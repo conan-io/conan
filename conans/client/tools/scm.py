@@ -67,7 +67,7 @@ class SCMBase(object):
         url_user = None
         url_pass = None
         scp_regex = re.compile("^([a-zA-Z0-9_]+)@([a-zA-Z0-9._-]+):(.*)$")
-        url_user_pass_regex = re.compile("^(file|http|git)s?:\/\/(\S+):(\S+)@("".*)$")
+        url_user_pass_regex = re.compile("^(file|http|git)s?:\/\/(\S+):(\S+)@(.*)$")
         url_user_regex = re.compile("^(file|http|git|ssh)s?:\/\/(\S+)@(.*)$")
         url_basic_regex = re.compile("^(file|http|git|ssh)s?:\/\/(.*)$")
 
