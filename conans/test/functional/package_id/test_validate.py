@@ -1,7 +1,10 @@
+import json
 import textwrap
 import unittest
 
 from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
+from conans.client.graph.graph import BINARY_INVALID
+from conans.model.info import PACKAGE_ID_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -32,6 +35,10 @@ class TestValidate(unittest.TestCase):
         self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("ID: INVALID", client.out)
+        client.run("info pkg/0.1@ -s os=Windows --json=myjson")
+        myjson = json.loads(client.load("myjson"))
+        self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
+        self.assertEqual(myjson[0]["id"], PACKAGE_ID_INVALID)
 
     def test_validate_compatible(self):
         client = TestClient()
