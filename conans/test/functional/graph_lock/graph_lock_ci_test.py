@@ -759,6 +759,7 @@ class CIPrivateRequiresTest(unittest.TestCase):
 
         self.assertEqual(to_build, build_order)
 
-        for ref, _, _, node_id in build_order[0]:
+        for ref, pid, _, node_id in build_order[0]:
             client.run("install %s --build=%s --lockfile=conan.lock --lockfile-out=conan.lock "
                        "--lockfile-id=%s" % (ref, ref, node_id))
+            self.assertIn('private/0.1:{} - Build'.format(pid))
