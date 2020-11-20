@@ -14,7 +14,8 @@ class BasicTest(unittest.TestCase):
 
     def test_basic(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
             class Pkg(ConanFile):
                 def toolchain(self):
                     tc = CMakeToolchain(self)
@@ -30,7 +31,8 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
             class Pkg(ConanFile):
                 toolchain = "cmake"
                 """)
@@ -44,7 +46,8 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
             class Pkg(ConanFile):
                 toolchain = "cmake"
                 def build(self):
