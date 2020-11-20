@@ -96,7 +96,7 @@ class ClientConfLogTest(unittest.TestCase):
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))
             self.assertEqual(logging.DEBUG, config.logging_level)
 
-    def test_log_level_numbers_env_var_debug(self):
+    def test_log_level_numbers_env_var_debug_text(self):
         with environment_append({"CONAN_LOGGING_LEVEL": "WakaWaka"}):
             save(os.path.join(self.tmp_dir, CONAN_CONF), default_client_conf)
             config = ConanClientConfigParser(os.path.join(self.tmp_dir, CONAN_CONF))

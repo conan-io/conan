@@ -104,7 +104,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   If it goes after, the Toolset definition is ignored -->
   <ImportGroup Label="PropertySheets">
     <Import Project="..\conan\conan_Hello.props" />
-    <Import Project="..\conan\conan_toolchain.props" />
+    <Import Project="..\conan\conantoolchain.props" />
   </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -289,7 +289,7 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_release_win32.props",
+        self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         client.run("build . -if=conan")
 
@@ -333,7 +333,7 @@ class WinTest(unittest.TestCase):
 
         # Run the configure corresponding to this test case
         client.run("install . %s -if=conan" % (settings, ))
-        self.assertIn("conanfile.py: MSBuildToolchain created conan_toolchain_debug_x64.props",
+        self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
         client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)

@@ -3,7 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conans.client.toolchain.visual import vcvars_arch, vcvars_command
-from conans.client.tools import msvs_toolset
+from conans.client.tools import msvs_toolset, intel_compilervars_command
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -11,7 +11,9 @@ from conans.util.files import save, load
 class MSBuildCmd(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.version = conanfile.settings.get_safe("compiler.version")
+        self.compiler = conanfile.settings.get_safe("compiler")
+        self.version = conanfile.settings.get_safe("compiler.base.version") or \
+                       conanfile.settings.get_safe("compiler.version")
         self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
@@ -27,11 +29,15 @@ class MSBuildCmd(object):
         self.platform = msvc_arch
 
     def command(self, sln):
-        vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                platform_type=None, winsdk_version=None,
-                                vcvars_ver=None)
+        if self.compiler == "intel":
+            cvars = intel_compilervars_command(self._conanfile)
+        else:
+            cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
+                                    platform_type=None, winsdk_version=None,
+                                    vcvars_ver=None)
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (vcvars, sln, self.build_type, self.platform))
+               % (cvars, sln, self.build_type, self.platform))
+
         return cmd
 
     def build(self, sln):
@@ -39,12 +45,14 @@ class MSBuildCmd(object):
         self._conanfile.run(cmd)
 
     @staticmethod
-    def get_version(settings):
+    def get_version(_):
         return NotImplementedError("get_version() method is not supported in MSBuild "
                                    "toolchain helper")
 
 
 class MSBuildToolchain(object):
+
+    filename = "conantoolchain.props"
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -63,7 +71,7 @@ class MSBuildToolchain(object):
 
     def write_toolchain_files(self):
         name, condition = self._name_condition(self._conanfile.settings)
-        config_filename = "conan_toolchain{}.props".format(name)
+        config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
 
@@ -108,7 +116,7 @@ class MSBuildToolchain(object):
         save(config_filepath, config_props)
 
     def _write_main_toolchain(self, config_filename, condition):
-        main_toolchain_path = os.path.abspath("conan_toolchain.props")
+        main_toolchain_path = os.path.abspath(self.filename)
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:
@@ -125,7 +133,7 @@ class MSBuildToolchain(object):
         try:
             import_group = dom.getElementsByTagName('ImportGroup')[0]
         except Exception:
-            raise ConanException("Broken conan_toolchain.props. Remove the file and try again")
+            raise ConanException("Broken {}. Remove the file and try again".format(self.filename))
         children = import_group.getElementsByTagName("Import")
         for node in children:
             if (config_filename == node.getAttribute("Project") and
@@ -139,5 +147,5 @@ class MSBuildToolchain(object):
 
         conan_toolchain = dom.toprettyxml()
         conan_toolchain = "\n".join(line for line in conan_toolchain.splitlines() if line.strip())
-        self._conanfile.output.info("MSBuildToolchain writing %s" % "conan_toolchain.props")
+        self._conanfile.output.info("MSBuildToolchain writing {}".format(self.filename))
         save(main_toolchain_path, conan_toolchain)

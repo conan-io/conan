@@ -34,6 +34,10 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} _MSVC_LANG" << _MSVC_LANG<< "\n";
     #endif
 
+    #if __INTEL_COMPILER
+    std::cout << "  {{ msg or name }} __INTEL_COMPILER" << __INTEL_COMPILER<< "\n";
+    #endif
+
     {% for it in preprocessor -%}
     std::cout << "  {{msg}} {{it}}: " <<  {{it}} << "\n";
     {%- endfor %}

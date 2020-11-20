@@ -14,7 +14,4 @@ deprecation>=2.0, <2.1
 tqdm>=4.28.1, <5
 Jinja2>=2.9, <3
 python-dateutil>=2.7.0, <3
-idna==2.6 ; sys_platform == "darwin" # Solving conflict, somehow is installing 2.7 when requests require 2.6
-cryptography>=3.2, <4 ; sys_platform == "darwin"
-pyOpenSSL>=16.0.0, <19.0.0 ; sys_platform == "darwin"
 
