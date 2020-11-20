@@ -23,7 +23,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
         install(TARGETS App RUNTIME DESTINATION bin)
         """)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
 
         class Foobar(ConanFile):
             name = "foobar"

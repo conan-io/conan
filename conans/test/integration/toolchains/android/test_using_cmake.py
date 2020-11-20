@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
+from conans.client.toolchain.cmake import CMakeToolchainBase
 from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 from ._utils import create_library

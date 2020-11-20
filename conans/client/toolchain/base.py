@@ -1,4 +1,6 @@
-from conans.client.toolchain.cmake import CMakeToolchain
+# This would be one of the few exceptions to import from conan.tools, to
+# allow the simplified generators=xxxx syntax
+from conan.tools.cmake import CMakeToolchain
 from conans.client.tools import chdir
 from conans.errors import conanfile_exception_formatter, ConanException
 
