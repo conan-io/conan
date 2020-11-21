@@ -41,9 +41,11 @@ class CMake(object):
         if hasattr(conanfile, "toolchain"):
             # Warning
             msg = ("\n*****************************************************************\n"
+                   "******************************************************************\n"
                    "This 'CMake' build helper has been deprecated and moved.\n"
                    "It will be removed in next Conan release.\n"
                    "Use 'from conan.tools.cmake import CMake' instead.\n"
+                   "********************************************************************\n"
                    "********************************************************************\n")
             ConanOutput(conanfile.output._stream,
                         color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
