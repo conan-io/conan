@@ -1,4 +1,5 @@
 import unittest
+import tempfile
 import textwrap
 import conans.client.toolchain.qbs.generic as qbs
 
@@ -29,7 +30,10 @@ class RunnerMock(object):
 
 
 class MockConanfileWithFolders(MockConanfile):
-    build_folder = "just/some/foobar/path"
+    install_folder = tempfile.mkdtemp()
+
+    def __del__(self):
+        tools.rmdir(self.install_folder)
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -89,7 +93,9 @@ class QbsGenericTest(unittest.TestCase):
 
     def test_settings_dir_location(self):
         conanfile = MockConanfileWithFolders(MockSettings({}))
-        self.assertEqual(qbs._settings_dir(conanfile), conanfile.build_folder)
+        self.assertEqual(
+            qbs._settings_dir(conanfile),
+            '%s/conan_qbs_toolchain_settings_dir' % conanfile.install_folder)
 
     def test_setup_toolchain_without_any_env_values(self):
         for settings in self._settings_to_test_against():
@@ -100,7 +106,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(
                 conanfile.runner.command_called[0],
                 "qbs-setup-toolchains --settings-dir %s %s %s" % (
-                    conanfile.build_folder, settings["qbs_compiler"],
+                    qbs._settings_dir(conanfile), settings["qbs_compiler"],
                     qbs._profile_name))
 
     def test_setup_toolchain_with_compiler_from_env(self):
@@ -114,7 +120,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(
                 conanfile.runner.command_called[0],
                 "qbs-setup-toolchains --settings-dir %s %s %s" % (
-                    conanfile.build_folder, compiler,
+                    qbs._settings_dir(conanfile), compiler,
                     qbs._profile_name))
 
     @staticmethod
@@ -196,7 +202,7 @@ class QbsGenericTest(unittest.TestCase):
         self.assertEqual(len(conanfile.runner.command_called), 1)
         self.assertEqual(conanfile.runner.command_called[0],
                          "qbs-config --settings-dir %s --list" % (
-                            conanfile.build_folder))
+                            qbs._settings_dir(conanfile)))
         self.assertEqual(config, expected_config)
 
     def test_toolchain_content(self):

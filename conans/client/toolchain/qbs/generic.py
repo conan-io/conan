@@ -15,7 +15,7 @@ _profiles_prefix_in_config = "profiles.%s" % _profile_name
 class QbsException(ConanException):
     def __str__(self):
         msg = super(QbsException, self).__str__()
-        return "Qbs build helper: {}".format(msg)
+        return "Qbs generic toolchain: {}".format(msg)
 
 
 def _env_var_to_list(var):
@@ -53,7 +53,7 @@ def _compiler_name(conanfile):
 
 
 def _settings_dir(conanfile):
-    return conanfile.build_folder
+    return '%s/conan_qbs_toolchain_settings_dir' % conanfile.install_folder
 
 
 def _setup_toolchains(conanfile):
@@ -140,6 +140,7 @@ class QbsGenericToolchain(object):
         _setup_toolchains(conanfile)
         self._profile_values = _read_qbs_toolchain_from_config(conanfile)
         self._profile_values.update(_flags_from_env())
+        tools.rmdir(_settings_dir(conanfile))
 
     def write_toolchain_files(self):
         save(self.filename, self.content)
