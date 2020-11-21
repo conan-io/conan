@@ -2,6 +2,7 @@ import traceback
 from os.path import join
 
 from conan.tools.cmake import CMakeToolchain
+from conan.tools.microsoft.msbuilddeps import MSBuildDeps
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -19,7 +20,6 @@ from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
 from .markdown import MarkdownGenerator
-from .msbuild import MSBuildGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
@@ -51,7 +51,7 @@ class GeneratorManager(object):
                             "qbs": QbsGenerator,
                             "scons": SConsGenerator,
                             "visual_studio": VisualStudioGenerator,
-                            "msbuild": MSBuildGenerator,
+                            "msbuild": MSBuildDeps,
                             "visual_studio_multi": VisualStudioMultiGenerator,
                             "visual_studio_legacy": VisualStudioLegacyGenerator,
                             "xcode": XCodeGenerator,
