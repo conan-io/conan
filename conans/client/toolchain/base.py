@@ -1,4 +1,4 @@
-from conans.client.toolchain.cmake import CMakeToolchain
+from conan.tools.cmake import CMakeToolchain
 from conans.client.tools import chdir
 from conans.errors import conanfile_exception_formatter, ConanException
 
