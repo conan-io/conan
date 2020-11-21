@@ -28,7 +28,8 @@ cmakelists_txt = textwrap.dedent("""
 """)
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, CMake, CMakeToolchain
+    from conans import ConanFile
+    from conan.tools.import CMake, CMakeToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
@@ -56,6 +57,7 @@ conanfile_py = textwrap.dedent("""
             cmake = self._configure_cmake()
             cmake.install()
     """)
+
 
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake

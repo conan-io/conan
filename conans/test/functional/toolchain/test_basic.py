@@ -3,6 +3,7 @@ import textwrap
 import unittest
 
 import pytest
+import six
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
@@ -14,7 +15,8 @@ class BasicTest(unittest.TestCase):
 
     def test_basic(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
             class Pkg(ConanFile):
                 def toolchain(self):
                     tc = CMakeToolchain(self)
@@ -30,7 +32,7 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMakeToolchain
+            from conans import ConanFile
             class Pkg(ConanFile):
                 toolchain = "cmake"
                 """)
@@ -44,7 +46,8 @@ class BasicTest(unittest.TestCase):
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
             class Pkg(ConanFile):
                 toolchain = "cmake"
                 def build(self):
@@ -56,4 +59,26 @@ class BasicTest(unittest.TestCase):
         client.run("install .")
         client.run("build .", assert_error=True)  # No CMakeLists.txt
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
+        self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
+
+    @unittest.skipIf(six.PY2, "The import to sibling fails in Python2")
+    def test_old_tools_imports(self):
+        conanfile = textwrap.dedent("""
+           from conans import ConanFile, CMakeToolchain, CMake
+           class Pkg(ConanFile):
+               def toolchain(self):
+                   tc = CMakeToolchain(self)
+                   tc.write_toolchain_files()
+               def build(self):
+                   cmake = CMake(self)
+                   cmake.configure()
+           """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        self.assertIn("'from conans import CMakeToolchain' has been deprecated and moved",
+                      client.out)
+        client.run("build .", assert_error=True)  # No CMakeLists.txt
+        self.assertIn("This 'CMake' build helper has been deprecated and moved.", client.out)
+        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
