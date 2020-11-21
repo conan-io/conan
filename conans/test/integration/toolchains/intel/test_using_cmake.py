@@ -3,9 +3,9 @@ import pytest
 import textwrap
 
 from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.microsoft.visual import vcvars_command
 from ._base import BaseIntelTestCase
 
-from conans.client.toolchain.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 
 

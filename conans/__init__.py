@@ -5,8 +5,9 @@ import warnings
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
 from conans.client.output import Color, ConanOutput, ScopedOutput
-from conans.client.toolchain.make import MakeToolchain
-from conans.client.toolchain.msbuild import MSBuildToolchain
+from conan.tools.gnu import MakeToolchain as _MakeToolchain
+from conan.tools.microsoft import MSBuildToolchain as _MSBuildToolchain
+from conan.tools.cmake import CMakeToolchain as _CMakeToolchain
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
@@ -15,6 +16,36 @@ from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.util.files import load
+
+
+class MakeToolchain(_MakeToolchain):
+    def __init__(self, conanfile, *args, **kwargs):
+        msg = ("\n*****************************************************************\n"
+               "*****************************************************************\n"
+               "'from conans import MakeToolchain' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'from conan.tools.gnu import MakeToolchain' instead.\n"
+               "*****************************************************************\n"
+               "*****************************************************************\n")
+        ConanOutput(conanfile.output._stream,
+                    color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        super(MakeToolchain, self).__init__(conanfile, *args, **kwargs)
+
+
+class MSBuildToolchain(_MSBuildToolchain):
+    def __init__(self, conanfile, *args, **kwargs):
+        msg = ("\n*****************************************************************\n"
+               "*****************************************************************\n"
+               "'from conans import MSBuildToolchain' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'from conan.tools.microsoft import MSBuildToolchain' instead.\n"
+               "*****************************************************************\n"
+               "*****************************************************************\n")
+        ConanOutput(conanfile.output._stream,
+                    color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        super(MSBuildToolchain, self).__init__(conanfile, *args, **kwargs)
 
 
 def CMakeToolchain(conanfile, **kwargs):
@@ -29,8 +60,7 @@ def CMakeToolchain(conanfile, **kwargs):
     ConanOutput(conanfile.output._stream,
                 color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
     warnings.warn(msg)
-    from conan.tools.cmake import CMakeToolchain as BaseCMakeToolchain
-    return BaseCMakeToolchain(conanfile, **kwargs)
+    return _CMakeToolchain(conanfile, **kwargs)
 
 
 # complex_search: With ORs and not filtering by not restricted settings

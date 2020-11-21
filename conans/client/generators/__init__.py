@@ -1,11 +1,12 @@
 import traceback
 from os.path import join
 
+from conan.tools.cmake import CMakeToolchain
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
-from conans.errors import ConanException
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save
 from .b2 import B2Generator
@@ -33,6 +34,7 @@ from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
+from ..tools import chdir
 
 
 class GeneratorManager(object):
@@ -119,3 +121,23 @@ class GeneratorManager(object):
                 output.error("Generator %s(file:%s) failed\n%s"
                              % (generator_name, generator.filename, str(e)))
                 raise ConanException(e)
+
+
+def write_toolchain(conanfile, path, output):
+    if hasattr(conanfile, "toolchain"):
+        output.highlight("Generating toolchain files")
+        if callable(conanfile.toolchain):
+            # This is the toolchain
+            with chdir(path):
+                with conanfile_exception_formatter(str(conanfile), "toolchain"):
+                    conanfile.toolchain()
+        else:
+            try:
+                toolchain = {"cmake": CMakeToolchain}[conanfile.toolchain]
+            except KeyError:
+                raise ConanException("Unknown toolchain '%s'" % conanfile.toolchain)
+            tc = toolchain(conanfile)
+            with chdir(path):
+                tc.write_toolchain_files()
+
+        # TODO: Lets discuss what to do with the environment
