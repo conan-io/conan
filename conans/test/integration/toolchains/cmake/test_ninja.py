@@ -24,7 +24,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         """)
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.tools.import CMake, CMakeToolchain
+        from conan.tools.cmake import CMake, CMakeToolchain
 
         class Foobar(ConanFile):
             name = "foobar"

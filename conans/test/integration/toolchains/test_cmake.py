@@ -165,7 +165,6 @@ class Base(unittest.TestCase):
 
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
-@unittest.skipIf(six.PY2, "Python2 fails to import conan.tools")
 class WinTest(Base):
     @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Release", "MD", "15", "17", "x86_64", "", False)])
@@ -242,7 +241,6 @@ class WinTest(Base):
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
-@unittest.skipIf(six.PY2, "Python2 fails to import conan.tools")
 class LinuxTest(Base):
     @parameterized.expand([("Debug",  "14", "x86", "libstdc++", True),
                            ("Release", "gnu14", "x86_64", "libstdc++11", False)])
@@ -300,7 +298,6 @@ class LinuxTest(Base):
 
 
 @unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
-@unittest.skipIf(six.PY2, "Python2 fails to import conan.tools")
 class AppleTest(Base):
     @parameterized.expand([("Debug",  "14",  True),
                            ("Release", "", False)])
@@ -355,12 +352,12 @@ class AppleTest(Base):
 @attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
-@unittest.skipIf(six.PY2, "Python2 fails to import conan.tools")
 class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"

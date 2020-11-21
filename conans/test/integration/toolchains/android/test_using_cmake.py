@@ -25,7 +25,7 @@ class AndroidToolchainTestCase(unittest.TestCase):
         self.t.save({
             'conanfile.py': textwrap.dedent("""
                 from conans import ConanFile
-                from conan.tools.import CMake, CMakeToolchain
+                from conan.tools.cmake import CMake, CMakeToolchain
 
                 class Library(ConanFile):
                     name = 'library'

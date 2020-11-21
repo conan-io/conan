@@ -29,7 +29,7 @@ cmakelists_txt = textwrap.dedent("""
 
 conanfile_py = textwrap.dedent("""
     from conans import ConanFile
-    from conan.tools.import CMake, CMakeToolchain
+    from conan.tools.cmake import CMake, CMakeToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
