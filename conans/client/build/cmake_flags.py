@@ -237,13 +237,11 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":
