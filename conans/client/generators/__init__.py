@@ -84,17 +84,36 @@ class GeneratorManager(object):
     def __getitem__(self, key):
         return self._generators[key]
 
+    @staticmethod
+    def _new_generator(generator_name):
+        if generator_name == "CMakeToolchain":
+            from conan.tools.cmake import CMakeToolchain
+            return CMakeToolchain
+        elif generator_name == "MakeToolchain":
+            from conan.tools.gnu import MakeToolchain
+            return MakeToolchain
+        elif generator_name == "MSBuildToolchain":
+            from conan.tools.microsoft import MSBuildToolchain
+            return MSBuildToolchain
+        elif generator_name == "MesonToolchain":
+            from conan.tools.meson import MesonToolchain
+            return MesonToolchain
+
     def write_generators(self, conanfile, path, output):
         """ produces auxiliary files, required to build a project or a package.
         """
         for generator_name in set(conanfile.generators):
-            if generator_name in ("CMakeToolchain", ):  # Hardcode the name here, PoC
-                from conan.tools.cmake import CMakeToolchain
-                generator = CMakeToolchain(conanfile)
-                output.highlight("Generating toolchain files")
-                with chdir(path):
-                    generator.generate()
-                continue
+            generator_class = self._new_generator(generator_name)
+            if generator_class:
+                try:
+                    generator = generator_class(conanfile)
+                    output.highlight("Generating toolchain files")
+                    with chdir(path):
+                        generator.generate()
+                    continue
+                except Exception as e:
+                    raise ConanException("Error in generator '{}': {}".format(generator_name,
+                                                                              str(e)))
 
             try:
                 generator_class = self._generators[generator_name]

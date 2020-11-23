@@ -35,7 +35,8 @@ class BasicTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
-                generators = "CMakeToolchain"
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "CMakeToolchain", "MesonToolchain", "MakeToolchain", "MSBuildToolchain"
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -44,6 +45,38 @@ class BasicTest(unittest.TestCase):
         self.assertIn("conanfile.py: Generating toolchain files", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
+        toolchain = client.load("conantoolchain.props")
+        self.assertIn("<?xml version", toolchain)
+        toolchain = client.load("conan_toolchain.mak")
+        self.assertIn("# Conan generated toolchain file", toolchain)
+        toolchain = client.load("conan_meson_native.ini")
+        self.assertIn("[project options]", toolchain)
+
+    def test_error_missing_settings(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                generators = "MSBuildToolchain"
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .", assert_error=True)
+        self.assertIn("Error in generator 'MSBuildToolchain': 'settings.build_type' doesn't exist",
+                      client.out)
+
+    def test_error_missing_settings_method(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuildToolchain
+            class Pkg(ConanFile):
+                def generate(self):
+                   tc = MSBuildToolchain(self)
+                   tc.generate()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .", assert_error=True)
+        self.assertIn("ERROR: conanfile.py: Error in generate() method, line 7", client.out)
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
