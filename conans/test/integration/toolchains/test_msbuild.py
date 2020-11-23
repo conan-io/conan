@@ -240,7 +240,7 @@ class WinTest(unittest.TestCase):
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 msbuild = MSBuild(self)

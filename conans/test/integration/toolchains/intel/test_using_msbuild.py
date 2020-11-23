@@ -22,7 +22,7 @@ conanfile_py = textwrap.dedent("""
 
         def generate(self):
             tc = MSBuildToolchain(self)
-            tc.write_toolchain_files()
+            tc.generate()
 
         def build(self):
             msbuild = MSBuild(self)

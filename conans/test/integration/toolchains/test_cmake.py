@@ -40,7 +40,7 @@ class Base(unittest.TestCase):
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 cmake = CMake(self)
@@ -363,7 +363,7 @@ class CMakeInstallTest(unittest.TestCase):
                 exports_sources = "CMakeLists.txt", "header.h"
                 def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()

@@ -21,7 +21,7 @@ class BasicTest(unittest.TestCase):
             class Pkg(ConanFile):
                 def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
                 """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -69,7 +69,7 @@ class BasicTest(unittest.TestCase):
            class Pkg(ConanFile):
                def generate(self):
                    tc = CMakeToolchain(self)
-                   tc.write_toolchain_files()
+                   tc.generate()
                def build(self):
                    cmake = CMake(self)
                    cmake.configure()
@@ -93,7 +93,7 @@ class BasicTest(unittest.TestCase):
                 settings = "os", "compiler", "arch", "build_type"
                 def generate(self):
                    tc = MSBuildToolchain(self)
-                   tc.write_toolchain_files()
+                   tc.generate()
                 def build(self):
                    msbuild = MSBuild(self)
                    msbuild.build("Project.sln")
@@ -115,13 +115,36 @@ class BasicTest(unittest.TestCase):
                 settings = "os", "compiler", "arch", "build_type"
                 def generate(self):
                    tc = MakeToolchain(self)
-                   tc.write_toolchain_files()
+                   tc.generate()
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         self.assertIn("'from conans import MakeToolchain' has been deprecated and moved",
                       client.out)
+
+    @unittest.skipIf(six.PY2, "The import to sibling fails in Python2")
+    def test_old_write_toolchain_files(self):
+        conanfile = textwrap.dedent("""
+               from conans import ConanFile
+               from conan.tools.gnu import MakeToolchain
+               from conan.tools.cmake import CMakeToolchain
+               from conan.tools.microsoft import MSBuildToolchain
+               class Pkg(ConanFile):
+                   settings = "os", "compiler", "arch", "build_type"
+                   def generate(self):
+                      tc = MakeToolchain(self)
+                      tc.write_toolchain_files()
+                      tc = CMakeToolchain(self)
+                      tc.write_toolchain_files()
+                      tc = MSBuildToolchain(self)
+                      tc.write_toolchain_files()
+               """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        self.assertEqual(3, str(client.out).count("'write_toolchain_files()' "
+                                                  "has been deprecated and moved"))
 
     def test_old_toolchain(self):
         conanfile = textwrap.dedent("""

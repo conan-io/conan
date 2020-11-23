@@ -33,7 +33,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
             def generate(self):
                 tc = CMakeToolchain(self, generator="Ninja")
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 cmake = CMake(self)

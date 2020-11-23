@@ -93,7 +93,7 @@ class GeneratorManager(object):
                 generator = CMakeToolchain(conanfile)
                 output.highlight("Generating toolchain files")
                 with chdir(path):
-                    generator.write_toolchain_files()
+                    generator.generate()
                 continue
 
             try:
@@ -156,7 +156,7 @@ def write_toolchain(conanfile, path, output):
                 raise ConanException("Unknown toolchain '%s'" % conanfile.toolchain)
             tc = toolchain(conanfile)
             with chdir(path):
-                tc.write_toolchain_files()
+                tc.generate()
 
         # TODO: Lets discuss what to do with the environment
 

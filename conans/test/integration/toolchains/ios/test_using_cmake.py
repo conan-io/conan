@@ -35,7 +35,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
                 def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     cmake = self._configure_cmake()

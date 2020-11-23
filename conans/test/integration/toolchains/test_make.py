@@ -39,7 +39,7 @@ class MakeToolchainTest(unittest.TestCase):
                     tc = MakeToolchain(self)
                     tc.variables["TEST_VAR"] = "TestVarValue"
                     tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     self.run("make -C ..")
@@ -132,7 +132,7 @@ class MakeToolchainTest(unittest.TestCase):
                     tc = MakeToolchain(self)
                     tc.variables["TEST_VAR"] = "TestVarValue"
                     tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     self.run("make -C ..")
