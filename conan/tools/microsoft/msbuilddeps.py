@@ -8,7 +8,7 @@ from conans.model import Generator
 from conans.util.files import load, save
 
 
-class MSBuildGenerator(Generator):
+class MSBuildDeps(Generator):
 
     _vars_conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -30,7 +30,7 @@ class MSBuildGenerator(Generator):
     _dep_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="TransitiveDependencies">
+          <ImportGroup Label="ConanDependencies">
           </ImportGroup>
           <ImportGroup Label="Configurations">
           </ImportGroup>
@@ -38,7 +38,7 @@ class MSBuildGenerator(Generator):
             <conan_{name}_props_imported>True</conan_{name}_props_imported>
           </PropertyGroup>
           <PropertyGroup>
-            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)</LocalDebuggerEnvironment>
+            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
           </PropertyGroup>
           <ItemDefinitionGroup>
@@ -66,7 +66,7 @@ class MSBuildGenerator(Generator):
         """)
 
     def __init__(self, conanfile):
-        super(MSBuildGenerator, self).__init__(conanfile)
+        super(MSBuildDeps, self).__init__(conanfile)
         self.configuration = conanfile.settings.build_type
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
@@ -75,7 +75,7 @@ class MSBuildGenerator(Generator):
         # User configurable things
         self._config_filename = None
 
-    def write_generator_files(self):
+    def generate(self):
         # TODO: Apply config from command line, something like
         # configuration = self.conanfile.config.generators["msbuild"].configuration
         # if configuration is not None:
@@ -121,7 +121,7 @@ class MSBuildGenerator(Generator):
         template = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
             <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-                <ImportGroup Label="PropertySheets" >
+                <ImportGroup Label="ConanDependencies" >
                 </ImportGroup>
             </Project>
             """)
@@ -144,7 +144,9 @@ class MSBuildGenerator(Generator):
             else:
                 # create a new import statement
                 import_node = dom.createElement('Import')
+                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep
                 import_node.setAttribute('Project', conf_props_name)
+                import_node.setAttribute('Condition', dep_imported)
                 # add it to the import group
                 import_group.appendChild(import_node)
         content_multi = dom.toprettyxml()

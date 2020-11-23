@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
@@ -24,7 +24,8 @@ class AndroidToolchainTestCase(unittest.TestCase):
         create_library(self.t)
         self.t.save({
             'conanfile.py': textwrap.dedent("""
-                from conans import ConanFile, CMake, CMakeToolchain
+                from conans import ConanFile
+                from conan.tools.cmake import CMake, CMakeToolchain
 
                 class Library(ConanFile):
                     name = 'library'
@@ -33,9 +34,9 @@ class AndroidToolchainTestCase(unittest.TestCase):
                     options = {'shared': [True, False]}
                     default_options = {'shared': False}
 
-                    def toolchain(self):
+                    def generate(self):
                         tc = CMakeToolchain(self)
-                        tc.write_toolchain_files()
+                        tc.generate()
 
                     def build(self):
                         cmake = CMake(self)

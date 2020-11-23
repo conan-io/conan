@@ -2,6 +2,7 @@
 
 import platform
 import textwrap
+import warnings
 from collections import OrderedDict
 
 from jinja2 import Template
@@ -62,6 +63,21 @@ class MakeToolchain(object):
         return arch_build, os_build
 
     def write_toolchain_files(self):
+        # Warning
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "'write_toolchain_files()' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        from conans.client.output import Color, ConanOutput
+        ConanOutput(self._conanfile.output._stream,
+                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        self.generate()
+
+    def generate(self):
         save(self.filename, self.content)
 
     @property
