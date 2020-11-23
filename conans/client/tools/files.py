@@ -3,6 +3,7 @@ import logging
 import os
 import platform
 import subprocess
+import shutil
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -101,6 +102,9 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         def print_progress(_, __):
             pass
 
+    def is_symlink_zipinfo(zi):
+        return (zi.external_attr >> 28) == 0xA
+
     with zipfile.ZipFile(filename, "r") as z:
         if not pattern:
             zip_info = z.infolist()
@@ -116,25 +120,45 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         print_progress.last_size = -1
         if platform.system() == "Windows":
             for file_ in zip_info:
-                extracted_size += file_.file_size
-                print_progress(extracted_size, uncompress_size)
-                try:
-                    z.extract(file_, full_path)
-                except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                if not is_symlink_zipinfo(file_):
+                    extracted_size += file_.file_size
+                    print_progress(extracted_size, uncompress_size)
+                    try:
+                        z.extract(file_, full_path)
+                    except Exception as e:
+                        output.error("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
+                if not is_symlink_zipinfo(file_):
+                    extracted_size += file_.file_size
+                    print_progress(extracted_size, uncompress_size)
+
+                    try:
+                        z.extract(file_, full_path)
+                        if keep_permissions:
+                            # Could be dangerous if the ZIP has been created in a non nix system
+                            # https://bugs.python.org/issue15795
+                            perm = file_.external_attr >> 16 & 0xFFF
+                            os.chmod(os.path.join(full_path, file_.filename), perm)
+                    except Exception as e:
+                        output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+
+        for file_ in zip_info:
+            if is_symlink_zipinfo(file_):
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
+
+                z.extract(file_, full_path)
+                full_name = os.path.join(full_path, file_.filename)
+                target = load(full_name)
+                os.unlink(full_name)
                 try:
-                    z.extract(file_, full_path)
-                    if keep_permissions:
-                        # Could be dangerous if the ZIP has been created in a non nix system
-                        # https://bugs.python.org/issue15795
-                        perm = file_.external_attr >> 16 & 0xFFF
-                        os.chmod(os.path.join(full_path, file_.filename), perm)
-                except Exception as e:
-                    output.error("Error extract %s\n%s" % (file_.filename, str(e)))
+                    os.symlink(target, full_name)
+                except OSError:
+                    if not os.path.isabs(target):
+                        target = os.path.join(full_path, target)
+                    shutil.copy2(target, full_name)
+
         output.writeln("")
 
 
