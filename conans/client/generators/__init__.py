@@ -166,3 +166,5 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
+
+        # TODO: Lets discuss what to do with the environment
