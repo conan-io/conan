@@ -595,6 +595,8 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
+        inodes = {}
+
         for filename, dest in sorted(symlinks.items()):
             info = tarfile.TarInfo(name=filename)
             info.type = tarfile.SYMTYPE
@@ -615,8 +617,16 @@ def compress_files(files, symlinks, name, dest_dir, output=None):
                     info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                     tgz.addfile(tarinfo=info)
                 else:
-                    with open(abs_path, 'rb') as file_handler:
-                        tgz.addfile(tarinfo=info, fileobj=file_handler)
+                    inode = os.stat(abs_path).st_ino
+                    if inode in inodes:
+                        info.type = tarfile.LNKTYPE
+                        info.linkname = inodes[inode]
+                        info.size = 0
+                        tgz.addfile(tarinfo=info)
+                    else:
+                        inodes[inode] = filename
+                        with open(abs_path, 'rb') as file_handler:
+                            tgz.addfile(tarinfo=info, fileobj=file_handler)
         tgz.close()
 
     duration = time.time() - t1

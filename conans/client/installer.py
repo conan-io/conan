@@ -7,7 +7,7 @@ from multiprocessing.pool import ThreadPool
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
-from conans.client.file_copier import report_copied_files
+from conans.client.file_copier import report_copied_files, FileCopier
 from conans.client.generators import TXTGenerator, write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
@@ -111,7 +111,9 @@ class _PackageBuilder(object):
         if not getattr(conanfile, 'no_copy_source', False):
             self._output.info('Copying sources to build folder')
             try:
-                shutil.copytree(source_folder, build_folder, symlinks=True)
+                copier = FileCopier([source_folder], build_folder)
+                copier("*", links=True)
+            # Should we preserve same treatment for FileCopier?
             except Exception as e:
                 msg = str(e)
                 if "206" in msg:  # System error shutil.Error 206: Filename or extension too long
