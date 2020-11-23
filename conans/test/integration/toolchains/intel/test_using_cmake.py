@@ -2,10 +2,10 @@ import os
 import pytest
 import textwrap
 
+from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.microsoft.visual import vcvars_command
 from ._base import BaseIntelTestCase
 
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
-from conans.client.toolchain.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 
 
@@ -28,7 +28,8 @@ cmakelists_txt = textwrap.dedent("""
 """)
 
 conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, CMake, CMakeToolchain
+    from conans import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain
 
     class App(ConanFile):
         settings = 'os', 'arch', 'compiler', 'build_type'
@@ -56,6 +57,7 @@ conanfile_py = textwrap.dedent("""
             cmake = self._configure_cmake()
             cmake.install()
     """)
+
 
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake

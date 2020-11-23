@@ -2,7 +2,7 @@ import textwrap
 import unittest
 import platform
 
-from conans.client.toolchain.visual import vcvars_command
+from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
@@ -23,7 +23,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
         install(TARGETS App RUNTIME DESTINATION bin)
         """)
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
 
         class Foobar(ConanFile):
             name = "foobar"
