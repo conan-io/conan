@@ -104,14 +104,14 @@ class MesonToolchainTest(unittest.TestCase):
     @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
     def test_linux(self):
         setttings = {"compiler": "gcc",
-                     "compiler.version": 10,
+                     "compiler.version": "5",
                      "compiler.libcxx": "libstdc++",
                      "arch": "x86_64",
                      "build_type": "Release"}
         self._build(setttings)
 
         self.assertIn("main __x86_64__ defined", self.t.out)
-        self.assertIn("main __GNUC__10", self.t.out)
+        self.assertIn("main __GNUC__5", self.t.out)
 
     def _build(self, settings):
         self.t = TestClient()
