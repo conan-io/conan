@@ -61,68 +61,58 @@ class SCMBase(object):
                     else:
                         return self._runner(command)
 
+    def handle_scp_pattern(self, user, domain, url):
+        if self._password:
+            self._output.warn("SCM password cannot be set for scp url, ignoring parameter")
+        if self._username:
+            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+        return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
+
+    def handle_url_pattern(self, scheme, url, user=None, password=None):
+        the_user = user or self._username
+        the_password = password or self._password
+        if scheme == "file":
+            if self._username:
+                self._output.warn("SCM username cannot be set for file url, ignoring parameter")
+            if self._password:
+                self._output.warn("SCM password cannot be set for file url, ignoring parameter")
+            return "{scheme}://{url}".format(scheme=scheme, url=url)
+        elif scheme == "ssh" and self._password:
+            self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
+
+        if user and self._username:
+            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+        if password and self._password:
+            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
+        if the_password and the_user and scheme != "ssh":
+            return "{scheme}://{user}:{password}@{url}".format(scheme=scheme, user=the_user,
+                                                               password=the_password, url=url)
+        elif the_user:
+            return "{scheme}://{user}@{url}".format(scheme=scheme, user=the_user, url=url)
+        else:
+            return "{scheme}://{url}".format(scheme=scheme, url=url)
+
     def get_url_with_credentials(self, url):
         if not self._username and not self._password:
             return url
-        url_user = None
-        url_pass = None
-        scp_regex = re.compile("^([a-zA-Z0-9_]+)@([a-zA-Z0-9._-]+):(.*)$")
-        url_user_pass_regex = re.compile("^(file|http|git)s?:\/\/(\S+):(\S+)@(.*)$")
-        url_user_regex = re.compile("^(file|http|git|ssh)s?:\/\/(\S+)@(.*)$")
-        url_basic_regex = re.compile("^(file|http|git|ssh)s?:\/\/(.*)$")
 
-        if scp_regex.match(url):
-            url_scheme = "scp"
-            url_user = scp_regex.match(url).group(0)
-        elif url_user_pass_regex.match(url):
-            matches = url_user_pass_regex.match(url)
-            url_scheme = matches.group(1)
-            url_user = matches.group(2)
-            url_pass = matches.group(3)
-        elif url_user_regex.match(url):
-            matches = url_user_regex.match(url)
-            url_scheme = matches.group(1)
-            url_user = matches.group(2)
-        elif url_basic_regex.match(url):
-            matches = url_basic_regex.match(url)
-            url_scheme = matches.group(1)
-        else:
-            self._output.warn("URL type not supported, ignoring 'username' and 'password' "
-                              "parameters")
-            return url
-        if url_scheme == "file":
-            return url
+        scp_regex = re.compile("^(?P<user>[a-zA-Z0-9_]+)@(?P<domain>[a-zA-Z0-9._-]+):(?P<url>.*)$")
+        url_user_pass_regex = re.compile("^(?P<scheme>file|http|https|git):\/\/(?P<user>\S+):(?P<password>\S+)@(?P<url>.*)$")
+        url_user_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\S+)@(?P<url>.*)$")
+        url_basic_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<url>.*)$")
 
-        if (url_scheme == "ssh" or url_scheme == "scp") and self._password:
-            self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
-        else:
-            if self._password and not (url_user or self._username):
-                self._output.warn("SCM username undefined, ignoring 'password' parameter")
-            if url_pass and self._password:
-                self._output.warn("SCM password got from URL, ignoring 'password' parameter")
-        if url_user and self._username:
-            self._output.warn("SCM username got from URL, ignoring 'username' parameter")
+        url_patterns = [
+            (scp_regex, self.handle_scp_pattern),
+            (url_user_pass_regex, self.handle_url_pattern),
+            (url_user_regex, self.handle_url_pattern),
+            (url_basic_regex, self.handle_url_pattern)
+        ]
 
-        if url_pass:  # This implies having the username in the url as well
-            return url
-
-        if url_user and self._password and url_scheme == "http":
-            lookfor = "{username}@".format(username=url_user)
-            replace_str = "{username}:{password}@".format(username=url_user,
-                                                          password=self._password)
-            url = url.replace(lookfor, replace_str, 1)
-            return url
-
-        if self._username and not url_user and url_scheme in ["http", "ssh"]:
-            replace_str = "://"
-            user_enc = quote_plus(self._username)
-            replace_str = replace_str + user_enc
-            if self._password and url_scheme == "http":
-                pwd_enc = quote_plus(self._password)
-                replace_str = replace_str + ":" + pwd_enc
-            replace_str = replace_str + "@"
-            url = url.replace("://", replace_str, 1)
-            return url
+        for regex, handler in url_patterns:
+            match = regex.match(url)
+            if match:
+                return handler(**match.groupdict())
+        self._output.warn("URL type not supported, ignoring 'username' and 'password' parameters")
         return url
 
     @classmethod
