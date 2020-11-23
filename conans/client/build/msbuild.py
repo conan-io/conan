@@ -3,10 +3,10 @@ import os
 import re
 import warnings
 
-from conans import ConanOutput, Color
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
+from conans.client.output import Color, ConanOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
