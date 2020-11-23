@@ -131,15 +131,15 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#directories
             # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
-            "c": self._env.get("CC", None),
-            "cpp": self._env.get("CXX", None),
-            "c_ld": self._env.get("LD", None),
-            "cpp_ld": self._env.get("LD", None),
-            "ar": self._env.get("AR", None),
-            "strip": self._env.get("STRIP", None),
-            "as": self._env.get("AS", None),
-            "windres": self._env.get("WINDRES", None),
-            "pkgconfig": self._env.get("PKG_CONFIG", None),
+            "c": self._to_meson_value(self._env.get("CC", None)),
+            "cpp": self._to_meson_value(self._env.get("CXX", None)),
+            "c_ld": self._to_meson_value(self._env.get("LD", None)),
+            "cpp_ld": self._to_meson_value(self._env.get("LD", None)),
+            "ar": self._to_meson_value(self._env.get("AR", None)),
+            "strip": self._to_meson_value(self._env.get("STRIP", None)),
+            "as": self._to_meson_value(self._env.get("AS", None)),
+            "windres": self._to_meson_value(self._env.get("WINDRES", None)),
+            "pkgconfig": self._to_meson_value(self._env.get("PKG_CONFIG", None)),
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self._to_meson_build_type(self._build_type) if self._build_type else None,
             "debug": self._to_meson_value(self._debug) if self._build_type else None,
