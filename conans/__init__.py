@@ -4,7 +4,6 @@ import warnings
 
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.cmake import CMake
-from conans.client.output import Color, ConanOutput
 from conans.client.build.meson import Meson
 from conans.client.build.msbuild import MSBuild
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
@@ -17,6 +16,7 @@ from conans.util.files import load
 
 try:
     from conan.tools.gnu import MakeToolchain as _MakeToolchain
+    from conans.client.output import Color, ConanOutput
     class MakeToolchain(_MakeToolchain):
         def __init__(self, conanfile, *args, **kwargs):
             msg = ("\n*****************************************************************\n"
@@ -38,6 +38,7 @@ except ImportError:
 
 try:
     from conan.tools.microsoft import MSBuildToolchain as _MSBuildToolchain
+    from conans.client.output import Color, ConanOutput
     class MSBuildToolchain(_MSBuildToolchain):
         def __init__(self, conanfile, *args, **kwargs):
             msg = ("\n*****************************************************************\n"
@@ -66,6 +67,7 @@ def CMakeToolchain(conanfile, **kwargs):
            "Use 'from conan.tools.cmake import CMakeToolchain' instead.\n"
            "*****************************************************************\n"
            "*****************************************************************\n")
+    from conans.client.output import Color, ConanOutput
     ConanOutput(conanfile.output._stream,
                 color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
     warnings.warn(msg)
