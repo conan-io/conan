@@ -243,6 +243,10 @@ class CMakeDefinitionsBuilder(object):
                     # to know about the sysroot before any other thing
                     definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
 
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
+
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":
                 arch_abi_settings = tools.to_android_abi(arch)
