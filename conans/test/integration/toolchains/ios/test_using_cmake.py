@@ -33,7 +33,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
                         self._cmake.configure()
                     return self._cmake
 
-                def toolchain(self):
+                def generate(self):
                     tc = CMakeToolchain(self)
                     tc.write_toolchain_files()
 

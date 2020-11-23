@@ -233,7 +233,7 @@ class WinTest(unittest.TestCase):
             generators = "msbuild"
             options = {"shared": [True, False]}
             default_options = {"shared": False}
-            def toolchain(self):
+            def generate(self):
                 tc = MSBuildToolchain(self)
                 tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
                 if self.settings.build_type == "Debug":

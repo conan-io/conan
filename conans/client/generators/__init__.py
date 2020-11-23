@@ -1,4 +1,5 @@
 import traceback
+import warnings
 from os.path import join
 
 from conan.tools.cmake import CMakeToolchain
@@ -87,6 +88,14 @@ class GeneratorManager(object):
         """ produces auxiliary files, required to build a project or a package.
         """
         for generator_name in set(conanfile.generators):
+            if generator_name in ("CMakeToolchain", ):  # Hardcode the name here, PoC
+                from conan.tools.cmake import CMakeToolchain
+                generator = CMakeToolchain(conanfile)
+                output.highlight("Generating toolchain files")
+                with chdir(path):
+                    generator.write_toolchain_files()
+                continue
+
             try:
                 generator_class = self._generators[generator_name]
             except KeyError:
@@ -125,6 +134,15 @@ class GeneratorManager(object):
 
 def write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "The 'toolchain' attribute or method has been deprecated.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generators = ClassName' or 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        output.warn(msg)
+        warnings.warn(msg)
         output.highlight("Generating toolchain files")
         if callable(conanfile.toolchain):
             # This is the toolchain
@@ -141,3 +159,10 @@ def write_toolchain(conanfile, path, output):
                 tc.write_toolchain_files()
 
         # TODO: Lets discuss what to do with the environment
+
+    if hasattr(conanfile, "generate"):
+        assert callable(conanfile.generate), "generate should be a method, not an attribute"
+        output.highlight("Calling generate()")
+        with chdir(path):
+            with conanfile_exception_formatter(str(conanfile), "generate"):
+                conanfile.generate()

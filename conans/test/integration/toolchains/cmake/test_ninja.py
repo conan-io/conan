@@ -31,7 +31,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
             exports_sources = "CMakeLists.txt", "main.cpp"
 
-            def toolchain(self):
+            def generate(self):
                 tc = CMakeToolchain(self, generator="Ninja")
                 tc.write_toolchain_files()
 

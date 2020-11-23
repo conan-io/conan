@@ -34,7 +34,7 @@ class AndroidToolchainTestCase(unittest.TestCase):
                     options = {'shared': [True, False]}
                     default_options = {'shared': False}
 
-                    def toolchain(self):
+                    def generate(self):
                         tc = CMakeToolchain(self)
                         tc.write_toolchain_files()
 
