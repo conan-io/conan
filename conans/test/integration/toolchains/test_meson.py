@@ -12,7 +12,6 @@ from conans.util.files import decode_text
 from conans.util.runners import version_runner
 
 
-
 def get_meson_version():
     try:
         out = version_runner(["meson", "--version"])
@@ -29,7 +28,8 @@ def get_meson_version():
                      "requires meson >= 0.56.0")
 class MesonToolchainTest(unittest.TestCase):
     _conanfile_py = textwrap.dedent("""
-    from conans import ConanFile, MesonToolchain, tools
+    from conans import ConanFile, tools
+    from conan.tools.meson import MesonToolchain
 
 
     class App(ConanFile):
@@ -68,7 +68,8 @@ class MesonToolchainTest(unittest.TestCase):
 
     _meson_build = textwrap.dedent("""
     project('tutorial', 'cpp')
-    add_global_arguments('-DSTRING_DEFINITION="' + get_option('STRING_DEFINITION') + '"', language : 'cpp')
+    add_global_arguments('-DSTRING_DEFINITION="' + get_option('STRING_DEFINITION') + '"',
+                         language : 'cpp')
     add_global_arguments('-DHELLO_MSG="' + get_option('HELLO_MSG') + '"', language : 'cpp')
     hello = library('hello', 'hello.cpp')
     executable('demo', 'main.cpp', link_with: hello)
@@ -148,4 +149,3 @@ class MesonToolchainTest(unittest.TestCase):
 
         self.assertIn("hello: Release!", self.t.out)
         self.assertIn("STRING_DEFINITION: Text", self.t.out)
-

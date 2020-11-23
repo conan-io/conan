@@ -4,7 +4,7 @@ import platform
 from conans.client import tools
 from conans.client.build import join_arguments
 from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -37,7 +37,7 @@ def _cmake_cmd_line_args(conanfile, generator, parallel, msbuild_verbosity):
     return args
 
 
-class CMakeToolchainBuildHelper(object):
+class CMake(object):
     """ CMake helper to use together with the toolchain feature. It implements a very simple
     wrapper to call the cmake executable, but without passing compile flags, preprocessor
     definitions... all that is set by the toolchain. Only the generator and the CMAKE_TOOLCHAIN_FILE

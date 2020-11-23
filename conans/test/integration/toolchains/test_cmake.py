@@ -5,6 +5,7 @@ import time
 import unittest
 
 import pytest
+import six
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -19,7 +20,8 @@ from conans.test.utils.tools import TestClient
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -130,9 +132,9 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"], calls=["hello"],
-                                   preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE",
-                                                 "MYDEFINE_CONFIG"])
+        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
+                                   calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
+                                                                  "MYDEFINE", "MYDEFINE_CONFIG"])
         self.client.save({"app_lib.cpp": lib_cpp})
 
         content = self.client.load("CMakeLists.txt")
@@ -354,7 +356,8 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
