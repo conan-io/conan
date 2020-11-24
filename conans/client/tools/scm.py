@@ -102,10 +102,10 @@ class SCMBase(object):
         url_basic_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<url>.*)$")
 
         url_patterns = [
-            (scp_regex, self.handle_scp_pattern),
-            (url_user_pass_regex, self.handle_url_pattern),
-            (url_user_regex, self.handle_url_pattern),
-            (url_basic_regex, self.handle_url_pattern)
+            (scp_regex, self._handle_scp_pattern),
+            (url_user_pass_regex, self._handle_url_pattern),
+            (url_user_regex, self._handle_url_pattern),
+            (url_basic_regex, self._handle_url_pattern)
         ]
 
         for regex, handler in url_patterns:
