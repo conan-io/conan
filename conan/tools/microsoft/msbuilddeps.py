@@ -4,11 +4,10 @@ from xml.dom import minidom
 
 from conans.client.tools import VALID_LIB_EXTENSIONS
 from conans.errors import ConanException
-from conans.model import Generator
 from conans.util.files import load, save
 
 
-class MSBuildDeps(Generator):
+class MSBuildDeps(object):
 
     _vars_conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -66,14 +65,12 @@ class MSBuildDeps(Generator):
         """)
 
     def __init__(self, conanfile):
-        super(MSBuildDeps, self).__init__(conanfile)
+        self._conanfile = conanfile
         self.configuration = conanfile.settings.build_type
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # TODO: this is ugly, improve this
         self.output_path = os.getcwd()
-        # User configurable things
-        self._config_filename = None
 
     def generate(self):
         # TODO: Apply config from command line, something like
@@ -84,20 +81,12 @@ class MSBuildDeps(Generator):
         # config_filename
         # TODO: This is duplicated in write_generators() function, would need to be moved
         # to generators and called from there
-        generator_files = self.content
+        generator_files = self._content()
         for generator_file, content in generator_files.items():
             generator_file_path = os.path.join(self.output_path, generator_file)
-            self.conanfile.output.info("Generating {}".format(generator_file))
             save(generator_file_path, content)
 
-    @property
-    def filename(self):
-        return None
-
-    @property
-    def config_filename(self):
-        if self._config_filename is not None:
-            return self._config_filename
+    def _config_filename(self):
         # Default name
         props = [("Configuration", self.configuration),
                  ("Platform", self.platform)]
@@ -217,18 +206,17 @@ class MSBuildDeps(Generator):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    @property
-    def content(self):
+    def _content(self):
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
-        if not self.conanfile.settings.get_safe("build_type"):
+        if not self._conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
         general_name = "conan_deps.props"
-        conf_name = self.config_filename
+        conf_name = self._config_filename()
         condition = self._condition()
-        public_deps = self.conanfile.requires.keys()
+        public_deps = self._conanfile.requires.keys()
         result[general_name] = self._deps_props(general_name, public_deps)
-        for dep_name, cpp_info in self._deps_build_info.dependencies:
+        for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)
             vars_conf_content = self._pkg_config_props(dep_name, cpp_info)

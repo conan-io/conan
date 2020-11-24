@@ -3,7 +3,6 @@ import warnings
 from os.path import join
 
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.microsoft.msbuilddeps import MSBuildDeps
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -52,7 +51,6 @@ class GeneratorManager(object):
                             "qbs": QbsGenerator,
                             "scons": SConsGenerator,
                             "visual_studio": VisualStudioGenerator,
-                            "msbuild": MSBuildDeps,
                             "visual_studio_multi": VisualStudioMultiGenerator,
                             "visual_studio_legacy": VisualStudioLegacyGenerator,
                             "xcode": XCodeGenerator,
@@ -70,7 +68,7 @@ class GeneratorManager(object):
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "MakeToolchain", "MSBuildToolchain",
-                                "MesonToolchain"]
+                                "MesonToolchain", "MSBuildDeps", "msbuild"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -97,6 +95,9 @@ class GeneratorManager(object):
         elif generator_name == "MesonToolchain":
             from conan.tools.meson import MesonToolchain
             return MesonToolchain
+        elif generator_name in ("MSBuildDeps", "msbuild"):
+            from conan.tools.microsoft import MSBuildDeps
+            return MSBuildDeps
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -107,9 +108,20 @@ class GeneratorManager(object):
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name)
             if generator_class:
+                if generator_name == "msbuild":
+                    msg = (
+                        "\n*****************************************************************\n"
+                        "******************************************************************\n"
+                        "'msbuild' has been deprecated and moved.\n"
+                        "It will be removed in next Conan release.\n"
+                        "Use 'MSBuildDeps' method instead.\n"
+                        "********************************************************************\n"
+                        "********************************************************************\n")
+                    from conans.client.output import Color
+                    output.writeln(msg, front=Color.BRIGHT_RED)
                 try:
                     generator = generator_class(conanfile)
-                    output.highlight("Generating toolchain files")
+                    output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
                     with chdir(path):
                         generator.generate()
                     continue
