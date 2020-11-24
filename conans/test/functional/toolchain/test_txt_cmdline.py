@@ -36,15 +36,8 @@ class TestTxtCommandLine(unittest.TestCase):
         self.assertIn("[project options]", toolchain)
 
     def test_command_line(self):
-        conanfile = textwrap.dedent("""
-            [generators]
-            CMakeToolchain
-            MesonToolchain
-            MakeToolchain
-            MSBuildToolchain
-            """)
         client = TestClient()
-        client.save({"conanfile.txt": conanfile})
+        client.save({"conanfile.txt": ""})
         client.run("install . -g CMakeToolchain -g MesonToolchain "
                    "-g MakeToolchain -g MSBuildToolchain")
         self._check(client)
