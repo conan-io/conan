@@ -104,10 +104,6 @@ class MSBuildDeps(Generator):
         name = "".join("_%s" % v for _, v in props if v is not None)
         return name.lower()
 
-    @config_filename.setter
-    def config_filename(self, value):
-        self._config_filename = value
-
     def _condition(self):
         props = [("Configuration", self.configuration),
                  ("Platform", self.platform)]

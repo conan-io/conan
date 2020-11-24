@@ -517,35 +517,6 @@ class MSBuildGeneratorTest(unittest.TestCase):
                    ' -s compiler.runtime=MD -s arch=x86 -s build_type=Debug')
         self.assertIn("conanfile.py: Generating conan_pkg_mydebug_myx86.props", client.out)
 
-    def test_custom_configuration_filename(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/1.0@")
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.microsoft import MSBuildDeps
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                requires = "pkg/1.0"
-                def toolchain(self):
-                    ms = MSBuildDeps(self)
-                    ms.config_filename = "_{}-{}".format(self.settings.arch,
-                                                         self.settings.build_type)
-                    ms.generate()
-            """)
-        client.save({"conanfile.py": conanfile})
-
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD')
-        self.assertIn("conanfile.py: Generating conan_pkg_x86_64-Release.props", client.out)
-        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
-                   ' -s compiler.runtime=MD -s arch=x86 -s build_type=Debug')
-        self.assertIn("conanfile.py: Generating conan_pkg_x86-Debug.props", client.out)
-        props = client.load("conan_pkg.props")
-        self.assertIn('Project="conan_pkg_x86_64-Release.props"', props)
-        self.assertIn('Project="conan_pkg_x86-Debug.props"', props)
-
     def test_install_transitive(self):
         # https://github.com/conan-io/conan/issues/8065
         client = TestClient()
