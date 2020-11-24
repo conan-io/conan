@@ -119,7 +119,7 @@ Using tox
 
     $ python -m tox
 
-It will install the needed requirements and launch `nose` skipping some heavy and slow tests.
+It will install the needed requirements and launch `pytest` skipping some heavy and slow tests.
 If you want to run the full test suite:
 
 .. code-block:: bash
@@ -180,7 +180,7 @@ You can run the actual tests like this:
 
 .. code-block:: bash
 
-    $ python -m nose .
+    $ python -m pytest .
 
 
 There are a couple of test attributes defined, as ``slow`` that you can use
@@ -188,7 +188,7 @@ to filter the tests, and do not execute them:
 
 .. code-block:: bash
 
-    $ python -m nose . -a !slow
+    $ python -m pytest . -m "not slow"
 
 A few minutes later it should print ``OK``:
 
@@ -204,16 +204,16 @@ To run specific tests, you can specify the test name too, something like:
 
 .. code-block:: bash
 
-    $ python -m nose conans.test.command.config_install_test:ConfigInstallTest.install_file_test --nocapture
+    $ python -m pytest conans/test/unittests/client/cmd/export_test.py::ExportTest::test_export_warning -s
 
-The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
+The ``-s`` argument can be useful to see some output that otherwise is captured by pytest.
 
 Also, you can run tests against an instance of Artifactory. Those tests should add the attribute
 ``artifactory_ready``.
 
 .. code-block:: bash
 
-    $ python -m nose . -A artifactory_ready
+    $ python -m pytest . -m artifactory_ready
 
 Some environment variables have to be defined to run them. For example, for an
 Artifactory instance that is running on the localhost with default user and password configured, the

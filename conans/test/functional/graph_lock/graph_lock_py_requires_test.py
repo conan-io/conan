@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 
 
 class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
-    def transitive_py_requires_test(self):
+    def test_transitive_py_requires(self):
         # https://github.com/conan-io/conan/issues/5529
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -39,6 +39,41 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
 
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+
+    def test_inherit_with_init(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import os, re
+            class Base(object):
+                def init(self):
+                    self.versionFile = "1.2.3"
+                def set_name(self):
+                    self.name = self.bundleName
+                def set_version(self):
+                    self.version = self.versionFile
+
+            class PythonRequires(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pyreq/1.3.0@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class BundleBuilder(ConanFile):
+                python_requires = "pyreq/1.3.0"
+                python_requires_extend = "pyreq.Base"
+                bundleName = "BASE"
+            """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+
+        client.run("lock create conanfile.py --base --lockfile-out=base.lock")
+        base_lock = client.load("base.lock")
+        self.assertIn('pyreq/1.3.0', base_lock)
+
+        client.run("lock create conanfile.py --lockfile=base.lock --lockfile-out=conan.lock")
+        conan_lock = client.load("conan.lock")
+        self.assertIn('pyreq/1.3.0', conan_lock)
 
 
 class GraphLockPyRequiresTest(unittest.TestCase):
@@ -102,7 +137,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertEqual(pkg["python_requires"], [tool])
         self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
-    def install_info_test(self):
+    def test_install_info(self):
         client = self.client
         # Make sure to use temporary if to not change graph_info.json
         client.run("install . -if=tmp")
@@ -125,7 +160,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         client.run("info . --lockfile=conan.lock")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
-    def create_test(self):
+    def test_create(self):
         client = self.client
         client.run("create . Pkg/0.1@user/channel --lockfile=conan.lock --lockfile-out=conan.lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
@@ -134,7 +169,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertNotIn("Tool/0.2@user/channel", client.out)
         self._check_lock(self.pkg_ref, self.pkg_id)
 
-    def export_pkg_test(self):
+    def test_export_pkg(self):
         client = self.client
         client.run("export-pkg . Pkg/0.1@user/channel --install-folder=. --lockfile=conan.lock "
                    "--lockfile-out=conan.lock")

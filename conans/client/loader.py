@@ -17,7 +17,6 @@ from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.model.values import Values
 from conans.paths import DATA_YML
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
@@ -47,7 +46,11 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            return cached[0](self._output, self._runner, display, user, channel), cached[2]
+            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            if hasattr(conanfile, "init") and callable(conanfile.init):
+                with conanfile_exception_formatter(str(conanfile), "init"):
+                    conanfile.init()
+            return conanfile, cached[2]
 
         if lock_python_requires is not None:
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
@@ -183,7 +186,7 @@ class ConanFileLoader(object):
                         pkg_settings = settings
                         break
             if pkg_settings:
-                tmp_settings.values = Values.from_list(pkg_settings)
+                tmp_settings.update_values(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
 

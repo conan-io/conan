@@ -8,7 +8,7 @@ from conans.util.dates import from_timestamp_to_iso8601, from_iso8601_to_datetim
 
 class TimeTest(unittest.TestCase):
 
-    def time_conversions_test(self):
+    def test_time_conversions(self):
         timestamp = "1547138099"
         iso = from_timestamp_to_iso8601(timestamp)
         self.assertEqual(iso, "2019-01-10T16:34:59Z")

@@ -280,7 +280,7 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
-                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
+                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='pkg/version@user/channel of the package to be tested')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -559,7 +559,7 @@ class Command(object):
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local folder or zip file (local or "
+                                       help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
@@ -629,7 +629,8 @@ class Command(object):
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "description", "None"]
+                             "required", "date", "author", "description", "provides", "deprecated",
+                             "None"]
         path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
@@ -1260,6 +1261,7 @@ class Command(object):
     def search(self, *args):
         """
         Searches package recipes and binaries in the local cache or a remote.
+        Unless a remote is specified only the local cache is searched.
 
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided

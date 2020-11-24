@@ -9,7 +9,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConan
 
 class TestPackageTest(unittest.TestCase):
 
-    def basic_test(self):
+    def test_basic(self):
         client = TestClient()
         client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
@@ -17,7 +17,7 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
-    def test_only_test(self):
+    def test_test_only(self):
         test_conanfile = GenConanfile().with_test("pass")
         client = TestClient()
         client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("0.1"),
@@ -38,7 +38,7 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
         self.assertIn("Hello/0.1@lasote/stable (test package): Running test()", client.out)
 
-    def wrong_version_test(self):
+    def test_wrong_version(self):
         # FIXME Conan 2.0: an incompatible requirement in test_package do nothing
         test_conanfile = GenConanfile().with_test("pass").with_require("Hello/0.2@user/cc")
         client = TestClient()
@@ -47,7 +47,7 @@ class TestPackageTest(unittest.TestCase):
         client.run("create . user/channel")
         self.assertNotIn("Hello/0.2", client.out)
 
-    def other_requirements_test(self):
+    def test_other_requirements(self):
         test_conanfile = (GenConanfile().with_require("other/0.2@user2/channel2")
                                         .with_require("Hello/0.1@user/channel")
                                         .with_test("pass"))
@@ -67,7 +67,7 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
 
-    def test_with_path_errors_test(self):
+    def test_test_with_path_errors(self):
         client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
@@ -84,7 +84,7 @@ class TestPackageTest(unittest.TestCase):
                       % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
                       client.out)
 
-    def build_folder_handling_test(self):
+    def test_build_folder_handling(self):
         test_conanfile = GenConanfile().with_test("pass")
         # Create a package which can be tested afterwards.
         client = TestClient()
@@ -122,7 +122,7 @@ class TestPackageTest(unittest.TestCase):
                                                     "build_folder")))
         self.assertFalse(os.path.exists(default_build_dir))
 
-    def check_version_test(self):
+    def test_check_version(self):
         client = TestClient()
         dep = textwrap.dedent("""
             from conans import ConanFile

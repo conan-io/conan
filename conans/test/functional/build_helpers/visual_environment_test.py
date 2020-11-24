@@ -110,7 +110,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
                 "_LINK_": "-myexelinkflag -mysharedlinkflag gdi32.lib user32.lib"
             })
 
-    def build_type_toolset_test(self):
+    def test_build_type_toolset(self):
         profile = """
 [settings]
 os=Windows

@@ -200,6 +200,16 @@ class GraphLockNode(object):
             self._modified = True  # Only for conan_build_info
         self._prev = value
 
+    def unlock_prev(self):
+        """ for creating a new lockfile from an existing one, when specifying --build, it
+        should make prev=None in order to unlock it and allow building again"""
+        if self._prev is None:
+            return  # Already unlocked
+        if not self._relaxed:
+            raise ConanException("Cannot build '%s' because it is already locked in the "
+                                 "input lockfile" % repr(self._ref))
+        self._prev = None
+
     def complete_base_node(self, package_id, prev):
         # completing a node from a base lockfile shouldn't mark the node as modified
         self.package_id = package_id
@@ -228,7 +238,8 @@ class GraphLockNode(object):
         if python_requires:
             python_requires = [ConanFileReference.loads(py_req, validate=False)
                                for py_req in python_requires]
-        options = OptionsValues.loads(data.get("options", ""))
+        options = data.get("options")
+        options = OptionsValues.loads(options) if options else None
         modified = data.get("modified")
         context = data.get("context")
         requires = data.get("requires", [])
@@ -491,8 +502,9 @@ class GraphLock(object):
                                      % (node.ref, node.id))
         else:
             node.graph_lock_node = locked_node
-            node.conanfile.options.values = locked_node.options
-            node.conanfile.options.freeze()
+            if locked_node.options is not None:  # This was a "partial" one, not a "base" one
+                node.conanfile.options.values = locked_node.options
+                node.conanfile.options.freeze()
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from

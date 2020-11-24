@@ -64,7 +64,7 @@ VSVersionInfo(
         StringStruct(u'CompanyName', u'JFrog'),
         StringStruct(u'FileDescription', u'Conan C, C++ Open Source Package Manager'),
         StringStruct(u'FileVersion', u'{version}'),
-        StringStruct(u'LegalCopyright', u'Copyright 2018 JFrog'),
+        StringStruct(u'LegalCopyright', u'Copyright 2020 JFrog'),
         StringStruct(u'ProductName', u'Conan'),
         StringStruct(u'ProductVersion', u'{version}')])
       ]),
@@ -90,7 +90,9 @@ def pyinstall(source_folder):
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
-    hidden = "--hidden-import=glob"
+    hidden = ("--hidden-import=glob --hidden-import=conan.tools.microsoft "
+              "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
+              "--hidden-import=conan.tools.meson")
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""
@@ -132,8 +134,8 @@ if __name__ == "__main__":
         print("pyinstaller does not yet support python 3.8, "
               "see: https://github.com/pyinstaller/pyinstaller/issues/4311", file=sys.stderr)
         exit(1)
-    source_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    output_folder = pyinstall(source_folder)
+    src_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    output_folder = pyinstall(src_folder)
     print("\n**************Conan binaries created!******************\n"
           "\nAppend this folder to your system PATH: '%s'\n"
           "Feel free to move the whole folder to another location." % output_folder)
