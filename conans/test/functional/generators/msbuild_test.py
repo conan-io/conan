@@ -419,7 +419,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "Hello1/1.0", "Hello3/1.0"
-                generators = "msbuild"
+                generators = "MSBuildDeps"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
@@ -549,5 +549,6 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
         client.save(files, clean_first=True)
         client.run("install .")
+        self.assertIn("'msbuild' has been deprecated and moved.", client.out)
         client.run("build .")
         self.assertNotIn("warning MSB4011", client.out)

@@ -42,7 +42,10 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        self.assertIn("conanfile.py: Generating toolchain files", client.out)
+        self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MakeToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
         toolchain = client.load("conantoolchain.props")
