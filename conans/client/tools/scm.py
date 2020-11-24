@@ -69,8 +69,6 @@ class SCMBase(object):
         return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
 
     def _handle_url_pattern(self, scheme, url, user=None, password=None):
-        the_user = user or self._username
-        the_password = password or self._password
         if scheme == "file":
             if self._username:
                 self._output.warn("SCM username cannot be set for file url, ignoring parameter")
