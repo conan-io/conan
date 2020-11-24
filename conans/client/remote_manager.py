@@ -95,7 +95,7 @@ class RemoteManager(object):
             uncompress_file(tgz_file, export_folder, output=self._output)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
-            os.rename(file_path, os.path.join(export_folder, file_name))
+            shutil.move(file_path, os.path.join(export_folder, file_name))
 
         # Make sure that the source dir is deleted
         rm_conandir(package_layout.source())
@@ -176,7 +176,7 @@ class RemoteManager(object):
                 uncompress_file(tgz_file, package_folder, output=self._output)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
-                os.rename(file_path, os.path.join(package_folder, file_name))
+                shutil.move(file_path, os.path.join(package_folder, file_name))
 
             # Issue #214 https://github.com/conan-io/conan/issues/214
             touch_folder(package_folder)
