@@ -61,7 +61,7 @@ class SCMBase(object):
                     else:
                         return self._runner(command)
 
-    def handle_scp_pattern(self, user, domain, url):
+    def _handle_scp_pattern(self, user, domain, url):
         if self._password:
             self._output.warn("SCM password cannot be set for scp url, ignoring parameter")
         if self._username:
