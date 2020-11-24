@@ -29,7 +29,7 @@ class Base(unittest.TestCase):
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
 
-            def toolchain(self):
+            def generate(self):
                 tc = CMakeToolchain(self)
                 tc.variables["MYVAR"] = "MYVAR_VALUE"
                 tc.variables["MYVAR2"] = "MYVAR_VALUE2"
@@ -40,7 +40,7 @@ class Base(unittest.TestCase):
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 cmake = CMake(self)
@@ -361,9 +361,9 @@ class CMakeInstallTest(unittest.TestCase):
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
-                def toolchain(self):
+                def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()

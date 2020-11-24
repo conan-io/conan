@@ -48,7 +48,7 @@ class MesonToolchainTest(unittest.TestCase):
             tc.definitions["FALSE_DEFINITION"] = False
             tc.definitions["INT_DEFINITION"] = 42
             tc.definitions["ARRAY_DEFINITION"] = ["Text1", "Text2"]
-            tc.write_toolchain_files()
+            tc.generate()
 
         def build(self):
             # this will be moved to build helper eventually

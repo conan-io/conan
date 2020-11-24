@@ -20,9 +20,9 @@ conanfile_py = textwrap.dedent("""
         generators = "msbuild"
         requires = "hello/0.1"
 
-        def toolchain(self):
+        def generate(self):
             tc = MSBuildToolchain(self)
-            tc.write_toolchain_files()
+            tc.generate()
 
         def build(self):
             msbuild = MSBuild(self)

@@ -47,6 +47,8 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
 def _validate_fpic(conanfile):
     v2_mode = get_env(CONAN_V2_MODE_ENVVAR, False)
+    # FIXME: The toolchain() has dissapeared, but now it is integrated with generators.
+    # FIXME: Not sure this check should be here, this could raise before the graph is fully evaluated
     toolchain = hasattr(conanfile, "toolchain")
 
     if not (toolchain or v2_mode):

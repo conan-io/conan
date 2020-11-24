@@ -174,6 +174,6 @@ class MesonToolchain(object):
         # TODO : cross-building
         pass
 
-    def write_toolchain_files(self):
+    def generate(self):
         self._write_native_file()
         self._write_cross_file()
