@@ -122,6 +122,7 @@ class GeneratorManager(object):
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
+                    generator.output_path = path
                     with chdir(path):
                         generator.generate()
                     continue
