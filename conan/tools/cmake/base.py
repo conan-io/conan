@@ -175,7 +175,7 @@ class CMakeToolchainBase(object):
         ConanOutput(self._conanfile.output._stream,
                     color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
         warnings.warn(msg)
-        return self.generate()
+       self.generate()
 
     def generate(self):
         # Prepare templates to be loaded
