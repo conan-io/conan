@@ -68,7 +68,7 @@ class SCMBase(object):
             self._output.warn("SCM username got from URL, ignoring 'username' parameter")
         return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
 
-    def handle_url_pattern(self, scheme, url, user=None, password=None):
+    def _handle_url_pattern(self, scheme, url, user=None, password=None):
         the_user = user or self._username
         the_password = password or self._password
         if scheme == "file":
