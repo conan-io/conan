@@ -116,7 +116,7 @@ class VisualStudioTest(unittest.TestCase):
             class Consumer(ConanFile):
                 name = "Consumer"
                 version = "0.1"
-                       
+
                 requires = "mylib/1.0@us/ch"
                 generators = "visual_studio"
                 """)

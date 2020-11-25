@@ -99,10 +99,10 @@ class MSBuildToolchain(object):
                         xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
                     <ImportGroup Label="PropertySheets" >
                     </ImportGroup>
-                    <PropertyGroup Label="Conan-PackageInfo">
+                    <PropertyGroup Label="ConanPackageInfo">
                         <ConanPackageName>{}</ConanPackageName>
                         <ConanPackageVersion>{}</ConanPackageVersion>
-                    </PropertyGroup>                    
+                    </PropertyGroup>
                 </Project>
                 """)
 
