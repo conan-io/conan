@@ -111,8 +111,23 @@ class _PackageBuilder(object):
         if not getattr(conanfile, 'no_copy_source', False):
             self._output.info('Copying sources to build folder')
             try:
-                copier = FileCopier([source_folder], build_folder)
-                copier("*", links=True)
+                inodes = dict()
+
+                def copy_or_link(srcname, dstname):
+                    inode = os.stat(srcname).st_ino
+                    if inode in inodes:
+                        try:
+                            os.link(inodes[inode], dstname)
+                        except OSError:
+                            shutil.copy2(srcname, dstname)
+                    else:
+                        shutil.copy2(srcname, dstname)
+                        inodes[inode] = dstname
+
+                shutil.copytree(source_folder, build_folder, symlinks=True,
+                                copy_function=copy_or_link)
+                #copier = FileCopier([source_folder], build_folder)
+                #copier("*", links=True)
             # Should we preserve same treatment for FileCopier?
             except Exception as e:
                 msg = str(e)
