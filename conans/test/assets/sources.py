@@ -9,7 +9,7 @@ _function_cpp = r"""
 
 {% for it in includes -%}
 #include "{{it}}.h"
-{%- endfor %}
+{% endfor %}
 
 int {{name}}(){
     #ifdef NDEBUG
@@ -34,13 +34,45 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} _MSVC_LANG" << _MSVC_LANG<< "\n";
     #endif
 
+    #if __INTEL_COMPILER
+    std::cout << "  {{ msg or name }} __INTEL_COMPILER" << __INTEL_COMPILER<< "\n";
+    #endif
+
+    #if __GNUC__
+    std::cout << "  {{ msg or name }} __GNUC__" << __GNUC__<< "\n";
+    #endif
+
+    #if __GNUC_MINOR__
+    std::cout << "  {{ msg or name }} __GNUC_MINOR__" << __GNUC_MINOR__<< "\n";
+    #endif
+
+    #if __clang_major__
+    std::cout << "  {{ msg or name }} __clang_major__" << __clang_major__<< "\n";
+    #endif
+
+    #if __clang_minor__
+    std::cout << "  {{ msg or name }} __clang_minor__" << __clang_minor__<< "\n";
+    #endif
+
+    #if __apple_build_version__
+    std::cout << "  {{ msg or name }} __apple_build_version__" << __apple_build_version__<< "\n";
+    #endif
+
+    #if __i386__
+    std::cout << "  {{ msg or name }} __i386__ defined\n";
+    #endif
+
+    #if __x86_64__
+    std::cout << "  {{ msg or name }} __x86_64__ defined\n";
+    #endif
+
     {% for it in preprocessor -%}
     std::cout << "  {{msg}} {{it}}: " <<  {{it}} << "\n";
     {%- endfor %}
 
     {% for it in calls -%}
     {{it}}();
-    {%- endfor %}
+    {% endfor %}
     return 0;
 }
 """

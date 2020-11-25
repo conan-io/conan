@@ -21,6 +21,7 @@ class MSBuildTest(unittest.TestCase):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
     def test_build_vs_project(self):
         conan_build_vs = """
@@ -104,6 +105,7 @@ class HelloConan(ConanFile):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_user_properties_file(self):
         conan_build_vs = textwrap.dedent("""
@@ -157,6 +159,7 @@ class HelloConan(ConanFile):
 
     @attr('slow')
     @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_user_properties_multifile(self):
         conan_build_vs = textwrap.dedent("""
@@ -223,6 +226,7 @@ class HelloConan(ConanFile):
         content = load(conan_props)
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_reuse_msbuild_object(self):
         # https://github.com/conan-io/conan/issues/2865
@@ -255,6 +259,7 @@ class HelloConan(ConanFile):
 
     @parameterized.expand([("True",), ("'my_log.binlog'",)])
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.tool_visual_studio
     def test_binary_log_build(self, value):
         conan_build_vs = """
 from conans import ConanFile, MSBuild

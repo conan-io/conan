@@ -13,6 +13,7 @@ from conans.util.log import logger
 
 class JWTAuth(AuthBase):
     """Attaches JWT Authentication to the given Request object."""
+
     def __init__(self, token):
         self.token = token
 
@@ -42,6 +43,7 @@ def handle_return_deserializer(deserializer=None):
     Map exceptions and http return codes and deserialize if needed.
 
     deserializer: Function for deserialize values"""
+
     def handle_return(method):
         def inner(*argc, **argv):
             ret = method(*argc, **argv)
@@ -50,7 +52,9 @@ def handle_return_deserializer(deserializer=None):
                 text = ret.text if ret.status_code != 404 else "404 Not found"
                 raise get_exception_from_error(ret.status_code)(text)
             return deserializer(ret.content) if deserializer else decode_text(ret.content)
+
         return inner
+
     return handle_return
 
 
@@ -169,19 +173,20 @@ class RestCommonMethods(object):
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
-    def get_json(self, url, data=None):
-        headers = self.custom_headers
+    def get_json(self, url, data=None, headers=None):
+        req_headers = self.custom_headers.copy()
+        req_headers.update(headers or {})
         if data:  # POST request
-            headers.update({'Content-type': 'application/json',
-                            'Accept': 'application/json'})
+            req_headers.update({'Content-type': 'application/json',
+                                'Accept': 'application/json'})
             logger.debug("REST: post: %s" % url)
-            response = self.requester.post(url, auth=self.auth, headers=headers,
+            response = self.requester.post(url, auth=self.auth, headers=req_headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
             logger.debug("REST: get: %s" % url)
-            response = self.requester.get(url, auth=self.auth, headers=headers,
+            response = self.requester.get(url, auth=self.auth, headers=req_headers,
                                           verify=self.verify_ssl,
                                           stream=True)
 
@@ -244,4 +249,3 @@ class RestCommonMethods(object):
         url = self.router.search_packages(ref, query)
         package_infos = self.get_json(url)
         return package_infos
-
