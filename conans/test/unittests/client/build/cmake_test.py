@@ -484,7 +484,9 @@ class CMakeTest(unittest.TestCase):
         with tools.chdir(self.tempdir):
             linux_stuff = ""
             if platform.system() != "Linux":
-                linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSROOT="/path/to/sysroot" '
+                linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
+                              '-DCMAKE_SYSTEM_PROCESSOR="i386" ' \
+                              '-DCMAKE_SYSROOT="/path/to/sysroot" '
             generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
 
             flags = '{} -DCONAN_COMPILER="gcc" ' \
@@ -659,8 +661,21 @@ class CMakeTest(unittest.TestCase):
                 cross = ""
                 skip_x64_x86 = the_os in ['Windows', 'Linux']
                 if cmake_system_name and cross_building(conanfile, skip_x64_x86=skip_x64_x86):
-                    cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
-                             % ({"Macos": "Darwin"}.get(the_os, the_os), cross_ver))
+                    if the_os in ["WindowsStore", "WindowsCE", "Windows"]:
+                        arch_map = {"armv8": "ARM64",
+                                    "armv7": "ARM",
+                                    "x86": "x86",
+                                    "x86_64": "AMD64"}
+                    else:
+                        arch_map = {"armv8": "aarch64",
+                                    "armv7":  "arm",
+                                    "x86": "i386",
+                                    "x86_64": "x86_64",
+                                    "sparcv9": "sparc64"}
+                    cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" "
+                             "-DCMAKE_SYSTEM_PROCESSOR=\"%s\" "
+                             "%s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                             % ({"Macos": "Darwin"}.get(the_os, the_os), arch_map.get(arch, arch), cross_ver))
                 cmake = CMake(conanfile, generator=generator, cmake_system_name=cmake_system_name,
                               set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_IN_LOCAL_CACHE", "%s-DCONAN_IN_LOCAL_CACHE" % cross)
@@ -796,6 +811,7 @@ class CMakeTest(unittest.TestCase):
               '-DCMAKE_EXPORT_NO_PACKAGE_REGISTRY="ON" -DCONAN_EXPORTED="1" -Wno-dev' % cmakegen,
               "")
 
+        settings.arch = "sparc"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.os = "WindowsStore"
@@ -857,7 +873,9 @@ build_type: [ Release]
 
         cmake = CMake(conanfile)
         generator = "Unix" if platform.system() != "Windows" else "MinGW"
-        cross = ("-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+        cross = ("-DCMAKE_SYSTEM_NAME=\"Linux\" "
+                 "-DCMAKE_SYSTEM_PROCESSOR=\"x86_64\" "
+                 "-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                  if platform.system() != "Linux" else "")
         self.assertEqual('-G "%s Makefiles" %s-DCONAN_IN_LOCAL_CACHE="OFF" '
                          '-DCONAN_COMPILER="gcc" '
@@ -941,6 +959,7 @@ build_type: [ Release]
         cmake = CMake(conanfile)
 
         cross = '-DCMAKE_SYSTEM_NAME="Android"' \
+                ' -DCMAKE_SYSTEM_PROCESSOR="arm"' \
                 ' -DCMAKE_SYSTEM_VERSION="{0}"' \
                 ' -DCMAKE_SYSROOT="/path/to/sysroot"' \
                 ' -DCMAKE_ANDROID_ARCH_ABI="armeabi-v7a"' \
@@ -1579,3 +1598,26 @@ build_type: [ Release]
         cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64", toolset="v141,host=x64")
         self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "v141,host=x64"', cmake.command_line)
+
+    @parameterized.expand([('Linux', 'armv7', 'Linux', 'arm'),
+                           ('Linux', 'armv8', 'Linux', 'aarch64'),
+                           ('FreeBSD', 'x86', 'FreeBSD', 'i386'),
+                           ('SunOS', 'sparcv9', 'SunOS', 'sparc64'),
+                           ('Windows', 'x86', 'Windows', 'x86'),
+                           ('Windows', 'x86_64', 'Windows', 'AMD64'),
+                           ('Windows', 'armv7', 'Windows', 'ARM'),
+                           ('Windows', 'armv8', 'Windows', 'ARM64'),
+                           ])
+    def test_cmake_system_processor(self, os_, arch_, system_name, system_processor):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = os_
+        settings.arch = arch_
+        settings.os_build = "Linux"
+        settings.arch_build = "x86_64"
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_NAME"], system_name)
+        self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], system_processor)

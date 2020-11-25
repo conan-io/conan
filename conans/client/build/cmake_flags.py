@@ -172,6 +172,61 @@ class CMakeDefinitionsBuilder(object):
         definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
+    @staticmethod
+    def _cmake_system_name(os_, cmake_version):
+        apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
+            "3.14") or not cmake_version else None
+        cmake_system_name_map = {"Macos": "Darwin",
+                                 "iOS": apple_system_name or "iOS",
+                                 "tvOS": apple_system_name or "tvOS",
+                                 "watchOS": apple_system_name or "watchOS",
+                                 "Neutrino": "QNX",
+                                 "": "Generic",
+                                 None: "Generic"}
+        return cmake_system_name_map.get(os_, os_)
+
+    @staticmethod
+    def _cmake_system_processor(os_, arch):
+        if os_ in ["Windows", "WindowsStore", "WindowsCE"]:
+            # Windows: PROCESSOR_ARCHITECTURE
+            # https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details
+            cmake_system_processor_map = {"x86_64": "AMD64",
+                                          "x86": "x86",
+                                          "ia64": "IA64",
+                                          "armv5hf": "ARM",
+                                          "armv6": "ARM",
+                                          "armv7": "ARM",
+                                          "armv7hf": "ARM",
+                                          "armv7s": "ARM",
+                                          "armv7k": "ARM",
+                                          "armv8": "ARM64",
+                                          "armv8_32": "ARM64",
+                                          "armv8.3": "ARM64"}
+        else:
+            cmake_system_processor_map = {"x86_64": "x86_64",
+                                          "x86": "i386",
+                                          "ia64": "ia64",
+                                          "armv5hf": "arm",
+                                          "armv6": "arm",
+                                          "armv7": "arm",
+                                          "armv7hf": "arm",
+                                          "armv7s": "arm",
+                                          "armv7k": "arm",
+                                          "armv8": "aarch64",
+                                          "armv8_32": "aarch64",
+                                          "armv8.3": "aarch64",
+                                          "sparc": "sparc",
+                                          "sparcv9": "sparc64",
+                                          "s390": "s390",
+                                          "s390x": "s390x",
+                                          "mips": "mips",
+                                          "mips64": "mips64",
+                                          "ppc32be": "pcc",
+                                          "ppc32": "ppcle",
+                                          "ppc64le": "ppc64le",
+                                          "ppc64": "ppc64"}
+        return cmake_system_processor_map.get(arch, arch)
+
     def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
@@ -182,7 +237,7 @@ class CMakeDefinitionsBuilder(object):
         env_sn = {"False": False, "True": True, "": None}.get(env_sn, env_sn)
         cmake_system_name = env_sn or self._forced_cmake_system_name
 
-        os_build, _, _, _ = get_cross_building_settings(self._conanfile)
+        os_build, arch_build, _, _ = get_cross_building_settings(self._conanfile)
         compiler = self._ss("compiler")
         libcxx = self._ss("compiler.libcxx")
 
@@ -204,16 +259,8 @@ class CMakeDefinitionsBuilder(object):
         else:  # detect if we are cross building and the system name and version
             skip_x64_x86 = os_ in ['Windows', 'Linux', 'SunOS', 'AIX']
             if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
-                apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
-                    "3.14") or not cmake_version else None
-                cmake_system_name_map = {"Macos": "Darwin",
-                                         "iOS": apple_system_name or "iOS",
-                                         "tvOS": apple_system_name or "tvOS",
-                                         "watchOS": apple_system_name or "watchOS",
-                                         "Neutrino": "QNX",
-                                         "": "Generic",
-                                         None: "Generic"}
-                definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name_map.get(os_, os_)
+                definitions["CMAKE_SYSTEM_NAME"] = self._cmake_system_name(os_, cmake_version)
+                definitions["CMAKE_SYSTEM_PROCESSOR"] = self._cmake_system_processor(os_, arch)
 
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
