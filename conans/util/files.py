@@ -446,15 +446,16 @@ def merge_directories(src, dst, excluded=None):
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir)
 
-        inodes = [os.stat(os.path.join(src_dir, filename)).st_ino for filename in files]
-        inodes = set([node for node in inodes if inodes.count(node) > 1])
+        inodes = {}
 
         for file_ in files:
             src_file = os.path.join(src_dir, file_)
             dst_file = os.path.join(dst_dir, file_)
+            inode = os.stat(src_file).st_ino
             if os.path.islink(src_file):
                 link_to_rel(src_file)
-            elif os.stat(os.path.join(src_dir, file_)).st_ino in inodes:
-                safe_hardlink(src_file, dst_file)
+            elif inode in inodes:
+                safe_hardlink(inodes[inode], dst_file)
             else:
                 shutil.copy2(src_file, dst_file)
+                inodes[inode] = dst_file

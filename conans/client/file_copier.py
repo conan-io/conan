@@ -222,8 +222,7 @@ class FileCopier(object):
         managing symlinks if necessary
         """
         copied_files = []
-        inodes = [os.stat(os.path.join(src, filename)).st_ino for filename in files]
-        inodes = set([node for node in inodes if inodes.count(node) > 1])
+        inodes = {}
 
         for filename in files:
             abs_src_name = os.path.join(src, filename)
@@ -243,8 +242,10 @@ class FileCopier(object):
             else:
                 inode = os.stat(abs_src_name).st_ino
                 if inode in inodes:
-                    safe_hardlink(abs_src_name, abs_dst_name)
+                    safe_hardlink(inodes[inode], abs_dst_name)
                 else:
                     shutil.copy2(abs_src_name, abs_dst_name)
+                    inodes[inode] = abs_dst_name
+
             copied_files.append(abs_dst_name)
         return copied_files
