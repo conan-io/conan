@@ -1,27 +1,42 @@
 from urllib.parse import urlsplit, urlunsplit
+
+from six.moves.urllib.parse import quote
+
+from conans.client.rest.file_uploader import FileUploader
 from conans.util.sha import sha256 as sha256_sum
 
 
 class ArtifactoryCacheDownloader(object):
 
-    def __init__(self, rt_base_url, file_downloader, requester, user_download=False):
+    def __init__(self, rt_base_url, file_downloader, requester, output, verify, config,
+                 user_download=False):
         self._rt_base_url = rt_base_url  # TBD: expected full url with credentials
         self._file_downloader = file_downloader
         self._user_download = user_download
         self._requester = requester
+        self._file_uploader = FileUploader(requester, output, verify, config)
 
     def _put(self, rt_path, file_path, **props):
         """ Put the 'local_filepath' to remote and assign given properties """
-        pass
+        try:
+            matrix_params_str = ";".join(
+                ["{}={}".format(key, quote(value, safe='')) for key, value in props.items()])
+            url = self._rt_base_url + ";" + matrix_params_str + "/" + rt_path
+            self._file_uploader.upload(url, abs_path=file_path)
+        except Exception as e:
+            # TODO: Check different exceptions
+            return None
 
     def _try_get(self, rt_path, file_path):
         """ Try to get remote file, return None if file is not found """
         try:
             url = self._rt_base_url + "/" + rt_path
-            response = self._requester.get(url, stream=True, verify=False)
-
-        except Exception as exc:
-
+            # TODO: Here we want to invoke requester, not my chained file_downloader
+            self._file_downloader.download(url=url, file_path=file_path)
+            return True
+        except Exception:
+            # TODO: Check different exceptions
+            return None
 
     def _rt_path(self, url, checksum=None):
         # TODO: Chain classes, use same implementation as 'file_downloader'

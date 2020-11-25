@@ -46,8 +46,10 @@ class CachedFileDownloader(object):
             try:
                 if not os.path.exists(cached_path):
                     try:
-                        self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
-                                                       overwrite, headers)
+                        self._file_downloader.download(url, file_path=cached_path, auth=auth,
+                                                       retry=retry, retry_wait=retry_wait,
+                                                       overwrite=overwrite, headers=headers,
+                                                       md5=md5, sha1=sha1, sha256=sha256)
                         self._check_checksum(cached_path, md5, sha1, sha256)
                     except Exception:
                         if os.path.exists(cached_path):

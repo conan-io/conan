@@ -45,7 +45,8 @@ class RestV2Methods(RestCommonMethods):
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         artifactory_cache = self._config.artifactory_cache
         if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+                                                    None, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
         contents = downloader.download(url, auth=self.auth, headers=headers)
@@ -223,7 +224,8 @@ class RestV2Methods(RestCommonMethods):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         artifactory_cache = self._config.artifactory_cache
         if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+                                                    self._output, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz

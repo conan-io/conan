@@ -48,7 +48,8 @@ class RestV1Methods(RestCommonMethods):
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
         artifactory_cache = self._config.artifactory_cache
         if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+                                                    None, self.verify_ssl, self._config)
         download_cache = self._config.download_cache
         if download_cache:
             assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
@@ -195,7 +196,8 @@ class RestV1Methods(RestCommonMethods):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
         artifactory_cache = self._config.artifactory_cache
         if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+                                                    self._output, self.verify_ssl, self._config)
         download_cache = self._config.download_cache
         if download_cache:
             assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"

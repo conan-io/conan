@@ -93,7 +93,9 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
     artifactory_cache = config.artifactory_cache
     if artifactory_cache:
-        downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
+        downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, requester=requester,
+                                                output=out, verify=verify, config=config,
+                                                user_download=True)
     if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
 
