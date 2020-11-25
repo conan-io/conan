@@ -136,6 +136,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.client.run_command("file libfoobard.dylib")
         self.assertIn("64-bit dynamically linked shared library x86_64", self.client.out)
 
+    @unittest.skip("Requires a specific profile on Windows")
     def test_devflow_build(self):
         """ Ninja build must proceed using default profile and conan development flow
         """
