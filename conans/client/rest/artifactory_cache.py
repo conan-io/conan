@@ -47,6 +47,7 @@ class ArtifactoryCacheDownloader(object):
         if checksum is not None:
             url += checksum
         h = sha256_sum(url.encode())
+        h = "{}/{}/{}".format(h[:2], h[2:4], h[4:])  # This will help Artifactory UI
         return h
 
     def download(self, url, file_path, md5=None, sha1=None, sha256=None, *args, **kwargs):

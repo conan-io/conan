@@ -43,9 +43,9 @@ class RestV2Methods(RestCommonMethods):
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        artifactory_cache = self._config.artifactory_cache
-        if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+        sources_backup = self._config.sources_backup
+        if sources_backup:
+            downloader = ArtifactoryCacheDownloader(sources_backup, downloader, self.requester,
                                                     None, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
@@ -222,9 +222,9 @@ class RestV2Methods(RestCommonMethods):
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
-        artifactory_cache = self._config.artifactory_cache
-        if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+        sources_backup = self._config.sources_backup
+        if sources_backup:
+            downloader = ArtifactoryCacheDownloader(sources_backup, downloader, self.requester,
                                                     self._output, self.verify_ssl, self._config)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)

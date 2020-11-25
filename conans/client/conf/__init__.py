@@ -446,10 +446,10 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def artifactory_cache(self):
+    def sources_backup(self):
         try:
-            artifactory_cache = self.get_item("storage.artifactory_cache")
-            return artifactory_cache
+            sources_backup = self.get_item("storage.sources_backup")
+            return sources_backup
         except ConanException:
             return None
 

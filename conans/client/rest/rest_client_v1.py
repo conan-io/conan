@@ -46,9 +46,9 @@ class RestV1Methods(RestCommonMethods):
         Its a generator, so it yields elements for memory performance
         """
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        artifactory_cache = self._config.artifactory_cache
-        if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+        sources_backup = self._config.sources_backup
+        if sources_backup:
+            downloader = ArtifactoryCacheDownloader(sources_backup, downloader, self.requester,
                                                     None, self.verify_ssl, self._config)
         download_cache = self._config.download_cache
         if download_cache:
@@ -194,9 +194,9 @@ class RestV1Methods(RestCommonMethods):
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
-        artifactory_cache = self._config.artifactory_cache
-        if artifactory_cache:
-            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader, self.requester,
+        sources_backup = self._config.sources_backup
+        if sources_backup:
+            downloader = ArtifactoryCacheDownloader(sources_backup, downloader, self.requester,
                                                     self._output, self.verify_ssl, self._config)
         download_cache = self._config.download_cache
         if download_cache:
