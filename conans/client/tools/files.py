@@ -2,6 +2,7 @@ import gzip
 import logging
 import os
 import platform
+import stat
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -224,17 +225,34 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
+@contextmanager
+def add_permissions(file_path, permissions):
+    if os.path.isfile(file_path):
+        saved_permissions = os.stat(file_path).st_mode
+        if saved_permissions & permissions == permissions:
+            yield
+            return
+        try:
+            os.chmod(file_path, saved_permissions | permissions)
+            yield
+        finally:
+            os.chmod(file_path, saved_permissions)
+    else:
+        yield
+
 def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
     encoding_in = encoding or "auto"
     encoding_out = encoding or "utf-8"
-    content = load(file_path, encoding=encoding_in)
+    with add_permissions(file_path, stat.S_IREAD):
+        content = load(file_path, encoding=encoding_in)
     if -1 == content.find(search):
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with add_permissions(file_path, stat.S_IWRITE):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
@@ -250,7 +268,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
 
     encoding_in = encoding or "auto"
     encoding_out = encoding or "utf-8"
-    content = load(file_path, encoding=encoding_in)
+    with add_permissions(file_path, stat.S_IREAD):
+        content = load(file_path, encoding=encoding_in)
     normalized_content = normalized_text(content)
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
@@ -264,20 +283,23 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         index = normalized_content.find(normalized_search)
 
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with add_permissions(file_path, stat.S_IWRITE):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):
-    content = load(pc_file)
+    with add_permissions(pc_file, stat.S_IREAD):
+        content = load(pc_file)
     lines = []
     for line in content.splitlines():
         if line.startswith("prefix="):
             lines.append('prefix=%s' % new_prefix)
         else:
             lines.append(line)
-    save(pc_file, "\n".join(lines))
+    with add_permissions(pc_file, stat.S_IWRITE):
+        save(pc_file, "\n".join(lines))
 
 
 def _path_equals(path1, path2):
