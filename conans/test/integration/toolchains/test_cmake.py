@@ -152,7 +152,9 @@ class Base(unittest.TestCase):
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s" % (settings, options))
             install_out = self.client.out
+            print(install_out)
             self.client.run("build ..")
+            print(self.client.out)
         return install_out
 
     def _modify_code(self):
@@ -273,8 +275,8 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        self._run_build(settings, options)
-        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", self.client.out)
+        install_out = self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
         self.assertIn("The C compiler identification is GNU", self.client.out)
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
@@ -309,21 +311,6 @@ class WinTest(Base):
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
-
-    def test_toolchain_mingw(self):
-        settings = {"compiler": "gcc",
-                    "compiler.version": "6",
-                    "compiler.libcxx": "libstdc++11",
-                    "compiler.threads": "win32",
-                    "compiler.exception": "seh",
-                    "arch": "x86_64",
-                    "build_type": "Release",
-                    }
-        options = {"shared": "True"}
-        out = self._run_build(settings, options)
-        self.assertIn("cmake -G \"MinGW Makefiles\" "
-                      "-DCMAKE_TOOLCHAIN_FILE=\"conan_toolchain.cmake\"", out)
-        self.assertIn("The C compiler identification is GNU", out)
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
