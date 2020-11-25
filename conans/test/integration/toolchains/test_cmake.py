@@ -152,9 +152,7 @@ class Base(unittest.TestCase):
         with self.client.chdir(build_directory):
             self.client.run("install .. %s %s" % (settings, options))
             install_out = self.client.out
-            print(install_out)
             self.client.run("build ..")
-            print(self.client.out)
         return install_out
 
     def _modify_code(self):
