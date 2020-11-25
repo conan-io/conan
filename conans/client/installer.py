@@ -113,15 +113,16 @@ class _PackageBuilder(object):
         if not getattr(conanfile, 'no_copy_source', False):
             self._output.info('Copying sources to build folder')
             try:
-                inodes = dict()
+                files = os.listdir(source_folder)
+                inodes = [os.stat(os.path.join(source_folder, filename)).st_ino for filename in files]
+                inodes = set([node for node in inodes if inodes.count(node) > 1])
 
                 def copy_or_link(srcname, dstname):
                     inode = os.stat(srcname).st_ino
                     if inode in inodes:
-                        safe_hardlink(inodes[inode], dstname)
+                        safe_hardlink(srcname, dstname)
                     else:
                         shutil.copy2(srcname, dstname)
-                        inodes[inode] = dstname
 
                 def copytree_or_link(src, dst):
                     if not os.path.exists(dst):
