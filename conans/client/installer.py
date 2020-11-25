@@ -2,6 +2,7 @@ import os
 import shutil
 import textwrap
 import time
+import stat
 from multiprocessing.pool import ThreadPool
 
 from conans.client import tools
@@ -33,7 +34,8 @@ from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
-from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
+from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty, \
+    safe_hardlink
 from conans.util.log import logger
 from conans.util.tracer import log_package_built, log_package_got_from_local_cache
 
@@ -116,18 +118,35 @@ class _PackageBuilder(object):
                 def copy_or_link(srcname, dstname):
                     inode = os.stat(srcname).st_ino
                     if inode in inodes:
-                        try:
-                            os.link(inodes[inode], dstname)
-                        except OSError:
-                            shutil.copy2(srcname, dstname)
+                        safe_hardlink(inodes[inode], dstname)
                     else:
                         shutil.copy2(srcname, dstname)
                         inodes[inode] = dstname
 
-                shutil.copytree(source_folder, build_folder, symlinks=True,
-                                copy_function=copy_or_link)
-                #copier = FileCopier([source_folder], build_folder)
-                #copier("*", links=True)
+                def copytree_or_link(src, dst):
+                    if not os.path.exists(dst):
+                        os.makedirs(dst)
+                        shutil.copystat(src, dst)
+                    lst = os.listdir(src)
+                    for item in lst:
+                        s = os.path.join(src, item)
+                        d = os.path.join(dst, item)
+                        if os.path.islink(s):
+                            if os.path.lexists(d):
+                                os.remove(d)
+                            os.symlink(os.readlink(s), d)
+                            try:
+                                st = os.lstat(s)
+                                mode = stat.S_IMODE(st.st_mode)
+                                os.lchmod(d, mode)
+                            except:
+                                pass
+                        elif os.path.isdir(s):
+                            copytree_or_link(s, d)
+                        else:
+                            copy_or_link(s, d)
+
+                copytree_or_link(source_folder, build_folder)
             # Should we preserve same treatment for FileCopier?
             except Exception as e:
                 msg = str(e)
@@ -524,6 +543,7 @@ class BinaryInstaller(object):
                 raise ConanException("Package '%s' corrupted. Package folder must exist: %s\n"
                                      "Try removing the package with 'conan remove'"
                                      % (str(pref), package_folder))
+
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
