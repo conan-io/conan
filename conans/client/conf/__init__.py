@@ -446,6 +446,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
+    def artifactory_cache(self):
+        try:
+            artifactory_cache = self.get_item("storage.artifactory_cache")
+            return artifactory_cache
+        except ConanException:
+            return None
+
+    @property
     def scm_to_conandata(self):
         try:
             scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")

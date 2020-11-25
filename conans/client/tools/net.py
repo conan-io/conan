@@ -1,5 +1,6 @@
 import os
 
+from conans.client.rest.artifactory_cache import ArtifactoryCacheDownloader
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_downloader import FileDownloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
@@ -90,12 +91,15 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
     checksum = sha256 or sha1 or md5
 
     downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
+    artifactory_cache = config.artifactory_cache
+    if artifactory_cache:
+        downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
     if config and config.download_cache and checksum:
         downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        if isinstance(downloader, CachedFileDownloader):
+        if not isinstance(downloader, FileDownloader):
             downloader.download(file_url, filename, retry=retry, retry_wait=retry_wait,
                                 overwrite=overwrite, auth=auth, headers=headers, md5=md5,
                                 sha1=sha1, sha256=sha256)

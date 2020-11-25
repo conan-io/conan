@@ -4,6 +4,7 @@ import traceback
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
+from conans.client.rest.artifactory_cache import ArtifactoryCacheDownloader
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
@@ -42,6 +43,9 @@ class RestV2Methods(RestCommonMethods):
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+        artifactory_cache = self._config.artifactory_cache
+        if artifactory_cache:
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
         contents = downloader.download(url, auth=self.auth, headers=headers)
@@ -217,6 +221,9 @@ class RestV2Methods(RestCommonMethods):
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        artifactory_cache = self._config.artifactory_cache
+        if artifactory_cache:
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
         if use_cache and self._config.download_cache:
             downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz

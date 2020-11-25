@@ -6,6 +6,7 @@ from collections import namedtuple
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.remote_manager import check_compressed_files
+from conans.client.rest.artifactory_cache import ArtifactoryCacheDownloader
 from conans.client.rest.client_routes import ClientV1Router
 from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
@@ -45,6 +46,9 @@ class RestV1Methods(RestCommonMethods):
         Its a generator, so it yields elements for memory performance
         """
         downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
+        artifactory_cache = self._config.artifactory_cache
+        if artifactory_cache:
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
         download_cache = self._config.download_cache
         if download_cache:
             assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
@@ -189,6 +193,9 @@ class RestV1Methods(RestCommonMethods):
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
         downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
+        artifactory_cache = self._config.artifactory_cache
+        if artifactory_cache:
+            downloader = ArtifactoryCacheDownloader(artifactory_cache, downloader)
         download_cache = self._config.download_cache
         if download_cache:
             assert snapshot_md5 is not None, "if download_cache is set, we need the file checksums"
