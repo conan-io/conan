@@ -148,7 +148,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
             os=Windows
             arch=x86
             compiler=Visual Studio
-            compiler.version=15
+            compiler.version=16
             compiler.runtime=MTd
             build_type=Debug
              """)
@@ -156,7 +156,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         client.run("install . -pr=win")
         # Ninja is single-configuration
         # It is necessary to set architecture=x86 here, otherwise final architecture is wrong
-        vcvars = vcvars_command("15", architecture="x86")
+        vcvars = vcvars_command("16", architecture="x86")
         client.run("install . -pr=win")
         client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
                            .format(vcvars))
