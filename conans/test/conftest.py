@@ -22,7 +22,7 @@ if not which("clang"):
     tools_available.remove("clang")
 try:
     if not vswhere():
-       tools_available.remove("visual_studio")
+        tools_available.remove("visual_studio")
 except ConanException:
     tools_available.remove("visual_studio")
 

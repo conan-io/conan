@@ -8,7 +8,7 @@ from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
 from conans.client.source import complete_recipe_sources
-from conans.client.toolchain.base import write_toolchain
+from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile

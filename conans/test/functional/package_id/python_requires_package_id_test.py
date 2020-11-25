@@ -69,3 +69,39 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.2", self.client2.out)
         self.assertIn("pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8 - Build", self.client2.out)
+
+
+class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
+
+    def test(self):
+        client = TestClient()
+        client.run("config set general.default_python_requires_id_mode=full_version_mode")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . tool/1.1.1@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                python_requires ="tool/[>=0.0]"
+            """)
+
+        client2 = TestClient(cache_folder=client.cache_folder)
+        client2.save({"conanfile.py": conanfile,
+                     "myprofile": "[build_requires]\ntool/[>=0.0]\n"})
+
+        client2.run("create . pkg/0.1@ -pr=myprofile")
+        self.assertIn("tool/1.1.1", client2.out)
+        self.assertIn("pkg/0.1: Package 'f3161fafc8273fe3c8afa3b51dcc198c33f66033' created",
+                      client2.out)
+
+        client.run("create . tool/1.1.2@")
+        client2.run("install pkg/0.1@ -pr=myprofile", assert_error=True)
+        self.assertIn("ERROR: Missing binary: pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8",
+                      client2.out)
+        self.assertIn("tool/1.1.2", client2.out)
+        self.assertNotIn("tool/1.1.1", client2.out)
+
+        client2.run("create . pkg/0.1@ -pr=myprofile")
+        self.assertIn("pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
+        self.assertIn("pkg/0.1: Package '387c1c797a011d426ecb25a1e01b28251e443ec8' created",
+                      client2.out)
