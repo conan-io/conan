@@ -5,7 +5,7 @@ import traceback
 from conans import DEFAULT_REVISION_V1
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
 from conans.client.downloaders.file_downloader import FileDownloader
