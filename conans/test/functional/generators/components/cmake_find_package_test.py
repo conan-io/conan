@@ -879,8 +879,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     cmake = CMake(self)
                     cmake.configure(source_folder="src")
                     cmake.build()
-                    bin_path = os.path.join("bin", "main")
-                    self.run(bin_path, run_environment=True)
+                    self.run(os.path.join("bin", "main"))
             """)
         cmakelists = textwrap.dedent("""
             project(consumer)
