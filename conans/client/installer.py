@@ -406,9 +406,10 @@ class BinaryInstaller(object):
         using_build_profile = bool(graph_info.profile_build)
         missing, invalid, downloads = self._classify(nodes_by_level)
         if invalid:
-            node = invalid[0]  # Raise the first one
-            msg = "{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid)
-            raise ConanInvalidConfiguration(msg)
+            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
+            for node in invalid:
+                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+            raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)

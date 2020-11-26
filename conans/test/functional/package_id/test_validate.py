@@ -4,7 +4,6 @@ import unittest
 
 from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
-from conans.model.info import PACKAGE_ID_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -209,7 +208,7 @@ class TestValidate(unittest.TestCase):
                requires = "dep/0.1"
 
                def validate(self):
-                   # FIXME: This is a ugly interface
+                   # FIXME: This is a ugly interface DO NOT MAKE IT PUBLIC
                    # if self.info.requires["dep"].full_version ==
                    if self.requires["dep"].ref.version > "0.1":
                        raise ConanInvalidConfiguration("dep> 0.1 is not supported")
@@ -222,3 +221,29 @@ class TestValidate(unittest.TestCase):
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("ERROR: pkg1/0.1: Invalid ID: dep> 0.1 is not supported", client.out)
+
+    def test_validate_package_id_mode(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        conanfile = textwrap.dedent("""
+          from conans import ConanFile
+          from conans.errors import ConanInvalidConfiguration
+          class Pkg(ConanFile):
+              settings = "os"
+
+              def validate(self):
+                  if self.settings.os == "Windows":
+                      raise ConanInvalidConfiguration("Windows not supported")
+              """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . dep/0.1@")
+
+        client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
+        error = client.run("create . pkg/0.1@", assert_error=True)
+        self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
+        self.assertIn("dep/0.1:INVALID - Invalid", client.out)
+        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("ERROR: There are invalid packages (packages that cannot "
+                      "exist for this configuration):", client.out)
+        self.assertIn("dep/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Invalid transitive dependencies", client.out)
