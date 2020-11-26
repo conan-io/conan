@@ -19,8 +19,7 @@ class CachedFileDownloader(object):
         self._file_downloader = file_downloader
         self._user_download = user_download
 
-    def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
-                 headers=None, md5=None, sha1=None, sha256=None):
+    def download(self, url, file_path=None, md5=None, sha1=None, sha256=None, **kwargs):
         """ compatible interface of FileDownloader + checksum
         """
         checksum = sha256 or sha1 or md5
@@ -36,9 +35,8 @@ class CachedFileDownloader(object):
             thread_lock.acquire()
             try:
                 if not os.path.exists(cached_path):
-                    self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
-                                                   overwrite, headers, md5=md5, sha1=sha1,
-                                                   sha256=sha256)
+                    self._file_downloader.download(url=url, file_path=cached_path, md5=md5,
+                                                   sha1=sha1, sha256=sha256, **kwargs)
                 else:
                     # specific check for corrupted cached files, will raise, but do nothing more
                     # user can report it or "rm -rf cache_folder/path/to/file"
