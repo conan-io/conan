@@ -23,10 +23,20 @@ class ExampleConan(ConanFile):
 @unittest.skipUnless(platform.system() != "Windows", "Requires Hardlinks")
 class HardLinksTest(unittest.TestCase):
 
+    FILE_SIZE = 1024 * 1024
+
+    def validate_inodes(self, folder):
+        inodes = []
+        for filename in ["file_1MB", "file_1MB_link1", "file_1MB_link2"]:
+            size = os.stat(os.path.join(folder, filename)).st_size
+            pkg_inode = os.stat(os.path.join(folder, filename)).st_ino
+            self.assertEqual(size, HardLinksTest.FILE_SIZE)
+            inodes.append(pkg_inode)
+        self.assertTrue(all(i == inodes[0] for i in inodes))
+
     def test_export_source_tgz_hardlink(self):
         """ Any hardlink MUST be preserved when packaged
         """
-        file_size = 1024 * 1024
         client = TestClient(servers={"default": TestServer(write_permissions=[("*/*@*/*", "*")])},
                             users={"default": [("conan", "password")]})
         client.save({
@@ -35,7 +45,7 @@ class HardLinksTest(unittest.TestCase):
         with chdir(client.current_folder):
             filename = "file_1MB"
             with open(filename, "wb") as fd:
-                fd.write(os.urandom(file_size))
+                fd.write(os.urandom(HardLinksTest.FILE_SIZE))
             inode = os.stat(filename).st_ino
             for i in range(2):
                 linkname = filename + "_link" + str(i + 1)
@@ -49,22 +59,24 @@ class HardLinksTest(unittest.TestCase):
         # Each file must be 1MB
         ref = ConanFileReference("example", "0.1.0", "conan", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
+        export_source_folder = client.cache.package_layout(pref.ref).export_sources()
+        source_folder = client.cache.package_layout(pref.ref).source()
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         download_folder = client.cache.package_layout(pref.ref).download_package(pref)
-        inodes = []
-        for filename in ["file_1MB", "file_1MB_link1", "file_1MB_link2"]:
-            size = os.stat(os.path.join(package_folder, filename)).st_size
-            pkg_inode = os.stat(os.path.join(package_folder, filename)).st_ino
-            self.assertEqual(size, file_size)
-            self.assertEqual(inode, pkg_inode)
-            inodes.append(pkg_inode)
-        # all inodes must be the same
-        self.assertTrue(all(i == inodes[0] for i in inodes))
+        self.validate_inodes(export_source_folder)
+        self.validate_inodes(source_folder)
+        self.validate_inodes(package_folder)
+
+        inode_src = os.stat(os.path.join(source_folder, "file_1MB")).st_ino
+        inode_exp = os.stat(os.path.join(export_source_folder, "file_1MB")).st_ino
+        inode_pkg = os.stat(os.path.join(package_folder, "file_1MB")).st_ino
+        self.assertNotEqual(inode_src, inode_exp)
+        self.assertNotEqual(inode_src, inode_pkg)
 
         client.run("upload * --all --confirm")
         self.assertIn("Uploading conan_package.tgz", client.out)
         size = os.stat(os.path.join(download_folder, "conan_package.tgz")).st_size
-        self.assertAlmostEqual(file_size, size, delta=2000)
+        self.assertAlmostEqual(HardLinksTest.FILE_SIZE, size, delta=2000)
 
     def test_weak_point_export_hardlink(self):
         """ Exporting hardlinks only works when exporting all files at once
@@ -98,33 +110,23 @@ class HardLinksTest(unittest.TestCase):
         # Each file must be 1MB
         ref = ConanFileReference("example", "0.1.0", "conan", "testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
+        export_source_folder = client.cache.package_layout(pref.ref).export_sources()
+        source_folder = client.cache.package_layout(pref.ref).source()
         build_folder = client.cache.package_layout(pref.ref).build(pref)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         download_folder = client.cache.package_layout(pref.ref).download_package(pref)
-        inodes = []
 
-        # Build folder preserves hard links
-        for filename in ["file_1MB", "file_1MB_link1", "file_1MB_link2"]:
-            size = os.stat(os.path.join(build_folder, filename)).st_size
-            pkg_inode = os.stat(os.path.join(build_folder, filename)).st_ino
-            self.assertEqual(size, file_size)
-            # It's a copy, not a hardlink
-            self.assertEqual(inode, pkg_inode)
-            inodes.append(pkg_inode)
-        # all inodes must be the same
-        self.assertTrue(all(i == inodes[0] for i in inodes))
+        self.validate_inodes(export_source_folder)
+        self.validate_inodes(source_folder)
+        self.validate_inodes(build_folder)
 
-        # Package folder does not preserve hardlink as we copied file by file.
-        # There is no reference to compare. Maybe, compare after copying files and checking with build folder?
-        for filename in ["file_1MB", "file_1MB_link1", "file_1MB_link2"]:
-            size = os.stat(os.path.join(package_folder, filename)).st_size
-            pkg_inode = os.stat(os.path.join(package_folder, filename)).st_ino
-            self.assertEqual(size, file_size)
-            # It's a copy, not a hardlink
-            self.assertNotEqual(inode, pkg_inode)
-            inodes.append(pkg_inode)
-        # all inodes must be the same
-        self.assertFalse(all(i == inodes[0] for i in inodes))
+        # package folder contains only copies
+        i_1mb = os.stat(os.path.join(package_folder, "file_1MB")).st_ino
+        i_1mb_lnk1 = os.stat(os.path.join(package_folder, "file_1MB_link1")).st_ino
+        i_1mb_lnk2 = os.stat(os.path.join(package_folder, "file_1MB_link2")).st_ino
+        self.assertNotEqual(i_1mb, i_1mb_lnk1)
+        self.assertNotEqual(i_1mb, i_1mb_lnk2)
+        self.assertNotEqual(i_1mb_lnk1, i_1mb_lnk2)
 
         client.run("upload * --all --confirm")
         self.assertIn("Uploading conan_package.tgz", client.out)
