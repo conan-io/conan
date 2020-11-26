@@ -860,7 +860,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.cpp_info.libs = ["middle"]
             """)
         client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
-                     "src/middle.h": middle_h, "src/middle.cpp": middle_cpp})
+                     "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
         client.run("create . middle/1.0@")
         conanfile = textwrap.dedent("""
             import os

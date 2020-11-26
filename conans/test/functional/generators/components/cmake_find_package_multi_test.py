@@ -804,3 +804,146 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
+
+    def test_same_name_global_target_collision(self):
+        conanfile_tpl = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "{name}"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake"
+                exports_sources = "src/*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.names["cmake_find_package_multi"] = "nonstd"
+                    self.cpp_info.filenames["cmake_find_package_multi"] = "{name}"
+                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "{name}"
+                    self.cpp_info.components["1"].libs = ["{name}"]
+            """)
+        client = TestClient()
+        for name in ["expected", "variant"]:
+            client.run("new {name}/1.0 -s".format(name=name))
+            client.save({"conanfile.py": conanfile_tpl.format(name=name)})
+            client.run("create . {name}/1.0@".format(name=name))
+        middle_cmakelists = textwrap.dedent("""
+            project(middle)
+            cmake_minimum_required(VERSION 3.1)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            find_package(expected)
+            find_package(variant)
+
+            add_library(middle middle.cpp)
+            target_link_libraries(middle nonstd::expected nonstd::variant)
+            """)
+        middle_h = textwrap.dedent("""
+            #pragma once
+
+            #ifdef WIN32
+              #define middle_EXPORT __declspec(dllexport)
+            #else
+              #define middle_EXPORT
+            #endif
+
+            middle_EXPORT void middle();
+            """)
+        middle_cpp = textwrap.dedent("""
+            #include "middle.h"
+            #include "expected.h"
+            #include "variant.h"
+
+            void middle() {
+                expected();
+                variant();
+            }
+            """)
+        middle_conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "middle"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                generators = "cmake", "cmake_find_package_multi"
+                exports_sources = "src/*"
+                requires = "expected/1.0", "variant/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.libs = ["middle"]
+            """)
+        client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
+                     "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
+        client.run("create . middle/1.0@")
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                generators = "cmake_find_package_multi", "cmake"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "src/*"
+                requires = "middle/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+                    bin_path = os.path.join("bin", "main")
+                    self.run(bin_path, run_environment=True)
+            """)
+        cmakelists = textwrap.dedent("""
+            project(consumer)
+            cmake_minimum_required(VERSION 3.1)
+
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+
+            find_package(middle)
+
+            add_executable(main main.cpp)
+            target_link_libraries(main middle::middle)
+            """)
+        main_cpp = textwrap.dedent("""
+            #include "middle.h"
+
+            int main() {
+                middle();
+            }
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "src/CMakeLists.txt": cmakelists,
+                     "src/main.cpp": main_cpp}, clean_first=True)
+        client.run("create . consumer/1.0@")
+        self.assertIn('Library middle found', client.out)
+        self.assertIn('Library expected found', client.out)
+        self.assertIn('Library variant found', client.out)
+        self.assertIn('expected/1.0: Hello World Release!', client.out)
+        self.assertIn('variant/1.0: Hello World Release!', client.out)
