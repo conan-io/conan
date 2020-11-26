@@ -31,7 +31,7 @@ class TestValidate(unittest.TestCase):
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("ID: INVALID", client.out)
         client.run("info pkg/0.1@ -s os=Windows --json=myjson")
@@ -106,7 +106,7 @@ class TestValidate(unittest.TestCase):
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("ID: INVALID", client.out)
@@ -143,23 +143,23 @@ class TestValidate(unittest.TestCase):
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         error = client.run("install pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         # Windows missing binary: INVALID
         error = client.run("install pkg/0.1@ -s os=Windows -s build_type=Debug",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Debug",
                            assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg/0.1: Invalid ID: Windows not supported", client.out)
+        self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         # info
         client.run("info pkg/0.1@ -s os=Windows")
@@ -194,7 +194,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1")})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg1/0.1: Invalid ID: Option 2 of 'dep' not supported", client.out)
+        self.assertIn("pkg1/0.1: Invalid ID: Option 2 of 'dep' not supported", client.out)
 
     def test_validate_requires(self):
         client = TestClient()
@@ -220,7 +220,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "dep/0.2")})
         error = client.run("install .", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("ERROR: pkg1/0.1: Invalid ID: dep> 0.1 is not supported", client.out)
+        self.assertIn("pkg1/0.1: Invalid ID: dep> 0.1 is not supported", client.out)
 
     def test_validate_package_id_mode(self):
         client = TestClient()
