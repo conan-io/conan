@@ -288,8 +288,7 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
 
 
 def replace_prefix_in_pc_file(pc_file, new_prefix):
-    with add_permissions(pc_file, stat.S_IREAD):
-        content = load(pc_file)
+    content = load(pc_file)
     lines = []
     for line in content.splitlines():
         if line.startswith("prefix="):
