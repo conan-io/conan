@@ -768,6 +768,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn('hello2 world!', client.out)
 
     def test_same_name_global_target_collision(self):
+        # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -890,6 +891,9 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             find_package(middle)
 
+            get_target_property(tmp middle::middle INTERFACE_LINK_LIBRARIES)
+            message("Middle link libraries: ${tmp}")
+
             add_executable(main main.cpp)
             target_link_libraries(main middle::middle)
             """)
@@ -907,5 +911,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn('Found middle: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found expected: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found variant: 1.0 (found version "1.0")', client.out)
+        self.assertIn("Middle link libraries: CONAN_LIB::middle_middle;nonstd::nonstd;$", client.out)
         self.assertIn('expected/1.0: Hello World Release!', client.out)
         self.assertIn('variant/1.0: Hello World Release!', client.out)
