@@ -1,11 +1,13 @@
 import os
-import platform
+import shutil
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer
 from conans.client.tools.files import chdir
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
+from conans.util.files import save_files
 
 conanfile = """
 import os
@@ -19,8 +21,22 @@ class ExampleConan(ConanFile):
         {}
 """
 
+def hardlinks_supported():
+    if not hasattr(os, "link"):
+        return False
+    tmpdir = temp_folder()
+    try:
+        save_files(tmpdir, {"a": ""})
+        with chdir(tmpdir):
+            os.link("a", "b")
+            return os.stat("a").st_ino == os.stat("b").st_ino
+    except OSError:
+        return False
+    finally:
+        shutil.rmtree(tmpdir)
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Hardlinks")
+
+@unittest.skipUnless(hardlinks_supported(), "Requires Hardlinks")
 class HardLinksTest(unittest.TestCase):
 
     FILE_SIZE = 1024 * 1024
