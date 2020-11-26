@@ -6,6 +6,7 @@ from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.sources import gen_function_h
 from conans.test.utils.tools import TestClient
 
 
@@ -812,27 +813,18 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             find_package(variant)
 
             add_library(middle middle.cpp)
-            target_link_libraries(middle nonstd::expected nonstd::variant)
+            target_link_libraries(middle nonstd::nonstd)
             """)
-        middle_h = textwrap.dedent("""
-            #pragma once
-
-            #ifdef WIN32
-              #define middle_EXPORT __declspec(dllexport)
-            #else
-              #define middle_EXPORT
-            #endif
-            
-            middle_EXPORT void middle();
-            """)
+        middle_h = gen_function_h(name="middle")
         middle_cpp = textwrap.dedent("""
             #include "middle.h"
             #include "expected.h"
             #include "variant.h"
 
-            void middle() {
+            int middle() {
                 expected();
                 variant();
+                return 0;
             }
             """)
         middle_conanfile = textwrap.dedent("""
