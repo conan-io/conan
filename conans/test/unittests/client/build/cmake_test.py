@@ -875,7 +875,6 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
         if platform.system() == "Windows":
             cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
@@ -886,6 +885,22 @@ build_type: [ Release]
             cmake = CMake(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
+
+    def test_sysroot_envvar(self):
+        settings = Settings.loads(get_default_settings_yml())
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        settings.os = "Linux"
+        settings.os_build = "Windows"
+        settings.compiler = "gcc"
+        settings.compiler.version = "5"
+        settings.arch_build = "x86_64"
+        settings.arch = "armv7"
+
+        # Now activate cross build and check sysroot and system processor
+        with(tools.environment_append({"CONAN_CMAKE_SYSROOT": "/path/to/var/sysroot"})):
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/var/sysroot")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and

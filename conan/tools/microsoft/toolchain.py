@@ -1,53 +1,11 @@
 import os
 import textwrap
+import warnings
 from xml.dom import minidom
 
-from conans.client.toolchain.visual import vcvars_arch, vcvars_command
-from conans.client.tools import msvs_toolset, intel_compilervars_command
+from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
-
-
-class MSBuildCmd(object):
-    def __init__(self, conanfile):
-        self._conanfile = conanfile
-        self.compiler = conanfile.settings.get_safe("compiler")
-        self.version = conanfile.settings.get_safe("compiler.base.version") or \
-                       conanfile.settings.get_safe("compiler.version")
-        self.vcvars_arch = vcvars_arch(conanfile)
-        self.build_type = conanfile.settings.get_safe("build_type")
-        msvc_arch = {'x86': 'x86',
-                     'x86_64': 'x64',
-                     'armv7': 'ARM',
-                     'armv8': 'ARM64'}
-        # if platforms:
-        #    msvc_arch.update(platforms)
-        arch = conanfile.settings.get_safe("arch")
-        msvc_arch = msvc_arch.get(str(arch))
-        if conanfile.settings.get_safe("os") == "WindowsCE":
-            msvc_arch = conanfile.settings.get_safe("os.platform")
-        self.platform = msvc_arch
-
-    def command(self, sln):
-        if self.compiler == "intel":
-            cvars = intel_compilervars_command(self._conanfile)
-        else:
-            cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                    platform_type=None, winsdk_version=None,
-                                    vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (cvars, sln, self.build_type, self.platform))
-
-        return cmd
-
-    def build(self, sln):
-        cmd = self.command(sln)
-        self._conanfile.run(cmd)
-
-    @staticmethod
-    def get_version(_):
-        return NotImplementedError("get_version() method is not supported in MSBuild "
-                                   "toolchain helper")
 
 
 class MSBuildToolchain(object):
@@ -70,6 +28,21 @@ class MSBuildToolchain(object):
         return name.lower(), condition
 
     def write_toolchain_files(self):
+        # Warning
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "'write_toolchain_files()' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        from conans.client.output import Color, ConanOutput
+        ConanOutput(self._conanfile.output._stream,
+                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        self.generate()
+
+    def generate(self):
         name, condition = self._name_condition(self._conanfile.settings)
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
@@ -126,8 +99,16 @@ class MSBuildToolchain(object):
                         xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
                     <ImportGroup Label="PropertySheets" >
                     </ImportGroup>
+                    <PropertyGroup Label="ConanPackageInfo">
+                        <ConanPackageName>{}</ConanPackageName>
+                        <ConanPackageVersion>{}</ConanPackageVersion>
+                    </PropertyGroup>
                 </Project>
                 """)
+
+            conan_package_name = self._conanfile.name if self._conanfile.name else ""
+            conan_package_version = self._conanfile.version if self._conanfile.version else ""
+            content = content.format(conan_package_name, conan_package_version)
 
         dom = minidom.parseString(content)
         try:

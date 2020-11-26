@@ -31,14 +31,15 @@ class MakeToolchainTest(unittest.TestCase):
         settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MakeToolchain
+            from conans import ConanFile
+            from conan.tools.gnu import MakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
-                def toolchain(self):
+                def generate(self):
                     tc = MakeToolchain(self)
                     tc.variables["TEST_VAR"] = "TestVarValue"
                     tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     self.run("make -C ..")
@@ -123,14 +124,15 @@ class MakeToolchainTest(unittest.TestCase):
         settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MakeToolchain
+            from conans import ConanFile
+            from conan.tools.gnu import MakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
-                def toolchain(self):
+                def generate(self):
                     tc = MakeToolchain(self)
                     tc.variables["TEST_VAR"] = "TestVarValue"
                     tc.preprocessor_definitions["TEST_DEFINITION"] = "TestPpdValue"
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     self.run("make -C ..")

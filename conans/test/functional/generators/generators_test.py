@@ -151,7 +151,7 @@ qmake
 
     def test_conditional_generators(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMakeToolchain
+            from conans import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 def configure(self):
