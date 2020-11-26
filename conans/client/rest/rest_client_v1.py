@@ -50,7 +50,7 @@ class RestV1Methods(RestCommonMethods):
             auth, _ = self._file_server_capabilities(resource_url)
             md5 = snapshot_md5.get(filename, None) if snapshot_md5 else None
             contents = run_downloader(self.requester, None, self.verify_ssl, self._config,
-                                      user_download=True, url=resource_url, auth=auth, md5=md5)
+                                      url=resource_url, auth=auth, md5=md5)
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -191,8 +191,7 @@ class RestV1Methods(RestCommonMethods):
             abs_path = os.path.join(to_folder, filename)
             md5 = snapshot_md5.get(filename, None) if snapshot_md5 else None
             run_downloader(self.requester, self._output, self.verify_ssl, self._config,
-                           user_download=True, url=resource_url, file_path=abs_path, auth=auth,
-                           md5=md5)
+                           url=resource_url, file_path=abs_path, auth=auth, md5=md5)
             ret[filename] = abs_path
         return ret
 
