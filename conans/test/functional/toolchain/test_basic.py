@@ -201,3 +201,28 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
+
+    def test_toolchain_windows(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuildToolchain
+            class Pkg(ConanFile):
+                name = "Pkg"
+                version = "0.1"
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "msbuild"
+
+                def generate(self):
+                    tc = MSBuildToolchain(self)
+                    tc.generate()
+        """)
+
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD')
+
+        conan_toolchain_props = client.load("conantoolchain.props")
+        self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
+        self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)
