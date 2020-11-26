@@ -239,7 +239,7 @@ class TestValidate(unittest.TestCase):
         client.run("export . dep/0.1@")
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
-        error = client.run("create . pkg/0.1@", assert_error=True)
+        error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("dep/0.1:INVALID - Invalid", client.out)
         self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
