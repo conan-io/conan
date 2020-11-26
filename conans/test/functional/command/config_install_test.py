@@ -13,7 +13,7 @@ from mock import patch
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.file_downloader import FileDownloader
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder

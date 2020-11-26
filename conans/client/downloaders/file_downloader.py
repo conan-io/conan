@@ -6,8 +6,7 @@ import traceback
 import six
 
 from conans.client.rest import response_to_str
-from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException, RequestErrorException
+from conans.errors import ConanException, NotFoundException, AuthenticationException, ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util import progress_bar
 from conans.util.files import mkdir
 from conans.util.log import logger
