@@ -245,8 +245,7 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
 
     encoding_in = encoding or "auto"
     encoding_out = encoding or "utf-8"
-    with add_permissions(file_path, stat.S_IREAD):
-        content = load(file_path, encoding=encoding_in)
+    content = load(file_path, encoding=encoding_in)
     if -1 == content.find(search):
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
@@ -268,8 +267,7 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
 
     encoding_in = encoding or "auto"
     encoding_out = encoding or "utf-8"
-    with add_permissions(file_path, stat.S_IREAD):
-        content = load(file_path, encoding=encoding_in)
+    content = load(file_path, encoding=encoding_in)
     normalized_content = normalized_text(content)
     normalized_search = normalized_text(search)
     index = normalized_content.find(normalized_search)
