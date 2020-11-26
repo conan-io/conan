@@ -4,11 +4,11 @@ from threading import Lock
 
 from six.moves.urllib_parse import urlsplit, urlunsplit
 
-from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as sha256_sum
+from .file_downloader import check_checksum
 
 
 class CachedFileDownloader(object):
@@ -18,15 +18,6 @@ class CachedFileDownloader(object):
         self._cache_folder = cache_folder
         self._file_downloader = file_downloader
         self._user_download = user_download
-
-    @staticmethod
-    def _check_checksum(cache_path, md5, sha1, sha256):
-        if md5:
-            check_md5(cache_path, md5)
-        if sha1:
-            check_sha1(cache_path, sha1)
-        if sha256:
-            check_sha256(cache_path, sha256)
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
                  headers=None, md5=None, sha1=None, sha256=None):
@@ -45,19 +36,14 @@ class CachedFileDownloader(object):
             thread_lock.acquire()
             try:
                 if not os.path.exists(cached_path):
-                    try:
-                        self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
-                                                       overwrite, headers)
-                        self._check_checksum(cached_path, md5, sha1, sha256)
-                    except Exception:
-                        if os.path.exists(cached_path):
-                            os.remove(cached_path)
-                        raise
+                    self._file_downloader.download(url, cached_path, auth, retry, retry_wait,
+                                                   overwrite, headers, md5=md5, sha1=sha1,
+                                                   sha256=sha256)
                 else:
                     # specific check for corrupted cached files, will raise, but do nothing more
                     # user can report it or "rm -rf cache_folder/path/to/file"
                     try:
-                        self._check_checksum(cached_path, md5, sha1, sha256)
+                        check_checksum(cached_path, md5, sha1, sha256)
                     except ConanException as e:
                         raise ConanException("%s\nCached downloaded file corrupted: %s"
                                              % (str(e), cached_path))
