@@ -105,11 +105,12 @@ cmake_minimum_required(VERSION 2.8.12)
             from conans import ConanFile, CMake, load
             class TestConan(ConanFile):
                 def build(self):
+                    self.package_folder = "package"
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.install()
                 def test(self):
-                    self.output.info("Content: %s" % load("include/header.h"))
+                    self.output.info("Content: %s" % load("package/include/header.h"))
             """)
         cmake = textwrap.dedent("""set(CMAKE_CXX_COMPILER_WORKS 1)
             project(Chat NONE)
