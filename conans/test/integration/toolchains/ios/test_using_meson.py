@@ -1,5 +1,6 @@
 import os
 import platform
+import pytest
 import textwrap
 import unittest
 
@@ -9,8 +10,13 @@ from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_ap
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
+from ..test_meson import get_meson_version
 
+
+@pytest.mark.toolchain
+@pytest.mark.tool_meson
 @unittest.skipUnless(platform.system() == "Darwin", "requires Xcode")
+@unittest.skipUnless(get_meson_version() >= "0.56.0", "requires meson >= 0.56.0")
 class IOSMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
