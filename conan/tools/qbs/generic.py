@@ -163,11 +163,9 @@ class LinkerFlagsParser(object):
         self.linker_flags = []
         self._parse = self._detect_wl_or_add_driver_linker_flag
         for token in ld_flags:
-            print('parse token: %s' % token)
             self._parse(token)
 
     def _detect_wl_or_add_driver_linker_flag(self, token):
-        print('_detect_wl_or_add_driver_linker_flag')
         if token == '-Wl':
             self._parse = self._assert_comma
         else:
@@ -175,20 +173,17 @@ class LinkerFlagsParser(object):
             self._parse = self._detect_wl_or_add_driver_linker_flag
 
     def _detect_wl_or_detect_comma_or_add_driver_linker_flag(self, token):
-        print('_detect_wl_or_detect_comma_or_add_driver_linker_flag')
         if token == ',':
             self._parse = self._add_linker_flag
         else:
             self._detect_wl_or_add_driver_linker_flag(token)
 
     def _assert_comma(self, token):
-        print('_assert_comma')
         if token != ',':
             raise QbsException('Could not parse LDFLAGS')
         self._parse = self._add_linker_flag
 
     def _add_linker_flag(self, token):
-        print('_add_linker_flag')
         self.linker_flags.append(token)
         self._parse = self._detect_wl_or_detect_comma_or_add_driver_linker_flag
 
