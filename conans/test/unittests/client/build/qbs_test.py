@@ -15,19 +15,19 @@ class RunnerMock(object):
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
-        if self.output and output and hasattr(output, "write"):
+        if self.output and output and hasattr(output, 'write'):
             output.write(self.output)
         return 0 if self.return_ok else 1
 
 
 class QbsTest(unittest.TestCase):
     def test_generating_config_command_line(self):
-        name = "default"
+        name = 'default'
         dict = {
-            "modules.cpp.cxxFlags": ["-frtti", "-fexceptions"],
-            "modules.cpp.ldFlags": "--defsym=hello_world",
-            "products.App.myIntProperty": 13,
-            "products.App.myBoolProperty": True
+            'modules.cpp.cxxFlags': ['-frtti', '-fexceptions'],
+            'modules.cpp.ldFlags': '--defsym=hello_world',
+            'products.App.myIntProperty': 13,
+            'products.App.myBoolProperty': True
         }
         expected_config_line = [
             'config:%s' % name,
@@ -47,7 +47,7 @@ class QbsTest(unittest.TestCase):
 
     def test_construct_build_helper_without_project_file(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}))
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         conanfile.source_folder = '.'
         build_helper = qbs.Qbs(conanfile)
         self.assertEqual(build_helper.jobs, tools.cpu_count())
@@ -55,28 +55,28 @@ class QbsTest(unittest.TestCase):
 
     def test_construct_build_helper_with_project_file(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}))
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         # just asume that the test is called from repo root
-        profile_file_path = "conans/client"
+        profile_file_path = 'conans/client'
         build_helper = qbs.Qbs(conanfile, project_file=profile_file_path)
         self.assertEqual(build_helper._project_file, profile_file_path)
 
     def test_construct_build_helper_with_wrong_project_file_path(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}))
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         with self.assertRaises(qbs.QbsException):
-            qbs.Qbs(conanfile, project_file="random/file/path")
+            qbs.Qbs(conanfile, project_file='random/file/path')
 
     def test_add_configuration(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}))
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         conanfile.source_folder = '.'
         build_helper = qbs.Qbs(conanfile)
         configurations = {
-            "debug":  {"products.MyLib.specialFlags": ["-frtti",
-                                                       "-fexceptions"]},
-            "release": {"products.MyLib.specialFlags": ["-fno-exceptions",
-                                                        "-fno-rtti"]}
+            'debug':  {'products.MyLib.specialFlags': ['-frtti',
+                                                       '-fexceptions']},
+            'release': {'products.MyLib.specialFlags': ['-fno-exceptions',
+                                                        '-fno-rtti']}
         }
         for name, config in configurations.items():
             build_helper.add_configuration(name, config)
@@ -84,7 +84,7 @@ class QbsTest(unittest.TestCase):
 
     def test_build(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}),
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
         conanfile.source_folder = '.'
         conanfile.build_folder = '.'
@@ -93,22 +93,22 @@ class QbsTest(unittest.TestCase):
         build_helper.build()
         self.assertEqual(
             conanfile.runner.command_called,
-            ("qbs build --no-install --build-directory %s "
-             "--file %s --jobs %s") % (
+            ('qbs build --no-install --build-directory %s '
+             '--file %s --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs))
+                build_helper.jobs, build_helper.use_toolchain_profile))
 
-        build_helper.build(products=["app1", "app2", "lib"])
+        build_helper.build(products=['app1', 'app2', 'lib'])
         self.assertEqual(
             conanfile.runner.command_called,
-            ("qbs build --no-install --build-directory %s "
-             "--file %s --products app1,app2,lib --jobs %s") % (
+            ('qbs build --no-install --build-directory %s '
+             '--file %s --products app1,app2,lib --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs))
+                build_helper.jobs, build_helper.use_toolchain_profile))
 
     def test_build_all(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}),
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
         conanfile.source_folder = '.'
         conanfile.build_folder = '.'
@@ -117,19 +117,19 @@ class QbsTest(unittest.TestCase):
         build_helper.build_all()
         self.assertEqual(
             conanfile.runner.command_called,
-            ("qbs build --no-install --build-directory %s "
-             "--file %s --all-products --jobs %s") % (
+            ('qbs build --no-install --build-directory %s '
+             '--file %s --all-products --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs))
+                build_helper.jobs, build_helper.use_toolchain_profile))
 
     def test_build_with_custom_configuration(self):
         conanfile = MockConanfile(
-            MockSettings({"os": "Linux", "compiler": "gcc"}),
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
             runner=RunnerMock())
         conanfile.source_folder = '.'
         conanfile.build_folder = '.'
         build_helper = qbs.Qbs(conanfile)
-        config_name = "debug"
+        config_name = 'debug'
         config_values = {
             'product.App.boolProperty': True,
             'product.App.intProperty': 1337,
@@ -140,11 +140,12 @@ class QbsTest(unittest.TestCase):
         build_helper.build()
         self.assertEqual(
             conanfile.runner.command_called,
-            ("qbs build --no-install --build-directory %s "
-             "--file %s --jobs %s "
-             "config:%s %s:%s %s:%s %s:%s %s:%s") % (
+            ('qbs build --no-install --build-directory %s '
+             '--file %s --jobs %s profile:%s '
+             'config:%s %s:%s %s:%s %s:%s %s:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, config_name,
+                build_helper.jobs, build_helper.use_toolchain_profile,
+                config_name,
                 'product.App.boolProperty',
                 'true',
                 'product.App.intProperty',
