@@ -186,7 +186,7 @@ class {package_name}TestConan(ConanFile):
             self.run(".%sexample" % os.sep)
 """
 
-test_cmake = """cmake_minimum_required(VERSION 2.8.12)
+test_cmake = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -202,7 +202,7 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
-test_cmake_pure_c = """cmake_minimum_required(VERSION 2.8.12)
+test_cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest C)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -261,7 +261,7 @@ void {name}(){{
 }}
 """
 
-cmake_pure_c = """cmake_minimum_required(VERSION 2.8)
+cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project({name} C)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
@@ -270,7 +270,7 @@ conan_basic_setup()
 add_library({name} {name}.c)
 """
 
-cmake = """cmake_minimum_required(VERSION 2.8)
+cmake = """cmake_minimum_required(VERSION 3.1)
 project({name} CXX)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
