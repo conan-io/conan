@@ -234,6 +234,32 @@ class QbsGenericTest(unittest.TestCase):
                     qbs._settings_dir(conanfile), compiler,
                     qbs._profile_name))
 
+    def test_linker_flags_parser(self):
+        test_data_ld_flags = {
+            '-Wl,flag1': ([], ['flag1']),
+            '-Wl,flag1,flag2': ([], ['flag1', 'flag2']),
+            '-Wl,flag1 -Wl,flag2': ([], ['flag1', 'flag2']),
+            '-dFlag1': (['-dFlag1'], []),
+            '-dFlag1 -dFlag2': (['-dFlag1', '-dFlag2'], []),
+            '-Wl,flag1 -dFlag1': (['-dFlag1'], ['flag1']),
+            '-Wl,flag1,flag2 -dFlag1': (['-dFlag1'], ['flag1', 'flag2']),
+            '-Wl,flag1,flag2 -dFlag1 -Wl,flag3 -dFlag2 -dFlag3 -Wl,flag4,flag5':
+                (['-dFlag1', '-dFlag2', '-dFlag3'],
+                 ['flag1', 'flag2', 'flag3', 'flag4', 'flag5']),
+        }
+        for ld_flags, expected in test_data_ld_flags.items():
+            driver_linker_flags, linker_flags = expected
+            print(ld_flags)
+            print(driver_linker_flags)
+            print(linker_flags)
+            parser = qbs.LinkerFlagsParser(qbs._env_var_to_list(ld_flags))
+            print(parser.driver_linker_flags)
+            print(parser.linker_flags)
+            self.assertEqual(parser.driver_linker_flags,
+                             driver_linker_flags)
+            self.assertEqual(parser.linker_flags,
+                             linker_flags)
+
     @staticmethod
     def _generate_flags(flag, qbs_key):
         return {'env': ('-{0}1 -{0}2 -{0}3_with_value=13 '
@@ -248,14 +274,15 @@ class QbsGenericTest(unittest.TestCase):
         cpp = self._generate_flags('cpp', 'cppFlags')
         cxx = self._generate_flags('cxx', 'cxxFlags')
         wl = self._generate_flags('Wl,', 'linkerFlags')
-        ld = self._generate_flags('ld', 'linkerFlags')
+        ld = self._generate_flags('ld', 'driverLinkerFlags')
         env = {
             'ASFLAGS': asm['env'],
             'CFLAGS': c['env'],
             'CPPFLAGS': cpp['env'],
             'CXXFLAGS': cxx['env'],
-            'LDFLAGS': '%s -Wl,%s' % (wl['env'], ld['env'].replace(' -', ',-'))
+            'LDFLAGS': '%s %s' % (wl['env'], ld['env'])
         }
+        print(env)
         with tools.environment_append(env):
             flags_from_env = qbs._flags_from_env()
 
@@ -264,10 +291,8 @@ class QbsGenericTest(unittest.TestCase):
             'cpp.'+c['qbs_key']: c['qbs_value'],
             'cpp.'+cpp['qbs_key']: cpp['qbs_value'],
             'cpp.'+cxx['qbs_key']: cxx['qbs_value'],
-            'cpp.'+wl['qbs_key']: ('%s%s' % (wl['qbs_value'],
-                                             ld['qbs_value'])).replace(
-                                                '][', ', ', 1).replace(
-                                                '-Wl,', ''),
+            'cpp.'+wl['qbs_key']: wl['qbs_value'].replace('-Wl,', ''),
+            'cpp.'+ld['qbs_key']: ld['qbs_value']
         }
         self.assertEqual(flags_from_env, expected_flags)
 

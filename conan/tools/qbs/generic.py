@@ -157,6 +157,42 @@ def _read_qbs_toolchain_from_config(conanfile):
     return config
 
 
+class LinkerFlagsParser(object):
+    def __init__(self, ld_flags):
+        self.driver_linker_flags = []
+        self.linker_flags = []
+        self._parse = self._detect_wl_or_add_driver_linker_flag
+        for token in ld_flags:
+            print('parse token: %s' % token)
+            self._parse(token)
+
+    def _detect_wl_or_add_driver_linker_flag(self, token):
+        print('_detect_wl_or_add_driver_linker_flag')
+        if token == '-Wl':
+            self._parse = self._assert_comma
+        else:
+            self.driver_linker_flags.append(token)
+            self._parse = self._detect_wl_or_add_driver_linker_flag
+
+    def _detect_wl_or_detect_comma_or_add_driver_linker_flag(self, token):
+        print('_detect_wl_or_detect_comma_or_add_driver_linker_flag')
+        if token == ',':
+            self._parse = self._add_linker_flag
+        else:
+            self._detect_wl_or_add_driver_linker_flag(token)
+
+    def _assert_comma(self, token):
+        print('_assert_comma')
+        if token != ',':
+            raise QbsException('Could not parse LDFLAGS')
+        self._parse = self._add_linker_flag
+
+    def _add_linker_flag(self, token):
+        print('_add_linker_flag')
+        self.linker_flags.append(token)
+        self._parse = self._detect_wl_or_detect_comma_or_add_driver_linker_flag
+
+
 def _flags_from_env():
     flags_from_env = {}
     if tools.get_env('ASFLAGS'):
@@ -172,11 +208,10 @@ def _flags_from_env():
         flags_from_env['cpp.cxxFlags'] = '%s' % (
             _env_var_to_list(tools.get_env('CXXFLAGS')))
     if tools.get_env('LDFLAGS'):
-        ld_flags = []
-        for item in _env_var_to_list(tools.get_env('LDFLAGS')):
-            if item not in ['-Wl', ',']:
-                ld_flags.append(item)
-        flags_from_env['cpp.linkerFlags'] = str(ld_flags)
+        parser = LinkerFlagsParser(_env_var_to_list(tools.get_env('LDFLAGS')))
+        flags_from_env['cpp.linkerFlags'] = str(parser.linker_flags)
+        flags_from_env['cpp.driverLinkerFlags'] = str(
+            parser.driver_linker_flags)
     return flags_from_env
 
 
