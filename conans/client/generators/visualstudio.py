@@ -19,6 +19,8 @@ class VisualStudioGenerator(Generator):
 </Project>'''
 
     properties_template = '''<PropertyGroup Label="ConanVariables"{condition}>
+    <ConanPackageName>{conan_package_name}</ConanPackageName>
+    <ConanPackageVersion>{conan_package_version}</ConanPackageVersion>
     <ConanCompilerFlags>{compiler_flags}</ConanCompilerFlags>
     <ConanLinkerFlags>{linker_flags}</ConanLinkerFlags>
     <ConanPreprocessorDefinitions>{definitions}</ConanPreprocessorDefinitions>
@@ -79,6 +81,8 @@ class VisualStudioGenerator(Generator):
             return ext in VALID_LIB_EXTENSIONS
 
         fields = {
+            'conan_package_name': self.conanfile.name if self.conanfile.name else "",
+            'conan_package_version': self.conanfile.version if self.conanfile.version else "",
             'condition': condition,
             'bin_dirs': "".join("%s;" % p for p in build_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in build_info.res_paths),

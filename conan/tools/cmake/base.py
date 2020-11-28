@@ -1,5 +1,6 @@
 import os
 import textwrap
+import warnings
 from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
@@ -162,6 +163,21 @@ class CMakeToolchainBase(object):
         return ctxt_toolchain, {}
 
     def write_toolchain_files(self):
+        # Warning
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "'write_toolchain_files()' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        from conans.client.output import Color, ConanOutput
+        ConanOutput(self._conanfile.output._stream,
+                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        self.generate()
+
+    def generate(self):
         # Prepare templates to be loaded
         dict_loader = DictLoader(self._get_templates())
         env = Environment(loader=dict_loader)

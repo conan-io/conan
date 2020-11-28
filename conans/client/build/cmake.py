@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import warnings
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -13,7 +14,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
-from conans.client.output import ConanOutput
+from conans.client.output import ConanOutput, Color
 from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -32,12 +33,23 @@ class CMake(object):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
         # If already injected, create and return
-        from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
+        from conan.tools.cmake.cmake import CMake as CMakeToolchainBuildHelper
         if CMakeToolchainBuildHelper in cls.__bases__ or CMakeBuildHelper in cls.__bases__:
             return super(CMake, cls).__new__(cls)
 
         # If not, add the proper CMake implementation
-        if hasattr(conanfile, "toolchain"):
+        if hasattr(conanfile, "toolchain") or hasattr(conanfile, "generate"):
+            # Warning
+            msg = ("\n*****************************************************************\n"
+                   "******************************************************************\n"
+                   "This 'CMake' build helper has been deprecated and moved.\n"
+                   "It will be removed in next Conan release.\n"
+                   "Use 'from conan.tools.cmake import CMake' instead.\n"
+                   "********************************************************************\n"
+                   "********************************************************************\n")
+            ConanOutput(conanfile.output._stream,
+                        color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+            warnings.warn(msg)
             CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeToolchainBuildHelper), {})
         else:
             CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeBuildHelper), {})

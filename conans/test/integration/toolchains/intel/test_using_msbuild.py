@@ -4,10 +4,10 @@ import pytest
 import textwrap
 import unittest
 
+from conan.tools.microsoft.visual import vcvars_command
 from ._base import BaseIntelTestCase
 from ..test_msbuild import myapp_vcxproj, sln_file
 
-from conans.client.toolchain.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 
 
@@ -20,9 +20,9 @@ conanfile_py = textwrap.dedent("""
         generators = "msbuild"
         requires = "hello/0.1"
 
-        def toolchain(self):
+        def generate(self):
             tc = MSBuildToolchain(self)
-            tc.write_toolchain_files()
+            tc.generate()
 
         def build(self):
             msbuild = MSBuild(self)
