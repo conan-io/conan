@@ -356,7 +356,7 @@ class AutoToolsBuildEnvironment(object):
             if "-isysroot" not in concat and platform.system() == "Darwin":
                 tmp_compilation_flags.extend(["-isysroot",
                                               tools.XCRun(self._conanfile.settings).sdk_path])
-            if "-arch" not in concat:
+            if "-arch" not in concat and self._arch:
                 tmp_compilation_flags.extend(["-arch", tools.to_apple_arch(self._arch)])
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
