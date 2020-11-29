@@ -5,7 +5,6 @@ import time
 import unittest
 
 import pytest
-import six
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
@@ -406,3 +405,40 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+
+@attr("toolchain")
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class CMakeOverrideCacheTest(unittest.TestCase):
+
+    def test_cmake_cache_variables(self):
+        # https://github.com/conan-io/conan/issues/7832
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = "CMakeLists.txt"
+                def generate(self):
+                    toolchain = CMakeToolchain(self)
+                    toolchain.variables["my_config_string"] = "my new value"
+                    toolchain.generate()
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.7)
+            project(my_project)
+            set(my_config_string "default value" CACHE STRING "my config string")
+            message(STATUS "VALUE OF CONFIG STRING: ${my_config_string}")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist})
+        client.run("install .")
+        client.run("build .")
+        print(client.out)
+        self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
