@@ -404,7 +404,6 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
-        # Upload to alternative server Hello0 but Hello1 to the default
         files = cpp_hello_conan_files("Hello0", "1.0")
         client.save(files)
         client.run("create . ")
@@ -438,9 +437,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
         client.save(files, clean_first=True)
         client.run("install .")
-
-        # Need to test also with bare SLN, because the helper is doing too much
         client.run("build .")
+        self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
         self.assertIn("Hello Hello3", client.out)
@@ -492,3 +490,37 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
         self.assertIn("ERROR: The 'msbuild' generator requires a 'build_type' setting value",
                       client.out)
+
+    def test_install_transitive(self):
+        # https://github.com/conan-io/conan/issues/8065
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkga/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("pkga/1.0")})
+        client.run("create . pkgb/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, MSBuild
+            class HelloConan(ConanFile):
+                settings = "os", "build_type", "compiler", "arch"
+                requires = "pkgb/1.0@", "pkga/1.0"
+                generators = "msbuild"
+                def build(self):
+                    msbuild = MSBuild(self)
+                    msbuild.build("MyProject.sln")
+            """)
+        myapp_cpp = gen_function_cpp(name="main", msg="MyApp")
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
+        files = {"MyProject.sln": sln_file,
+                 "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
+                                                                          "conan_deps.props"),
+                 "MyProject/MyProject.cpp": myproject_cpp,
+                 "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
+                                                              "conan_deps.props"),
+                 "MyApp/MyApp.cpp": myapp_cpp,
+                 "conanfile.py": conanfile}
+
+        client.save(files, clean_first=True)
+        client.run("install .")
+        client.run("build .")
+        self.assertNotIn("warning MSB4011", client.out)

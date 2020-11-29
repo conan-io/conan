@@ -8,7 +8,7 @@ from conans.model import Generator
 from conans.util.files import load
 
 
-class MSBuildGenerator(Generator):
+class MSBuildDeps(Generator):
 
     _vars_conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
@@ -30,7 +30,7 @@ class MSBuildGenerator(Generator):
     _dep_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="TransitiveDependencies">
+          <ImportGroup Label="ConanDependencies">
           </ImportGroup>
           <ImportGroup Label="Configurations">
           </ImportGroup>
@@ -87,7 +87,7 @@ class MSBuildGenerator(Generator):
         template = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
             <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-                <ImportGroup Label="PropertySheets" >
+                <ImportGroup Label="ConanDependencies" >
                 </ImportGroup>
             </Project>
             """)
@@ -110,7 +110,9 @@ class MSBuildGenerator(Generator):
             else:
                 # create a new import statement
                 import_node = dom.createElement('Import')
+                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep
                 import_node.setAttribute('Project', conf_props_name)
+                import_node.setAttribute('Condition', dep_imported)
                 # add it to the import group
                 import_group.appendChild(import_node)
         content_multi = dom.toprettyxml()

@@ -2,7 +2,7 @@ import platform
 import textwrap
 import unittest
 
-from conans.client.toolchain.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
@@ -14,7 +14,8 @@ class ToolchainiOSTestCase(unittest.TestCase):
         self.t = TestClient()
         create_library(self.t)
         self._conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
 
 
             class Library(ConanFile):
@@ -32,9 +33,9 @@ class ToolchainiOSTestCase(unittest.TestCase):
                         self._cmake.configure()
                     return self._cmake
 
-                def toolchain(self):
+                def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
 
                 def build(self):
                     cmake = self._configure_cmake()
