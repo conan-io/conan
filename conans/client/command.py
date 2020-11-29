@@ -473,7 +473,7 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
-        parser.add_argument("--lockfile-id", action=OnceArgument,
+        parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
@@ -528,7 +528,7 @@ class Command(object):
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
-                                                     lockfile_id=args.lockfile_id)
+                                                     lockfile_node_id=args.lockfile_node_id)
 
         except ConanException as exc:
             info = exc.info
