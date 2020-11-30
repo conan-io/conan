@@ -95,21 +95,23 @@ class _PackageBuilder(object):
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, remotes):
+    def _prepare_sources(self, conanfile, pref, package_layout, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
         scm_sources_folder = package_layout.scm_sources()
+        conanfile_path = package_layout.conanfile()
+        source_folder = package_layout.source()
 
         complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
-        _remove_folder_raising(build_folder)
-
         config_source(export_folder, export_source_folder, scm_sources_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 
+    @staticmethod
+    def _copy_sources(conanfile, source_folder, build_folder):
+        _remove_folder_raising(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
-            self._output.info('Copying sources to build folder')
+            conanfile.output.info('Copying sources to build folder')
             try:
                 shutil.copytree(source_folder, build_folder, symlinks=True)
             except Exception as e:
@@ -193,8 +195,8 @@ class _PackageBuilder(object):
         if not skip_build:
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
-                self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, remotes)
+                self._prepare_sources(conanfile, pref, package_layout, remotes)
+                self._copy_sources(conanfile, source_folder, build_folder)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
