@@ -280,8 +280,8 @@ class CompressionTest(unittest.TestCase):
             if isinstance(self.compressor, ZipCompressor):
                 # ZIP: The date and time are encoded in standard MS-DOS format.
                 # MS-DOS uses year values relative to 1980 and 2 second precision.
-                t1 = t1 & ~1
-                t2 = t2 & ~1
+                t1 = int(t1) & ~1
+                t2 = int(t2) & ~1
             self.assertEqual(t1, t2)
             # 3. verify permissions
             self.assertEqual(stat.S_IMODE(stat1.st_mode), stat.S_IMODE(stat2.st_mode))
