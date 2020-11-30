@@ -250,7 +250,7 @@ set_property(TARGET {{name}}::{{name}}
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                          {%- for config in configs %}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
@@ -273,8 +273,12 @@ set_property(TARGET {{name}}::{{name}}
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
-            deps_names = ';'.join(
-                ["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
+            deps_names = []
+            for it in public_deps:
+                name = "{}::{}".format(*self._get_require_name(*it))
+                if name not in deps_names:
+                    deps_names.append(name)
+            deps_names = ';'.join(deps_names)
             pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
                                          public_deps]
             config_version = self.config_version_template.format(version=pkg_version)

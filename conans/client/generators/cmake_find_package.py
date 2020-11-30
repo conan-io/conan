@@ -194,9 +194,9 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "{{ '${'+pkg_name+'_COMPONENTS}' }}")
             endif()
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY
+                         INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
 
     """))
@@ -238,7 +238,12 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         self._validate_components(cpp_info)
 
         public_deps = self.get_public_deps(cpp_info)
-        deps_names = ';'.join(["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
+        deps_names = []
+        for it in public_deps:
+            name = "{}::{}".format(*self._get_require_name(*it))
+            if name not in deps_names:
+                deps_names.append(name)
+        deps_names = ';'.join(deps_names)
         pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
                                      public_deps]
 
