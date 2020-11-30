@@ -226,7 +226,7 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
 
 
 @contextmanager
-def add_permissions(file_path, permissions):
+def _add_permissions(file_path, permissions):
     if os.path.isfile(file_path):
         saved_permissions = os.stat(file_path).st_mode
         if saved_permissions & permissions == permissions:
@@ -250,7 +250,7 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode(encoding_out)
-    with add_permissions(file_path, stat.S_IWRITE):
+    with _add_permissions(file_path, stat.S_IWRITE):
         save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
@@ -281,7 +281,7 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         index = normalized_content.find(normalized_search)
 
     content = content.encode(encoding_out)
-    with add_permissions(file_path, stat.S_IWRITE):
+    with _add_permissions(file_path, stat.S_IWRITE):
         save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
@@ -295,7 +295,7 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
             lines.append('prefix=%s' % new_prefix)
         else:
             lines.append(line)
-    with add_permissions(pc_file, stat.S_IWRITE):
+    with _add_permissions(pc_file, stat.S_IWRITE):
         save(pc_file, "\n".join(lines))
 
 
