@@ -200,6 +200,16 @@ class GraphLockNode(object):
             self._modified = True  # Only for conan_build_info
         self._prev = value
 
+    def unlock_prev(self):
+        """ for creating a new lockfile from an existing one, when specifying --build, it
+        should make prev=None in order to unlock it and allow building again"""
+        if self._prev is None:
+            return  # Already unlocked
+        if not self._relaxed:
+            raise ConanException("Cannot build '%s' because it is already locked in the "
+                                 "input lockfile" % repr(self._ref))
+        self._prev = None
+
     def complete_base_node(self, package_id, prev):
         # completing a node from a base lockfile shouldn't mark the node as modified
         self.package_id = package_id

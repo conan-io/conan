@@ -4,6 +4,7 @@ import re
 import unittest
 
 import mock
+import pytest
 import six
 from parameterized import parameterized
 
@@ -72,6 +73,7 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.tool_visual_studio
     def test_binary_logging_on(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -83,6 +85,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln", output_binary_log=True)
         self.assertIn("/bl", command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_binary_logging_on_with_filename(self):
         bl_filename = "a_special_log.log"
@@ -119,6 +122,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln")
         self.assertNotIn("/bl", command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
     def test_binary_logging_not_supported(self, mock_get_version):
@@ -143,6 +147,7 @@ class MSBuildTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             msbuild.get_command("dummy.sln", targets="sometarget")
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_get_version(self):
         settings = MockSettings({"build_type": "Debug",
@@ -172,6 +177,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_skip_toolset(self):
         settings = MockSettings({"build_type": "Debug",

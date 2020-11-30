@@ -40,6 +40,41 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
 
+    def test_inherit_with_init(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            import os, re
+            class Base(object):
+                def init(self):
+                    self.versionFile = "1.2.3"
+                def set_name(self):
+                    self.name = self.bundleName
+                def set_version(self):
+                    self.version = self.versionFile
+
+            class PythonRequires(ConanFile):
+                pass
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pyreq/1.3.0@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class BundleBuilder(ConanFile):
+                python_requires = "pyreq/1.3.0"
+                python_requires_extend = "pyreq.Base"
+                bundleName = "BASE"
+            """)
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+
+        client.run("lock create conanfile.py --base --lockfile-out=base.lock")
+        base_lock = client.load("base.lock")
+        self.assertIn('pyreq/1.3.0', base_lock)
+
+        client.run("lock create conanfile.py --lockfile=base.lock --lockfile-out=conan.lock")
+        conan_lock = client.load("conan.lock")
+        self.assertIn('pyreq/1.3.0', conan_lock)
+
 
 class GraphLockPyRequiresTest(unittest.TestCase):
     if get_env("TESTING_REVISIONS_ENABLED", False):

@@ -321,13 +321,12 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
     def test_cmake_definitions_apple(self):
-        #https://github.com/conan-io/conan/issues/7875
+        # https://github.com/conan-io/conan/issues/7875
         settings_mock = _MockSettings(build_type="Release")
         settings_mock.os = "iOS"
         settings_mock.os_build = "Macos"
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        install_folder = "/c/foo/testing"
-        setattr(conanfile, "install_folder", install_folder)
+        conanfile.install_folder = "/c/foo/testing"
         conanfile.initialize(settings_mock, EnvValues())
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")

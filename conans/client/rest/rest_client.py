@@ -79,8 +79,8 @@ class RestApiClient(object):
     def get_package_manifest(self, pref):
         return self._get_api().get_package_manifest(pref)
 
-    def get_package_info(self, pref):
-        return self._get_api().get_package_info(pref)
+    def get_package_info(self, pref, headers):
+        return self._get_api().get_package_info(pref, headers=headers)
 
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
@@ -161,5 +161,5 @@ class RestApiClient(object):
     def get_latest_recipe_revision(self, ref):
         return self._get_api().get_latest_recipe_revision(ref)
 
-    def get_latest_package_revision(self, pref):
-        return self._get_api().get_latest_package_revision(pref)
+    def get_latest_package_revision(self, pref, headers):
+        return self._get_api().get_latest_package_revision(pref, headers=headers)

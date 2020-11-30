@@ -1,9 +1,7 @@
-import platform
 import textwrap
 import unittest
 
-
-from conans.client.toolchain import MakeToolchain
+from conan.tools.gnu import MakeToolchain
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.test.utils.tools import TestBufferConanOutput

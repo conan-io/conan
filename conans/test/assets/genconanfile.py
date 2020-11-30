@@ -38,6 +38,12 @@ class GenConanfile(object):
         self._package_info = {}
         self._package_id_lines = []
         self._test_lines = []
+        self._short_path = None
+        self._exports_sources = []
+
+    def with_short_paths(self, value):
+        self._short_path = value
+        return self
 
     def with_name(self, name):
         self._name = name
@@ -65,6 +71,11 @@ class GenConanfile(object):
 
     def with_generator(self, generator):
         self._generators.append(generator)
+        return self
+
+    def with_exports_sources(self, *exports):
+        for export in exports:
+            self._exports_sources.append(export)
         return self
 
     def with_require(self, ref, private=False, override=False):
@@ -355,6 +366,11 @@ class GenConanfile(object):
             ret.append("    {}".format(self._provides_line))
         if self._deprecated_line:
             ret.append("    {}".format(self._deprecated_line))
+        if self._short_path is not None:
+            ret.append("    short_paths = {}".format(str(self._short_path)))
+        if self._exports_sources:
+            line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
+            ret.append("    exports_sources = {}".format(line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
