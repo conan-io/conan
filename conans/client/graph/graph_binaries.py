@@ -188,7 +188,7 @@ class GraphBinariesAnalyzer(object):
                         # NO Build mode
                         self._process_node(node, pref, compatible_build_mode, update, remotes)
                         assert node.binary is not None
-                        if node.binary not in BINARY_MISSING:
+                        if node.binary not in (BINARY_MISSING, ):
                             node.conanfile.output.info("Main binary package '%s' missing. Using "
                                                        "compatible package '%s'"
                                                        % (node.package_id, package_id))
