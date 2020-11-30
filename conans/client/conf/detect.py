@@ -99,11 +99,9 @@ def _get_compiler_exe(exe):
     return compiler
 
 
-def _choose_compiler_by_platform_priority(vs, cc, gcc, clang, sun_cc):
+def _choose_compiler_by_platform_priority(cc, gcc, clang, sun_cc):
     # historically, the compiler priority used to be different for platforms in conan
-    if detected_os() == "Windows":
-        return vs or cc or gcc or clang
-    elif platform.system() == "Darwin":
+    if platform.system() == "Darwin":
         return clang or cc or gcc
     elif platform.system() == "SunOS":
         return sun_cc or cc or gcc or clang
@@ -134,7 +132,7 @@ def _get_compiler_from_command(output, command):
 
     # the compiler command doesn't contain an obvious name hint like "gcc" or "clang", so brute-force
     gcc, clang, sun_cc = _get_gcc_clang_suncc(output, command)
-    return _choose_compiler_by_platform_priority(None, None, gcc, clang, sun_cc)
+    return _choose_compiler_by_platform_priority(None, gcc, clang, sun_cc)
 
 
 def _get_default_compiler(output):
@@ -164,10 +162,12 @@ def _get_default_compiler(output):
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
-    vs = sun_cc = None
+    sun_cc = None
     if detected_os() == "Windows":
         version = latest_visual_studio_version_installed(output)
         vs = ('Visual Studio', version) if version else None
+        if vs:
+            return vs
 
     if v2_mode:
         cc = _get_compiler_and_version(output, "cc")
@@ -185,7 +185,7 @@ def _get_default_compiler(output):
         cc = None
         gcc, clang, sun_cc = _get_gcc_clang_suncc(output, command=None)
 
-    return _choose_compiler_by_platform_priority(vs, cc, gcc, clang, sun_cc)
+    return _choose_compiler_by_platform_priority(cc, gcc, clang, sun_cc)
 
 
 def _get_profile_compiler_version(compiler, version, output):
