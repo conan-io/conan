@@ -352,8 +352,8 @@ class GraphBinariesAnalyzer(object):
                 raise ConanException("{}: Locked options do not match computed options\n"
                                      "Locked options:\n{}\n"
                                      "Computed options:\n{}".format(node.ref,
-                                                                    node.conanfile.options.values,
-                                                                    node.graph_lock_node.options))
+                                                                    node.graph_lock_node.options,
+                                                                    node.conanfile.options.values))
 
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):

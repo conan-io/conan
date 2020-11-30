@@ -417,13 +417,11 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("export pahomqttc pahomqttc/1.0@")
         client.run("export pahomqttcpp pahomqttcpp/1.0@")
 
-        client.save({"conanfile.txt": "[requires]\npahomqttcpp/1.0"}, clean_first=True)
-        client.run("install . --build -o paho-mqtt-c:shared=False")
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
         lockfile = client.load("conan.lock")
-        print(lockfile)
         self.assertIn('"options": "pahomqttc:shared=False"', lockfile)
         self.assertNotIn('shared=True', lockfile)
-        client.run("install . --lockfile=conan.lock")
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
 
     def test_configure(self):
         # https://github.com/conan-io/conan/issues/7991
@@ -452,13 +450,12 @@ class LockFileOptionsTest(unittest.TestCase):
         client.run("export pahomqttc pahomqttc/1.0@")
         client.run("export pahomqttcpp pahomqttcpp/1.0@")
 
-        client.save({"conanfile.txt": "[requires]\npahomqttcpp/1.0"}, clean_first=True)
-        client.run("install . --build -o paho-mqtt-c:shared=False")
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
         lockfile = client.load("conan.lock")
         self.assertIn('"options": "pahomqttc:shared=True"', lockfile)
         # Check the trailing ", to not get the profile one
         self.assertNotIn('shared=False"', lockfile)
-        client.run("install . --lockfile=conan.lock")
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
 
 
 class GraphInstallArgumentsUpdated(unittest.TestCase):
