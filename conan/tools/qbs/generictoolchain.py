@@ -64,9 +64,9 @@ _cxx_language_version = {
 }
 
 
-class QbsException(ConanException):
+class QbsToolchainException(ConanException):
     def __str__(self):
-        msg = super(QbsException, self).__str__()
+        msg = super(QbsToolchainException, self).__str__()
         return 'Qbs generic toolchain: {}'.format(msg)
 
 
@@ -75,7 +75,8 @@ def _bool(b):
         return None
 
     if type(b)is not bool:
-        raise QbsException('Tried to convert non bool type value to bool')
+        raise QbsToolchainException(
+            'Tried to convert non bool type value to bool')
 
     if b:
         return 'true'
@@ -90,10 +91,10 @@ def _env_var_to_list(var):
 def _check_for_compiler(conanfile):
     compiler = conanfile.settings.get_safe('compiler')
     if not compiler:
-        raise QbsException('need compiler to be set in settings')
+        raise QbsToolchainException('need compiler to be set in settings')
 
     if compiler not in ['Visual Studio', 'gcc', 'clang']:
-        raise QbsException('compiler not supported')
+        raise QbsToolchainException('compiler not supported')
 
 
 def _default_compiler_name(conanfile):
@@ -109,7 +110,7 @@ def _default_compiler_name(conanfile):
             return 'cl'
         if compiler == 'clang':
             return 'clang-cl'
-        raise QbsException('unknown windows compiler')
+        raise QbsToolchainException('unknown windows compiler')
 
     return compiler
 
@@ -180,7 +181,7 @@ class LinkerFlagsParser(object):
 
     def _assert_comma(self, token):
         if token != ',':
-            raise QbsException('Could not parse LDFLAGS')
+            raise QbsToolchainException('Could not parse LDFLAGS')
         self._parse = self._add_linker_flag
 
     def _add_linker_flag(self, token):
