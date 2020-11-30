@@ -249,12 +249,7 @@ class QbsGenericTest(unittest.TestCase):
         }
         for ld_flags, expected in test_data_ld_flags.items():
             driver_linker_flags, linker_flags = expected
-            print(ld_flags)
-            print(driver_linker_flags)
-            print(linker_flags)
             parser = qbs.LinkerFlagsParser(qbs._env_var_to_list(ld_flags))
-            print(parser.driver_linker_flags)
-            print(parser.linker_flags)
             self.assertEqual(parser.driver_linker_flags,
                              driver_linker_flags)
             self.assertEqual(parser.linker_flags,

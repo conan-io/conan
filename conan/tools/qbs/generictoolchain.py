@@ -85,7 +85,7 @@ def _bool(b):
 
 
 def _env_var_to_list(var):
-    return list(shlex.shlex(var, posix=True, punctuation_chars=True))
+    return shlex.split(var)
 
 
 def _check_for_compiler(conanfile):
@@ -162,31 +162,12 @@ class LinkerFlagsParser(object):
     def __init__(self, ld_flags):
         self.driver_linker_flags = []
         self.linker_flags = []
-        self._parse = self._detect_wl_or_add_driver_linker_flag
-        for token in ld_flags:
-            self._parse(token)
 
-    def _detect_wl_or_add_driver_linker_flag(self, token):
-        if token == '-Wl':
-            self._parse = self._assert_comma
-        else:
-            self.driver_linker_flags.append(token)
-            self._parse = self._detect_wl_or_add_driver_linker_flag
-
-    def _detect_wl_or_detect_comma_or_add_driver_linker_flag(self, token):
-        if token == ',':
-            self._parse = self._add_linker_flag
-        else:
-            self._detect_wl_or_add_driver_linker_flag(token)
-
-    def _assert_comma(self, token):
-        if token != ',':
-            raise QbsToolchainException('Could not parse LDFLAGS')
-        self._parse = self._add_linker_flag
-
-    def _add_linker_flag(self, token):
-        self.linker_flags.append(token)
-        self._parse = self._detect_wl_or_detect_comma_or_add_driver_linker_flag
+        for item in ld_flags:
+            if item.startswith('-Wl'):
+                self.linker_flags.extend(item.split(',')[1:])
+            else:
+                self.driver_linker_flags.append(item)
 
 
 def _flags_from_env():
