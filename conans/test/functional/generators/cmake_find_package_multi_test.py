@@ -57,7 +57,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 # Test that we are using find_dependency with the NO_MODULE option
                 # to skip finding first possible FindBye somewhere
                 self.assertIn("find_dependency(hello REQUIRED NO_MODULE)",
-                              load(os.path.join(c.current_folder, "byeConfig.cmake")))
+                              load(os.path.join(c.current_folder, "bye-config.cmake")))
 
                 if platform.system() == "Windows":
                     c.run_command('cmake .. -G "Visual Studio 15 Win64"')
@@ -315,29 +315,31 @@ class Conan(ConanFile):
 
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
-        os.unlink(os.path.join(client.current_folder, "helloConfigVersion.cmake"))
+        os.unlink(os.path.join(client.current_folder, "hello-config-version.cmake"))
         exit_code = client.run("build .", assert_error=True)
         self.assertNotEqual(0, exit_code)
 
     @parameterized.expand([
-        ("find_package(hello 1.0)", False, True),
-        ("find_package(hello 1.1)", False, True),
-        ("find_package(hello 1.2)", False, False),
-        ("find_package(hello 1.0 EXACT)", False, False),
-        ("find_package(hello 1.1 EXACT)", False, True),
-        ("find_package(hello 1.2 EXACT)", False, False),
-        ("find_package(hello 0.1)", False, False),
-        ("find_package(hello 2.0)", False, False),
-        ("find_package(hello 1.0 REQUIRED)", False, True),
-        ("find_package(hello 1.1 REQUIRED)", False, True),
-        ("find_package(hello 1.2 REQUIRED)", True, False),
-        ("find_package(hello 1.0 EXACT REQUIRED)", True, False),
-        ("find_package(hello 1.1 EXACT REQUIRED)", False, True),
-        ("find_package(hello 1.2 EXACT REQUIRED)", True, False),
-        ("find_package(hello 0.1 REQUIRED)", True, False),
-        ("find_package(hello 2.0 REQUIRED)", True, False)
+        ("hello", "1.0", "", False, True),
+        ("Hello", "1.0", "", False, True),
+        ("HELLO", "1.0", "", False, True),
+        ("hello", "1.1", "", False, True),
+        ("hello", "1.2", "", False, False),
+        ("hello", "1.0", "EXACT", False, False),
+        ("hello", "1.1", "EXACT", False, True),
+        ("hello", "1.2", "EXACT", False, False),
+        ("hello", "0.1", "", False, False),
+        ("hello", "2.0", "", False, False),
+        ("hello", "1.0", "REQUIRED", False, True),
+        ("hello", "1.1", "REQUIRED", False, True),
+        ("hello", "1.2", "REQUIRED", True, False),
+        ("hello", "1.0", "EXACT REQUIRED", True, False),
+        ("hello", "1.1", "EXACT REQUIRED", False, True),
+        ("hello", "1.2", "EXACT REQUIRED", True, False),
+        ("hello", "0.1", "REQUIRED", True, False),
+        ("hello", "2.0", "REQUIRED", True, False)
     ])
-    def test_version(self, find_package_string, cmake_fails, package_found):
+    def test_version(self, name, version, params, cmake_fails, package_found):
         client = TestClient()
         client.run("new hello/1.1 -s")
         client.run("create .")
@@ -345,9 +347,9 @@ class Conan(ConanFile):
         cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.1)
             project(consumer)
-            {find_package_string}
-            message(STATUS "hello found: ${{hello_FOUND}}")
-            """).format(find_package_string=find_package_string)
+            find_package({name} {version} {params})
+            message(STATUS "hello found: ${{{name}_FOUND}}")
+            """).format(name=name, version=version, params=params)
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
