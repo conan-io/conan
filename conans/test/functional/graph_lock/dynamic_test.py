@@ -446,9 +446,9 @@ class PartialOptionsTest(unittest.TestCase):
         expected = textwrap.dedent("""\
                        ERROR: LibA/1.0: Locked options do not match computed options
                        Locked options:
-                       myoption=False
+                       myoption=True
                        Computed options:
-                       myoption=True""")
+                       myoption=False""")
         self.assertIn(expected, client.out)
 
         # Order of LibC, LibB does matter, in this case it will not raise
