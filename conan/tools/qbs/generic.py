@@ -130,14 +130,14 @@ def _setup_toolchains(conanfile):
             env_context = tools.vcvars()
 
     with env_context:
-        cmd = 'qbs-setup-toolchains --settings-dir %s %s %s' % (
+        cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
               _settings_dir(conanfile), compiler, _profile_name)
         conanfile.run(cmd)
 
 
 def _read_qbs_toolchain_from_config(conanfile):
     s = StringIO()
-    conanfile.run('qbs-config --settings-dir %s --list' % (
+    conanfile.run('qbs-config --settings-dir "%s" --list' % (
                     _settings_dir(conanfile)), output=s)
     config = {}
     s.seek(0)
