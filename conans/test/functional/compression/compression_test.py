@@ -275,13 +275,13 @@ class CompressionTest(unittest.TestCase):
             # 1. verify contents
             self.assertEqual(md5sum(filename1), md5sum(filename2))
             # 2. verify timestamps
-            t1 = int(stat1.st_mtime)
-            t2 = int(stat2.st_mtime)
+            t1 = stat1.st_mtime
+            t2 = stat2.st_mtime
             if isinstance(self.compressor, ZipCompressor):
                 # ZIP: The date and time are encoded in standard MS-DOS format.
                 # MS-DOS uses year values relative to 1980 and 2 second precision.
-                t1 &= ~1
-                t2 &= ~1
+                t1 = t1 & ~1
+                t2 = t2 & ~1
             self.assertEqual(t1, t2)
             # 3. verify permissions
             self.assertEqual(stat.S_IMODE(stat1.st_mode), stat.S_IMODE(stat2.st_mode))
