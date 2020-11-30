@@ -9,7 +9,7 @@ from conans.util.env_reader import get_env
 
 class BuildOrderTest(unittest.TestCase):
 
-    def single_consumer_test(self):
+    def test_single_consumer(self):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
@@ -18,8 +18,16 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
+    def test_base_graph(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("test4", "0.1")})
+        client.run("lock create conanfile.py --base --lockfile-out=conan.lock")
+        client.run("lock build-order conan.lock --json=bo.json", assert_error=True)
+        self.assertIn("Lockfiles with --base do not contain profile information, "
+                      "cannot be used. Create a full lockfile", client.out)
+
     @parameterized.expand([(True,), (False,)])
-    def build_not_locked_test(self, export):
+    def test_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
@@ -59,7 +67,7 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
-    def build_locked_error_test(self):
+    def test_build_locked_error(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("test4", "0.1")})
         client.run("create .")
@@ -80,16 +88,17 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual([], jsonbo)
         # if we try to build anyway, error
         client.run("install test4/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'test4/0.1#f876ec9ea0f44cb7adb1588e431b391a' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f876ec9ea0f44cb7adb1588e431b391a" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'test4/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
 
     @parameterized.expand([(True,), (False,)])
-    def transitive_build_not_locked_test(self, export):
+    def test_transitive_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_require_plain("dep/0.1"),
-                     "app/conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+                     "pkg/conanfile.py": GenConanfile().with_require("dep/0.1"),
+                     "app/conanfile.py": GenConanfile().with_require("pkg/0.1")})
         if export:
             client.run("export dep dep/0.1@")
             client.run("export pkg pkg/0.1@")
@@ -158,8 +167,9 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[1][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -177,8 +187,9 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[2][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -199,17 +210,17 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual([], jsonbo)
 
     @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
-    def package_revision_mode_build_order_test(self):
+    def test_package_revision_mode_build_order(self):
         # https://github.com/conan-io/conan/issues/6232
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . libb/0.1@")
         client.run("export . libc/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("libc/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("libc/0.1")})
         client.run("export . liba/0.1@")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("liba/0.1")
-                                                   .with_require_plain("libb/0.1")})
+        client.save({"conanfile.py": GenConanfile().with_require("liba/0.1")
+                                                   .with_require("libb/0.1")})
         client.run("export . app/0.1@")
 
         client.run("lock create --reference=app/0.1@ --build=missing --lockfile-out=conan.lock")
@@ -244,12 +255,12 @@ class BuildOrderTest(unittest.TestCase):
 class BuildRequiresBuildOrderTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
-    def transitive_build_not_locked_test(self, export):
+    def test_transitive_build_not_locked(self, export):
         # https://github.com/conan-io/conan/issues/5727
         client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile(),
-                     "pkg/conanfile.py": GenConanfile().with_build_require_plain("dep/0.1"),
-                     "app/conanfile.py": GenConanfile().with_require_plain("pkg/0.1")})
+                     "pkg/conanfile.py": GenConanfile().with_build_requires("dep/0.1"),
+                     "app/conanfile.py": GenConanfile().with_require("pkg/0.1")})
         if export:
             client.run("export dep dep/0.1@")
             client.run("export pkg pkg/0.1@")
@@ -321,8 +332,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'dep/0.1#f3367e0e7d170aa12abccb175fee5f97' because it is "
-                      "already locked in the input lockfile", client.out)
+        rrev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'dep/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[1][0][0]))
         self.assertIn("dep/0.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
@@ -340,8 +352,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        self.assertIn("Cannot build 'pkg/0.1#1364f701b47130c7e38f04c5e5fab985' because it is "
-                      "already locked in the input lockfile", client.out)
+        rrev = "#1364f701b47130c7e38f04c5e5fab985" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'pkg/0.1{}' because it is "
+                      "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build={0}".format(build_order[2][0][0]))
         self.assertNotIn("dep/0.1", client.out)
@@ -367,10 +380,9 @@ class GraphLockWarningsTestCase(unittest.TestCase):
     def test_override(self):
         client = TestClient()
         client.save({"harfbuzz.py": GenConanfile("harfbuzz", "1.0"),
-                     "ffmpeg.py":
-                         GenConanfile("ffmpeg", "1.0").with_requirement_plain("harfbuzz/[>=1.0]"),
-                     "meta.py": GenConanfile("meta", "1.0").with_requirement_plain("ffmpeg/1.0")
-                                                           .with_requirement_plain("harfbuzz/1.0")
+                     "ffmpeg.py": GenConanfile("ffmpeg", "1.0").with_requirement("harfbuzz/[>=1.0]"),
+                     "meta.py": GenConanfile("meta", "1.0").with_requirement("ffmpeg/1.0")
+                                                           .with_requirement("harfbuzz/1.0")
                      })
         client.run("export harfbuzz.py")
         client.run("export ffmpeg.py")
@@ -394,14 +406,14 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         # this is the recommended approach, build_requires should be locked from the beginning
         client = TestClient()
         client.save({"zlib.py": GenConanfile(),
-                     "harfbuzz.py": GenConanfile().with_require_plain("fontconfig/1.0"),
+                     "harfbuzz.py": GenConanfile().with_require("fontconfig/1.0"),
                      "fontconfig.py": GenConanfile(),
-                     "ffmpeg.py": GenConanfile().with_build_require_plain("fontconfig/1.0")
-                                                .with_build_require_plain("harfbuzz/1.0"),
-                     "variant.py": GenConanfile().with_require_plain("ffmpeg/1.0")
-                                                 .with_require_plain("fontconfig/1.0")
-                                                 .with_require_plain("harfbuzz/1.0")
-                                                 .with_require_plain("zlib/1.0")
+                     "ffmpeg.py": GenConanfile().with_build_requires("fontconfig/1.0",
+                                                                     "harfbuzz/1.0"),
+                     "variant.py": GenConanfile().with_requires("ffmpeg/1.0",
+                                                                "fontconfig/1.0",
+                                                                "harfbuzz/1.0",
+                                                                "zlib/1.0")
                      })
         client.run("export zlib.py zlib/1.0@")
         client.run("export fontconfig.py fontconfig/1.0@")
@@ -461,8 +473,8 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
     def test_build_requires_not_needed(self):
         client = TestClient()
         client.save({'tool/conanfile.py': GenConanfile(),
-                     'libA/conanfile.py': GenConanfile().with_build_require_plain("tool/1.0"),
-                     'App/conanfile.py': GenConanfile().with_require_plain("libA/1.0")})
+                     'libA/conanfile.py': GenConanfile().with_build_requires("tool/1.0"),
+                     'App/conanfile.py': GenConanfile().with_require("libA/1.0")})
         client.run("create tool tool/1.0@")
         client.run("create libA libA/1.0@")
         client.run("create App app/1.0@")

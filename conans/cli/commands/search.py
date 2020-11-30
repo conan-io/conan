@@ -1,44 +1,27 @@
 import json
 
+from conans.cli.cli import cli_out_write
 from conans.client.output import Color
-from conans.errors import NoRemoteAvailable
 from conans.cli.command import conan_command, Extender
 
 
-def output_search_cli(info, out):
-    results = info["results"]
-    for remote_info in results:
+def output_search_cli(info):
+    for remote_info in info:
         source = "cache" if remote_info["remote"] is None else str(remote_info["remote"])
-        out.writeln("{}:".format(source), Color.BRIGHT_WHITE)
+        cli_out_write("{}:".format(source), Color.BRIGHT_WHITE)
         for conan_item in remote_info["items"]:
             reference = conan_item["recipe"]["id"]
-            out.writeln(" {}".format(reference))
+            cli_out_write(" {}".format(reference))
 
 
-def output_search_json(info, out):
-    results = info["results"]
-    myjson = json.dumps(results, indent=4)
-    out.writeln(myjson)
-
-
-def apiv2_search_recipes(query, remote_patterns=None, local_cache=False):
-    remote = None
-    if remote_patterns is not None and len(remote_patterns) > 0:
-        remote = remote_patterns[0].replace("*", "remote")
-
-    if remote and "bad" in remote:
-        raise NoRemoteAvailable("Remote '%s' not found in remotes" % remote)
-
-    search_results = {"results": [{"remote": remote,
-                                   "items": [{"recipe": {"id": "app/1.0"}},
-                                             {"recipe": {"id": "liba/1.0"}}]}]}
-
-    return search_results
+def output_search_json(info):
+    myjson = json.dumps(info, indent=4)
+    cli_out_write(myjson)
 
 
 @conan_command(group="Consumer", formatters={"cli": output_search_cli,
-                                                      "json": output_search_json})
-def search(*args, conan_api, parser, **kwargs):
+                                             "json": output_search_json})
+def search(conan_api, parser, *args, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """
@@ -55,5 +38,5 @@ def search(*args, conan_api, parser, **kwargs):
     args = parser.parse_args(*args)
 
     remotes = args.remote or []
-    info = apiv2_search_recipes(args.query, remote_patterns=remotes, local_cache=args.cache)
+    info = conan_api.search_recipes(args.query, remote_patterns=remotes, local_cache=args.cache)
     return info

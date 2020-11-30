@@ -57,21 +57,24 @@ def intel_installation_path(version, arch):
     return installation_path
 
 
-def compilervars_command(conanfile, arch=None, compiler_version=None, force=False):
+def intel_compilervars_command(conanfile, arch=None, compiler_version=None, force=False):
     """
     https://software.intel.com/en-us/intel-system-studio-cplusplus-compiler-user-and-reference-guide-using-compilervars-file
     :return:
     """
     if "PSTLROOT" in os.environ and not force:
-        return "echo Conan:compilervars already set"
+        return "echo Conan:intel_compilervars already set"
     settings = conanfile.settings
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     arch = arch or settings.get_safe("arch")
     system = platform.system()
     cvars = "compilervars.bat" if system == "Windows" else "compilervars.sh"
-    command = os.path.join(intel_installation_path(version=compiler_version, arch=arch), "bin", cvars)
+    command = os.path.join(intel_installation_path(version=compiler_version, arch=arch), "bin",
+                           cvars)
     command = '"%s"' % command
-    if system != "Windows":
+    if system == "Windows":
+        command = "call " + command
+    else:
         command = ". " + command  # dot is more portable than source
     if arch == "x86_64":
         command += " -arch intel64"
@@ -101,13 +104,14 @@ def compilervars_command(conanfile, arch=None, compiler_version=None, force=Fals
     return command
 
 
-def compilervars_dict(conanfile, arch=None, compiler_version=None, force=False, only_diff=True):
-    cmd = compilervars_command(conanfile, arch, compiler_version, force)
+def intel_compilervars_dict(conanfile, arch=None, compiler_version=None, force=False,
+                            only_diff=True):
+    cmd = intel_compilervars_command(conanfile, arch, compiler_version, force)
     return env_diff(cmd, only_diff)
 
 
 @contextmanager
-def compilervars(*args, **kwargs):
-    new_env = compilervars_dict(*args, **kwargs)
+def intel_compilervars(*args, **kwargs):
+    new_env = intel_compilervars_dict(*args, **kwargs)
     with environment_append(new_env):
         yield

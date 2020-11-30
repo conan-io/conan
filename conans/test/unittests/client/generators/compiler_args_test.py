@@ -12,7 +12,7 @@ from conans.test.utils.mocks import ConanFileMock
 
 class CompilerArgsTest(unittest.TestCase):
 
-    def visual_studio_extensions_test(self):
+    def test_visual_studio_extensions(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -63,7 +63,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.env_info = EnvInfo()
         return conan_file
 
-    def gcc_test(self):
+    def test_gcc(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"
@@ -115,7 +115,7 @@ class CompilerArgsTest(unittest.TestCase):
                          ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
                          gcc.content)
 
-    def compiler_args_test(self):
+    def test_compiler_args(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -160,7 +160,7 @@ class CompilerArgsTest(unittest.TestCase):
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -F /root/Frameworks', args.content)
 
-    def apple_frameworks_test(self):
+    def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Macos"
         settings.compiler = "apple-clang"
@@ -178,7 +178,7 @@ class CompilerArgsTest(unittest.TestCase):
                          ' -F /root/Frameworks -F /root/path/to/Frameworks1'
                          ' -F /root/path/to/Frameworks2', args.content)
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Linux"
         settings.compiler = "gcc"

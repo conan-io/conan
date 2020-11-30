@@ -4,13 +4,16 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
 
+@pytest.mark.tool_cmake
 class RunEnvironmentTest(unittest.TestCase):
 
     def test_run_environment(self):
@@ -44,6 +47,7 @@ class RunEnvironmentTest(unittest.TestCase):
         self.assertIn("Hello Hello0", client.out)
 
 
+@pytest.mark.tool_cmake
 class RunEnvironmentSharedTest(unittest.TestCase):
 
     def setUp(self):

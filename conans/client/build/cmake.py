@@ -1,5 +1,7 @@
 import os
 import platform
+import re
+import warnings
 from itertools import chain
 
 from six import StringIO  # Python 2 and 3 compatible
@@ -12,7 +14,7 @@ from conans.client.build.cmake_flags import CMakeDefinitionsBuilder, \
     cmake_install_prefix_var_name, get_toolset, build_type_definition, \
     cmake_in_local_cache_var_name, runtime_definition_var_name, get_generator_platform, \
     is_generator_platform_supported, is_toolset_supported
-from conans.client.output import ConanOutput
+from conans.client.output import ConanOutput, Color
 from conans.client.tools.env import environment_append, _environment_add
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -31,12 +33,23 @@ class CMake(object):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
         # If already injected, create and return
-        from conans.client.build.cmake_toolchain_build_helper import CMakeToolchainBuildHelper
+        from conan.tools.cmake.cmake import CMake as CMakeToolchainBuildHelper
         if CMakeToolchainBuildHelper in cls.__bases__ or CMakeBuildHelper in cls.__bases__:
             return super(CMake, cls).__new__(cls)
 
         # If not, add the proper CMake implementation
-        if hasattr(conanfile, "toolchain"):
+        if hasattr(conanfile, "toolchain") or hasattr(conanfile, "generate"):
+            # Warning
+            msg = ("\n*****************************************************************\n"
+                   "******************************************************************\n"
+                   "This 'CMake' build helper has been deprecated and moved.\n"
+                   "It will be removed in next Conan release.\n"
+                   "Use 'from conan.tools.cmake import CMake' instead.\n"
+                   "********************************************************************\n"
+                   "********************************************************************\n")
+            ConanOutput(conanfile.output._stream,
+                        color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+            warnings.warn(msg)
             CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeToolchainBuildHelper), {})
         else:
             CustomCMakeClass = type("CustomCMakeClass", (cls, CMakeBuildHelper), {})
@@ -97,7 +110,12 @@ class CMakeBuildHelper(object):
         # FIXME CONAN 2.0: CMake() interface should be always the constructor and self.definitions.
         # FIXME CONAN 2.0: Avoid properties and attributes to make the user interface more clear
 
-        self.definitions = builder.get_definitions()
+        try:
+            cmake_version = self.get_version()
+            self.definitions = builder.get_definitions(cmake_version)
+        except ConanException:
+            self.definitions = builder.get_definitions(None)
+
         self.definitions["CONAN_EXPORTED"] = "1"
 
         self.toolset = toolset or get_toolset(self._settings, self.generator)
@@ -180,10 +198,11 @@ class CMakeBuildHelper(object):
         generator_platform = self.generator_platform
 
         if self.generator_platform and 'Visual Studio' in generator:
-            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using the -A argument
-            #   to keep previous implementation, but any modern CMake will support (and recommend) passing the
-            #   platform in its own argument.
-            compiler_version = self._settings.get_safe("compiler.version")
+            # FIXME: Conan 2.0 We are adding the platform to the generator instead of using
+            #  the -A argument to keep previous implementation, but any modern CMake will support
+            #  (and recommend) passing the platform in its own argument.
+            # Get the version from the generator, as it could have been defined by user argument
+            compiler_version = re.search("Visual Studio ([0-9]*)", generator).group(1)
             if Version(compiler_version) < "16" and self._settings.get_safe("os") != "WindowsCE":
                 if self.generator_platform == "x64":
                     generator += " Win64" if not generator.endswith(" Win64") else ""
@@ -259,8 +278,8 @@ class CMakeBuildHelper(object):
         elif is_intel:
             if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
                                   "Unix Makefiles"]:
-                compilervars_dict = tools.compilervars_dict(self._conanfile, force=True)
-                context = _environment_add(compilervars_dict, post=self._append_vcvars)
+                intel_compilervars_dict = tools.intel_compilervars_dict(self._conanfile, force=True)
+                context = _environment_add(intel_compilervars_dict, post=self._append_vcvars)
         with context:
             self._conanfile.run(command)
 
@@ -318,26 +337,27 @@ class CMakeBuildHelper(object):
         if target is not None:
             args = ["--target", target] + args
 
-        compiler_version = self._settings.get_safe("compiler.version")
         if self.generator and self.parallel:
             if ("Makefiles" in self.generator or "Ninja" in self.generator) and \
                     "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count(self._conanfile.output))
-            elif "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                # Parallel for building projects in the solution
-                args.append("/m:%i" % cpu_count(output=self._conanfile.output))
+            elif "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    # Parallel for building projects in the solution
+                    args.append("/m:%i" % cpu_count(output=self._conanfile.output))
 
         if self.generator and self.msbuild_verbosity:
-            if "Visual Studio" in self.generator and \
-                    compiler_version and Version(compiler_version) >= "10":
-                if "--" not in args:
-                    args.append("--")
-                args.append("/verbosity:%s" % self.msbuild_verbosity)
+            if "Visual Studio" in self.generator:
+                compiler_version = re.search("Visual Studio ([0-9]*)", self.generator).group(1)
+                if Version(compiler_version) >= "10":
+                    if "--" not in args:
+                        args.append("--")
+                    args.append("/verbosity:%s" % self.msbuild_verbosity)
 
         arg_list = join_arguments([
             args_to_string([build_dir]),

@@ -7,6 +7,7 @@ from mock import Mock
 
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.generators import GeneratorManager
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -45,11 +46,12 @@ class GraphManagerTest(unittest.TestCase):
         binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
+        generator_manager = GeneratorManager()
         hook_manager = Mock()
         app_type = namedtuple("ConanApp", "cache out remote_manager hook_manager graph_manager"
-                              " binaries_analyzer")
+                              " binaries_analyzer generator_manager")
         app = app_type(self.cache, self.output, self.remote_manager, hook_manager, self.manager,
-                       binaries)
+                       binaries, generator_manager)
         return app
 
     def recipe_cache(self, reference, requires=None):
@@ -57,7 +59,7 @@ class GraphManagerTest(unittest.TestCase):
         conanfile = GenConanfile()
         if requires:
             for r in requires:
-                conanfile.with_require_plain(r)
+                conanfile.with_require(r)
         conanfile.with_package_info(
             cpp_info={"libs": ["mylib{}{}lib".format(ref.name, ref.version)]},
             env_info={"MYENV": ["myenv{}{}env".format(ref.name, ref.version)]})
@@ -91,10 +93,10 @@ class GraphManagerTest(unittest.TestCase):
             conanfile.with_name(ref.name).with_version(ref.version)
         if requires:
             for r in requires:
-                conanfile.with_require_plain(r)
+                conanfile.with_require(r)
         if build_requires:
             for r in build_requires:
-                conanfile.with_build_require_plain(r)
+                conanfile.with_build_requires(r)
         save(path, str(conanfile))
         return path
 

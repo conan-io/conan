@@ -20,6 +20,7 @@ from conans.client.tools.env import *  # pylint: disable=unused-import
 from conans.client.tools.pkg_config import *  # pylint: disable=unused-import
 from conans.client.tools.scm import *  # pylint: disable=unused-import
 from conans.client.tools.settings import *  # pylint: disable=unused-import
+from conans.client.tools.intel import *  # pylint: disable=unused-import
 from conans.client.tools.apple import *
 from conans.client.tools.android import *
 # Tools form conans.util
@@ -96,7 +97,9 @@ collect_libs = tools_files.collect_libs
 which = tools_files.which
 unix2dos = tools_files.unix2dos
 dos2unix = tools_files.dos2unix
+rename = tools_files.rename
 fix_symlinks = tools_files.fix_symlinks
+remove_files_by_mask = tools_files.remove_files_by_mask
 
 
 def unzip(*args, **kwargs):

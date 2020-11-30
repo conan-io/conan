@@ -10,18 +10,18 @@ from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 class ConanAliasTest(unittest.TestCase):
 
-    def alias_overriden_test(self):
+    def test_alias_overriden(self):
         # https://github.com/conan-io/conan/issues/3353
         client = TestClient()
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . PkgA/0.1@user/testing")
         client.run("alias PkgA/latest@user/testing PkgA/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")})
         client.run("export . PkgB/0.1@user/testing")
         client.run("alias PkgB/latest@user/testing PkgB/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("PkgA/latest@user/testing")
-                                                   .with_require_plain("PkgB/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")
+                                                   .with_require("PkgB/latest@user/testing")})
         client.run("info .")
         self.assertNotIn("overridden", client.out)
 
@@ -31,7 +31,7 @@ class ConanAliasTest(unittest.TestCase):
         self.assertIn("An alias can only be defined to a package with the same name",
                       client.out)
 
-    def complete_large_test(self):
+    def test_complete_large(self):
         # https://github.com/conan-io/conan/issues/2583
         conanfile0 = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -154,7 +154,7 @@ class Pkg(ConanFile):
         self.assertIn('"CD/0.1@user/testing" -> "CB/0.1@user/testing"', graphfile)
         self.assertIn('"CJ/0.1@user/testing" -> "CB/0.1@user/testing"', graphfile)
 
-    def striped_large_test(self):
+    def test_striped_large(self):
         # https://github.com/conan-io/conan/issues/2583
         conanfile0 = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -208,7 +208,7 @@ class Pkg(ConanFile):
         self.assertIn('"CK/0.1@user/testing" -> "CH/0.1@user/testing"', graphfile)
 
     @parameterized.expand([(True, ), (False, )])
-    def test_double_alias_test(self, use_requires):
+    def test_double_alias(self, use_requires):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
@@ -253,7 +253,7 @@ class Pkg(ConanFile):
         self.assertIn('"conanfile.txt" -> "LibA/0.1@user/testing"', graphfile)
 
     @parameterized.expand([(True, ), (False, )])
-    def double_alias_options_test(self, use_requires):
+    def test_double_alias_options(self, use_requires):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
@@ -317,7 +317,7 @@ class Pkg(ConanFile):
         self.assertIn("LibC/0.1@user/testing: MYOPTION: LibC True", client.out)
 
     @parameterized.expand([(True, ), (False, )])
-    def double_alias_ranges_test(self, use_requires):
+    def test_double_alias_ranges(self, use_requires):
         # https://github.com/conan-io/conan/issues/2583
         client = TestClient()
         if use_requires:
@@ -360,25 +360,25 @@ class Pkg(ConanFile):
         self.assertIn('"conanfile.txt" -> "LibB/sha1@user/testing"', graphfile)
         self.assertIn('"conanfile.txt" -> "LibA/sha1@user/testing"', graphfile)
 
-    def alias_bug_test(self):
+    def test_alias_bug(self):
         # https://github.com/conan-io/conan/issues/2252
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/latest@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/latest@user/testing")})
         client.run("create . Pkg1/0.1@user/testing")
         client.run("create . Pkg2/0.1@user/testing")
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg1/0.1@user/testing")
-                                                   .with_require_plain("Pkg2/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_requires("Pkg1/0.1@user/testing",
+                                                                  "Pkg2/0.1@user/testing")})
         client.run("create . PkgRoot/0.1@user/testing")
         self.assertNotIn("Pkg/latest@user/testing", client.out)
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
         self.assertIn("Pkg1/0.1@user/testing: Already installed!", client.out)
         self.assertIn("Pkg2/0.1@user/testing: Already installed!", client.out)
 
-    def transitive_alias_test(self):
+    def test_transitive_alias(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
@@ -387,18 +387,18 @@ class Pkg(ConanFile):
         client.run("alias Pkg/megalatest@user/testing Pkg/superlatest@user/testing")
 
         client.save({"conanfile.py":
-                     GenConanfile().with_require_plain("Pkg/megalatest@user/testing")})
+                     GenConanfile().with_require("Pkg/megalatest@user/testing")})
         client.run("create . Consumer/0.1@user/testing")
         self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
         self.assertNotIn("latest@user", client.out)
 
-    def repeated_alias_test(self):
+    def test_repeated_alias(self):
         client = TestClient()
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
-    def test_basic_test(self):
+    def test_basic(self):
         test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})

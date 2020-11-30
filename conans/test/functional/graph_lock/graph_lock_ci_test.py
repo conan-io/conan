@@ -6,7 +6,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.graph_lock import LOCKFILE
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -374,6 +374,52 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
+    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    def test_package_revisions_unkown_id_update(self):
+        # https://github.com/conan-io/conan/issues/7588
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=package_revision_mode")
+        files = {
+            "pkga/conanfile.py": conanfile.format(requires=""),
+            "pkga/myfile.txt": "HelloA",
+            "pkgb/conanfile.py": conanfile.format(requires='requires="PkgA/[*]@user/channel"'),
+            "pkgb/myfile.txt": "HelloB",
+            "pkgc/conanfile.py": conanfile.format(requires='requires="PkgB/[*]@user/channel"'),
+            "pkgc/myfile.txt": "HelloC",
+            "pkgd/conanfile.py": conanfile.format(requires='requires="PkgC/[*]@user/channel"'),
+            "pkgd/myfile.txt": "HelloD",
+        }
+        client.save(files)
+        client.run("export pkga PkgA/0.1@user/channel")
+        client.run("export pkgb PkgB/0.1@user/channel")
+        client.run("export pkgc PkgC/0.1@user/channel")
+        client.run("export pkgd PkgD/0.1@user/channel")
+
+        client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=conan.lock")
+        lockfile = json.loads(client.load("conan.lock"))
+        nodes = lockfile["graph_lock"]["nodes"]
+        self.assertEqual(nodes["3"]["ref"], "PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada")
+        self.assertEqual(nodes["3"]["package_id"], "Package_ID_unknown")
+
+        client.run("install PkgA/0.1@user/channel --build=PkgA/0.1@user/channel "
+                   "--lockfile=conan.lock --lockfile-out=conan_out.lock")
+        client.run("lock update conan.lock conan_out.lock")
+
+        client.run("install PkgB/0.1@user/channel --build=PkgB/0.1@user/channel "
+                   "--lockfile=conan.lock --lockfile-out=conan_out.lock")
+        lockfile = json.loads(client.load("conan_out.lock"))
+        nodes = lockfile["graph_lock"]["nodes"]
+        self.assertEqual(nodes["3"]["ref"], "PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada")
+        self.assertEqual(nodes["3"]["package_id"], "6e9742c2106791c1c777da8ccfb12a1408385d8d")
+        self.assertEqual(nodes["3"]["prev"], "f971905c142e0de728f32a7237553622")
+
+        client.run("lock update conan.lock conan_out.lock")
+        lockfile = json.loads(client.load("conan.lock"))
+        nodes = lockfile["graph_lock"]["nodes"]
+        self.assertEqual(nodes["3"]["ref"], "PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada")
+        self.assertEqual(nodes["3"]["package_id"], "6e9742c2106791c1c777da8ccfb12a1408385d8d")
+        self.assertEqual(nodes["3"]["prev"], "f971905c142e0de728f32a7237553622")
+
 
 class CIPythonRequiresTest(unittest.TestCase):
     python_req = textwrap.dedent("""
@@ -480,11 +526,13 @@ class CIPythonRequiresTest(unittest.TestCase):
         self.assertNotIn("pyreq/0.2", client.out)
 
         # Go back to main orchestrator
-        # This should fail, as PkgB/0.2 is not involved in the new resolution
+        # This should fail, as PkgB/1.0 is not involved in the new resolution
         client.run("lock create --reference=PkgD/0.1@user/channel "
-                   "--lockfile=buildb.lock --lockfile-out=conan.lock", assert_error=True)
-        self.assertIn("ERROR: The provided lockfile was not used, there is no overlap",
-                      client.out)
+                   "--lockfile=buildb.lock --lockfile-out=error.lock")
+        # User can perfectly go and check the resulting lockfile and check if PkgB/0.1 is there
+        # We can probably help automate this with a "conan lock find" subcommand
+        error_lock = client.load("error.lock")
+        self.assertNotIn("PkgB/1.0@user/channel", error_lock)
 
         client.run("lock build-order conan.lock --json=build_order.json")
         json_file = client.load("build_order.json")
@@ -656,3 +704,62 @@ class CIBuildRequiresTest(unittest.TestCase):
         client.run("install PkgD/0.1@user/channel --build -pr=myprofile")
         self.assertIn("br/0.2", client.out)
         self.assertNotIn("br/0.1", client.out)
+
+
+class CIPrivateRequiresTest(unittest.TestCase):
+    def test(self):
+        # https://github.com/conan-io/conan/issues/7985
+        client = TestClient()
+        files = {
+            "private/conanfile.py": GenConanfile().with_option("myoption", [True, False]),
+            "pkga/conanfile.py": textwrap.dedent("""
+                from conans import ConanFile
+                class PkgA(ConanFile):
+                    requires = ("private/0.1", "private"),
+                    def configure(self):
+                        self.options["private"].myoption = True
+                """),
+            "pkgb/conanfile.py": textwrap.dedent("""
+                from conans import ConanFile
+                class PkgB(ConanFile):
+                    requires = "pkga/0.1", ("private/0.1", "private"),
+                    def configure(self):
+                        self.options["private"].myoption = False
+                """),
+            "pkgc/conanfile.py": GenConanfile().with_require("pkgb/0.1")
+        }
+        client.save(files)
+        client.run("export private private/0.1@")
+        client.run("export pkga pkga/0.1@")
+        client.run("export pkgb pkgb/0.1@")
+
+        client.run("lock create pkgc/conanfile.py --name=pkgc --version=0.1 --build "
+                   "--lockfile-out=conan.lock")
+        client.run("lock build-order conan.lock --json=build_order.json")
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+        if client.cache.config.revisions_enabled:
+            build_order = [[['private/0.1@#e31c7a656abb86256b08af0e64d37d42',
+                             'd2560ba1787c188a1d7fabeb5f8e012ac53301bb', 'host', '3'],
+                            ['private/0.1@#e31c7a656abb86256b08af0e64d37d42',
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                           [['pkga/0.1@#edf085c091f9f4adfdb623bda9415a79',
+                             '5b0fc4382d9c849ae3ef02a57b62b26ad5137990', 'host', '2']],
+                           [['pkgb/0.1@#9b0edf8f61a88f92e05919b406d74089',
+                             'd7d6ac48b43e368b0a5ff79015acea49b758ffdf', 'host', '1']]]
+        else:
+            build_order = [[['private/0.1@',
+                             'd2560ba1787c188a1d7fabeb5f8e012ac53301bb', 'host', '3'],
+                            ['private/0.1@',
+                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                           [['pkga/0.1@',
+                             '5b0fc4382d9c849ae3ef02a57b62b26ad5137990', 'host', '2']],
+                           [['pkgb/0.1@',
+                             'd7d6ac48b43e368b0a5ff79015acea49b758ffdf', 'host', '1']]]
+
+        self.assertEqual(to_build, build_order)
+
+        for ref, pid, _, node_id in build_order[0]:
+            client.run("install %s --build=%s --lockfile=conan.lock --lockfile-out=conan.lock "
+                       "--lockfile-node-id=%s" % (ref, ref, node_id))
+            self.assertIn('private/0.1:{} - Build'.format(pid), client.out)

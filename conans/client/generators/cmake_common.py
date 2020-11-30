@@ -850,7 +850,7 @@ class CMakeCommonMacros:
                 endif()
                 foreach(_FRAMEWORK ${FRAMEWORKS})
                     # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
-                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}})
+                    find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${CONAN_FRAMEWORK_DIRS${SUFFIX}} CMAKE_FIND_ROOT_PATH_BOTH)
                     if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
                         list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
                     else()
@@ -971,25 +971,12 @@ cmake_macros = "\n".join([
 
 cmake_macros_multi = "\n".join([
     textwrap.dedent("""
-        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
-            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_release.cmake)
-        else()
-            message(FATAL_ERROR "No conanbuildinfo_release.cmake, please install the Release conf first")
-        endif()
-
-        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
-            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_debug.cmake)
-        else()
-            message(FATAL_ERROR "No conanbuildinfo_debug.cmake, please install the Debug conf first")
-        endif()
-
-        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
-            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_minsizerel.cmake)
-        endif()
-
-        if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
-            include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_relwithdebinfo.cmake)
-        endif()
+        ### load generated conanbuildinfo files.
+        foreach(_name release debug minsizerel relwithdebinfo)
+            if(EXISTS ${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_${_name}.cmake)
+                include(${CMAKE_CURRENT_LIST_DIR}/conanbuildinfo_${_name}.cmake)
+            endif()
+        endforeach()
         """),
     CMakeCommonMacros.conan_set_vs_runtime_preserve_build_type,
     CMakeCommonMacros.conan_set_find_paths_multi,

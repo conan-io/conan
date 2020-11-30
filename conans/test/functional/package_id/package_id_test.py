@@ -1,12 +1,14 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
 
 class PackageIdTest(unittest.TestCase):
 
-    def double_package_id_call_test(self):
+    def test_double_package_id_call(self):
         # https://github.com/conan-io/conan/issues/3085
         conanfile = """from conans import ConanFile
 
@@ -22,7 +24,7 @@ class TestConan(ConanFile):
         out = str(client.out)
         self.assertEqual(1, out.count("Pkg/0.1@user/testing: Calling package_id()"))
 
-    def remove_option_setting_test(self):
+    def test_remove_option_setting(self):
         # https://github.com/conan-io/conan/issues/2826
         conanfile = """from conans import ConanFile
 
@@ -49,7 +51,8 @@ class TestConan(ConanFile):
                       "'%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-    def value_parse_test(self):
+    @pytest.mark.tool_compiler
+    def test_value_parse(self):
         # https://github.com/conan-io/conan/issues/2816
         conanfile = """
 from conans import ConanFile
@@ -80,7 +83,7 @@ class TestConan(ConanFile):
         client.run("search test/0.1@danimtb/testing")
         self.assertIn("compiler.version: kk=kk", client.out)
 
-    def option_in_test(self):
+    def test_option_in(self):
         # https://github.com/conan-io/conan/issues/7299
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -116,3 +119,23 @@ class TestConan(ConanFile):
         self.assertIn("other is not an info.option!!!", client.out)
         self.assertIn("ERROR: OPTIONS: option 'whatever' doesn't exist", client.out)
         self.assertIn("ERROR: INFO: option 'whatever' doesn't exist", client.out)
+
+    def test_build_type_remove_windows(self):
+        # https://github.com/conan-io/conan/issues/7603
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                def package_id(self):
+                    if self.settings.os == "Windows" and self.settings.compiler == "Visual Studio":
+                       del self.info.settings.build_type
+                       del self.info.settings.compiler.runtime
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=14 -s build_type=Release')
+        self.assertIn("pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Build", client.out)
+        client.run('install pkg/0.1@ -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=14 -s build_type=Debug')
+        self.assertIn("pkg/0.1:e1f7c8ffe5f9342d04ab704810faf93060ae3d70 - Cache", client.out)

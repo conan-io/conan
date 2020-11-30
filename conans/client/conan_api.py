@@ -22,6 +22,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
 from conans.client.conanfile.package import run_package_method
 from conans.client.conf.required_version import check_required_conan_version
+from conans.client.generators import GeneratorManager
 from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
@@ -183,10 +184,8 @@ class ConanApp(object):
         artifacts_properties = self.cache.read_artifacts_properties()
         rest_client_factory = RestApiClientFactory(self.out, self.requester, self.config,
                                                    artifacts_properties=artifacts_properties)
-        # To store user and token
-        localdb = LocalDB.create(self.cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, localdb)
+        auth_manager = ConanApiAuthManager(rest_client_factory, self.user_io, self.cache.localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.cache, auth_manager, self.out, self.hook_manager)
 
@@ -200,9 +199,12 @@ class ConanApp(object):
 
         self.proxy = ConanProxy(self.cache, self.out, self.remote_manager)
         self.range_resolver = RangeResolver(self.cache, self.remote_manager)
-        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver)
+        self.generator_manager = GeneratorManager()
+        self.python_requires = ConanPythonRequire(self.proxy, self.range_resolver,
+                                                  self.generator_manager)
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
-        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires, self.pyreq_loader)
+        self.loader = ConanFileLoader(self.runner, self.out, self.python_requires,
+                                      self.generator_manager, self.pyreq_loader)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
@@ -280,8 +282,17 @@ class ConanAPIV1(object):
             conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
             conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
-            update = True if remote_name else False
-            result = self.app.proxy.get_recipe(ref, update, update, remotes, ActionRecorder())
+            if remote_name:
+                remotes = self.app.load_remotes()
+                remote = remotes.get_remote(remote_name)
+                try:  # get_recipe_manifest can fail, not in server
+                    _, ref = self.app.remote_manager.get_recipe_manifest(ref, remote)
+                except NotFoundException:
+                    raise RecipeNotFoundException(ref)
+                else:
+                    ref = self.app.remote_manager.get_recipe(ref, remote)
+
+            result = self.app.proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
@@ -520,7 +531,8 @@ class ConanAPIV1(object):
                           remote_name=None, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
-                          lockfile=None, lockfile_out=None, profile_build=None):
+                          lockfile=None, lockfile_out=None, profile_build=None,
+                          lockfile_node_id=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         recorder = ActionRecorder()
@@ -545,7 +557,8 @@ class ConanAPIV1(object):
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
-                         generators=generators, recorder=recorder)
+                         generators=generators, recorder=recorder,
+                         lockfile_node_id=lockfile_node_id)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -774,7 +787,7 @@ class ConanAPIV1(object):
                                                                    deps_info_required=True)
         run_package_method(conanfile, None, source_folder, build_folder, package_folder,
                            install_folder, self.app.hook_manager, conanfile_path, None,
-                           local=True, copy_info=True)
+                           copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
@@ -1288,6 +1301,10 @@ class ConanAPIV1(object):
         lockfile = _make_abs_path(lockfile, cwd)
 
         graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        if graph_lock_file.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
+
         graph_lock = graph_lock_file.graph_lock
         build_order = graph_lock.build_order()
         return build_order
@@ -1314,6 +1331,7 @@ class ConanAPIV1(object):
         if path and reference:
             raise ConanException("Both path and reference arguments were provided. Please provide "
                                  "only one of them")
+
         if path:
             ref_or_path = _make_abs_path(path, cwd)
             if not os.path.isfile(ref_or_path):
@@ -1359,8 +1377,6 @@ class ConanAPIV1(object):
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
             new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
-            # check if the lockfile provided was used or not
-            new_graph_lock.check_contained(graph_lock)
             graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()

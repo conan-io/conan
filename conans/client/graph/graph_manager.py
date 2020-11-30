@@ -107,10 +107,10 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True):
+                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
-        root_node = self._load_root_node(reference, create_reference, graph_info)
+        root_node = self._load_root_node(reference, create_reference, graph_info, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
                                          remotes, recorder,
                                          apply_build_requires=apply_build_requires)
@@ -120,7 +120,7 @@ class GraphManager(object):
 
         return deps_graph
 
-    def _load_root_node(self, reference, create_reference, graph_info):
+    def _load_root_node(self, reference, create_reference, graph_info, lockfile_node_id):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
@@ -136,7 +136,7 @@ class GraphManager(object):
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
-            return self._load_root_direct_reference(reference, graph_lock, profile)
+            return self._load_root_direct_reference(reference, graph_lock, profile, lockfile_node_id)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
@@ -190,7 +190,7 @@ class GraphManager(object):
 
         return root_node, ref
 
-    def _load_root_direct_reference(self, reference, graph_lock, profile):
+    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
@@ -202,7 +202,7 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
-            graph_lock.find_require_and_lock(reference, conanfile)
+            graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
         return root_node
 
     def _load_root_test_package(self, path, create_reference, graph_lock, profile):
@@ -343,6 +343,10 @@ class GraphManager(object):
             if new_profile_build_requires:
                 _recurse_build_requires(new_profile_build_requires, {})
 
+            if graph_lock:
+                graph_lock.check_locked_build_requires(node, package_build_requires,
+                                                       new_profile_build_requires)
+
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
                     graph_lock):
@@ -406,7 +410,7 @@ def load_deps_info(current_path, conanfile, required):
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
         deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
-            TXTGenerator.loads(load(info_file_path))
+            TXTGenerator.loads(load(info_file_path), filter_empty=True)
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info

@@ -11,8 +11,8 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_context_manager,
-                               merge_directories)
+from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
+                               merge_directories, clean_dirty)
 
 
 def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
@@ -40,9 +40,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
                % str(ref))
         raise ConanException(msg)
 
-    export_path = package_layout.export()
     try:
-        remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+        remote_manager.get_recipe_sources(ref, package_layout, current_remote)
     except Exception as e:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"
@@ -72,23 +71,22 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
     local cache.
     """
 
-    def remove_source(raise_error=True):
+    def remove_source():
         output.warn("This can take a while for big packages")
         try:
             rmdir(src_folder)
         except BaseException as e_rm:
-            set_dirty(src_folder)
             msg = str(e_rm)
             if six.PY2:
                 msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
             output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
             output.warn("**** Please delete it manually ****")
-            if raise_error or isinstance(e_rm, KeyboardInterrupt):
-                raise ConanException("Unable to remove source folder")
+            raise ConanException("Unable to remove source folder")
 
     if is_dirty(src_folder):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
+        clean_dirty(src_folder)
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()

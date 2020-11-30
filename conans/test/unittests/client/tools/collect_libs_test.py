@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 class CollectLibsTest(unittest.TestCase):
 
-    def collect_libs_test(self):
+    def test_collect_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -25,7 +25,7 @@ class CollectLibsTest(unittest.TestCase):
         client.run("create . mylib/0.1@user/channel")
 
         # reusing the binary already in cache
-        client.save({"conanfile.py": GenConanfile().with_require_plain("mylib/0.1@user/channel")},
+        client.save({"conanfile.py": GenConanfile().with_require("mylib/0.1@user/channel")},
                     clean_first=True)
         client.run('install . -g cmake')
         conanbuildinfo = client.load("conanbuildinfo.cmake")

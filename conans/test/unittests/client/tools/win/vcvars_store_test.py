@@ -4,6 +4,7 @@
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client import tools
@@ -14,6 +15,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @attr('visual_studio')
+@pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsStoreTest(unittest.TestCase):
     output = TestBufferConanOutput()
@@ -45,6 +47,21 @@ class VCVarsStoreTest(unittest.TestCase):
         settings.os.version = '10.0'
 
         command = tools.vcvars_command(settings, output=self.output)
+        self.assertIn('vcvarsall.bat', command)
+        self.assertIn('x86', command)
+        self.assertIn('store', command)
+        self.assertIn(sdk_version, command)
+
+    def test_10_custom_winsdk(self):
+        settings = Settings.loads(get_default_settings_yml())
+        settings.compiler = 'Visual Studio'
+        settings.compiler.version = '14'
+        settings.arch = 'x86'
+        settings.os = 'WindowsStore'
+        settings.os.version = '10.0'
+
+        sdk_version = '10.0.18362.0'
+        command = tools.vcvars_command(settings, winsdk_version=sdk_version, output=self.output)
         self.assertIn('vcvarsall.bat', command)
         self.assertIn('x86', command)
         self.assertIn('store', command)

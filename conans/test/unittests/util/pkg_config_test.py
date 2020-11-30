@@ -5,6 +5,7 @@ import os
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client.tools.env import environment_append
@@ -29,6 +30,8 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @attr("unix")
+@pytest.mark.unix
+@pytest.mark.tool_autotools
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
         if platform.system() == "Windows":
@@ -57,6 +60,8 @@ class PkgConfigTest(unittest.TestCase):
             self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
             self.assertEqual(pkg_config.variables['prefix'], '/usr/local')
+
+            self.assertEqual(frozenset(pkg_config.version), frozenset(['6.6.6']))
         os.unlink(filename)
 
     def test_define_prefix(self):
@@ -81,9 +86,11 @@ class PkgConfigTest(unittest.TestCase):
             self.assertEqual(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
             self.assertEqual(pkg_config.variables['prefix'], '/home/conan')
+
+            self.assertEqual(frozenset(pkg_config.version), frozenset(['6.6.6']))
         os.unlink(filename)
 
-    def rpaths_libs_test(self):
+    def test_rpaths_libs(self):
         if platform.system() == "Windows":
             return
         pc_content = """prefix=/my_prefix/path

@@ -1,29 +1,31 @@
 import os
 import unittest
 
-from conans.client.tools.files import remove_files_by_mask, chdir
-from conans.test.utils.tools import TestClient
+# Check it is importable from tools
+from conans.tools import remove_files_by_mask
+from conans.client.tools.files import chdir
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save_files
 
 
 class RemoveFilesByMaskTest(unittest.TestCase):
-    def remove_files_by_mask_test(self):
-        client = TestClient()
-        tmpdir = client.current_folder
+    def test_remove_files_by_mask(self):
+        tmpdir = temp_folder()
 
         with chdir(tmpdir):
             os.makedirs("subdir")
             os.makedirs("dir.pdb")
             os.makedirs(os.path.join("subdir", "deepdir"))
 
-        client.save({"1.txt": "",
-                     "1.pdb": "",
-                     "1.pdb1": "",
-                     os.path.join("subdir", "2.txt"): "",
-                     os.path.join("subdir", "2.pdb"): "",
-                     os.path.join("subdir", "2.pdb1"): "",
-                     os.path.join("subdir", "deepdir", "3.txt"): "",
-                     os.path.join("subdir", "deepdir", "3.pdb"): "",
-                     os.path.join("subdir", "deepdir", "3.pdb1"): ""})
+        save_files(tmpdir, {"1.txt": "",
+                            "1.pdb": "",
+                            "1.pdb1": "",
+                            os.path.join("subdir", "2.txt"): "",
+                            os.path.join("subdir", "2.pdb"): "",
+                            os.path.join("subdir", "2.pdb1"): "",
+                            os.path.join("subdir", "deepdir", "3.txt"): "",
+                            os.path.join("subdir", "deepdir", "3.pdb"): "",
+                            os.path.join("subdir", "deepdir", "3.pdb1"): ""})
 
         removed_files = remove_files_by_mask(tmpdir, "*.sh")
         self.assertEqual(removed_files, [])

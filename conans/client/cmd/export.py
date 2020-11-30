@@ -17,7 +17,7 @@ from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
-    merge_directories
+    merge_directories, clean_dirty
 from conans.util.log import logger
 
 isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
@@ -113,21 +113,22 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     output.highlight("Exporting package recipe")
     output = conanfile.output
 
-    # Get previous digest
-    try:
-        previous_manifest = package_layout.recipe_manifest()
-    except IOError:
-        previous_manifest = None
-    finally:
-        _recreate_folders(package_layout.export())
-        _recreate_folders(package_layout.export_sources())
-
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
+        # Get previous manifest
+        try:
+            previous_manifest = package_layout.recipe_manifest()
+        except IOError:
+            previous_manifest = None
 
+        package_layout.export_remove()
+        export_folder = package_layout.export()
+        export_src_folder = package_layout.export_sources()
+        mkdir(export_folder)
+        mkdir(export_src_folder)
         origin_folder = os.path.dirname(conanfile_path)
-        export_recipe(conanfile, origin_folder, package_layout.export())
-        export_source(conanfile, origin_folder, package_layout.export_sources())
+        export_recipe(conanfile, origin_folder, export_folder)
+        export_source(conanfile, origin_folder, export_src_folder)
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
         # Calculate the "auto" values and replace in conanfile.py
@@ -138,7 +139,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
-        rmdir(scm_sources_folder)
         if local_src_folder and not keep_source:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
@@ -153,15 +153,15 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        manifest = FileTreeManifest.create(export_folder, export_src_folder)
         modified_recipe |= not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
-            output.info('Folder: %s' % package_layout.export())
+            output.info('Folder: %s' % export_folder)
         else:
             output.info("The stored package has not changed")
             manifest = previous_manifest  # Use the old one, keep old timestamp
-        manifest.save(package_layout.export())
+        manifest.save(export_folder)
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
@@ -178,6 +178,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             if is_dirty(source_folder):
                 output.info("Source folder is corrupted, forcing removal")
                 rmdir(source_folder)
+                clean_dirty(source_folder)
             elif modified_recipe and not keep_source:
                 output.info("Package recipe modified in export, forcing source folder removal")
                 output.info("Use the --keep-source, -k option to skip it")
@@ -216,14 +217,14 @@ def _check_settings_for_warnings(conanfile, output):
         if 'os' not in conanfile.settings:
             return
 
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
+        output.writeln("*" * 60, front=Color.BRIGHT_RED)
         output.writeln("  This package defines both 'os' and 'os_build' ",
                        front=Color.BRIGHT_RED)
         output.writeln("  Please use 'os' for libraries and 'os_build'",
                        front=Color.BRIGHT_RED)
         output.writeln("  only for build-requires used for cross-building",
                        front=Color.BRIGHT_RED)
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
+        output.writeln("*" * 60, front=Color.BRIGHT_RED)
     except ConanException:
         pass
 
@@ -336,10 +337,10 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 if i_body + 1 == len(tree.body):  # Last statement over all
                                     next_line = len(lines)
                                 else:
-                                    next_line = tree.body[i_body+1].lineno - 1
+                                    next_line = tree.body[i_body + 1].lineno - 1
                             else:
                                 # Next statement can be a comment or anything else
-                                next_statement = statements[i+1]
+                                next_statement = statements[i + 1]
                                 if isPY38 and isinstance(next_statement, ast.Expr):
                                     # Python 3.8 properly parses multiline comments with start
                                     # and end lines, here we preserve the same (wrong)
@@ -349,11 +350,11 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                     next_line = next_statement.lineno - 1
                                 next_line_content = lines[next_line].strip()
                                 if (next_line_content.endswith('"""') or
-                                        next_line_content.endswith("'''")):
+                                    next_line_content.endswith("'''")):
                                     next_line += 1
                         except IndexError:
                             next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno-1):next_line]]
+                        replace = [line for line in lines[(stmt.lineno - 1):next_line]]
                         to_replace.append("".join(replace).lstrip())
                         comments = [line.strip('\n') for line in replace
                                     if line.strip().startswith("#") or not line.strip()]
@@ -425,15 +426,6 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     return revision
 
 
-def _recreate_folders(destination_folder):
-    try:
-        if os.path.exists(destination_folder):
-            rmdir(destination_folder)
-        os.makedirs(destination_folder)
-    except Exception as e:
-        raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
-
-
 def _classify_patterns(patterns):
     patterns = patterns or []
     included, excluded = [], []
@@ -461,7 +453,7 @@ def export_source(conanfile, origin_folder, destination_source_folder):
                              "use 'export_sources()' instead")
 
     if isinstance(conanfile.exports_sources, str):
-        conanfile.exports_sources = (conanfile.exports_sources, )
+        conanfile.exports_sources = (conanfile.exports_sources,)
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
     copier = FileCopier([origin_folder], destination_source_folder)
@@ -478,7 +470,7 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     if callable(conanfile.exports):
         raise ConanException("conanfile 'exports' shouldn't be a method, use 'export()' instead")
     if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
+        conanfile.exports = (conanfile.exports,)
 
     output = conanfile.output
     package_output = ScopedOutput("%s exports" % output.scope, output)

@@ -180,8 +180,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     conan_v2_behavior("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
-    from conans.client.build.msbuild import MSBuild
-    tmp = MSBuild(settings)
+    from conans.client.build.msbuild import MSBuildHelper
+    tmp = MSBuildHelper(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
     tmp._output = output
 
@@ -478,13 +478,14 @@ def vcvars_command(conanfile=None, arch=None, compiler_version=None, force=False
         if os_setting == 'WindowsStore':
             os_version_setting = conanfile.settings.get_safe("os.version")
             if os_version_setting == '8.1':
-                command.append('store 8.1')
+                winsdk_version = winsdk_version or "8.1"
+                command.append('store %s' % winsdk_version)
             elif os_version_setting == '10.0':
-                windows_10_sdk = find_windows_10_sdk()
-                if not windows_10_sdk:
+                winsdk_version = winsdk_version or find_windows_10_sdk()
+                if not winsdk_version:
                     raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
                                          "but Windows 10 SDK wasn't found")
-                command.append('store %s' % windows_10_sdk)
+                command.append('store %s' % winsdk_version)
             else:
                 raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return " ".join(command)

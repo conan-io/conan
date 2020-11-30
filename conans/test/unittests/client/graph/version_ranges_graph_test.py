@@ -105,7 +105,7 @@ class VersionRangesTest(GraphTest):
             deps_graph = self.build_graph(GenConanfile().with_name("Hello").with_version("1.2")
                                                         .with_require(req),
                                           update=True)
-            self.assertEqual(self.remote_manager.count, {'Say': 1})
+            self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
             self.assertEqual(2, len(deps_graph.nodes))
             hello = _get_nodes(deps_graph, "Hello")[0]
             say = _get_nodes(deps_graph, "Say")[0]
@@ -151,7 +151,7 @@ class HelloConan(ConanFile):
                                                   Edge(dep1, say), Edge(dep2, say)})
 
         # Most important check: counter of calls to remote
-        self.assertEqual(self.remote_manager.count, {'Say': 1})
+        self.assertEqual(self.remote_manager.count, {'Say/*@myuser/testing': 1})
 
     @parameterized.expand([("", "0.3", None, None, False),
                            ('"Say/1.1@myuser/testing"', "1.1", False, True, False),
@@ -166,9 +166,9 @@ class HelloConan(ConanFile):
                            ('("Say/[>=0.2,<=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ('("Say/[>=0.2 <=1.0]@myuser/testing", "override")', "0.3", True, True, True),
                            ])
-    def transitive_test(self, version_range, solution, override, valid, is_vrange):
+    def test_transitive(self, version_range, solution, override, valid, is_vrange):
         hello_text = GenConanfile().with_name("Hello").with_version("1.2")\
-                                   .with_require_plain("Say/[>0.1, <1]@myuser/testing")
+                                   .with_require("Say/[>0.1, <1]@myuser/testing")
         hello_ref = ConanFileReference.loads("Hello/1.2@myuser/testing")
         self.retriever.save_recipe(hello_ref, hello_text)
 
@@ -211,7 +211,7 @@ class ChatConan(ConanFile):
         say_ref = ConanFileReference.loads("Say/%s@myuser/testing" % solution)
         self.assertEqual(_clear_revs(conanfile.requires), Requirements(str(say_ref)))
 
-    def duplicated_error_test(self):
+    def test_duplicated_error(self):
         content = GenConanfile().with_name("log4cpp").with_version("1.1.1")
         log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@myuser/testing")
         self.retriever.save_recipe(log4cpp_ref, content)
@@ -269,7 +269,7 @@ class Project(ConanFile):
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")
 
-    def different_user_channel_resolved_correctly_test(self):
+    def test_different_user_channel_resolved_correctly(self):
         server1 = TestServer()
         server2 = TestServer()
         servers = OrderedDict([("server1", server1), ("server2", server2)])

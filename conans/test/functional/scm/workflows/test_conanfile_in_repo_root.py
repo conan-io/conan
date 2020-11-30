@@ -3,11 +3,12 @@
 import os
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.test.functional.scm.workflows.common import TestWorkflow
-from conans.test.utils.tools import TestClient
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient
 
 
 class ConanfileInRepoRoot(TestWorkflow):
@@ -18,6 +19,7 @@ class ConanfileInRepoRoot(TestWorkflow):
 
 
 @attr("svn")
+@pytest.mark.tool_svn
 class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
     """ Test SCM url='auto' with SVN, it can only work if conanfile is in the root of the repo
 
@@ -78,6 +80,8 @@ class SVNConanfileInRepoRootTest(ConanfileInRepoRoot, SVNLocalRepoTestCase):
         self.assertIn("Repo origin deduced by 'auto':", t.out)
 
 
+@attr("git")
+@pytest.mark.tool_git
 class GitConanfileInRepoRootTest(ConanfileInRepoRoot, unittest.TestCase):
 
     conanfile = ConanfileInRepoRoot.conanfile_base.format(extra_header="",

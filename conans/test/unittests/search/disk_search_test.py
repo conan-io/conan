@@ -37,7 +37,7 @@ class SearchTest(unittest.TestCase):
             all_artif = [_artif for _artif in sorted(packages)]
             self.assertEqual(all_artif, artifacts)
 
-    def pattern_test(self):
+    def test_pattern(self):
         with chdir(self.cache.store):
             references = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
             refs = [ConanFileReference.loads(reference) for reference in references]
@@ -49,7 +49,7 @@ class SearchTest(unittest.TestCase):
             recipes = search_recipes(self.cache, "opencv/*@lasote/testing")
             self.assertEqual(recipes, refs)
 
-    def case_insensitive_test(self):
+    def test_case_insensitive(self):
         with chdir(self.cache.store):
             root_folder2 = "sdl/1.5/lasote/stable"
             ref2 = ConanFileReference.loads("sdl/1.5@lasote/stable")

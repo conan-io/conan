@@ -4,17 +4,19 @@ import sys
 import unittest
 from collections import OrderedDict
 
+import pytest
 import six
 from nose.plugins.attrib import attr
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
 
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MyBuildInfo(unittest.TestCase):
 
     def setUp(self):
@@ -126,7 +128,8 @@ class MyBuildInfo(unittest.TestCase):
             self.assertEqual(0, len(module["dependencies"]))
 
     @attr('ide_fail')
-    def trace_command_test(self):
+    @pytest.mark.ide_fail
+    def test_trace_command(self):
         from conans.build_info.command import run
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         # Generate some traces

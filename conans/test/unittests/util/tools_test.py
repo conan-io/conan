@@ -7,6 +7,7 @@ import unittest
 import warnings
 from collections import namedtuple
 
+import pytest
 import requests
 import six
 from bottle import request, static_file, HTTPError
@@ -88,7 +89,7 @@ class ReplaceInFileTest(unittest.TestCase):
 class ToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
-    def replace_paths_test(self):
+    def test_replace_paths(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
         replace_with = "MYPATH"
@@ -131,18 +132,18 @@ class ToolsTest(unittest.TestCase):
         else:
             self.assertFalse(ret)
 
-    def load_save_test(self):
+    def test_load_save(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
         save(path, u"äüïöñç")
         content = load(path)
         self.assertEqual(content, u"äüïöñç")
 
-    def md5_test(self):
+    def test_md5(self):
         result = md5(u"äüïöñç")
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
 
-    def cpu_count_test(self):
+    def test_cpu_count(self):
         output = ConanOutput(sys.stdout)
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
@@ -163,7 +164,7 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertEqual(12, cpus)
 
-    def get_env_unit_test(self):
+    def test_get_env_unit(self):
         """
         Unit tests tools.get_env
         """
@@ -291,7 +292,8 @@ class HelloConan(ConanFile):
         self.assertEqual(os.getenv("Z", None), None)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def msvc_build_command_test(self):
+    @pytest.mark.tool_visual_studio
+    def test_msvc_build_command(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -335,7 +337,7 @@ class HelloConan(ConanFile):
         self.assertIn('vcvarsall.bat', cmd)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def vswhere_description_strip_test(self):
+    def test_vswhere_description_strip(self):
         myoutput = """
 [
   {
@@ -400,7 +402,8 @@ class HelloConan(ConanFile):
             self.assertNotIn("descripton", json)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def vswhere_path_test(self):
+    @pytest.mark.tool_visual_studio
+    def test_vswhere_path(self):
         """
         Locate vswhere in PATH or in ProgramFiles
         """
@@ -427,7 +430,7 @@ class HelloConan(ConanFile):
             self.assertTrue(vswhere())
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def run_in_bash_test(self):
+    def test_run_in_bash(self):
 
         class MockConanfile(object):
             def __init__(self):
@@ -465,7 +468,7 @@ class HelloConan(ConanFile):
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
-    def download_retries_errors_test(self):
+    def test_download_retries_errors(self):
         out = TestBufferConanOutput()
 
         # Retry arguments override defaults
@@ -485,7 +488,8 @@ class HelloConan(ConanFile):
                            retry=2, retry_wait=0)
 
     @attr("slow")
-    def download_retries_test(self):
+    @pytest.mark.slow
+    def test_download_retries(self):
         http_server = StoppableThreadBottle()
 
         with tools.chdir(tools.mkdir_tmp()):
@@ -549,8 +553,9 @@ class HelloConan(ConanFile):
         http_server.stop()
 
     @attr("slow")
+    @pytest.mark.slow
     @patch("conans.tools._global_config")
-    def download_unathorized_test(self, mock_config):
+    def test_download_unathorized(self, mock_config):
         http_server = StoppableThreadBottle()
         mock_config.return_value = ConfigMock()
 
@@ -621,17 +626,17 @@ class HelloConan(ConanFile):
         ["Neutrino", "sh4le", None, "sh4-nto-qnx"],
         ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"]
     ])
-    def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
+    def test_get_gnu_triplet(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
         self.assertEqual(triplet, expected_triplet,
                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
-    def get_gnu_triplet_on_windows_without_compiler_test(self):
+    def test_get_gnu_triplet_on_windows_without_compiler(self):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
 
-    def detect_windows_subsystem_test(self):
-        # Dont raise test
+    def test_detect_windows_subsystem(self):
+        # Don't raise test
         result = OSInfo.detect_windows_subsystem()
         if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
@@ -639,8 +644,9 @@ class HelloConan(ConanFile):
             self.assertEqual(str, type(result))
 
     @attr('slow')
+    @pytest.mark.slow
     @attr('local_bottle')
-    def get_filename_download_test(self):
+    def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
             import tarfile
@@ -705,8 +711,9 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
     @attr('slow')
+    @pytest.mark.slow
     @attr('local_bottle')
-    def get_gunzip_test(self):
+    def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()
         filepath = os.path.join(tmp, "test.txt.gz")
@@ -792,7 +799,7 @@ class HelloConan(ConanFile):
             self.assertEqual(3, requester.count)
             self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
 
-    def check_output_runner_test(self):
+    def test_check_output_runner(self):
         import tempfile
         original_temp = tempfile.gettempdir()
         patched_temp = os.path.join(original_temp, "dir with spaces")
@@ -802,8 +809,8 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-
-    def unix_to_dos_unit_test(self):
+    @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
+    def test_unix_to_dos_unit(self):
 
         def save_file(contents):
             tmp = temp_folder()
@@ -849,7 +856,7 @@ class HelloConan(ConanFile):
 
         self.assertEqual("a line\notherline\n", str(tools.load(fp)))
 
-    def unix_to_dos_conanfile_test(self):
+    def test_unix_to_dos_conanfile(self):
         client = TestClient()
         conanfile = """
 import os
@@ -873,7 +880,7 @@ class HelloConan(ConanFile):
 
 class CollectLibTestCase(unittest.TestCase):
 
-    def collect_libs_test(self):
+    def test_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
         conanfile.package_folder = None
@@ -937,7 +944,7 @@ class CollectLibTestCase(unittest.TestCase):
         self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                       % no_folder_path, conanfile.output)
 
-    def self_collect_libs_test(self):
+    def test_self_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
         conanfile.package_folder = None

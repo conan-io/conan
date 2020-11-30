@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 class RequiredConanVersionTest(unittest.TestCase):
 
-    def required_conan_version_test(self):
+    def test_required_conan_version(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -27,6 +27,9 @@ class RequiredConanVersionTest(unittest.TestCase):
         self.assertIn("Current Conan version (%s) does not satisfy the defined one (>=100.0)"
                       % __version__, client.out)
         with mock.patch("conans.client.conf.required_version.client_version", "101.0"):
+            client.run("export . pkg/1.0@")
+
+        with mock.patch("conans.client.conf.required_version.client_version", "101.0-dev"):
             client.run("export . pkg/1.0@")
 
         client.run("install pkg/1.0@", assert_error=True)

@@ -1,5 +1,4 @@
 import os
-import platform
 import unittest
 
 import six
@@ -13,17 +12,17 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
 class RemoveLocksTest(unittest.TestCase):
-    def remove_locks_test(self):
+    def test_remove_locks(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
         client.run("create . lasote/testing")
@@ -45,7 +44,7 @@ class RemoveLocksTest(unittest.TestCase):
 
 class RemoveRegistryTest(unittest.TestCase):
 
-    def remove_registry_test(self):
+    def test_remove_registry(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
@@ -61,7 +60,7 @@ class RemoveRegistryTest(unittest.TestCase):
 
 class RemoveOutdatedTest(unittest.TestCase):
 
-    def remove_query_test(self):
+    def test_remove_query(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
@@ -90,7 +89,7 @@ class Test(ConanFile):
             self.assertIn("There are no packages", client.out)
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
-    def remove_outdated_test(self):
+    def test_remove_outdated(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
@@ -131,7 +130,7 @@ conaninfo = '''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
 [recipe_hash]
-''' + fake_recipe_hash +  '''
+''' + fake_recipe_hash + '''
 [recipe_revision]
 '''
 
@@ -163,7 +162,8 @@ class RemoveTest(unittest.TestCase):
             fake_metadata = PackageMetadata()
             fake_metadata.recipe.revision = DEFAULT_REVISION_V1
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
-            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
+            files["%s/%s/conanmanifest.txt" % (
+                folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id
@@ -172,7 +172,9 @@ class RemoveTest(unittest.TestCase):
                 prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
-                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i) + "905eefe3570dd09a8453b30b9272bb44"
+                files[
+                    "%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(
+                    i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
             files["%s/metadata.json" % folder] = fake_metadata.dumps()
             exports_sources_dir = client.cache.package_layout(ref).export_sources()
@@ -264,7 +266,7 @@ class RemoveTest(unittest.TestCase):
             else:
                 self.assertFalse(os.path.exists(folder))
 
-    def basic_test(self):
+    def test_basic(self):
         self.client.run("remove hello/* -f")
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -273,7 +275,7 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
-    def basic_mocked_test(self):
+    def test_basic_mocked(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/*", user_io=mocked_user_io)
@@ -284,7 +286,7 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
-    def basic_packages_test(self):
+    def test_basic_packages(self):
         self.client.run("remove hello/* -p -f")
         self.assert_folders(local_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -293,11 +295,11 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
@@ -313,7 +315,7 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove Hello/*@myuser/testing -f")
         self._validate_remove_all_hello_packages()
 
-    def test_remove_any_package_version_channel(self):
+    def test_remove_any_package_version_user(self):
         self.client.run("remove Hello/*@*/testing -f")
         self._validate_remove_all_hello_packages()
 
@@ -329,7 +331,7 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
 
-    def test_remove_any_package_channel(self):
+    def test_remove_any_package_user(self):
         self.client.run("remove Hello/1.4.10@*/testing -f")
         self._validate_remove_hello_1_4_10()
 
@@ -337,7 +339,7 @@ class RemoveTest(unittest.TestCase):
         self.client.run("remove Hello/1.4.10@myuser/* -f")
         self._validate_remove_hello_1_4_10()
 
-    def builds_test(self):
+    def test_builds(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/* -b", user_io=mocked_user_io)
@@ -347,16 +349,16 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "source", "export", "export_source",
+        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
-    def src_test(self):
+    def test_src(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/* -s", user_io=mocked_user_io)
@@ -367,15 +369,15 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
         six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
-                                    "metadata.json.lock"],
+                                    "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
 
-    def reject_removal_test(self):
+    def test_reject_removal(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=False)
         self.client.run("remove hello/* -s -b -p", user_io=mocked_user_io)
@@ -384,7 +386,7 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remote_build_error_test(self):
+    def test_remote_build_error(self):
         self.client.run("remove hello/* -b -r=default", assert_error=True)
         self.assertIn("Remotes don't have 'build' or 'src' folder", self.client.out)
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -392,14 +394,14 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remote_packages_test(self):
+    def test_remote_packages(self):
         self.client.run("remove hello/* -p -r=default -f")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remote_conans_test(self):
+    def test_remote_conans(self):
         self.client.run("remove hello/* -r=default -f")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
@@ -409,49 +411,49 @@ class RemoveTest(unittest.TestCase):
         folders = os.listdir(remote_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
-    def remove_specific_package_test(self):
+    def test_remove_specific_package(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f")
         self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remove_specific_packages_test(self):
+    def test_remove_specific_packages(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -p 2_H1 -f")
         self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remove_specific_build_test(self):
+    def test_remove_specific_build(self):
         self.client.run("remove hello/1.4.10* -b=1_H1 -f")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remove_specific_builds_test(self):
+    def test_remove_specific_builds(self):
         self.client.run("remove hello/1.4.10* -b=1_H1 -b=2_H1 -f")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remove_remote_specific_package_test(self):
+    def test_remove_remote_specific_package(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f -r=default")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def remove_remote_specific_packages_test(self):
+    def test_remove_remote_specific_packages(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -p2_H1 -f -r=default")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
-    def try_remove_using_query_and_packages_or_builds_test(self):
+    def test_try_remove_using_query_and_packages_or_builds(self):
         with six.assertRaisesRegex(self, Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -p=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-p' parameters can't be used at the same time", self.client.out)
@@ -463,16 +465,10 @@ class RemoveTest(unittest.TestCase):
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "This test is insane to be "
                                                                   "tested with revisions, in "
                                                                   "general all the module")
-    def query_remove_locally_test(self):
-        # Incorrect casing of "hello"
-        self.client.run("remove hello/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
+    def test_query_remove_locally(self):
+        self.client.run("remove notfoundname/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)
-        if platform.system() == "Linux":
-            self.assertIn("Recipe not found: 'hello/1.4.10@myuser/testing'", self.client.out)
-        else:
-            self.assertIn("Requested 'hello/1.4.10@myuser/testing' but found "
-                          "case incompatible 'Hello'\n"
-                          "Case insensitive filesystem can't manage this", self.client.out)
+        self.assertIn("Recipe not found: 'notfoundname/1.4.10@myuser/testing'", self.client.out)
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -508,14 +504,14 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         servers = {"default": self.test_server}
         self.client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
 
-    def local_test(self):
+    def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
         self.client.run("remove lib/1.0 -f")
         folder = self.client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
         self.assertFalse(os.path.exists(folder))
 
-    def remote_test(self):
+    def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
         self.client.run("upload lib/1.0 -r default -c --all")

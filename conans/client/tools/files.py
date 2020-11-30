@@ -1,8 +1,9 @@
+import gzip
 import logging
 import os
 import platform
-import shutil
-
+import stat
+import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -75,7 +76,6 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             filename.endswith(".tar")):
         return untargz(filename, destination, pattern)
     if filename.endswith(".gz"):
-        import gzip
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
         target_name = filename[:-3] if destination == "." else destination
@@ -225,6 +225,21 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
+@contextmanager
+def _add_permissions(file_path, permissions):
+    if os.path.isfile(file_path):
+        saved_permissions = os.stat(file_path).st_mode
+        if saved_permissions & permissions == permissions:
+            yield
+            return
+        try:
+            os.chmod(file_path, saved_permissions | permissions)
+            yield
+        finally:
+            os.chmod(file_path, saved_permissions)
+    else:
+        yield
+
 def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
@@ -235,7 +250,8 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_permissions(file_path, stat.S_IWRITE):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
@@ -265,7 +281,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         index = normalized_content.find(normalized_search)
 
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_permissions(file_path, stat.S_IWRITE):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
 
@@ -278,7 +295,8 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
             lines.append('prefix=%s' % new_prefix)
         else:
             lines.append(line)
-    save(pc_file, "\n".join(lines))
+    with _add_permissions(pc_file, stat.S_IWRITE):
+        save(pc_file, "\n".join(lines))
 
 
 def _path_equals(path1, path2):
@@ -369,6 +387,32 @@ def unix2dos(filepath):
 
 def dos2unix(filepath):
     _replace_with_separator(filepath, "\n")
+
+
+def rename(src, dst):
+    """
+    rename a file or folder to avoid "Access is denied" error on Windows
+    :param src: Source file or folder
+    :param dst: Destination file or folder
+    """
+    if os.path.exists(dst):
+        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
+        # /move Moves files and directories, and deletes them from the source after they are copied.
+        # /e Copies subdirectories. Note that this option includes empty directories.
+        # /ndl Specifies that directory names are not to be logged.
+        # /nfl Specifies that file names are not to be logged.
+        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+                                   stdout=subprocess.PIPE)
+        process.communicate()
+        if process.returncode != 1:
+            raise ConanException("rename {} to {} failed.".format(src, dst))
+    else:
+        try:
+            os.rename(src, dst)
+        except Exception as err:
+            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
 
 
 def remove_files_by_mask(directory, pattern):

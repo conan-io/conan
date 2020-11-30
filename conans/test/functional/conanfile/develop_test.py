@@ -26,7 +26,7 @@ class Pkg(ConanFile):
 class DevelopTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
-    def develop_test(self, with_test):
+    def test_develop(self, with_test):
         client = TestClient()
         if with_test:
             client.save({"conanfile.py": conanfile})
@@ -45,11 +45,11 @@ class DevelopTest(unittest.TestCase):
         client.run("install Pkg/0.1@user/testing --build")
         self.assertNotIn("Develop True", client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require_plain("Pkg/0.1@user/testing")})
+        client.save({"conanfile.py": GenConanfile().with_require("Pkg/0.1@user/testing")})
         client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop True", client.out)
 
-    def local_commands_test(self):
+    def test_local_commands(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
