@@ -39,10 +39,10 @@ class GenConanfile(object):
         self._package_id_lines = []
         self._test_lines = []
         self._layout_text = None
+        self._short_path = None
 
     def with_text_layout(self, layout):
         self._layout_text = layout
-        self._short_path = None
         self._exports_sources = []
 
     def with_short_paths(self, value):
