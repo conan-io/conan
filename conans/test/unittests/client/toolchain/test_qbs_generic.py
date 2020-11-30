@@ -216,7 +216,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
                 conanfile.runner.command_called[0],
-                'qbs-setup-toolchains --settings-dir %s %s %s' % (
+                'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
                     qbs._settings_dir(conanfile), settings['qbs_compiler'],
                     qbs._profile_name))
 
@@ -230,7 +230,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
                 conanfile.runner.command_called[0],
-                'qbs-setup-toolchains --settings-dir %s %s %s' % (
+                'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
                     qbs._settings_dir(conanfile), compiler,
                     qbs._profile_name))
 
@@ -337,7 +337,7 @@ class QbsGenericTest(unittest.TestCase):
         config = qbs._read_qbs_toolchain_from_config(conanfile)
         self.assertEqual(len(conanfile.runner.command_called), 1)
         self.assertEqual(conanfile.runner.command_called[0],
-                         'qbs-config --settings-dir %s --list' % (
+                         'qbs-config --settings-dir "%s" --list' % (
                             qbs._settings_dir(conanfile)))
         self.assertEqual(config, expected_config)
 
