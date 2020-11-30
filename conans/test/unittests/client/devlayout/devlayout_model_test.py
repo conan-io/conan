@@ -1,7 +1,7 @@
 import unittest
 
 from conans import DefaultLayout
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.mocks import MockSettings, MockConanfile
 
 
 class DevLayoutModelTest(unittest.TestCase):
