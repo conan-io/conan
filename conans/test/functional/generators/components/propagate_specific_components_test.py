@@ -56,7 +56,7 @@ class PropagateSpecificComponents(unittest.TestCase):
     def test_cmake_find_package_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g cmake_find_package_multi')
-        content = t.load('middleConfig.cmake')
+        content = t.load('middle-config.cmake')
         self.assertIn("find_dependency(top REQUIRED NO_MODULE)", content)
         self.assertIn("find_package(top REQUIRED NO_MODULE)", content)
 
