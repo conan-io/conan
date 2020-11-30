@@ -46,6 +46,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 {find_dependencies_block}
             endif()
         endif()
+
+        foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS}})
+            include(${{_BUILD_MODULE_PATH}})
+        endforeach()
         """)
 
     find_components_tpl = Template(textwrap.dedent("""\
