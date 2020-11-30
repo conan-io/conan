@@ -1,5 +1,5 @@
 import unittest
-import conans.client.build.qbs as qbs
+import conan.tools.qbs.qbs as qbs
 
 from conans.client import tools
 from conans.test.utils.mocks import MockConanfile, MockSettings

@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import textwrap
-import conans.client.toolchain.qbs.generic as qbs
+import conan.tools.qbs.generictoolchain as qbs
 
 from conans import tools
 from conans.test.utils.mocks import MockConanfile, MockSettings, MockOptions
