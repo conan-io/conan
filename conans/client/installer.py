@@ -433,7 +433,6 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                        # TODO: Check if BINARY_INVALID?
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
 
