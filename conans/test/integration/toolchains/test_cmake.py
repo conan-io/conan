@@ -306,6 +306,7 @@ class WinTest(Base):
         self._run_app(build_type)
 
         self._modify_code()
+        time.sleep(2)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
