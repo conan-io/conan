@@ -46,7 +46,7 @@ class QbsGenericTest(unittest.TestCase):
     def test_convert_bool(self):
         self.assertEqual(qbs._bool(True), 'true')
         self.assertEqual(qbs._bool(False), 'false')
-        with self.assertRaises(qbs.QbsException):
+        with self.assertRaises(qbs.QbsToolchainException):
             qbs._bool("")
 
     def test_convert_build_variant(self):
@@ -166,13 +166,13 @@ class QbsGenericTest(unittest.TestCase):
 
     def test_compiler_not_in_settings(self):
         conanfile = MockConanfile(MockSettings({}))
-        with self.assertRaises(qbs.QbsException):
+        with self.assertRaises(qbs.QbsToolchainException):
             qbs._check_for_compiler(conanfile)
 
     def test_compiler_in_settings_not_supported(self):
         conanfile = MockConanfile(
             MockSettings({'compiler': 'not realy a compiler name'}))
-        with self.assertRaises(qbs.QbsException):
+        with self.assertRaises(qbs.QbsToolchainException):
             qbs._check_for_compiler(conanfile)
 
     def test_valid_compiler(self):
