@@ -7,7 +7,7 @@ from threading import Thread
 
 from bottle import static_file, request
 
-from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.env_reader import get_env

@@ -250,7 +250,7 @@ set_property(TARGET {{name}}::{{name}}
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                          {%- for config in configs %}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
@@ -273,14 +273,18 @@ set_property(TARGET {{name}}::{{name}}
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
-            deps_names = ';'.join(
-                ["{}::{}".format(*self._get_require_name(*it)) for it in public_deps])
+            deps_names = []
+            for it in public_deps:
+                name = "{}::{}".format(*self._get_require_name(*it))
+                if name not in deps_names:
+                    deps_names.append(name)
+            deps_names = ';'.join(deps_names)
             pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
                                          public_deps]
             config_version = self.config_version_template.format(version=pkg_version)
-            ret["{}ConfigVersion.cmake".format(pkg_filename)] = config_version
+            ret[self._config_version_filename(pkg_filename)] = config_version
             if not cpp_info.components:
-                ret["{}Config.cmake".format(pkg_filename)] = self._config(
+                ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
                     version=cpp_info.version,
@@ -331,8 +335,20 @@ set_property(TARGET {{name}}::{{name}}
                     conan_message=CMakeFindPackageCommonMacros.conan_message,
                     configs=self._configurations
                 )
-                ret["{}Config.cmake".format(pkg_filename)] = target_config
+                ret[self._config_filename(pkg_filename)] = target_config
         return ret
+
+    def _config_filename(self, pkg_filename):
+        if pkg_filename == pkg_filename.lower():
+            return "{}-config.cmake".format(pkg_filename)
+        else:
+            return "{}Config.cmake".format(pkg_filename)
+
+    def _config_version_filename(self, pkg_filename):
+        if pkg_filename == pkg_filename.lower():
+            return "{}-config-version.cmake".format(pkg_filename)
+        else:
+            return "{}ConfigVersion.cmake".format(pkg_filename)
 
     def _config(self, filename, name, version, public_deps_names):
         # Builds the XXXConfig.cmake file for one package

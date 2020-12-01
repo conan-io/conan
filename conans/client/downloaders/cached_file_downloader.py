@@ -81,10 +81,10 @@ class CachedFileDownloader(object):
         the URL in the apiV1 contains the signature=xxx for signed urls, but that can change,
         so better strip it from the URL before the hash
         """
-        urltokens = urlsplit(url)
+        scheme, netloc, path, _, _ = urlsplit(url)
         # append empty query and fragment before unsplit
         if not self._user_download:  # removes ?signature=xxx
-            url = urlunsplit(urltokens[0:3]+("", ""))
+            url = urlunsplit((scheme, netloc, path, "", ""))
         if checksum is not None:
             url += checksum
         h = sha256_sum(url.encode())

@@ -58,7 +58,9 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
 
   .. code-block:: bash
 
-      $ git clone https://github.com/conan-io/conan.git
+      $ git clone https://github.com/conan-io/conan.git conan-io
+      
+ NOTE: repository directory name matters, some directories are known to be problematic to run tests (e.g. `conan`). `conan-io` directory name was tested and guaranteed to be working.
 
 - **Install in editable mode**
 
