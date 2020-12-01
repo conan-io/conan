@@ -9,7 +9,7 @@ from parameterized import parameterized
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
-from ..test_meson import get_meson_version
+from conans.test.integration.toolchains.test_meson import get_meson_version
 
 
 @pytest.mark.toolchain
