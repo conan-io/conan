@@ -61,24 +61,39 @@ class CMake(object):
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
+    def _get_folders(self, arg_source_folder):
+        """:returns
+                source_folder
+                build_folder
+                install_folder"""
+        if not self._conanfile.lyt:
+            source_folder = self._conanfile.source_folder
+            build_folder = self._conanfile.build_folder
+            install_folder = self._conanfile.install_folder
+            if arg_source_folder:
+                source_folder = os.path.join(source_folder, arg_source_folder)
+            if self._build_folder:
+                build_folder = os.path.join(build_folder, self._build_folder)
+            return source_folder, build_folder, install_folder
+
+        source_folder = self._conanfile.lyt.source_folder
+        build_folder = self._conanfile.lyt.build_folder
+        install_folder = self._conanfile.install_folder
+
+        return source_folder, build_folder, install_folder
+
     def configure(self, source_folder=None):
         # TODO: environment?
         if not self._conanfile.should_configure:
             return
 
-        source = self._conanfile.source_folder
-        if source_folder:
-            source = os.path.join(self._conanfile.source_folder, source_folder)
-
-        build_folder = self._conanfile.build_folder
-        if self._build_folder:
-            build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
+        source_folder, build_folder, install_folder = self._get_folders(source_folder)
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            CMakeToolchainBase.filename,
+            os.path.join(install_folder, CMakeToolchainBase.filename),
             self._conanfile.package_folder.replace("\\", "/"),
-            source)
+            source_folder)
 
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
@@ -96,6 +111,9 @@ class CMake(object):
         bf = self._conanfile.build_folder
         if self._build_folder:
             bf = os.path.join(self._conanfile.build_folder, self._build_folder)
+
+        if self._conanfile.lyt:
+            bf = self._conanfile.lyt.build_folder
 
         if build_type and not self._is_multiconfiguration:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "

@@ -8,14 +8,15 @@ class DefaultLayout(object):
         # Build layout
         self.build = "build"
         self.src = ""
+        self.install = ""  # Relative to root
+
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_libdir = ""  # Relative to self.build
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_bindir = ""  # Relative to self.build
         # Relative to root, needed to specify "build/x" or "src/x"
         self.build_includedirs = [self.build, self.src]
-        self.build_installdir = None  # Relative to root
-        self.build_builddir = ""  # Relative to root
+        self.build_builddir = ""  # Relative to root (build scripts like findxxx)
         self.build_resdir = ""  # Relative to root
 
         self.pkg_libdir = "lib"
@@ -37,8 +38,8 @@ class DefaultLayout(object):
         return os.path.join(self.build, self.build_bindir)
 
     @property
-    def build_install_folder(self):
-        return self.build_installdir if self.build_installdir is not None else self.build
+    def install_folder(self):
+        return self.install if self.install is not None else self.build
 
     # Getters, useful for recipes, relative to self._conanfile.xxx
     @property

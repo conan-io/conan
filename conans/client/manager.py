@@ -93,7 +93,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
     if install_folder:
         base_install_folder = install_folder
         if conanfile.lyt:
-            install_folder = os.path.join(install_folder, conanfile.lyt.build_install_folder)
+            install_folder = os.path.join(install_folder, conanfile.lyt.install_folder)
 
         conanfile.install_folder = install_folder
         # Write generators

@@ -124,8 +124,6 @@ class _PackageBuilder(object):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
         install_folder = conanfile.build_folder
-        if conanfile.lyt:
-            install_folder = os.path.join(conanfile.build_folder, conanfile.lyt.build_install_folder)
         self._generator_manager.write_generators(conanfile, install_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
@@ -217,7 +215,7 @@ class _PackageBuilder(object):
                         # In local cache, install folder always is build_folder
                         conanfile.install_folder = build_folder
                         if node.conanfile.lyt:
-                            lyi = node.conanfile.lyt.build_install_folder
+                            lyi = node.conanfile.lyt.install_folder
                             conanfile.install_folder = os.path.join(build_folder, lyi)
                         self._build(conanfile, pref)
 
@@ -471,10 +469,6 @@ class BinaryInstaller(object):
             if build_folder is not None:
                 build_folder = os.path.join(base_path, build_folder)
                 output = node.conanfile.output
-                if node.conanfile.lyt:
-                    build_folder = os.path.join(build_folder,
-                                                node.conanfile.lyt.build_install_folder)
-
                 self._generator_manager.write_generators(node.conanfile, build_folder, output)
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())

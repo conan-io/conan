@@ -40,6 +40,7 @@ class GenConanfile(object):
         self._test_lines = []
         self._layout_text = None
         self._short_path = None
+        self._exports_sources = None
 
     def with_text_layout(self, layout):
         self._layout_text = layout

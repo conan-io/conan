@@ -334,6 +334,10 @@ class CMakeBuildHelper(object):
     def _build(self, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        if self._conanfile.lyt:
+            build_dir = self._conanfile.lyt.build_folder
+
         if target is not None:
             args = ["--target", target] + args
 
