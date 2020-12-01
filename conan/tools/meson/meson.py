@@ -247,7 +247,7 @@ class MesonToolchain(object):
     @property
     def _cross_content(self):
         os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-        os_target, arch_target = os_host, arch_host  # assume target the same as a host for now?
+        os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
 
         build_machine = self._to_meson_machine(os_build, arch_build)
         host_machine = self._to_meson_machine(os_host, arch_host)
