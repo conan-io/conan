@@ -81,6 +81,10 @@ class MSBuildDeps(object):
         # config_filename
         # TODO: This is duplicated in write_generators() function, would need to be moved
         # to generators and called from there
+        if self.configuration is None:
+            raise ConanException("MSBuildDeps.configuration is None, it should have a value")
+        if self.platform is None:
+            raise ConanException("MSBuildDeps.platform is None, it should have a value")
         generator_files = self._content()
         for generator_file, content in generator_files.items():
             generator_file_path = os.path.join(self.output_path, generator_file)
@@ -90,13 +94,13 @@ class MSBuildDeps(object):
         # Default name
         props = [("Configuration", self.configuration),
                  ("Platform", self.platform)]
-        name = "".join("_%s" % v for _, v in props if v is not None)
+        name = "".join("_%s" % v for _, v in props)
         return name.lower()
 
     def _condition(self):
         props = [("Configuration", self.configuration),
                  ("Platform", self.platform)]
-        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
+        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
     def _deps_props(self, name_general, deps):
