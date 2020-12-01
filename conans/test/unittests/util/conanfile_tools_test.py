@@ -83,7 +83,7 @@ class Pkg(ConanFile):
         self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)
 
         replace_path_in_file(text_file, "FOUR FIVE SIX", "SEVEN EIGHT NINE",
-                        output=TestBufferConanOutput())
+                             output=TestBufferConanOutput())
         self.assertEqual(load(text_file), "SEVEN EIGHT NINE")
 
         self.assertEqual(os.stat(text_file).st_mode, mode_before_replace)
