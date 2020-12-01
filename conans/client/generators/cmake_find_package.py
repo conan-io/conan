@@ -215,7 +215,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         ########## GLOBAL BUILD MODULES #############################################################
 
         foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS}' }})
-            include(${{_BUILD_MODULE_PATH}})
+            include(${_BUILD_MODULE_PATH})
         endforeach()
 
     """))

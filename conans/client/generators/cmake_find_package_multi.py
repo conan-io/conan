@@ -13,6 +13,7 @@ from conans.client.generators.cmake_multi import extend
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
     _configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
+    _configurations_upper = ["RELEASE", "RELWITHDEBINFO", "MINSIZEREL", "DEBUG"]
 
     config_template = textwrap.dedent("""
         {macros_and_functions}
@@ -25,6 +26,7 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
 
         {target_props_block}
+        {build_modules_block}
         {find_dependencies_block}
         """)
 
@@ -66,6 +68,15 @@ set_property(TARGET {{name}}::{{name}}
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
              {%- endfor %})
+    """)
+
+    build_modules = Template("""
+# Build modules
+{%- for config in configs %}
+foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config+'}' }})
+    include(${_BUILD_MODULE_PATH})
+endforeach()
+{%- endfor %}
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -255,6 +266,24 @@ set_property(TARGET {{name}}::{{name}}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
         endif()
+
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+
+        {%- endfor %}
+
+        ########## GLOBAL BUILD MODULES #############################################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS}' }})
+            include(${{_BUILD_MODULE_PATH}})
+        endforeach()
         """))
 
     @property
@@ -362,6 +391,8 @@ set_property(TARGET {{name}}::{{name}}
 
         # Define the targets properties
         targets_props = self.target_properties.render(name=name, configs=self._configurations)
+        # Add build modules
+        build_modules_block = self.build_modules.render(name=name, configs=self._configurations_upper)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
@@ -372,6 +403,7 @@ set_property(TARGET {{name}}::{{name}}
         tmp = self.config_template.format(name=name, version=version,
                                           filename=filename,
                                           target_props_block=targets_props,
+                                          build_modules_block=build_modules_block,
                                           find_dependencies_block=find_dependencies_block,
                                           macros_and_functions=macros_and_functions)
         return tmp

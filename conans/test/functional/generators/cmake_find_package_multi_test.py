@@ -147,6 +147,97 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
+    @parameterized.expand([(False,), (True,)])
+    def test_build_modules_alias_target(self, use_components):
+        print("USE COMPONENTS", use_components)
+        client = TestClient()
+        client.run("new hello/1.0 -s")
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake", "src/*"]
+                generators = "cmake"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="src")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include")
+                    self.copy("*.a", dst="lib")
+                    self.copy("*.lib", dst="lib")
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    builddir = os.path.join("share", "cmake")
+                    module = os.path.join(builddir, "target-alias.cmake")
+            %s
+            """)
+        if use_components:
+            info = textwrap.dedent("""\
+                self.cpp_info.name = "namespace"
+                self.cpp_info.filenames["cmake_find_package_multi"] = "hello"
+                self.cpp_info.components["comp"].build_modules.append(module)
+                self.cpp_info.components["comp"].builddirs = [builddir]
+                """)
+            target_alias = textwrap.dedent("""
+                if(NOT TARGET otherhello)
+                    add_library(otherhello INTERFACE IMPORTED)
+                    target_link_libraries(otherhello INTERFACE namespace::hello)
+                endif()
+                """)
+        else:
+            info = textwrap.dedent("""\
+                self.cpp_info.build_modules.append(module)
+                self.cpp_info.builddirs = [builddir]
+                """)
+            target_alias = textwrap.dedent("""
+                if(NOT TARGET otherhello)
+                    add_library(otherhello INTERFACE IMPORTED)
+                    target_link_libraries(otherhello INTERFACE hello::hello)
+                endif()
+                """)
+        conanfile = conanfile % textwrap.indent(info, "        ")
+        print(conanfile)
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package_multi"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(hello)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        if use_components:
+            self.assertIn("otherhello link libraries: namespace::hello", client.out)
+        else:
+            self.assertIn("otherhello link libraries: hello::hello", client.out)
+
     def test_cmake_find_package_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools

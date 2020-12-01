@@ -6,6 +6,7 @@ import unittest
 import pytest
 import six
 from nose.plugins.attrib import attr
+from parameterized import parameterized
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
@@ -430,7 +431,9 @@ message("Target libs: ${tmp}")
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
-    def test_build_modules_alias_target(self):
+    @parameterized.expand([(False,), (True,)])
+    def test_build_modules_alias_target(self, use_components):
+        print("USE COMPONENTS", use_components)
         client = TestClient()
         client.run("new hello/1.0 -s")
         conanfile = textwrap.dedent("""
@@ -458,13 +461,34 @@ message("Target libs: ${tmp}")
                 def package_info(self):
                     builddir = os.path.join("share", "cmake")
                     module = os.path.join(builddir, "target-alias.cmake")
-                    self.cpp_info.build_modules.append(module)
-                    self.cpp_info.builddirs = [builddir]
-        """)
-        target_alias = textwrap.dedent("""
-            add_library(otherhello INTERFACE IMPORTED)
-            target_link_libraries(otherhello INTERFACE hello::hello)
+            %s
             """)
+        if use_components:
+            info = textwrap.dedent("""\
+                self.cpp_info.name = "namespace"
+                self.cpp_info.filenames["cmake_find_package"] = "hello"
+                self.cpp_info.components["comp"].build_modules.append(module)
+                self.cpp_info.components["comp"].builddirs = [builddir]
+                """)
+            target_alias = textwrap.dedent("""
+                if(NOT TARGET otherhello)
+                    add_library(otherhello INTERFACE IMPORTED)
+                    target_link_libraries(otherhello INTERFACE namespace::hello)
+                endif()
+                """)
+        else:
+            info = textwrap.dedent("""\
+                self.cpp_info.build_modules.append(module)
+                self.cpp_info.builddirs = [builddir]
+                """)
+            target_alias = textwrap.dedent("""
+                if(NOT TARGET otherhello)
+                    add_library(otherhello INTERFACE IMPORTED)
+                    target_link_libraries(otherhello INTERFACE hello::hello)
+                endif()
+                """)
+        conanfile = conanfile % textwrap.indent(info, "        ")
+        print(conanfile)
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
 
@@ -493,7 +517,10 @@ message("Target libs: ${tmp}")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
-        self.assertIn("otherhello link libraries: hello::hello", client.out)
+        if use_components:
+            self.assertIn("otherhello link libraries: namespace::hello", client.out)
+        else:
+            self.assertIn("otherhello link libraries: hello::hello", client.out)
 
     def test_cpp_info_name(self):
         client = TestClient()
