@@ -313,7 +313,7 @@ endmacro()""", macro)
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(settings_mock, EnvValues())
         install_folder = "/c/foo/testing"
-        setattr(conanfile, "install_folder", install_folder)
+        setattr(conanfile, "_conan_base_install_folder", install_folder)
         conanfile.generators = ["cmake_find_package_multi"]
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")
@@ -345,7 +345,7 @@ endmacro()""", macro)
             settings_mock = _MockSettings(build_type="Release")
             conanfile = ConanFile(TestBufferConanOutput(), None)
             install_folder = "/c/foo/testing"
-            setattr(conanfile, "install_folder", install_folder)
+            setattr(conanfile, "_conan_base_install_folder", install_folder)
             conanfile.initialize(settings_mock, EnvValues())
             assert CMakeBuildHelper(conanfile)
 

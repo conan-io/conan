@@ -123,11 +123,10 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        install_folder = conanfile.install_folder
-        self._generator_manager.write_generators(conanfile, install_folder, self._output)
+        self._generator_manager.write_generators(conanfile, conanfile.install_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
-        write_toolchain(conanfile, conanfile.build_folder, self._output)
+        write_toolchain(conanfile, conanfile.install_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -210,10 +209,10 @@ class _PackageBuilder(object):
                         conanfile.set_base_source_folder(build_folder)
 
                     if not skip_build:
-                        conanfile.set_base_build_folder = build_folder
+                        conanfile.set_base_build_folder(build_folder)
                         conanfile.package_folder = package_folder
                         # In local cache, install folder always is build_folder
-                        conanfile.set_base_install_folder = build_folder
+                        conanfile.set_base_install_folder(build_folder)
                         self._build(conanfile, pref)
 
                         clean_dirty(build_folder)

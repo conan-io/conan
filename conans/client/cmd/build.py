@@ -43,7 +43,8 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
         conan_file.set_base_source_folder(source_folder)
         conan_file.package_folder = package_folder
         # FIXME: Ugly & smelly: The -if already sets the whole install path
-        conan_file.lyt.install = ""
+        if conan_file.lyt:
+            conan_file.lyt.install = ""
         conan_file.set_base_install_folder(install_folder)
         mkdir(conan_file.build_folder)
         os.chdir(conan_file.build_folder)
