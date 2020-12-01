@@ -227,6 +227,7 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
 
 @contextmanager
 def _add_write_permissions(file_path):
+    # Assumes the file already exist in disk
     write = stat.S_IWRITE
     saved_permissions = os.stat(file_path).st_mode
     if saved_permissions & write == write:
