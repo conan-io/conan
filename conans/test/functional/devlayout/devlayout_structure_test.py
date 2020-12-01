@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient, TurboTestClient, GenConanfile
 class DevLayoutNoBuildTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
             import os
-            from conans import ConanFile, tools, Layout
+            from conans import ConanFile, tools, DefaultLayout
 
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"

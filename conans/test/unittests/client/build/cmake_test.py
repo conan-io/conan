@@ -46,8 +46,8 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
+        conanfile.set_base_source_folder(os.path.join(self.tempdir, "src"))
+        conanfile.set_base_build_folder(os.path.join(self.tempdir, "build"))
         conanfile.package_folder = os.path.join(self.tempdir, "pkg")
         conanfile.deps_cpp_info = DepsCppInfo()
 
@@ -74,8 +74,8 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
+        conanfile.set_base_source_folder(os.path.join(self.tempdir, "src"))
+        conanfile.set_base_build_folder(os.path.join(self.tempdir, "build"))
         conanfile.package_folder = os.path.join(self.tempdir, "pkg")
         conanfile.deps_cpp_info = DepsCppInfo()
 
@@ -447,8 +447,8 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.set_base_source_folder(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.set_base_build_folder(os.path.join(self.tempdir, "my_cache_build_folder"))
 
         # Existing make
         make_path = os.path.join(self.tempdir, "make")
@@ -479,8 +479,8 @@ class CMakeTest(unittest.TestCase):
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.set_base_source_folder(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.set_base_build_folder(os.path.join(self.tempdir, "my_cache_build_folder"))
         with tools.chdir(self.tempdir):
             linux_stuff = ""
             if platform.system() != "Linux":
@@ -1169,7 +1169,7 @@ build_type: [ Release]
     def test_pkg_config_path(self):
         conanfile = ConanFileMock()
         conanfile.generators = ["pkg_config"]
-        conanfile.install_folder = "/my_install/folder/"
+        conanfile.set_base_install_folder("/my_install/folder/")
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"

@@ -39,12 +39,15 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_test = should_test
 
     try:
-        mkdir(build_folder)
-        os.chdir(build_folder)
-        conan_file.build_folder = build_folder
-        conan_file.source_folder = source_folder
+        conan_file.set_base_build_folder(build_folder)
+        conan_file.set_base_source_folder(source_folder)
         conan_file.package_folder = package_folder
-        conan_file.install_folder = install_folder
+        # FIXME: Ugly & smelly: The -if already sets the whole install path
+        conan_file.lyt.install = ""
+        conan_file.set_base_install_folder(install_folder)
+        mkdir(conan_file.build_folder)
+        os.chdir(conan_file.build_folder)
+
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):

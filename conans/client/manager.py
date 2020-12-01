@@ -91,32 +91,28 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
         manifest_manager.print_log()
 
     if install_folder:
-        base_install_folder = install_folder
-        if conanfile.lyt:
-            install_folder = os.path.join(install_folder, conanfile.lyt.install_folder)
-
-        conanfile.install_folder = install_folder
+        conanfile.set_base_install_folder(install_folder)
         # Write generators
         output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
-            app.generator_manager.write_generators(conanfile, install_folder, output)
-            write_toolchain(conanfile, install_folder, output)
+            app.generator_manager.write_generators(conanfile, conanfile.install_folder, output)
+            write_toolchain(conanfile, conanfile.install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
+            save(os.path.join(conanfile.install_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(install_folder)
+            graph_info.save(conanfile.install_folder)
             output.info("Generated graphinfo")
             graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                             graph_info.graph_lock)
-            graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
+            graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
 
         if not no_imports:
-            run_imports(conanfile, base_install_folder)
+            run_imports(conanfile, conanfile.install_folder)
 
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile, conanfile.output)
@@ -126,7 +122,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                run_deploy(deploy_conanfile, install_folder)
+                run_deploy(deploy_conanfile, conanfile.install_folder)
 
         # FIXME: Returning this is a terrible smell
-        return install_folder
+        return conanfile.install_folder

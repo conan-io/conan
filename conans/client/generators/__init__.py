@@ -111,9 +111,6 @@ class GeneratorManager(object):
                     generator = generator_class(conanfile)
                     output.highlight("Generating toolchain files")
 
-                    if conanfile.lyt:
-                        path = join(path, conanfile.lyt.install_folder)
-
                     with chdir(path):
                         generator.generate()
                     continue

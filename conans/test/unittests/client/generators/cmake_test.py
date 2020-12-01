@@ -326,7 +326,7 @@ endmacro()""", macro)
         settings_mock.os = "iOS"
         settings_mock.os_build = "Macos"
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        conanfile.install_folder = "/c/foo/testing"
+        conanfile.set_base_install_folder("/c/foo/testing")
         conanfile.initialize(settings_mock, EnvValues())
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")

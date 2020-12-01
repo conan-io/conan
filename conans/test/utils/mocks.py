@@ -149,7 +149,7 @@ class ConanFileMock(ConanFile):
         options = options or ""
         self.command = None
         self.path = None
-        self.source_folder = self.build_folder = "."
+        self.__conan_base_source_folder = self.__conan_base_build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(options))
         if options_values:
@@ -159,7 +159,7 @@ class ConanFileMock(ConanFile):
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
-        self.install_folder = "myinstallfolder"
+        self.__conan_base_install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.should_configure = True

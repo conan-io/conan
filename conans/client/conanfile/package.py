@@ -28,9 +28,9 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     output.info("Package folder %s" % package_folder)
 
     conanfile.package_folder = package_folder
-    conanfile.source_folder = source_folder
-    conanfile.install_folder = install_folder
-    conanfile.build_folder = build_folder
+    conanfile.set_base_source_folder(source_folder)
+    conanfile.set_base_install_folder(install_folder)
+    conanfile.set_base_build_folder(build_folder)
 
     with get_env_context_manager(conanfile):
         return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,

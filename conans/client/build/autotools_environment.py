@@ -152,8 +152,8 @@ class AutoToolsBuildEnvironment(object):
         #             (now the configure is run in cwd and should be run in the build folder)
         build_folder = os.getcwd()
         if self._conanfile.lyt:
-            configure_dir = os.path.join(self._conanfile.source_folder, self._conanfile.lyt.src)
-            build_folder = os.path.join(self._conanfile.build_folder, self._conanfile.lyt.build)
+            configure_dir = self._conanfile.source_folder
+            build_folder = self._conanfile.build_folder
 
         triplet_args = []
 
@@ -254,8 +254,7 @@ class AutoToolsBuildEnvironment(object):
             #             (now the configure is run in cwd and should be run in the build folder)
             build_folder = os.getcwd()
             if self._conanfile.lyt:
-                build_folder = os.path.join(self._conanfile.build_folder,
-                                            self._conanfile.lyt.build)
+                build_folder = self._conanfile.build_folder
 
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),

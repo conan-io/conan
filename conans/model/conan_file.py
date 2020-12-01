@@ -134,6 +134,11 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
+    # folders
+    _conan_base_source_folder = None
+    _conan_base_build_folder = None
+    _conan_base_install_folder = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
@@ -174,6 +179,33 @@ class ConanFile(object):
 
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
+
+    @property
+    def source_folder(self):
+        if self.lyt:
+            return os.path.join(self._conan_base_source_folder, self.lyt.src)
+        return self._conan_base_source_folder
+
+    def set_base_source_folder(self, folder):
+        self._conan_base_source_folder = folder
+
+    @property
+    def build_folder(self):
+        if self.lyt:
+            return os.path.join(self._conan_base_build_folder, self.lyt.build)
+        return self._conan_base_build_folder
+
+    def set_base_build_folder(self, folder):
+        self._conan_base_build_folder = folder
+
+    @property
+    def install_folder(self):
+        if self.lyt:
+            return os.path.join(self._conan_base_install_folder, self.lyt.install)
+        return self._conan_base_install_folder
+
+    def set_base_install_folder(self, folder):
+        self._conan_base_install_folder = folder
 
     @property
     def env(self):

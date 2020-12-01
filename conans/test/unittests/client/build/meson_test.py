@@ -62,8 +62,8 @@ class MesonTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = MockDepsCppInfo()
         conan_file.settings = settings
-        conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conan_file.set_base_source_folder(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conan_file.set_base_build_folder(os.path.join(self.tempdir, "my_cache_build_folder"))
         conan_file.package_folder = package_folder
         meson = Meson(conan_file)
 
