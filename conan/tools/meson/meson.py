@@ -242,8 +242,7 @@ class MesonToolchain(object):
             'cpu': self._to_meson_value(cpu),
             'endian': self._to_meson_value(endian),
         }
-        t = Template(self._machine_template)
-        return t.render(context)
+        return self._render(self._machine_template, context)
 
     @property
     def _cross_content(self):
