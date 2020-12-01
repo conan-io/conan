@@ -160,10 +160,6 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
-            include(${_BUILD_MODULE_PATH})
-        endforeach()
-
         {%- endfor %}
 
 
@@ -202,6 +198,25 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                                       "{{ '${'+pkg_name+'_COMPONENTS}' }}")
             endif()
         endif()
+
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+
+        {%- endfor %}
+
+        ########## GLOBAL BUILD MODULES #############################################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS}' }})
+            include(${{_BUILD_MODULE_PATH}})
+        endforeach()
 
     """))
 

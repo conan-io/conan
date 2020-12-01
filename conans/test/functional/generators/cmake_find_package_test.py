@@ -433,7 +433,6 @@ message("Target libs: ${tmp}")
     def test_build_modules_alias_target(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
-        print(os.listdir(client.current_folder))
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
