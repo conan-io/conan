@@ -232,7 +232,9 @@ endforeach()
         {%- macro tvalue(pkg_name, comp_name, var, config) -%}
         {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
         {%- endmacro -%}
+
         {%- for comp_name, comp in components %}
+
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
@@ -271,19 +273,28 @@ endforeach()
         #############################################################################################
 
         {%- for comp_name, comp in components %}
+
         ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
+        {%- for config in configs_upper %}
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config+'}' }})
             include(${_BUILD_MODULE_PATH})
         endforeach()
 
         {%- endfor %}
 
+        {%- endfor %}
+
         ########## GLOBAL BUILD MODULES #############################################################
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS}' }})
-            include(${{_BUILD_MODULE_PATH}})
+        {%- for config in configs_upper %}
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS_'+config+'}' }})
+            include(${_BUILD_MODULE_PATH})
         endforeach()
+
+        {%- endfor %}
         """))
 
     @property
@@ -362,7 +373,8 @@ endforeach()
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message,
-                    configs=self._configurations
+                    configs=self._configurations,
+                    configs_upper=self._configurations_upper
                 )
                 ret[self._config_filename(pkg_filename)] = target_config
         return ret

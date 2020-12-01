@@ -433,7 +433,6 @@ message("Target libs: ${tmp}")
 
     @parameterized.expand([(False,), (True,)])
     def test_build_modules_alias_target(self, use_components):
-        print("USE COMPONENTS", use_components)
         client = TestClient()
         client.run("new hello/1.0 -s")
         conanfile = textwrap.dedent("""
@@ -488,7 +487,6 @@ message("Target libs: ${tmp}")
                 endif()
                 """)
         conanfile = conanfile % textwrap.indent(info, "        ")
-        print(conanfile)
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
 
