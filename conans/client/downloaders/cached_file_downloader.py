@@ -4,11 +4,11 @@ from threading import Lock
 
 from six.moves.urllib_parse import urlsplit, urlunsplit
 
+from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as sha256_sum
-from .file_downloader import check_checksum
 
 
 class CachedFileDownloader(object):

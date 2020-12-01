@@ -1,5 +1,5 @@
-from .cached_file_downloader import CachedFileDownloader
-from .file_downloader import FileDownloader
+from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
+from conans.client.downloaders.file_downloader import FileDownloader
 
 
 def run_downloader(requester, output, verify, config, user_download=False, use_cache=True, **kwargs):
