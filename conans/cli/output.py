@@ -67,6 +67,25 @@ class TqdmHandler(logging.StreamHandler):
             self.handleError(record)
 
 
+class ColorFormatter(logging.Formatter):
+    level_color = {
+        'WARNING': Color.YELLOW,
+        'INFO': Color.YELLOW,
+        'DEBUG': Color.BLUE,
+        'CRITICAL': Color.YELLOW,
+        'ERROR': Color.RED
+    }
+
+    def __init__(self, msg, use_color=True):
+        logging.Formatter.__init__(self, msg)
+        self.use_color = use_color
+
+    def format(self, record):
+        if self.use_color and record.levelname in self.level_color:
+            record.msg = "{}{}{}".format(self.level_color[record.levelname], record.msg, Style.RESET_ALL)
+        return logging.Formatter.format(self, record)
+
+
 class ConanOutput(object):
     def __init__(self, quiet=False):
         self._logger = logging.getLogger("conan_out_logger")
@@ -79,7 +98,7 @@ class ConanOutput(object):
         else:
             self._stream = sys.stderr
             self._stream_handler = TqdmHandler(self._stream)
-            self._stream_handler.setFormatter(logging.Formatter("%(message)s"))
+            self._stream_handler.setFormatter(ColorFormatter("%(message)s", use_color=self._color))
             self._logger.addHandler(self._stream_handler)
             self._logger.setLevel(logging.INFO)
             self._logger.propagate = False
@@ -109,28 +128,26 @@ class ConanOutput(object):
     def _write(self, msg, level, fg=None, bg=None):
         if self._scope:
             msg = "{}: {}".format(self.scope, msg)
-        if self._color:
-            msg = "{}{}{}{}".format(fg or '', bg or '', msg, Style.RESET_ALL)
         self._logger.log(level, msg)
 
     def debug(self, msg):
         self._write(msg, logging.DEBUG)
 
-    def info(self, msg, fg=None, bg=None):
-        self._write(msg, logging.INFO, fg, bg)
+    def info(self, msg):
+        self._write(msg, logging.INFO)
 
     # TODO: remove, just to support the migration system warn message
     def warn(self, msg):
-        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+        self._write("WARNING: {}".format(msg), logging.WARNING)
 
     def warning(self, msg):
-        self._write("WARNING: {}".format(msg), logging.WARNING, Color.YELLOW)
+        self._write("WARNING: {}".format(msg), logging.WARNING)
 
     def error(self, msg):
-        self._write("ERROR: {}".format(msg), logging.ERROR, Color.RED)
+        self._write("ERROR: {}".format(msg), logging.ERROR)
 
     def critical(self, msg):
-        self._write("ERROR: {}".format(msg), logging.CRITICAL, Color.BRIGHT_RED)
+        self._write("ERROR: {}".format(msg), logging.CRITICAL)
 
     def flush(self):
         if self._stream_handler:
