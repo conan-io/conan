@@ -84,7 +84,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
-        lines.append("Description: %s" % description)
+        lines.append("Description: %s" % "".join(description))
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
