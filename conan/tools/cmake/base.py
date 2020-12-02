@@ -70,7 +70,12 @@ class CMakeToolchainBase(object):
         {% block before_try_compile %}
             {# build_type (Release, Debug, etc) is only defined for single-config generators #}
             {%- if build_type %}
-            set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+            if(CMAKE_BUILD_TYPE)
+                # Allows overriding with -DCMAKE_BUILD_TYPE together with the toolchain
+                set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "Choose the type of build." FORCE)
+            else()
+                set(CMAKE_BUILD_TYPE "{{ build_type }}" CACHE STRING "Choose the type of build." FORCE)
+            endif()
             {%- endif %}
         {% endblock %}
 
