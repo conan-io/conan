@@ -1,9 +1,11 @@
 import os
+import six
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 from conans.model.conan_generator import GeneratorComponentsMixin
+from conans.errors import ConanException
 
 """
 PC FILE EXAMPLE:
@@ -84,7 +86,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
-        lines.append("Description: %s" % "".join(description))
+        lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
         libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]

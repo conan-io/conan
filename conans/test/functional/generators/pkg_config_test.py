@@ -203,24 +203,3 @@ class PkgConfigConan(ConanFile):
         pc = client.load("pkg.pc")
         self.assertNotIn("libdir=${prefix}/lib", pc)
         self.assertNotIn("includedir=${prefix}/include", pc)
-
-    def test_tuple_description(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class PkgConfigConan(ConanFile):
-                name = "foo"
-                version = "0.1"
-                description = ("Conan, ",
-                               "the package manager  ")
-
-                def build(self):
-                    pass
-            """)
-
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create .")
-        client.run("install foo/0.1@ -g pkg_config")
-
-        pc_content = client.load("foo.pc")
-        self.assertIn("Description: Conan, the package manager", pc_content)

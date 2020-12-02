@@ -173,6 +173,9 @@ class ConanFile(object):
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
 
+        if self.description is not None and not isinstance(self.description, six.string_types):
+            raise ConanException("Recipe 'description' must be a string.")
+
     @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
