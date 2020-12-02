@@ -66,11 +66,11 @@ class CMake(object):
         if not self._conanfile.should_configure:
             return
 
-        _source_folder = self._conanfile.source_folder
+        source = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
         install_folder = self._conanfile.install_folder
         if source_folder:
-            _source_folder = os.path.join(_source_folder, source_folder)
+            source = os.path.join(source, source_folder)
         if self._build_folder:
             build_folder = os.path.join(build_folder, self._build_folder)
 
@@ -78,7 +78,7 @@ class CMake(object):
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
             os.path.join(install_folder, CMakeToolchainBase.filename),
             self._conanfile.package_folder.replace("\\", "/"),
-            _source_folder)
+            source)
 
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
