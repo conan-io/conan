@@ -546,7 +546,8 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create .")
 
         consumer = textwrap.dedent("""
-            from conans import ConanFile, CMake
+            import os
+            from conans import ConanFile, CMake, tools
 
             class Conan(ConanFile):
                 name = "consumer"
@@ -557,6 +558,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                 requires = "hello/1.0"
 
                 def build(self):
+                    print(tools.load(os.path.join(self.install_folder, "conanbuildinfo.cmake")))
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
@@ -571,4 +573,5 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
+        print(client.out)
         self.assertIn("otherhello link libraries: CONAN_PKG::hello", client.out)
