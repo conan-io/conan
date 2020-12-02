@@ -1,11 +1,9 @@
 import os
-import six
 
 from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
 from conans.client.tools.oss import get_build_os_arch
 from conans.model import Generator
 from conans.model.conan_generator import GeneratorComponentsMixin
-from conans.errors import ConanException
 
 """
 PC FILE EXAMPLE:
