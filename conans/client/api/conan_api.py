@@ -1,5 +1,6 @@
 import os
 import sys
+import textwrap
 import time
 
 from tqdm import tqdm
@@ -66,7 +67,14 @@ class ConanAPIV2(object):
         self.out.info("info message")
         self.out.warning("warning message")
         self.out.scope = ""
-        self.out.error("error message")
+        multiline_msg = textwrap.dedent("""
+            This is an error message with multiple lines.
+
+            It will be added to the logger correctly.
+                * There should be no problems adding them
+                * But let's check it anyway
+        """)
+        self.out.error(multiline_msg)
         self.out.critical("critical message")
         for _ in tqdm(range(10)):
             time.sleep(.08)
