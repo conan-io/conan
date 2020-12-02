@@ -1534,8 +1534,10 @@ class Command(object):
         parser_rename.add_argument('remote', help='The old remote name')
         parser_rename.add_argument('new_remote', help='The new remote name')
 
-        subparsers.add_parser('list_ref',
-                              help='List the package recipes and its associated remotes')
+        parser_list_ref = subparsers.add_parser('list_ref', help='List the package recipes '
+                                                                 'and its associated remotes')
+        parser_list_ref.add_argument("--no-remote", action='store_true', default=False,
+                                     help='List the ones without remote')
         parser_padd = subparsers.add_parser('add_ref',
                                             help="Associate a recipe's reference to a remote")
         parser_padd.add_argument('reference', help='Package recipe reference')
@@ -1551,6 +1553,8 @@ class Command(object):
         list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
                                                             'its associated remotes')
         list_pref.add_argument('reference', help='Package recipe reference')
+        list_pref.add_argument("--no-remote", action='store_true', default=False,
+                               help='List the ones without remote')
 
         add_pref = subparsers.add_parser('add_pref',
                                          help="Associate a package reference to a remote")
@@ -1597,7 +1601,7 @@ class Command(object):
         elif args.subcommand == "update":
             return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
-            refs = self._conan.remote_list_ref()
+            refs = self._conan.remote_list_ref(args.no_remote)
             self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
             return self._conan.remote_add_ref(reference, remote_name)
@@ -1606,7 +1610,7 @@ class Command(object):
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
-            refs = self._conan.remote_list_pref(reference)
+            refs = self._conan.remote_list_pref(reference, args.no_remote)
             self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)

@@ -10,7 +10,7 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -19,7 +19,7 @@ from conans.client.source import complete_recipe_sources, config_source
 from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
@@ -306,14 +306,16 @@ class BinaryInstaller(object):
 
     @staticmethod
     def _classify(nodes_by_level):
-        missing, downloads = [], []
+        missing, invalid, downloads = [], [], []
         for level in nodes_by_level:
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
+                elif node.binary == BINARY_INVALID:
+                    invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
-        return missing, downloads
+        return missing, invalid, downloads
 
     def _raise_missing(self, missing):
         if not missing:
@@ -402,7 +404,12 @@ class BinaryInstaller(object):
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
-        missing, downloads = self._classify(nodes_by_level)
+        missing, invalid, downloads = self._classify(nodes_by_level)
+        if invalid:
+            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
+            for node in invalid:
+                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+            raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = set()
         self._download(downloads, processed_package_refs)

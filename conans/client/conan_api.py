@@ -48,7 +48,6 @@ from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.source import config_source_local
-from conans.client.store.localdb import LocalDB
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
@@ -1017,9 +1016,18 @@ class ConanAPIV1(object):
         return self.app.cache.registry.rename(remote_name, new_new_remote)
 
     @api_method
-    def remote_list_ref(self):
-        return {str(r): remote_name for r, remote_name in self.app.cache.registry.refs_list.items()
-                if remote_name}
+    def remote_list_ref(self, no_remote=False):
+        if no_remote:
+            result = {}
+            for ref in self.app.cache.all_refs():
+                metadata = self.app.cache.package_layout(ref).load_metadata()
+                if not metadata.recipe.remote:
+                    result[str(ref)] = None
+            return result
+        else:
+            return {str(r): remote_name for r, remote_name in
+                    self.app.cache.registry.refs_list.items()
+                    if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
@@ -1042,14 +1050,23 @@ class ConanAPIV1(object):
             metadata.recipe.remote = remote.name
 
     @api_method
-    def remote_list_pref(self, reference):
+    def remote_list_pref(self, reference, no_remote=False):
         ref = ConanFileReference.loads(reference, validate=True)
-        ret = {}
-        tmp = self.app.cache.registry.prefs_list
-        for pref, remote in tmp.items():
-            if pref.ref == ref and remote:
-                ret[repr(pref)] = remote
-        return ret
+        if no_remote:
+            result = {}
+            metadata = self.app.cache.package_layout(ref).load_metadata()
+            for pid, pkg_metadata in metadata.packages.items():
+                if not pkg_metadata.remote:
+                    pref = PackageReference(ref, pid)
+                    result[repr(pref)] = None
+            return result
+        else:
+            ret = {}
+            tmp = self.app.cache.registry.prefs_list
+            for pref, remote in tmp.items():
+                if pref.ref == ref and remote:
+                    ret[repr(pref)] = remote
+            return ret
 
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
