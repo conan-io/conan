@@ -13,7 +13,6 @@ from conans.client.generators.cmake_multi import extend
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
     _configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
-    _configurations_upper = ["RELEASE", "RELWITHDEBINFO", "MINSIZEREL", "DEBUG"]
 
     config_template = textwrap.dedent("""
         {macros_and_functions}
@@ -73,7 +72,7 @@ set_property(TARGET {{name}}::{{name}}
     build_modules = Template("""
 # Build modules
 {%- for config in configs %}
-foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config+'}' }})
+foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
     include(${_BUILD_MODULE_PATH})
 endforeach()
 {%- endfor %}
@@ -272,25 +271,11 @@ endforeach()
         ########## BUILD MODULES ####################################################################
         #############################################################################################
 
-        {%- for comp_name, comp in components %}
-
-        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
-
-        {%- for config in configs_upper %}
-
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config+'}' }})
-            include(${_BUILD_MODULE_PATH})
-        endforeach()
-
-        {%- endfor %}
-
-        {%- endfor %}
-
         ########## GLOBAL BUILD MODULES #############################################################
 
-        {%- for config in configs_upper %}
+        {%- for config in configs %}
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS_'+config+'}' }})
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
             include(${_BUILD_MODULE_PATH})
         endforeach()
 
@@ -373,8 +358,7 @@ endforeach()
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message,
-                    configs=self._configurations,
-                    configs_upper=self._configurations_upper
+                    configs=self._configurations
                 )
                 ret[self._config_filename(pkg_filename)] = target_config
         return ret
@@ -404,7 +388,7 @@ endforeach()
         # Define the targets properties
         targets_props = self.target_properties.render(name=name, configs=self._configurations)
         # Add build modules
-        build_modules_block = self.build_modules.render(name=name, configs=self._configurations_upper)
+        build_modules_block = self.build_modules.render(name=name, configs=self._configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
