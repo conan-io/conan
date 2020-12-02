@@ -25,7 +25,7 @@ class DevLayoutTest(unittest.TestCase):
             exports_sources = "src/*", "CMakeLists.txt"
             generators = "cmake"
             layout = "cmake"
-            
+
             def build(self):
                 cmake = CMake(self) # Opt-in is defined having toolchain
                 cmake.configure()
@@ -41,9 +41,9 @@ class DevLayoutTest(unittest.TestCase):
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8.12)
         set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)    
+        set(CMAKE_CXX_ABI_COMPILED 1)
         project(HelloWorldLib CXX)
-        
+
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
         conan_basic_setup(NO_OUTPUT_DIRS)
 
@@ -80,7 +80,7 @@ class DevLayoutTest(unittest.TestCase):
           #define HELLO_EXPORT
         #endif
 
-        HELLO_EXPORT 
+        HELLO_EXPORT
         std::string hello();
         """)
     app = textwrap.dedent(r"""
@@ -117,12 +117,12 @@ class DevLayoutTest(unittest.TestCase):
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
-            
+
             def imports(self):
                 self.lyt.imports()
 
             def test(self):
-                os.chdir(self.lyt.build_bin_folder)
+                # os.chdir(self.lyt.build_bindir)
                 self.run(".%sapp" % os.sep)
         """)
 
@@ -162,7 +162,7 @@ class DevLayoutTest(unittest.TestCase):
                     settings = "os", "compiler", "arch", "build_type"
                     generators = "cmake"
                     exports_sources = "src/*"
-                    
+
                     def layout(self):
                         self.lyt = DefaultLayout(self)
                         self.lyt.src = "src"
@@ -247,7 +247,7 @@ class DevLayoutTest(unittest.TestCase):
                 requires = "pkg/0.1@user/testing"
                 generators = "cmake_find_package_multi"
                 layout = "cmake"
-                    
+
                 def imports(self):
                     self.lyt.imports()
             """)
@@ -260,7 +260,7 @@ class DevLayoutTest(unittest.TestCase):
             set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
             set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR} ${CMAKE_PREFIX_PATH})
             find_package(pkg)
-            
+
             add_executable(app app.cpp)
             target_link_libraries(app pkg::pkg)
             """)
@@ -388,7 +388,7 @@ class DevLayoutTest(unittest.TestCase):
                     settings = "os", "compiler", "arch", "build_type"
                     exports_sources = "src/*", "CMakeLists.txt"
                     generators = "cmake"
-                
+
                     def layout(self):
                        self.lyt = DefaultLayout(self)
                        self.lyt.build_libdir = "lib"

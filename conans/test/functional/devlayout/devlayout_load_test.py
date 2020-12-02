@@ -16,7 +16,7 @@ class LayoutLoadTest(unittest.TestCase):
 
               class Pkg(ConanFile):
                   settings = "os", "compiler", "arch", "build_type"
-                  
+
                   def layout(self):
                       self.lyt = CMakeLayout(self)
                       self.lyt.build = "mybuild"
@@ -49,23 +49,23 @@ class LayoutLoadTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
            import platform
            from conans import ConanFile, CMake
-    
+
            class Pkg(ConanFile):
                settings = "os", "compiler", "arch", "build_type"
                layout = "cmake"
-               
+
                def assert_layout(self):
                    assert self.layout == "cmake"
                    assert self.lyt.build == "build" if platform.system == "Windows" \
                                 else "cmake-build-{}".format(str(self.settings.build_type))
                    assert self.lyt.src == ""
-    
+
                def build(self):
                    self.assert_layout()
-    
+
                def package(self):
                    self.assert_layout()
-    
+
                def package_info(self):
                    self.assert_layout()
                """)
@@ -94,7 +94,7 @@ class LayoutLoadTest(unittest.TestCase):
                """)
         override_layout = textwrap.dedent("""
         from conans import DefaultLayout
-        
+
         def layout(self):
             self.lyt = DefaultLayout(self)
             self.lyt.build = "overwritten_build"
@@ -151,7 +151,7 @@ class LayoutLoadTest(unittest.TestCase):
                    assert self.lyt.build == "overwritten_build"
                    assert self.lyt.src == "overwritten_src"
                    self.output.warn("Here, building")
-                   
+
                def package_info(self):
                     self.output.warn("Here, being reused: {}".format(self.lyt.build))
                """)
@@ -170,28 +170,6 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("install lib/1.0@")
         self.assertIn("Here, being reused: overwritten_build", client.out)
 
-    def layout_available_methods_test(self):
-        """Test the available methods from the layout, even without declared settings"""
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-           import os
-           from conans import ConanFile, CMake
-
-           class Pkg(ConanFile):
-               layout = "cmake"
-
-               def build(self):
-                   assert os.path.join(self.build_folder, self.lyt.build) == self.lyt.build_folder
-                   assert os.path.join(self.source_folder, self.lyt.src) == self.lyt.source_folder
-                   assert self.lyt.build_lib_folder == \
-                          os.path.join(self.lyt.build, self.lyt.build_libdir)
-                   assert self.lyt.build_bin_folder == \
-                          os.path.join(self.lyt.build, self.lyt.build_bindir)
-
-               """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create . lib/1.0@")
-
     def returning_non_layout_in_method_test(self):
         """If you assign the layout badly in the method..."""
         client = TestClient()
@@ -202,10 +180,10 @@ class LayoutLoadTest(unittest.TestCase):
                    class Pkg(ConanFile):
                        def layout(self):
                            pass
-                           
+
                        def build(self):
                            self.lyt.build_folder
-                           
+
                        """)
         client.save({"conanfile.py": conanfile})
         client.run("create . lib/1.0@", assert_error=True)
@@ -245,7 +223,7 @@ def wrong_function():
 
         overwrite = """
 def layout(self):
-    pass # Not assigning 
+    pass # Not assigning
 """
         client.save({LAYOUT_PY: overwrite})
         client.run("install .", assert_error=True)

@@ -120,7 +120,9 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
     conanfile.set_base_source_folder(src_folder)
     conanfile.set_base_build_folder(None)
     conanfile.package_folder = None
-    with tools.chdir(src_folder):
+
+    mkdir(conanfile.source_folder)
+    with tools.chdir(conanfile.source_folder):
         try:
             with get_env_context_manager(conanfile):
                 hook_manager.execute("pre_source", conanfile=conanfile,

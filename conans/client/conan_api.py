@@ -785,8 +785,15 @@ class ConanAPIV1(object):
                                  "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                           install_folder, self.app.hook_manager, conanfile_path, None,
+
+        conanfile.package_folder = package_folder
+        conanfile.set_base_source_folder(source_folder)
+        conanfile.set_base_install_folder(install_folder)
+        if conanfile.lyt:
+            conanfile.lyt.install = ""  # The install folder comes already with the full route
+        conanfile.set_base_build_folder(build_folder)
+
+        run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
 
     @api_method

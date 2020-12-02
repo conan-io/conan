@@ -147,32 +147,28 @@ class _PackageBuilder(object):
             # Now remove all files that were imported with imports()
             remove_imports(conanfile, copied_files, self._output)
 
-    def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
-                 package_folder):
+    def _package(self, conanfile, pref, package_layout, conanfile_path):
 
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
         conanfile.info.recipe_hash = manifest.summary_hash
 
         # Creating ***info.txt files
-        save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
+        save(os.path.join(conanfile.build_folder, CONANINFO), conanfile.info.dumps())
         self._output.info("Generated %s" % CONANINFO)
-        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conanfile).content)
+        save(os.path.join(conanfile.build_folder, BUILD_INFO), TXTGenerator(conanfile).content)
         self._output.info("Generated %s" % BUILD_INFO)
 
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
         # Could be source or build depends no_copy_source
-        source_folder = conanfile.source_folder
-        install_folder = build_folder  # While installing, the infos goes to build folder
-        prev = run_package_method(conanfile, package_id, source_folder, build_folder,
-                                  package_folder, install_folder, self._hook_manager,
-                                  conanfile_path, pref.ref)
+        prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
+                                  pref.ref)
 
         update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
-            make_read_only(package_folder)
+            make_read_only(conanfile.package_folder)
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
@@ -198,27 +194,29 @@ class _PackageBuilder(object):
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            mkdir(build_folder)
+            conanfile.set_base_build_folder(build_folder)
+            mkdir(conanfile.build_folder)
 
-            with tools.chdir(build_folder):
-                self._output.info('Building your package in %s' % build_folder)
+            with tools.chdir(conanfile.build_folder):
+                self._output.info('Building your package in %s' % conanfile.build_folder)
                 try:
                     if getattr(conanfile, 'no_copy_source', False):
                         conanfile.set_base_source_folder(source_folder)
                     else:
                         conanfile.set_base_source_folder(build_folder)
 
+                    mkdir(conanfile.source_folder)
+                    conanfile.package_folder = package_folder
+
                     if not skip_build:
-                        conanfile.set_base_build_folder(build_folder)
-                        conanfile.package_folder = package_folder
                         # In local cache, install folder always is build_folder
                         conanfile.set_base_install_folder(build_folder)
+                        mkdir(conanfile.install_folder)
                         self._build(conanfile, pref)
 
                         clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
-                                         build_folder, package_folder)
+                    prev = self._package(conanfile, pref, package_layout, conanfile_path)
                     assert prev
                     node.prev = prev
                     log_file = os.path.join(build_folder, RUN_LOG_NAME)
@@ -444,12 +442,29 @@ class BinaryInstaller(object):
 
         if node.conanfile.lyt:
             layout = node.conanfile.lyt
-            node.conanfile.cpp_info.includedirs = [os.path.join(base_path, d)
+            node.conanfile.set_base_build_folder(base_path)
+            node.conanfile.set_base_source_folder(base_path)
+            build_folder = node.conanfile.build_folder
+            source_folder = node.conanfile.source_folder
+
+            node.conanfile.cpp_info.includedirs = [os.path.join(build_folder, d)
                                                    for d in layout.build_includedirs]
-            node.conanfile.cpp_info.libdirs = [os.path.join(base_path, layout.build_lib_folder)]
-            node.conanfile.cpp_info.bindirs = [os.path.join(base_path, layout.build_bin_folder)]
-            node.conanfile.cpp_info.builddirs = [os.path.join(base_path, layout.build_builddir)]
-            node.conanfile.cpp_info.resdirs = [os.path.join(base_path, layout.build_resdir)]
+            node.conanfile.cpp_info.libdirs = [os.path.join(build_folder, layout.build_libdir)]
+            node.conanfile.cpp_info.bindirs = [os.path.join(build_folder, layout.build_bindir)]
+            node.conanfile.cpp_info.builddirs = [os.path.join(build_folder, layout.build_builddir)]
+            node.conanfile.cpp_info.resdirs = [os.path.join(build_folder, layout.build_resdir)]
+
+            if source_folder != build_folder:
+                node.conanfile.cpp_info.includedirs.extend([os.path.join(source_folder, d)
+                                                           for d in layout.build_includedirs])
+                node.conanfile.cpp_info.libdirs.extend(
+                    [os.path.join(source_folder, layout.build_libdir)])
+                node.conanfile.cpp_info.bindirs.extend(
+                    [os.path.join(source_folder, layout.build_bindir)])
+                node.conanfile.cpp_info.builddirs.extend(
+                    [os.path.join(source_folder, layout.build_builddir)])
+                node.conanfile.cpp_info.resdirs.extend(
+                    [os.path.join(source_folder, layout.build_resdir)])
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
@@ -613,8 +628,8 @@ class BinaryInstaller(object):
         with pythonpath(conanfile) if not conan_v2 else no_op():
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    conanfile.package_folder = package_folder
-                    conanfile.set_base_build_folder(None)
+                    conanfile.package_folder = package_folder  # TODO: Why not in layout??
+                    conanfile.set_base_source_folder(None)
                     conanfile.set_base_build_folder(None)
                     conanfile.set_base_install_folder(None)
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,

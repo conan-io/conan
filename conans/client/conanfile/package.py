@@ -14,37 +14,35 @@ from conans.util.files import save, mkdir
 from conans.util.log import logger
 
 
-def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
-                       install_folder, hook_manager, conanfile_path, ref, copy_info=False):
+def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info=False):
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
-    mkdir(package_folder)
+    mkdir(conanfile.package_folder)
     output = conanfile.output
     # Make the copy of all the patterns
     output.info("Generating the package")
-    output.info("Package folder %s" % package_folder)
-
-    conanfile.package_folder = package_folder
-    conanfile.set_base_source_folder(source_folder)
-    conanfile.set_base_install_folder(install_folder)
-    conanfile.set_base_build_folder(build_folder)
+    output.info("Package folder %s" % conanfile.package_folder)
 
     with get_env_context_manager(conanfile):
-        return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                             install_folder, hook_manager, conanfile_path, ref, copy_info)
+        return _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info)
 
 
-def _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                  install_folder, hook_manager, conanfile_path, ref, copy_info):
+def _call_package(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info):
     output = conanfile.output
 
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
     output.highlight("Calling package()")
+
+    source_folder = conanfile.source_folder
+    build_folder = conanfile.build_folder
+    package_folder = conanfile.package_folder
+    install_folder = conanfile.install_folder
+
     folders = [source_folder, build_folder] if source_folder != build_folder else [build_folder]
     conanfile.copy = FileCopier(folders, package_folder)
     with conanfile_exception_formatter(str(conanfile), "package"):

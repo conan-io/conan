@@ -1,6 +1,3 @@
-import os
-
-
 class DefaultLayout(object):
     def __init__(self, conan_file):
         self._conan_file = conan_file
@@ -8,14 +5,14 @@ class DefaultLayout(object):
         # Build layout
         self.build = "build"
         self.src = ""
-        self.install = ""  # Relative to root
+        self.install = "build"  # Relative to root
 
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_libdir = ""  # Relative to self.build
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_bindir = ""  # Relative to self.build
-        # Relative to root, needed to specify "build/x" or "src/x"
-        self.build_includedirs = [self.build, self.src]
+        # Relative to both build and src
+        self.build_includedirs = ["", "include"]
         self.build_builddir = ""  # Relative to root (build scripts like findxxx)
         self.build_resdir = ""  # Relative to root
 
@@ -28,28 +25,6 @@ class DefaultLayout(object):
     def __str__(self):
         return str(self.__dict__)
 
-    # Getters, relative to base
-    @property
-    def build_lib_folder(self):
-        return os.path.join(self.build, self.build_libdir)
-
-    @property
-    def build_bin_folder(self):
-        return os.path.join(self.build, self.build_bindir)
-
-    @property
-    def install_folder(self):
-        return self.install if self.install is not None else self.build
-
-    # Getters, useful for recipes, relative to self._conanfile.xxx
-    @property
-    def build_folder(self):
-        return os.path.join(self._conan_file.build_folder, self.build)
-
-    @property
-    def source_folder(self):
-        return os.path.join(self._conan_file.source_folder, self.src)
-
     def package(self, header_patterns=None, bin_patterns=None, lib_patterns=None,
                 build_patterns=None, res_patterns=None):
 
@@ -61,20 +36,16 @@ class DefaultLayout(object):
 
         for include in self.build_includedirs:
             for pat in header_patterns:
-                self._conan_file.copy(pat, dst=self.pkg_includedir,
-                                      src=include, keep_path=False)
+                self._conan_file.copy(pat, dst=self.pkg_includedir, src=include, keep_path=False)
         for pat in lib_patterns:
-            self._conan_file.copy(pat, dst=self.pkg_libdir,
-                                  src=self.build_lib_folder, keep_path=False)
+            self._conan_file.copy(pat, dst=self.pkg_libdir, src=self.build_libdir, keep_path=False)
         for pat in bin_patterns:
-            self._conan_file.copy(pat, dst=self.pkg_bindir,
-                                  src=self.build_bin_folder, keep_path=False)
+            self._conan_file.copy(pat, dst=self.pkg_bindir, src=self.build_bindir, keep_path=False)
         for pat in build_patterns:
-            self._conan_file.copy(pat, dst=self.pkg_builddir,
-                                  src=self.build_builddir, keep_path=False)
+            self._conan_file.copy(pat, dst=self.pkg_builddir, src=self.build_builddir,
+                                  keep_path=False)
         for pat in res_patterns:
-            self._conan_file.copy(pat, dst=self.pkg_resdir,
-                                  src=self.build_resdir, keep_path=False)
+            self._conan_file.copy(pat, dst=self.pkg_resdir, src=self.build_resdir, keep_path=False)
 
     def imports(self, bin_patterns=None, lib_patterns=None, build_patterns=None, res_patterns=None):
         bin_patterns = bin_patterns or ["*.exe", "*.dll"]
@@ -83,9 +54,9 @@ class DefaultLayout(object):
         res_patterns = res_patterns or []
 
         for pat in lib_patterns:
-            self._conan_file.copy(pat, dst=self.build_lib_folder, src="@libdirs", keep_path=False)
+            self._conan_file.copy(pat, dst=self.build_libdir, src="@libdirs", keep_path=False)
         for pat in bin_patterns:
-            self._conan_file.copy(pat, dst=self.build_bin_folder, src="@bindirs", keep_path=False)
+            self._conan_file.copy(pat, dst=self.build_bindir, src="@bindirs", keep_path=False)
         for pat in build_patterns:
             self._conan_file.copy(pat, dst=self.build_builddir, src="@builddirs", keep_path=False)
         for pat in res_patterns:
@@ -129,4 +100,5 @@ class CMakeLayout(DefaultLayout):
                 self.build = "cmake-build-{}".format(str(build_type.lower()))
             else:
                 self.build = "build"
-        self.build_includedirs = [self.build, "src"]
+        self.install = self.build
+        self.build_includedirs = [""]
