@@ -540,7 +540,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         """)
         target_alias = textwrap.dedent("""
             add_library(otherhello INTERFACE IMPORTED)
-            target_link_libraries(otherhello INTERFACE hello::hello)
+            target_link_libraries(otherhello INTERFACE CONAN_PKG::hello)
             """)
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
@@ -571,4 +571,4 @@ class CMakeGeneratorTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
-        self.assertIn("otherhello link libraries: hello::hello", client.out)
+        self.assertIn("otherhello link libraries: CONAN_PKG::hello", client.out)
