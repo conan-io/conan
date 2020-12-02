@@ -352,7 +352,6 @@ class CMakeDefinitionsBuilder(object):
 
         # Install to package folder
         try:
-            # FIXME: Use the package layout here
             if self._conanfile.package_folder:
                 definitions["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
                 definitions["CMAKE_INSTALL_BINDIR"] = DEFAULT_BIN
@@ -376,7 +375,6 @@ class CMakeDefinitionsBuilder(object):
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
         install_folder = self._conanfile.install_folder.replace("\\", "/")
-
         if "cmake_find_package" in self._conanfile.generators:
             definitions["CMAKE_MODULE_PATH"] = install_folder
 

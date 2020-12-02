@@ -124,5 +124,4 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None,
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, conanfile.install_folder)
 
-        # FIXME: Returning this is a terrible smell
         return conanfile.install_folder

@@ -66,11 +66,10 @@ class CMake(object):
         if not self._conanfile.should_configure:
             return
 
-        source = self._conanfile.source_folder
         build_folder = self._conanfile.build_folder
         install_folder = self._conanfile.install_folder
-        if source_folder:
-            source = os.path.join(source, source_folder)
+        source = os.path.join(self._conanfile.source_folder, source_folder) \
+            if source_folder else self._conanfile.source_folder
         if self._build_folder:
             build_folder = os.path.join(build_folder, self._build_folder)
 
