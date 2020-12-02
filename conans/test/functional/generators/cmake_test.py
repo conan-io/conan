@@ -567,6 +567,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.0)
             project(test)
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            message("CONAN_BUILD_MODULES_PATHS: ${CONAN_BUILD_MODULES_PATHS}")
             conan_basic_setup()
             get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
             message("otherhello link libraries: ${tmp}")
