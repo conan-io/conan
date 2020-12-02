@@ -168,9 +168,9 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include")
-                    self.copy("*.a", dst="lib")
-                    self.copy("*.lib", dst="lib")
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
                     self.copy("target-alias.cmake", dst="share/cmake")
 
                 def package_info(self):
@@ -182,6 +182,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             info = textwrap.dedent("""\
                 self.cpp_info.name = "namespace"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "hello"
+                self.cpp_info.components["comp"].libs = ["hello"]
                 self.cpp_info.components["comp"].build_modules.append(module)
                 self.cpp_info.components["comp"].builddirs = [builddir]
                 """)
@@ -193,6 +194,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 """)
         else:
             info = textwrap.dedent("""\
+                self.cpp_info.libs = ["hello"]
                 self.cpp_info.build_modules.append(module)
                 self.cpp_info.builddirs = [builddir]
                 """)
@@ -213,7 +215,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 name = "consumer"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt"]
+                exports_sources = ["CMakeLists.txt", "main.cpp"]
                 generators = "cmake_find_package_multi"
                 requires = "hello/1.0"
 
@@ -229,7 +231,15 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
             message("otherhello link libraries: ${tmp}")
             """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        main = textwrap.dedent("""
+            #include "hello.h"
+
+            int main() {
+                hello();
+                return 0;
+            }
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists, "main.cpp": main})
         client.run("create .")
         if use_components:
             self.assertIn("otherhello link libraries: namespace::hello", client.out)

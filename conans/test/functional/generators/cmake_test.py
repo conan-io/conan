@@ -527,12 +527,13 @@ class CMakeGeneratorTest(unittest.TestCase):
                     cmake.build()
 
                 def package(self):
-                    self.copy("*.h", dst="include")
-                    self.copy("*.a", dst="lib")
-                    self.copy("*.lib", dst="lib")
+                    self.copy("*.h", dst="include", src="src")
+                    self.copy("*.lib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
                     self.copy("target-alias.cmake", dst="share/cmake")
 
                 def package_info(self):
+                    self.cpp_info.libs = ["hello"]
                     builddir = os.path.join("share", "cmake")
                     module = os.path.join(builddir, "target-alias.cmake")
                     self.cpp_info.build_modules.append(module)
@@ -553,12 +554,11 @@ class CMakeGeneratorTest(unittest.TestCase):
                 name = "consumer"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt"]
+                exports_sources = ["CMakeLists.txt", "main.cpp"]
                 generators = "cmake"
                 requires = "hello/1.0"
 
                 def build(self):
-                    print(tools.load(os.path.join(self.install_folder, "conanbuildinfo.cmake")))
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
@@ -567,12 +567,20 @@ class CMakeGeneratorTest(unittest.TestCase):
             cmake_minimum_required(VERSION 3.0)
             project(test)
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            message("CONAN_BUILD_MODULES_PATHS: ${CONAN_BUILD_MODULES_PATHS}")
             conan_basic_setup(TARGETS)
             get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
             message("otherhello link libraries: ${tmp}")
+            add_executable(app main.cpp)
+            target_link_libraries(app otherhello)
             """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        main = textwrap.dedent("""
+            #include "hello.h"
+
+            int main() {
+                hello();
+                return 0;
+            }
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists, "main.cpp": main})
         client.run("create .")
-        print(client.out)
         self.assertIn("otherhello link libraries: CONAN_PKG::hello", client.out)
