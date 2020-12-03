@@ -441,7 +441,7 @@ def load_recipe_layout(conanfile):
             raise ConanException("The layout() method is not assigning a DefaultLayout "
                                  "object to self.lyt")
         return  # Already defined method
-    if isinstance(conanfile.layout, str):
+    if isinstance(conanfile.layout, str):  # FIXME: I would remove this way to instance it
         from conans import CMakeLayout
 
         if conanfile.layout == "cmake":

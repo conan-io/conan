@@ -22,7 +22,7 @@ class DevLayoutTest(unittest.TestCase):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
             generators = "cmake"
-            exports_sources = "src/*", "CMakeLists.txt"
+            exports_sources = "src/*", "include/*", "CMakeLists.txt"
             generators = "cmake"
             layout = "cmake"
 
@@ -50,6 +50,8 @@ class DevLayoutTest(unittest.TestCase):
         add_library(hello src/hello.cpp)
         add_executable(app src/app.cpp)
         target_link_libraries(app PRIVATE hello)
+        target_include_directories(app PRIVATE include)
+        target_include_directories(hello PUBLIC include)
         """)
     hellopp = textwrap.dedent("""
         #include "hello.h"
@@ -131,7 +133,7 @@ class DevLayoutTest(unittest.TestCase):
         client.save({"conanfile.py": self.conanfile,
                      "CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
-                     "src/hello.h": self.helloh,
+                     "include/hello.h": self.helloh,
                      "src/app.cpp": self.app,
                      "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
@@ -167,6 +169,7 @@ class DevLayoutTest(unittest.TestCase):
                         self.lyt = DefaultLayout(self)
                         self.lyt.src = "src"
                         self.lyt.build = "my_custom_build"
+                        self.lyt.src_includedirs = ["."]
                         self.lyt.pkg_libdir = "lib_custom"
                         self.lyt.pkg_bindir = "bin_custom"
 
@@ -313,7 +316,7 @@ class DevLayoutTest(unittest.TestCase):
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
-                    exports_sources = "src/*", "CMakeLists.txt"
+                    exports_sources = "src/*", "include/*", "CMakeLists.txt"
                     generators = "cmake"
                     layout = "cmake"
 
@@ -332,7 +335,7 @@ class DevLayoutTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
-                     "src/hello.h": self.helloh,
+                     "include/hello.h": self.helloh,
                      "src/app.cpp": self.app,
                      "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
@@ -386,7 +389,7 @@ class DevLayoutTest(unittest.TestCase):
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
-                    exports_sources = "src/*", "CMakeLists.txt"
+                    exports_sources = "src/*", "include/*", "CMakeLists.txt"
                     generators = "cmake"
 
                     def layout(self):
@@ -409,8 +412,8 @@ class DevLayoutTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": self.cmake,
                      "src/hello.cpp": self.hellopp,
-                     "src/hello.h": self.helloh,
                      "src/app.cpp": self.app,
+                     "include/hello.h": self.helloh,
                      "test_package/src/app.cpp": self.app,
                      "test_package/CMakeLists.txt": self.test_cmake,
                      "test_package/conanfile.py": self.test_conanfile
@@ -462,7 +465,6 @@ class DevLayoutTest(unittest.TestCase):
     @unittest.skipIf(platform.system() == "Windows", "No windows")
     def test_local_build_single_config(self, shared):
         client = self.client
-        mkdir(os.path.join(client.current_folder, "build"))
         shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""
 
         client.run("install .")

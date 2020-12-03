@@ -463,7 +463,7 @@ class BinaryInstaller(object):
 
             if source_folder != build_folder:
                 node.conanfile.cpp_info.includedirs.extend([os.path.join(source_folder, d)
-                                                           for d in layout.build_includedirs])
+                                                           for d in layout.src_includedirs])
                 node.conanfile.cpp_info.libdirs.extend(
                     [os.path.join(source_folder, layout.build_libdir)])
                 node.conanfile.cpp_info.bindirs.extend(
