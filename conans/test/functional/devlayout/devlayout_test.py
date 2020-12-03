@@ -139,7 +139,7 @@ class DevLayoutTest(unittest.TestCase):
                      })
         self.client = client
 
-    def cache_create_test(self):
+    def test_cache_create(self):
         # Cache creation
         client = TurboTestClient(cache_folder=self.client.cache_folder,
                                  current_folder=self.client.current_folder)
@@ -152,7 +152,7 @@ class DevLayoutTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
                                                     "cmake-build-release")))
 
-    def cache_custom_layout_test(self):
+    def test_cache_custom_layout(self):
         # We can even change the src and the package layout and it works
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
@@ -209,7 +209,7 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn(libname, contents)
 
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
-    def cache_create_shared_test(self):
+    def test_cache_create_shared(self):
         # Cache creation
         client = self.client
         client.run("create . pkg/0.1@user/testing -o pkg:shared=True")
@@ -221,7 +221,7 @@ class DevLayoutTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
-    def local_muticonfig_build_test(self, shared):
+    def test_local_muticonfig_build(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
         client.run("install .")
@@ -376,7 +376,7 @@ class DevLayoutTest(unittest.TestCase):
         lib_package_folder = os.path.join(client.current_folder, "package", "lib")
         self.assertIn(libname, os.listdir(lib_package_folder))  # The library is there
 
-    def disable_output_dirs_test(self):
+    def test_disable_output_dirs(self):
         """If we have disabled the output dirs, the layout have to change accordingly, if
         we use a wrong layout the libs/headers are not copied and not propagated
         correctly for the editable-consumers"""
@@ -460,7 +460,7 @@ class DevLayoutTest(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
     @unittest.skipIf(platform.system() == "Windows", "No windows")
-    def local_build_test_single_config(self, shared):
+    def test_local_build_single_config(self, shared):
         client = self.client
         mkdir(os.path.join(client.current_folder, "build"))
         shared = "-DBUILD_SHARED_LIBS=ON" if shared else ""

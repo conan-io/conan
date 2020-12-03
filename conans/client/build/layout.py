@@ -2,10 +2,10 @@ class DefaultLayout(object):
     def __init__(self, conan_file):
         self._conan_file = conan_file
 
-        # Build layout
+        # "Build" layout
         self.build = "build"
         self.src = ""
-        self.install = "build"  # Relative to root
+        self._install = None  # Will be defaulted to build, Relative to root
 
         # TODO: To discuss, are we sure we want only 1 value?
         self.build_libdir = ""  # Relative to self.build
@@ -24,6 +24,15 @@ class DefaultLayout(object):
 
     def __str__(self):
         return str(self.__dict__)
+
+
+    @property
+    def install(self):
+        return self._install if self._install is not None else self.build
+
+    @install.setter
+    def install(self, value):
+        self._install = value
 
     def package(self, header_patterns=None, bin_patterns=None, lib_patterns=None,
                 build_patterns=None, res_patterns=None):

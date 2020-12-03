@@ -44,7 +44,7 @@ class GenConanfile(object):
 
     def with_text_layout(self, layout):
         self._layout_text = layout
-        self._exports_sources = []
+        return self
 
     def with_short_paths(self, value):
         self._short_path = value

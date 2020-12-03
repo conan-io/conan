@@ -78,7 +78,7 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("install lib/1.0@")
 
     @unittest.skipIf(six.PY2, "Needs PY3")
-    def load_layout_py_local_methods_test(self):
+    def test_load_layout_py_local_methods(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
            from conans import ConanFile, CMake
@@ -102,11 +102,11 @@ class LayoutLoadTest(unittest.TestCase):
         """)
         client.save({"conanfile.py": conanfile, LAYOUT_PY: override_layout})
         client.run("install .")
-        # If not specified in the layout, layout.build_installdir is defauted to layout.build
+        # If not specified in the layout, layout.install is defaulted to layout.build
         client.run("build . -if=overwritten_build")
         self.assertIn("Here, building", client.out)
 
-    def not_load_layout_create_test(self):
+    def test_not_load_layout_create(self):
         """The LAYOUT_PY file is not used with a Conan create because the package is in the cache
            and this is only intended to work only for packages being edited (local methods +
            editables) Otherwise a package in the cache would have been generated with a "patchy"
@@ -137,7 +137,7 @@ class LayoutLoadTest(unittest.TestCase):
         self.assertIn("Here, building", client.out)
 
     @unittest.skipIf(six.PY2, "Needs PY3")
-    def editable_load_layout_create_test(self):
+    def test_editable_load_layout_create(self):
         """If the package is in editable mode, the LAYOUT_PY is also used"""
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -170,7 +170,7 @@ class LayoutLoadTest(unittest.TestCase):
         client.run("install lib/1.0@")
         self.assertIn("Here, being reused: overwritten_build", client.out)
 
-    def returning_non_layout_in_method_test(self):
+    def test_returning_non_layout_in_method(self):
         """If you assign the layout badly in the method..."""
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -190,7 +190,7 @@ class LayoutLoadTest(unittest.TestCase):
         self.assertIn("The layout() method is not assigning a DefaultLayout object to self.lyt",
                       client.out)
 
-    def invalid_layout_type_test(self):
+    def test_invalid_layout_type(self):
         """If you forget to return the layout in the method..."""
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -210,7 +210,7 @@ class LayoutLoadTest(unittest.TestCase):
                       client.out)
 
     @unittest.skipIf(six.PY2, "Needs PY3")
-    def invalid_layout_override_test(self):
+    def test_invalid_layout_override(self):
         client = TestClient()
         conanfile = GenConanfile().with_text_layout("cmake")
         overwrite = """
@@ -231,7 +231,7 @@ def layout(self):
                       client.out)
 
     @unittest.skipUnless(six.PY2, "Needs PY2")
-    def check_layout_override_py2_only_test(self):
+    def test_check_layout_override_py2_only(self):
         client = TestClient()
         conanfile = GenConanfile().with_text_layout("cmake")
         overwrite = """

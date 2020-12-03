@@ -6,7 +6,7 @@ from conans.test.utils.mocks import MockSettings, MockConanfile
 
 class DevLayoutModelTest(unittest.TestCase):
 
-    def base_class_defaults_test(self):
+    def test_base_class_defaults(self):
         settings = MockSettings({})
         cf = MockConanfile(settings)
         ly = DefaultLayout(cf)
@@ -14,8 +14,8 @@ class DevLayoutModelTest(unittest.TestCase):
         self.assertEqual(ly.src, "")
         self.assertEqual(ly.build_libdir, "")
         self.assertEqual(ly.build_bindir, "")
-        self.assertEqual(ly.build_includedirs, [ly.build, ly.src])
-        self.assertIsNone(ly.build_installdir)
+        self.assertEqual(ly.build_includedirs, ["", "include"])
+        self.assertEquals(ly.install, "build")
         self.assertEqual(ly.pkg_libdir, "lib")
         self.assertEqual(ly.pkg_bindir, "bin")
         self.assertEqual(ly.pkg_includedir, "include")
@@ -29,10 +29,6 @@ class DevLayoutModelTest(unittest.TestCase):
 
     def folders_test(self):
         # TODO: default install dir, other composed...
-        pass
-
-    def package_test(self):
-        # TODO: COMPLETE layout with patterns and test
         pass
 
     def package_test(self):
