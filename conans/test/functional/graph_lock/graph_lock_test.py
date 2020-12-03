@@ -528,4 +528,4 @@ class AddressRootNodetest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock")
-        self.assertIn("conanfile.py (pkg/0.1): Installing package, client.out")
+        self.assertIn("conanfile.py (pkg/0.1): Installing package", client.out)
