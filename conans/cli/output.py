@@ -77,8 +77,8 @@ class ColorFormatter(logging.Formatter):
         'ERROR': Color.RED
     }
 
-    def __init__(self, msg, use_color=False, **kwargs):
-        logging.Formatter.__init__(self, msg, **kwargs)
+    def __init__(self, msg, use_color=True, *args, **kwargs):
+        super(ColorFormatter, self).__init__(msg, *args, **kwargs)
         self._use_color = use_color
 
     def format(self, record):
