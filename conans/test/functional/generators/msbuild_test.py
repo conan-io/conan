@@ -518,6 +518,33 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("conan_pkg_myrelease_myx86_64.props", props)
         self.assertIn("conan_pkg_mydebug_myx86.props", props)
 
+    def test_custom_configuration_errors(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuildDeps
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                requires = "pkg/1.0"
+                def generate(self):
+                    ms = MSBuildDeps(self)
+                    ms.configuration = None
+                    ms.generate()
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD', assert_error=True)
+        self.assertIn("MSBuildDeps.configuration is None, it should have a value", client.out)
+        client.save({"conanfile.py": conanfile.replace("configuration", "platform")})
+
+        client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
+                   ' -s compiler.runtime=MD', assert_error=True)
+        self.assertIn("MSBuildDeps.platform is None, it should have a value", client.out)
+
     def test_install_transitive(self):
         # https://github.com/conan-io/conan/issues/8065
         client = TestClient()

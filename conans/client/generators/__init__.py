@@ -9,7 +9,7 @@ from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
-from conans.util.files import normalize, save
+from conans.util.files import normalize, save, mkdir
 from .b2 import B2Generator
 from .boostbuild import BoostBuildGenerator
 from .cmake import CMakeGenerator
@@ -122,6 +122,8 @@ class GeneratorManager(object):
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
+                    generator.output_path = path
+                    mkdir(path)
                     with chdir(path):
                         generator.generate()
                     continue

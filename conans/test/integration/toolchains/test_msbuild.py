@@ -45,7 +45,6 @@ Global
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x64.Build.0 = ReleaseShared|x64
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.ActiveCfg = ReleaseShared|Win32
         {B58316C0-C78A-4E9B-AE8F-5D6368CE3840}.ReleaseShared|x86.Build.0 = ReleaseShared|Win32
-
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
@@ -136,7 +135,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props.
   If it goes after, the Toolset definition is ignored -->
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_Hello.props" />
+    <Import Project="..\conan\conan_hello.props" />
     <Import Project="..\conan\conantoolchain.props" />
   </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -347,8 +346,8 @@ class WinTest(unittest.TestCase):
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"],
                            preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_CONFIG"])
 
-    def _run_app(self, client, arch, build_type, shared=None, msg="main"):
-        if build_type == "Release" and shared == "shared":
+    def _run_app(self, client, arch, build_type, shared=None):
+        if build_type == "Release" and shared:
             configuration = "ReleaseShared"
         else:
             configuration = build_type
@@ -357,6 +356,7 @@ class WinTest(unittest.TestCase):
             command_str = "%s\\MyApp.exe" % configuration
         else:
             command_str = "x64\\%s\\MyApp.exe" % configuration
+        # To run the app without VS IDE, we need to copy the .exe to the DLLs folder
         new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, build_type)
         with chdir(client.current_folder):
             mkdir(os.path.dirname(new_cmd))
@@ -367,7 +367,7 @@ class WinTest(unittest.TestCase):
         else:
             self.assertIn("main _M_X64 defined", client.out)
         self.assertIn("Hello World %s" % build_type, client.out)
-        self.assertIn("%s: %s!" % (msg, build_type), client.out)
+        self.assertIn("main: %s!" % build_type, client.out)
         self.assertIn("DEFINITIONS_BOTH: True", client.out)
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
@@ -463,12 +463,11 @@ class WinTest(unittest.TestCase):
                     "compiler.cppstd": "17"}
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
         client.run("new hello/0.1 -s")
-        configs = [("Release", "x86", "shared"), ("Release", "x86_64", "shared"),
-                   ("Debug", "x86", "static"), ("Debug", "x86_64", "static")]
+        configs = [("Release", "x86", True), ("Release", "x86_64", True),
+                   ("Debug", "x86", False), ("Debug", "x86_64", False)]
         for build_type, arch, shared in configs:
             # Build the profile according to the settings provided
             runtime = "MT" if build_type == "Release" else "MTd"
-            shared = "True" if shared == "shared" else "False"
             client.run("create . hello/0.1@ %s -s build_type=%s -s arch=%s -s compiler.runtime=%s "
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
@@ -482,7 +481,6 @@ class WinTest(unittest.TestCase):
         # Run the configure corresponding to this test case
         for build_type, arch, shared in configs:
             runtime = "MT" if build_type == "Release" else "MTd"
-            shared = "True" if shared == "shared" else "False"
             client.run("install . %s -s build_type=%s -s arch=%s -s compiler.runtime=%s -if=conan"
                        " -o hello:shared=%s" % (settings, build_type, arch, runtime, shared))
 
@@ -491,10 +489,12 @@ class WinTest(unittest.TestCase):
 
         for build_type, arch, shared in configs:
             platform_arch = "x86" if arch == "x86" else "x64"
-            if build_type == "Release" and shared == "shared":
+            if build_type == "Release" and shared:
                 configuration = "ReleaseShared"
             else:
                 configuration = build_type
+
+            # The "conan build" command is not good enough, cannot do the switch between configs
             cmd = ('set "VSCMD_START_DIR=%%CD%%" && '
                    '"%s" x64 && msbuild "MyProject.sln" /p:Configuration=%s '
                    '/p:Platform=%s ' % (vcvars_path, configuration, platform_arch))
