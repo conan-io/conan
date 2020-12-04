@@ -175,6 +175,23 @@ class FileCopierTest(unittest.TestCase):
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
 
+    def test_excludes_camelcase_folder(self):
+        # https://github.com/conan-io/conan/issues/8153
+        folder1 = temp_folder()
+        sub1 = os.path.join(folder1, "subdir1")
+        save(os.path.join(sub1, "file1.txt"), "Hello1")
+        save(os.path.join(sub1, "file2.c"), "Hello2")
+        sub2 = os.path.join(folder1, "CamelCaseIgnore")
+        save(os.path.join(sub2, "file3.txt"), "Hello3")
+        save(os.path.join(sub2, "file4.c"), "Hello4")
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*", excludes=["somedll.dll", "CamelCaseIgnore"])
+        self.assertFalse(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+        copier("*", excludes=["somedll.dll"])
+        self.assertTrue(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+
     def test_multifolder(self):
         src_folder1 = temp_folder()
         src_folder2 = temp_folder()
