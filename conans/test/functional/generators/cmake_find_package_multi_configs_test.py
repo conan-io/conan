@@ -19,12 +19,12 @@ class CustomConfigurationTest(unittest.TestCase):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
 
-            def toolchain(self):
-                generator = CMakeDeps(self)
-                generator.configurations.append("ReleaseShared")
+            def generate(self):
+                cmake = CMakeDeps(self)
+                cmake.configurations.append("ReleaseShared")
                 if self.options["hello"].shared:
-                    generator.configuration = "ReleaseShared"
-                generator.write_generator_files()
+                    cmake.configuration = "ReleaseShared"
+                cmake.generate()
 
             def imports(self):
                 config = str(self.settings.build_type)
@@ -67,7 +67,7 @@ class CustomConfigurationTest(unittest.TestCase):
                           "CMakeLists.txt": self.cmakelist,
                           "app.cpp": self.app})
 
-    def test_toolchain_multi(self):
+    def test_generator_multi(self):
         settings = {"compiler": "Visual Studio",
                     "compiler.version": "15",
                     "arch": "x86_64",

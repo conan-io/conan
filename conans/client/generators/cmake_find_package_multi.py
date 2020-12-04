@@ -265,7 +265,7 @@ set_property(TARGET {{name}}::{{name}}
         # FIXME: Ugly way to define the output path
         self.output_path = os.getcwd()
 
-    def write_generator_files(self):
+    def generate(self):
         generator_files = self.content
         for generator_file, content in generator_files.items():
             generator_file = os.path.join(self.output_path, generator_file)
