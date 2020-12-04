@@ -105,7 +105,6 @@ cmake_minimum_required(VERSION 2.8.12)
             from conans import ConanFile, CMake, load
             class TestConan(ConanFile):
                 def build(self):
-                    self.package_folder = "package"
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.install()

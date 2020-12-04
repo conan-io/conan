@@ -37,9 +37,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      keep_build=keep_build,
                      recorder=recorder)
         cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
-                  # FIXME: Probably we need a better (or user-defined) layout definition
-                  #package_folder=os.path.join(test_build_folder, "package"),
-                  package_folder=None,
+                  package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)
     finally:
         if delete_after_build:
