@@ -335,8 +335,12 @@ class WinTest(unittest.TestCase):
                 gen.generate()
 
             def imports(self):
+                if self.options["hello"].shared and self.settings.build_type == "Release":
+                    configuration = "ReleaseShared"
+                else:
+                    configuration = self.settings.build_type
                 self.copy("*.dll", src="bin",
-                          dst="%s/%s" % (self.settings.arch, self.settings.build_type),
+                          dst="%s/%s" % (self.settings.arch, configuration),
                           keep_path=False)
 
             def build(self):
@@ -357,7 +361,7 @@ class WinTest(unittest.TestCase):
         else:
             command_str = "x64\\%s\\MyApp.exe" % configuration
         # To run the app without VS IDE, we need to copy the .exe to the DLLs folder
-        new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, build_type)
+        new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
         with chdir(client.current_folder):
             mkdir(os.path.dirname(new_cmd))
             shutil.copy(command_str, new_cmd)
@@ -507,3 +511,13 @@ class WinTest(unittest.TestCase):
             version = int(version)
             self.assertTrue(10 <= version < 20)
             self.assertIn("main _MSVC_LANG2017", client.out)
+
+            new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
+            vcvars = vcvars_command(version="15", architecture="amd64")
+            cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, new_cmd))
+            client.run_command(cmd)
+            if shared:
+                self.assertIn("hello.dll", client.out)
+            else:
+                self.assertNotIn("hello.dll", client.out)
+            self.assertIn("KERNEL32.dll", client.out)
