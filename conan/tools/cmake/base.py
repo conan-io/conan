@@ -144,8 +144,8 @@ class CMakeToolchainBase(object):
         self.preprocessor_definitions = Variables()
 
         # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = self._conanfile.install_folder
-        self.cmake_module_path = self._conanfile.install_folder
+        self.cmake_prefix_path = '"{}"'.format(self._conanfile.install_folder)
+        self.cmake_module_path = '"{}"'.format(self._conanfile.install_folder)
 
         self.build_type = None
 

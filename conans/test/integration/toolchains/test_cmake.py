@@ -301,7 +301,8 @@ class LinuxTest(Base):
         self._run_build(settings, {"shared": shared})
 
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="{}/build/conan_toolchain.cmake"'
+                      ''.format(self.client.current_folder), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         pic_str = "" if shared else "ON"
