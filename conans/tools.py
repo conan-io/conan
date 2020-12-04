@@ -91,6 +91,7 @@ check_with_algorithm_sum = tools_files.check_with_algorithm_sum
 check_sha1 = tools_files.check_sha1
 check_md5 = tools_files.check_md5
 check_sha256 = tools_files.check_sha256
+flatten_directory = tools_files.flatten_directory
 patch = tools_files.patch
 replace_prefix_in_pc_file = tools_files.replace_prefix_in_pc_file
 collect_libs = tools_files.collect_libs

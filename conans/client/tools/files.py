@@ -2,11 +2,13 @@ import gzip
 import logging
 import os
 import platform
+import random
 import stat
 import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
+from pathlib import Path
 
 import six
 from patch_ng import fromfile, fromstring
@@ -471,3 +473,30 @@ def fix_symlinks(conanfile, raise_if_error=False):
 
     if offending_files and raise_if_error:
         raise ConanException("There are invalid symlinks in the package!")
+
+
+def flatten_directory(base_path='.', pattern='*'):
+    """Reduce filesystem tree depth by moving everything from given directory one level up and
+    removing that directory afterwards.
+    :param base_path: Base path where the flattening should be applied
+    :param pattern: Flatten only path matching the pattern. This should be a
+    Unix shell-style wildcard, see fnmatch documentation for more details. Match must select single
+    directory.
+    :return: Name of the flattened directory
+    """
+    base = Path(base_path)
+    matching_directories = [d for d in base.iterdir() if d.is_dir() and fnmatch(d.name, pattern)]
+    if not matching_directories:
+        raise ConanException("Failed to flatten directory: No directory found")
+    if len(matching_directories) > 1:
+        raise ConanException("Failed to flatten directory: Only single directory can be selected")
+
+    directory = matching_directories[0]
+    directory_name = directory.name
+    randomized = str(directory) + str(random.random())
+    directory.rename(randomized)
+    directory = Path(randomized)
+    for item in directory.iterdir():
+        item.rename(item.parents[1] / item.name)
+    directory.rmdir()
+    return directory_name
