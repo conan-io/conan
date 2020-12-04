@@ -14,13 +14,13 @@ from conans.test.utils.tools import TestClient
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.generators import CMakeGenerator
+        from conan.tools.cmake import CMakeDeps
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
 
             def toolchain(self):
-                generator = CMakeGenerator(self)
+                generator = CMakeDeps(self)
                 generator.configurations.append("ReleaseShared")
                 if self.options["hello"].shared:
                     generator.configuration = "ReleaseShared"
