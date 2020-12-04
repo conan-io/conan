@@ -93,8 +93,10 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
         client.run("install PkgA/0.1@ --build=PkgA --lockfile=conan.lock --lockfile-out=conan.lock",
                    assert_error=True)
-        self.assertIn("Cannot build 'PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a' because it is "
-                      "already locked", client.out)
+        rev = "#fa090239f8ba41ad559f8e934494ee2a" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'PkgA/0.1{}' because it is already locked".format(rev),
+                      client.out)
+
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock", assert_error=True)
         self.assertIn("ERROR: Attempt to modify locked PkgA/0.1", client.out)
 
@@ -387,6 +389,74 @@ class LockFileOptionsTest(unittest.TestCase):
         pkg_lock = client.load("pkg.lock")
         self.assertIn('"options": "shared=False"', pkg_lock)
 
+    def test_config_option(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def config_options(self):
+                    # This is weaker than "configure()", will be overwritten by downstream
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=False"', lockfile)
+        self.assertNotIn('shared=True', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
+    def test_configure(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def configure(self):
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=True"', lockfile)
+        # Check the trailing ", to not get the profile one
+        self.assertNotIn('shared=False"', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
 
 class GraphInstallArgumentsUpdated(unittest.TestCase):
 
@@ -401,8 +471,9 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
-        self.assertIn("Cannot build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97' because it "
-                      "is already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'somelib/1.0{}' because it "
+                      "is already locked in the input lockfile".format(rev), client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
 

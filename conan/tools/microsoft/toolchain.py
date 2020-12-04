@@ -1,50 +1,16 @@
 import os
 import textwrap
+import warnings
 from xml.dom import minidom
 
-from conans.client.toolchain.visual import vcvars_arch, vcvars_command
 from conans.client.tools import msvs_toolset
 from conans.errors import ConanException
 from conans.util.files import save, load
 
 
-class MSBuildCmd(object):
-    def __init__(self, conanfile):
-        self._conanfile = conanfile
-        self.version = conanfile.settings.get_safe("compiler.version")
-        self.vcvars_arch = vcvars_arch(conanfile)
-        self.build_type = conanfile.settings.get_safe("build_type")
-        msvc_arch = {'x86': 'x86',
-                     'x86_64': 'x64',
-                     'armv7': 'ARM',
-                     'armv8': 'ARM64'}
-        # if platforms:
-        #    msvc_arch.update(platforms)
-        arch = conanfile.settings.get_safe("arch")
-        msvc_arch = msvc_arch.get(str(arch))
-        if conanfile.settings.get_safe("os") == "WindowsCE":
-            msvc_arch = conanfile.settings.get_safe("os.platform")
-        self.platform = msvc_arch
-
-    def command(self, sln):
-        vcvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                platform_type=None, winsdk_version=None,
-                                vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
-               % (vcvars, sln, self.build_type, self.platform))
-        return cmd
-
-    def build(self, sln):
-        cmd = self.command(sln)
-        self._conanfile.run(cmd)
-
-    @staticmethod
-    def get_version(settings):
-        return NotImplementedError("get_version() method is not supported in MSBuild "
-                                   "toolchain helper")
-
-
 class MSBuildToolchain(object):
+
+    filename = "conantoolchain.props"
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -62,8 +28,23 @@ class MSBuildToolchain(object):
         return name.lower(), condition
 
     def write_toolchain_files(self):
+        # Warning
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "'write_toolchain_files()' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        from conans.client.output import Color, ConanOutput
+        ConanOutput(self._conanfile.output._stream,
+                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        self.generate()
+
+    def generate(self):
         name, condition = self._name_condition(self._conanfile.settings)
-        config_filename = "conan_toolchain{}.props".format(name)
+        config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
 
@@ -108,7 +89,7 @@ class MSBuildToolchain(object):
         save(config_filepath, config_props)
 
     def _write_main_toolchain(self, config_filename, condition):
-        main_toolchain_path = os.path.abspath("conan_toolchain.props")
+        main_toolchain_path = os.path.abspath(self.filename)
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:
@@ -118,14 +99,22 @@ class MSBuildToolchain(object):
                         xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
                     <ImportGroup Label="PropertySheets" >
                     </ImportGroup>
+                    <PropertyGroup Label="ConanPackageInfo">
+                        <ConanPackageName>{}</ConanPackageName>
+                        <ConanPackageVersion>{}</ConanPackageVersion>
+                    </PropertyGroup>
                 </Project>
                 """)
+
+            conan_package_name = self._conanfile.name if self._conanfile.name else ""
+            conan_package_version = self._conanfile.version if self._conanfile.version else ""
+            content = content.format(conan_package_name, conan_package_version)
 
         dom = minidom.parseString(content)
         try:
             import_group = dom.getElementsByTagName('ImportGroup')[0]
         except Exception:
-            raise ConanException("Broken conan_toolchain.props. Remove the file and try again")
+            raise ConanException("Broken {}. Remove the file and try again".format(self.filename))
         children = import_group.getElementsByTagName("Import")
         for node in children:
             if (config_filename == node.getAttribute("Project") and
@@ -139,5 +128,5 @@ class MSBuildToolchain(object):
 
         conan_toolchain = dom.toprettyxml()
         conan_toolchain = "\n".join(line for line in conan_toolchain.splitlines() if line.strip())
-        self._conanfile.output.info("MSBuildToolchain writing %s" % "conan_toolchain.props")
+        self._conanfile.output.info("MSBuildToolchain writing {}".format(self.filename))
         save(main_toolchain_path, conan_toolchain)

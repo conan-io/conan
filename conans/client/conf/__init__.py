@@ -181,6 +181,8 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # config_install_interval = 1h
     # required_conan_version = >=1.26
 
+    # keep_python_files = False           # environment CONAN_KEEP_PYTHON_FILES
+
     [storage]
     # This is the default path, but you can write your own. It must be an absolute path or a
     # path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
@@ -264,6 +266,7 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_MSBUILD_VERBOSITY", "msbuild_verbosity", None),
             ("CONAN_CACERT_PATH", "cacert_path", None),
             ("CONAN_DEFAULT_PACKAGE_ID_MODE", "default_package_id_mode", None),
+            ("CONAN_KEEP_PYTHON_FILES", "keep_python_files", False),
             # ("CONAN_DEFAULT_PROFILE_PATH", "default_profile", DEFAULT_PROFILE_NAME),
         ],
         "hooks": [

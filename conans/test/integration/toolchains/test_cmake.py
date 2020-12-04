@@ -19,7 +19,8 @@ from conans.test.utils.tools import TestClient
 class Base(unittest.TestCase):
 
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeToolchain
+        from conans import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
@@ -27,7 +28,7 @@ class Base(unittest.TestCase):
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
 
-            def toolchain(self):
+            def generate(self):
                 tc = CMakeToolchain(self)
                 tc.variables["MYVAR"] = "MYVAR_VALUE"
                 tc.variables["MYVAR2"] = "MYVAR_VALUE2"
@@ -38,7 +39,7 @@ class Base(unittest.TestCase):
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 cmake = CMake(self)
@@ -130,9 +131,9 @@ class Base(unittest.TestCase):
         return install_out
 
     def _modify_code(self):
-        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"], calls=["hello"],
-                                   preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE",
-                                                 "MYDEFINE_CONFIG"])
+        lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
+                                   calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
+                                                                  "MYDEFINE", "MYDEFINE_CONFIG"])
         self.client.save({"app_lib.cpp": lib_cpp})
 
         content = self.client.load("CMakeLists.txt")
@@ -236,6 +237,55 @@ class WinTest(Base):
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
+
+    @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
+                           ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
+    def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
+        settings = {"compiler": "gcc",
+                    "compiler.version": version,
+                    "compiler.libcxx": libcxx,
+                    "compiler.cppstd": cppstd,
+                    "arch": arch,
+                    "build_type": build_type,
+                    }
+        options = {"shared": shared}
+        install_out = self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
+        self.assertIn("The C compiler identification is GNU", self.client.out)
+        self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+
+        def _verify_out(marker=">>"):
+            vars = {"CMAKE_GENERATOR_PLATFORM": "",
+                    "CMAKE_BUILD_TYPE": build_type,
+                    "CMAKE_CXX_FLAGS": "-m64",
+                    "CMAKE_CXX_FLAGS_DEBUG": "-g",
+                    "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                    "CMAKE_C_FLAGS": "-m64",
+                    "CMAKE_C_FLAGS_DEBUG": "-g",
+                    "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                    "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                    "CMAKE_EXE_LINKER_FLAGS": "-m64",
+                    "CMAKE_CXX_STANDARD": cppstd,
+                    "CMAKE_CXX_EXTENSIONS": "OFF",
+                    "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
+            if shared:
+                self.assertIn("app_lib.dll", self.client.out)
+            else:
+                self.assertNotIn("app_lib.dll", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vars.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
+        self._run_app(build_type)
+
+        self._modify_code()
+        time.sleep(2)
+        self._incremental_build()
+        _verify_out(marker="++>>")
+        self._run_app(build_type, msg="AppImproved")
 
 
 @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
@@ -354,13 +404,14 @@ class CMakeInstallTest(unittest.TestCase):
 
     def test_install(self):
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake, CMakeToolchain
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 exports_sources = "CMakeLists.txt", "header.h"
-                def toolchain(self):
+                def generate(self):
                     tc = CMakeToolchain(self)
-                    tc.write_toolchain_files()
+                    tc.generate()
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -403,3 +454,40 @@ class CMakeInstallTest(unittest.TestCase):
         package_id = layout.package_ids()[0]
         package_folder = layout.package(PackageReference(ref, package_id))
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+
+
+@attr("toolchain")
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class CMakeOverrideCacheTest(unittest.TestCase):
+
+    def test_cmake_cache_variables(self):
+        # https://github.com/conan-io/conan/issues/7832
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = "CMakeLists.txt"
+                def generate(self):
+                    toolchain = CMakeToolchain(self)
+                    toolchain.variables["my_config_string"] = "my new value"
+                    toolchain.generate()
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.7)
+            project(my_project)
+            set(my_config_string "default value" CACHE STRING "my config string")
+            message(STATUS "VALUE OF CONFIG STRING: ${my_config_string}")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist})
+        client.run("install .")
+        client.run("build .")
+        print(client.out)
+        self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)

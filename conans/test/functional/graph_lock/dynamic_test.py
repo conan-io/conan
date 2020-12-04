@@ -218,7 +218,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         updated = client.load("updated.lock")
         self.assertEqual(updated, new)
 
-    def augment_test_package_requires(self):
+    def test_augment_test_package_requires(self):
         # https://github.com/conan-io/conan/issues/6067
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("tool", "0.1")})
@@ -312,6 +312,43 @@ class GraphLockDynamicTest(unittest.TestCase):
         client.run("create . LibB/1.1@ --lockfile=libb.lock")
         self.assertIn("LibA/1.0 from local cache - Cache", client.out)
 
+    def test_relax_lockfile_to_build(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require("LibA/[>=1.0]")})
+        client.run("create . LibB/1.0@")
+        client.save({"conanfile.py": GenConanfile().with_require("LibB/[>=1.0]")})
+        client.run("create . LibC/1.0@")
+        client.run("lock create --reference=LibC/1.0 --lockfile-out=libc.lock")
+
+        # New version of LibA/1.0.1, that should never be used
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . LibA/1.0.1@")
+
+        client.run("lock create --reference=LibC/1.0 --build=LibC --lockfile=libc.lock "
+                   "--lockfile-out=libc2.lock")
+        libc2_json = json.loads(client.load("libc2.lock"))
+        libc = libc2_json["graph_lock"]["nodes"]["1"]
+        self.assertIn("LibC/1.0", libc["ref"])
+        self.assertIsNone(libc.get("prev"))
+        # Now it is possible to build it again
+        client.run("install LibC/1.0@ --build=LibC --lockfile=libc2.lock --lockfile-out=libc3.lock")
+        self.assertIn("LibC/1.0:3f278cfc7b3c4509db7f72c9bf2e472732c4f69f - Build", client.out)
+        self.assertIn("LibC/1.0: Created package", client.out)
+        libc3_json = json.loads(client.load("libc3.lock"))
+        libc = libc3_json["graph_lock"]["nodes"]["1"]
+        self.assertIn("LibC/1.0", libc["ref"])
+        self.assertIsNotNone(libc.get("prev"))
+
+        # Now unlock/build everything
+        client.run("lock create --reference=LibC/1.0 --build --lockfile=libc3.lock "
+                   "--lockfile-out=libc4.lock")
+        client.run("lock build-order libc4.lock")
+        self.assertIn("LibA/1.0@", client.out)
+        self.assertIn("LibB/1.0@", client.out)
+        self.assertIn("LibC/1.0@", client.out)
+
 
 class PartialOptionsTest(unittest.TestCase):
     """
@@ -337,8 +374,8 @@ class PartialOptionsTest(unittest.TestCase):
         self.client = client
 
     def test_partial_lock_option_command_line(self):
-        # When 'LibA:myoption' is set in command line, the option value is saved in the libb.lock and it is applied to all
-        # graph, overriding LibC.
+        # When 'LibA:myoption' is set in command line, the option value is saved in the
+        # libb.lock and it is applied to all graph, overriding LibC.
         client = self.client
         client.save({"conanfile.py": GenConanfile().with_require("LibA/1.0")})
         client.run("create . LibB/1.0@ -o LibA:myoption=True")
@@ -403,18 +440,20 @@ class PartialOptionsTest(unittest.TestCase):
     def _check(self):
         client = self.client
 
-        def _validate():
-            client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                       "--lockfile-out=libd.lock", assert_error=True)
-            expected = ("LibA/1.0: LibC/1.0 tried to change LibA/1.0 option myoption to False\n"
-                        "but it was already defined as True")
-            self.assertIn(expected, client.out)
+        client.save({"conanfile.py": GenConanfile().with_requires("LibB/1.0", "LibC/1.0")})
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock", assert_error=True)
+        expected = textwrap.dedent("""\
+                       ERROR: LibA/1.0: Locked options do not match computed options
+                       Locked options:
+                       myoption=True
+                       Computed options:
+                       myoption=False""")
+        self.assertIn(expected, client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")
-                                                   .with_require("LibC/1.0")})
-        _validate()
+        # Order of LibC, LibB does matter, in this case it will not raise
+        client.save({"conanfile.py": GenConanfile().with_requires("LibC/1.0", "LibB/1.0")})
 
-        # Order of LibC, LibB does matter
-        client.save({"conanfile.py": GenConanfile().with_require("LibC/1.0")
-                                                   .with_require("LibB/1.0")})
-        _validate()
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock")
+        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)

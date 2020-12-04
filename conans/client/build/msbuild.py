@@ -1,11 +1,12 @@
 import copy
 import os
 import re
+import warnings
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
-from conans.client.toolchain.msbuild import MSBuildCmd
+from conans.client.output import Color, ConanOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
@@ -24,12 +25,24 @@ class MSBuild(object):
         """ Inject the proper MSBuild base class in the hierarchy """
 
         # If already injected, create and return
-        if MSBuildHelper in cls.__bases__ or MSBuildCmd in cls.__bases__:
+        from conan.tools.microsoft import MSBuild as _MSBuild
+        if MSBuildHelper in cls.__bases__ or _MSBuild in cls.__bases__:
             return super(MSBuild, cls).__new__(cls)
 
         # If not, add the proper CMake implementation
-        if hasattr(conanfile, "toolchain"):
-            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildCmd), {})
+        if hasattr(conanfile, "toolchain") or hasattr(conanfile, "generate"):
+            # Warning
+            msg = ("\n*****************************************************************\n"
+                   "******************************************************************\n"
+                   "This 'MSBuild' build helper has been deprecated and moved.\n"
+                   "It will be removed in next Conan release.\n"
+                   "Use 'from conan.tools.microsoft import MSBuild' instead.\n"
+                   "********************************************************************\n"
+                   "********************************************************************\n")
+            ConanOutput(conanfile.output._stream,
+                        color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+            warnings.warn(msg)
+            msbuild_class = type("CustomMSBuildClass", (cls, _MSBuild), {})
         else:
             msbuild_class = type("CustomMSBuildClass", (cls, MSBuildHelper), {})
 
