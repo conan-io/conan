@@ -9,13 +9,13 @@ from conans.util.env_reader import get_env
 
 
 class GraphLockErrorsTest(unittest.TestCase):
-    def missing_lock_error_test(self):
+    def test_missing_lock_error(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: Missing lockfile in", client.out)
 
-    def update_different_profile_test(self):
+    def test_update_different_profile(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("install . -if=conf1 -s os=Windows")
@@ -25,7 +25,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("os=Windows", client.out)
         self.assertIn("os=Linux", client.out)
 
-    def try_to_pass_profile_test(self):
+    def test_try_to_pass_profile(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
@@ -48,7 +48,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
                       "when using lockfile", client.out)
 
-    def error_old_format_test(self):
+    def test_error_old_format(self):
         client = TestClient()
         client.save({"conanfile.txt": ""})
         client.run("install .")
@@ -58,7 +58,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("install . --lockfile=conan.lock", assert_error=True)
         self.assertIn("This lockfile was created with an incompatible version", client.out)
 
-    def error_no_find_test(self):
+    def test_error_no_find(self):
         client = TestClient()
         client.save({"consumer.txt": ""})
         client.run("lock create consumer.txt --lockfile-out=output.lock")
@@ -70,7 +70,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("install consumer.py name/version@ --lockfile=output.lock")
         self.assertIn("consumer.py (name/version): Generated graphinfo", client.out)
 
-    def commands_cannot_create_lockfile_test(self):
+    def test_commands_cannot_create_lockfile(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("export . --lockfile-out=conan.lock", assert_error=True)
@@ -86,28 +86,30 @@ class GraphLockErrorsTest(unittest.TestCase):
         self.assertIn("ERROR: lockfile_out cannot be specified if lockfile is not defined",
                       client.out)
 
-    def cannot_create_twice_test(self):
+    def test_cannot_create_twice(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
         client.run("install PkgA/0.1@ --build=PkgA --lockfile=conan.lock --lockfile-out=conan.lock",
                    assert_error=True)
-        self.assertIn("Cannot build 'PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a' because it is "
-                      "already locked", client.out)
+        rev = "#fa090239f8ba41ad559f8e934494ee2a" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'PkgA/0.1{}' because it is already locked".format(rev),
+                      client.out)
+
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock", assert_error=True)
         self.assertIn("ERROR: Attempt to modify locked PkgA/0.1", client.out)
 
 
 class GraphLockConanfileTXTTest(unittest.TestCase):
-    def conanfile_txt_test(self):
+    def test_conanfile_txt(self):
         client = TestClient()
         client.save({"conanfile.txt": ""})
         client.run("install .")
         client.run("install . --lockfile=conan.lock")
         self.assertIn("Using lockfile", client.out)
 
-    def conanfile_txt_deps_test(self):
+    def test_conanfile_txt_deps(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/0.1@user/testing")
@@ -128,7 +130,7 @@ class GraphLockConanfileTXTTest(unittest.TestCase):
 
 
 class ReproducibleLockfiles(unittest.TestCase):
-    def reproducible_lockfile_test(self):
+    def test_reproducible_lockfile(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("create . PkgA/0.1@user/channel")
@@ -150,7 +152,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         info_lock = client.load("conan.lock")
         self.assertEqual(lockfile, info_lock)
 
-    def reproducible_lockfile_txt_test(self):
+    def test_reproducible_lockfile_txt(self):
         client = TestClient()
         client.save({"conanfile.txt": ""})
         client.run("install .")
@@ -213,7 +215,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         self.assertEqual(pkgb.get("package_id"), pkg_b_id)
         self.assertEqual(pkgb.get("prev"), prev_b)
 
-    def install_info_lock_test(self):
+    def test_install_info_lock(self):
         # Normal install will use it (use install-folder to not change graph-info)
         client = self.client
         client.run("install . -if=tmp")  # Output graph_info to temporary
@@ -231,19 +233,19 @@ class GraphLockRevisionTest(unittest.TestCase):
         client.run("info . --lockfile=conan.lock")
         self.assertIn("Revision: fa090239f8ba41ad559f8e934494ee2a", client.out)
 
-    def export_lock_test(self):
+    def test_export_lock(self):
         # locking a version range at export
         self.client.run("export . user/channel --lockfile=conan.lock --lockfile-out=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b)
 
-    def create_lock_test(self):
+    def test_create_lock(self):
         # Create is also possible
         client = self.client
         client.run("create . PkgB/0.1@user/channel --update --lockfile=conan.lock "
                    "--lockfile-out=conan.lock")
         self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b, self.pkg_b_id, self.prev_b)
 
-    def export_pkg_test(self):
+    def test_export_pkg(self):
         client = self.client
         # Necessary to clean previous revision
         client.run("remove * -f")
@@ -387,6 +389,74 @@ class LockFileOptionsTest(unittest.TestCase):
         pkg_lock = client.load("pkg.lock")
         self.assertIn('"options": "shared=False"', pkg_lock)
 
+    def test_config_option(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def config_options(self):
+                    # This is weaker than "configure()", will be overwritten by downstream
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=False"', lockfile)
+        self.assertNotIn('shared=True', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
+    def test_configure(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def configure(self):
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=True"', lockfile)
+        # Check the trailing ", to not get the profile one
+        self.assertNotIn('shared=False"', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
 
 class GraphInstallArgumentsUpdated(unittest.TestCase):
 
@@ -401,8 +471,9 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
-        self.assertIn("Cannot build 'somelib/1.0#f3367e0e7d170aa12abccb175fee5f97' because it "
-                      "is already locked in the input lockfile", client.out)
+        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        self.assertIn("Cannot build 'somelib/1.0{}' because it "
+                      "is already locked in the input lockfile".format(rev), client.out)
         new_lock = client.load("somelib.lock")
         self.assertEqual(previous_lock, new_lock)
 

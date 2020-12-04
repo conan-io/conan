@@ -11,22 +11,22 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.files import (set_dirty, is_dirty, mkdir, rmdir, set_dirty_context_manager,
+from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager,
                                merge_directories, clean_dirty)
 
 
-def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
+def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
     package_layout = cache.package_layout(ref, conanfile.short_paths)
-    sources_folder = package_layout.export_sources()
-    if os.path.exists(sources_folder):
+    export_sources_folder = package_layout.export_sources()
+    if os.path.exists(export_sources_folder):
         return None
 
     if conanfile.exports_sources is None and not hasattr(conanfile, "export_sources"):
-        mkdir(sources_folder)
+        mkdir(export_sources_folder)
         return None
 
     # If not path to sources exists, we have a problem, at least an empty folder
@@ -40,9 +40,8 @@ def complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes):
                % str(ref))
         raise ConanException(msg)
 
-    export_path = package_layout.export()
     try:
-        remote_manager.get_recipe_sources(ref, export_path, sources_folder, current_remote)
+        remote_manager.get_recipe_sources(ref, package_layout, current_remote)
     except Exception as e:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"
@@ -69,7 +68,11 @@ def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
 def config_source(export_folder, export_source_folder, scm_sources_folder,
                   src_folder, conanfile, output, conanfile_path, reference, hook_manager, cache):
     """ Implements the sources configuration when a package is going to be built in the
-    local cache.
+    local cache:
+    - remove old sources if dirty or build_policy=always
+    - execute SCM logic
+    - do a copy of the export and exports_sources folders to the source folder in the cache
+    - run the source() recipe method
     """
 
     def remove_source():
@@ -77,7 +80,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
         try:
             rmdir(src_folder)
         except BaseException as e_rm:
-            set_dirty(src_folder)
             msg = str(e_rm)
             if six.PY2:
                 msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1

@@ -1,9 +1,11 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANFILE_TXT
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 
 generator = """
@@ -71,7 +73,8 @@ class CustomGeneratorTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
 
-    def reuse_test(self):
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
+    def test_reuse(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
@@ -103,7 +106,7 @@ class CustomGeneratorTest(unittest.TestCase):
         generated = client.load("customfile.gen")
         self.assertEqual(generated, "My custom generator content")
 
-    def multifile_test(self):
+    def test_multifile(self):
         gen_ref = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {CONANFILE: generator_multi}
@@ -122,7 +125,7 @@ class CustomGeneratorTest(unittest.TestCase):
             generated = client.load("file%d.gen" % i)
             self.assertEqual(generated, "CustomContent%d" % i)
 
-    def export_template_generator_test(self):
+    def test_export_template_generator(self):
         templated_generator = """
 import os
 from conans import ConanFile, load
@@ -147,7 +150,7 @@ class MyCustomGeneratorWithTemplatePackage(ConanFile):
         generated = client.load("customfile.gen")
         self.assertEqual(generated, "Template: Hello")
 
-    def install_folder_test(self):
+    def test_install_folder(self):
         # https://github.com/conan-io/conan/issues/5568
         templated_generator = textwrap.dedent("""
             from conans import ConanFile

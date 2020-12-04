@@ -1,8 +1,6 @@
-import calendar
 import fnmatch
 import os
 import stat
-import time
 
 from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
@@ -10,6 +8,7 @@ from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
+from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5sum
 
@@ -54,7 +53,7 @@ def undo_imports(current_path, output):
 def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
     report_copied_files(copied_files, output)
     if copied_files:
-        date = calendar.timegm(time.gmtime())
+        date = timestamp_now()
         file_dict = {}
         for f in copied_files:
             abs_path = os.path.join(dest_folder, f)

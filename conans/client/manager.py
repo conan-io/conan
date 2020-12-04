@@ -7,8 +7,8 @@ from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
-from conans.client.source import complete_recipe_sources
-from conans.client.toolchain.base import write_toolchain
+from conans.client.source import retrieve_exports_sources
+from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
@@ -21,7 +21,7 @@ from conans.util.files import normalize, save
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, recorder=None):
+                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -53,7 +53,8 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         out.writeln(graph_info.profile_host.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
-                                          False, update, remotes, recorder)
+                                          False, update, remotes, recorder,
+                                          lockfile_node_id=lockfile_node_id)
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:
@@ -83,8 +84,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         for node in deps_graph.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            complete_recipe_sources(remote_manager, cache, node.conanfile, node.ref,
-                                    remotes)
+            retrieve_exports_sources(remote_manager, cache, node.conanfile, node.ref, remotes)
         manifest_manager.check_graph(deps_graph, verify=manifest_verify,
                                      interactive=manifest_interactive)
         manifest_manager.print_log()

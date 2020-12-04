@@ -1,12 +1,14 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
 
-
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class UploadCompressionTest(unittest.TestCase):
 
     def setUp(self):
@@ -14,7 +16,7 @@ class UploadCompressionTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def reuse_uploaded_tgz_test(self):
+    def test_reuse_uploaded_tgz(self):
         # Download packages from a remote, then copy to another channel
         # and reupload them. Because they have not changed, the tgz is not created again
 
@@ -30,12 +32,12 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertIn("Compressing package", self.client.out)
 
         # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-        self.client.run("copy %s lasote/testing" % str(ref))
+        self.client.run("copy %s lasote/testing --all" % str(ref))
         self.client.run("upload Hello0/0.1@lasote/testing --all")
         self.assertNotIn("Compressing recipe", self.client.out)
         self.assertNotIn("Compressing package", self.client.out)
 
-    def reuse_downloaded_tgz_test(self):
+    def test_reuse_downloaded_tgz(self):
         # Download packages from a remote, then copy to another channel
         # and reupload them. It needs to compress it again, not tgz is kept
 
@@ -59,7 +61,7 @@ class UploadCompressionTest(unittest.TestCase):
         self.assertIn("Compressing recipe", self.client.out)
         self.assertIn("Compressing package", self.client.out)
 
-    def upload_only_tgz_if_needed_test(self):
+    def test_upload_only_tgz_if_needed(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["lib/another_export_file.lib"] = "to compress"

@@ -3,6 +3,7 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 from parameterized import parameterized
 
@@ -12,6 +13,8 @@ from conans.util.files import load
 
 
 @attr('slow')
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
 
     def test_native_export_multi(self):
@@ -21,9 +24,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         """
         c = TestClient()
         project_folder_name = "project_targets"
-        assets_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "assets/cmake_find_package_multi")
-        c.copy_from_assets(assets_path, ["bye", "hello", project_folder_name])
+        c.copy_assets("cmake_find_package_multi", ["bye", "hello", project_folder_name])
 
         # Create packages for hello and bye
         for p in ("hello", "bye"):
@@ -56,7 +57,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 # Test that we are using find_dependency with the NO_MODULE option
                 # to skip finding first possible FindBye somewhere
                 self.assertIn("find_dependency(hello REQUIRED NO_MODULE)",
-                              load(os.path.join(c.current_folder, "byeConfig.cmake")))
+                              load(os.path.join(c.current_folder, "bye-config.cmake")))
 
                 if platform.system() == "Windows":
                     c.run_command('cmake .. -G "Visual Studio 15 Win64"')
@@ -79,7 +80,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                         self.assertIn("bye World {}!".format(bt), c.out)
                         os.remove(os.path.join(c.current_folder, "example"))
 
-    def build_modules_test(self):
+    def test_build_modules(self):
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -146,7 +147,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
-    def cmake_find_package_system_libs_test(self):
+    def test_cmake_find_package_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
 
@@ -223,7 +224,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
-    def cpp_info_name_test(self):
+    def test_cpp_info_name(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
@@ -233,8 +234,8 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         client.run("new hello2/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        'self.cpp_info.libs = ["hello"]',
-                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        'self.cpp_info.libs = ["hello2"]',
+                        'self.cpp_info.libs = ["hello2"]\n        self.cpp_info.name = "MYHELLO2"',
                         output=client.out)
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         'exports_sources = "src/*"',
@@ -268,7 +269,7 @@ class Conan(ConanFile):
         client.run("install .")
         client.run("build .")
         self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello_RELEASE;MYHELLO::MYHELLO;"
+                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
@@ -286,7 +287,7 @@ class Conan(ConanFile):
                       "$<$<CONFIG:Debug>:;>",
                       client.out)
 
-    def no_version_file_test(self):
+    def test_no_version_file(self):
         client = TestClient()
         client.run("new hello/1.1 -s")
         client.run("create .")
@@ -314,29 +315,31 @@ class Conan(ConanFile):
 
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
-        os.unlink(os.path.join(client.current_folder, "helloConfigVersion.cmake"))
+        os.unlink(os.path.join(client.current_folder, "hello-config-version.cmake"))
         exit_code = client.run("build .", assert_error=True)
         self.assertNotEqual(0, exit_code)
 
     @parameterized.expand([
-        ("find_package(hello 1.0)", False, True),
-        ("find_package(hello 1.1)", False, True),
-        ("find_package(hello 1.2)", False, False),
-        ("find_package(hello 1.0 EXACT)", False, False),
-        ("find_package(hello 1.1 EXACT)", False, True),
-        ("find_package(hello 1.2 EXACT)", False, False),
-        ("find_package(hello 0.1)", False, False),
-        ("find_package(hello 2.0)", False, False),
-        ("find_package(hello 1.0 REQUIRED)", False, True),
-        ("find_package(hello 1.1 REQUIRED)", False, True),
-        ("find_package(hello 1.2 REQUIRED)", True, False),
-        ("find_package(hello 1.0 EXACT REQUIRED)", True, False),
-        ("find_package(hello 1.1 EXACT REQUIRED)", False, True),
-        ("find_package(hello 1.2 EXACT REQUIRED)", True, False),
-        ("find_package(hello 0.1 REQUIRED)", True, False),
-        ("find_package(hello 2.0 REQUIRED)", True, False)
+        ("hello", "1.0", "", False, True),
+        ("Hello", "1.0", "", False, True),
+        ("HELLO", "1.0", "", False, True),
+        ("hello", "1.1", "", False, True),
+        ("hello", "1.2", "", False, False),
+        ("hello", "1.0", "EXACT", False, False),
+        ("hello", "1.1", "EXACT", False, True),
+        ("hello", "1.2", "EXACT", False, False),
+        ("hello", "0.1", "", False, False),
+        ("hello", "2.0", "", False, False),
+        ("hello", "1.0", "REQUIRED", False, True),
+        ("hello", "1.1", "REQUIRED", False, True),
+        ("hello", "1.2", "REQUIRED", True, False),
+        ("hello", "1.0", "EXACT REQUIRED", True, False),
+        ("hello", "1.1", "EXACT REQUIRED", False, True),
+        ("hello", "1.2", "EXACT REQUIRED", True, False),
+        ("hello", "0.1", "REQUIRED", True, False),
+        ("hello", "2.0", "REQUIRED", True, False)
     ])
-    def version_test(self, find_package_string, cmake_fails, package_found):
+    def test_version(self, name, version, params, cmake_fails, package_found):
         client = TestClient()
         client.run("new hello/1.1 -s")
         client.run("create .")
@@ -344,9 +347,9 @@ class Conan(ConanFile):
         cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.1)
             project(consumer)
-            {find_package_string}
-            message(STATUS "hello found: ${{hello_FOUND}}")
-            """).format(find_package_string=find_package_string)
+            find_package({name} {version} {params})
+            message(STATUS "hello found: ${{{name}_FOUND}}")
+            """).format(name=name, version=version, params=params)
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -372,7 +375,7 @@ class Conan(ConanFile):
         else:
             self.assertIn("hello found: 0", client.out)
 
-    def cpp_info_config_test(self):
+    def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -409,7 +412,7 @@ class Conan(ConanFile):
         self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
         self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
 
-    def components_system_libs_test(self):
+    def test_components_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 

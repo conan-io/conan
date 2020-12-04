@@ -3,12 +3,11 @@ import time
 import traceback
 
 from conans import DEFAULT_REVISION_V1
+from conans.client.downloaders import run_downloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
-from conans.client.rest.download_cache import CachedFileDownloader
 from conans.client.rest.file_uploader import FileUploader
 from conans.client.rest.rest_client_common import RestCommonMethods, get_exception_from_error
-from conans.client.rest.file_downloader import FileDownloader
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     RecipeNotFoundException, AuthenticationException, ForbiddenException
 from conans.model.info import ConanInfo
@@ -39,12 +38,11 @@ class RestV2Methods(RestCommonMethods):
         data["files"] = list(data["files"].keys())
         return data
 
-    def _get_remote_file_contents(self, url, use_cache):
+    def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
-        downloader = FileDownloader(self.requester, None, self.verify_ssl, self._config)
-        if use_cache and self._config.download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
-        contents = downloader.download(url, auth=self.auth)
+        contents = run_downloader(self.requester, None, self.verify_ssl, self._config,
+                                  use_cache=use_cache, url=url,
+                                  auth=self.auth, headers=headers)
         return contents
 
     def _get_snapshot(self, url):
@@ -77,10 +75,10 @@ class RestV2Methods(RestCommonMethods):
             logger.error(traceback.format_exc())
             raise ConanException(msg)
 
-    def get_package_info(self, pref):
+    def get_package_info(self, pref, headers):
         url = self.router.package_info(pref)
         cache = (pref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
+        content = self._get_remote_file_contents(url, use_cache=cache, headers=headers)
         return ConanInfo.loads(decode_text(content))
 
     def get_recipe(self, ref, dest_folder):
@@ -195,7 +193,7 @@ class RestV2Methods(RestCommonMethods):
         for filename in sorted(files):
             if self._output and not self._output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
-                            "Uploading %s -> %s" % (filename, display_name))
+                    "Uploading %s -> %s" % (filename, display_name))
                 self._output.writeln(msg)
             resource_url = urls[filename]
             try:
@@ -216,9 +214,6 @@ class RestV2Methods(RestCommonMethods):
             logger.debug("\nUPLOAD: All uploaded! Total time: %s\n" % str(time.time() - t1))
 
     def _download_and_save_files(self, urls, dest_folder, files, use_cache):
-        downloader = FileDownloader(self.requester, self._output, self.verify_ssl, self._config)
-        if use_cache and self._config.download_cache:
-            downloader = CachedFileDownloader(self._config.download_cache, downloader)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename in sorted(files, reverse=True):
@@ -226,7 +221,9 @@ class RestV2Methods(RestCommonMethods):
                 self._output.writeln("Downloading %s" % filename)
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
-            downloader.download(resource_url, abs_path, auth=self.auth)
+            run_downloader(self.requester, self._output, self.verify_ssl, self._config,
+                           use_cache=use_cache,
+                           url=resource_url, file_path=abs_path, auth=self.auth)
 
     def _remove_conanfile_files(self, ref, files):
         # V2 === revisions, do not remove files, it will create a new revision if the files changed
@@ -329,9 +326,9 @@ class RestV2Methods(RestCommonMethods):
         # Ignored data["time"]
         return ref.copy_with_rev(rev)
 
-    def get_latest_package_revision(self, pref):
+    def get_latest_package_revision(self, pref, headers):
         url = self.router.package_latest(pref)
-        data = self.get_json(url)
+        data = self.get_json(url, headers=headers)
         prev = data["revision"]
         # Ignored data["time"]
         return pref.copy_with_revs(pref.ref.revision, prev)

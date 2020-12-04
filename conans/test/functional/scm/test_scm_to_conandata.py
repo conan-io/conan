@@ -3,6 +3,7 @@ import tempfile
 import textwrap
 import unittest
 
+import pytest
 import yaml
 
 from conans.client.graph.python_requires import ConanPythonRequire
@@ -85,6 +86,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         self.assertIn("revision: 123", t.out)
         self.assertIn('url: weir"d', t.out)
 
+    @pytest.mark.tool_git
     def test_auto_is_replaced(self):
         conanfile = textwrap.dedent("""
             import os

@@ -1,12 +1,15 @@
 import os
+import platform
 import textwrap
 import unittest
 
+import pytest
 import six
 
 from conans.client.runner import ConanRunner
-from conans.test.utils.tools import TestClient
+from conans.client.tools import environment_append
 from conans.test.utils.mocks import TestBufferConanOutput
+from conans.test.utils.tools import TestClient
 
 
 class RunnerTest(unittest.TestCase):
@@ -21,7 +24,7 @@ class RunnerTest(unittest.TestCase):
         client.run("build .")
         return client
 
-    def ignore_error_test(self):
+    def test_ignore_error(self):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     def source(self):
@@ -33,7 +36,7 @@ class Pkg(ConanFile):
         client.run("source .")
         self.assertIn("RETCODE True", client.out)
 
-    def basic_test(self):
+    def test_basic(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -60,7 +63,8 @@ class ConanFileToolsTest(ConanFile):
 > python --version
 -----------------""", out.getvalue())
 
-    def log_test(self):
+    @pytest.mark.tool_cmake
+    def test_log(self):
         conanfile = '''
 from conans import ConanFile
 
@@ -136,7 +140,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertNotIn("cmake version", output)
         self.assertIn("Logging command output to file ", output)
 
-    def cwd_test(self):
+    def test_cwd(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -159,7 +163,7 @@ class ConanFileToolsTest(ConanFile):
         client.run("build .")
         self.assertTrue(os.path.exists(test_folder))
 
-    def cwd_error_test(self):
+    def test_cwd_error(self):
         conanfile = '''
 from conans import ConanFile
 from conans.client.runner import ConanRunner
@@ -182,7 +186,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Error while executing 'mkdir test_folder'", client.out)
         self.assertFalse(os.path.exists(test_folder))
 
-    def runner_capture_output_test(self):
+    def test_runner_capture_output(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -215,3 +219,32 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("source .")
         self.assertIn("Buffer got msgs 1", client.out)
+
+    def test_credentials_removed(self):
+        conanfile = textwrap.dedent("""
+            import os
+            import platform
+            from conans import ConanFile
+
+            class Recipe(ConanFile):
+                def export(self):
+                    self.output.info(">> key: {}<<".format(os.getenv('CONAN_LOGIN_ENCRYPTION_KEY')))
+                    self.output.info(">> var: {}<<".format(os.getenv('OTHER_VAR')))
+                    if platform.system() == 'Windows':
+                        self.run("echo key: %CONAN_LOGIN_ENCRYPTION_KEY%--")
+                        self.run("echo var: %OTHER_VAR%--")
+                    else:
+                        self.run("echo key: $CONAN_LOGIN_ENCRYPTION_KEY--")
+                        self.run("echo var: $OTHER_VAR--")
+        """)
+        with environment_append({'CONAN_LOGIN_ENCRYPTION_KEY': 'secret!', 'OTHER_VAR': 'other_var'}):
+            client = TestClient()
+            client.save({"conanfile.py": conanfile})
+            client.run("export . name/version@")
+            self.assertIn("name/version: >> key: secret!<<", client.out)
+            self.assertIn("name/version: >> var: other_var<<", client.out)
+            if platform.system() == 'Windows':
+                self.assertIn("key: %CONAN_LOGIN_ENCRYPTION_KEY%--", client.out)
+            else:
+                self.assertIn("key: --", client.out)
+            self.assertIn("var: other_var--", client.out)

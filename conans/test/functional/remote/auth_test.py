@@ -35,7 +35,7 @@ class AuthorizeTest(unittest.TestCase):
                                              "nacho@gmail.com": "nachopass"})  # exported creds
         self.servers["default"] = self.test_server
 
-    def retries_test(self):
+    def test_retries(self):
         """Bad login 2 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
                                                                          ("baduser", "badpass2"),
@@ -53,7 +53,7 @@ class AuthorizeTest(unittest.TestCase):
         # Check that login failed two times before ok
         self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
 
-    def auth_with_env_test(self):
+    def test_auth_with_env(self):
 
         def _upload_with_credentials(credentials):
             cli = TestClient(servers=self.servers, users={})
@@ -87,7 +87,7 @@ class AuthorizeTest(unittest.TestCase):
                                                "CONAN_LOGIN_USERNAME": "pepe"})
             self.assertIn("Too many failed login attempts, bye!", client.out)
 
-    def max_retries_test(self):
+    def test_max_retries(self):
         """Bad login 3 times"""
         self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
                                                                          ("baduser", "badpass2"),
@@ -104,7 +104,7 @@ class AuthorizeTest(unittest.TestCase):
         # Check that login failed all times
         self.assertEqual(self.conan.api.app.user_io.login_index["default"], 3)
 
-    def no_client_username_checks_test(self):
+    def test_no_client_username_checks(self):
         """Checks whether client username checks are disabled."""
 
         # Try with a load of names that contain special characters
@@ -127,7 +127,7 @@ class AuthorizeTest(unittest.TestCase):
 
 class AuthenticationTest(unittest.TestCase):
 
-    def unauthorized_during_capabilities_test(self):
+    def test_unauthorized_during_capabilities(self):
 
         class RequesterMock(object):
 

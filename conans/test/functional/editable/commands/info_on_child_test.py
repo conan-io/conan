@@ -7,7 +7,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -51,6 +51,7 @@ class InfoCommandTest(unittest.TestCase):
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
                       "    Remote: None\n"
+                      "    Provides: lib\n"
                       "    Recipe: Editable\n{}"
                       "    Binary: Editable\n"
                       "    Binary remote: None\n"

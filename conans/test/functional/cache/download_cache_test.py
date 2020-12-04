@@ -7,7 +7,7 @@ from threading import Thread
 
 from bottle import static_file, request
 
-from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.env_reader import get_env
@@ -67,7 +67,7 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
     @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
-    def corrupted_cache_test(self):
+    def test_corrupted_cache(self):
         # This test only works without revisions, because v1 has md5 file checksums, but v2 nop
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
@@ -95,7 +95,7 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: md5 signature failed", client.out)
         self.assertIn("Cached downloaded file corrupted", client.out)
 
-    def user_downloads_cached_test(self):
+    def test_user_downloads_cached(self):
         http_server = StoppableThreadBottle()
 
         file_path = os.path.join(temp_folder(), "myfile.txt")
@@ -224,7 +224,7 @@ class CachedDownloaderUnitTest(unittest.TestCase):
         self.file_downloader = FakeFileDownloader()
         self.cached_downloader = CachedFileDownloader(cache_folder, self.file_downloader)
 
-    def concurrent_locks_test(self):
+    def test_concurrent_locks(self):
         folder = temp_folder()
 
         def download(index):

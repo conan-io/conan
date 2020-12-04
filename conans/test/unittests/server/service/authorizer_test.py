@@ -14,7 +14,7 @@ class AuthorizerTest(unittest.TestCase):
         self.openssl_ref2 = ConanFileReference.loads("openssl/2.0.2@lasote/testing")
         self.openssl_pref2 = PackageReference(self.openssl_ref2, "123123123")
 
-    def invalid_rule_test(self):
+    def test_invalid_rule(self):
         """Invalid rule input"""
         read_perms = ["invalid_reference", "lasote", ("*/*@*/*", "")]
         write_perms = []
@@ -23,7 +23,7 @@ class AuthorizerTest(unittest.TestCase):
         self.assertRaises(InternalErrorException,
                           authorizer.check_read_conan, "pepe", self.openssl_ref)
 
-    def check_wildcards_test(self):
+    def test_check_wildcards(self):
         # Only pepe can read openssl versions
         read_perms = [("openssl/*@lasote/testing", "pepe"), ("*/*@*/*", "*")]
         # Only pepe (and lasote because its owner) can write it and no more users can write
@@ -80,7 +80,7 @@ class AuthorizerTest(unittest.TestCase):
         tmp_ref = ConanFileReference.loads("openssl/2.0.1@lasote/otherchannel")
         authorizer.check_read_conan("pepe", tmp_ref)
 
-    def permissions_test(self):
+    def test_permissions(self):
         """Check that permissions logic is ok"""
         # Only lasote can read it but other conans can be readed
         read_perms = [(str(self.openssl_ref), "lasote"), ("*/*@*/*", "*")]
@@ -136,8 +136,8 @@ class AuthorizerTest(unittest.TestCase):
         # Pepe can't write other package
         self.assertRaises(ForbiddenException,
                           authorizer.check_write_package, "pepe", self.openssl_pref2)
-        
-    def authenticated_user_wildcard_permissions_test(self):
+
+    def test_authenticated_user_wildcard_permissions(self):
         """Check that authenciated user wildcard permissions logic is ok"""
         # Only authenticated users can read openssl
         read_perms = [(str(self.openssl_ref), "?"), ("*/*@*/*", "*")]
@@ -178,7 +178,7 @@ class AuthorizerTest(unittest.TestCase):
         self.assertRaises(AuthenticationException,
                           authorizer.check_write_package, None, self.openssl_pref)
 
-    def users_test(self):
+    def test_users(self):
         """Check that lists of user names are parsed correctly"""
 
         # Simple user list

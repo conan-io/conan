@@ -2,6 +2,7 @@ import os
 import platform
 import unittest
 
+import pytest
 from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
@@ -11,15 +12,12 @@ from conans.test.utils.tools import TestClient
 class MakeGeneratorTest(unittest.TestCase):
 
     @attr('slow')
+    @pytest.mark.slow
+    @pytest.mark.tool_autotools
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")
-    def complete_creation_reuse_test(self):
+    def test_complete_creation_reuse(self):
         client = TestClient(path_with_spaces=False)
         client.run("new myhello/1.0.0 --sources")
-        conanfile_path = os.path.join(client.current_folder, "conanfile.py")
-        replace_in_file(conanfile_path, "{\"shared\": [True, False]}",
-                        "{\"shared\": [True, False], \"fPIC\": [True, False]}", output=client.out)
-        replace_in_file(conanfile_path, "{\"shared\": False}", "{\"shared\": False, \"fPIC\": True}",
-                        output=client.out)
         client.run("create . danimtb/testing")
         hellowrapper_include = """
 #pragma once
@@ -27,12 +25,12 @@ class MakeGeneratorTest(unittest.TestCase):
 void hellowrapper();
 """
         hellowrapper_impl = """
-#include "hello.h"
+#include "myhello.h"
 
 #include "hellowrapper.h"
 
 void hellowrapper(){
-    hello();
+    myhello();
 }
 """
         makefile = """

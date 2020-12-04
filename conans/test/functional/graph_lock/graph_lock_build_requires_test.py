@@ -217,7 +217,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         self.assertIn("pkg2/1.0: Applying build-requirement: cmake/1.0", client.out)
         self.assertIn("pkg2/1.0: Applying build-requirement: gtest/1.0", client.out)
 
-    def conditional_env_var_test(self):
+    def test_conditional_env_var(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . dep_recipe/1.0@")

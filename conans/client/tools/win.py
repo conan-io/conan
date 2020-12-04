@@ -180,8 +180,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     conan_v2_behavior("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
-    from conans.client.build.msbuild import MSBuild
-    tmp = MSBuild(settings)
+    from conans.client.build.msbuild import MSBuildHelper
+    tmp = MSBuildHelper(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
     tmp._output = output
 

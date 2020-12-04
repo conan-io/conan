@@ -5,6 +5,7 @@ from subprocess import PIPE, Popen, STDOUT
 
 import six
 
+from conans.client.tools import environment_append
 from conans.errors import ConanException
 from conans.util.files import decode_text
 from conans.util.runners import pyinstaller_bundle_env_cleaned
@@ -55,19 +56,21 @@ class ConanRunner(object):
             stream_output.write(call_message)
 
         with pyinstaller_bundle_env_cleaned():
-            # No output has to be redirected to logs or buffer or omitted
-            if (output is True and not self._output and not log_filepath and self._log_run_to_output
-                    and not subprocess):
-                return self._simple_os_call(command, cwd)
-            elif log_filepath:
-                if stream_output:
-                    stream_output.write("Logging command output to file '%s'\n" % (log_filepath,))
-                with open(log_filepath, "a+") as log_handler:
-                    if self._print_commands_to_output:
-                        log_handler.write(call_message)
-                    return self._pipe_os_call(command, stream_output, log_handler, cwd, user_output)
-            else:
-                return self._pipe_os_call(command, stream_output, None, cwd, user_output)
+            # Remove credentials before running external application
+            with environment_append({'CONAN_LOGIN_ENCRYPTION_KEY': None}):
+                # No output has to be redirected to logs or buffer or omitted
+                if (output is True and not self._output and not log_filepath and self._log_run_to_output
+                        and not subprocess):
+                    return self._simple_os_call(command, cwd)
+                elif log_filepath:
+                    if stream_output:
+                        stream_output.write("Logging command output to file '%s'\n" % (log_filepath,))
+                    with open(log_filepath, "a+") as log_handler:
+                        if self._print_commands_to_output:
+                            log_handler.write(call_message)
+                        return self._pipe_os_call(command, stream_output, log_handler, cwd, user_output)
+                else:
+                    return self._pipe_os_call(command, stream_output, None, cwd, user_output)
 
     def _pipe_os_call(self, command, stream_output, log_handler, cwd, user_output):
 

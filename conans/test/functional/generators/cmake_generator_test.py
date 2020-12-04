@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans import tools
 from conans.client.runner import ConanRunner
 from conans.test.utils.tools import TestClient
@@ -40,6 +42,7 @@ os_build={os_build}
 """
 
 
+@pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
     def _check_build_generator(self, os_build, generator):

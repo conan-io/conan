@@ -1,7 +1,6 @@
 import os
 
-from conans.client.rest.download_cache import CachedFileDownloader
-from conans.client.rest.file_downloader import FileDownloader
+from conans.client.downloaders import run_downloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
@@ -89,25 +88,19 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     checksum = sha256 or sha1 or md5
 
-    downloader = FileDownloader(requester=requester, output=out, verify=verify, config=config)
-    if config and config.download_cache and checksum:
-        downloader = CachedFileDownloader(config.download_cache, downloader, user_download=True)
-
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
-        if isinstance(downloader, CachedFileDownloader):
-            downloader.download(file_url, filename, retry=retry, retry_wait=retry_wait,
-                                overwrite=overwrite, auth=auth, headers=headers, md5=md5,
-                                sha1=sha1, sha256=sha256)
-        else:
-            downloader.download(file_url, filename, retry=retry, retry_wait=retry_wait,
-                                overwrite=overwrite, auth=auth, headers=headers)
-            if md5:
-                check_md5(filename, md5)
-            if sha1:
-                check_sha1(filename, sha1)
-            if sha256:
-                check_sha256(filename, sha256)
+        run_downloader(requester=requester, output=out, verify=verify, config=config,
+                       user_download=True, use_cache=bool(config and checksum), url=file_url,
+                       file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
+                       auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+        # TODO: Probably move inside downloader, remove the file,... locks...
+        if md5:
+            check_md5(filename, md5)
+        if sha1:
+            check_sha1(filename, sha1)
+        if sha256:
+            check_sha256(filename, sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):

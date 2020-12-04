@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized_class
 
 from conans.client.tools import environment_append, save
@@ -113,6 +114,7 @@ class SettingsCppStdScopedPackageTests(unittest.TestCase):
                       " 'compiler.cppstd' together with 'cppstd'", t.out)
 
 
+@pytest.mark.tool_compiler
 class UseCompilerCppStdSettingTests(unittest.TestCase):
 
     conanfile = textwrap.dedent("""

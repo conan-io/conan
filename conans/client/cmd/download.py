@@ -1,5 +1,5 @@
 from conans.client.output import ScopedOutput
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import NotFoundException, RecipeNotFoundException
 from multiprocessing.pool import ThreadPool
@@ -18,14 +18,11 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     except NotFoundException:
         raise RecipeNotFoundException(ref)
 
-    with cache.package_layout(ref).update_metadata() as metadata:
-        metadata.recipe.remote = remote.name
-
     conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_basic(conan_file_path)
 
     # Download the sources too, don't be lazy
-    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
@@ -48,10 +45,10 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
 
     def _download(package_id):
         pref = PackageReference(ref, package_id)
-        package_folder = cache.package_layout(pref.ref, short_paths=short_paths).package(pref)
+        layout = cache.package_layout(pref.ref, short_paths=short_paths)
         if output and not output.is_terminal:
             output.info("Downloading %s" % str(pref))
-        remote_manager.get_package(pref, package_folder, remote, output, recorder)
+        remote_manager.get_package(conanfile, pref, layout, remote, output, recorder)
 
     if parallel is not None:
         output.info("Downloading binary packages in %s parallel threads" % parallel)

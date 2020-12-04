@@ -7,18 +7,10 @@ from conans import DEFAULT_REVISION_V1
 class _RecipeMetadata(object):
 
     def __init__(self):
-        self._revision = None
+        self.revision = None
         self.properties = {}
         self.checksums = {}
         self.remote = None
-
-    @property
-    def revision(self):
-        return self._revision
-
-    @revision.setter
-    def revision(self, r):
-        self._revision = r
 
     def to_dict(self):
         ret = {"revision": self.revision,

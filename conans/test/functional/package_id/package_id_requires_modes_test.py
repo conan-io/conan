@@ -16,7 +16,7 @@ class PackageIDTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    def cross_build_settings_test(self):
+    def test_cross_build_settings(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
@@ -497,7 +497,7 @@ ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.cli
 
 class PackageIDErrorTest(unittest.TestCase):
 
-    def transitive_multi_mode_package_id_test(self):
+    def test_transitive_multi_mode_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
@@ -517,7 +517,7 @@ class PackageIDErrorTest(unittest.TestCase):
         client.run('create . consumer/1.0@user/testing --build')
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
-    def transitive_multi_mode2_package_id_test(self):
+    def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
@@ -547,7 +547,7 @@ class PackageIDErrorTest(unittest.TestCase):
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
-    def transitive_multi_mode_build_requires_test(self):
+    def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
@@ -579,7 +579,7 @@ class PackageIDErrorTest(unittest.TestCase):
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
-    def package_revision_mode_editable_test(self):
+    def test_package_revision_mode_editable(self):
         # Package revision mode crash when using editables
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")

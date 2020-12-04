@@ -4,6 +4,7 @@ import re
 import unittest
 
 import mock
+import pytest
 import six
 from parameterized import parameterized
 
@@ -18,7 +19,7 @@ from conans.test.utils.test_files import temp_folder
 
 class MSBuildTest(unittest.TestCase):
 
-    def dont_mess_with_build_type_test(self):
+    def test_dont_mess_with_build_type(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64",
@@ -51,7 +52,7 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn("<PreprocessorDefinitions>foo=0;bar=False;%(PreprocessorDefinitions)",
                       template)
 
-    def without_runtime_test(self):
+    def test_without_runtime(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64"})
@@ -60,7 +61,7 @@ class MSBuildTest(unittest.TestCase):
         template = msbuild._get_props_file_contents()
         self.assertNotIn("<RuntimeLibrary>", template)
 
-    def custom_properties_test(self):
+    def test_custom_properties(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64"})
@@ -72,7 +73,8 @@ class MSBuildTest(unittest.TestCase):
         self.assertIn('/p:MyProp2="MyValue2"', command)
 
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def binary_logging_on_test(self):
+    @pytest.mark.tool_visual_studio
+    def test_binary_logging_on(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -83,8 +85,9 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln", output_binary_log=True)
         self.assertIn("/bl", command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def binary_logging_on_with_filename_test(self):
+    def test_binary_logging_on_with_filename(self):
         bl_filename = "a_special_log.log"
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -97,7 +100,7 @@ class MSBuildTest(unittest.TestCase):
         expected_command = '/bl:"%s"' % bl_filename
         self.assertIn(expected_command, command)
 
-    def binary_logging_off_explicit_test(self):
+    def test_binary_logging_off_explicit(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -108,7 +111,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln", output_binary_log=False)
         self.assertNotIn("/bl", command)
 
-    def binary_logging_off_implicit_test(self):
+    def test_binary_logging_off_implicit(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -119,9 +122,10 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("dummy.sln")
         self.assertNotIn("/bl", command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    @mock.patch("conans.client.build.msbuild.MSBuild.get_version")
-    def binary_logging_not_supported_test(self, mock_get_version):
+    @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
+    def test_binary_logging_not_supported(self, mock_get_version):
         mock_get_version.return_value = Version("14")
 
         mocked_settings = MockSettings({"build_type": "Debug",
@@ -143,8 +147,9 @@ class MSBuildTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             msbuild.get_command("dummy.sln", targets="sometarget")
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def get_version_test(self):
+    def test_get_version(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -162,7 +167,7 @@ class MSBuildTest(unittest.TestCase):
                            ("10", "v100"),
                            ("9", "v90"),
                            ("8", "v80")])
-    def default_toolset_test(self, compiler_version, expected_toolset):
+    def test_default_toolset(self, compiler_version, expected_toolset):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": compiler_version,
@@ -172,8 +177,9 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
+    @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def skip_toolset_test(self):
+    def test_skip_toolset(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -210,7 +216,7 @@ class MSBuildTest(unittest.TestCase):
                            ("v100",),
                            ("v90",),
                            ("v80",)])
-    def explicit_toolset_test(self, expected_toolset):
+    def test_explicit_toolset(self, expected_toolset):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "15",
@@ -225,7 +231,7 @@ class MSBuildTest(unittest.TestCase):
                            ("14", "v140_xp"),
                            ("12", "v120_xp"),
                            ("11", "v110_xp")])
-    def custom_toolset_test(self, compiler_version, expected_toolset):
+    def test_custom_toolset(self, compiler_version, expected_toolset):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": compiler_version,
@@ -236,7 +242,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("project_should_flags_test_file.sln")
         self.assertIn('/p:PlatformToolset="%s"' % expected_toolset, command)
 
-    def definitions_test(self):
+    def test_definitions(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64",
@@ -249,7 +255,7 @@ class MSBuildTest(unittest.TestCase):
                       "_WIN32_WINNT=0x0501;"
                       "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
 
-    def definitions_no_value_test(self):
+    def test_definitions_no_value(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64",
@@ -262,7 +268,7 @@ class MSBuildTest(unittest.TestCase):
                       "_DEBUG;"
                       "%(PreprocessorDefinitions)</PreprocessorDefinitions>", template)
 
-    def verbosity_default_test(self):
+    def test_verbosity_default(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64"})
@@ -271,7 +277,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("projecshould_flags_testt_file.sln")
         self.assertIn('/verbosity:minimal', command)
 
-    def verbosity_env_test(self):
+    def test_verbosity_env(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64"})
@@ -281,7 +287,7 @@ class MSBuildTest(unittest.TestCase):
             command = msbuild.get_command("projecshould_flags_testt_file.sln")
             self.assertIn('/verbosity:detailed', command)
 
-    def verbosity_explicit_test(self):
+    def test_verbosity_explicit(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "arch": "x86_64"})
@@ -290,7 +296,7 @@ class MSBuildTest(unittest.TestCase):
         command = msbuild.get_command("projecshould_flags_testt_file.sln", verbosity="quiet")
         self.assertIn('/verbosity:quiet', command)
 
-    def properties_injection_test(self):
+    def test_properties_injection(self):
         # https://github.com/conan-io/conan/issues/4471
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -307,7 +313,7 @@ class MSBuildTest(unittest.TestCase):
         self.assertTrue(os.path.isabs(props_file_path))
         self.assertEqual(os.path.basename(props_file_path), "conan_build.props")
 
-    def windows_ce_test(self):
+    def test_windows_ce(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
                                  "compiler.version": "9",

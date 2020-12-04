@@ -459,7 +459,9 @@ def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=Fa
     build_os, build_arch, host_os, host_arch = ret
 
     if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
-            host_arch is not None and (build_arch == "x86_64") and (host_arch == "x86"):
+            host_arch is not None and ((build_arch == "x86_64") and (host_arch == "x86") or
+                                       (build_arch == "sparcv9") and (host_arch == "sparc") or
+                                       (build_arch == "ppc64") and (host_arch == "ppc32")):
         return False
 
     if host_os is not None and (build_os != host_os):

@@ -2,7 +2,6 @@ import os
 import platform
 import shutil
 from collections import OrderedDict
-from os.path import join
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
@@ -14,6 +13,7 @@ from conans.client.conf import ConanClientConfigParser, get_default_client_conf,
 from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
+from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -35,13 +35,13 @@ TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
 
 
-def is_case_insensitive_os():
+def _is_case_insensitive_os():
     system = platform.system()
     return system != "Linux" and system != "FreeBSD" and system != "SunOS"
 
 
-if is_case_insensitive_os():
-    def check_ref_case(ref, store_folder):
+if _is_case_insensitive_os():
+    def _check_ref_case(ref, store_folder):
         if not os.path.exists(store_folder):
             return
 
@@ -51,14 +51,17 @@ if is_case_insensitive_os():
             try:
                 idx = [item.lower() for item in items].index(part.lower())
                 if part != items[idx]:
-                    raise ConanException("Requested '%s' but found case incompatible '%s'\n"
-                                         "Case insensitive filesystem can't manage this"
-                                         % (str(ref), items[idx]))
+                    raise ConanException("Requested '{requested}', but found case incompatible"
+                                         " recipe with name '{existing}' in the cache. Case"
+                                         " insensitive filesystem can't manage this.\n Remove"
+                                         " existing recipe '{existing}' and try again.".format(
+                        requested=str(ref), existing=items[idx]
+                    ))
                 tmp = os.path.normpath(tmp + os.sep + part)
             except ValueError:
                 return
 else:
-    def check_ref_case(ref, store_folder):  # @UnusedVariable
+    def _check_ref_case(ref, store_folder):  # @UnusedVariable
         pass
 
 
@@ -76,7 +79,7 @@ class ClientCache(object):
         self._config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
-        self._store_folder = self.config.storage_path or self.cache_folder
+        self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
         # Just call it to make it raise in case of short_paths misconfiguration
         _ = self.config.short_paths_home
 
@@ -104,14 +107,14 @@ class ClientCache(object):
             return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
                                          conanfile_path)
         else:
-            check_ref_case(ref, self.store)
+            _check_ref_case(ref, self.store)
             base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
             return PackageCacheLayout(base_folder=base_folder, ref=ref,
                                       short_paths=short_paths, no_lock=self._no_locks())
 
     @property
     def remotes_path(self):
-        return join(self.cache_folder, REMOTES)
+        return os.path.join(self.cache_folder, REMOTES)
 
     @property
     def registry(self):
@@ -124,7 +127,7 @@ class ClientCache(object):
 
     @property
     def artifacts_properties_path(self):
-        return join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
+        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
 
     def read_artifacts_properties(self):
         ret = {}
@@ -154,37 +157,39 @@ class ClientCache(object):
 
     @property
     def localdb(self):
-        return join(self.cache_folder, LOCALDB)
+        localdb_filename = os.path.join(self.cache_folder, LOCALDB)
+        encryption_key = os.getenv('CONAN_LOGIN_ENCRYPTION_KEY', None)
+        return LocalDB.create(localdb_filename, encryption_key=encryption_key)
 
     @property
     def conan_conf_path(self):
-        return join(self.cache_folder, CONAN_CONF)
+        return os.path.join(self.cache_folder, CONAN_CONF)
 
     @property
     def profiles_path(self):
-        return join(self.cache_folder, PROFILES_FOLDER)
+        return os.path.join(self.cache_folder, PROFILES_FOLDER)
 
     @property
     def settings_path(self):
-        return join(self.cache_folder, CONAN_SETTINGS)
+        return os.path.join(self.cache_folder, CONAN_SETTINGS)
 
     @property
     def generators_path(self):
-        return join(self.cache_folder, GENERATORS_FOLDER)
+        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
 
     @property
     def default_profile_path(self):
         if os.path.isabs(self.config.default_profile):
             return self.config.default_profile
         else:
-            return join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
+            return os.path.join(self.cache_folder, PROFILES_FOLDER, self.config.default_profile)
 
     @property
     def hooks_path(self):
         """
         :return: Hooks folder in client cache
         """
-        return join(self.cache_folder, HOOKS_FOLDER)
+        return os.path.join(self.cache_folder, HOOKS_FOLDER)
 
     @property
     def default_profile(self):

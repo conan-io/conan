@@ -28,18 +28,18 @@ class DeployGeneratorTest(unittest.TestCase):
         self.client.current_folder = temp_folder()
         self.client.run("install %s -g deploy" % ref.full_str())
 
-    def deploy_folder_path_test(self):
+    def test_deploy_folder_path(self):
         base_path = os.path.join(self.client.current_folder, "name")
         expected_include_path = os.path.join(base_path, "include")
         expected_lib_path = os.path.join(base_path, "my_libs")
         self.assertTrue(os.path.exists(expected_include_path))
         self.assertTrue(os.path.exists(expected_lib_path))
 
-    def deploy_manifest_path_test(self):
+    def test_deploy_manifest_path(self):
         expected_manifest_path = os.path.join(self.client.current_folder, "deploy_manifest.txt")
         self.assertTrue(os.path.exists(expected_manifest_path))
 
-    def deploy_manifest_content_test(self):
+    def test_deploy_manifest_content(self):
         base_path = os.path.join(self.client.current_folder, "name")
         header_path = os.path.join(base_path, "include", "header.h")
         lib_path = os.path.join(base_path, "my_libs", "file.lib")
@@ -50,7 +50,7 @@ class DeployGeneratorTest(unittest.TestCase):
         self.assertIn(lib_path, content)
         self.assertIn(config_path, content)
 
-    def no_conan_metadata_files_test(self):
+    def test_no_conan_metadata_files(self):
         metadata_files = ["conaninfo.txt", "conanmanifest.txt"]
         # Assert not in directory tree
         for root, _, _ in os.walk(self.client.current_folder):
@@ -101,13 +101,13 @@ class DeployGeneratorGraphTest(unittest.TestCase):
 
         return [header1_path, lib1_path, config1_path, header2_path, lib2_path, config2_path]
 
-    def deploy_manifest_content_test(self):
+    def test_deploy_manifest_content(self):
         manifest_path = os.path.join(self.client.current_folder, "deploy_manifest.txt")
         content = load(manifest_path)
         for path in self.get_expected_paths():
             self.assertIn(path, content)
 
-    def file_paths_test(self):
+    def test_file_paths(self):
         for path in self.get_expected_paths():
             self.assertTrue(os.path.exists(path))
 
@@ -130,7 +130,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.header_path))
 
     @unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
-    def same_permissions_test(self):
+    def test_same_permissions(self):
         stat_info = os.stat(self.header_path)
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
         os.chmod(self.header_path, stat_info.st_mode | stat.S_IXUSR)
