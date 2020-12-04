@@ -30,7 +30,7 @@ class MSBuild(object):
             return super(MSBuild, cls).__new__(cls)
 
         # If not, add the proper CMake implementation
-        if hasattr(conanfile, "toolchain"):
+        if hasattr(conanfile, "toolchain") or hasattr(conanfile, "generate"):
             # Warning
             msg = ("\n*****************************************************************\n"
                    "******************************************************************\n"

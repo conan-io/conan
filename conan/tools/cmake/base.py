@@ -1,5 +1,6 @@
 import os
 import textwrap
+import warnings
 from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
@@ -43,9 +44,11 @@ class CMakeToolchainBase(object):
                                           '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
-                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{%- endfor -%}
+                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
+                {%- endfor -%}
                 {% if action=='set' %}
-                set({{ it }} {{ genexpr.str }})
+                set({{ it }} {{ genexpr.str }} CACHE STRING
+                    "Variable {{ it }} conan-toolchain defined")
                 {% elif action=='add_definitions' %}
                 add_definitions(-D{{ it }}={{ genexpr.str }})
                 {% endif %}
@@ -115,7 +118,7 @@ class CMakeToolchainBase(object):
 
         # Variables
         {% for it, value in variables.items() %}
-        set({{ it }} "{{ value }}")
+        set({{ it }} "{{ value }}" CACHE STRING "Variable {{ it }} conan-toolchain defined")
         {%- endfor %}
         # Variables  per configuration
         {{ toolchain_macros.iterate_configs(variables_config, action='set') }}
@@ -126,7 +129,8 @@ class CMakeToolchainBase(object):
         add_definitions(-D{{ it }}="{{ value }}")
         {%- endfor %}
         # Preprocessor definitions per configuration
-        {{ toolchain_macros.iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
+        {{ toolchain_macros.iterate_configs(preprocessor_definitions_config,
+                                            action='add_definitions') }}
         """)
 
     def __init__(self, conanfile, **kwargs):
@@ -162,6 +166,21 @@ class CMakeToolchainBase(object):
         return ctxt_toolchain, {}
 
     def write_toolchain_files(self):
+        # Warning
+        msg = ("\n*****************************************************************\n"
+               "******************************************************************\n"
+               "'write_toolchain_files()' has been deprecated and moved.\n"
+               "It will be removed in next Conan release.\n"
+               "Use 'generate()' method instead.\n"
+               "********************************************************************\n"
+               "********************************************************************\n")
+        from conans.client.output import Color, ConanOutput
+        ConanOutput(self._conanfile.output._stream,
+                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+        warnings.warn(msg)
+        self.generate()
+
+    def generate(self):
         # Prepare templates to be loaded
         dict_loader = DictLoader(self._get_templates())
         env = Environment(loader=dict_loader)

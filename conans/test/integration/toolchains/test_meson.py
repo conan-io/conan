@@ -4,7 +4,6 @@ import pytest
 import textwrap
 import unittest
 
-from conans.client.tools.files import which
 from conans.model.version import Version
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
@@ -24,8 +23,7 @@ def get_meson_version():
 
 @pytest.mark.toolchain
 @pytest.mark.tool_meson
-@unittest.skipUnless(which("meson") and get_meson_version() >= Version("0.56.0"),
-                     "requires meson >= 0.56.0")
+@unittest.skipUnless(get_meson_version() >= "0.56.0", "requires meson >= 0.56.0")
 class MesonToolchainTest(unittest.TestCase):
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
@@ -48,7 +46,7 @@ class MesonToolchainTest(unittest.TestCase):
             tc.definitions["FALSE_DEFINITION"] = False
             tc.definitions["INT_DEFINITION"] = 42
             tc.definitions["ARRAY_DEFINITION"] = ["Text1", "Text2"]
-            tc.write_toolchain_files()
+            tc.generate()
 
         def build(self):
             # this will be moved to build helper eventually

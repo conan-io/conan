@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_from_settings
+from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
 
 import textwrap
@@ -39,6 +40,24 @@ class MesonToolchain(object):
     {% if cpp_args %}cpp_args = {{cpp_args}}{% endif %}
     {% if cpp_link_args %}cpp_link_args = {{cpp_link_args}}{% endif %}
     {% if pkg_config_path %}pkg_config_path = {{pkg_config_path}}{% endif %}
+    """)
+
+    _cross_file_template = _native_file_template + textwrap.dedent("""
+    [build_machine]
+    {{build_machine}}
+
+    [host_machine]
+    {{host_machine}}
+
+    [target_machine]
+    {{target_machine}}
+    """)
+
+    _machine_template = textwrap.dedent("""
+    system = {{system}}
+    cpu_family = {{cpu_family}}
+    cpu = {{cpu}}
+    endian = {{endian}}
     """)
 
     def __init__(self, conanfile, env=os.environ):
@@ -119,7 +138,7 @@ class MesonToolchain(object):
         return "'%s'" % value if value.strip() else None
 
     @property
-    def _native_content(self):
+    def _context(self):
         project_options = []
         for k, v in self.definitions.items():
             project_options.append("%s = %s" % (k, self._to_meson_value(v)))
@@ -143,7 +162,8 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self._to_meson_build_type(self._build_type) if self._build_type else None,
             "debug": self._to_meson_value(self._debug) if self._build_type else None,
-            "default_library": self._to_meson_shared(self._shared) if self._shared is not None else None,
+            "default_library": self._to_meson_shared(
+                self._shared) if self._shared is not None else None,
             # https://mesonbuild.com/Builtin-options.html#base-options
             "b_vscrt": self._to_meson_vscrt(self._vscrt),
             "b_staticpic": self._to_meson_value(self._fpic) if (self._shared is False and self._fpic
@@ -159,21 +179,94 @@ class MesonToolchain(object):
             "cpp_link_args": self._env.get("LDFLAGS", None),
             "pkg_config_path": self._env.get("PKG_CONFIG_PATH", None)
         }
-        t = Template(self._native_file_template)
-        content = t.render(context)
-        return content
+        return context
+
+    @staticmethod
+    def _render(template, context):
+        t = Template(template)
+        return t.render(context)
+
+    @property
+    def _native_content(self):
+        return self._render(self._native_file_template, self._context)
+
+    def _to_meson_machine(self, machine_os, machine_arch):
+        # https://mesonbuild.com/Reference-tables.html#operating-system-names
+        system_map = {'Android': 'android',
+                      'Macos': 'darwin',
+                      'iOS': 'darwin',
+                      'watchOS': 'darwin',
+                      'tvOS': 'darwin',
+                      'FreeBSD': 'freebsd',
+                      'Emscripten': 'emscripten',
+                      'Linux': 'linux',
+                      'SunOS': 'sunos',
+                      'Windows': 'windows',
+                      'WindowsCE': 'windows',
+                      'WindowsStore': 'windows'}
+        # https://mesonbuild.com/Reference-tables.html#cpu-families
+        cpu_family_map = {'armv4': ('arm', 'armv4', 'little'),
+                          'armv4i': ('arm', 'armv4i', 'little'),
+                          'armv5el': ('arm', 'armv5el', 'little'),
+                          'armv5hf': ('arm', 'armv5hf', 'little'),
+                          'armv6': ('arm', 'armv6', 'little'),
+                          'armv7': ('arm', 'armv7', 'little'),
+                          'armv7hf': ('arm', 'armv7hf', 'little'),
+                          'armv7s': ('arm', 'armv7s', 'little'),
+                          'armv7k':('arm', 'armv7k', 'little'),
+                          'armv8': ('aarch64', 'armv8', 'little'),
+                          'armv8_32': ('aarch64', 'armv8_32', 'little'),
+                          'armv8.3': ('aarch64', 'armv8.3', 'little'),
+                          'avr': ('avr', 'avr', 'little'),
+                          'mips': ('mips', 'mips', 'big'),
+                          'mips64': ('mips64', 'mips64', 'big'),
+                          'ppc32be': ('ppc', 'ppc', 'big'),
+                          'ppc32': ('ppc', 'ppc', 'little'),
+                          'ppc64le': ('ppc64', 'ppc64', 'little'),
+                          'ppc64': ('ppc64', 'ppc64', 'big'),
+                          's390': ('s390', 's390', 'big'),
+                          's390x': ('s390x', 's390x', 'big'),
+                          'sh4le': ('sh4', 'sh4', 'little'),
+                          'sparc': ('sparc', 'sparc', 'big'),
+                          'sparcv9': ('sparc64', 'sparc64', 'big'),
+                          'wasm': ('wasm32', 'wasm32', 'little'),
+                          'x86': ('x86', 'x86', 'little'),
+                          'x86_64': ('x86_64', 'x86_64', 'little')}
+        system = system_map.get(machine_os, machine_os.lower())
+        default_cpu_tuple = (machine_arch.lower(), machine_arch.lower(), 'little')
+        cpu_tuple = cpu_family_map.get(machine_arch, default_cpu_tuple)
+        cpu_family, cpu, endian = cpu_tuple[0], cpu_tuple[1], cpu_tuple[2]
+        context = {
+            'system': self._to_meson_value(system),
+            'cpu_family': self._to_meson_value(cpu_family),
+            'cpu': self._to_meson_value(cpu),
+            'endian': self._to_meson_value(endian),
+        }
+        return self._render(self._machine_template, context)
 
     @property
     def _cross_content(self):
-        raise Exception("cross-building is not implemented yet!")
+        os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
+        os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
+
+        build_machine = self._to_meson_machine(os_build, arch_build)
+        host_machine = self._to_meson_machine(os_host, arch_host)
+        target_machine = self._to_meson_machine(os_target, arch_target)
+
+        context = self._context
+        context['build_machine'] = build_machine
+        context['host_machine'] = host_machine
+        context['target_machine'] = target_machine
+        return self._render(self._cross_file_template, context)
 
     def _write_native_file(self):
         save(self._native_filename, self._native_content)
 
     def _write_cross_file(self):
-        # TODO : cross-building
-        pass
+        save(self._cross_filename, self._cross_content)
 
-    def write_toolchain_files(self):
-        self._write_native_file()
-        self._write_cross_file()
+    def generate(self):
+        if cross_building(self._conanfile):
+            self._write_cross_file()
+        else:
+            self._write_native_file()

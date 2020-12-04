@@ -13,7 +13,7 @@ from mock import patch
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.file_downloader import FileDownloader
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
@@ -350,8 +350,8 @@ class Pkg(ConanFile):
         """
 
         for origin in ["", "--type=url"]:
-            def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
-                self._create_zip(filename)
+            def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+                self._create_zip(file_path)
 
             with patch.object(FileDownloader, 'download', new=my_download):
                 self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
@@ -362,8 +362,8 @@ class Pkg(ConanFile):
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
     def test_install_change_only_verify_ssl(self):
-        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
-            self._create_zip(filename)
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
@@ -502,9 +502,9 @@ class Pkg(ConanFile):
         fake_url_with_credentials = "http://test_user:test_password@myfakeurl.com/myconf.zip"
         fake_url_hidden_password = "http://test_user:<hidden>@myfakeurl.com/myconf.zip"
 
-        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertEqual(url, fake_url_with_credentials)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
@@ -519,13 +519,13 @@ class Pkg(ConanFile):
     def test_ssl_verify(self):
         fake_url = "https://fakeurl.com/myconf.zip"
 
-        def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
+        def download_verify_false(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertFalse(obj._verify_ssl)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
-        def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
+        def download_verify_true(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertTrue(obj._verify_ssl)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)

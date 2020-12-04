@@ -103,7 +103,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <!-- Very IMPORTANT this should go BEFORE the Microsoft.Cpp.props.
   If it goes after, the Toolset definition is ignored -->
   <ImportGroup Label="PropertySheets">
-    <Import Project="..\conan\conan_Hello.props" />
+    <Import Project="..\conan\conan_hello.props" />
     <Import Project="..\conan\conantoolchain.props" />
   </ImportGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -233,14 +233,14 @@ class WinTest(unittest.TestCase):
             generators = "msbuild"
             options = {"shared": [True, False]}
             default_options = {"shared": False}
-            def toolchain(self):
+            def generate(self):
                 tc = MSBuildToolchain(self)
                 tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
                 if self.settings.build_type == "Debug":
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
                 else:
                     tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
-                tc.write_toolchain_files()
+                tc.generate()
 
             def build(self):
                 msbuild = MSBuild(self)
