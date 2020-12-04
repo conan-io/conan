@@ -389,6 +389,74 @@ class LockFileOptionsTest(unittest.TestCase):
         pkg_lock = client.load("pkg.lock")
         self.assertIn('"options": "shared=False"', pkg_lock)
 
+    def test_config_option(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def config_options(self):
+                    # This is weaker than "configure()", will be overwritten by downstream
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=False"', lockfile)
+        self.assertNotIn('shared=True', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
+    def test_configure(self):
+        # https://github.com/conan-io/conan/issues/7991
+        client = TestClient()
+        pahomqttc = textwrap.dedent("""
+            from conans import ConanFile
+            class PahoMQTCC(ConanFile):
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+                def configure(self):
+                    self.options.shared = True
+            """)
+
+        pahomqttcpp = textwrap.dedent("""
+            from conans import ConanFile
+            class Meta(ConanFile):
+                requires = "pahomqttc/1.0"
+                def configure(self):
+                    self.options["pahomqttc"].shared = False
+            """)
+
+        client.save({"pahomqttc/conanfile.py": pahomqttc,
+                     "pahomqttcpp/conanfile.py": pahomqttcpp,
+                     "consumer/conanfile.txt": "[requires]\npahomqttcpp/1.0"})
+        client.run("export pahomqttc pahomqttc/1.0@")
+        client.run("export pahomqttcpp pahomqttcpp/1.0@")
+
+        client.run("install consumer/conanfile.txt --build -o paho-mqtt-c:shared=False")
+        lockfile = client.load("conan.lock")
+        self.assertIn('"options": "pahomqttc:shared=True"', lockfile)
+        # Check the trailing ", to not get the profile one
+        self.assertNotIn('shared=False"', lockfile)
+        client.run("install consumer/conanfile.txt --lockfile=conan.lock")
+
 
 class GraphInstallArgumentsUpdated(unittest.TestCase):
 

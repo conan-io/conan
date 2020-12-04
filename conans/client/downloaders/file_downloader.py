@@ -6,8 +6,8 @@ import traceback
 import six
 
 from conans.client.rest import response_to_str
-from conans.errors import AuthenticationException, ConanConnectionError, ConanException, \
-    NotFoundException, ForbiddenException, RequestErrorException
+from conans.errors import ConanException, NotFoundException, AuthenticationException, \
+    ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util import progress_bar
 from conans.util.files import mkdir
 from conans.util.log import logger
@@ -125,7 +125,7 @@ class FileDownloader(object):
             # it seems that if gzip we don't know the size, cannot resume and shouldn't raise
             if total_downloaded_size != total_length and not gzip:
                 if (file_path and total_length > total_downloaded_size > range_start
-                        and response.headers.get("Accept-Ranges") == "bytes"):
+                    and response.headers.get("Accept-Ranges") == "bytes"):
                     written_chunks = self._download_file(url, auth, headers, file_path,
                                                          try_resume=True)
                 else:

@@ -22,9 +22,13 @@ class {package_name}Conan(ConanFile):
     description = "<Description of {package_name} here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
-    options = {{"shared": [True, False]}}
-    default_options = {{"shared": False}}
+    options = {{"shared": [True, False], "fPIC": [True, False]}}
+    default_options = {{"shared": False, "fPIC": True}}
     generators = "cmake"
+
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
 
     def source(self):
         self.run("git clone https://github.com/conan-io/hello.git")
@@ -91,11 +95,15 @@ class {package_name}Conan(ConanFile):
     description = "<Description of {package_name} here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
-    options = {{"shared": [True, False]}}
-    default_options = {{"shared": False}}
+    options = {{"shared": [True, False], "fPIC": [True, False]}}
+    default_options = {{"shared": False, "fPIC": True}}
     generators = "cmake"
     exports_sources = "src/*"
 {configure}
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
     def build(self):
         cmake = CMake(self)
         cmake.configure(source_folder="src")
@@ -145,6 +153,9 @@ class {package_name}Conan(ConanFile):
 
     def package(self):
         self.copy("*.h", "include")
+
+    def package_id(self):
+        self.info.header_only()
 """
 
 
@@ -175,7 +186,7 @@ class {package_name}TestConan(ConanFile):
             self.run(".%sexample" % os.sep)
 """
 
-test_cmake = """cmake_minimum_required(VERSION 2.8.12)
+test_cmake = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest CXX)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -191,7 +202,7 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
-test_cmake_pure_c = """cmake_minimum_required(VERSION 2.8.12)
+test_cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest C)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -250,7 +261,7 @@ void {name}(){{
 }}
 """
 
-cmake_pure_c = """cmake_minimum_required(VERSION 2.8)
+cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project({name} C)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
@@ -259,7 +270,7 @@ conan_basic_setup()
 add_library({name} {name}.c)
 """
 
-cmake = """cmake_minimum_required(VERSION 2.8)
+cmake = """cmake_minimum_required(VERSION 3.1)
 project({name} CXX)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)

@@ -2,6 +2,7 @@ import gzip
 import logging
 import os
 import platform
+import stat
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -224,6 +225,21 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
+@contextmanager
+def _add_write_permissions(file_path):
+    # Assumes the file already exist in disk
+    write = stat.S_IWRITE
+    saved_permissions = os.stat(file_path).st_mode
+    if saved_permissions & write == write:
+        yield
+        return
+    try:
+        os.chmod(file_path, saved_permissions | write)
+        yield
+    finally:
+        os.chmod(file_path, saved_permissions)
+
+
 def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
@@ -234,7 +250,8 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_write_permissions(file_path):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
@@ -264,7 +281,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         index = normalized_content.find(normalized_search)
 
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_write_permissions(file_path):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
 
@@ -277,7 +295,8 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
             lines.append('prefix=%s' % new_prefix)
         else:
             lines.append(line)
-    save(pc_file, "\n".join(lines))
+    with _add_write_permissions(pc_file):
+        save(pc_file, "\n".join(lines))
 
 
 def _path_equals(path1, path2):
