@@ -464,14 +464,10 @@ class BinaryInstaller(object):
             if source_folder != build_folder:
                 node.conanfile.cpp_info.includedirs.extend([os.path.join(source_folder, d)
                                                            for d in layout.src_includedirs])
-                node.conanfile.cpp_info.libdirs.extend(
-                    [os.path.join(source_folder, layout.build_libdir)])
-                node.conanfile.cpp_info.bindirs.extend(
-                    [os.path.join(source_folder, layout.build_bindir)])
                 node.conanfile.cpp_info.builddirs.extend(
-                    [os.path.join(source_folder, layout.build_builddir)])
+                    [os.path.join(source_folder, layout.src_builddir)])
                 node.conanfile.cpp_info.resdirs.extend(
-                    [os.path.join(source_folder, layout.build_resdir)])
+                    [os.path.join(source_folder, layout.src_resdir)])
             return
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()

@@ -62,9 +62,13 @@ class DevLayoutNoBuildTest(unittest.TestCase):
         lyt.build = "build-folder"
         lyt.install = "install-folder"
 
+        lyt.src_includedirs = ["custom-include"]
+        lyt.src_resdir = "my_src_resdir"
+        lyt.src_builddir = "my_src_builddir"
+
         lyt.build_libdir = "my_libdir"
         lyt.build_bindir = "my_bindir"
-        lyt.build_includedirs = ["", "include", "custom-include"]
+        lyt.build_includedirs = ["include"]
         lyt.build_resdir = "my_resdir"
         lyt.build_builddir = "my_builddir"
 
@@ -94,8 +98,9 @@ class DevLayoutNoBuildTest(unittest.TestCase):
         client.run("package . -if=install-folder")
         pf = os.path.join(client.current_folder, "package")
         self.assertTrue(os.path.exists(os.path.join(pf, "other_lib", "hello.a")))
+        # The hello.h is not packaged because / is not included as include dir
         self.assertTrue(os.path.exists(os.path.join(pf, "other_bin", "myapp.exe")))
-        self.assertTrue(os.path.exists(os.path.join(pf, "other_include", "hello.h")))
+        self.assertFalse(os.path.exists(os.path.join(pf, "other_include", "hello.h")))
         self.assertTrue(os.path.exists(os.path.join(pf, "other_include", "custom.h")))
 
         # Now make it editable and create a consumer for it
@@ -108,28 +113,22 @@ class DevLayoutNoBuildTest(unittest.TestCase):
         curfolder = client.current_folder.replace("\\", "/")
 
         expected = """[includedirs]
-{path}/build-folder/
 {path}/build-folder/include
-{path}/build-folder/custom-include
-{path}/unzipped-folder/
-{path}/unzipped-folder/include
 {path}/unzipped-folder/custom-include
 
 [libdirs]
 {path}/build-folder/my_libdir
-{path}/unzipped-folder/my_libdir
 
 [bindirs]
 {path}/build-folder/my_bindir
-{path}/unzipped-folder/my_bindir
 
 [resdirs]
 {path}/build-folder/my_resdir
-{path}/unzipped-folder/my_resdir
+{path}/unzipped-folder/my_src_resdir
 
 [builddirs]
 {path}/build-folder/my_builddir
-{path}/unzipped-folder/my_builddir"""
+{path}/unzipped-folder/my_src_builddir"""
 
         self.assertIn(expected.format(path=curfolder), txt_contents)
 
@@ -152,7 +151,7 @@ class DevLayoutNoBuildTest(unittest.TestCase):
                          {'conaninfo.txt', 'conanmanifest.txt', 'other_bin', 'other_build',
                           'other_include', 'other_lib', 'other_resdir'})
         include_dir = os.path.join(p_folder, "other_include")
-        self.assertEqual(set(os.listdir(include_dir)), {'hello.h', 'custom.h', 'generated_header.h'})
+        self.assertEqual(set(os.listdir(include_dir)), {'custom.h', 'generated_header.h'})
         bin_dir = os.path.join(p_folder, "other_bin")
         self.assertEqual(os.listdir(bin_dir), ['myapp.exe'])
         build_dir = os.path.join(p_folder, "other_build")
