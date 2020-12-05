@@ -879,6 +879,7 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
+    @unittest.skipIf(six.PY2, "The import to pathlib fails in Python2")
     def test_flatten_directory(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmpdirname:

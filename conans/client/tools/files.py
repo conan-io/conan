@@ -8,7 +8,10 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
-from pathlib import Path
+try:
+    from pathlib import Path
+except ImportError:
+    Path = None
 
 import six
 from patch_ng import fromfile, fromstring
@@ -484,6 +487,8 @@ def flatten_directory(base_path='.', pattern='*'):
     directory.
     :return: Name of the flattened directory
     """
+    if Path is None:
+        raise ConanException("flatten_directory is only supported in Python 3")
     base = Path(base_path)
     matching_directories = [d for d in base.iterdir() if d.is_dir() and fnmatch(d.name, pattern)]
     if not matching_directories:
