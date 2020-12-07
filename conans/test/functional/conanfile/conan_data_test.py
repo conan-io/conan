@@ -191,3 +191,29 @@ class Lib(ConanFile):
         self.assertIn("My URL: this url", client.out)
         client.run("export-pkg . name/version@ -sf tmp/source -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
+
+    def test_different_version(self):
+        # https://github.com/conan-io/conan/issues/8160
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+            class ExpectedLiteConan(ConanFile):
+                name = "expected-lite"
+                upstream_version = "0.2.0"
+                version = "0.2.0-1"
+
+                def source(self):
+                    print(str(self.conan_data))
+                    tools.get(**self.conan_data["sources"][self.upstream_version])
+                """)
+        conandata = textwrap.dedent("""\
+            sources:
+              "0.2.0":
+                url: https://github.com/martinmoene/expected-lite/archive/v0.2.0.tar.gz
+                sha256: 3cd85c1dc0e0ad0ee6eed301847d7f0a972a200dc6f77afa23cb0e40aa9134bc
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "conandata.yml": conandata})
+        client.run("create .")
+        print(client.out)
