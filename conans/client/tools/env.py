@@ -124,7 +124,7 @@ def env_diff(cmd, only_diff):
     if platform.system() == "Windows":
         cmd += " && set"
     else:
-        cmd += " && export"
+        cmd += " && printenv"
     ret = check_output_runner(cmd)
     new_env = {}
     for line in ret.splitlines():
