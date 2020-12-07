@@ -3,6 +3,7 @@
 import os
 import unittest
 import mock
+import platform
 
 from conans.client.tools import env
 
@@ -53,3 +54,11 @@ class ToolsEnvTest(unittest.TestCase):
                              {'env_var2': 'value2'}),\
              env.environment_append({'env_var1': None}):
             self.assertNotIn('env_var1', os.environ)
+
+    def test_environment_env_diff_win(self):
+        if platform.system() == "Windows":
+            cmd = "set env_var1=value"
+        else:
+            cmd = "export env_var1=value"
+        env_diff = env.env_diff(cmd, only_diff=True)
+        self.assertIn('env_var1', env_diff)
