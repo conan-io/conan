@@ -162,3 +162,12 @@ class TestConan(ConanFile):
             self.assertEqual(5, len(os.listdir(short_folder)))
             client.run("install dep/1.0@ --build")
             self.assertEqual(5, len(os.listdir(short_folder)))
+
+    def test_info_paths(self):
+        # https://github.com/conan-io/conan/issues/8172
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("export . test/1.0@")
+        client.run("info test/1.0@ --paths")
+        print(client.out)
+        client.run("info test/1.0@ --paths")
