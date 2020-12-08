@@ -1961,7 +1961,6 @@ class Command(object):
         else:
             self._out.success("Conan version %s" % client_version)
 
-
     def _show_help(self):
         """
         Prints a summary of all commands.

@@ -15,6 +15,11 @@ class VersionTest(unittest.TestCase):
         client.run("version")
         self.assertIn("Conan version %s" % __version__, client.out)
 
+    def test_version_original_command(self):
+        client = TestClient()
+        client.run("--version")
+        self.assertIn("Conan version %s" % __version__, client.out)
+
     def test_version_json(self):
         json_file = "version.json"
         client = TestClient()
