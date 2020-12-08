@@ -1941,6 +1941,27 @@ class Command(object):
                                     lockfile=args.lockfile,
                                     lockfile_out=args.lockfile_out)
 
+    def version(self, *args):
+        """ Show Conan version
+        """
+        parser = argparse.ArgumentParser(description=self.version.__doc__,
+                                         prog="conan version",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the version information will be '
+                                 'written')
+
+        args = parser.parse_args(*args)
+        if args.json:
+            json_content = json.dumps({"version": client_version})
+            json_path = args.json
+            if not os.path.isabs(args.json):
+                json_path = os.path.join(get_cwd(), args.json)
+            save(json_path, json_content)
+        else:
+            self._out.success("Conan version %s" % client_version)
+
+
     def _show_help(self):
         """
         Prints a summary of all commands.
