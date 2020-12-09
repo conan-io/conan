@@ -1,7 +1,9 @@
+import textwrap
 import unittest
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -94,5 +96,31 @@ cmake_minimum_required(VERSION 2.8.12)
 
         client.run("remove * --force")
         client.run("create . user/channel")
-        self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
-                      client.out)
+        self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!", client.out)
+
+    @pytest.mark.tool_cmake
+    def test_cmake_install_test_package(self):
+        client = TestClient()
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake, load
+            class TestConan(ConanFile):
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.install()
+                def test(self):
+                    self.output.info("Content: %s" % load("package/include/header.h"))
+            """)
+        cmake = textwrap.dedent("""set(CMAKE_CXX_COMPILER_WORKS 1)
+            project(Chat NONE)
+            cmake_minimum_required(VERSION 2.8.12)
+            install(FILES header.h DESTINATION include)
+            """)
+        client.save({"conanfile.py": GenConanfile(),
+                     "test/conanfile.py": test_conanfile,
+                     "test/CMakeLists.txt": cmake,
+                     "test/header.h": "my header h!!"})
+
+        client.run("create . pkg/0.1@")
+        self.assertIn("pkg/0.1 (test package): Running test()", client.out)
+        self.assertIn("pkg/0.1 (test package): Content: my header h!!", client.out)
