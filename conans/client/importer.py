@@ -56,6 +56,9 @@ def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
         date = timestamp_now()
         file_dict = {}
         for f in copied_files:
+            if os.path.islink(f) and not os.path.exists(os.readlink(f)):
+                raise ConanException("Could not import '{}': Broken symbolic link."
+                                     .format(os.path.basename(f)))
             abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)

@@ -7,6 +7,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
+from conans.tools import os_info
 
 conanfile = """
 from conans import ConanFile
@@ -283,3 +284,38 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
+
+
+class SymbolicLinksImportsTest(unittest.TestCase):
+
+    @unittest.skipIf(os_info.is_windows, "Symbolic link is not suppported on Windows.")
+    def test_symbolic_link_lib(self):
+        conanfile_txt = textwrap.dedent("""
+            [requires]
+            foo/0.1.0
+
+            [imports]
+            bin, *.dll -> .
+            lib, *.dylib -> .
+            lib, *.so -> .
+        """)
+
+        conanfile_py = textwrap.dedent("""
+            from conans import ConanFile, tools
+            import os
+            class Pkg(ConanFile):
+                def build(self):
+                    tools.save("libfoo.so.0.1.0", "ELF")
+                    os.symlink("libfoo.so.0.1.0", "libfoo.so")
+                def package(self):
+                    self.copy("*.so*", dst="lib", symlinks=True)
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_py})
+        client.run("create conanfile.py foo/0.1.0@")
+
+        consumer = TestClient(cache_folder=client.cache_folder)
+        consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
+        consumer.run("install conanfile.txt", assert_error=True)
+        self.assertIn("Could not import 'libfoo.so': Broken symbolic link.", consumer.out)
