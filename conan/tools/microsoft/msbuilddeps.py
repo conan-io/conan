@@ -13,6 +13,7 @@ class MSBuildDeps(object):
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup Label="ConanVariables">
+            <Conan{name}RootFolder>{root_folder}</Conan{name}RootFolder>
             <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
             <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
             <Conan{name}PreprocessorDefinitions>{definitions}</Conan{name}PreprocessorDefinitions>
@@ -151,6 +152,7 @@ class MSBuildDeps(object):
 
         fields = {
             'name': name,
+            'root_folder': cpp_info.rootpath,
             'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),

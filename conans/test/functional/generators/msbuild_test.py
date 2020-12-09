@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 import unittest
@@ -453,6 +454,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . mypkg/0.1@")
         client.run("install mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
+        # https://github.com/conan-io/conan/issues/8163
+        props = client.load("conan_mypkg_release_x64.props")  # default Release/x64
+        folder = props[props.find("<ConanmypkgRootFolder>")+len("<ConanmypkgRootFolder>")
+                       :props.find("</ConanmypkgRootFolder>")]
+        self.assertTrue(os.path.isfile(os.path.join(folder, "conaninfo.txt")))
 
     def test_install_reference_gcc(self):
         client = TestClient()
