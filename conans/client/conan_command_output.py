@@ -8,15 +8,12 @@ from conans.client.graph.grapher import Grapher
 from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANINFO
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
-from conans.util.env_reader import get_env
 from conans.util.files import save
 from conans import __version__ as client_version
 from conans.util.misc import make_tuple
-from conans.util.windows import CONAN_REAL_PATH
 
 
 class CommandOutputer(object):
@@ -152,12 +149,7 @@ class CommandOutputer(object):
                 item_data["build_folder"] = package_layout.build(pref)
 
                 pref = PackageReference(ref, package_id)
-                package_folder = package_layout.package(pref)
-                # If the package folder exist, but doesn't contain package, it was short-folder new
-                if (os.path.isdir(package_folder)
-                        and not os.path.exists(os.path.join(package_folder, CONANINFO))):
-                    package_layout.package_remove(pref)
-                item_data["package_folder"] = package_folder
+                item_data["package_folder"] = package_layout.package(pref)
 
             try:
                 package_metadata = self._cache.package_layout(ref).load_metadata()
