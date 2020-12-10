@@ -573,10 +573,10 @@ class MSBuildGeneratorTest(unittest.TestCase):
         myproject_cpp = gen_function_cpp(name="main", msg="MyProject")
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj.replace("conan_Hello3.props",
-                                                                          "conan_deps.props"),
+                                                                          "conandeps.props"),
                  "MyProject/MyProject.cpp": myproject_cpp,
                  "MyApp/MyApp.vcxproj": myapp_vcxproj.replace("conan_Hello1.props",
-                                                              "conan_deps.props"),
+                                                              "conandeps.props"),
                  "MyApp/MyApp.cpp": myapp_cpp,
                  "conanfile.py": conanfile}
 
@@ -585,3 +585,28 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("'msbuild' has been deprecated and moved.", client.out)
         client.run("build .")
         self.assertNotIn("warning MSB4011", client.out)
+
+    def test_install_build_requires(self):
+        # https://github.com/conan-io/conan/issues/8170
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . tool/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            class HelloConan(ConanFile):
+                settings = "os", "build_type", "compiler", "arch"
+                build_requires = "tool/1.0"
+                generators = "MSBuildDeps"
+                def build(self):
+                    deps = load("conandeps.props")
+                    assert "conan_tool.props" in deps
+                    self.output.info("Conan_tools.props in deps")
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        deps = client.load("conandeps.props")
+        self.assertIn("conan_tool.props", deps)
+        client.run("create . pkg/0.1@")
+        self.assertIn("Conan_tools.props in deps", client.out)
+
