@@ -3,14 +3,62 @@ import platform
 
 from conans.client import tools
 from conans.client.build import join_arguments
-from conans.client.build.cmake_flags import is_multi_configuration, get_generator
+from conans.client.build.cmake_flags import is_multi_configuration
 from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
-from conans.client.tools.oss import cpu_count, args_to_string
+from conans.client.tools.oss import cpu_count, args_to_string, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import mkdir
+from conans.util.log import logger
+
+
+def get_generator(conanfile):
+    # Returns the name of the generator to be used by CMake
+    # TODO: Provide a way to configure the generator from config
+    if "CONAN_CMAKE_GENERATOR" in os.environ:
+        return os.environ["CONAN_CMAKE_GENERATOR"]
+
+    compiler = conanfile.settings.get_safe("compiler")
+    if compiler == "msvc":
+        toolset = conanfile.settings.get_safe("compiler.toolset")
+        _visuals = {'140': '14 2015',
+                    '141': '15 2017',
+                    '142': '16 2019'}[toolset]
+        base = "Visual Studio %s" % _visuals
+        return base
+
+    compiler_base = conanfile.settings.get_safe("compiler.base")
+    arch = conanfile.settings.get_safe("arch")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
+    os_build, _, _, _ = get_cross_building_settings(conanfile)
+
+    if not compiler or not compiler_version or not arch:
+        if os_build == "Windows":
+            logger.warning("CMake generator could not be deduced from settings")
+            return None
+        return "Unix Makefiles"
+
+    if compiler == "Visual Studio" or compiler_base == "Visual Studio":
+        version = compiler_base_version or compiler_version
+        _visuals = {'8': '8 2005',
+                    '9': '9 2008',
+                    '10': '10 2010',
+                    '11': '11 2012',
+                    '12': '12 2013',
+                    '14': '14 2015',
+                    '15': '15 2017',
+                    '16': '16 2019'}.get(version, "UnknownVersion %s" % version)
+        base = "Visual Studio %s" % _visuals
+        return base
+
+    # The generator depends on the build machine, not the target
+    if os_build == "Windows" and compiler != "qcc":
+        return "MinGW Makefiles"  # it is valid only under Windows
+
+    return "Unix Makefiles"
 
 
 def _validate_recipe(conanfile):

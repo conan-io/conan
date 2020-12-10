@@ -238,6 +238,75 @@ class WinTest(Base):
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
 
+    @parameterized.expand([("Debug", "static", "141", "14", "x86", True),
+                           ("Release", "dynamic", "141", "17", "x86_64", False)])
+    def test_toolchain_win_msvc(self, build_type, runtime, toolset, cppstd, arch, shared):
+        settings = {"compiler": "msvc",
+                    "compiler.toolset": toolset,
+                    "compiler.runtime": runtime,
+                    "compiler.cppstd": cppstd,
+                    "arch": arch,
+                    "build_type": build_type,
+                    }
+        options = {"shared": shared}
+        install_out = self._run_build(settings, options)
+        self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
+
+        # FIXME: Hardcoded VS version and partial toolset check
+        self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
+                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        self.assertIn("Microsoft Visual Studio/2017", self.client.out)
+
+        runtime = "MT" if runtime == "static" else "MD"
+        generator_platform = "x64" if arch == "x86_64" else "Win32"
+        arch = "x64" if arch == "x86_64" else "X86"
+        shared_str = "ON" if shared else "OFF"
+        vals = {"CMAKE_GENERATOR_PLATFORM": generator_platform,
+                "CMAKE_BUILD_TYPE": "",
+                "CMAKE_CXX_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc",
+                "CMAKE_CXX_FLAGS_DEBUG": "/%sd /Zi /Ob0 /Od /RTC1" % runtime,
+                "CMAKE_CXX_FLAGS_RELEASE": "/%s /O2 /Ob2 /DNDEBUG" % runtime,
+                "CMAKE_C_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /W3",
+                "CMAKE_C_FLAGS_DEBUG": "/%sd /Zi /Ob0 /Od /RTC1" % runtime,
+                "CMAKE_C_FLAGS_RELEASE": "/%s /O2 /Ob2 /DNDEBUG" % runtime,
+                "CMAKE_SHARED_LINKER_FLAGS": "/machine:%s" % arch,
+                "CMAKE_EXE_LINKER_FLAGS": "/machine:%s" % arch,
+                "CMAKE_CXX_STANDARD": cppstd,
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "BUILD_SHARED_LIBS": shared_str}
+
+        def _verify_out(marker=">>"):
+            if shared:
+                self.assertIn("app_lib.dll", self.client.out)
+            else:
+                self.assertNotIn("app_lib.dll", self.client.out)
+
+            out = str(self.client.out).splitlines()
+            for k, v in vals.items():
+                self.assertIn("%s %s: %s" % (marker, k, v), out)
+
+        _verify_out()
+
+        toolchain = self.client.load("build/conan_toolchain.cmake")
+        include = self.client.load("build/conan_project_include.cmake")
+        opposite_build_type = "Release" if build_type == "Debug" else "Debug"
+        settings["build_type"] = opposite_build_type
+        self._run_build(settings, options)
+        # The generated toolchain files must be identical because it is a multi-config
+        self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
+        self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
+
+        self._run_app("Release", bin_folder=True)
+        self._run_app("Debug", bin_folder=True)
+
+        self._modify_code()
+        time.sleep(1)
+        self._incremental_build(build_type=build_type)
+        _verify_out(marker="++>>")
+        self._run_app(build_type, bin_folder=True, msg="AppImproved")
+        self._incremental_build(build_type=opposite_build_type)
+        self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
+
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
