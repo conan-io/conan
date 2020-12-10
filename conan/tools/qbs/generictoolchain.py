@@ -73,15 +73,7 @@ class QbsToolchainException(ConanException):
 def _bool(b):
     if b is None:
         return None
-
-    if type(b)is not bool:
-        raise QbsToolchainException(
-            'Tried to convert non bool type value to bool')
-
-    if b:
-        return 'true'
-    else:
-        return 'false'
+    return str(b).lower()
 
 
 def _env_var_to_list(var):

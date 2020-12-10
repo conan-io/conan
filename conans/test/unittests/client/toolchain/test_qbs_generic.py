@@ -46,8 +46,6 @@ class QbsGenericTest(unittest.TestCase):
     def test_convert_bool(self):
         self.assertEqual(qbs._bool(True), 'true')
         self.assertEqual(qbs._bool(False), 'false')
-        with self.assertRaises(qbs.QbsToolchainException):
-            qbs._bool("")
 
     def test_convert_build_variant(self):
         conanfile = MockConanfileWithFolders(MockSettings({
