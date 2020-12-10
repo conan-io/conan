@@ -113,31 +113,6 @@ class TestConan(ConanFile):
         self.assertIn("conaninfo.txt", client.out)
         self.assertIn("conanmanifest.txt", client.out)
 
-    def test_package_folder_removed(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class TestConan(ConanFile):
-                short_paths = True
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create . test/1.0@")
-        self.assertIn("test/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
-        ref = ConanFileReference.loads("test/1.0")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        pkg_folder = client.cache.package_layout(ref).package(pref)
-
-        shutil.rmtree(pkg_folder)
-
-        client.run("install test/1.0@", assert_error=True)
-        self.assertIn("ERROR: Package 'test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' corrupted."
-                      " Package folder must exist:", client.out)
-        client.run("remove test/1.0@ -p -f")
-        client.run("install test/1.0@", assert_error=True)
-        self.assertIn("ERROR: Missing binary: test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                      client.out)
-
     @parameterized.expand([(True,), (False,)])
     def test_leaking_folders(self, use_always_short_paths):
         # https://github.com/conan-io/conan/issues/7983
