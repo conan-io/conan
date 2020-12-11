@@ -7,7 +7,7 @@ import uuid
 
 import yaml
 
-from conans import DefaultLayout
+from conan.tools.layout import DefaultLayout
 from conans.client.conf.required_version import validate_conan_version
 from conans.client.loader_txt import ConanFileTextLoader
 from conans.client.tools.files import chdir
@@ -442,7 +442,7 @@ def load_recipe_layout(conanfile):
                                  "object to self.lyt")
         return  # Already defined method
     if isinstance(conanfile.layout, str):  # FIXME: I would remove this way to instance it
-        from conans import CMakeLayout
+        from conan.tools.layout import CMakeLayout
 
         if conanfile.layout == "cmake":
             conanfile.lyt = CMakeLayout(conanfile)

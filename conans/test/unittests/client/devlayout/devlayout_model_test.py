@@ -1,6 +1,6 @@
 import unittest
 
-from conans import DefaultLayout
+from conan.tools.layout import DefaultLayout
 from conans.test.utils.mocks import MockSettings, MockConanfile
 
 

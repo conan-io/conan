@@ -12,7 +12,8 @@ class LayoutLoadTest(unittest.TestCase):
     def test_method_layout_load(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
-              from conans import ConanFile, CMake, CMakeLayout
+              from conans import ConanFile, CMake
+              from conan.tools.layout import CMakeLayout
 
               class Pkg(ConanFile):
                   settings = "os", "compiler", "arch", "build_type"
@@ -93,7 +94,7 @@ class LayoutLoadTest(unittest.TestCase):
                    self.output.warn("Here, building")
                """)
         override_layout = textwrap.dedent("""
-        from conans import DefaultLayout
+        from conan.tools.layout import DefaultLayout
 
         def layout(self):
             self.lyt = DefaultLayout(self)
@@ -125,7 +126,7 @@ class LayoutLoadTest(unittest.TestCase):
                    self.output.warn("Here, building")
                """)
         override_layout = textwrap.dedent("""
-        from conans import DefaultLayout
+        from conan.tools.layout import DefaultLayout
 
         def layout(self):
             self.lyt = DefaultLayout(self)
@@ -156,7 +157,7 @@ class LayoutLoadTest(unittest.TestCase):
                     self.output.warn("Here, being reused: {}".format(self.lyt.build))
                """)
         override_layout = textwrap.dedent("""
-        from conans import DefaultLayout
+        from conan.tools.layout import DefaultLayout
 
         def layout(self):
             self.lyt = DefaultLayout(self)

@@ -10,12 +10,14 @@ from conans import tools
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TurboTestClient
 from conans.util.files import mkdir
+from test.assets.sources import gen_function_h, gen_function_cpp
 
 
 @attr("slow")
 class DevLayoutTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
-        from conans import ConanFile, CMake, CMakeLayout
+        from conans import ConanFile, CMake
+        from conan.tools.layout import CMakeLayout
 
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -53,46 +55,10 @@ class DevLayoutTest(unittest.TestCase):
         target_include_directories(app PRIVATE include)
         target_include_directories(hello PUBLIC include)
         """)
-    hellopp = textwrap.dedent("""
-        #include "hello.h"
 
-        std::string hello(){
-            #ifdef 	_M_IX86
-                #ifdef NDEBUG
-                return  "Hello World Release 32bits!";
-                #else
-                return  "Hello World Debug 32bits!";
-                #endif
-            #else
-                #ifdef NDEBUG
-                return  "Hello World Release!";
-                #else
-                return  "Hello World Debug!";
-                #endif
-            #endif
-        }
-        """)
-    helloh = textwrap.dedent("""
-        #pragma once
-        #include <string>
-
-        #ifdef WIN32
-          #define HELLO_EXPORT __declspec(dllexport)
-        #else
-          #define HELLO_EXPORT
-        #endif
-
-        HELLO_EXPORT
-        std::string hello();
-        """)
-    app = textwrap.dedent(r"""
-        #include <iostream>
-        #include "hello.h"
-
-        int main(){
-            std::cout << "****\n" << hello() << "\n****\n\n";
-        }
-        """)
+    hellopp = gen_function_cpp(name="hello")
+    helloh = gen_function_h(name="hello")
+    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     test_cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 2.8.12)
         set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -148,7 +114,7 @@ class DevLayoutTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/0.1@user/testing")
         pref = client.create(ref, conanfile=None)  # Use the created conanfile
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
-        self.assertIn("Hello World Release!", client.out)
+        self.assertIn("main: Release!", client.out)
         pl = client.cache.package_layout(ref)
         # There is a "build" subfolder also in the cache
         self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
@@ -158,7 +124,8 @@ class DevLayoutTest(unittest.TestCase):
         # We can even change the src and the package layout and it works
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
-                from conans import ConanFile, CMake, DefaultLayout
+                from conans import ConanFile, CMake
+                from conan.tools.layout import DefaultLayout
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
@@ -197,7 +164,7 @@ class DevLayoutTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/0.1@user/testing")
         pref = client.create(ref, conanfile=None)  # Use the created conanfile
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
-        self.assertIn("Hello World Release!", client.out)
+        self.assertIn("main: Release!", client.out)
         pl = client.cache.package_layout(ref)
         # There is a "my_custom_build" subfolder also in the cache
         self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
@@ -220,7 +187,7 @@ class DevLayoutTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.dll' file: hello.dll", client.out)
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
         self.assertIn("imports(): Copied 1 '.dll' file: hello.dll", client.out)
-        self.assertIn("Hello World Release!", client.out)
+        self.assertIn("main: Release!", client.out)
 
     @parameterized.expand([(True,), (False,)])
     @unittest.skipIf(platform.system() != "Windows", "Needs windows")
@@ -233,17 +200,18 @@ class DevLayoutTest(unittest.TestCase):
             client.run_command('cmake ../ -G "Visual Studio 15 Win64" %s' % shared)
             client.run_command("cmake --build . --config Release")
             client.run_command(r"Release\\app.exe")
-            self.assertIn("Hello World Release!", client.out)
+            self.assertIn("main: Release!", client.out)
             client.run_command("cmake --build . --config Debug")
             client.run_command(r"Debug\\app.exe")
-            self.assertIn("Hello World Debug!", client.out)
+            self.assertIn("main: Debug!", client.out)
 
         client.run("editable add . pkg/0.1@user/testing")
         # Consumer of editable package
         client2 = TestClient(cache_folder=client.cache_folder)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake, tools, CMakeLayout
+            from conans import ConanFile, CMake, tools
+            from conan.tools.layout import CMakeLayout
 
             class Consumer(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
@@ -280,10 +248,10 @@ class DevLayoutTest(unittest.TestCase):
             # alternative 2: virtualrunenv switch debug/release???
             # alternative 3: environment in cmake => path in MSBuild
             client2.run_command(r"Release\\app.exe")
-            self.assertIn("Hello World Release!", client2.out)
+            self.assertIn("main: Release!", client2.out)
             client2.run_command("cmake --build . --config Debug")
             client2.run_command(r"Debug\\app.exe")
-            self.assertIn("Hello World Debug!", client2.out)
+            self.assertIn("main: Debug!", client2.out)
 
         # do changes
         client.save({"src/hello.cpp": self.hellopp.replace("World", "Moon")})
@@ -344,7 +312,7 @@ class DevLayoutTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/0.1@user/testing")
         pref = client.create(ref, conanfile=None)  # Use the created conanfile
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
-        self.assertIn("Hello World Release!", client.out)
+        self.assertIn("main: Release!", client.out)
         pl = client.cache.package_layout(ref)
         # There is a "cmake-build-release" sub-folder also in the cache
         build_path = os.path.join(pl.build(pref.copy_clear_revs()), "cmake-build-release")
@@ -356,7 +324,7 @@ class DevLayoutTest(unittest.TestCase):
         # We can repeat the create now with debug
         pref = client.create(ref, conanfile=None, args="-s build_type=Debug")
         self.assertIn("pkg/0.1@user/testing package(): Packaged 1 '.h' file: hello.h", client.out)
-        self.assertIn("Hello World Debug!", client.out)
+        self.assertIn("main: Debug!", client.out)
         pl = client.cache.package_layout(ref)
         self.assertTrue(os.path.exists(os.path.join(pl.build(pref.copy_clear_revs()),
                                                     "cmake-build-debug")))
@@ -385,7 +353,8 @@ class DevLayoutTest(unittest.TestCase):
         correctly for the editable-consumers"""
         client = TurboTestClient()
         conanfile = textwrap.dedent("""
-                from conans import ConanFile, CMake, DefaultLayout
+                from conans import ConanFile, CMake
+                from conan.tools.layout import DefaultLayout
 
                 class Pkg(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
@@ -472,20 +441,21 @@ class DevLayoutTest(unittest.TestCase):
             client.run_command('cmake ../  %s -DCMAKE_BUILD_TYPE=Release' % shared)
             client.run_command("cmake --build .")
             client.run_command(r"./app")
-            self.assertIn("Hello World Release!", client.out)
+            self.assertIn("main: Release!", client.out)
         client.run("install . -s build_type=Debug")
         with client.chdir("cmake-build-debug"):
             client.run_command('cmake ../  %s -DCMAKE_BUILD_TYPE=Debug' % shared)
             client.run_command("cmake --build .")
             client.run_command(r"./app")
-            self.assertIn("Hello World Debug!", client.out)
+            self.assertIn("main: Debug!", client.out)
 
         client.run("editable add . pkg/0.1@user/testing")
         # Consumer of editable package
         client2 = TestClient(cache_folder=client.cache_folder)
         consumer = textwrap.dedent("""
             import os
-            from conans import ConanFile, CMake, tools, CMakeLayout
+            from conans import ConanFile, CMake, tools
+            from conan.tools.layout import CMakeLayout
 
             class Consumer(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
@@ -518,37 +488,37 @@ class DevLayoutTest(unittest.TestCase):
             client2.run_command('cmake .. -DCMAKE_BUILD_TYPE=Release')
             client2.run_command("cmake --build . ")
             client2.run_command("./app")
-            self.assertIn("Hello World Release!", client2.out)
+            self.assertIn("hello: Release!", client2.out)
 
         with client2.chdir("cmake-build-debug"):
             client2.run_command('cmake .. -DCMAKE_BUILD_TYPE=Debug')
             client2.run_command("cmake --build . ")
             client2.run_command("./app")
-            self.assertIn("Hello World Debug!", client2.out)
+            self.assertIn("hello: Debug!", client2.out)
 
         # do changes
-        client.save({"src/hello.cpp": self.hellopp.replace("World", "Moon")})
+        client.save({"src/hello.cpp": self.hellopp.replace("hello:", "bye:")})
         with client.chdir("cmake-build-release"):
             client.run_command("cmake .. -DCMAKE_BUILD_TYPE=Release")
             client.run_command("cmake --build .")
             client.run_command(r"./app")
-            self.assertIn("Hello Moon Release!", client.out)
+            self.assertIn("bye: Release!", client.out)
         with client.chdir("cmake-build-debug"):
             client.run_command("cmake .. -DCMAKE_BUILD_TYPE=Debug")
             client.run_command("cmake --build .")
             client.run_command(r"./app")
-            self.assertIn("Hello Moon Debug!", client.out)
+            self.assertIn("bye: Debug!", client.out)
 
         # It is NOT necessary to "install" again, to fire the imports() nor to copy the shared
         with client2.chdir("cmake-build-release"):
             client2.run_command("cmake --build . ")
             client2.run_command("./app")
-            self.assertIn("Hello Moon Release!", client2.out)
+            self.assertIn("bye: Release!", client2.out)
 
         with client2.chdir("cmake-build-debug"):
             client2.run_command("cmake --build . ")
             client2.run_command("./app")
-            self.assertIn("Hello Moon Debug!", client2.out)
+            self.assertIn("bye: Debug!", client2.out)
 
     # TODO: In other place: Test mocked autotools and cmake with layout
     # TODO: Test the export of the layout file is blocked
