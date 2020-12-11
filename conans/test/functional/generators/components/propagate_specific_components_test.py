@@ -67,7 +67,7 @@ class PropagateSpecificComponents(unittest.TestCase):
         t = TestClient(cache_folder=self.cache_folder)
         t.save({'conanfile.py': self.app})
         t.run("install . -g cmake_find_package -g cmake_find_package_multi")
-        find = t.load("findmiddle.cmake")
+        find = t.load("Findmiddle.cmake")
         self.assertIn('set(middle_LIBRARIES_TARGETS "${middle_LIBRARIES_TARGETS};top::cmp1")', find)
         self.assertNotIn("top::top", find)
         config = t.load("middleTarget-release.cmake")
