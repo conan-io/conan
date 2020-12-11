@@ -155,10 +155,7 @@ class CustomSettingsTest(unittest.TestCase):
             set(CMAKE_EXE_LINKER_FLAGS_MYRELEASE ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
             """)
         self.client.save({"src/CMakeLists.txt": cmake})
-        self.client.run("create . hello/0.1@ -s compiler.version=15 "
-                        "-s build_type=MyRelease -o hello:shared=True")
-        self.client.run("create . hello/0.1@ -s compiler.version=15 "
-                        "-s build_type=MyRelease")
+        self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
