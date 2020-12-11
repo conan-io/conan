@@ -1,6 +1,6 @@
 import textwrap
 
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 
 
 class CMakeiOSToolchain(CMakeToolchainBase):

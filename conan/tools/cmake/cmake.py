@@ -1,10 +1,10 @@
 import os
 import platform
 
+from conan.tools.cmake.utils import get_generator, is_multi_configuration
+from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client import tools
 from conans.client.build import join_arguments
-from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException

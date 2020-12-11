@@ -3,7 +3,7 @@ import textwrap
 
 from conans.client.tools.files import which
 from conans.errors import ConanException
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 
 
 class CMakeAndroidToolchain(CMakeToolchainBase):
