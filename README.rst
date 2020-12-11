@@ -237,8 +237,8 @@ License
 
 `MIT LICENSE <./LICENSE.md>`__
 
-.. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
-   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
+.. |Build Status Develop| image:: https://ci.conan.io/buildStatus/icon?job=ConanTestSuite/develop
+   :target: https://ci.conan.io/job/ConanTestSuite/job/develop/
 
 .. |Develop climate| image:: https://api.codeclimate.com/v1/badges/081b53e570d5220b34e4/maintainability.svg
    :target: https://codeclimate.com/github/conan-io/conan/maintainability

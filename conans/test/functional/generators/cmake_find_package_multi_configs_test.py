@@ -7,6 +7,7 @@ import pytest
 
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
+
 from conans.util.files import save, load
 
 
@@ -78,8 +79,7 @@ class CustomConfigurationTest(unittest.TestCase):
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
         # Run the configure corresponding to this test case
-        build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
-        with self.client.chdir(build_directory):
+        with self.client.chdir('build'):
             self.client.run("install .. %s -o hello:shared=True" % settings)
             self.client.run("install .. %s -o hello:shared=False" % settings)
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
