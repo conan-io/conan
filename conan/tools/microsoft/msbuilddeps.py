@@ -220,8 +220,8 @@ class MSBuildDeps(object):
         general_name = "conandeps.props"
         conf_name = self._config_filename()
         condition = self._condition()
-        # Include all direct build_requires for both build & host context. This might change
-        direct_deps = self._conanfile.deps_cpp_info.direct_deps
+        # Include all direct build_requires for host context. This might change
+        direct_deps = self._conanfile.deps_cpp_info.direct_host_deps
         result[general_name] = self._deps_props(general_name, direct_deps)
         for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             # One file per configuration, with just the variables
