@@ -212,12 +212,12 @@ class CachedDownloaderUnitTest(unittest.TestCase):
             def __init__(self):
                 self.calls = Counter()
 
-            def download(self, url, file_path_=None, *args, **kwargs):
+            def download(self, url, file_path=None, *args, **kwargs):
                 if "slow" in url:
                     time.sleep(0.5)
                 self.calls[url] += 1
-                if file_path_:
-                    save(file_path_, url)
+                if file_path:
+                    save(file_path, url)
                 else:
                     return url
 

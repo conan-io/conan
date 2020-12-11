@@ -262,6 +262,14 @@ set_property(TARGET {{name}}::{{name}}
         super(CMakeFindPackageMultiGenerator, self).__init__(conanfile)
         self.configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
         self.configuration = str(self.conanfile.settings.build_type)
+        # FIXME: Ugly way to define the output path
+        self.output_path = os.getcwd()
+
+    def generate(self):
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.join(self.output_path, generator_file)
+            save(generator_file, content)
 
     @property
     def filename(self):
@@ -305,7 +313,6 @@ set_property(TARGET {{name}}::{{name}}
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
-
                 ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
@@ -382,11 +389,3 @@ set_property(TARGET {{name}}::{{name}}
                                           find_dependencies_block=find_dependencies_block,
                                           macros_and_functions=macros_and_functions)
         return tmp
-
-    def generate(self):
-        # FIXME: Ugly way to define the output path
-        self.output_path = os.getcwd()
-        generator_files = self.content
-        for generator_file, content in generator_files.items():
-            generator_file = os.path.abspath(generator_file)
-            save(generator_file, content)
