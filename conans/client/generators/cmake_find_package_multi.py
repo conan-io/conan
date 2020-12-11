@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -8,11 +9,11 @@ from conans.client.generators.cmake_find_package_common import (find_transitive_
                                                                 target_template,
                                                                 CMakeFindPackageCommonMacros)
 from conans.client.generators.cmake_multi import extend
+from conans.util.files import save
 
 
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
-    _configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
 
     config_template = textwrap.dedent("""
         {macros_and_functions}
@@ -257,6 +258,19 @@ set_property(TARGET {{name}}::{{name}}
         endif()
         """))
 
+    def __init__(self, conanfile):
+        super(CMakeFindPackageMultiGenerator, self).__init__(conanfile)
+        self.configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
+        self.configuration = str(self.conanfile.settings.build_type)
+        # FIXME: Ugly way to define the output path
+        self.output_path = os.getcwd()
+
+    def generate(self):
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.join(self.output_path, generator_file)
+            save(generator_file, content)
+
     @property
     def filename(self):
         return None
@@ -265,7 +279,7 @@ set_property(TARGET {{name}}::{{name}}
     def content(self):
         ret = {}
         build_type = str(self.conanfile.settings.build_type).upper()
-        build_type_suffix = "_{}".format(build_type) if build_type else ""
+        build_type_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             self._validate_components(cpp_info)
             pkg_filename = self._get_filename(cpp_info)
@@ -299,7 +313,7 @@ set_property(TARGET {{name}}::{{name}}
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
-                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
+                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info)
@@ -333,7 +347,7 @@ set_property(TARGET {{name}}::{{name}}
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message,
-                    configs=self._configurations
+                    configs=self.configurations
                 )
                 ret[self._config_filename(pkg_filename)] = target_config
         return ret
@@ -361,7 +375,7 @@ set_property(TARGET {{name}}::{{name}}
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.render(name=name, configs=self._configurations)
+        targets_props = self.target_properties.render(name=name, configs=self.configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
