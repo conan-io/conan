@@ -24,19 +24,20 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
         build_modes = ["never"]
     try:
         install_folder = deps_install(app=app,
-                                      create_reference=reference,
-                                      ref_or_path=conanfile_abs_path,
-                                      install_folder=test_build_folder,
-                                      remotes=remotes,
-                                      graph_info=graph_info,
-                                      update=update,
-                                      build_modes=build_modes,
-                                      manifest_folder=manifest_folder,
-                                      manifest_verify=manifest_verify,
-                                      manifest_interactive=manifest_interactive,
-                                      keep_build=keep_build,
-                                      recorder=recorder)
-        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder, package_folder=None,
+                     create_reference=reference,
+                     ref_or_path=conanfile_abs_path,
+                     install_folder=test_build_folder,
+                     remotes=remotes,
+                     graph_info=graph_info,
+                     update=update,
+                     build_modes=build_modes,
+                     manifest_folder=manifest_folder,
+                     manifest_verify=manifest_verify,
+                     manifest_interactive=manifest_interactive,
+                     keep_build=keep_build,
+                     recorder=recorder)
+        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
+                  package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=install_folder, test=reference)
     finally:
         if delete_after_build:

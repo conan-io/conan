@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import rmdir
@@ -10,7 +10,7 @@ from conans.util.files import rmdir
 def _prepare_sources(cache, ref, remote_manager, loader, remotes):
     conan_file_path = cache.package_layout(ref).conanfile()
     conanfile = loader.load_basic(conan_file_path)
-    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes)
     return conanfile.short_paths
 
 
@@ -19,7 +19,7 @@ def cmd_copy(ref, user_channel, package_ids, cache, user_io, remote_manager, loa
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
-    # It is important to get the revision early, so "complete_recipe_sources" can
+    # It is important to get the revision early, so "retrieve_exports_sources" can
     # get the right revision sources, not latest
     layout = cache.package_layout(ref)
     src_metadata = layout.load_metadata()
