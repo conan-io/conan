@@ -221,7 +221,10 @@ class MSBuildDeps(object):
         conf_name = self._config_filename()
         condition = self._condition()
         # Include all direct build_requires for both build & host context. This might change
-        build_requires_names = [name for name, _ in self._conanfile.build_requires.keys()]
+        if hasattr(self._conanfile, "build_requires"):
+            build_requires_names = [name for name, _ in self._conanfile.build_requires.keys()]
+        else:
+            build_requires_names = []
         public_deps = list(self._conanfile.requires.keys()) + build_requires_names
         result[general_name] = self._deps_props(general_name, public_deps)
         for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
