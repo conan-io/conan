@@ -7,6 +7,8 @@ class DefaultLayout(object):
 
         self.build = "build"  # Where the software is built (relative to conanfile.build_folder)
         self.src = ""  # Where the CMakeLists.txt is (relative to conanfile.source_folder)
+        # self.package = ""
+
         self._install = None  # Will be defaulted to the value of build in the getter
 
         # Relative to self.src

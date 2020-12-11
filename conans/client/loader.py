@@ -19,7 +19,6 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
-from conans.paths import LAYOUT_PY
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
 
@@ -209,7 +208,6 @@ class ConanFileLoader(object):
         conanfile.in_local_cache = False
         try:
             self._initialize_conanfile(conanfile, profile_host)
-            load_overrides_layout_file(os.path.dirname(conanfile_path), conanfile)
 
             # The consumer specific
             conanfile.develop = True
@@ -244,7 +242,6 @@ class ConanFileLoader(object):
         try:
             self._initialize_conanfile(conanfile, profile)
             if editable:
-                load_overrides_layout_file(os.path.dirname(conanfile_path), conanfile)
                 conanfile.in_local_cache = False
                 conanfile.develop = True
             return conanfile
@@ -453,36 +450,3 @@ def load_recipe_layout(conanfile):
     else:
         raise ConanException("Unexpected layout type declared in the "
                              "conanfile: '{}'".format(conanfile.layout.__class__.__name__))
-
-
-def load_overrides_layout_file(conanfile_folder, conanfile):
-    """Only for local methods and editables, developer overrides with priority over the
-    recipe declarations"""
-    file_path = os.path.join(conanfile_folder, LAYOUT_PY)
-    if not os.path.exists(file_path):
-        return False
-
-    import six
-    if six.PY2:
-        raise ConanException("The {} feature is Python3 only".format(LAYOUT_PY))
-
-    import importlib.util
-
-    # The module name has to be scoped to avoid collisions?
-    module_name = '{}.conan_layout'.format(conanfile_folder)
-
-    spec = importlib.util.spec_from_file_location(module_name, file_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    if not hasattr(module, "layout"):
-        raise ConanException("The file {} has no 'layout()' method".format(LAYOUT_PY))
-    if not callable(module.layout):
-        raise ConanException("Unexpected layout type declared at {}: "
-                             "'{}'".format(file_path, conanfile.layout.__class__.__name__))
-
-    # attach function as a method class
-    conanfile.lyt = None  # Invalidate the one from the recipe to validate it is correct here
-    module.layout(conanfile)
-    if not isinstance(conanfile.lyt, DefaultLayout):
-        raise ConanException("The layout() method is not assigning a DefaultLayout object to self.lyt")
-    return True
