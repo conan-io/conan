@@ -55,6 +55,8 @@ def get_generator(conanfile):
         os_build = conanfile.settings_build.get_safe('os')
     else:
         os_build = conanfile.settings.get_safe('os_build')
+    if os_build is None:  # Assume is the same specified in host settings, not cross-building
+        os_build = conanfile.settings.get_safe("os")
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
