@@ -609,4 +609,3 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("conan_tool.props", deps)
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
-

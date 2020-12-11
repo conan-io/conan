@@ -588,6 +588,7 @@ class BinaryInstaller(object):
                     env_info.PATH.extend(dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
+        conan_file.deps_cpp_info.direct_deps = [n.name for n in node.neighbors()]
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [node.ref.name for node in node_order]
