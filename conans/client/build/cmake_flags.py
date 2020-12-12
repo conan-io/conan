@@ -37,6 +37,8 @@ def get_toolset(settings, generator):
 
 def get_generator(conanfile):
     # Returns the name of the generator to be used by CMake
+    if "CONAN_CMAKE_GENERATOR" in os.environ:
+        return os.environ["CONAN_CMAKE_GENERATOR"]
 
     compiler = conanfile.settings.get_safe("compiler")
     compiler_base = conanfile.settings.get_safe("compiler.base")
