@@ -40,7 +40,7 @@ def get_generator_platform(settings, generator):
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
+    if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
             generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
@@ -221,8 +221,11 @@ class CMakeGenericToolchain(CMakeToolchainBase):
 
     def _deduce_vs_static_runtime(self):
         settings = self._conanfile.settings
-        if (settings.get_safe("compiler") == "Visual Studio" and
-            "MT" in settings.get_safe("compiler.runtime")):
+        compiler = settings.get_safe("compiler")
+        runtime = settings.get_safe("compiler.runtime")
+        if compiler == "Visual Studio" and "MT" in runtime:
+            return True
+        if compiler == "msvc" and runtime == "static":
             return True
         return False
 

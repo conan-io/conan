@@ -73,13 +73,13 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
         msvc:
             runtime: [static, dynamic]
-            toolset:
+            version:
                 140:
                 141:
-                   version: [None, "1910", "1911", "1912", "1913", "1914", "1915", "1916"]
+                   mscver: [None, "1910", "1911", "1912", "1913", "1914", "1915", "1916"]
                 142:
-                   version: [None, "1920", "1921", "1922", "1923", "1924", "1925", "1926",
-                             "1927", "1928"]
+                   mscver: [None, "1920", "1921", "1922", "1923", "1924", "1925", "1926",
+                            "1927", "1928"]
             cppstd: [None, 14, 17, 20]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
