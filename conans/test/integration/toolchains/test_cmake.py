@@ -192,7 +192,7 @@ class WinTest(Base):
         else:
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
-        runtime = "MT" if "MT" in runtime else "MD"
+        runtime = "MT" if "MT" in runtime or runtime == "static" else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch = "x64" if arch == "x86_64" else "X86"
         shared_str = "ON" if shared else "OFF"
@@ -260,26 +260,26 @@ class WinTest(Base):
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         def _verify_out(marker=">>"):
-            vars = {"CMAKE_GENERATOR_PLATFORM": "",
-                    "CMAKE_BUILD_TYPE": build_type,
-                    "CMAKE_CXX_FLAGS": "-m64",
-                    "CMAKE_CXX_FLAGS_DEBUG": "-g",
-                    "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                    "CMAKE_C_FLAGS": "-m64",
-                    "CMAKE_C_FLAGS_DEBUG": "-g",
-                    "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                    "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                    "CMAKE_EXE_LINKER_FLAGS": "-m64",
-                    "CMAKE_CXX_STANDARD": cppstd,
-                    "CMAKE_CXX_EXTENSIONS": "OFF",
-                    "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
+            cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
+                          "CMAKE_BUILD_TYPE": build_type,
+                          "CMAKE_CXX_FLAGS": "-m64",
+                          "CMAKE_CXX_FLAGS_DEBUG": "-g",
+                          "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                          "CMAKE_C_FLAGS": "-m64",
+                          "CMAKE_C_FLAGS_DEBUG": "-g",
+                          "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                          "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                          "CMAKE_EXE_LINKER_FLAGS": "-m64",
+                          "CMAKE_CXX_STANDARD": cppstd,
+                          "CMAKE_CXX_EXTENSIONS": "OFF",
+                          "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
             if shared:
                 self.assertIn("app_lib.dll", self.client.out)
             else:
                 self.assertNotIn("app_lib.dll", self.client.out)
 
             out = str(self.client.out).splitlines()
-            for k, v in vars.items():
+            for k, v in cmake_vars.items():
                 self.assertIn("%s %s: %s" % (marker, k, v), out)
 
         _verify_out()
