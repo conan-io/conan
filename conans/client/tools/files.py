@@ -110,7 +110,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
         if flat_folder:
             names = z.namelist()
-            common_folder = os.path.commonpath(names)
+            common_folder = os.path.commonprefix(names).split(os.sep)[0]
             if not common_folder:
                 raise ConanException("The zip file contains more than 1 folder in the root")
             if len(names) == 1 and len(names[0].split(os.sep)) == 1:
@@ -160,7 +160,7 @@ def untargz(filename, destination=".", pattern=None, flat_folder=False):
             members = tarredgzippedFile.getmembers()
             if flat_folder:
                 names = tarredgzippedFile.getnames()
-                common_folder = os.path.commonpath(names)
+                common_folder = os.path.commonprefix(names).split(os.sep)[0]
                 if not common_folder:
                     raise ConanException("The tgz file contains more than 1 folder in the root")
                 if len(names) == 1 and len(names[0].split(os.sep)) == 1:
