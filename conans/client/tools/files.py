@@ -55,7 +55,8 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None,
+          flat_folder=False):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -67,6 +68,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     :param pattern: Extract only paths matching the pattern. This should be a
     Unix shell-style wildcard, see fnmatch documentation for more details.
     :param output: output
+    :param flat: If all the contents are in a single dir, flat that directory.
     :return:
     """
     output = default_output(output, 'conans.client.tools.files.unzip')
@@ -74,7 +76,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern)
+        return untargz(filename, destination, pattern, flat_folder)
     if filename.endswith(".gz"):
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
@@ -84,7 +86,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
-        return untargz(filename, destination, pattern)
+        return untargz(filename, destination, pattern, flat_folder)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
@@ -103,10 +105,19 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
-        if not pattern:
-            zip_info = z.infolist()
-        else:
-            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
+        zip_info = z.infolist()
+        if pattern:
+            zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if flat_folder:
+            common_folder = None
+            for info in zip_info:
+                _check_common = os.path.normpath(info.filename).split(os.sep)[0]
+                if common_folder is None:
+                    common_folder = _check_common
+                elif _check_common != common_folder:
+                    raise ConanException("The zip file contains more than 1 folder in the root")
+                info.filename = os.sep.join(os.path.normpath(info.filename).split(os.sep)[1:])
+
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
             output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
@@ -139,14 +150,26 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None):
+def untargz(filename, destination=".", pattern=None, flat_folder=False):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        if not pattern:
+        if not pattern and not flat_folder:
             tarredgzippedFile.extractall(destination)
         else:
-            members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                  tarredgzippedFile.getmembers()))
+            members = tarredgzippedFile.getmembers()
+            if flat_folder:
+                common_folder = None
+                for member in tarredgzippedFile.getmembers():
+                    _check_common = os.path.normpath(member.name).split(os.sep)[0]
+                    if common_folder is None:
+                        common_folder = _check_common
+                    elif _check_common != common_folder:
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
+                    member.name = os.sep.join(os.path.normpath(member.name).split(os.sep)[1:])
+                    member.path = member.name
+            if pattern:
+                members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                      tarredgzippedFile.getmembers()))
             tarredgzippedFile.extractall(destination, members=members)
 
 

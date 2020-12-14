@@ -11,42 +11,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import tar_extract, gzopen_without_timestamps, save
 
 
-
-def _compress_folder(folder, tgz_path):
-    # Create a tar.gz file with the files in the folder
-    with open(tgz_path, "wb") as tgz_handle:
-        tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
-
-        files, _ = gather_files(folder)
-        for filename, abs_path in files.items():
-            info = tarfile.TarInfo(name=filename)
-            with open(filename, 'rb') as file_handler:
-                tgz.addfile(tarinfo=info, fileobj=file_handler)
-        tgz.close()
-
-
-class TarExtractPlainTest(unittest.TestCase):
-
-    def setUp(self):
-        self.tmp_folder = temp_folder()
-        with chdir(self.tmp_folder):
-            # Create a couple of files
-            ori_files_dir = os.path.join(self.tmp_folder, "subfolder-1.2.3")
-            file1 = os.path.join(ori_files_dir, "file1")
-            file2 = os.path.join(ori_files_dir, "folder", "file2")
-            file3 = os.path.join(ori_files_dir, "file3")
-
-            save(file1, "")
-            save(file2, "")
-            save(file3, "")
-
-            self.tgz_file = os.path.join(self.tmp_folder, "file.tar.gz")
-            _compress_folder(self.tmp_folder, self.tgz_file)
-
-    def test_plain_tgz(self):
-        assert False
-
-
 class TarExtractTest(unittest.TestCase):
 
     def setUp(self):
@@ -61,9 +25,17 @@ class TarExtractTest(unittest.TestCase):
 
             # Create a tar.gz file with the above files
             self.tgz_file = os.path.join(self.tmp_folder, "file.tar.gz")
-            _compress_folder(ori_files_dir, self.tgz_file)
+            with open(self.tgz_file, "wb") as tgz_handle:
+                tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
 
-    #@unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
+                files, _ = gather_files(ori_files_dir)
+                for filename, abs_path in files.items():
+                    info = tarfile.TarInfo(name=filename)
+                    with open(file1, 'rb') as file_handler:
+                        tgz.addfile(tarinfo=info, fileobj=file_handler)
+                tgz.close()
+
+    @unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
     def test_link_folder(self):
         # If there is a linked folder in the current directory that matches one file in the tar.
         # https://github.com/conan-io/conan/issues/4959

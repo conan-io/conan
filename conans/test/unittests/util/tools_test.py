@@ -16,6 +16,7 @@ from nose.plugins.attrib import attr
 from parameterized import parameterized
 from requests.models import Response
 
+from client.tools import chdir
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
@@ -34,6 +35,7 @@ from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 from conans.util.runners import check_output_runner
+from test.functional.command.config_install_test import zipdir
 
 
 class ConfigMock:
@@ -87,6 +89,36 @@ class ReplaceInFileTest(unittest.TestCase):
 
 class ToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
+
+    def test_get_unzip_flat_folder(self):
+        """Test that the flat_folder mechanism from the underlying unzip
+        is called if I call the tools.get by checking that the exception of an invalid zip to
+        flat is raised"""
+
+        zip_folder = temp_folder()
+
+        def new_download(*args, **kwargs):
+            tmp_folder = temp_folder()
+            with chdir(tmp_folder):
+                # Create a couple of files
+                ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
+                file1 = os.path.join(ori_files_dir, "file1")
+                file2 = os.path.join(ori_files_dir, "folder", "file2")
+                # !!! This file is not under the root "subfolder-1.2.3"
+                file3 = os.path.join("file3")
+
+                save(file1, "")
+                save(file2, "")
+                save(file3, "")
+
+                zip_file = os.path.join(zip_folder, "file.zip")
+                zipdir(tmp_folder, zip_file)
+
+        with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 "
+                                                         "folder in the root"):
+            with patch('conans.client.tools.net.download', new=new_download):
+                with chdir(zip_folder):
+                    tools.get("file.zip", flat_folder=True)
 
     def test_replace_paths(self):
         folder = temp_folder()
