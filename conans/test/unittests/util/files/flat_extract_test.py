@@ -18,7 +18,6 @@ class ZipExtractPlainTest(unittest.TestCase):
     def test_plain_tgz(self):
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
-            # Create a couple of files
             ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
             file1 = os.path.join(ori_files_dir, "file1")
             file2 = os.path.join(ori_files_dir, "folder", "file2")
@@ -51,16 +50,12 @@ class ZipExtractPlainTest(unittest.TestCase):
     def test_invalid_flat(self):
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
-            # Create a couple of files
-            ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
-            file1 = os.path.join(ori_files_dir, "file1")
-            file2 = os.path.join(ori_files_dir, "folder", "file2")
-            # !!! This file is not under the root "subfolder-1.2.3"
-            file3 = os.path.join("file3")
+            # Not a single dir containing everything
+            file1 = os.path.join(tmp_folder, "subfolder-1.2.3", "folder2", "file1")
+            file2 = os.path.join(tmp_folder, "other-1.2.3", "folder", "file2")
 
             save(file1, "")
             save(file2, "")
-            save(file3, "")
 
         zip_folder = temp_folder()
         zip_file = os.path.join(zip_folder, "file.zip")
@@ -70,6 +65,20 @@ class ZipExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 folder "
                                                          "in the root"):
+            unzip(zip_file, destination=extract_folder, flat_folder=True)
+
+    def test_invalid_flat_single_file(self):
+        tmp_folder = temp_folder()
+        with chdir(tmp_folder):
+            save("file1", "contentsfile1")
+
+        zip_folder = temp_folder()
+        zip_file = os.path.join(zip_folder, "file.zip")
+        zipdir(tmp_folder, zip_file)
+
+        # Extract without the subfolder
+        extract_folder = temp_folder()
+        with six.assertRaisesRegex(self, ConanException, "The zip file contains a file in the root"):
             unzip(zip_file, destination=extract_folder, flat_folder=True)
 
 
@@ -125,16 +134,12 @@ class TarExtractPlainTest(unittest.TestCase):
     def test_invalid_flat(self):
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
-            # Create a couple of files
-            ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
-            file1 = os.path.join(ori_files_dir, "file1")
-            file2 = os.path.join(ori_files_dir, "folder", "file2")
-            # !!! This file is not under the root "subfolder-1.2.3"
-            file3 = os.path.join("file3")
+            # Not a single dir containing everything
+            file1 = os.path.join(tmp_folder, "subfolder-1.2.3", "folder2", "file1")
+            file2 = os.path.join(tmp_folder, "other-1.2.3", "folder", "file2")
 
             save(file1, "")
             save(file2, "")
-            save(file3, "")
 
         tgz_folder = temp_folder()
         tgz_file = os.path.join(tgz_folder, "file.tar.gz")
@@ -144,4 +149,18 @@ class TarExtractPlainTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, "The tgz file contains more than 1 folder "
                                                          "in the root"):
             untargz(tgz_file, destination=extract_folder, flat_folder=True)
+
+    def test_invalid_flat_single_file(self):
+        tmp_folder = temp_folder()
+        with chdir(tmp_folder):
+            save("file1", "contentsfile1")
+
+        zip_folder = temp_folder()
+        tgz_file = os.path.join(zip_folder, "file.tar.gz")
+        self._compress_folder(tmp_folder, tgz_file)
+
+        # Extract without the subfolder
+        extract_folder = temp_folder()
+        with six.assertRaisesRegex(self, ConanException, "The tgz file contains a file in the root"):
+            unzip(tgz_file, destination=extract_folder, flat_folder=True)
 
