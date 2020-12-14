@@ -5,6 +5,7 @@ import textwrap
 import unittest
 
 import pytest
+from parameterized import parameterized
 
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import vs_installation_path
@@ -266,12 +267,15 @@ class WinTest(unittest.TestCase):
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
     @pytest.mark.tool_cmake
-    def test_toolchain_win(self):
+    @parameterized.expand([("Visual Studio", "15", "MT"),
+                           ("msvc", "141", "static")]
+                          )
+    def test_toolchain_win(self, compiler, version, runtime):
         client = TestClient(path_with_spaces=False)
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
+        settings = {"compiler": compiler,
+                    "compiler.version": version,
                     "compiler.cppstd": "17",
-                    "compiler.runtime": "MT",
+                    "compiler.runtime": runtime,
                     "build_type": "Release",
                     "arch": "x86"}
 
@@ -280,6 +284,7 @@ class WinTest(unittest.TestCase):
 
         client.run("new hello/0.1 -s")
         client.run("create . hello/0.1@ %s" % (settings, ))
+        print(client.out)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,

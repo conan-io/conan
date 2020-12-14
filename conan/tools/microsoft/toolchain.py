@@ -53,13 +53,23 @@ class MSBuildToolchain(object):
         def format_macro(k, value):
             return '%s="%s"' % (k, value) if value is not None else k
 
+        compiler = self._conanfile.settings.get_safe("compiler")
         runtime = self._conanfile.settings.get_safe("compiler.runtime")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         toolset = msvs_toolset(self._conanfile.settings)
-        runtime_library = {"MT": "MultiThreaded",
-                           "MTd": "MultiThreadedDebug",
-                           "MD": "MultiThreadedDLL",
-                           "MDd": "MultiThreadedDebugDLL"}.get(runtime, "")
+        if compiler == "msvc":
+            build_type = self._conanfile.settings.get_safe("build_type")
+            if build_type == "Debug":
+                runtime_library = {"static": "MultiThreaded",
+                                   "dyanmic": "MultiThreadedDLL"}.get(runtime, "")
+            else:
+                runtime_library = {"static": "MultiThreadedDebug",
+                                   "dyanmic": "MultiThreadedDebugDLL"}.get(runtime, "")
+        else:
+            runtime_library = {"MT": "MultiThreaded",
+                               "MTd": "MultiThreadedDebug",
+                               "MD": "MultiThreadedDLL",
+                               "MDd": "MultiThreadedDebugDLL"}.get(runtime, "")
 
         content = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
