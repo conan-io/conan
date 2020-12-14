@@ -109,17 +109,15 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
         if flat_folder:
-            common_folder = None
-            for info in zip_info:
-                dir_split = os.path.normpath(info.filename).split(os.sep)
-                if len(dir_split) == 1:
-                    raise ConanException("The zip file contains a file in the root")
-                _check_common = dir_split[0]
-                if common_folder is None:
-                    common_folder = _check_common
-                elif _check_common != common_folder:
-                    raise ConanException("The zip file contains more than 1 folder in the root")
-                info.filename = os.sep.join(os.path.normpath(info.filename).split(os.sep)[1:])
+            names = z.namelist()
+            common_folder = os.path.commonpath(names)
+            if not common_folder:
+                raise ConanException("The zip file contains more than 1 folder in the root")
+            if len(names) == 1 and len(names[0].split(os.sep)) == 1:
+                raise ConanException("The zip file contains a file in the root")
+
+            for member in zip_info:
+                member.filename = os.sep.join(member.filename.split(os.sep)[1:])
 
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
@@ -161,17 +159,15 @@ def untargz(filename, destination=".", pattern=None, flat_folder=False):
         else:
             members = tarredgzippedFile.getmembers()
             if flat_folder:
-                common_folder = None
-                for member in tarredgzippedFile.getmembers():
-                    dir_split = os.path.normpath(member.name).split(os.sep)
-                    if len(dir_split) == 1:
-                        raise ConanException("The tgz file contains a file in the root")
-                    _check_common = dir_split[0]
-                    if common_folder is None:
-                        common_folder = _check_common
-                    elif _check_common != common_folder:
-                        raise ConanException("The tgz file contains more than 1 folder in the root")
-                    member.name = os.sep.join(dir_split[1:])
+                names = tarredgzippedFile.getnames()
+                common_folder = os.path.commonpath(names)
+                if not common_folder:
+                    raise ConanException("The tgz file contains more than 1 folder in the root")
+                if len(names) == 1 and len(names[0].split(os.sep)) == 1:
+                    raise ConanException("The tgz file contains a file in the root")
+
+                for member in members:
+                    member.name = os.sep.join(member.name.split(os.sep)[1:])
                     member.path = member.name
             if pattern:
                 members = list(filter(lambda m: fnmatch(m.name, pattern),

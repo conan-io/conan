@@ -15,7 +15,7 @@ from conans.util.files import gzopen_without_timestamps
 
 class ZipExtractPlainTest(unittest.TestCase):
 
-    def test_plain_tgz(self):
+    def test_plain_zip(self):
         tmp_folder = temp_folder()
         with chdir(tmp_folder):
             ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
@@ -130,6 +130,32 @@ class TarExtractPlainTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "file3")))
+
+    def test_plain_tgz_common_base(self):
+
+        tmp_folder = temp_folder()
+        with chdir(tmp_folder):
+            # Create a couple of files
+            ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
+            file1 = os.path.join(ori_files_dir, "folder", "file1")
+            file2 = os.path.join(ori_files_dir, "folder", "file2")
+            file3 = os.path.join(ori_files_dir, "folder", "file3")
+
+            save(file1, "")
+            save(file2, "")
+            save(file3, "")
+
+        tgz_folder = temp_folder()
+        tgz_file = os.path.join(tgz_folder, "file.tar.gz")
+        self._compress_folder(tmp_folder, tgz_file)
+
+        # Tgz unzipped regularly
+        extract_folder = temp_folder()
+        untargz(tgz_file, destination=extract_folder, flat_folder=True)
+        self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
+        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file1")))
+        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
+        self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file3")))
 
     def test_invalid_flat(self):
         tmp_folder = temp_folder()
