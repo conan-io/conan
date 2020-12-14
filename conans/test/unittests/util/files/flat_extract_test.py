@@ -4,13 +4,13 @@ import unittest
 
 import six
 
-from client.tools import untargz, unzip
+from conans.client.tools import untargz, unzip
 from conans.client.tools.files import chdir, save
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
-from model.manifest import gather_files
-from test.functional.command.config_install_test import zipdir
-from util.files import gzopen_without_timestamps
+from conans.model.manifest import gather_files
+from conans.test.functional.command.config_install_test import zipdir
+from conans.util.files import gzopen_without_timestamps
 
 
 class ZipExtractPlainTest(unittest.TestCase):
