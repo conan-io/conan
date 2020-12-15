@@ -1,6 +1,6 @@
 from conans.client.downloaders.artifactory_cache_downloader import ArtifactoryCacheDownloader
 
-from errors import ConanException
+from conans.errors import ConanException
 
 
 class FakeFileDownloader(object):

@@ -1,6 +1,6 @@
 import textwrap
 
-from client.downloaders.utils import hash_url
+from conans.client.downloaders.utils import hash_url
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 
 
