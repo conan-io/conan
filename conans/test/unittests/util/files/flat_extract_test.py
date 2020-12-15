@@ -189,4 +189,3 @@ class TarExtractPlainTest(unittest.TestCase):
         extract_folder = temp_folder()
         with six.assertRaisesRegex(self, ConanException, "The tgz file contains a file in the root"):
             unzip(tgz_file, destination=extract_folder, flat_folder=True)
-

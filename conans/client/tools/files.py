@@ -110,14 +110,15 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
         if flat_folder:
             names = z.namelist()
-            common_folder = os.path.commonprefix(names).split(os.sep)[0]
-            if not common_folder:
+            common_folder = os.path.split(os.path.commonprefix(names))[0]
+            if not common_folder and len(names) > 1:
                 raise ConanException("The zip file contains more than 1 folder in the root")
-            if len(names) == 1 and len(names[0].split(os.sep)) == 1:
+            if len(names) == 1 and len(names[0].replace("\\", "/").split("/")) == 1:
                 raise ConanException("The zip file contains a file in the root")
 
             for member in zip_info:
-                member.filename = os.sep.join(member.filename.split(os.sep)[1:])
+                name = member.filename.replace("\\", "/")
+                member.filename = "/".join(name.split("/")[1:])
 
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
@@ -158,16 +159,18 @@ def untargz(filename, destination=".", pattern=None, flat_folder=False):
             tarredgzippedFile.extractall(destination)
         else:
             members = tarredgzippedFile.getmembers()
+
             if flat_folder:
                 names = tarredgzippedFile.getnames()
-                common_folder = os.path.commonprefix(names).split(os.sep)[0]
-                if not common_folder:
+                common_folder = os.path.split(os.path.commonprefix(names))[0]
+                if not common_folder and len(names) > 1:
                     raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split(os.sep)) == 1:
+                if len(names) == 1 and len(names[0].replace("\\", "/").split("/")) == 1:
                     raise ConanException("The tgz file contains a file in the root")
 
                 for member in members:
-                    member.name = os.sep.join(member.name.split(os.sep)[1:])
+                    name = member.name.replace("\\", "/")
+                    member.name = "/".join(name.split("/")[1:])
                     member.path = member.name
             if pattern:
                 members = list(filter(lambda m: fnmatch(m.name, pattern),
