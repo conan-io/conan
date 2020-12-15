@@ -1878,14 +1878,10 @@ compiler:
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
     msvc:
+        version: ["19.0",
+                  "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
+                  "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28"]
         runtime: [static, dynamic]
-        version:
-            140:
-            141:
-               mscver: [None, "1910", "1911", "1912", "1913", "1914", "1915", "1916"]
-            142:
-               mscver: [None, "1920", "1921", "1922", "1923", "1924", "1925", "1926",
-                        "1927", "1928"]
         cppstd: [None, 14, 17, 20]
     Visual Studio: &visual_studio
         runtime: [MD, MT, MTd, MDd]

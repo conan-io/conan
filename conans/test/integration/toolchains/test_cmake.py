@@ -167,8 +167,8 @@ class Base(unittest.TestCase):
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
-                           ("msvc", "Debug", "static", "141", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "141", "17", "x86_64", None, False)]
+                           ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
+                           ("msvc", "Release", "dynamic", "19.11", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
