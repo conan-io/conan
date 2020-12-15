@@ -90,10 +90,12 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
 
     def _download_file(file_url):
         # The download cache is only used if a checksum is provided, otherwise, a normal download
+        use_caches = bool(config and checksum)
         run_downloader(requester=requester, output=out, verify=verify, config=config,
-                       user_download=True, use_cache=bool(config and checksum), url=file_url,
-                       file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
-                       auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
+                       user_download=True, use_cache=use_caches, use_rt_cache=use_caches,
+                       url=file_url, file_path=filename, retry=retry, retry_wait=retry_wait,
+                       overwrite=overwrite, auth=auth, headers=headers, md5=md5, sha1=sha1,
+                       sha256=sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):

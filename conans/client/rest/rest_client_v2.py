@@ -41,7 +41,7 @@ class RestV2Methods(RestCommonMethods):
     def _get_remote_file_contents(self, url, use_cache, headers=None):
         # We don't want traces in output of these downloads, they are ugly in output
         contents = run_downloader(self.requester, None, self.verify_ssl, self._config,
-                                  use_cache=use_cache, url=url,
+                                  use_cache=use_cache, use_rt_cache=False, url=url,
                                   auth=self.auth, headers=headers)
         return contents
 

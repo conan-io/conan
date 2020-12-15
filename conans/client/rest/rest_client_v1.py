@@ -52,7 +52,7 @@ class RestV1Methods(RestCommonMethods):
             assert not self._config.download_cache or snapshot_md5, \
                 "if download_cache is set, we need the file checksums"
             contents = run_downloader(self.requester, None, self.verify_ssl, self._config,
-                                      url=resource_url, auth=auth, md5=md5)
+                                      use_rt_cache=False, url=resource_url, auth=auth, md5=md5)
             yield os.path.normpath(filename), contents
 
     def _file_server_capabilities(self, resource_url):
@@ -195,7 +195,8 @@ class RestV1Methods(RestCommonMethods):
             assert not self._config.download_cache or snapshot_md5, \
                 "if download_cache is set, we need the file checksums"
             run_downloader(self.requester, self._output, self.verify_ssl, self._config,
-                           url=resource_url, file_path=abs_path, auth=auth, md5=md5)
+                           use_rt_cache=False, url=resource_url, file_path=abs_path, auth=auth,
+                           md5=md5)
             ret[filename] = abs_path
         return ret
 
