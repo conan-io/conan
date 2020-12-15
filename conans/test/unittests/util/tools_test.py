@@ -710,8 +710,8 @@ class HelloConan(ConanFile):
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
-    def test_get_unzip_flat_folder(self):
-        """Test that the flat_folder mechanism from the underlying unzip
+    def test_get_unzip_strip_root(self):
+        """Test that the strip_root mechanism from the underlying unzip
           is called if I call the tools.get by checking that the exception of an invalid zip to
           flat is raised"""
 
@@ -735,7 +735,7 @@ class HelloConan(ConanFile):
                                                          "folder in the root"):
             with patch('conans.client.tools.net.download', new=mock_download):
                 with chdir(zip_folder):
-                    tools.get("file.zip", flat_folder=True)
+                    tools.get("file.zip", strip_root=True)
 
     @attr('slow')
     @pytest.mark.slow

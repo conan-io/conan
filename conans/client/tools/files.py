@@ -56,7 +56,7 @@ def human_size(size_bytes):
 
 
 def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None,
-          flat_folder=False):
+          strip_root=False):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -76,7 +76,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, flat_folder)
+        return untargz(filename, destination, pattern, strip_root)
     if filename.endswith(".gz"):
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
@@ -86,7 +86,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
-        return untargz(filename, destination, pattern, flat_folder)
+        return untargz(filename, destination, pattern, strip_root)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
@@ -108,7 +108,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
-        if flat_folder:
+        if strip_root:
             names = [n.replace("\\", "/") for n in z.namelist()]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
             if not common_folder and len(names) > 1:
@@ -152,15 +152,15 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None, flat_folder=False):
+def untargz(filename, destination=".", pattern=None, strip_root=False):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        if not pattern and not flat_folder:
+        if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:
             members = tarredgzippedFile.getmembers()
 
-            if flat_folder:
+            if strip_root:
                 names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
                 common_folder = os.path.commonprefix(names).split("/", 1)[0]
                 if not common_folder and len(names) > 1:
