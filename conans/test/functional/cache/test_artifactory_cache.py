@@ -1,13 +1,7 @@
 import textwrap
-from collections import OrderedDict
-
-import requests
 
 from client.downloaders.utils import hash_url
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
-
-
-
 
 
 class TestArtifactoryCacheTestCase(object):
