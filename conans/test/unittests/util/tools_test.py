@@ -21,6 +21,7 @@ from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import get_default_settings_yml, get_default_client_conf
 from conans.client.output import ConanOutput
+from conans.client.tools import chdir
 from conans.client.tools.files import replace_in_file, which
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
@@ -29,7 +30,7 @@ from conans.model.build_info import CppInfo
 from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir
 from conans.tools import get_global_instances
 from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
@@ -708,6 +709,33 @@ class HelloConan(ConanFile):
 
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
+
+    def test_get_unzip_flat_folder(self):
+        """Test that the flat_folder mechanism from the underlying unzip
+          is called if I call the tools.get by checking that the exception of an invalid zip to
+          flat is raised"""
+
+        zip_folder = temp_folder()
+
+        def mock_download(*args, **kwargs):
+            tmp_folder = temp_folder()
+            with chdir(tmp_folder):
+                ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
+                file1 = os.path.join(ori_files_dir, "file1")
+                file2 = os.path.join(ori_files_dir, "folder", "file2")
+                # !!! This file is not under the root "subfolder-1.2.3"
+                file3 = os.path.join("file3")
+                save(file1, "")
+                save(file2, "")
+                save(file3, "")
+                zip_file = os.path.join(zip_folder, "file.zip")
+                zipdir(tmp_folder, zip_file)
+
+        with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 "
+                                                         "folder in the root"):
+            with patch('conans.client.tools.net.download', new=mock_download):
+                with chdir(zip_folder):
+                    tools.get("file.zip", flat_folder=True)
 
     @attr('slow')
     @pytest.mark.slow
