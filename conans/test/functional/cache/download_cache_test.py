@@ -37,8 +37,10 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("install mypkg/0.1@user/testing")
         content = load(log_trace_file)
         self.assertEqual(6, content.count('"_action": "DOWNLOAD"'))
-        # 6 files cached, plus "locks" folder = 7
-        self.assertEqual(7, len(os.listdir(cache_folder)))
+        # 6 files cached, plus "locks" folder, plus 'cached_files' = 7
+        self.assertEqual(8, len(os.listdir(cache_folder)))
+        mapping = load(os.path.join(cache_folder, CachedFileDownloader._cache_mapping))
+        self.assertEqual(6, len(mapping.splitlines()))
 
         os.remove(log_trace_file)
         client.run("remove * -f")
@@ -146,8 +148,10 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertTrue(os.path.exists(local_path2))
         self.assertEqual("some query", client.load("myfile2.txt"))
 
-        # 2 files cached, plus "locks" folder = 3
-        self.assertEqual(3, len(os.listdir(cache_folder)))
+        # 2 files cached, plus "locks" folder, plus 'cached_files' = 4
+        self.assertEqual(4, len(os.listdir(cache_folder)))
+        mapping = load(os.path.join(cache_folder, CachedFileDownloader._cache_mapping))
+        self.assertEqual(2, len(mapping.splitlines()))
 
         # remove remote file
         os.remove(file_path)

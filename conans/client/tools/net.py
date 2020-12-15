@@ -9,7 +9,7 @@ from conans.util.fallbacks import default_output, default_requester
 def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
         pattern=None, requester=None, output=None, verify=True, retry=None, retry_wait=None,
         overwrite=False, auth=None, headers=None):
-    """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
+    """ high level downloaders + unzipper + (optional hash checker) + delete temporary zip
     """
 
     if not filename:  # deduce filename from the URL

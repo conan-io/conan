@@ -448,6 +448,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
+    def sources_backup(self):
+        try:
+            sources_backup = self.get_item("storage.sources_backup")
+            return sources_backup
+        except ConanException:
+            return None
+
+    @property
     def scm_to_conandata(self):
         try:
             scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
