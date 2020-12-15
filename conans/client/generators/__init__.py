@@ -80,8 +80,13 @@ class GeneratorManager(object):
     def __getitem__(self, key):
         return self._generators[key]
 
-    def _new_generator(self, generator_name):
+    def _new_generator(self, generator_name, output):
         if generator_name not in self._new_generators:
+            return
+        if generator_name in self._generators:  # Avoid colisions with user custom generators
+            msg = ("******* Your custom generator name '{}' is colliding with a new experimental "
+                   "built-in one. It is recommended to rename it. *******".format(generator_name))
+            output.warn(msg)
             return
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
@@ -106,7 +111,7 @@ class GeneratorManager(object):
         """ produces auxiliary files, required to build a project or a package.
         """
         for generator_name in set(conanfile.generators):
-            generator_class = self._new_generator(generator_name)
+            generator_class = self._new_generator(generator_name, output)
             if generator_class:
                 if generator_name == "msbuild":
                     msg = (
