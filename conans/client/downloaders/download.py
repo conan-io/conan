@@ -7,9 +7,8 @@ def run_downloader(requester, output, verify, config, user_download=False, use_c
                    use_rt_cache=None, **kwargs):
     downloader = FileDownloader(requester=requester, output=output, verify=verify, config=config)
 
-    sources_backup = config.sources_backup
-    if use_rt_cache and sources_backup:
-        downloader = ArtifactoryCacheDownloader(sources_backup, downloader,
+    if use_rt_cache and config.sources_backup:
+        downloader = ArtifactoryCacheDownloader(config.sources_backup, downloader,
                                                 user_download=user_download)
 
     if use_cache and config.download_cache:
