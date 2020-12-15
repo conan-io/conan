@@ -1,8 +1,10 @@
 import os
 import textwrap
 import unittest
+import ctypes
 
 from conans.client.importer import IMPORTS_MANIFESTS
+from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -55,6 +57,13 @@ class HelloReuseConan(ConanFile):
     def imports(self):
         self.copy("*2.txt")
 """
+
+
+def is_windows_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
 
 class ImportsTest(unittest.TestCase):
@@ -288,8 +297,9 @@ class SymbolicImportsTest(unittest.TestCase):
 
 class SymbolicLinksImportsTest(unittest.TestCase):
 
-    @unittest.skipIf(os_info.is_windows, "Symbolic link is not suppported on Windows.")
-    def test_symbolic_link_lib(self):
+    @unittest.skipIf(os_info.is_windows and not is_windows_admin(),
+                     "Symbolic link requires admin privileges on Windows.")
+    def test_symbolic_link_file(self):
         conanfile_txt = textwrap.dedent("""
             [requires]
             foo/0.1.0
@@ -317,5 +327,31 @@ class SymbolicLinksImportsTest(unittest.TestCase):
 
         consumer = TestClient(cache_folder=client.cache_folder)
         consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
-        consumer.run("install conanfile.txt", assert_error=True)
-        self.assertIn("Could not import 'libfoo.so': Broken symbolic link.", consumer.out)
+        consumer.run("install conanfile.txt")
+        linkpath = os.path.join(consumer.current_folder, "libfoo.so")
+        self.assertIn("Copied 1 '.so' file: libfoo.so", consumer.out)
+        self.assertTrue(os.path.islink(linkpath))
+        self.assertFalse(os.path.exists(os.readlink(linkpath)))
+
+    @unittest.skipIf(os_info.is_windows and not is_windows_admin(),
+                     "Symbolic link requires admin privileges on Windows.")
+    def test_symbolic_link_folder(self):
+        conanfile_py = textwrap.dedent("""
+            from conans import ConanFile, tools
+            import os
+            class Pkg(ConanFile):
+                def build(self):
+                    tools.save("foo/libfoo.so", "ELF")
+                    os.symlink("foo", "foo.link")
+                def package(self):
+                    self.copy("*.so", dst="lib", symlinks=True)
+                    tools.rmdir(os.path.join(self.package_folder, "lib", "foo"))
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_py})
+        # Conan prevents packaging broken links to folders
+        client.run("config set general.skip_broken_symlinks_check=True")
+        client.run("create conanfile.py foo/0.1.0@")
+        self.assertIn("package(): WARN: No files in this package!", client.out)
+        self.assertTrue(os.path.exists(client.cache.package_layout(ConanFileReference.loads("foo/0.1.0@")).packages()))
