@@ -58,7 +58,7 @@ class TestArtifactoryCacheTestCase(object):
         assert len(url_calls) == 3
         assert url_calls[0] == 'http://no.checksum.file'
         yes_checksum_hash = hash_url('http://yes.checksum.file', 'md5_chechsum', False)
-        assert url_calls[1] == 'https://rt.jfrog/backup_repo/{}'.format(yes_checksum_hash)
+        assert url_calls[1] == '{}/{}'.format(rt_sources_backup, yes_checksum_hash)
         assert url_calls[2] == 'http://yes.checksum.file'
         url_calls.clear()
 
