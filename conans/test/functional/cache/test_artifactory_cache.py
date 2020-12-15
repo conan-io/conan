@@ -54,7 +54,7 @@ class TestArtifactoryCacheTestCase(object):
         yes_checksum_hash = hash_url('http://yes.checksum.file', 'md5_chechsum', False)
         assert url_calls[1] == '{}/{}'.format(rt_sources_backup, yes_checksum_hash)
         assert url_calls[2] == 'http://yes.checksum.file'
-        url_calls.clear()
+        url_calls = []
 
         client.run("upload * --all --confirm")
         client.run("remove * -f")
