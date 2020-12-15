@@ -14,6 +14,7 @@ class FakeFileDownloader(object):
         self.calls.append(url)
         if not self._rt_found and url.startswith(self.rt_domain):
             raise ConanException("File '{url}' not found".format(url=url))
+        return True  # FileDownloader always returns the written chunks
 
 
 class TestArtifactoryCacheDownload(object):
@@ -22,13 +23,13 @@ class TestArtifactoryCacheDownload(object):
         fake_downloader = FakeFileDownloader(True)
         rt_downloader = ArtifactoryCacheDownloader('https://jfrog.rt', fake_downloader)
         rt_downloader.download('https://domain.url/filename', file_path='filesystem_path')
-        assert len(fake_downloader.calls) == 1
-        assert fake_downloader.calls[0].startswith('https://jfrog.rt')
+        assert len(fake_downloader.calls) == 1, fake_downloader.calls
+        assert fake_downloader.calls[0].startswith('https://jfrog.rt/')
 
     def test_rt_file_not_found(self):
         fake_downloader = FakeFileDownloader(False)
         rt_downloader = ArtifactoryCacheDownloader('https://jfrog.rt', fake_downloader)
         rt_downloader.download('https://domain.url/filename', file_path='filesystem_path')
         assert len(fake_downloader.calls) == 2
-        assert fake_downloader.calls[0].startswith('https://jfrog.rt')
+        assert fake_downloader.calls[0].startswith('https://jfrog.rt/')
         assert fake_downloader.calls[1] == 'https://domain.url/filename'

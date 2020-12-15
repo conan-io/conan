@@ -12,8 +12,8 @@ class ArtifactoryCacheDownloader(object):
         """ Try to get remote file, return None if file is not found """
         try:
             url = self._rt_base_url + "/" + rt_path
-            self._downloader.download(url=url, file_path=file_path, **kwargs)
-            return True
+            # TODO: Here we need to silence the output from chained downloader
+            return self._downloader.download(url=url, file_path=file_path, **kwargs)
         except Exception:
             # TODO: Check different exceptions: if the checksum fails we should warn the user so
             #   they can remove the file from the Artifactory server.
@@ -26,5 +26,8 @@ class ArtifactoryCacheDownloader(object):
         #  skip the 'try_get' for urls under those domains.
         checksum = sha256 or sha1 or md5
         h = hash_url(url, checksum, self._user_download)
-        if not self._try_get(h, file_path=file_path, md5=md5, sha256=sha256, **kwargs):
-            self._downloader.download(url=url, file_path=file_path, md5=md5, sha256=sha256, **kwargs)
+        r = self._try_get(h, file_path=file_path, md5=md5, sha256=sha256, **kwargs)
+        if r is None:
+            r = self._downloader.download(url=url, file_path=file_path, md5=md5, sha256=sha256,
+                                          **kwargs)
+        return r
