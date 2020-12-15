@@ -118,7 +118,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
 
             for member in zip_info:
                 name = member.filename.replace("\\", "/")
-                member.filename = "/".join(name.split("/")[1:])
+                member.filename = name.split("/", 1)[1]
 
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
@@ -170,7 +170,7 @@ def untargz(filename, destination=".", pattern=None, flat_folder=False):
 
                 for member in members:
                     name = member.name.replace("\\", "/")
-                    member.name = "/".join(name.split("/")[1:])
+                    member.name = name.split("/", 1)[1]
                     member.path = member.name
             if pattern:
                 members = list(filter(lambda m: fnmatch(m.name, pattern),
