@@ -162,7 +162,9 @@ class GraphManager(object):
                 if ref.name is None:
                     # If the graph_info information is not there, better get what we can from
                     # the conanfile
-                    conanfile = self._loader.load_basic(path)
+                    # Using load_named() to run set_name() set_version() and get them
+                    # so it can be found by name in the lockfile
+                    conanfile = self._loader.load_named(path, None, None, None, None)
                     ref = ConanFileReference(ref.name or conanfile.name,
                                              ref.version or conanfile.version,
                                              ref.user, ref.channel, validate=False)

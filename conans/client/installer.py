@@ -536,10 +536,8 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
             package_folder = layout.package(pref)
-            if not os.path.isdir(package_folder):
-                raise ConanException("Package '%s' corrupted. Package folder must exist: %s\n"
-                                     "Try removing the package with 'conan remove'"
-                                     % (str(pref), package_folder))
+            assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                                   % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)

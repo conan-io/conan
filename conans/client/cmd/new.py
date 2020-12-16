@@ -409,10 +409,11 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                                                    user=user, channel=channel,
                                                                    package_name=package_name)
         if pure_c:
-            files["test_package/example.c"] = test_main.format(name=name, version=version)
+            files["test_package/example.c"] = test_main.format(name=name)
             files["test_package/CMakeLists.txt"] = test_cmake_pure_c
         else:
-            files["test_package/example.cpp"] = test_main.format(name=name, version=version)
+            include_name = name if exports_sources else "hello"
+            files["test_package/example.cpp"] = test_main.format(name=include_name)
             files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
