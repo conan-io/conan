@@ -297,6 +297,8 @@ class WinTest(unittest.TestCase):
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
         check_msc_ver("v141", client.out)
+        self.assertIn("main _MSVC_LANG2017", client.out)
+        check_vs_runtime("Release/MyApp.exe", client, "15", static=True, build_type="Release")
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
