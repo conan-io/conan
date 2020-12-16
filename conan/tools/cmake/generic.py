@@ -206,15 +206,16 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         return architecture_flag(self._conanfile.settings)
 
     def _runtimes(self):
-        # Parsing existing file to get existing configured runtimes
+        # Parsing existing toolchain file to get existing configured runtimes
         config_dict = {}
         if os.path.exists(self.project_include_filename):
             existing_include = load(self.project_include_filename)
-            existing_configs = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
-                                         existing_include)
-            capture = existing_configs.group(1)
-            matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>([A-Za-z]*)>", capture)
-            config_dict = dict(matches)
+            msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
+                                           existing_include)
+            if msvc_runtime_value:
+                capture = msvc_runtime_value.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>([A-Za-z]*)>", capture)
+                config_dict = dict(matches)
 
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")

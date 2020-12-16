@@ -94,7 +94,6 @@ class Base(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient(path_with_spaces=True)
-        print(self.client.current_folder)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -505,5 +504,4 @@ class CMakeOverrideCacheTest(unittest.TestCase):
                      "CMakeLists.txt": cmakelist})
         client.run("install .")
         client.run("build .")
-        print(client.out)
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
