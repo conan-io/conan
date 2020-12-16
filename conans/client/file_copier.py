@@ -238,6 +238,9 @@ class FileCopier(object):
                     pass
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
             else:
-                shutil.copy2(abs_src_name, abs_dst_name)
+                try:
+                    shutil.copy2(abs_src_name, abs_dst_name)
+                except (IOError, OSError) as error:  # for py3, handle just PermissionError
+                    raise ConanException("Could not copy file: {}".format(str(error)))
             copied_files.append(abs_dst_name)
         return copied_files

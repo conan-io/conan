@@ -1,15 +1,15 @@
 import os
 import textwrap
 import unittest
-import ctypes
+import stat
 
 from conans.client.importer import IMPORTS_MANIFESTS
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
-from conans.tools import os_info
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.util.files import mkdir, save_files
+from conans.tools import chdir, rmdir
 
 conanfile = """
 from conans import ConanFile
@@ -59,11 +59,19 @@ class HelloReuseConan(ConanFile):
 """
 
 
-def is_windows_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
+def symlinks_supported():
+    if not hasattr(os, "symlink"):
         return False
+    tmpdir = temp_folder()
+    try:
+        save_files(tmpdir, {"a": ""})
+        with chdir(tmpdir):
+            os.symlink("a", "b")
+            return os.path.islink("b")
+    except OSError:
+        return False
+    finally:
+        rmdir(tmpdir)
 
 
 class ImportsTest(unittest.TestCase):
@@ -294,11 +302,48 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
 
+    def test_no_read_permission(self):
+        """ Read restriction must print a meaningful message
 
+           This test case represents when a CI job runs with root level
+           and remove all file permission.
+        """
+        conanfile_txt = textwrap.dedent("""
+                    [requires]
+                    foo/0.1.0
+
+                    [imports]
+                    lib, *.lib -> .
+                """)
+
+        conanfile_py = textwrap.dedent("""
+                    from conans import ConanFile, tools
+                    import os
+                    class Pkg(ConanFile):
+                        def build(self):
+                            tools.save("fake.lib", "ELF")
+                        def package(self):
+                            self.copy("*.lib", dst="lib")
+                    """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_py})
+        client.run("create conanfile.py foo/0.1.0@")
+        ref = ConanFileReference.loads("foo/0.1.0@")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.cache.package_layout(ref).package(pref)
+        link_path = os.path.join(package_folder, "lib", "fake.lib")
+        os.chmod(link_path, 0o000)
+
+        consumer = TestClient(cache_folder=client.cache_folder)
+        consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
+        consumer.run("install conanfile.txt", assert_error=True)
+        self.assertIn("ERROR: Could not copy file: [Errno 13] Permission denied:", consumer.out)
+
+
+@unittest.skipUnless(symlinks_supported(), "Symbolic link is required for this test.")
 class SymbolicLinksImportsTest(unittest.TestCase):
 
-    @unittest.skipIf(os_info.is_windows and not is_windows_admin(),
-                     "Symbolic link requires admin privileges on Windows.")
     def test_symbolic_link_file(self):
         conanfile_txt = textwrap.dedent("""
             [requires]
@@ -333,8 +378,6 @@ class SymbolicLinksImportsTest(unittest.TestCase):
         self.assertTrue(os.path.islink(linkpath))
         self.assertFalse(os.path.exists(os.readlink(linkpath)))
 
-    @unittest.skipIf(os_info.is_windows and not is_windows_admin(),
-                     "Symbolic link requires admin privileges on Windows.")
     def test_symbolic_link_folder(self):
         conanfile_py = textwrap.dedent("""
             from conans import ConanFile, tools
