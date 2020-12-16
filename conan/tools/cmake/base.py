@@ -1,4 +1,3 @@
-import os
 import textwrap
 import warnings
 from collections import OrderedDict, defaultdict
@@ -33,7 +32,6 @@ class Variables(OrderedDict):
 
 class CMakeToolchainBase(object):
     filename = "conan_toolchain.cmake"
-    project_include_filename = "conan_project_include.cmake"
 
     _toolchain_macros_tpl = textwrap.dedent("""
         {% macro iterate_configs(var_config, action) -%}
@@ -137,8 +135,7 @@ class CMakeToolchainBase(object):
         }
 
     def _get_template_context_data(self):
-        """ Returns two dictionaries, the context for the '_template_toolchain' and
-            the context for the '_template_project_include' templates.
+        """ Returns dict, the context for the '_template_toolchain'
         """
         ctxt_toolchain = {
             "variables": self.variables,
@@ -149,7 +146,7 @@ class CMakeToolchainBase(object):
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
         }
-        return ctxt_toolchain, {}
+        return ctxt_toolchain
 
     def write_toolchain_files(self):
         # Warning
@@ -171,17 +168,7 @@ class CMakeToolchainBase(object):
         dict_loader = DictLoader(self._get_templates())
         env = Environment(loader=dict_loader)
 
-        ctxt_toolchain, ctxt_project_include = self._get_template_context_data()
-        if ctxt_project_include:
-            # Make it absolute, wrt to current folder, set by the caller
-            conan_project_include_cmake = os.path.abspath(self.project_include_filename)
-            conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
-            t = env.get_template(self.project_include_filename)
-            content = t.render(**ctxt_project_include)
-            save(conan_project_include_cmake, content)
-
-            ctxt_toolchain.update({'conan_project_include_cmake': conan_project_include_cmake})
-
+        ctxt_toolchain = self._get_template_context_data()
         t = env.get_template(self.filename)
         content = t.render(**ctxt_toolchain)
         save(self.filename, content)

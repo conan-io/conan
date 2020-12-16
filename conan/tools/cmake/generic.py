@@ -110,32 +110,20 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
             {%- endif %}
 
+            {% if vs_runtimes %}
+            {% set genexpr = namespace(str='') %}
+            {%- for config, value in vs_runtimes.items() -%}
+                {%- set genexpr.str = genexpr.str +
+                                      '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
+            {%- endfor -%}
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
+            {% endif %}
+
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
         {% endblock %}
-        """)
-
-    _project_include_filename_tpl = textwrap.dedent("""
-        # When using a Conan toolchain, this file is included as the last step of `project()` calls.
-        #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
-
-        if (NOT CONAN_TOOLCHAIN_INCLUDED)
-            message(FATAL_ERROR "This file is expected to be used together with the Conan toolchain")
-        endif()
-
-        message(STATUS "Using CMAKE_PROJECT_INCLUDE included file")
-
-        # Adjustments that depends on the build_type/configuration
-        {% if vs_runtimes %}
-        {% set genexpr = namespace(str='') %}
-        {%- for config, value in vs_runtimes.items() -%}
-            {%- set genexpr.str = genexpr.str +
-                                  '$<$<CONFIG:' + config + '>' + value|string + '>' %}
-        {%- endfor -%}
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
-        {% endif %}
         """)
 
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
@@ -181,8 +169,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
     def _get_templates(self):
         templates = super(CMakeGenericToolchain, self)._get_templates()
         templates.update({
-            CMakeToolchainBase.filename: self._toolchain_tpl,
-            CMakeToolchainBase.project_include_filename: self._project_include_filename_tpl
+            CMakeToolchainBase.filename: self._toolchain_tpl
         })
         return templates
 
@@ -208,13 +195,13 @@ class CMakeGenericToolchain(CMakeToolchainBase):
     def _runtimes(self):
         # Parsing existing toolchain file to get existing configured runtimes
         config_dict = {}
-        if os.path.exists(self.project_include_filename):
-            existing_include = load(self.project_include_filename)
+        if os.path.exists(self.filename):
+            existing_include = load(self.filename)
             msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
                                            existing_include)
             if msvc_runtime_value:
                 capture = msvc_runtime_value.group(1)
-                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>([A-Za-z]*)>", capture)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([A-Za-z]*)>", capture)
                 config_dict = dict(matches)
 
         settings = self._conanfile.settings
@@ -277,8 +264,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         return cppstd, cppstd_extensions
 
     def _get_template_context_data(self):
-        ctxt_toolchain, ctxt_project_include = \
-            super(CMakeGenericToolchain, self)._get_template_context_data()
+        ctxt_toolchain = super(CMakeGenericToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
@@ -291,7 +277,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
             "architecture": self.architecture,
-            "compiler": self.compiler
+            "compiler": self.compiler,
+            'vs_runtimes': self.vs_runtimes
         })
-        ctxt_project_include.update({'vs_runtimes': self.vs_runtimes})
-        return ctxt_toolchain, ctxt_project_include
+        return ctxt_toolchain
