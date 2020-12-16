@@ -171,7 +171,6 @@ class WinTest(Base):
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
-        print(self.client.current_folder)
         settings = {"compiler": compiler,
                     "compiler.version": version,
                     "compiler.toolset": toolset,
@@ -182,7 +181,6 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         install_out = self._run_build(settings, options)
-        print(self.client.out)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
@@ -224,6 +222,10 @@ class WinTest(Base):
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
+        if runtime == "MTd":
+            settings["compiler.runtime"] = "MT"
+        if runtime == "MD":
+            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
