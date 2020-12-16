@@ -376,3 +376,4 @@ class WinTest(unittest.TestCase):
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
             self._run_app(client, arch, build_type)
             check_msc_ver("v141", client.out)
+            self.assertIn("main _MSVC_LANG2017", client.out)
