@@ -141,7 +141,7 @@ class MSBuildTest(unittest.TestCase):
             msbuild.get_command("dummy.sln", output_binary_log=True)
         self.assertIn(except_text, str(exc.exception))
 
-    def test_error_targets_argument_Test(self):
+    def test_error_targets_argument(self):
         conanfile = MockConanfile(MockSettings({}))
         msbuild = MSBuild(conanfile)
         with self.assertRaises(TypeError):
