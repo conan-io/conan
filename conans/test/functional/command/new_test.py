@@ -259,7 +259,7 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('CONAN_CHANNEL: "testing"', circleci)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', circleci)
 
-    def new_ci_test_partial(self):
+    def test_new_ci_partial(self):
         client = TestClient()
         root = client.current_folder
         client.run('new MyPackage/1.3@myuser/testing -cis', assert_error=True)

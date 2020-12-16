@@ -345,7 +345,7 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertNotIn("TESTING!!!", client.out)
 
-    def create_test_package_requires(self):
+    def test_create_package_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Dep/0.1@user/channel")
