@@ -1,7 +1,6 @@
 import os
 import textwrap
 import unittest
-import stat
 
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.ref import ConanFileReference, PackageReference
