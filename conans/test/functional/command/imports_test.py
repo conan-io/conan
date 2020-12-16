@@ -1,6 +1,7 @@
 import os
 import textwrap
 import unittest
+import stat
 
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.ref import ConanFileReference, PackageReference
@@ -8,7 +9,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import mkdir, save_files
-from conans.tools import chdir, rmdir
+from conans.tools import chdir, rmdir, os_info
 
 conanfile = """
 from conans import ConanFile
@@ -301,6 +302,7 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))
         self.assertEqual("bye moon", self.consumer.load("lib/myfile.a"))
 
+    @unittest.skipIf(os_info.is_windows, "chmod has no effect on Windows.")
     def test_no_read_permission(self):
         """ Read restriction must print a meaningful message
 
@@ -332,7 +334,8 @@ class SymbolicImportsTest(unittest.TestCase):
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package_layout(ref).package(pref)
         link_path = os.path.join(package_folder, "lib", "fake.lib")
-        os.chmod(link_path, 0o000)
+        mode = os.stat(link_path).st_mode
+        os.chmod(link_path, mode & ~stat.S_IREAD)
 
         consumer = TestClient(cache_folder=client.cache_folder)
         consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
