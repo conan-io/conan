@@ -1,6 +1,5 @@
 import os
 import platform
-import re
 import textwrap
 import time
 import unittest
