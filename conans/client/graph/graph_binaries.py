@@ -339,6 +339,9 @@ class GraphBinariesAnalyzer(object):
                                           python_requires=python_requires,
                                           default_python_requires_id_mode=
                                           default_python_requires_id_mode)
+        msvc_compatible = conanfile.info.msvc_compatible()
+        if msvc_compatible:
+            conanfile.compatible_packages.append(msvc_compatible)
 
         # Once we are done, call package_id() to narrow and change possible values
         with conanfile_exception_formatter(str(conanfile), "package_id"):
