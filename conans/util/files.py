@@ -159,8 +159,8 @@ def _generic_algorithm_sum(file_path, algorithm_name):
     except ValueError:  # FIPS error https://github.com/conan-io/conan/issues/7800
         hasher = hashlib.new(algorithm_name, usedforsecurity=False)
 
-    # broken symlink are allowed to be installed, so they are empty files.
-    if os.path.islink(file_path) and not os.path.exists(os.readlink(file_path)):
+    # symlink are empty files.
+    if os.path.islink(file_path):
         hasher.update(b'')
     else:
         with open(file_path, 'rb') as fh:

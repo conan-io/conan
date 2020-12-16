@@ -345,6 +345,8 @@ class SymbolicImportsTest(unittest.TestCase):
 class SymbolicLinksImportsTest(unittest.TestCase):
 
     def test_symbolic_link_file(self):
+        """ Broken symbolic link must calculated as empty file.
+        """
         conanfile_txt = textwrap.dedent("""
             [requires]
             foo/0.1.0
@@ -379,6 +381,8 @@ class SymbolicLinksImportsTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.readlink(linkpath)))
 
     def test_symbolic_link_folder(self):
+        """ Symbolic link to folder must be calculated as empty file.
+        """
         conanfile_py = textwrap.dedent("""
             from conans import ConanFile, tools
             import os
@@ -398,3 +402,34 @@ class SymbolicLinksImportsTest(unittest.TestCase):
         client.run("create conanfile.py foo/0.1.0@")
         self.assertIn("package(): WARN: No files in this package!", client.out)
         self.assertTrue(os.path.exists(client.cache.package_layout(ConanFileReference.loads("foo/0.1.0@")).packages()))
+
+    @unittest.skipUnless(os.path.exists("/dev/zero"), "Require device file support.")
+    def test_device_file(self):
+        """ Device files must not enter in loop when copying/importing
+        """
+        conanfile_txt = textwrap.dedent("""
+            [requires]
+            foo/0.1.0
+
+            [imports]
+            bin, *.link -> .
+        """)
+
+        conanfile_py = textwrap.dedent("""
+            from conans import ConanFile, tools
+            import os
+            class Pkg(ConanFile):
+                def build(self):
+                    os.symlink("/dev/zero", "zero.link")
+                def package(self):
+                    self.copy("*.link", dst="bin", symlinks=True)
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_py})
+        client.run("create conanfile.py foo/0.1.0@")
+
+        consumer = TestClient(cache_folder=client.cache_folder)
+        consumer.save({"conanfile.txt": conanfile_txt}, clean_first=True)
+        consumer.run("install conanfile.txt")
+        self.assertIn("imports(): Copied 1 '.link' file: zero.link", consumer.out)
