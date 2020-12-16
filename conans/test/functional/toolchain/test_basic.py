@@ -1,4 +1,5 @@
 # coding=utf-8
+import os
 import platform
 import textwrap
 import unittest
@@ -8,6 +9,7 @@ import six
 from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @attr("toolchain")
@@ -42,7 +44,10 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        self.assertIn("conanfile.py: Generating toolchain files", client.out)
+        self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MakeToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
         toolchain = client.load("conantoolchain.props")
@@ -226,3 +231,32 @@ class BasicTest(unittest.TestCase):
         conan_toolchain_props = client.load("conantoolchain.props")
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
         self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)
+
+    def test_conflict_user_generator(self):
+        client = TestClient()
+        generator = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.model import Generator
+            class CMakeToolchain(Generator):
+                @property
+                def filename(self):
+                    return "mygenerator.gen"
+                @property
+                def content(self):
+                    return "HelloWorld"
+                """)
+
+        save(os.path.join(client.cache.generators_path, "mygenerator.py"), generator)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = "CMakeToolchain"
+            """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+        self.assertIn("Your custom generator name 'CMakeToolchain' is colliding", client.out)
+        gen = client.load("mygenerator.gen")
+        self.assertEqual("HelloWorld", gen)

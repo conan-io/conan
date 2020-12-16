@@ -44,9 +44,11 @@ class CMakeToolchainBase(object):
                                           '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
-                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}{%- endfor -%}
+                {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
+                {%- endfor -%}
                 {% if action=='set' %}
-                set({{ it }} {{ genexpr.str }})
+                set({{ it }} {{ genexpr.str }} CACHE STRING
+                    "Variable {{ it }} conan-toolchain defined")
                 {% elif action=='add_definitions' %}
                 add_definitions(-D{{ it }}={{ genexpr.str }})
                 {% endif %}
@@ -116,7 +118,7 @@ class CMakeToolchainBase(object):
 
         # Variables
         {% for it, value in variables.items() %}
-        set({{ it }} "{{ value }}")
+        set({{ it }} "{{ value }}" CACHE STRING "Variable {{ it }} conan-toolchain defined")
         {%- endfor %}
         # Variables  per configuration
         {{ toolchain_macros.iterate_configs(variables_config, action='set') }}
@@ -127,7 +129,8 @@ class CMakeToolchainBase(object):
         add_definitions(-D{{ it }}="{{ value }}")
         {%- endfor %}
         # Preprocessor definitions per configuration
-        {{ toolchain_macros.iterate_configs(preprocessor_definitions_config, action='add_definitions') }}
+        {{ toolchain_macros.iterate_configs(preprocessor_definitions_config,
+                                            action='add_definitions') }}
         """)
 
     def __init__(self, conanfile, **kwargs):
