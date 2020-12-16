@@ -1,7 +1,9 @@
 import os
+import re
 import textwrap
 
 from conans.client.tools import cpu_count
+from conans.util.files import load
 from conans.errors import ConanException
 from conan.tools.cmake.base import CMakeToolchainBase
 from conan.tools.cmake.utils import get_generator, is_multi_configuration, architecture_flag
@@ -123,32 +125,16 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             message(FATAL_ERROR "This file is expected to be used together with the Conan toolchain")
         endif()
 
-        ########### Utility macros and functions ###########
-        function(conan_get_policy policy_id policy)
-            if(POLICY "${policy_id}")
-                cmake_policy(GET "${policy_id}" _policy)
-                set(${policy} "${_policy}" PARENT_SCOPE)
-            else()
-                set(${policy} "" PARENT_SCOPE)
-            endif()
-        endfunction()
-        ########### End of Utility macros and functions ###########
+        message(STATUS "Using CMAKE_PROJECT_INCLUDE included file")
 
-        # Adjustments that depends on the build_type
-        {% if vs_static_runtime %}
-        conan_get_policy(CMP0091 policy_0091)
-        if(policy_0091 STREQUAL "NEW")
-            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-        else()
-            foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                         CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                         CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL
-                         CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                if(DEFINED ${flag})
-                    string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
-                endif()
-            endforeach()
-        endif()
+        # Adjustments that depends on the build_type/configuration
+        {% if vs_runtimes %}
+        {% set genexpr = namespace(str='') %}
+        {%- for config, value in vs_runtimes.items() -%}
+            {%- set genexpr.str = genexpr.str +
+                                  '$<$<CONFIG:' + config + '>' + value|string + '>' %}
+        {%- endfor -%}
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
         {% endif %}
         """)
 
@@ -157,7 +143,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         super(CMakeGenericToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
-        self.vs_static_runtime = self._deduce_vs_static_runtime()
+        self.vs_runtimes = self._runtimes()
         self.parallel = parallel
 
         self.generator = generator or get_generator(self._conanfile)
@@ -219,15 +205,33 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         # This should be factorized and make it toolchain-private
         return architecture_flag(self._conanfile.settings)
 
-    def _deduce_vs_static_runtime(self):
+    def _runtimes(self):
+        # Parsing existing file to get existing configured runtimes
+        config_dict = {}
+        if os.path.exists(self.project_include_filename):
+            existing_include = load(self.project_include_filename)
+            existing_configs = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
+                                         existing_include)
+            capture = existing_configs.group(1)
+            matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>([A-Za-z]*)>", capture)
+            config_dict = dict(matches)
+
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
+        build_type = settings.get_safe("build_type")  # FIXME: change for configuration
         runtime = settings.get_safe("compiler.runtime")
-        if compiler == "Visual Studio" and "MT" in runtime:
-            return True
-        if compiler == "msvc" and runtime == "static":
-            return True
-        return False
+        if compiler == "Visual Studio":
+            config_dict[build_type] = {"MT": "MultiThreaded",
+                                       "MTd": "MultiThreadedDebug",
+                                       "MD": "MultiThreadedDLL",
+                                       "MDd": "MultiThreadedDebugDLL"}[runtime]
+        if compiler == "msvc":
+            runtime_type = settings.get_safe("compiler.runtime_type")
+            rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
+            if runtime != "static":
+                rt += "DLL"
+            config_dict[build_type] = rt
+        return config_dict
 
     def _get_libcxx(self):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
@@ -288,5 +292,5 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "architecture": self.architecture,
             "compiler": self.compiler
         })
-        ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})
+        ctxt_project_include.update({'vs_runtimes': self.vs_runtimes})
         return ctxt_toolchain, ctxt_project_include

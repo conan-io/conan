@@ -85,22 +85,8 @@ class CMakeToolchainBase(object):
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
         {% if conan_project_include_cmake %}
-        if(CMAKE_VERSION VERSION_LESS "3.15")
-            message(WARNING
-                " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
-                " used by Conan toolchain to work. In order to get the same behavior you will\\n"
-                " need to manually include the generated file after your 'project()' call in the\\n"
-                " main CMakeLists.txt file:\\n"
-                " \\n"
-                "     project(YourProject C CXX)\\n"
-                "     include(\\"\\${CMAKE_BINARY_DIR}/conan_project_include.cmake\\")\\n"
-                " \\n"
-                " This file contains some definitions and extra adjustments that depend on\\n"
-                " the build_type and it cannot be done in the toolchain.")
-        else()
-            # Will be executed after the 'project()' command
-            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
-        endif()
+        # Will be executed after the 'project()' command
+        set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
         {% endif %}
 
         {% block main %}
