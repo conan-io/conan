@@ -1,9 +1,10 @@
 import unittest
 import tempfile
 import textwrap
-import conan.tools.qbs.generictoolchain as qbs
+import conan.tools.qt.generictoolchain as qbs
 
 from conans import tools
+from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings, MockOptions
 
 
@@ -164,13 +165,13 @@ class QbsGenericTest(unittest.TestCase):
 
     def test_compiler_not_in_settings(self):
         conanfile = MockConanfile(MockSettings({}))
-        with self.assertRaises(qbs.QbsToolchainException):
+        with self.assertRaises(ConanException):
             qbs._check_for_compiler(conanfile)
 
     def test_compiler_in_settings_not_supported(self):
         conanfile = MockConanfile(
             MockSettings({'compiler': 'not realy a compiler name'}))
-        with self.assertRaises(qbs.QbsToolchainException):
+        with self.assertRaises(ConanException):
             qbs._check_for_compiler(conanfile)
 
     def test_valid_compiler(self):
@@ -214,7 +215,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
                 conanfile.runner.command_called[0],
-                'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
+                'qt-setup-toolchains --settings-dir "%s" %s %s' % (
                     qbs._settings_dir(conanfile), settings['qbs_compiler'],
                     qbs._profile_name))
 
@@ -228,7 +229,7 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
                 conanfile.runner.command_called[0],
-                'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
+                'qt-setup-toolchains --settings-dir "%s" %s %s' % (
                     qbs._settings_dir(conanfile), compiler,
                     qbs._profile_name))
 
@@ -301,10 +302,10 @@ class QbsGenericTest(unittest.TestCase):
             profiles.conan.cpp.platformLinkerFlags: undefined
             profiles.conan.cpp.toolchainInstallPath: "/usr/bin"
             profiles.conan.cpp.toolchainPrefix: "arm-none-eabi-"
-            profiles.conan.qbs.targetPlatform: ""
-            profiles.conan.qbs.someBoolProp: "true"
-            profiles.conan.qbs.someIntProp: "13"
-            profiles.conan.qbs.toolchain: ["gcc"]
+            profiles.conan.qt.targetPlatform: ""
+            profiles.conan.qt.someBoolProp: "true"
+            profiles.conan.qt.someIntProp: "13"
+            profiles.conan.qt.toolchain: ["gcc"]
             ''')
 
     def test_read_qbs_toolchain_from_qbs_config_output(self):
@@ -317,10 +318,10 @@ class QbsGenericTest(unittest.TestCase):
             'cpp.platformLinkerFlags': 'undefined',
             'cpp.toolchainInstallPath': '"/usr/bin"',
             'cpp.toolchainPrefix': '"arm-none-eabi-"',
-            'qbs.targetPlatform': '""',
-            'qbs.someBoolProp': 'true',
-            'qbs.someIntProp': '13',
-            'qbs.toolchain': '["gcc"]'
+            'qt.targetPlatform': '""',
+            'qt.someBoolProp': 'true',
+            'qt.someIntProp': '13',
+            'qt.toolchain': '["gcc"]'
         }
 
         conanfile = MockConanfileWithFolders(
@@ -330,19 +331,19 @@ class QbsGenericTest(unittest.TestCase):
         config = qbs._read_qbs_toolchain_from_config(conanfile)
         self.assertEqual(len(conanfile.runner.command_called), 1)
         self.assertEqual(conanfile.runner.command_called[0],
-                         'qbs-config --settings-dir "%s" --list' % (
+                         'qt-config --settings-dir "%s" --list' % (
                             qbs._settings_dir(conanfile)))
         self.assertEqual(config, expected_config)
 
     def test_toolchain_content(self):
         expected_content = textwrap.dedent('''\
-            import qbs
+            import qt
 
             Project {
                 Profile {
                     name: "conan_toolchain_profile"
 
-                    /* detected via qbs-setup-toolchains */
+                    /* detected via qt-setup-toolchains */
                     cpp.cCompilerName: "gcc"
                     cpp.compilerName: "g++"
                     cpp.cxxCompilerName: "g++"
@@ -351,18 +352,18 @@ class QbsGenericTest(unittest.TestCase):
                     cpp.platformLinkerFlags: undefined
                     cpp.toolchainInstallPath: "/usr/bin"
                     cpp.toolchainPrefix: "arm-none-eabi-"
-                    qbs.targetPlatform: ""
-                    qbs.someBoolProp: true
-                    qbs.someIntProp: 13
-                    qbs.toolchain: ["gcc"]
+                    qt.targetPlatform: ""
+                    qt.someBoolProp: true
+                    qt.someIntProp: 13
+                    qt.toolchain: ["gcc"]
 
                     /* deduced from environment */
-                    qbs.sysroot: "/foo/bar/path"
+                    qt.sysroot: "/foo/bar/path"
 
                     /* conan settings */
-                    qbs.buildVariant: "release"
-                    qbs.architecture: "x86_64"
-                    qbs.optimization: "small"
+                    qt.buildVariant: "release"
+                    qt.architecture: "x86_64"
+                    qt.optimization: "small"
                     cpp.cxxLanguageVersion: "c++17"
 
                     /* package options */

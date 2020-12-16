@@ -1,5 +1,5 @@
 import unittest
-import conan.tools.qbs.qbs as qbs
+import conan.tools.qt.qbs as qbs
 
 from conans.client import tools
 from conans.test.utils.mocks import MockConanfile, MockSettings
@@ -93,7 +93,7 @@ class QbsTest(unittest.TestCase):
         build_helper.build()
         self.assertEqual(
             conanfile.runner.command_called,
-            ('qbs build --no-install --build-directory %s '
+            ('qt build --no-install --build-directory %s '
              '--file %s --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
                 build_helper.jobs, build_helper.use_toolchain_profile))
@@ -101,7 +101,7 @@ class QbsTest(unittest.TestCase):
         build_helper.build(products=['app1', 'app2', 'lib'])
         self.assertEqual(
             conanfile.runner.command_called,
-            ('qbs build --no-install --build-directory %s '
+            ('qt build --no-install --build-directory %s '
              '--file %s --products app1,app2,lib --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
                 build_helper.jobs, build_helper.use_toolchain_profile))
@@ -117,7 +117,7 @@ class QbsTest(unittest.TestCase):
         build_helper.build_all()
         self.assertEqual(
             conanfile.runner.command_called,
-            ('qbs build --no-install --build-directory %s '
+            ('qt build --no-install --build-directory %s '
              '--file %s --all-products --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
                 build_helper.jobs, build_helper.use_toolchain_profile))
@@ -140,7 +140,7 @@ class QbsTest(unittest.TestCase):
         build_helper.build()
         self.assertEqual(
             conanfile.runner.command_called,
-            ('qbs build --no-install --build-directory %s '
+            ('qt build --no-install --build-directory %s '
              '--file %s --jobs %s profile:%s '
              'config:%s %s:%s %s:%s %s:%s %s:%s') % (
                 conanfile.build_folder, build_helper._project_file,

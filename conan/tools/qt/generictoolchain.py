@@ -64,12 +64,6 @@ _cxx_language_version = {
 }
 
 
-class QbsToolchainException(ConanException):
-    def __str__(self):
-        msg = super(QbsToolchainException, self).__str__()
-        return 'Qbs generic toolchain: {}'.format(msg)
-
-
 def _bool(b):
     if b is None:
         return None
@@ -83,10 +77,10 @@ def _env_var_to_list(var):
 def _check_for_compiler(conanfile):
     compiler = conanfile.settings.get_safe('compiler')
     if not compiler:
-        raise QbsToolchainException('need compiler to be set in settings')
+        raise ConanException('Qbs: need compiler to be set in settings')
 
     if compiler not in ['Visual Studio', 'gcc', 'clang']:
-        raise QbsToolchainException('compiler not supported')
+        raise ConanException('Qbs: compiler {} not supported'.format(compiler))
 
 
 def _default_compiler_name(conanfile):
@@ -102,7 +96,7 @@ def _default_compiler_name(conanfile):
             return 'cl'
         if compiler == 'clang':
             return 'clang-cl'
-        raise QbsToolchainException('unknown windows compiler')
+        raise ConanException('unknown windows compiler')
 
     return compiler
 
@@ -123,14 +117,14 @@ def _setup_toolchains(conanfile):
             env_context = tools.vcvars()
 
     with env_context:
-        cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
+        cmd = 'qt-setup-toolchains --settings-dir "%s" %s %s' % (
               _settings_dir(conanfile), compiler, _profile_name)
         conanfile.run(cmd)
 
 
 def _read_qbs_toolchain_from_config(conanfile):
     s = StringIO()
-    conanfile.run('qbs-config --settings-dir "%s" --list' % (
+    conanfile.run('qt-config --settings-dir "%s" --list' % (
                     _settings_dir(conanfile)), output=s)
     config = {}
     s.seek(0)
@@ -185,16 +179,16 @@ def _flags_from_env():
 
 
 class QbsGenericToolchain(object):
-    filename = 'conan_toolchain.qbs'
+    filename = 'conan_toolchain.qt'
 
     _template_toolchain = textwrap.dedent('''\
-        import qbs
+        import qt
 
         Project {
             Profile {
                 name: "conan_toolchain_profile"
 
-                /* detected via qbs-setup-toolchains */
+                /* detected via qt-setup-toolchains */
                 {%- for key, value in _profile_values_from_setup.items() %}
                 {{ key }}: {{ value }}
                 {%- endfor %}
@@ -204,18 +198,18 @@ class QbsGenericToolchain(object):
                 {{ key }}: {{ value }}
                 {%- endfor %}
                 {%- if sysroot %}
-                qbs.sysroot: "{{ sysroot }}"
+                qt.sysroot: "{{ sysroot }}"
                 {%- endif %}
 
                 /* conan settings */
                 {%- if build_variant %}
-                qbs.buildVariant: "{{ build_variant }}"
+                qt.buildVariant: "{{ build_variant }}"
                 {%- endif %}
                 {%- if architecture %}
-                qbs.architecture: "{{ architecture }}"
+                qt.architecture: "{{ architecture }}"
                 {%- endif %}
                 {%- if optimization %}
-                qbs.optimization: "{{ optimization }}"
+                qt.optimization: "{{ optimization }}"
                 {%- endif %}
                 {%- if cxx_language_version %}
                 cpp.cxxLanguageVersion: "{{ cxx_language_version }}"
