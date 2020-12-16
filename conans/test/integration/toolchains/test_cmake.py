@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import textwrap
 import time
 import unittest
@@ -10,6 +11,7 @@ from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.integration.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 
@@ -228,7 +230,15 @@ class WinTest(Base):
         self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
         self._run_app("Release", bin_folder=True)
+        check_msc_ver(toolset or "v141", self.client.out)
+        self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
         self._run_app("Debug", bin_folder=True)
+        check_msc_ver(toolset or "v141", self.client.out)
+        self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
+        check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
+                         static="MT" in runtime)
+        check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug",
+                         static="MT" in runtime)
 
         self._modify_code()
         time.sleep(1)

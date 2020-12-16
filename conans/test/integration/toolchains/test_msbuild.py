@@ -1,14 +1,13 @@
 import os
 import platform
-import re
 import textwrap
 import unittest
 
 import pytest
 
-from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.integration.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 
@@ -297,17 +296,7 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
         self._run_app(client, "x86", "Release")
-        version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
-        version = int(version)
-        self.assertTrue(10 <= version < 20)
-        self.assertIn("main _MSVC_LANG2017", client.out)
-
-        vcvars = vcvars_command(version="15", architecture="x86")
-        cmd = ('%s && dumpbin /dependents "Release\\MyApp.exe"' % vcvars)
-        client.run_command(cmd)
-        # No other DLLs dependencies rather than kernel, it was MT, statically linked
-        self.assertIn("KERNEL32.dll", client.out)
-        self.assertEqual(1, str(client.out).count(".dll"))
+        check_msc_ver("v141", client.out)
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
@@ -340,14 +329,9 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
-        self.assertIn("main _MSC_VER1900", client.out)
+        check_msc_ver("v140", client.out)
         self.assertIn("main _MSVC_LANG2014", client.out)
-
-        vcvars = vcvars_command(version="15", architecture="amd64")
-        cmd = ('%s && dumpbin /dependents "x64\\Debug\\MyApp.exe"' % vcvars)
-        client.run_command(cmd)
-        self.assertIn("MSVCP140D.dll", client.out)
-        self.assertIn("VCRUNTIME140D.dll", client.out)
+        check_vs_runtime("x64/Debug/MyApp.exe", client, "15", static=False, build_type="Debug")
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):
@@ -389,7 +373,4 @@ class WinTest(unittest.TestCase):
             self.assertIn("Visual Studio 2017", client.out)
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
             self._run_app(client, arch, build_type)
-            version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
-            version = int(version)
-            self.assertTrue(10 <= version < 20)
-            self.assertIn("main _MSVC_LANG2017", client.out)
+            check_msc_ver("v141", client.out)
