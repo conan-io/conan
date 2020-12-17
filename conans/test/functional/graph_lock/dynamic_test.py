@@ -440,18 +440,20 @@ class PartialOptionsTest(unittest.TestCase):
     def _check(self):
         client = self.client
 
-        def _validate():
-            client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
-                       "--lockfile-out=libd.lock", assert_error=True)
-            expected = ("LibA/1.0: LibC/1.0 tried to change LibA/1.0 option myoption to False\n"
-                        "but it was already defined as True")
-            self.assertIn(expected, client.out)
+        client.save({"conanfile.py": GenConanfile().with_requires("LibB/1.0", "LibC/1.0")})
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock", assert_error=True)
+        expected = textwrap.dedent("""\
+                       ERROR: LibA/1.0: Locked options do not match computed options
+                       Locked options:
+                       myoption=True
+                       Computed options:
+                       myoption=False""")
+        self.assertIn(expected, client.out)
 
-        client.save({"conanfile.py": GenConanfile().with_require("LibB/1.0")
-                                                   .with_require("LibC/1.0")})
-        _validate()
+        # Order of LibC, LibB does matter, in this case it will not raise
+        client.save({"conanfile.py": GenConanfile().with_requires("LibC/1.0", "LibB/1.0")})
 
-        # Order of LibC, LibB does matter
-        client.save({"conanfile.py": GenConanfile().with_require("LibC/1.0")
-                                                   .with_require("LibB/1.0")})
-        _validate()
+        client.run("lock create conanfile.py --name=LibD --version=1.0 --lockfile=libb.lock "
+                   "--lockfile-out=libd.lock")
+        self.assertIn("LibC/1.0:777a7717c781c687b6d0fecc05d3818d0a031f92 - Missing", client.out)
