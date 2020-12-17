@@ -189,7 +189,7 @@ class QbsGenericTest(unittest.TestCase):
             {'os': 'Windows', 'compiler': 'Visual Studio',
              'qbs_compiler': 'cl'},
             {'os': 'Windows', 'compiler': 'Visual Studio',
-             'compiler.toolset': 'ClangCl', 'qbs_compiler': 'clang-cl'},
+             'compiler.toolset': 'ClangCL', 'qbs_compiler': 'clang-cl'},
             {'os': 'Linux', 'compiler': 'gcc', 'qbs_compiler': 'gcc'},
             {'os': 'Linux', 'compiler': 'clang', 'qbs_compiler': 'clang'}
         ]
