@@ -76,8 +76,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
         # FIXME: Broken assert
         #  self.assertIn("with debug_info", self.client.out)
 
-    @unittest.skip("FIXME: Broken on Windows")
-    def test_locally_build_Windows(self):
+    @unittest.skipIf(platform.system() != "Windows", "Only windows")
+    def test_locally_build_windows(self):
         """ Ninja build must proceed using default profile and cmake build (Windows)
         """
         win_host = textwrap.dedent("""[settings]
@@ -136,7 +136,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.client.run_command("file libfoobard.dylib")
         self.assertIn("64-bit dynamically linked shared library x86_64", self.client.out)
 
-    @unittest.skip("Requires a specific profile on Windows")
+    @unittest.skipIf(platform.system() != "Windows", "Only windows")
     def test_devflow_build(self):
         """ Ninja build must proceed using default profile and conan development flow
         """
