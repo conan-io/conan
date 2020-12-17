@@ -583,7 +583,8 @@ class CMakeCommonMacros:
             # If using VS, verify toolset
             if (CONAN_COMPILER STREQUAL "Visual Studio")
                 if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
-                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang" OR
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "ClangCL")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
                 elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")
