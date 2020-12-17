@@ -347,3 +347,11 @@ class NewCommandTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+    def test_new_test_package_custom_name(self):
+        # https://github.com/conan-io/conan/issues/8164
+        client = TestClient()
+        client.run("new mypackage/0.1 -t")
+        source = client.load("test_package/example.cpp")
+        self.assertIn('#include "hello.h"', source)
+        self.assertIn("hello();", source)

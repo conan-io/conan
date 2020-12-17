@@ -1,5 +1,5 @@
 from conans.client.output import ScopedOutput
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import NotFoundException, RecipeNotFoundException
 from multiprocessing.pool import ThreadPool
@@ -22,7 +22,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     conanfile = loader.load_basic(conan_file_path)
 
     # Download the sources too, don't be lazy
-    complete_recipe_sources(remote_manager, cache, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary
