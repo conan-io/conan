@@ -117,14 +117,14 @@ def _setup_toolchains(conanfile):
             env_context = tools.vcvars()
 
     with env_context:
-        cmd = 'qt-setup-toolchains --settings-dir "%s" %s %s' % (
+        cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
               _settings_dir(conanfile), compiler, _profile_name)
         conanfile.run(cmd)
 
 
 def _read_qbs_toolchain_from_config(conanfile):
     s = StringIO()
-    conanfile.run('qt-config --settings-dir "%s" --list' % (
+    conanfile.run('qbs-config --settings-dir "%s" --list' % (
                     _settings_dir(conanfile)), output=s)
     config = {}
     s.seek(0)
@@ -178,17 +178,17 @@ def _flags_from_env():
     return flags_from_env
 
 
-class QbsGenericToolchain(object):
-    filename = 'conan_toolchain.qt'
+class QbsToolchain(object):
+    filename = 'conan_toolchain.qbs'
 
     _template_toolchain = textwrap.dedent('''\
-        import qt
+        import qbs
 
         Project {
             Profile {
                 name: "conan_toolchain_profile"
 
-                /* detected via qt-setup-toolchains */
+                /* detected via qbs-setup-toolchains */
                 {%- for key, value in _profile_values_from_setup.items() %}
                 {{ key }}: {{ value }}
                 {%- endfor %}
@@ -198,18 +198,18 @@ class QbsGenericToolchain(object):
                 {{ key }}: {{ value }}
                 {%- endfor %}
                 {%- if sysroot %}
-                qt.sysroot: "{{ sysroot }}"
+                qbs.sysroot: "{{ sysroot }}"
                 {%- endif %}
 
                 /* conan settings */
                 {%- if build_variant %}
-                qt.buildVariant: "{{ build_variant }}"
+                qbs.buildVariant: "{{ build_variant }}"
                 {%- endif %}
                 {%- if architecture %}
-                qt.architecture: "{{ architecture }}"
+                qbs.architecture: "{{ architecture }}"
                 {%- endif %}
                 {%- if optimization %}
-                qt.optimization: "{{ optimization }}"
+                qbs.optimization: "{{ optimization }}"
                 {%- endif %}
                 {%- if cxx_language_version %}
                 cpp.cxxLanguageVersion: "{{ cxx_language_version }}"

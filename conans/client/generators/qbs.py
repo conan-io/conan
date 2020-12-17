@@ -1,3 +1,4 @@
+from conans.model import Generator
 from conans.paths import BUILD_INFO_QBS
 
 
@@ -24,8 +25,8 @@ class DepsCppQbs(object):
         self.rootpath = '%s' % cpp_info.rootpath.replace("\\", "/")
 
 
-class QbsGenerator(object):
-    name = "qt"
+class QbsGenerator(Generator):
+    name = "qbs"
 
     @property
     def filename(self):
@@ -33,7 +34,7 @@ class QbsGenerator(object):
 
     @property
     def content(self):
-        deps = DepsCppQbs(self.conanfile.deps_build_info)
+        deps = DepsCppQbs(self.deps_build_info)
 
         template = ('    Product {{\n'
                     '        name: "{dep}"\n'
@@ -60,11 +61,11 @@ class QbsGenerator(object):
         sections.append(all_flags)
         template_deps = template + '    // {dep} root path: {deps.rootpath}\n'
 
-        for dep_name, dep_cpp_info in self.conanfile.deps_build_info.dependencies:
+        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppQbs(dep_cpp_info)
             depends_items = ""
             for public_dep in dep_cpp_info.public_deps:
-                name = self.conanfile.deps_build_info[public_dep].get_name(QbsGenerator.name)
+                name = self.deps_build_info[public_dep].get_name(QbsGenerator.name)
                 depends_items += depends_template.format(dep=name)
             dep_flags = template_deps.format(dep=dep_name, deps=deps, depends_items=depends_items)
             sections.append(dep_flags)

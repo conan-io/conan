@@ -1,2 +1,2 @@
-from conan.tools.qt.generictoolchain import QbsGenericToolchain
+from conan.tools.qt.qbstoolchain import QbsToolchain
 from conan.tools.qt.qbs import Qbs

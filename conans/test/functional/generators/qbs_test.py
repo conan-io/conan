@@ -17,6 +17,6 @@ class QbsGeneratorTest(unittest.TestCase):
         pkg = GenConanfile("pkg", "0.1").with_requires("dep/0.1@user/testing")
         client.save({"conanfile.py": pkg}, clean_first=True)
         client.run("create . user/testing")
-        client.run("install pkg/0.1@user/testing -g=qt")
-        qbs = client.load("conanbuildinfo.qt")
+        client.run("install pkg/0.1@user/testing -g=qbs")
+        qbs = client.load("conanbuildinfo.qbs")
         self.assertIn('Depends { name: "dep" }', qbs)

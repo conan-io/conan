@@ -4,9 +4,9 @@ from conans import tools
 from conans.errors import ConanException
 
 
-def _configuration_dict_to_commandlist(name, dict):
+def _configuration_dict_to_commandlist(name, config_dict):
     command_list = ['config:%s' % name]
-    for key, value in dict.items():
+    for key, value in config_dict.items():
         if type(value) is bool:
             if value:
                 b = 'true'
@@ -20,7 +20,7 @@ def _configuration_dict_to_commandlist(name, dict):
 
 class Qbs(object):
     def __init__(self, conanfile, project_file=None):
-        # hardcoded name, see qt toolchain
+        # hardcoded name, see qbs toolchain
         self.use_toolchain_profile = 'conan_toolchain_profile'
         self._conanfile = conanfile
         self._set_project_file(project_file)
@@ -39,7 +39,8 @@ class Qbs(object):
     def add_configuration(self, name, values):
         self._configuration[name] = values
 
-    def build(self, products=[]):
+    def build(self, products=None):
+        products = products or []
         args = [
             '--no-install',
             '--build-directory', self._conanfile.build_folder,
@@ -58,7 +59,7 @@ class Qbs(object):
             config = self._configuration[name]
             args.extend(_configuration_dict_to_commandlist(name, config))
 
-        cmd = 'qt build %s' % (' '.join(args))
+        cmd = 'qbs build %s' % (' '.join(args))
         self._conanfile.run(cmd)
 
     def build_all(self):
@@ -78,7 +79,7 @@ class Qbs(object):
             config = self._configuration[name]
             args.extend(_configuration_dict_to_commandlist(name, config))
 
-        cmd = 'qt build %s' % (' '.join(args))
+        cmd = 'qbs build %s' % (' '.join(args))
         self._conanfile.run(cmd)
 
     def install(self):
@@ -90,7 +91,7 @@ class Qbs(object):
         ]
 
         for name in self._configuration:
-            args.append('config:%s' % (name))
+            args.append('config:%s' % name)
 
-        cmd = 'qt install %s' % (' '.join(args))
+        cmd = 'qbs install %s' % (' '.join(args))
         self._conanfile.run(cmd)
