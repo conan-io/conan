@@ -1,6 +1,6 @@
 import os
 
-from conans.client.downloaders import run_downloader
+from conans.client.downloaders.download import run_downloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
