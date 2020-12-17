@@ -1,4 +1,4 @@
-from .utils import hash_url
+from conans.client.downloaders.utils import hash_url
 
 
 class RemoteCacheDownloader(object):

@@ -11,7 +11,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
 from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
-from conans.util.env_reader import get_env
 from conans.util.files import save
 from conans import __version__ as client_version
 from conans.util.misc import make_tuple

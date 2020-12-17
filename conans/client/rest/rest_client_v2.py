@@ -3,7 +3,7 @@ import time
 import traceback
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.downloaders import run_downloader
+from conans.client.downloaders.download import run_downloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV2Router
 from conans.client.rest.file_uploader import FileUploader

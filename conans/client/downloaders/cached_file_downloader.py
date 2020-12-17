@@ -4,10 +4,10 @@ from contextlib import contextmanager
 from threading import Lock
 
 from conans.client.downloaders.file_downloader import check_checksum
+from conans.client.downloaders.utils import hash_url
 from conans.errors import ConanException
 from conans.util.files import mkdir
 from conans.util.locks import SimpleLock
-from .utils import hash_url
 
 
 class CachedFileDownloader(object):

@@ -3,6 +3,7 @@ import os
 import random
 import shlex
 import shutil
+import socket
 import sys
 import textwrap
 import threading
@@ -71,7 +72,7 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_profile(profile=None, settings=None):
+def create_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
@@ -876,6 +877,14 @@ class TurboTestClient(TestClient):
         return rev
 
 
+def get_free_port():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    ret = sock.getsockname()[1]
+    sock.close()
+    return ret
+
+
 class StoppableThreadBottle(threading.Thread):
     """
     Real server to test download endpoints
@@ -883,8 +892,8 @@ class StoppableThreadBottle(threading.Thread):
 
     def __init__(self, host=None, port=None):
         self.host = host or "127.0.0.1"
-        self.port = port or random.randrange(48000, 49151)
         self.server = bottle.Bottle()
+        self.port = port or get_free_port()
         super(StoppableThreadBottle, self).__init__(target=self.server.run,
                                                     kwargs={"host": self.host, "port": self.port})
         self.daemon = True
