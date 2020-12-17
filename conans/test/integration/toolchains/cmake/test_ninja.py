@@ -80,11 +80,35 @@ class CMakeNinjaTestCase(unittest.TestCase):
     def test_locally_build_windows(self):
         """ Ninja build must proceed using default profile and cmake build (Windows)
         """
+        client = TestClient(path_with_spaces=False)
+        client.save({"conanfile.py": self.conanfile,
+                     "main.cpp": self.main_cpp,
+                     "CMakeLists.txt": self.cmake})
+        win_host = textwrap.dedent("""
+            [settings]
+            os=Windows
+            arch=x86_64
+            compiler=Visual Studio
+            compiler.version=15
+            compiler.runtime=MD
+            build_type=Release
+             """)
+        client.save({"win": win_host})
+        client.run("install . -pr=win")
+        # Ninja is single-configuration
+        vcvars = vcvars_command("15", architecture="amd64")
+        client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
+                           .format(vcvars))
+        client.run_command("{} && cmake --build .".format(vcvars))
+        client.run_command("App")
+        self.assertIn("main: Release!", client.out)
+        self.assertIn("main _M_X64 defined", client.out)
+
         win_host = textwrap.dedent("""[settings]
                                  os=Windows
                                  arch=x86_64
                                  compiler=Visual Studio
-                                 compiler.version=16
+                                 compiler.version=15
                                  compiler.runtime=MD
                                  build_type=Release
                                  [env]
@@ -149,7 +173,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
             os=Windows
             arch=x86
             compiler=Visual Studio
-            compiler.version=16
+            compiler.version=15
             compiler.runtime=MTd
             build_type=Debug
              """)
@@ -157,7 +181,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         client.run("install . -pr=win")
         # Ninja is single-configuration
         # It is necessary to set architecture=x86 here, otherwise final architecture is wrong
-        vcvars = vcvars_command("16", architecture="x86")
+        vcvars = vcvars_command("15", architecture="x86")
         client.run("install . -pr=win")
         client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
                            .format(vcvars))
