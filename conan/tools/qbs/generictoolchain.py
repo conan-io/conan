@@ -97,7 +97,7 @@ def _default_compiler_name(conanfile):
         if compiler == 'gcc':
             return 'mingw'
         if compiler == 'Visual Studio':
-            if tools.msvs_toolset(conanfile) == 'ClangCl':
+            if tools.msvs_toolset(conanfile) == 'ClangCL':
                 return 'clang-cl'
             return 'cl'
         if compiler == 'clang':
@@ -120,7 +120,7 @@ def _setup_toolchains(conanfile):
     env_context = tools.no_op()
     if platform.system() == 'Windows':
         if compiler in ['cl', 'clang-cl']:
-            env_context = tools.vcvars()
+            env_context = tools.vcvars(conanfile)
 
     with env_context:
         cmd = 'qbs-setup-toolchains --settings-dir "%s" %s %s' % (
