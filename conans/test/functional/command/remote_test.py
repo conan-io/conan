@@ -250,7 +250,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("origin3: https://myurl3", lines[1])
         self.assertIn("origin: https://myurl", lines[2])
 
-    def update_test_insert(self):
+    def test_update_insert(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
@@ -374,7 +374,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote remove origin", assert_error=True)
         self.assertIn("ERROR: No remote 'origin' defined in remotes", self.client.out)
 
-    def duplicated_error_tests(self):
+    def test_duplicated_error(self):
         """ check remote name and URL are not duplicated
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)

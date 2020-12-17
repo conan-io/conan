@@ -285,7 +285,7 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_PACKAGE_NAME MyPkg)', cmake_lines)
         self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
 
-    def settings_are_generated_tests(self):
+    def test_settings_are_generated(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
