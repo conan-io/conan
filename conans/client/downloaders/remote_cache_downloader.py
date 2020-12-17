@@ -1,7 +1,7 @@
 from .utils import hash_url
 
 
-class ArtifactoryCacheDownloader(object):
+class RemoteCacheDownloader(object):
 
     def __init__(self, rt_base_url, downloader, user_download=False):
         self._rt_base_url = rt_base_url
@@ -15,7 +15,7 @@ class ArtifactoryCacheDownloader(object):
             return self._downloader.download(url=url, file_path=file_path, **kwargs)
         except Exception:
             # TODO: Check different exceptions: if the checksum fails we should warn the user so
-            #   they can remove the file from the Artifactory server.
+            #   they can remove the file from the remote.
             return None
 
     def download(self, url, file_path=None, md5=None, sha1=None, sha256=None, **kwargs):

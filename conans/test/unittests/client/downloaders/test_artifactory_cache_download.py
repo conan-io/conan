@@ -1,4 +1,4 @@
-from conans.client.downloaders.artifactory_cache_downloader import ArtifactoryCacheDownloader
+from conans.client.downloaders.remote_cache_downloader import RemoteCacheDownloader
 
 from conans.errors import ConanException
 
@@ -21,14 +21,14 @@ class TestArtifactoryCacheDownload(object):
 
     def test_rt_file_exist(self):
         fake_downloader = FakeFileDownloader(True)
-        rt_downloader = ArtifactoryCacheDownloader('https://jfrog.rt', fake_downloader)
+        rt_downloader = RemoteCacheDownloader('https://jfrog.rt', fake_downloader)
         rt_downloader.download('https://domain.url/filename', file_path='filesystem_path')
         assert len(fake_downloader.calls) == 1, fake_downloader.calls
         assert fake_downloader.calls[0].startswith('https://jfrog.rt/')
 
     def test_rt_file_not_found(self):
         fake_downloader = FakeFileDownloader(False)
-        rt_downloader = ArtifactoryCacheDownloader('https://jfrog.rt', fake_downloader)
+        rt_downloader = RemoteCacheDownloader('https://jfrog.rt', fake_downloader)
         rt_downloader.download('https://domain.url/filename', file_path='filesystem_path')
         assert len(fake_downloader.calls) == 2
         assert fake_downloader.calls[0].startswith('https://jfrog.rt/')
