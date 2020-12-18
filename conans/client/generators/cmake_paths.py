@@ -26,7 +26,7 @@ class CMakePathsGenerator(Generator):
         # 3. The "install_folder" ones, in case there is no FindXXX.cmake, try with the install dir
         #    if the user used the "cmake_find_package" will find the auto-generated
         # 4. The CMake installation dir/Modules ones.
-        deps = DepsCppCmake(self.deps_build_info, "cmake_paths")
+        deps = DepsCppCmake(self.deps_build_info, self.name)
         lines.append("set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}} "
                      "${{CMAKE_CURRENT_LIST_DIR}})".format(deps=deps))
         lines.append("set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}} "
