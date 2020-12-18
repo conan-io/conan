@@ -228,6 +228,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         ret = []
         for comp_genname, comp, comp_requires_gennames in components:
             deps_cpp_cmake = DepsCppCmake(comp)
+            deps_cpp_cmake.build_modules_paths = deps_cpp_cmake.build_modules_paths[self.name]
             deps_cpp_cmake.public_deps = " ".join(
                 ["{}::{}".format(*it) for it in comp_requires_gennames])
             ret.append((comp_genname, deps_cpp_cmake))
