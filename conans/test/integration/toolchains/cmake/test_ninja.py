@@ -132,8 +132,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
         # FIXME: Broken assert
         #  self.assertIn("with debug_info", client.out)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only windows")
     @parameterized.expand([("Release", "15"), ("Debug", "15")])
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_locally_build_app_windows(self, build_type, msvc_version):
         """ Ninja build must proceed an app using default profile and cmake build (Windows)
         """
@@ -166,9 +166,9 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
         check_vs_runtime("App.exe", client, msvc_version, static=False, build_type=build_type)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only windows")
     @parameterized.expand([("Release", "15", False), ("Debug", "15", False),
                            ("Release", "15", True), ("Debug", "15", True)])
+    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
     def test_locally_build_lib_windows(self, build_type, msvc_version, shared):
         """ Ninja build must proceed a library using default profile and cmake build (Windows)
         """
