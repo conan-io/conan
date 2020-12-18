@@ -14,9 +14,11 @@ class DepsCppCmake(object):
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-            assert isinstance(paths, list), "'%s is not a list" % (paths)
+            if isinstance(paths, list):
+                print("'%s is not a list" % (paths))
             for p in paths:
-                assert isinstance(p, str), "'%s' is not a string -> %s" % (p, paths)
+                if isinstance(p, str):
+                    print("'%s' is not a string -> %s" % (p, paths))
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
