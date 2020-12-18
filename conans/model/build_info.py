@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from copy import copy
 
 from conans.errors import ConanException
@@ -60,7 +60,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = []
+        self.build_modules = defaultdict(list)
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
@@ -89,8 +89,10 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
+            print(self.build_modules.items())
+            print()
+            self._build_modules_paths = {g: [os.path.join(self.rootpath, p) if not os.path.isabs(p)
+                                         else p for p in l] for g, l in self.build_modules.items()}
         return self._build_modules_paths
 
     @property
@@ -323,6 +325,19 @@ class _BaseDepsCppInfo(_CppInfo):
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
+        def merge_dicts(dict1, dict2):
+            all_keys = set(list(dict1.keys()) + list(dict2.keys()))
+            temp = {}
+            for k in all_keys:
+                if k in dict1.keys() and k in dict2.keys():
+                    temp[k] = [v for v in dict1[k] if v not in dict2[k]]
+                    temp[k].extend(dict2[k])
+                elif k in dict1.keys():
+                    temp[k] = dict1[k]
+                elif k in dict2.keys():
+                    temp[k] = dict2[k]
+            return temp
+
         self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
         self.srcdirs = merge_lists(self.srcdirs, dep_cpp_info.src_paths)
@@ -333,7 +348,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
         self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
@@ -419,6 +434,20 @@ class DepCppInfo(object):
     def _merge_lists(seq1, seq2):
         return seq1 + [s for s in seq2 if s not in seq1]
 
+    @staticmethod
+    def _merge_dicts(dict1, dict2):
+        all_keys = set(list(dict1.keys()) + list(dict2.keys()))
+        temp = {}
+        for k in all_keys:
+            if k in dict1.keys() and k in dict2.keys():
+                temp[k] = [v for v in dict1[k] if v not in dict2[k]]
+                temp[k].extend(dict2[k])
+            elif k in dict1.keys():
+                temp[k] = dict1[k]
+            elif k in dict2.keys():
+                temp[k] = dict2[k]
+        return temp
+
     def _aggregated_values(self, item):
         values = getattr(self, "_%s" % item)
         if values is not None:
@@ -438,6 +467,18 @@ class DepCppInfo(object):
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
                 paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
+        setattr(self, "_%s_paths" % item, paths)
+        return paths
+
+    def _aggregated_dict_paths(self, item):
+        paths = getattr(self, "_%s_paths" % item)
+        if paths is not None:
+            return paths
+        paths = getattr(self._cpp_info, "%s_paths" % item)
+        if self._cpp_info.components:
+            for component in self._get_sorted_components().values():
+                kk = getattr(component, "%s_paths" % item)
+                paths = self._merge_dicts(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
@@ -488,7 +529,7 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules")
+        return self._aggregated_dict_paths("build_modules")
 
     @property
     def include_paths(self):

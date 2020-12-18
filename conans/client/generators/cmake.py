@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
     generate_targets_section, CMakeCommonMacros
@@ -12,7 +14,9 @@ class DepsCppCmake(object):
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-
+            assert isinstance(paths, list), "'%s is not a list" % (paths)
+            for p in paths:
+                assert isinstance(p, str), "'%s' is not a string -> %s" % (p, paths)
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
@@ -63,9 +67,10 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
-        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
-                                               path.endswith(".cmake")])
-
+        self.build_modules_paths = defaultdict(list)
+        for k, v in cpp_info.build_modules_paths.items():
+            self.build_modules_paths[k] = join_paths(v)
+        print(self.build_modules_paths)
 
 class CMakeGenerator(Generator):
     @property
@@ -81,11 +86,13 @@ class CMakeGenerator(Generator):
         for _, dep_cpp_info in self.deps_build_info.dependencies:
             dep_name = dep_cpp_info.get_name("cmake")
             deps = DepsCppCmake(dep_cpp_info)
+            deps.build_modules_paths = deps.build_modules_paths["cmake"]
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
                 deps = DepsCppCmake(cpp_info)
+                deps.build_modules_paths = deps.build_modules_paths["cmake"]
                 dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
                 sections.append(dep_flags)
 
@@ -97,11 +104,13 @@ class CMakeGenerator(Generator):
         all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
         deps = DepsCppCmake(self.deps_build_info)
+        deps.build_modules_paths = deps.build_modules_paths["cmake"]
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
             deps = DepsCppCmake(cpp_info)
+            deps.build_modules_paths = deps.build_modules_paths["cmake"]
             dep_flags = cmake_global_vars(deps=deps, build_type=config)
             sections.append(dep_flags)
 

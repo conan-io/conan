@@ -228,14 +228,14 @@ VAR2=23
     def test_cpp_info_build_modules(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
-        info.build_modules.append("my_module.cmake")
-        info.debug.build_modules = ["mod-release.cmake"]
+        info.build_modules["generator"].append("my_module.cmake")
+        info.debug.build_modules["other_gen"] = ["mod-release.cmake"]
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
-                             list(deps_cpp_info["myname"].build_modules_paths))
+                             list(deps_cpp_info["myname"].build_modules_paths["generator"]))
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
-                             list(deps_cpp_info["myname"].debug.build_modules_paths))
+                             list(deps_cpp_info["myname"].debug.build_modules_paths["other_gen"]))
 
     def test_cppinfo_public_interface(self):
         folder = temp_folder()

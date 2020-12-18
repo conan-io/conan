@@ -14,6 +14,18 @@ def extend(cpp_info, config):
     if config_info:
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
+
+        def add_dicts(dict1, dict2):
+            all_keys = set(list(dict1.keys()) + list(dict2.keys()))
+            temp = {}
+            for k in all_keys:
+                if k in dict1.keys() and k in dict2.keys():
+                    temp[k] = [v for v in dict1[k] if v not in dict2[k]] + dict2[k]
+                elif k in dict1.keys():
+                    temp[k] = dict1[k]
+                elif k in dict2.keys():
+                    temp[k] = dict2[k]
+            return temp
         result = CppInfo(str(config_info), config_info.rootpath)
         result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
@@ -28,7 +40,7 @@ def extend(cpp_info, config):
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
         result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
-        result.build_modules = add_lists(cpp_info.build_modules, config_info.build_modules)
+        result.build_modules = add_dicts(cpp_info.build_modules, config_info.build_modules)
         return result
     return cpp_info
 
@@ -55,6 +67,7 @@ class CMakeMultiGenerator(Generator):
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)
+            deps.build_modules_paths = deps.build_modules_paths["cmake_multi"]
             dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=build_type)
             sections.append(dep_flags)
 
@@ -66,6 +79,7 @@ class CMakeMultiGenerator(Generator):
 
         dep_cpp_info = extend(self.deps_build_info, build_type)
         deps = DepsCppCmake(dep_cpp_info)
+        deps.build_modules_paths = deps.build_modules_paths["cmake_multi"]
         all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
 

@@ -254,6 +254,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
             pkg_info = DepsCppCmake(cpp_info)
+            pkg_info.build_modules_paths = pkg_info.build_modules_paths[self.name]
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                              build_type_suffix="",
                                                              deps_names=deps_names)
@@ -284,6 +285,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
             # The find_libraries_block, all variables for the package, and creation of targets
             deps = DepsCppCmake(dep_cpp_info)
+            deps.build_modules_paths = deps.build_modules_paths[self.name]
             find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
                                                           build_type_suffix="",
                                                           deps_names=deps_names)
