@@ -1,6 +1,6 @@
 import os
 
-from conans.client.downloaders import run_downloader
+from conans.client.downloaders.download import run_downloader
 from conans.client.tools.files import check_md5, check_sha1, check_sha256, unzip
 from conans.errors import ConanException
 from conans.util.fallbacks import default_output, default_requester
@@ -94,13 +94,6 @@ def download(url, filename, verify=True, out=None, retry=None, retry_wait=None, 
                        user_download=True, use_cache=bool(config and checksum), url=file_url,
                        file_path=filename, retry=retry, retry_wait=retry_wait, overwrite=overwrite,
                        auth=auth, headers=headers, md5=md5, sha1=sha1, sha256=sha256)
-        # TODO: Probably move inside downloader, remove the file,... locks...
-        if md5:
-            check_md5(filename, md5)
-        if sha1:
-            check_sha1(filename, sha1)
-        if sha256:
-            check_sha256(filename, sha256)
         out.writeln("")
 
     if not isinstance(url, (list, tuple)):

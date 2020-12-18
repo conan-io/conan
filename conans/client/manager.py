@@ -7,7 +7,7 @@ from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
@@ -84,8 +84,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         for node in deps_graph.nodes:
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
-            complete_recipe_sources(remote_manager, cache, node.conanfile, node.ref,
-                                    remotes)
+            retrieve_exports_sources(remote_manager, cache, node.conanfile, node.ref, remotes)
         manifest_manager.check_graph(deps_graph, verify=manifest_verify,
                                      interactive=manifest_interactive)
         manifest_manager.print_log()

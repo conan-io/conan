@@ -60,7 +60,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test2(self):
+    def test_multi_levels_2(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
@@ -85,7 +85,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n5, n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test3(self):
+    def test_multi_levels_3(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")

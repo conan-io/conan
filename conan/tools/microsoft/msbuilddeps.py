@@ -13,6 +13,7 @@ class MSBuildDeps(object):
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup Label="ConanVariables">
+            <Conan{name}RootFolder>{root_folder}</Conan{name}RootFolder>
             <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
             <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
             <Conan{name}PreprocessorDefinitions>{definitions}</Conan{name}PreprocessorDefinitions>
@@ -151,6 +152,7 @@ class MSBuildDeps(object):
 
         fields = {
             'name': name,
+            'root_folder': cpp_info.rootpath,
             'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
@@ -215,11 +217,12 @@ class MSBuildDeps(object):
         if not self._conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
-        general_name = "conan_deps.props"
+        general_name = "conandeps.props"
         conf_name = self._config_filename()
         condition = self._condition()
-        public_deps = self._conanfile.requires.keys()
-        result[general_name] = self._deps_props(general_name, public_deps)
+        # Include all direct build_requires for host context. This might change
+        direct_deps = self._conanfile.deps_cpp_info.direct_host_deps
+        result[general_name] = self._deps_props(general_name, direct_deps)
         for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)

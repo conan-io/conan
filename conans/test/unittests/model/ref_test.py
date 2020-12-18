@@ -126,19 +126,19 @@ class ConanNameTestCase(unittest.TestCase):
         self.assertIsNone(ConanName.validate_name("a" * ConanName._max_chars))
         self.assertIsNone(ConanName.validate_name("a" * 50))  # Regression test
 
-    def validate_name_test_invalid_format(self):
+    def test_validate_name_invalid_format(self):
         self._check_invalid_format("-no.dash.start")
         self._check_invalid_format("a" * (ConanName._min_chars - 1))
         self._check_invalid_format("a" * (ConanName._max_chars + 1))
 
-    def validate_name_test_invalid_type(self):
+    def test_validate_name_invalid_type(self):
         self._check_invalid_type(123.34)
         self._check_invalid_type(("item1", "item2",))
 
     def test_validate_name_version(self):
         self.assertIsNone(ConanName.validate_name("[vvvv]", version=True))
 
-    def validate_name_version_test_invalid(self):
+    def test_validate_name_version_invalid(self):
         self._check_invalid_format("[no.close.bracket", True)
         self._check_invalid_format("no.open.bracket]", True)
 
