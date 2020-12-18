@@ -30,7 +30,9 @@ class _MockSettings(object):
     fields = []
 
     def __init__(self, build_type=None):
-        self.build_type = build_type
+        class BuildType(str):
+            values_range = ["Debug", "Release"]
+        self.build_type = BuildType(build_type)
 
     @property
     def compiler(self):
@@ -393,8 +395,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
 
     def setUp(self):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        settings = _MockSettings()
-        settings.build_type = "Debug"
+        settings = _MockSettings(build_type="Debug")
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
@@ -470,8 +471,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
 
     def setUp(self):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        settings = _MockSettings()
-        settings.build_type = "Debug"
+        settings = _MockSettings(build_type="Debug")
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
