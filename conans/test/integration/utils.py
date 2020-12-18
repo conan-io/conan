@@ -6,7 +6,7 @@ from conan.tools.microsoft.visual import vcvars_command
 def check_vs_runtime(exe, client, vs_version, build_type, static, architecture="amd64"):
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
     exe = exe.replace("/", "\\")
-    cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, exe))
+    cmd = ('%s && dumpbin /nologo /dependents "%s"' % (vcvars, exe))
     client.run_command(cmd)
 
     if static:
@@ -34,3 +34,29 @@ def check_msc_ver(toolset, output):
         assert 10 <= version < 20, "Error:{}".format(output)
     else:
         raise NotImplementedError()
+
+
+def check_msvc_library(library, client, vs_version, build_type, static, architecture="amd64"):
+    vcvars = vcvars_command(version=vs_version, architecture=architecture)
+    library = library.replace("/", "\\")
+    if static:
+        client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, library))
+        if build_type == "Debug":
+            assert "RuntimeLibrary=MDd_DynamicDebug" in client.out, "Error:{}".format(client.out)
+        else:
+            assert "RuntimeLibrary=MD_DynamicRelease" in client.out, "Error:{}".format(client.out)
+    else:
+        client.run_command('{} && DUMPBIN /NOLOGO /DEPENDENTS "{}"'.format(vcvars, library))
+        if vs_version == "15":
+            if build_type == "Debug":
+                assert "MSVCP140D.dll" in client.out, "Error:{}".format(client.out)
+                assert "VCRUNTIME140D.dll" in client.out, "Error:{}".format(client.out)
+            else:
+                assert "MSVCP140.dll" in client.out, "Error:{}".format(client.out)
+                assert "VCRUNTIME140.dll" in client.out, "Error:{}".format(client.out)
+        else:
+            raise NotImplementedError()
+
+    client.run_command('{} && DUMPBIN /NOLOGO /HEADERS "{}"'.format(vcvars, library))
+    if architecture == "amd64":
+        assert "machine (x64)" in client.out, "Error:{}".format(client.out)
