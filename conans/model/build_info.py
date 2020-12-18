@@ -89,8 +89,6 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            print(self.build_modules.items())
-            print()
             self._build_modules_paths = {g: [os.path.join(self.rootpath, p) if not os.path.isabs(p)
                                          else p for p in l] for g, l in self.build_modules.items()}
         return self._build_modules_paths
