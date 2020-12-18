@@ -174,7 +174,8 @@ def _files(env_vars, vars_with_spaces, flavor, activate_tpl, deactivate_tpl, ven
     activate_content = activate_tpl.render(environment_file=env_filepath,
                                            modified_vars=modified_vars, new_vars=new_vars,
                                            venv_name=venv_name)
-    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars)
+    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars, 
+                                               venv_name=venv_name)
 
     environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]
     # This blank line is important, otherwise the script doens't process last line
