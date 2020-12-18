@@ -67,10 +67,10 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
-        self.build_modules_paths = defaultdict(list)
+        self.build_modules_paths = defaultdict(str)
         for k, v in cpp_info.build_modules_paths.items():
             self.build_modules_paths[k] = join_paths(v)
-        print(self.build_modules_paths)
+
 
 class CMakeGenerator(Generator):
     @property
