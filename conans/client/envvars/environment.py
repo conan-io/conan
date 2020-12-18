@@ -70,7 +70,7 @@ bat_deactivate = textwrap.dedent("""\
 
 ps1_activate = textwrap.dedent("""\
     {%- for it in modified_vars %}
-    $env:CONAN_OLD_{{it}}=$env:{{it}}
+    $env:CONAN_OLD_{{venv_name}}_{{it}}=$env:{{it}}
     {%- endfor %}
 
     foreach ($line in Get-Content "{{ environment_file }}") {
@@ -79,20 +79,20 @@ ps1_activate = textwrap.dedent("""\
         Set-Item env:\\$var -Value "$value_expanded"
     }
 
-    function global:_old_conan_prompt {""}
-    $function:_old_conan_prompt = $function:prompt
+    function global:_old_conan_{{venv_name}}_prompt {""}
+    $function:_old_conan_{{venv_name}}_prompt = $function:prompt
     function global:prompt {
-        write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_prompt
+        write-host "({{venv_name}}) " -nonewline; & $function:_old_conan_{{venv_name}}_prompt
     }
 """)
 
 ps1_deactivate = textwrap.dedent("""\
-    $function:prompt = $function:_old_conan_prompt
-    remove-item function:_old_conan_prompt
+    $function:prompt = $function:_old_conan_{{venv_name}}_prompt
+    remove-item function:_old_conan_{{venv_name}}_prompt
 
     {% for it in modified_vars %}
-    $env:{{it}}=$env:CONAN_OLD_{{it}}
-    Remove-Item env:CONAN_OLD_{{it}}
+    $env:{{it}}=$env:CONAN_OLD_{{venv_name}}_{{it}}
+    Remove-Item env:CONAN_OLD_{{venv_name}}_{{it}}
     {%- endfor %}
     {%- for it in new_vars %}
     Remove-Item env:{{it}}
