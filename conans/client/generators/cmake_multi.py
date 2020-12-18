@@ -20,12 +20,13 @@ def extend(cpp_info, config):
             temp = {}
             for k in all_keys:
                 if k in dict1.keys() and k in dict2.keys():
-                    temp[k] = [v for v in dict1[k] if v not in dict2[k]] + dict2[k]
+                    temp[k] = dict1[k] + [v for v in dict2[k] if v not in dict1[k]]
                 elif k in dict1.keys():
                     temp[k] = dict1[k]
                 elif k in dict2.keys():
                     temp[k] = dict2[k]
             return temp
+
         result = CppInfo(str(config_info), config_info.rootpath)
         result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)

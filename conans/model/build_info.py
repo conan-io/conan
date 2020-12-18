@@ -35,6 +35,20 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+def merge_dicts(dict1, dict2):
+    all_keys = set(list(dict1.keys()) + list(dict2.keys()))
+    temp = {}
+    for k in all_keys:
+        if k in dict1.keys() and k in dict2.keys():
+            temp[k] = [v for v in dict1[k] if v not in dict2[k]]
+            temp[k].extend(dict2[k])
+        elif k in dict1.keys():
+            temp[k] = dict1[k]
+        elif k in dict2.keys():
+            temp[k] = dict2[k]
+    return temp
+
+
 class _CppInfo(object):
     """ Object that stores all the necessary information to build in C/C++.
     It is intended to be system independent, translation to
@@ -320,21 +334,9 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
+
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
-
-        def merge_dicts(dict1, dict2):
-            all_keys = set(list(dict1.keys()) + list(dict2.keys()))
-            temp = {}
-            for k in all_keys:
-                if k in dict1.keys() and k in dict2.keys():
-                    temp[k] = [v for v in dict1[k] if v not in dict2[k]]
-                    temp[k].extend(dict2[k])
-                elif k in dict1.keys():
-                    temp[k] = dict1[k]
-                elif k in dict2.keys():
-                    temp[k] = dict2[k]
-            return temp
 
         self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
@@ -432,20 +434,6 @@ class DepCppInfo(object):
     def _merge_lists(seq1, seq2):
         return seq1 + [s for s in seq2 if s not in seq1]
 
-    @staticmethod
-    def _merge_dicts(dict1, dict2):
-        all_keys = set(list(dict1.keys()) + list(dict2.keys()))
-        temp = {}
-        for k in all_keys:
-            if k in dict1.keys() and k in dict2.keys():
-                temp[k] = [v for v in dict1[k] if v not in dict2[k]]
-                temp[k].extend(dict2[k])
-            elif k in dict1.keys():
-                temp[k] = dict1[k]
-            elif k in dict2.keys():
-                temp[k] = dict2[k]
-        return temp
-
     def _aggregated_values(self, item):
         values = getattr(self, "_%s" % item)
         if values is not None:
@@ -475,8 +463,7 @@ class DepCppInfo(object):
         paths = getattr(self._cpp_info, "%s_paths" % item)
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
-                kk = getattr(component, "%s_paths" % item)
-                paths = self._merge_dicts(paths, getattr(component, "%s_paths" % item))
+                paths = merge_dicts(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
