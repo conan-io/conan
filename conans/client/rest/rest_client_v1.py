@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
-from conans.client.downloaders import run_downloader
+from conans.client.downloaders.download import run_downloader
 from conans.client.downloaders.file_downloader import FileDownloader
 from conans.client.remote_manager import check_compressed_files
 from conans.client.rest.client_routes import ClientV1Router

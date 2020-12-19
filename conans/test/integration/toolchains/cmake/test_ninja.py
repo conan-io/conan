@@ -4,6 +4,7 @@ import platform
 
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.integration.utils import check_vs_runtime
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
 
@@ -13,11 +14,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
     main_cpp = gen_function_cpp(name="main")
     cmake = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8.12)
+        cmake_minimum_required(VERSION 3.15)
         project(App CXX)
-        if(CMAKE_VERSION VERSION_LESS "3.15")
-            include(${CMAKE_BINARY_DIR}/conan_project_include.cmake)
-        endif()
         set(CMAKE_VERBOSE_MAKEFILE ON)
         add_executable(App main.cpp)
         install(TARGETS App RUNTIME DESTINATION bin)
@@ -106,9 +104,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.assertIn("main _MSC_VER19", client.out)
         self.assertIn("main _MSVC_LANG2014", client.out)
 
-        client.run_command('{} && dumpbin /dependents /summary /directives "App.exe"'.format(vcvars))
-        self.assertIn("MSVCP140.dll", client.out)
-        self.assertIn("VCRUNTIME140.dll", client.out)
+        check_vs_runtime("App.exe", client, "15", build_type="Release", static=False)
 
     @unittest.skipIf(platform.system() != "Windows", "Only windows")
     def test_locally_build_windows_debug(self):
@@ -142,6 +138,4 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.assertIn("main _MSC_VER19", client.out)
         self.assertIn("main _MSVC_LANG2014", client.out)
 
-        client.run_command('{} && dumpbin /dependents /summary /directives "App.exe"'.format(vcvars))
-        self.assertIn("KERNEL32.dll", client.out)
-        self.assertEqual(1, str(client.out).count(".dll"))
+        check_vs_runtime("App.exe", client, "15", build_type="Debug", static=True)

@@ -27,6 +27,7 @@ from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
+from conans.test.utils.tools import get_free_port
 
 
 class RestApiUnitTest(unittest.TestCase):
@@ -70,7 +71,7 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            with environment_append({"CONAN_SERVER_PORT": str(9300+randrange(100))}):
+            with environment_append({"CONAN_SERVER_PORT": str(get_free_port())}):
                 cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
                 cls.server.start()
 

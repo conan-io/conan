@@ -49,9 +49,10 @@ def get_generator(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = conanfile.settings.get_safe("compiler.version")
     if compiler == "msvc":
-        _visuals = {'140': '14 2015',
-                    '141': '15 2017',
-                    '142': '16 2019'}[compiler_version]
+        version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+        _visuals = {'19.0': '14 2015',
+                    '19.1': '15 2017',
+                    '19.2': '16 2019'}[version]
         base = "Visual Studio %s" % _visuals
         return base
 

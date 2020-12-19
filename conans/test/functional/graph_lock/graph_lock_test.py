@@ -509,3 +509,23 @@ class BuildLockedTest(unittest.TestCase):
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(flac["prev"], prev)
+
+
+class AddressRootNodetest(unittest.TestCase):
+    def test_find_root_node(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.errors import ConanInvalidConfiguration
+
+            class Pkg(ConanFile):
+                def set_name(self):
+                    self.name = "pkg"
+
+                def set_version(self):
+                    self.version = "0.1"
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("lock create conanfile.py --lockfile-out=conan.lock")
+        client.run("install . --lockfile=conan.lock")
+        self.assertIn("conanfile.py (pkg/0.1): Installing package", client.out)

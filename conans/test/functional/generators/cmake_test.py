@@ -484,7 +484,6 @@ class CMakeGeneratorTest(unittest.TestCase):
             message("comp compile options: ${tmp}")
             """)
         run_test("cmake_find_package", cmakelists)
-        print(client.out)
 
         # Test cmake_find_package generator without components
         run_test("cmake_find_package", cmakelists, with_components=False)

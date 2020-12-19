@@ -175,6 +175,28 @@ class FileCopierTest(unittest.TestCase):
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
 
+    def test_excludes_camelcase_folder(self):
+        # https://github.com/conan-io/conan/issues/8153
+        folder1 = temp_folder()
+        save(os.path.join(folder1, "UPPER.txt"), "")
+        save(os.path.join(folder1, "lower.txt"), "")
+        sub2 = os.path.join(folder1, "CamelCaseIgnore")
+        save(os.path.join(sub2, "file3.txt"), "")
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*", excludes=["CamelCaseIgnore", "UPPER.txt"])
+        self.assertFalse(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+        self.assertFalse(os.path.exists(os.path.join(folder2, "UPPER.txt")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
+
+        folder2 = temp_folder()
+        copier = FileCopier([folder1], folder2)
+        copier("*")
+        self.assertTrue(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "UPPER.txt")))
+        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
+
     def test_multifolder(self):
         src_folder1 = temp_folder()
         src_folder2 = temp_folder()
