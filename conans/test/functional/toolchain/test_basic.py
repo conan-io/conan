@@ -33,6 +33,37 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
 
+    def test_basic_test_package(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeToolchain
+            class Pkg(ConanFile):
+                settings = "os", "build_type", "compiler", "arch"
+                generators = "cmake_find_package_multi"
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+                """)
+        test_conanfile = textwrap.dedent("""
+            from conans import ConanFile, load
+            from conan.tools.cmake import CMakeToolchain
+            class Pkg(ConanFile):
+                settings = "os", "build_type", "compiler", "arch"
+                generators = "cmake_find_package_multi"
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    tc.generate()
+                def test(self):
+                    self.output.write(load("conan_toolchain.cmake"))
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . pkg/0.1@")
+
+        self.assertIn("pkg/0.1 (test package): Calling generate()", client.out)
+        self.assertIn("Conan automatically generated toolchain file", client.out)
+
     def test_declarative(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
