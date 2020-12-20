@@ -645,6 +645,7 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
+    @pytest.mark.local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
@@ -712,6 +713,7 @@ class HelloConan(ConanFile):
     @attr('slow')
     @pytest.mark.slow
     @attr('local_bottle')
+    @pytest.mark.local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()

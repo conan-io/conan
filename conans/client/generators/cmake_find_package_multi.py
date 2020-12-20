@@ -260,8 +260,8 @@ set_property(TARGET {{name}}::{{name}}
 
     def __init__(self, conanfile):
         super(CMakeFindPackageMultiGenerator, self).__init__(conanfile)
-        self.configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
         self.configuration = str(self.conanfile.settings.build_type)
+        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # FIXME: Ugly way to define the output path
         self.output_path = os.getcwd()
 
