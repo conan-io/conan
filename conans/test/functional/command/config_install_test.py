@@ -4,7 +4,6 @@ import shutil
 import textwrap
 import time
 import unittest
-import zipfile
 
 import pytest
 import six
@@ -17,7 +16,7 @@ from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
 win_profile = """[settings]
@@ -70,17 +69,6 @@ conanconf_interval = """
 [general]
 config_install_interval = 5m
 """
-
-
-def zipdir(path, zipfilename):
-    with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
-        for root, _, files in os.walk(path):
-            for f in files:
-                file_path = os.path.join(root, f)
-                if file_path == zipfilename:
-                    continue
-                relpath = os.path.relpath(file_path, path)
-                z.write(file_path, relpath)
 
 
 class ConfigInstallTest(unittest.TestCase):
