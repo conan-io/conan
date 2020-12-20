@@ -279,7 +279,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def cmake_test_needed_settings(self):
+    def test_cmake_needed_settings(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake

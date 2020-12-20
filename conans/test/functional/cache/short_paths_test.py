@@ -4,7 +4,12 @@ import shutil
 import textwrap
 import unittest
 
+from parameterized import parameterized
+
+from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
@@ -108,27 +113,35 @@ class TestConan(ConanFile):
         self.assertIn("conaninfo.txt", client.out)
         self.assertIn("conanmanifest.txt", client.out)
 
-    def test_package_folder_removed(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
+    @parameterized.expand([(True,), (False,)])
+    def test_leaking_folders(self, use_always_short_paths):
+        # https://github.com/conan-io/conan/issues/7983
+        client = TestClient(cache_autopopulate=False)
+        short_folder = temp_folder()
+        # Testing in CI requires setting it via env-var
+        with environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
+            conanfile = GenConanfile().with_exports_sources("*")
+            if use_always_short_paths:
+                client.run("config set general.use_always_short_paths=True")
+            else:
+                conanfile.with_short_paths(True)
+            client.save({"conanfile.py": conanfile,
+                         "file.h": ""})
+            client.run("create . dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("remove * -f")
+            self.assertEqual(0, len(os.listdir(short_folder)))
+            client.run("create . dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("install dep/1.0@")
+            self.assertEqual(5, len(os.listdir(short_folder)))
+            client.run("install dep/1.0@ --build")
+            self.assertEqual(5, len(os.listdir(short_folder)))
 
-            class TestConan(ConanFile):
-                short_paths = True
-            """)
+    def test_info_paths(self):
+        # https://github.com/conan-io/conan/issues/8172
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create . test/1.0@")
-        self.assertIn("test/1.0: Package '%s' created" % NO_SETTINGS_PACKAGE_ID, client.out)
-        ref = ConanFileReference.loads("test/1.0")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        pkg_folder = client.cache.package_layout(ref).package(pref)
-
-        shutil.rmtree(pkg_folder)
-
-        client.run("install test/1.0@", assert_error=True)
-        self.assertIn("ERROR: Package 'test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' corrupted."
-                      " Package folder must exist:", client.out)
-        client.run("remove test/1.0@ -p -f")
-        client.run("install test/1.0@", assert_error=True)
-        self.assertIn("ERROR: Missing binary: test/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                      client.out)
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("export . test/1.0@")
+        client.run("info test/1.0@ --paths")
+        client.run("info test/1.0@ --paths")

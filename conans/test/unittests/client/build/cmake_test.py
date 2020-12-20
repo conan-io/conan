@@ -224,6 +224,27 @@ class CMakeTest(unittest.TestCase):
             self.assertNotIn('-G "Visual Studio 15 2017" -A "x64"', cmake.command_line)
             self.assertNotIn('-T "Intel C++ Compiler 19.0', cmake.command_line)
 
+    @parameterized.expand([("SunOS", "sparcv9", "sparc"),
+                           ("AIX", "ppc64", "ppc32"),
+                           ("SunOS", "x86_64", "x86")])
+    def test_cmake_not_cross_compile(self, os_build, arch_build, arch):
+        # https://github.com/conan-io/conan/issues/8052
+        settings = Settings.loads(get_default_settings_yml())
+        settings.os = os_build
+        settings.os_build = os_build
+        settings.compiler = "gcc"
+        settings.compiler.version = "9.2"
+        settings.compiler.libcxx = "libstdc++"
+        settings.arch = arch
+        settings.arch_build = arch_build
+
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+
+        cmake = CMake(conanfile)
+        self.assertNotIn('CMAKE_SYSTEM_NAME', cmake.command_line)
+        self.assertIn('-G "Unix Makefiles"', cmake.command_line)
+
     def test_cmake_generator_platform(self):
         conanfile = ConanFileMock()
         conanfile.settings = Settings()
@@ -854,7 +875,6 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
         if platform.system() == "Windows":
             cmake = CMake(conanfile)
             self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
@@ -865,6 +885,22 @@ build_type: [ Release]
             cmake = CMake(conanfile)
             self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
             self.assertEqual(cmake.definitions["CMAKE_SYSTEM_PROCESSOR"], "somevalue")
+
+    def test_sysroot_envvar(self):
+        settings = Settings.loads(get_default_settings_yml())
+        conanfile = ConanFileMock()
+        conanfile.settings = settings
+        settings.os = "Linux"
+        settings.os_build = "Windows"
+        settings.compiler = "gcc"
+        settings.compiler.version = "5"
+        settings.arch_build = "x86_64"
+        settings.arch = "armv7"
+
+        # Now activate cross build and check sysroot and system processor
+        with(tools.environment_append({"CONAN_CMAKE_SYSROOT": "/path/to/var/sysroot"})):
+            cmake = CMake(conanfile)
+            self.assertEqual(cmake.definitions["CMAKE_SYSROOT"], "/path/to/var/sysroot")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and

@@ -7,19 +7,23 @@ from conans.util.env_reader import get_env
 from conans.util.files import load, md5, md5sum, save, walk
 
 
-def discarded_file(filename):
+def discarded_file(filename, keep_python):
     """
     # The __conan pattern is to be prepared for the future, in case we want to manage our
     own files that shouldn't be uploaded
     """
-    return (filename == ".DS_Store" or filename.endswith(".pyc") or
-            filename.endswith(".pyo") or filename == "__pycache__" or
-            filename.startswith("__conan"))
+    if not keep_python:
+        return (filename == ".DS_Store" or filename.endswith(".pyc") or
+                filename.endswith(".pyo") or filename == "__pycache__" or
+                filename.startswith("__conan"))
+    else:
+        return filename == ".DS_Store"
 
 
 def gather_files(folder):
     file_dict = {}
     symlinks = {}
+    keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
     for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
         for d in dirs:
@@ -28,7 +32,7 @@ def gather_files(folder):
                 rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
                 symlinks[rel_path] = os.readlink(abs_path)
         for f in files:
-            if discarded_file(f):
+            if discarded_file(f, keep_python):
                 continue
             abs_path = os.path.join(root, f)
             rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
@@ -42,7 +46,6 @@ def gather_files(folder):
                                          "'general.skip_broken_symlinks_check' at the conan.conf "
                                          "file."
                                          % abs_path)
-
     return file_dict, symlinks
 
 
@@ -74,10 +77,12 @@ class FileTreeManifest(object):
         tokens = text.split("\n")
         the_time = int(tokens[0])
         file_sums = {}
+        keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
         for md5line in tokens[1:]:
             if md5line:
                 filename, file_md5 = md5line.split(": ")
-                if not discarded_file(filename):
+                # FIXME: This is weird, it should never happen, maybe remove?
+                if not discarded_file(filename, keep_python):
                     file_sums[filename] = file_md5
         return FileTreeManifest(the_time, file_sums)
 

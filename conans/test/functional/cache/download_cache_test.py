@@ -7,7 +7,7 @@ from threading import Thread
 
 from bottle import static_file, request
 
-from conans.client.rest.download_cache import CachedFileDownloader
+from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.env_reader import get_env
@@ -212,12 +212,12 @@ class CachedDownloaderUnitTest(unittest.TestCase):
             def __init__(self):
                 self.calls = Counter()
 
-            def download(self, url, file_path_=None, *args, **kwargs):
+            def download(self, url, file_path=None, *args, **kwargs):
                 if "slow" in url:
                     time.sleep(0.5)
                 self.calls[url] += 1
-                if file_path_:
-                    save(file_path_, url)
+                if file_path:
+                    save(file_path, url)
                 else:
                     return url
 

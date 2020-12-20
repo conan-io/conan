@@ -30,7 +30,9 @@ class _MockSettings(object):
     fields = []
 
     def __init__(self, build_type=None):
-        self.build_type = build_type
+        class BuildType(str):
+            values_range = ["Debug", "Release"]
+        self.build_type = BuildType(build_type)
 
     @property
     def compiler(self):
@@ -285,7 +287,7 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_PACKAGE_NAME MyPkg)', cmake_lines)
         self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
 
-    def settings_are_generated_tests(self):
+    def test_settings_are_generated(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -321,13 +323,12 @@ endmacro()""", macro)
         self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
 
     def test_cmake_definitions_apple(self):
-        #https://github.com/conan-io/conan/issues/7875
+        # https://github.com/conan-io/conan/issues/7875
         settings_mock = _MockSettings(build_type="Release")
         settings_mock.os = "iOS"
         settings_mock.os_build = "Macos"
         conanfile = ConanFile(TestBufferConanOutput(), None)
-        install_folder = "/c/foo/testing"
-        setattr(conanfile, "install_folder", install_folder)
+        conanfile.install_folder = "/c/foo/testing"
         conanfile.initialize(settings_mock, EnvValues())
         definitions_builder = CMakeDefinitionsBuilder(conanfile)
         definitions = definitions_builder.get_definitions("3.13")
@@ -394,8 +395,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
 
     def setUp(self):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        settings = _MockSettings()
-        settings.build_type = "Debug"
+        settings = _MockSettings(build_type="Debug")
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")
@@ -471,8 +471,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
 
     def setUp(self):
         self.conanfile = ConanFile(TestBufferConanOutput(), None)
-        settings = _MockSettings()
-        settings.build_type = "Debug"
+        settings = _MockSettings(build_type="Debug")
         self.conanfile.initialize(settings, EnvValues())
         ref = ConanFileReference.loads("my_pkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder1")

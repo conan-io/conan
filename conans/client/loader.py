@@ -46,7 +46,11 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            return cached[0](self._output, self._runner, display, user, channel), cached[2]
+            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            if hasattr(conanfile, "init") and callable(conanfile.init):
+                with conanfile_exception_formatter(str(conanfile), "init"):
+                    conanfile.init()
+            return conanfile, cached[2]
 
         if lock_python_requires is not None:
             self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}

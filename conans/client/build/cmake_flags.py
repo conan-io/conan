@@ -202,7 +202,7 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            skip_x64_x86 = os_ in ['Windows', 'Linux']
+            skip_x64_x86 = os_ in ['Windows', 'Linux', 'SunOS', 'AIX']
             if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
                 apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
                     "3.14") or not cmake_version else None
@@ -237,13 +237,15 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":

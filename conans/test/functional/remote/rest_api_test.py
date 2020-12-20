@@ -1,6 +1,7 @@
 import os
 import platform
 import unittest
+from random import randrange
 
 import pytest
 import requests
@@ -14,6 +15,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.rest.rest_client_v1 import complete_url
+from conans.client.tools import environment_append
 from conans.client.userio import UserIO
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
@@ -25,6 +27,7 @@ from conans.test.utils.server_launcher import TestServerLauncher
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
 from conans.util.files import md5, save
+from conans.test.utils.tools import get_free_port
 
 
 class RestApiUnitTest(unittest.TestCase):
@@ -68,28 +71,29 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
-            cls.server.start()
+            with environment_append({"CONAN_SERVER_PORT": str(get_free_port())}):
+                cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'])
+                cls.server.start()
 
-            filename = os.path.join(temp_folder(), "conan.conf")
-            save(filename, "")
-            config = ConanClientConfigParser(filename)
-            requester = ConanRequester(config, requests)
-            client_factory = RestApiClientFactory(TestBufferConanOutput(), requester=requester,
-                                                  config=config)
-            localdb = LocalDBMock()
+                filename = os.path.join(temp_folder(), "conan.conf")
+                save(filename, "")
+                config = ConanClientConfigParser(filename)
+                requester = ConanRequester(config, requests)
+                client_factory = RestApiClientFactory(TestBufferConanOutput(), requester=requester,
+                                                      config=config)
+                localdb = LocalDBMock()
 
-            mocked_user_io = UserIO(out=TestBufferConanOutput())
-            mocked_user_io.get_username = Mock(return_value="private_user")
-            mocked_user_io.get_password = Mock(return_value="private_pass")
+                mocked_user_io = UserIO(out=TestBufferConanOutput())
+                mocked_user_io.get_username = Mock(return_value="private_user")
+                mocked_user_io.get_password = Mock(return_value="private_pass")
 
-            cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_io, localdb)
-            cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
-                                True)
-            cls.auth_manager._authenticate(cls.remote, user="private_user",
-                                           password="private_pass")
-            cls.api = client_factory.new(cls.remote, localdb.access_token, localdb.refresh_token,
-                                         {})
+                cls.auth_manager = ConanApiAuthManager(client_factory, mocked_user_io, localdb)
+                cls.remote = Remote("myremote", "http://127.0.0.1:%s" % str(cls.server.port), True,
+                                    True)
+                cls.auth_manager._authenticate(cls.remote, user="private_user",
+                                               password="private_pass")
+                cls.api = client_factory.new(cls.remote, localdb.access_token, localdb.refresh_token,
+                                             {})
 
     @classmethod
     def tearDownClass(cls):
@@ -159,7 +163,7 @@ class RestApiTest(unittest.TestCase):
         self._upload_package(pref, {CONANINFO: conan_info})
 
         # Get the package info
-        info = self.api.get_package_info(pref)
+        info = self.api.get_package_info(pref, headers=None)
         self.assertIsInstance(info, ConanInfo)
         self.assertEqual(info, ConanInfo.loads(conan_info))
 
