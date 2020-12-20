@@ -90,6 +90,7 @@ sources:
     @attr("slow")
     @pytest.mark.slow
     @attr('local_bottle')
+    @pytest.mark.local_bottle
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
         md5_value = "2ef49b5a102db1abb775eaf1922d5662"
