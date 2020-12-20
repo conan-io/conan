@@ -54,12 +54,13 @@ class MSBuildToolchain(object):
             return '%s="%s"' % (k, value) if value is not None else k
 
         compiler = self._conanfile.settings.get_safe("compiler")
+        compiler_version = self._conanfile.settings.get_safe("compiler.version")
         runtime = self._conanfile.settings.get_safe("compiler.runtime")
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         toolset = msvs_toolset(self._conanfile.settings)
         if compiler == "msvc":
             build_type = self._conanfile.settings.get_safe("build_type")
-            if build_type == "Debug":
+            if build_type != "Debug":
                 runtime_library = {"static": "MultiThreaded",
                                    "dyanmic": "MultiThreadedDLL"}.get(runtime, "")
             else:
@@ -93,6 +94,12 @@ class MSBuildToolchain(object):
         # It is useless to set PlatformToolset in the config file, because the conditional checks it
         cppstd = "stdcpp%s" % cppstd if cppstd else ""
         toolset = toolset or ""
+        if compiler == "msvc":
+            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': 'v140',  # TODO: This is common to CMake, refactor
+                        '19.1': 'v141',
+                        '19.2': 'v142'}
+            toolset = _visuals[version]
         config_props = content.format(preprocessor_definitions, runtime_library, cppstd, toolset)
         config_filepath = os.path.abspath(config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)

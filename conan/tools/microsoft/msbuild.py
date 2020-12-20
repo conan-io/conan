@@ -9,10 +9,11 @@ class MSBuild(object):
         self.version = conanfile.settings.get_safe("compiler.base.version") or \
                        conanfile.settings.get_safe("compiler.version")
         if self.compiler == "msvc":
-            _visuals = {'140': '14',  # TODO: This is common to CMake, refactor
-                        '141': '15',
-                        '142': '16'}
-            self.version = _visuals[self.version]
+            version = self.version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
+                        '19.1': '15',
+                        '19.2': '16'}
+            self.version = _visuals[version]
         self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',

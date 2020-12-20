@@ -6,7 +6,7 @@ import unittest
 import pytest
 from parameterized import parameterized
 
-from conans.client.tools import vs_installation_path
+from conans.client.tools import vs_installation_path, environment_append
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.integration.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
@@ -267,7 +267,7 @@ class WinTest(unittest.TestCase):
 
     @pytest.mark.tool_cmake
     @parameterized.expand([("Visual Studio", "15", "MT"),
-                           ("msvc", "141", "static")]
+                           ("msvc", "19.1", "static")]
                           )
     def test_toolchain_win(self, compiler, version, runtime):
         client = TestClient(path_with_spaces=False)
@@ -281,9 +281,9 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
-        client.run("new hello/0.1 -s")
+        with environment_append({"CONAN_V2_BEHAVIOR": "1"}):
+            client.run("new hello/0.1 -s")
         client.run("create . hello/0.1@ %s" % (settings, ))
-        print(client.out)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
