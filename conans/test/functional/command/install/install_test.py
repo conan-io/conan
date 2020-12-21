@@ -122,7 +122,8 @@ class MyPkg(ConanFile):
         self.assertIn("Running system requirements!!", client.out)
 
     def test_install_transitive_pattern(self):
-        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        # Make sure a simple conan install doesn't fire package_info() so
+        # self.layout.package_folder breaks
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
@@ -194,7 +195,8 @@ class Pkg(ConanFile):
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
 
     def test_install_package_folder(self):
-        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        # Make sure a simple conan install doesn't fire package_info() so
+        # self.layout.package_folder breaks
         client = TestClient()
         client.save({"conanfile.py": textwrap.dedent("""\
             from conans import ConanFile
@@ -203,7 +205,7 @@ class Pkg(ConanFile):
                 def package_info(self):
                     self.dummy_doesnt_exist_not_break
                     self.output.info("Hello")
-                    self.env_info.PATH = os.path.join(self.package_folder, "bin")
+                    self.env_info.PATH = os.path.join(self.layout.package_folder, "bin")
             """)})
         client.run("install .")
         self.assertNotIn("Hello", client.out)

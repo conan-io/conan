@@ -110,7 +110,7 @@ class AConan(ConanFile):
     def build(self):
         self.deps_user_info
         self.deps_env_info
-        assert(self.build_folder == os.getcwd())
+        assert(self.layout.build_folder == os.getcwd())
         assert(hasattr(self, "package_folder"))
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
@@ -145,13 +145,13 @@ class AConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.warn("Build folder=>%s" % self.build_folder)
-        self.output.warn("Src folder=>%s" % self.source_folder)
-        self.output.warn("Package folder=>%s" % self.package_folder)
-        assert(os.path.exists(self.build_folder))
-        assert(os.path.exists(self.source_folder))
+        self.output.warn("Build folder=>%s" % self.layout.build_folder)
+        self.output.warn("Src folder=>%s" % self.layout.source_folder)
+        self.output.warn("Package folder=>%s" % self.layout.package_folder)
+        assert(os.path.exists(self.layout.build_folder))
+        assert(os.path.exists(self.layout.source_folder))
         # package_folder will be created manually or by the CMake helper when local invocation
-        assert(not os.path.exists(self.package_folder))
+        assert(not os.path.exists(self.layout.package_folder))
 """
 
         client = TestClient()

@@ -16,15 +16,15 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
         conanfile = textwrap.dedent("""\
             import os
             from conans import ConanFile, tools
-            
+
             class PyReq(ConanFile):
                 exports_sources = "exports_sources.txt", "more_exports_sources.txt"
                 exports = "exports.txt", "more_exports.txt"
-                
+
                 def source(self, is_empty):
                     self.output.info(">>>> PyReq::source")
-                    self.output.info(">>>> - source_folder: {{}}".format(self.source_folder))
-                    file_list = sorted(os.listdir(self.source_folder))
+                    self.output.info(">>>> - source_folder: {{}}".format(self.layout.source_folder))
+                    file_list = sorted(os.listdir(self.layout.source_folder))
                     self.output.info(">>>> - source list: {{}}".format(file_list))
                     if is_empty:
                         assert not file_list, "No files expected, found {{}}".format(file_list)
@@ -48,15 +48,15 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
     def test_locate_pyreq_folders(self, empty_exports):
         conanfile = Template(textwrap.dedent("""\
             from conans import ConanFile, python_requires
-            
+
             base = python_requires("{{ pyreq }}")
-            
+
             class MyLib(base.PyReq):
                 {% if empty %}
                 exports_sources = None
                 exports = None
                 {% endif %}
-                
+
                 def source(self):
                     super(MyLib, self).source(is_empty={{ empty }})
 
@@ -65,7 +65,7 @@ class PythonRequireExportSourcesTest(unittest.TestCase):
                     self.output.info(" - pyreq::ref: {{{}}}".format(str(pyreq.ref)))
                     self.output.info(" - pyreq::exports_sources: {{{}}}".format(pyreq.exports_sources_folder))
                     self.output.info(" - pyreq::exports: {{{}}}".format(pyreq.exports_folder))
-            
+
             """))
         content = conanfile.render(pyreq=self.pyreq, empty=empty_exports)
 

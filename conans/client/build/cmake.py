@@ -245,14 +245,14 @@ class CMakeBuildHelper(object):
             return origin
 
         if source_dir or build_dir:  # OLD MODE
-            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
-            source_ret = source_dir or self._conanfile.source_folder
+            build_ret = build_dir or self.build_dir or self._conanfile.layout.build_folder
+            source_ret = source_dir or self._conanfile.layout.source_folder
         else:
-            build_ret = get_dir(build_folder, self._conanfile.build_folder)
-            source_ret = get_dir(source_folder, self._conanfile.source_folder)
+            build_ret = get_dir(build_folder, self._conanfile.layout.build_folder)
+            source_ret = get_dir(source_folder, self._conanfile.layout.source_folder)
 
         if self._conanfile.in_local_cache and cache_build_folder:
-            build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
+            build_ret = get_dir(cache_build_folder, self._conanfile.layout.build_folder)
 
         return source_ret, build_ret
 
@@ -302,14 +302,14 @@ class CMakeBuildHelper(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                       os.pathsep.join(get_abs_path(f, self._conanfile.layout.install_folder)
                                        for f in pkg_config_paths)}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
             set_env = "pkg_config" in self._conanfile.generators \
                       and "PKG_CONFIG_PATH" not in os.environ
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.layout.install_folder} if set_env else None
 
         with environment_append(pkg_env):
             command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,
@@ -330,7 +330,7 @@ class CMakeBuildHelper(object):
 
     def _build(self, args=None, build_dir=None, target=None):
         args = args or []
-        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+        build_dir = build_dir or self.build_dir or self._conanfile.layout.build_folder
         if target is not None:
             args = ["--target", target] + args
 
@@ -367,7 +367,7 @@ class CMakeBuildHelper(object):
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
             return
-        mkdir(self._conanfile.package_folder)
+        mkdir(self._conanfile.layout.package_folder)
         if not self.definitions.get(cmake_install_prefix_var_name):
             raise ConanException("%s not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is "
@@ -454,7 +454,8 @@ class CMakeBuildHelper(object):
                                  "Define name in your recipe")
         pf = self.definitions.get(cmake_install_prefix_var_name)
         replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
-        allwalk = chain(walk(self._conanfile.build_folder), walk(self._conanfile.package_folder))
+        allwalk = chain(walk(self._conanfile.layout.build_folder),
+                        walk(self._conanfile.layout.package_folder))
 
         # We don't want warnings printed because there is no replacement of the abs path.
         # there could be MANY cmake files in the package and the normal thing is to not find

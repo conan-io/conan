@@ -43,8 +43,8 @@ class Meson(object):
         self.backend = backend or "ninja"  # Other backends are poorly supported, not default other.
 
         self.options = dict()
-        if self._conanfile.package_folder:
-            self.options['prefix'] = self._conanfile.package_folder
+        if self._conanfile.layout.package_folder:
+            self.options['prefix'] = self._conanfile.layout.package_folder
         self.options['libdir'] = DEFAULT_LIB
         self.options['bindir'] = DEFAULT_BIN
         self.options['sbindir'] = DEFAULT_BIN
@@ -114,14 +114,14 @@ class Meson(object):
             raise ConanException("Use 'build_folder'/'source_folder'")
 
         if source_dir or build_dir:  # OLD MODE
-            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
-            source_ret = source_dir or self._conanfile.source_folder
+            build_ret = build_dir or self.build_dir or self._conanfile.layout.build_folder
+            source_ret = source_dir or self._conanfile.layout.source_folder
         else:
-            build_ret = get_abs_path(build_folder, self._conanfile.build_folder)
-            source_ret = get_abs_path(source_folder, self._conanfile.source_folder)
+            build_ret = get_abs_path(build_folder, self._conanfile.layout.build_folder)
+            source_ret = get_abs_path(source_folder, self._conanfile.layout.source_folder)
 
         if self._conanfile.in_local_cache and cache_build_folder:
-            build_ret = get_abs_path(cache_build_folder, self._conanfile.build_folder)
+            build_ret = get_abs_path(cache_build_folder, self._conanfile.layout.build_folder)
 
         return source_ret, build_ret
 
@@ -145,10 +145,10 @@ class Meson(object):
                                                     cache_build_folder)
 
         if pkg_config_paths:
-            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.layout.install_folder)
                                        for f in pkg_config_paths)
         else:
-            pc_paths = self._conanfile.install_folder
+            pc_paths = self._conanfile.layout.install_folder
 
         mkdir(self.build_dir)
 
@@ -191,7 +191,7 @@ class Meson(object):
             raise ConanException("Build only supported with 'ninja' backend")
 
         args = args or []
-        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+        build_dir = build_dir or self.build_dir or self._conanfile.layout.build_folder
 
         arg_list = join_arguments([
             '-C "%s"' % build_dir,
@@ -202,7 +202,7 @@ class Meson(object):
 
     def _run_meson_command(self, subcommand=None, args=None, build_dir=None):
         args = args or []
-        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+        build_dir = build_dir or self.build_dir or self._conanfile.layout.build_folder
 
         arg_list = join_arguments([
             subcommand,
@@ -222,7 +222,7 @@ class Meson(object):
     def install(self, args=None, build_dir=None):
         if not self._conanfile.should_install:
             return
-        mkdir(self._conanfile.package_folder)
+        mkdir(self._conanfile.layout.package_folder)
         if not self.options.get('prefix'):
             raise ConanException("'prefix' not defined for 'meson.install()'\n"
                                  "Make sure 'package_folder' is defined")

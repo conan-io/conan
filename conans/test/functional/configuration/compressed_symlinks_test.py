@@ -22,8 +22,8 @@ class HelloConan(ConanFile):
 
     def package(self):
         # Link to file.txt and then remove it
-        tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
-        os.symlink("file.txt", os.path.join(self.package_folder, "link.txt"))
+        tools.save(os.path.join(self.layout.package_folder, "file.txt"), "contents")
+        os.symlink("file.txt", os.path.join(self.layout.package_folder, "link.txt"))
 """
         ref = ConanFileReference.loads("lib/1.0@conan/stable")
         # By default it is not allowed

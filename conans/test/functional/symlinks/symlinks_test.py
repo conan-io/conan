@@ -244,7 +244,7 @@ class ConanSymlink(ConanFile):
                 version = "3.0.0"
                 exports_sources = ["*"]
                 def build(self):
-                    debug_path = os.path.join(self.build_folder, "debug")
+                    debug_path = os.path.join(self.layout.build_folder, "debug")
                     assert os.path.exists(debug_path), "Symlinked folder not created!"
             """)
 

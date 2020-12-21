@@ -231,9 +231,9 @@ class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
             class TestConan(ConanFile):
 
                 def package(self):
-                    folder_path = os.path.join(self.package_folder, "one_folder")
+                    folder_path = os.path.join(self.layout.package_folder, "one_folder")
                     tools.mkdir(folder_path)
-                    link_folder_path = os.path.join(self.package_folder, "other_folder")
+                    link_folder_path = os.path.join(self.layout.package_folder, "other_folder")
                     with tools.chdir(os.path.dirname(folder_path)):
                         os.symlink(os.path.basename(folder_path), link_folder_path)
         """)

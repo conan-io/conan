@@ -142,8 +142,8 @@ class HelloConan(ConanFile):
                     self.cpp_info.components["dep1"].libs.append("libdep1")
                     self.cpp_info.components["dep1"].defines.append("definedep1")
                     self.cpp_info.components["dep2"].libs.append("libdep2")
-                    os.mkdir(os.path.join(self.package_folder, "include"))
-                    os.mkdir(os.path.join(self.package_folder, "includedep2"))
+                    os.mkdir(os.path.join(self.layout.package_folder, "include"))
+                    os.mkdir(os.path.join(self.layout.package_folder, "includedep2"))
                     self.cpp_info.components["dep2"].includedirs.append("includedep2")
                 """)
         intermediate = textwrap.dedent("""
@@ -157,12 +157,12 @@ class HelloConan(ConanFile):
                     self.cpp_info.components["int1"].requires = ["dep::dep"]  # To avoid exception
                     self.cpp_info.components["int1"].libs.append("libint1")
                     self.cpp_info.components["int1"].defines.append("defint1")
-                    os.mkdir(os.path.join(self.package_folder, "include"))
-                    os.mkdir(os.path.join(self.package_folder, "includeint1"))
+                    os.mkdir(os.path.join(self.layout.package_folder, "include"))
+                    os.mkdir(os.path.join(self.layout.package_folder, "includeint1"))
                     self.cpp_info.components["int1"].includedirs.append("includeint1")
                     self.cpp_info.components["int2"].libs.append("libint2")
                     self.cpp_info.components["int2"].defines.append("defint2")
-                    os.mkdir(os.path.join(self.package_folder, "includeint2"))
+                    os.mkdir(os.path.join(self.layout.package_folder, "includeint2"))
                     self.cpp_info.components["int2"].includedirs.append("includeint2")
                 """)
         consumer = textwrap.dedent("""

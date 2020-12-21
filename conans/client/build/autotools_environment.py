@@ -164,21 +164,21 @@ class AutoToolsBuildEnvironment(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       [os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                       [os.pathsep.join(get_abs_path(f, self._conanfile.layout.install_folder)
                                         for f in pkg_config_paths)]}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
-            pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
+            pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.layout.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else None
 
         configure_dir = self._adjust_path(configure_dir)
 
-        if self._conanfile.package_folder is not None:
+        if self._conanfile.layout.package_folder is not None:
             if not args:
-                args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
+                args = ["--prefix=%s" % self._conanfile.layout.package_folder.replace("\\", "/")]
             elif not self._is_flag_in_args("prefix", args):
-                args.append("--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"))
+                args.append("--prefix=%s" % self._conanfile.layout.package_folder.replace("\\", "/"))
 
             all_flags = ["bindir", "sbindir", "libexecdir", "libdir", "includedir", "oldincludedir",
                          "datarootdir"]

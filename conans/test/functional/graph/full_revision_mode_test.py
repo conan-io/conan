@@ -20,7 +20,7 @@ class FullRevisionModeTest(unittest.TestCase):
             import uuid, os
             class Pkg(ConanFile):
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(os.path.join(self.layout.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfilea})
@@ -71,7 +71,7 @@ class FullRevisionModeTest(unittest.TestCase):
             class Pkg(ConanFile):
                 %s
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(os.path.join(self.layout.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})
@@ -122,7 +122,7 @@ class FullRevisionModeTest(unittest.TestCase):
                 def build(self):
                     self.output.info("TOOLS LIBS: {}".format(self.deps_cpp_info["Tool"].libs))
                 def package(self):
-                    save(os.path.join(self.package_folder, "file.txt"),
+                    save(os.path.join(self.layout.package_folder, "file.txt"),
                          str(uuid.uuid1()))
             """)
         clienta.save({"conanfile.py": conanfile % ""})

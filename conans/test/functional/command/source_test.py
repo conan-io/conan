@@ -40,11 +40,11 @@ class TestexportConan(ConanFile):
 
     def source(self):
         save("hello/hello.h", "my hello header!")
-        patch = os.path.join(self.source_folder, "patch.patch")
+        patch = os.path.join(self.layout.source_folder, "patch.patch")
         self.output.info("PATCH: %s" % tools.load(patch))
-        header = os.path.join(self.source_folder, "hello/hello.h")
+        header = os.path.join(self.layout.source_folder, "hello/hello.h")
         self.output.info("HEADER: %s" % tools.load(header))
-        python = os.path.join(self.source_folder, "mypython.py")
+        python = os.path.join(self.layout.source_folder, "mypython.py")
         self.output.info("PYTHON: %s" % tools.load(python))
 """
         client = TestClient()
@@ -79,7 +79,7 @@ class Pkg(ConanFile):
     exports_sources = "*"
     def source(self):
         if self.develop:
-            patch = os.path.join(self.source_folder, "mypatch")
+            patch = os.path.join(self.layout.source_folder, "mypatch")
             self.output.info("PATCH: %s" % load(patch))
 """
         client.save({"conanfile.py": conanfile,
@@ -211,7 +211,7 @@ class ConanLib(ConanFile):
     requires="Hello/0.1@conan/testing"
 
     def source(self):
-        assert(os.getcwd() == self.source_folder)
+        assert(os.getcwd() == self.layout.source_folder)
         self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cxxflags[0])
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)

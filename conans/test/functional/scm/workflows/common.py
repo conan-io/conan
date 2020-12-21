@@ -26,8 +26,9 @@ class TestWorkflow(object):
                    "subfolder": "{scm_subfolder}" }}
 
             def source(self):
-                self.output.info(self.source_folder)
-                content = tools.load(os.path.join(self.source_folder, "{scm_subfolder}", "file.txt"))
+                self.output.info(self.layout.source_folder)
+                content = tools.load(os.path.join(self.layout.source_folder,
+                                                  "{scm_subfolder}", "file.txt"))
                 self.output.info(">>>> I'm {{}}/{{}}@{{}}/{{}}".format(self.name, self.version,
                                                                        self.user, self.channel))
                 self.output.info(">>>> content: {{}} ".format(content))

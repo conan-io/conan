@@ -10,5 +10,5 @@ def catch_deprecation_warning(test_suite, n=1):
         warnings.filterwarnings("always", module="(.*\.)?conans\..*")
         yield
         if n:
-            test_suite.assertEqual(len(w), n)
+            test_suite.assertEqual(len(w), n, "The deprecation messages count doesn't match")
             test_suite.assertTrue(issubclass(w[0].category, DeprecationWarning))

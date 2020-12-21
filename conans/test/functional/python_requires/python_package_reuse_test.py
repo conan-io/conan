@@ -19,7 +19,7 @@ class ConanToolPackage(ConanFile):
         self.copy("*")
 
     def package_info(self):
-        self.env_info.PYTHONPATH.append(self.package_folder)
+        self.env_info.PYTHONPATH.append(self.layout.package_folder)
 """
 
 
@@ -266,7 +266,7 @@ class ConanToolPackage(ConanFile):
         self.copy("*")
 
     def package_info(self):
-        self.env_info.PYTHONPATH.append(self.package_folder)
+        self.env_info.PYTHONPATH.append(self.layout.package_folder)
 """
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})

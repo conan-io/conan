@@ -309,12 +309,12 @@ def _path_equals(path1, path2):
 
 
 def collect_libs(conanfile, folder=None):
-    if not conanfile.package_folder:
+    if not conanfile.layout.package_folder:
         return []
     if folder:
-        lib_folders = [os.path.join(conanfile.package_folder, folder)]
+        lib_folders = [os.path.join(conanfile.layout.package_folder, folder)]
     else:
-        lib_folders = [os.path.join(conanfile.package_folder, folder)
+        lib_folders = [os.path.join(conanfile.layout.package_folder, folder)
                        for folder in conanfile.cpp_info.libdirs]
     result = []
     for lib_folder in lib_folders:
@@ -427,7 +427,7 @@ def remove_files_by_mask(directory, pattern):
 
 
 def fix_symlinks(conanfile, raise_if_error=False):
-    """ Fix the symlinks in the conanfile.package_folder: make symlinks relative and remove
+    """ Fix the symlinks in the conanfile.layout.package_folder: make symlinks relative and remove
         those links to files outside the package (it will print an error, or raise
         if 'raise_if_error' evaluates to true).
     """
@@ -443,9 +443,9 @@ def fix_symlinks(conanfile, raise_if_error=False):
             return
 
         link_abs_target = os.path.join(dirpath, link_target)
-        link_rel_target = os.path.relpath(link_abs_target, conanfile.package_folder)
+        link_rel_target = os.path.relpath(link_abs_target, conanfile.layout.package_folder)
         if link_rel_target.startswith('..') or os.path.isabs(link_rel_target):
-            offending_file = os.path.relpath(fullpath, conanfile.package_folder)
+            offending_file = os.path.relpath(fullpath, conanfile.layout.package_folder)
             offending_files.append(offending_file)
             conanfile.output.error("{token} '{item}' links to a {token} outside the package, "
                                    "it's been removed.".format(item=offending_file, token=token))
@@ -453,7 +453,7 @@ def fix_symlinks(conanfile, raise_if_error=False):
         elif not os.path.exists(link_abs_target):
             # This is a broken symlink. Failure is controlled by config variable
             #  'general.skip_broken_symlinks_check'. Do not fail here.
-            offending_file = os.path.relpath(fullpath, conanfile.package_folder)
+            offending_file = os.path.relpath(fullpath, conanfile.layout.package_folder)
             offending_files.append(offending_file)
             conanfile.output.error("{token} '{item}' links to a path that doesn't exist, it's"
                                    " been removed.".format(item=offending_file, token=token))
@@ -462,7 +462,7 @@ def fix_symlinks(conanfile, raise_if_error=False):
             os.unlink(fullpath)
             os.symlink(link_rel_target, fullpath)
 
-    for (dirpath, dirnames, filenames) in os.walk(conanfile.package_folder):
+    for (dirpath, dirnames, filenames) in os.walk(conanfile.layout.package_folder):
         for filename in filenames:
             work_on_element(dirpath, filename, token="file")
 

@@ -17,7 +17,7 @@ from conans.util.log import logger
 def run_package_method(conanfile, package_id, source_folder, build_folder, package_folder,
                        install_folder, hook_manager, conanfile_path, ref, copy_info=False):
     """ calls the recipe "package()" method
-    - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
+    - Assigns folders to conanfile.layout.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
@@ -27,10 +27,10 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     output.info("Generating the package")
     output.info("Package folder %s" % package_folder)
 
-    conanfile.package_folder = package_folder
-    conanfile.source_folder = source_folder
-    conanfile.install_folder = install_folder
-    conanfile.build_folder = build_folder
+    conanfile.layout.set_base_package_folder(package_folder)
+    conanfile.layout.set_base_source_folder(source_folder)
+    conanfile.layout.set_base_install_folder(install_folder)
+    conanfile.layout.set_base_build_folder(build_folder)
 
     with get_env_context_manager(conanfile):
         return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,

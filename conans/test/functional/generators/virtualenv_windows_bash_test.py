@@ -44,7 +44,7 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
                 self.env_info.CFLAGS = ["cflags1", "cflags2"]
 
                 # Add something to the path
-                self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
+                self.env_info.PATH.append(os.path.join(self.layout.package_folder, "bin"))
 
     """)
 

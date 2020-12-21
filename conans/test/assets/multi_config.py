@@ -13,7 +13,7 @@ class {name}Conan(ConanFile):
     def build(self):
         cmake = CMake(self)
         if cmake.is_multi_configuration:
-            cmd = 'cmake "%s" %s' % (self.source_folder, cmake.command_line)
+            cmd = 'cmake "%s" %s' % (self.layout.source_folder, cmake.command_line)
             self.run(cmd)
             self.run("cmake --build . --config Debug")
             self.run("cmake --build . --config Release")
@@ -23,7 +23,7 @@ class {name}Conan(ConanFile):
             for config in ("Debug", "Release", "RelWithDebInfo", "MinSizeRel"):
                 self.output.info("Building %s" % config)
                 self.run('cmake "%s" %s -DCMAKE_BUILD_TYPE=%s'
-                         % (self.source_folder, cmake.command_line, config))
+                         % (self.layout.source_folder, cmake.command_line, config))
                 self.run("cmake --build .")
                 shutil.rmtree("CMakeFiles")
                 os.remove("CMakeCache.txt")
@@ -62,7 +62,7 @@ class TestConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         if cmake.is_multi_configuration:
-            cmd = 'cmake "%s" %s' % (self.source_folder, cmake.command_line)
+            cmd = 'cmake "%s" %s' % (self.layout.source_folder, cmake.command_line)
             self.run(cmd)
             self.run("cmake --build . --config Debug")
             self.run("cmake --build . --config Release")
@@ -70,7 +70,7 @@ class TestConan(ConanFile):
             for config in ("Debug", "Release"):
                 self.output.info("Building %s" % config)
                 self.run('cmake "%s" %s -DCMAKE_BUILD_TYPE=%s'
-                         % (self.source_folder, cmake.command_line, config))
+                         % (self.layout.source_folder, cmake.command_line, config))
                 self.run("cmake --build .")
                 shutil.rmtree("CMakeFiles")
                 os.remove("CMakeCache.txt")

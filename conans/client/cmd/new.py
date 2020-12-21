@@ -47,7 +47,7 @@ conan_basic_setup()''')
 
         # Explicit way:
         # self.run('cmake %s/hello %s'
-        #          % (self.source_folder, cmake.command_line))
+        #          % (self.layout.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -111,7 +111,7 @@ class {package_name}Conan(ConanFile):
 
         # Explicit way:
         # self.run('cmake %s/hello %s'
-        #          % (self.source_folder, cmake.command_line))
+        #          % (self.layout.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):

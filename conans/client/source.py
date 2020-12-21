@@ -121,9 +121,9 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
         - Executing the recipe source() method
         - Calling post_source hook
     """
-    conanfile.source_folder = src_folder
-    conanfile.build_folder = None
-    conanfile.package_folder = None
+    conanfile.layout.set_base_source_folder(src_folder)
+    conanfile.layout.set_base_build_folder(None)
+    conanfile.layout.set_base_package_folder(None)
     with tools.chdir(src_folder):
         try:
             with get_env_context_manager(conanfile):

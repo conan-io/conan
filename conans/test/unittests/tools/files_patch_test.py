@@ -71,7 +71,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.layout.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- /dev/null
             +++ b/src/newfile
@@ -89,7 +89,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.layout.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- a\src\oldfile
             +++ b/dev/null
@@ -109,7 +109,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
             from conans import ConanFile, tools
             class PatchConan(ConanFile):
                 def source(self):
-                    tools.patch(self.source_folder, "example.patch", strip=1)""")
+                    tools.patch(self.layout.source_folder, "example.patch", strip=1)""")
         patch = dedent("""
             --- a/oldfile
             +++ b/dev/null

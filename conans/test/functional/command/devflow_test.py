@@ -20,7 +20,8 @@ class ConanFileToolsTest(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
+        self.output.info("Source files: %s" % load(os.path.join(self.layout.source_folder,
+                                                                "file.h")))
         save("myartifact.lib", "artifact contents!")
         save("subdir/myartifact2.lib", "artifact2 contents!")
 
@@ -136,7 +137,8 @@ class ConanFileToolsTest(ConanFile):
         save("file.h", "file_h_contents!")
 
     def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
+        self.output.info("Source files: %s" % load(os.path.join(self.layout.source_folder,
+                                                   "file.h")))
         save("myartifact.lib", "artifact contents!")
 
     def package(self):

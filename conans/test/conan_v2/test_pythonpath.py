@@ -18,7 +18,7 @@ class PythonBuildTest(ConanV2ModeTestCase):
                 self.copy("*")
 
             def package_info(self):
-                self.env_info.PYTHONPATH.append(self.package_folder)
+                self.env_info.PYTHONPATH.append(self.layout.package_folder)
         """)
 
     tooling = textwrap.dedent("""

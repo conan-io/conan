@@ -29,16 +29,16 @@ class TestConan(ConanFile):
     exports_sources = "source_file.cpp"
 
     def source(self):
-        for item in os.listdir(self.source_folder):
+        for item in os.listdir(self.layout.source_folder):
             self.output.info("SOURCE: " + str(item))
     def build(self):
-        tools.save(os.path.join(self.build_folder, "artifact"), "")
-        for item in os.listdir(self.build_folder):
+        tools.save(os.path.join(self.layout.build_folder, "artifact"), "")
+        for item in os.listdir(self.layout.build_folder):
             self.output.info("BUILD: " + str(item))
     def package(self):
         self.copy("source_file.cpp")
         self.copy("artifact")
-        for item in os.listdir(self.build_folder):
+        for item in os.listdir(self.layout.build_folder):
             self.output.info("PACKAGE: " + str(item))
 """
 

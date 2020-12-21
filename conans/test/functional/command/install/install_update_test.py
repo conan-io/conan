@@ -27,7 +27,7 @@ from conans.tools import save
 import os, random
 class Pkg(ConanFile):
     def package(self):
-        save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
+        save(os.path.join(self.layout.package_folder, "file.txt"), str(random.random()))
     def deploy(self):
         self.copy("file.txt")
 """
@@ -97,7 +97,7 @@ import os, random
 from conans import ConanFile, tools
 class Pkg(ConanFile):
     def package(self):
-        tools.save(os.path.join(self.package_folder, "file.txt"), str(random.random()))
+        tools.save(os.path.join(self.layout.package_folder, "file.txt"), str(random.random()))
 """
         servers = OrderedDict()
         servers["r1"] = TestServer()

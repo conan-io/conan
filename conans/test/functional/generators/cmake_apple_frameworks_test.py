@@ -133,11 +133,11 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
                         cmake.configure(source_folder="src")
                         cmake.build()
                         cmake.install()
-                        self.run("otool -L '%s/lib/hello.framework/hello'" % self.build_folder)
-                        self.run("otool -L '%s/hello.framework/hello'" % self.package_folder)
+                        self.run("otool -L '%s/lib/hello.framework/hello'" % self.layout.build_folder)
+                        self.run("otool -L '%s/hello.framework/hello'" % self.layout.package_folder)
 
                     def package_info(self):
-                        self.cpp_info.frameworkdirs.append(self.package_folder)
+                        self.cpp_info.frameworkdirs.append(self.layout.package_folder)
                         self.cpp_info.frameworks.append("hello")
                 """)
     cmake = textwrap.dedent("""

@@ -126,23 +126,23 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        self._generator_manager.write_generators(conanfile, conanfile.build_folder, self._output)
+        self._generator_manager.write_generators(conanfile, conanfile.layout.build_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
-        write_toolchain(conanfile, conanfile.build_folder, self._output)
+        write_toolchain(conanfile, conanfile.layout.build_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
-        copied_files = run_imports(conanfile, conanfile.build_folder)
+        copied_files = run_imports(conanfile, conanfile.layout.build_folder)
 
         try:
             run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
-            self._output.info("Build folder %s" % conanfile.build_folder)
+            self._output.info("Build folder %s" % conanfile.layout.build_folder)
         except Exception as exc:
             self._output.writeln("")
             self._output.error("Package '%s' build failed" % pref.id)
-            self._output.warn("Build folder %s" % conanfile.build_folder)
+            self._output.warn("Build folder %s" % conanfile.layout.build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
                 raise exc
             raise ConanException(exc)
@@ -166,7 +166,7 @@ class _PackageBuilder(object):
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
         # Could be source or build depends no_copy_source
-        source_folder = conanfile.source_folder
+        source_folder = conanfile.layout.source_folder
         install_folder = build_folder  # While installing, the infos goes to build folder
         prev = run_package_method(conanfile, package_id, source_folder, build_folder,
                                   package_folder, install_folder, self._hook_manager,
@@ -206,15 +206,20 @@ class _PackageBuilder(object):
                 self._output.info('Building your package in %s' % build_folder)
                 try:
                     if getattr(conanfile, 'no_copy_source', False):
-                        conanfile.source_folder = source_folder
+                        conanfile.layout.set_base_source_folder(source_folder)
                     else:
-                        conanfile.source_folder = build_folder
+                        conanfile.layout.set_base_source_folder(build_folder)
 
                     if not skip_build:
-                        conanfile.build_folder = build_folder
-                        conanfile.package_folder = package_folder
+                        conanfile.layout.set_base_build_folder(build_folder)
+                        conanfile.layout.set_base_package_folder(package_folder)
                         # In local cache, install folder always is build_folder
-                        conanfile.install_folder = build_folder
+                        conanfile.layout.set_base_install_folder(build_folder)
+
+                        mkdir(conanfile.layout.build_folder)
+                        mkdir(conanfile.layout.package_folder)
+                        mkdir(conanfile.layout.install_folder)
+
                         self._build(conanfile, pref)
                         clean_dirty(build_folder)
 
@@ -611,10 +616,10 @@ class BinaryInstaller(object):
         with pythonpath(conanfile) if not conan_v2 else no_op():
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    conanfile.package_folder = package_folder
-                    conanfile.source_folder = None
-                    conanfile.build_folder = None
-                    conanfile.install_folder = None
+                    conanfile.layout.set_base_package_folder(package_folder)
+                    conanfile.layout.set_base_source_folder(None)
+                    conanfile.layout.set_base_build_folder(None)
+                    conanfile.layout.set_base_install_folder(None)
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()

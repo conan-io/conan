@@ -66,13 +66,13 @@ class CMake(object):
         if not self._conanfile.should_configure:
             return
 
-        source = self._conanfile.source_folder
+        source = self._conanfile.layout.source_folder
         if source_folder:
-            source = os.path.join(self._conanfile.source_folder, source_folder)
+            source = os.path.join(self._conanfile.layout.source_folder, source_folder)
 
-        build_folder = self._conanfile.build_folder
+        build_folder = self._conanfile.layout.build_folder
         if self._build_folder:
-            build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
+            build_folder = os.path.join(self._conanfile.layout.build_folder, self._build_folder)
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
@@ -93,9 +93,9 @@ class CMake(object):
                 self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
-        bf = self._conanfile.build_folder
+        bf = self._conanfile.layout.build_folder
         if self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
+            bf = os.path.join(self._conanfile.layout.build_folder, self._build_folder)
 
         if build_type and not self._is_multiconfiguration:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "

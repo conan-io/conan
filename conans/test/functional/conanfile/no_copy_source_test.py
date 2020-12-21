@@ -20,7 +20,8 @@ class ConanFileToolsTest(ConanFile):
     no_copy_source = True
 
     def build(self):
-        self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
+        self.output.info("Source files: %s" % load(os.path.join(self.layout.source_folder,
+                                                                "file.h")))
         save("myartifact.lib", "artifact contents!")
 
     def package(self):
@@ -57,7 +58,7 @@ class ConanFileToolsTest(ConanFile):
 
     def source(self):
         save("header.h", "artifact contents!")
-    
+
     def package(self):
         self.copy("*.h", dst="include")
 '''

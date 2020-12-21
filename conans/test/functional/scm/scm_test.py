@@ -361,7 +361,7 @@ class ConanLib(ConanFile):
     scm = {"type": "git", "url": "%s", "revision": "%s"}
 
     def build(self):
-        assert os.path.exists(os.path.join(self.build_folder, "conans", "model", "username.py"))
+        assert os.path.exists(os.path.join(self.layout.build_folder, "conans", "model", "username.py"))
 ''' % (remote, revision)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")

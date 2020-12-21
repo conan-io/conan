@@ -10,6 +10,7 @@ from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
+from conans.model.layout import Layout
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 
@@ -135,7 +136,7 @@ class MockConanfile(ConanFile):
         self.should_install = True
         self.should_test = True
 
-        self.package_folder = None
+        self.layout = Layout()
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -149,7 +150,6 @@ class ConanFileMock(ConanFile):
         options = options or ""
         self.command = None
         self.path = None
-        self.source_folder = self.build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(options))
         if options_values:
@@ -159,7 +159,6 @@ class ConanFileMock(ConanFile):
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
-        self.install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.should_configure = True
@@ -172,6 +171,7 @@ class ConanFileMock(ConanFile):
         self.env_info = EnvInfo()
         self.deps_user_info = DepsUserInfo()
         self._conan_env_values = EnvValues()
+        self.layout = Layout()
 
     def run(self, command):
         self.command = command

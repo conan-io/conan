@@ -46,13 +46,13 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
-        conanfile.package_folder = os.path.join(self.tempdir, "pkg")
+        conanfile.layout.set_base_source_folder(os.path.join(self.tempdir, "src"))
+        conanfile.layout.set_base_build_folder(os.path.join(self.tempdir, "build"))
+        conanfile.layout.set_base_package_folder(os.path.join(self.tempdir, "pkg"))
         conanfile.deps_cpp_info = DepsCppInfo()
 
-        msg = "FOLDER: " + _format_path_as_cmake(conanfile.package_folder)
-        for folder in (conanfile.build_folder, conanfile.package_folder):
+        msg = "FOLDER: " + _format_path_as_cmake(conanfile.layout.package_folder)
+        for folder in (conanfile.layout.build_folder, conanfile.layout.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
             save(os.path.join(folder, "file3.txt"), msg)
@@ -61,7 +61,7 @@ class CMakeTest(unittest.TestCase):
 
         cmake = CMake(conanfile, generator="Unix Makefiles")
         cmake.patch_config_paths()
-        for folder in (conanfile.build_folder, conanfile.package_folder):
+        for folder in (conanfile.layout.build_folder, conanfile.layout.package_folder):
             self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
             self.assertEqual(msg, load(os.path.join(folder, "file2")))
             self.assertEqual(msg, load(os.path.join(folder, "file3.txt")))
@@ -74,9 +74,9 @@ class CMakeTest(unittest.TestCase):
         conanfile = ConanFileMock()
         conanfile.name = "MyPkg"
         conanfile.settings = Settings()
-        conanfile.source_folder = os.path.join(self.tempdir, "src")
-        conanfile.build_folder = os.path.join(self.tempdir, "build")
-        conanfile.package_folder = os.path.join(self.tempdir, "pkg")
+        conanfile.layout.set_base_source_folder(os.path.join(self.tempdir, "src"))
+        conanfile.layout.set_base_build_folder(os.path.join(self.tempdir, "build"))
+        conanfile.layout.set_base_package_folder(os.path.join(self.tempdir, "pkg"))
         conanfile.deps_cpp_info = DepsCppInfo()
 
         ref = ConanFileReference.loads("MyPkg1/0.1@user/channel")
@@ -89,7 +89,7 @@ class CMakeTest(unittest.TestCase):
                          self.tempdir2)
 
         msg = "FOLDER: " + _format_path_as_cmake(self.tempdir2)
-        for folder in (conanfile.build_folder, conanfile.package_folder):
+        for folder in (conanfile.layout.build_folder, conanfile.layout.package_folder):
             save(os.path.join(folder, "file1.cmake"), "Nothing")
             save(os.path.join(folder, "file2"), msg)
             save(os.path.join(folder, "file3.txt"), msg)
@@ -98,7 +98,7 @@ class CMakeTest(unittest.TestCase):
 
         cmake = CMake(conanfile, generator="Unix Makefiles")
         cmake.patch_config_paths()
-        for folder in (conanfile.build_folder, conanfile.package_folder):
+        for folder in (conanfile.layout.build_folder, conanfile.layout.package_folder):
             self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
             self.assertEqual(msg, load(os.path.join(folder, "file2")))
             self.assertEqual(msg, load(os.path.join(folder, "file3.txt")))
@@ -133,7 +133,7 @@ class CMakeTest(unittest.TestCase):
         conanfile.should_build = True
         conanfile.should_install = False
         conanfile.should_test = True
-        conanfile.package_folder = temp_folder()
+        conanfile.layout.set_base_package_folder(temp_folder())
         cmake = CMake(conanfile, generator="Unix Makefiles")
         cmake.configure()
         self.assertIsNone(conanfile.command)
@@ -447,8 +447,8 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.layout.set_base_source_folder(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.layout.set_base_build_folder(os.path.join(self.tempdir, "my_cache_build_folder"))
 
         # Existing make
         make_path = os.path.join(self.tempdir, "make")
@@ -479,8 +479,8 @@ class CMakeTest(unittest.TestCase):
 
         conanfile = ConanFileMock()
         conanfile.settings = settings
-        conanfile.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
-        conanfile.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+        conanfile.layout.set_base_source_folder(os.path.join(self.tempdir, "my_cache_source_folder"))
+        conanfile.layout.set_base_build_folder(os.path.join(self.tempdir, "my_cache_build_folder"))
         with tools.chdir(self.tempdir):
             linux_stuff = ""
             if platform.system() != "Linux":
@@ -1169,7 +1169,7 @@ build_type: [ Release]
     def test_pkg_config_path(self):
         conanfile = ConanFileMock()
         conanfile.generators = ["pkg_config"]
-        conanfile.install_folder = "/my_install/folder/"
+        conanfile.layout.set_base_install_folder("/my_install/folder/")
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -1347,9 +1347,9 @@ build_type: [ Release]
 
     def test_install_definitions(self):
         conanfile = ConanFileMock()
-        conanfile.package_folder = None
+        conanfile.layout.set_base_package_folder(None)
         conanfile.settings = Settings.loads(get_default_settings_yml())
-        install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.package_folder,
+        install_defintions = {"CMAKE_INSTALL_PREFIX": conanfile.layout.package_folder,
                               "CMAKE_INSTALL_BINDIR": "bin",
                               "CMAKE_INSTALL_SBINDIR": "bin",
                               "CMAKE_INSTALL_LIBEXECDIR": "bin",
@@ -1364,8 +1364,8 @@ build_type: [ Release]
             self.assertNotIn(key, install_defintions.keys())
 
         # With package_folder
-        conanfile.package_folder = "my_package_folder"
-        install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.package_folder
+        conanfile.layout.set_base_package_folder("my_package_folder")
+        install_defintions["CMAKE_INSTALL_PREFIX"] = conanfile.layout.package_folder
         cmake = CMake(conanfile)
         for key, value in install_defintions.items():
             self.assertEqual(cmake.definitions[key], value)

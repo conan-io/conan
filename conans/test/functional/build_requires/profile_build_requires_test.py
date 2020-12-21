@@ -34,7 +34,7 @@ class Tool(ConanFile):
         self.copy("mypythontool.py")
 
     def package_info(self):
-        self.env_info.PYTHONPATH.append(self.package_folder)
+        self.env_info.PYTHONPATH.append(self.layout.package_folder)
 
 """
 

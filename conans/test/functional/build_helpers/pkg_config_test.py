@@ -125,7 +125,7 @@ class PkgConfigTest(unittest.TestCase):
 
             """)
         libb = libb_conanfile + """
-        path = os.path.join(self.package_folder, "libB.pc")
+        path = os.path.join(self.layout.package_folder, "libB.pc")
         tools.replace_prefix_in_pc_file(path, "${package_root_path_lib_b}")
 """
         self._run_reuse(libb, liba_conanfile)

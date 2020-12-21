@@ -161,7 +161,7 @@ class MyCustomGeneratorWithTemplatePackage(ConanFile):
                     return "customfile.gen"
                 @property
                 def content(self):
-                    return self.conanfile.install_folder
+                    return self.conanfile.layout.install_folder
 
             class MyCustomGenerator(ConanFile):
                 pass

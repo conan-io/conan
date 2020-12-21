@@ -44,16 +44,16 @@ class AConan(ConanFile):
             assert(self.in_local_cache == False)
 
     def source(self):
-        assert(self.source_folder == os.getcwd())
+        assert(self.layout.source_folder == os.getcwd())
         self.assert_in_local_cache()
 
         # Prevented to use them, it's dangerous, because the source is run only for the first
         # config, so only the first build_folder/package_folder would be modified
-        assert(self.build_folder is None)
-        assert(self.package_folder is None)
+        assert(self.layout.build_folder is None)
+        assert(self.layout.package_folder is None)
 
-        assert(self.source_folder is not None)
-        self.copy_source_folder = self.source_folder
+        assert(self.layout.source_folder is not None)
+        self.copy_source_folder = self.layout.source_folder
 
         if %(source_with_infos)s:
             self.assert_deps_infos()
@@ -64,55 +64,56 @@ class AConan(ConanFile):
         assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
 
     def build(self):
-        assert(self.build_folder == os.getcwd())
+        assert(self.layout.build_folder == os.getcwd())
 
         self.assert_in_local_cache()
         self.assert_deps_infos()
 
         if self.no_copy_source and self.in_local_cache:
-            assert(self.copy_source_folder == self.source_folder)  # Only in install
-            assert(self.install_folder == self.build_folder)
+            assert(self.copy_source_folder == self.layout.source_folder)  # Only in install
+            assert(self.layout.install_folder == self.layout.build_folder)
         else:
-            assert(self.source_folder == self.build_folder)
-            self.install_folder
+            assert(self.layout.source_folder == self.layout.build_folder)
+            self.layout.install_folder
 
-        assert(self.package_folder is not None)
-        self.copy_build_folder = self.build_folder
+        assert(self.layout.package_folder is not None)
+        self.copy_build_folder = self.layout.build_folder
 
     def package(self):
-        assert(self.install_folder is not None)
-        assert(self.build_folder == os.getcwd())
+        assert(self.layout.install_folder is not None)
+        assert(self.layout.build_folder == os.getcwd())
         self.assert_in_local_cache()
         self.assert_deps_infos()
 
         if self.in_local_cache:
-            assert(self.copy_build_folder == self.build_folder)
+            assert(self.copy_build_folder == self.layout.build_folder)
 
         if self.no_copy_source and self.in_local_cache:
-            assert(self.copy_source_folder == self.source_folder)  # Only in install
+            assert(self.copy_source_folder == self.layout.source_folder)  # Only in install
         else:
-            assert(self.source_folder == self.build_folder)
+            assert(self.layout.source_folder == self.layout.build_folder)
 
-        self.copy_package_folder = self.package_folder
+        self.copy_package_folder = self.layout.package_folder
 
     def package_info(self):
-        assert(self.package_folder == os.getcwd())
+        assert(self.layout.package_folder == os.getcwd())
         assert(self.in_local_cache == True)
 
-        assert(self.source_folder is None)
-        assert(self.build_folder is None)
-        assert(self.install_folder is None)
+        assert(self.layout.source_folder is None)
+        assert(self.layout.build_folder is None)
+        assert(self.layout.install_folder is None)
 
     def imports(self):
         assert(self.imports_folder == os.getcwd())
 
     def deploy(self):
-        assert(self.install_folder == os.getcwd())
+        assert(self.layout.install_folder == os.getcwd())
 """
 
 
 class TestFoldersAccess(unittest.TestCase):
-    """"Tests the presence of self.source_folder, self.build_folder, self.package_folder
+    """"Tests the presence of self.layout.source_folder, self.layout.build_folder,
+    self.layout.package_folder
     in the conanfile methods. Also the availability of the self.deps_cpp_info, self.deps_user_info
     and self.deps_env_info. Also the 'in_local_cache' variable. """
 
