@@ -161,7 +161,6 @@ class ConanFileMock(ConanFile):
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
-        self._conan_base_install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.should_configure = True
@@ -177,6 +176,7 @@ class ConanFileMock(ConanFile):
         self.layout = Layout()
         self.layout.set_base_source_folder(".")
         self.layout.set_base_build_folder(".")
+        self.layout.set_base_install_folder("myinstallfolder")
 
     def run(self, command):
         self.command = command
