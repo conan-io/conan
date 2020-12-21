@@ -1,4 +1,5 @@
 import os
+import platform
 import unittest
 
 import pytest
@@ -19,6 +20,7 @@ from conans.test.utils.test_files import temp_folder
 
 @attr('visual_studio')
 @pytest.mark.tool_visual_studio
+@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VisualStudioMultiGeneratorTest(unittest.TestCase):
 
     @parameterized.expand([(False, ), (True, )])
