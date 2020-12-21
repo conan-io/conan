@@ -1,2 +1,2 @@
-from .generictoolchain import QbsGenericToolchain
-from .qbs import Qbs
+from conan.tools.qbs.qbstoolchain import QbsToolchain
+from conan.tools.qbs.qbs import Qbs

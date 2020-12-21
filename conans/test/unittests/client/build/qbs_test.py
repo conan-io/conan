@@ -2,6 +2,7 @@ import unittest
 import conan.tools.qbs.qbs as qbs
 
 from conans.client import tools
+from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings
 
 
@@ -23,7 +24,7 @@ class RunnerMock(object):
 class QbsTest(unittest.TestCase):
     def test_generating_config_command_line(self):
         name = 'default'
-        dict = {
+        flag_dict = {
             'modules.cpp.cxxFlags': ['-frtti', '-fexceptions'],
             'modules.cpp.ldFlags': '--defsym=hello_world',
             'products.App.myIntProperty': 13,
@@ -32,17 +33,15 @@ class QbsTest(unittest.TestCase):
         expected_config_line = [
             'config:%s' % name,
         ]
-        for key, value in dict.items():
+        for key, value in flag_dict.items():
             if type(value) is bool:
                 if value:
                     value = 'true'
                 else:
                     value = 'false'
             expected_config_line.append('%s:%s' % (key, value))
-        print(qbs._configuration_dict_to_commandlist(name, dict))
-        print(expected_config_line)
         self.assertEqual(
-            qbs._configuration_dict_to_commandlist(name, dict),
+            qbs._configuration_dict_to_commandlist(name, flag_dict),
             expected_config_line)
 
     def test_construct_build_helper_without_project_file(self):
@@ -64,7 +63,7 @@ class QbsTest(unittest.TestCase):
     def test_construct_build_helper_with_wrong_project_file_path(self):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
-        with self.assertRaises(qbs.QbsException):
+        with self.assertRaises(ConanException):
             qbs.Qbs(conanfile, project_file='random/file/path')
 
     def test_add_configuration(self):

@@ -64,12 +64,6 @@ _cxx_language_version = {
 }
 
 
-class QbsToolchainException(ConanException):
-    def __str__(self):
-        msg = super(QbsToolchainException, self).__str__()
-        return 'Qbs generic toolchain: {}'.format(msg)
-
-
 def _bool(b):
     if b is None:
         return None
@@ -83,10 +77,10 @@ def _env_var_to_list(var):
 def _check_for_compiler(conanfile):
     compiler = conanfile.settings.get_safe('compiler')
     if not compiler:
-        raise QbsToolchainException('need compiler to be set in settings')
+        raise ConanException('Qbs: need compiler to be set in settings')
 
     if compiler not in ['Visual Studio', 'gcc', 'clang']:
-        raise QbsToolchainException('compiler not supported')
+        raise ConanException('Qbs: compiler {} not supported'.format(compiler))
 
 
 def _default_compiler_name(conanfile):
@@ -102,7 +96,7 @@ def _default_compiler_name(conanfile):
             return 'cl'
         if compiler == 'clang':
             return 'clang-cl'
-        raise QbsToolchainException('unknown windows compiler')
+        raise ConanException('unknown windows compiler')
 
     return compiler
 
@@ -184,7 +178,7 @@ def _flags_from_env():
     return flags_from_env
 
 
-class QbsGenericToolchain(object):
+class QbsToolchain(object):
     filename = 'conan_toolchain.qbs'
 
     _template_toolchain = textwrap.dedent('''\

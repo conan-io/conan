@@ -4,15 +4,9 @@ from conans import tools
 from conans.errors import ConanException
 
 
-class QbsException(ConanException):
-    def __str__(self):
-        msg = super(QbsException, self).__str__()
-        return 'Qbs build helper: {}'.format(msg)
-
-
-def _configuration_dict_to_commandlist(name, dict):
+def _configuration_dict_to_commandlist(name, config_dict):
     command_list = ['config:%s' % name]
-    for key, value in dict.items():
+    for key, value in config_dict.items():
         if type(value) is bool:
             if value:
                 b = 'true'
@@ -40,13 +34,13 @@ class Qbs(object):
             self._project_file = project_file
 
         if not os.path.exists(self._project_file):
-            raise QbsException(
-                'could not find project file %s' % self._project_file)
+            raise ConanException('Qbs: could not find project file %s' % self._project_file)
 
     def add_configuration(self, name, values):
         self._configuration[name] = values
 
-    def build(self, products=[]):
+    def build(self, products=None):
+        products = products or []
         args = [
             '--no-install',
             '--build-directory', self._conanfile.build_folder,
@@ -97,7 +91,7 @@ class Qbs(object):
         ]
 
         for name in self._configuration:
-            args.append('config:%s' % (name))
+            args.append('config:%s' % name)
 
         cmd = 'qbs install %s' % (' '.join(args))
         self._conanfile.run(cmd)
