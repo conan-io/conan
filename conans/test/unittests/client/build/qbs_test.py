@@ -1,5 +1,5 @@
 import unittest
-import conan.tools.qt.qbs as qbs
+import conan.tools.qbs.qbs as qbs
 
 from conans.client import tools
 from conans.errors import ConanException

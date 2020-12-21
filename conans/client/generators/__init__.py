@@ -104,7 +104,7 @@ class GeneratorManager(object):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
         elif generator_name == "QbsToolchain":
-            from conan.tools.qt.qbstoolchain import QbsToolchain
+            from conan.tools.qbs.qbstoolchain import QbsToolchain
             return QbsToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "

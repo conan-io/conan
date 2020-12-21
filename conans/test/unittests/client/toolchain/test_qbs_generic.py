@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import textwrap
-import conan.tools.qt.qbstoolchain as qbs
+import conan.tools.qbs.qbstoolchain as qbs
 
 from conans import tools
 from conans.errors import ConanException
@@ -154,13 +154,13 @@ class QbsGenericTest(unittest.TestCase):
                              cxx_language_version)
 
     def test_split_env_var_into_list(self):
-        list = ['-p1', '-p2', '-p3_with_value=13',
-                '-p_with_space1="hello world"',
-                '"-p_with_space2=Hello World"']
+        env_var_list = ['-p1', '-p2', '-p3_with_value=13',
+                        '-p_with_space1="hello world"',
+                        '"-p_with_space2=Hello World"']
         expected_list = ['-p1', '-p2', '-p3_with_value=13',
                          '-p_with_space1=hello world',
                          '-p_with_space2=Hello World']
-        env_var = ' '.join(list)
+        env_var = ' '.join(env_var_list)
         self.assertEqual(qbs._env_var_to_list(env_var), expected_list)
 
     def test_compiler_not_in_settings(self):
