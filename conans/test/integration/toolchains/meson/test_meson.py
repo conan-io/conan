@@ -1,33 +1,14 @@
 import os
-import platform
-import pytest
 import textwrap
-import unittest
 
-from conans.model.version import Version
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.utils.tools import TestClient
-from conans.util.files import decode_text
-from conans.util.runners import version_runner
+from conans.test.integration.toolchains.meson._base import TestMesonBase
 
 
-def get_meson_version():
-    try:
-        out = version_runner(["meson", "--version"])
-        version_line = decode_text(out).split('\n', 1)[0]
-        version_str = version_line.rsplit(' ', 1)[-1]
-        return Version(version_str)
-    except Exception:
-        return Version("0.0.0")
-
-
-@pytest.mark.toolchain
-@pytest.mark.tool_meson
-@unittest.skipUnless(get_meson_version() >= "0.56.0", "requires meson >= 0.56.0")
-class MesonToolchainTest(unittest.TestCase):
+class MesonToolchainTest(TestMesonBase):
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
-    from conan.tools.meson import MesonToolchain
+    from conan.tools.meson import Meson, MesonToolchain
 
 
     class App(ConanFile):
@@ -39,7 +20,7 @@ class MesonToolchainTest(unittest.TestCase):
             if self.settings.os == "Windows":
                 del self.options.fPIC
 
-        def toolchain(self):
+        def generate(self):
             tc = MesonToolchain(self)
             tc.definitions["STRING_DEFINITION"] = "Text"
             tc.definitions["TRUE_DEFINITION"] = True
@@ -49,10 +30,9 @@ class MesonToolchainTest(unittest.TestCase):
             tc.generate()
 
         def build(self):
-            # this will be moved to build helper eventually
-            with tools.vcvars(self) if self.settings.compiler == "Visual Studio" else tools.no_op():
-                self.run("meson setup --native-file conan_meson_native.ini build .")
-                self.run("meson compile -C build")
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
     """)
 
     _meson_options_txt = textwrap.dedent("""
@@ -73,52 +53,7 @@ class MesonToolchainTest(unittest.TestCase):
     executable('demo', 'main.cpp', link_with: hello)
     """)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
-    def test_macosx(self):
-        settings = {"compiler": "apple-clang",
-                    "compiler.libcxx": "libc++",
-                    "compiler.version": "12.0",
-                    "arch": "x86_64",
-                    "build_type": "Release"}
-        self._build(settings)
-
-        self.assertIn("main __x86_64__ defined", self.t.out)
-        self.assertIn("main __apple_build_version__", self.t.out)
-        self.assertIn("main __clang_major__12", self.t.out)
-        # TODO: check why __clang_minor__ seems to be not defined in XCode 12
-        # commented while migrating to XCode12 CI
-        #self.assertIn("main __clang_minor__0", self.t.out)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
-    def test_win32(self):
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
-                    "compiler.runtime": "MD",
-                    "arch": "x86_64",
-                    "build_type": "Release"}
-        self._build(settings)
-
-        self.assertIn("main _M_X64 defined", self.t.out)
-        self.assertIn("main _MSC_VER19", self.t.out)
-        self.assertIn("main _MSVC_LANG2014", self.t.out)
-
-    @unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
-    def test_linux(self):
-        setttings = {"compiler": "gcc",
-                     "compiler.version": "5",
-                     "compiler.libcxx": "libstdc++",
-                     "arch": "x86_64",
-                     "build_type": "Release"}
-        self._build(setttings)
-
-        self.assertIn("main __x86_64__ defined", self.t.out)
-        self.assertIn("main __GNUC__5", self.t.out)
-
-    def _build(self, settings):
-        self.t = TestClient()
-
-        settings_str = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-
+    def test_build(self):
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello", preprocessor=["STRING_DEFINITION"])
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
@@ -130,7 +65,7 @@ class MesonToolchainTest(unittest.TestCase):
                      "hello.cpp": hello_cpp,
                      "main.cpp": app})
 
-        self.t.run("install . %s" % settings_str)
+        self.t.run("install . %s" % self._settings_str)
 
         content = self.t.load("conan_meson_native.ini")
 
@@ -149,3 +84,5 @@ class MesonToolchainTest(unittest.TestCase):
 
         self.assertIn("hello: Release!", self.t.out)
         self.assertIn("STRING_DEFINITION: Text", self.t.out)
+
+        self._check_binary()
