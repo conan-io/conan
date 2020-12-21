@@ -15,16 +15,13 @@ class _LayoutEntry(object):
 class Layout(object):
     def __init__(self):
 
-        # Base folders:
-        #  - For the cache they are assigned to the corresponding dir
-        #  - For the local methods they are assigned according to the command args (--source-folder)
         self._base_source_folder = None
         self._base_build_folder = None
         self._base_install_folder = None
         self._base_package_folder = None
 
         self.install = _LayoutEntry()
-        self.install.folder = None  # Will be defaulted to the value of build in the getter
+        self.install.folder = ""
 
         self.build = _LayoutEntry()
         self.build.folder = ""  # Where the software is built (relative to _base_build_folder)
@@ -47,7 +44,7 @@ class Layout(object):
     def source_folder(self):
         if self._base_source_folder is None:
             return None
-        if not self.source.folder:  # Avoid the "join" with "" that append a "/" at the end
+        if not self.source.folder:
             return self._base_source_folder
 
         return os.path.join(self._base_source_folder, self.source.folder)
@@ -61,7 +58,7 @@ class Layout(object):
         print("Build folder: {}".format(self._base_build_folder))
         if self._base_build_folder is None:
             return None
-        if not self.build.folder:  # Avoid the "join" with "" that append a "/" at the end: breaking?
+        if not self.build.folder:
             return self._base_build_folder
         return os.path.join(self._base_build_folder, self.build.folder)
 
@@ -71,8 +68,8 @@ class Layout(object):
     @property
     def install_folder(self):
         if self._base_install_folder is None:
-            return None
-        if not self.install.folder:  # Avoid the "join" with "" that append a "/" at the end: breaking?
+            return self.build_folder  # If None, default to build_folder (review)
+        if not self.install.folder:
             return self._base_install_folder
 
         return os.path.join(self._base_install_folder, self.build.folder)
@@ -91,6 +88,7 @@ class Layout(object):
 
     def set_base_package_folder(self, folder):
         self._base_package_folder = folder
+
 
 
 

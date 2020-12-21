@@ -124,6 +124,7 @@ class MockDepsCppInfo(defaultdict):
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.layout = Layout()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
@@ -137,6 +138,7 @@ class MockConanfile(ConanFile):
         self.should_test = True
 
         self.layout = Layout()
+
 
     def run(self, *args, **kwargs):
         if self.runner:
@@ -172,6 +174,10 @@ class ConanFileMock(ConanFile):
         self.deps_user_info = DepsUserInfo()
         self._conan_env_values = EnvValues()
         self.layout = Layout()
+
+        self.layout.set_base_source_folder(".")
+        self.layout.set_base_build_folder(".")
+        self.layout.set_base_install_folder("myinstallfolder")
 
     def run(self, command):
         self.command = command
