@@ -56,8 +56,8 @@ includedir=${prefix}/include
 Name: MyPkg2
 Description: Conan package: MyPkg2
 Version: 2.3
-Libs: -L${libdir} -sharedlinkflag -exelinkflag
-Cflags: -I${includedir} -cxxflag -DMYDEFINE2
+Libs: -L"${libdir}" -sharedlinkflag -exelinkflag
+Cflags: -I"${includedir}" -cxxflag -DMYDEFINE2
 Requires: my_pkg
 """)
 
@@ -68,8 +68,8 @@ includedir=${prefix}/include
 Name: mypkg1
 Description: My other cool description
 Version: 1.7
-Libs: -L${libdir}
-Cflags: -I${includedir} -Flag1=21 -DMYDEFINE11
+Libs: -L"${libdir}"
+Cflags: -I"${includedir}" -Flag1=21 -DMYDEFINE11
 Requires: my_pkg
 """)
 
@@ -80,8 +80,8 @@ includedir=${prefix}/include
 Name: my_pkg
 Description: My cool description
 Version: 1.3
-Libs: -L${libdir}
-Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
+Libs: -L"${libdir}"
+Cflags: -I"${includedir}" -Flag1=23 -DMYDEFINE1
 """)
 
     def test_pkg_config_custom_names(self):
@@ -152,8 +152,8 @@ includedir=${prefix}/include
 Name: my_pkg2_custom_name
 Description: Conan package: my_pkg2_custom_name
 Version: 2.3
-Libs: -L${libdir} -sharedlinkflag -exelinkflag
-Cflags: -I${includedir} -cxxflag -DMYDEFINE2
+Libs: -L"${libdir}" -sharedlinkflag -exelinkflag
+Cflags: -I"${includedir}" -cxxflag -DMYDEFINE2
 Requires: my_pkg_custom_name my_pkg1_custom_name
 """)
         self.assertEqual(files["my_pkg1_custom_name.pc"], """prefix=/dummy_root_folder1
@@ -163,8 +163,8 @@ includedir=${prefix}/include
 Name: my_pkg1_custom_name
 Description: My other cool description
 Version: 1.7
-Libs: -L${libdir}
-Cflags: -I${includedir} -Flag1=21 -DMYDEFINE11
+Libs: -L"${libdir}"
+Cflags: -I"${includedir}" -Flag1=21 -DMYDEFINE11
 """)
         self.assertEqual(files["my_pkg_custom_name.pc"], """prefix=/dummy_root_folder1
 libdir=${prefix}/lib
@@ -173,8 +173,8 @@ includedir=${prefix}/include
 Name: my_pkg_custom_name
 Description: My cool description
 Version: 1.3
-Libs: -L${libdir}
-Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
+Libs: -L"${libdir}"
+Cflags: -I"${includedir}" -Flag1=23 -DMYDEFINE1
 """)
         self.assertEqual(files["BZip2.pc"], """prefix=/dummy_root_folder2
 libdir=${prefix}/lib
@@ -183,8 +183,8 @@ includedir=${prefix}/include
 Name: BZip2
 Description: Conan package: BZip2
 Version: 2.3
-Libs: -L${libdir} -sharedlinkflag -exelinkflag
-Cflags: -I${includedir} -cxxflag -DMYDEFINE2
+Libs: -L"${libdir}" -sharedlinkflag -exelinkflag
+Cflags: -I"${includedir}" -cxxflag -DMYDEFINE2
 Requires: my_pkg_custom_name my_pkg1_custom_name zlib
 """)
 
@@ -213,6 +213,6 @@ includedir=${prefix}/include
 Name: MyPkg
 Description: My cool description
 Version: 1.3
-Libs: -L${libdir} -Wl,-rpath,"${libdir}" -framework AudioUnit -framework AudioToolbox -F /dummy_root_folder1/Frameworks
-Cflags: -I${includedir}
+Libs: -L"${libdir}" -Wl,-rpath,"${libdir}" -framework AudioUnit -framework AudioToolbox -F /dummy_root_folder1/Frameworks
+Cflags: -I"${includedir}"
 """)

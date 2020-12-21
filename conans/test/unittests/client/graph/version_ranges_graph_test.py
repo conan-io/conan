@@ -10,7 +10,7 @@ from conans.model.requires import Requirements
 from conans.test.unittests.model.transitive_reqs_test import GraphTest
 from conans.test.utils.tools import GenConanfile, TurboTestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID
-from conans.test.utils.tools import test_profile
+from conans.test.utils.tools import create_profile
 
 
 def _get_nodes(graph, name):
@@ -48,7 +48,7 @@ class VersionRangesTest(GraphTest):
 
     def build_graph(self, content, update=False):
         self.loader._cached_conanfile_classes = {}
-        profile = test_profile()
+        profile = create_profile()
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, update, update, self.remotes,
                                              profile_host=profile,
