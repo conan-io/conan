@@ -9,6 +9,7 @@ import textwrap
 import threading
 import time
 import uuid
+import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -72,7 +73,7 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_profile(profile=None, settings=None):
+def create_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
@@ -905,3 +906,14 @@ class StoppableThreadBottle(threading.Thread):
     def run_server(self):
         self.start()
         time.sleep(1)
+
+
+def zipdir(path, zipfilename):
+    with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
+        for root, _, files in os.walk(path):
+            for f in files:
+                file_path = os.path.join(root, f)
+                if file_path == zipfilename:
+                    continue
+                relpath = os.path.relpath(file_path, path)
+                z.write(file_path, relpath)

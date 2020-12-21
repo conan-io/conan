@@ -431,10 +431,11 @@ class CMakeGeneratorTest(unittest.TestCase):
                     if consumer_generator == "cmake_find_package":
                         self.assertIn("comp compile options: one;two;three;four", client.out)
                     else:
-                        self.assertIn("$<$<CONFIG:Release>:;one;two;three;four>;"
-                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                        self.assertIn("$<$<CONFIG:Debug>:;>;"
                                       "$<$<CONFIG:MinSizeRel>:;>;"
-                                      "$<$<CONFIG:Debug>:;>", client.out)
+                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                                      "$<$<CONFIG:Release>:;one;two;three;four>"
+                                      , client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
                                consumer_generator, consumer_cmakelists)
@@ -484,7 +485,6 @@ class CMakeGeneratorTest(unittest.TestCase):
             message("comp compile options: ${tmp}")
             """)
         run_test("cmake_find_package", cmakelists)
-        print(client.out)
 
         # Test cmake_find_package generator without components
         run_test("cmake_find_package", cmakelists, with_components=False)
