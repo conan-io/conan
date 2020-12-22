@@ -14,7 +14,6 @@ from conans.test.utils.tools import TestClient
 @attr("toolchain")
 @pytest.mark.slow
 @pytest.mark.toolchain
-@pytest.mark.tool_autotools
 class MakeToolchainTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")
@@ -111,6 +110,7 @@ class MakeToolchainTest(unittest.TestCase):
 
     @unittest.skipUnless(platform.system() in ["Windows"], "Requires mingw32-make")
     @unittest.skipIf(which("mingw32-make") is None, "Needs mingw32-make")
+    @pytest.mark.tool_mingw
     def test_toolchain_windows(self):
         client = TestClient(path_with_spaces=False)
 
