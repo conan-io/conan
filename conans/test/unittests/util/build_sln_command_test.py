@@ -22,8 +22,6 @@ from conans.util.files import load, save
 
 
 @attr('visual_studio')
-@pytest.mark.tool_visual_studio
-@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class BuildSLNCommandTest(unittest.TestCase):
 
     def test_no_configuration(self):
