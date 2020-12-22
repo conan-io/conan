@@ -765,54 +765,6 @@ class HelloConan(ConanFile):
             output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
             self.assertIn(payload, str(output))
 
-    @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
-    @unittest.skipIf(which("file") is None, "Needs the 'file' command, not by default in linux")
-    def test_unix_to_dos_unit(self):
-
-        def save_file(contents):
-            tmp = temp_folder()
-            filepath = os.path.join(tmp, "a_file.txt")
-            save(filepath, contents)
-            return filepath
-
-        fp = save_file(b"a line\notherline\n")
-        if platform.system() != "Windows":
-            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
-
-            tools.unix2dos(fp)
-            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
-        else:
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
-            tools.unix2dos(fp)
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
-
-        self.assertEqual("a line\r\notherline\r\n", str(tools.load(fp)))
-
-        fp = save_file(b"a line\r\notherline\r\n")
-        if platform.system() != "Windows":
-            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
-
-            tools.dos2unix(fp)
-            output = check_output_runner(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
-        else:
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
-            tools.dos2unix(fp)
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
-
-        self.assertEqual("a line\notherline\n", str(tools.load(fp)))
-
     def test_unix_to_dos_conanfile(self):
         client = TestClient()
         conanfile = """
