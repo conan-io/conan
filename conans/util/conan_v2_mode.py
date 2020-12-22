@@ -5,16 +5,6 @@ from contextlib import contextmanager
 from conans.errors import ConanV2Exception
 
 CONAN_V2_MODE_ENVVAR = "CONAN_V2_MODE"
-CONAN_V2_BEHAVIOR = "CONAN_V2_BEHAVIOR"
-
-
-def conan2_behavior(msg=""):
-    """ this should be used for pure behavior changes, not for deprecations errors """
-    if os.environ.get(CONAN_V2_BEHAVIOR, False):
-        if msg:
-            print("Conan 2.0 behavior: {}".format(msg))
-        return True
-    return False
 
 
 def conan_v2_behavior(msg, v1_behavior=None):

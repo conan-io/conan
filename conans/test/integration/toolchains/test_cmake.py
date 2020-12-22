@@ -8,7 +8,6 @@ import pytest
 from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
-from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.integration.utils import check_vs_runtime, check_msc_ver
@@ -168,15 +167,13 @@ class Base(unittest.TestCase):
 class TestNew(unittest.TestCase):
     def test_new(self):
         client = TestClient()
-        with environment_append({"CONAN_V2_BEHAVIOR": "1"}):
-            client.run("new pkg/0.1 -s -t")
-            conanfile = client.load("conanfile.py")
-            self.assertIn("CMakeToolchain", conanfile)
-            conanfile = client.load("test_package/conanfile.py")
-            self.assertIn("CMakeToolchain", conanfile)
-            cmake = client.load("test_package/CMakeLists.txt")
-            self.assertIn("find_package", cmake)
-
+        client.run("new pkg/0.1 --template=v2_cmake")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("CMakeToolchain", conanfile)
+        conanfile = client.load("test_package/conanfile.py")
+        self.assertIn("CMakeToolchain", conanfile)
+        cmake = client.load("test_package/CMakeLists.txt")
+        self.assertIn("find_package", cmake)
         client.run("create .")
         self.assertIn("pkg/0.1: Hello World Release!", client.out)
 
