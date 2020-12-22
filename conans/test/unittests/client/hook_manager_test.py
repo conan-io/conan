@@ -86,6 +86,7 @@ class HookManagerTest(unittest.TestCase):
             hook_manager.execute(method)
             self.assertIn("[HOOK - my_hook.py] %s(): %s()" % (method, method), output)
 
+    @unittest.skipIf(six.PY2, "Does not pass on Py2 with Pytest")
     def test_no_error_with_no_method(self):
         hook_manager, output, hook_path = self._init()
         other_hook = """
@@ -97,6 +98,7 @@ def my_custom_function():
         hook_manager.execute("pre_source")
         self.assertEqual("", output)
 
+    @unittest.skipIf(six.PY2, "Does not pass on Py2 with Pytest")
     def test_exception_in_method(self):
         hook_manager, output, hook_path = self._init()
         my_hook = """
