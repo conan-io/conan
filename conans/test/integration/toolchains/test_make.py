@@ -3,7 +3,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools import which
 from conans.test.assets.sources import gen_function_h, gen_function_cpp

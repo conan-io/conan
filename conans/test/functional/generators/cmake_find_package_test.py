@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
@@ -14,7 +13,6 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):

@@ -5,7 +5,6 @@ import unittest
 import pytest
 import yaml
 from bottle import static_file
-from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import tgz_with_contents
@@ -87,9 +86,7 @@ sources:
         client.run("install . --build")
         self.assertIn("My URL:", client.out)
 
-    @attr("slow")
     @pytest.mark.slow
-    @attr('local_bottle')
     @pytest.mark.local_bottle
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})

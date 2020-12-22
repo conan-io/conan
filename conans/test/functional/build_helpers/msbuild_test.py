@@ -6,7 +6,6 @@ import unittest
 import pytest
 import six
 import mock
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
@@ -27,7 +26,6 @@ from conans.test.utils.test_files import temp_folder
 
 class MSBuildTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
@@ -111,7 +109,6 @@ class HelloConan(ConanFile):
         build_folder = client.cache.package_layout(pref.ref).build(pref)
         self.assertTrue(os.path.exists(os.path.join(build_folder, "mp.props")))
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
@@ -165,7 +162,6 @@ class HelloConan(ConanFile):
         content = load(conan_props)
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")

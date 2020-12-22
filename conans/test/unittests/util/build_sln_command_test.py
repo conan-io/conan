@@ -7,7 +7,6 @@ import unittest
 import warnings
 
 import pytest
-from nose.plugins.attrib import attr
 from six import StringIO
 
 from conans.client import tools

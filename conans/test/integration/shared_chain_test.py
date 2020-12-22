@@ -3,7 +3,6 @@ import shutil
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer

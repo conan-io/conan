@@ -12,7 +12,6 @@ import requests
 import six
 from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 from requests.models import Response
 
@@ -570,9 +569,7 @@ class HelloConan(ConanFile):
         else:
             self.assertEqual(str, type(result))
 
-    @attr('slow')
     @pytest.mark.slow
-    @attr('local_bottle')
     @pytest.mark.local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
@@ -665,9 +662,7 @@ class HelloConan(ConanFile):
                 with chdir(zip_folder):
                     tools.get("file.zip", strip_root=True)
 
-    @attr('slow')
     @pytest.mark.slow
-    @attr('local_bottle')
     @pytest.mark.local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server

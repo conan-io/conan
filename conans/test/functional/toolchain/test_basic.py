@@ -6,13 +6,11 @@ import unittest
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 class BasicTest(unittest.TestCase):
 

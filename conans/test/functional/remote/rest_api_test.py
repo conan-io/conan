@@ -6,7 +6,6 @@ from random import randrange
 import pytest
 import requests
 from mock import Mock
-from nose.plugins.attrib import attr
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.conf import ConanClientConfigParser
@@ -58,9 +57,7 @@ class RestApiUnitTest(unittest.TestCase):
                          "https://host:1234/subdir/v1/path_to_file.txt")
 
 
-@attr('slow')
 @pytest.mark.slow
-@attr('rest_api')
 @pytest.mark.rest_api
 class RestApiTest(unittest.TestCase):
     """Open a real server (sockets) to test rest_api function."""
