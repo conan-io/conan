@@ -7,9 +7,8 @@ import unittest
 from parameterized import parameterized
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.integration.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
-
-from conans.test.integration.toolchains.test_meson import get_meson_version
 
 
 @pytest.mark.toolchain
@@ -19,7 +18,7 @@ class AndroidToolchainMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""
     from conans import ConanFile, tools
-    from conan.tools.meson import MesonToolchain
+    from conan.tools.meson import Meson, MesonToolchain
 
 
     class App(ConanFile):
@@ -31,15 +30,14 @@ class AndroidToolchainMesonTestCase(unittest.TestCase):
             if self.settings.os == "Windows":
                 del self.options.fPIC
 
-        def toolchain(self):
+        def generate(self):
             tc = MesonToolchain(self)
             tc.generate()
 
         def build(self):
-            # this will be moved to build helper eventually
-            with tools.vcvars(self) if self.settings.compiler == "Visual Studio" else tools.no_op():
-                self.run("meson setup --cross-file conan_meson_cross.ini build .")
-                self.run("meson compile -C build")
+            meson = Meson(self)
+            meson.configure()
+            meson.build()
     """)
 
     _meson_build = textwrap.dedent("""

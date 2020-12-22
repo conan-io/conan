@@ -14,7 +14,7 @@ from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
-    forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
+    forbidden_generators = ["cmake", "cmake_multi"]
     if any(it in conanfile.generators for it in forbidden_generators):
         raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
                              " or 'cmake_find_package_multi' generators")
