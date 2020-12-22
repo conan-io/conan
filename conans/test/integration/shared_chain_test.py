@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import rmdir
 
 
-@attr("slow")
 @pytest.mark.slow
 class SharedChainTest(unittest.TestCase):
 

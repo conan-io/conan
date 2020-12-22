@@ -9,8 +9,6 @@ from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-@attr("slow")
-@attr("toolchain")
 @pytest.mark.slow
 @pytest.mark.toolchain
 class MakeToolchainTest(unittest.TestCase):
