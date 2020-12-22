@@ -42,7 +42,7 @@ def get_generator_platform(settings, generator):
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
+    if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
             generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
@@ -213,12 +213,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
-        if compiler == "msvc":
-            runtime_type = settings.get_safe("compiler.runtime_type")
-            rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
-            if runtime != "static":
-                rt += "DLL"
-            config_dict[build_type] = rt
         return config_dict
 
     def _get_libcxx(self):

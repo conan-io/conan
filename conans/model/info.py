@@ -575,27 +575,6 @@ class ConanInfo(object):
         self.options.clear()
         self.requires.clear()
 
-    def msvc_compatible(self):
-        if self.settings.compiler != "msvc":
-            return
-
-        compatible = self.clone()
-        version = compatible.settings.compiler.version
-        runtime = compatible.settings.compiler.runtime
-        runtime_type = compatible.settings.compiler.runtime_type
-
-        compatible.settings.compiler = "Visual Studio"
-        version = str(version)[:4]
-        _visuals = {'19.0': '14',
-                    '19.1': '15',
-                    '19.2': '16'}
-        compatible.settings.compiler.version = _visuals[version]
-        runtime = "MT" if runtime == "static" else "MD"
-        if  runtime_type == "Debug":
-            runtime = "{}d".format(runtime)
-        compatible.settings.compiler.runtime = runtime
-        return compatible
-
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
         using Visual Studio 14"""
