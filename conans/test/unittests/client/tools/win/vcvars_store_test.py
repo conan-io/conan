@@ -14,7 +14,6 @@ from conans.model.settings import Settings
 from conans.test.utils.mocks import TestBufferConanOutput
 
 
-@attr('visual_studio')
 @pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class VCVarsStoreTest(unittest.TestCase):
