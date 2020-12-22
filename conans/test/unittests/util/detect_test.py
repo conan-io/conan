@@ -30,17 +30,14 @@ class DetectTest(unittest.TestCase):
         if platform_compiler is not None:
             self.assertEqual(result.get("compiler", None), platform_compiler)
 
+    @pytest.mark.tool_gcc
     @unittest.skipIf(platform.system() != "Darwin", "only OSX test")
     def test_detect_default_in_mac_os_using_gcc_as_default(self):
         """
         Test if gcc in Mac OS X is using apple-clang as frontend
         """
         # See: https://github.com/conan-io/conan/issues/2231
-        try:
-            output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:
-            # gcc is not installed or there is any error (no test scenario)
-            return
+        output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
 
         if "clang" not in output:
             # Not test scenario gcc should display clang in output
