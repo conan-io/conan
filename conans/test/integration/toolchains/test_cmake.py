@@ -164,20 +164,6 @@ class Base(unittest.TestCase):
         self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
 
 
-class TestNew(unittest.TestCase):
-    def test_new(self):
-        client = TestClient()
-        client.run("new pkg/0.1 --template=v2_cmake")
-        conanfile = client.load("conanfile.py")
-        self.assertIn("CMakeToolchain", conanfile)
-        conanfile = client.load("test_package/conanfile.py")
-        self.assertIn("CMakeToolchain", conanfile)
-        cmake = client.load("test_package/CMakeLists.txt")
-        self.assertIn("find_package", cmake)
-        client.run("create .")
-        self.assertIn("pkg/0.1: Hello World Release!", client.out)
-
-
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
     @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),

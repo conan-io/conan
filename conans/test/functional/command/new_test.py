@@ -355,3 +355,13 @@ class NewCommandTest(unittest.TestCase):
         source = client.load("test_package/example.cpp")
         self.assertIn('#include "hello.h"', source)
         self.assertIn("hello();", source)
+
+    def test_new_v2_cmake(self):
+        client = TestClient()
+        client.run("new pkg/0.1 --template=v2_cmake")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("CMakeToolchain", conanfile)
+        conanfile = client.load("test_package/conanfile.py")
+        self.assertIn("CMakeToolchain", conanfile)
+        cmake = client.load("test_package/CMakeLists.txt")
+        self.assertIn("find_package", cmake)
