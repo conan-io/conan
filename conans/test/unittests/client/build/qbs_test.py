@@ -1,9 +1,13 @@
 import unittest
+
+import six
+
 import conan.tools.qbs.qbs as qbs
 
 from conans.client import tools
 from conans.errors import ConanException
 from conans.test.utils.mocks import MockConanfile, MockSettings
+from conans.test.utils.test_files import temp_folder
 
 
 class RunnerMock(object):
@@ -56,7 +60,7 @@ class QbsTest(unittest.TestCase):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}))
         # just asume that the test is called from repo root
-        profile_file_path = 'conans/client'
+        profile_file_path = temp_folder()
         build_helper = qbs.Qbs(conanfile, project_file=profile_file_path)
         self.assertEqual(build_helper._project_file, profile_file_path)
 
@@ -121,6 +125,7 @@ class QbsTest(unittest.TestCase):
                 conanfile.build_folder, build_helper._project_file,
                 build_helper.jobs, build_helper.use_toolchain_profile))
 
+    @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
     def test_build_with_custom_configuration(self):
         conanfile = MockConanfile(
             MockSettings({'os': 'Linux', 'compiler': 'gcc'}),

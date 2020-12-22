@@ -1,6 +1,9 @@
 import unittest
 import tempfile
 import textwrap
+
+import six
+
 import conan.tools.qbs.qbstoolchain as qbs
 
 from conans import tools
@@ -12,6 +15,8 @@ class RunnerMock(object):
     class Expectation(object):
         def __init__(self, return_ok=True, output=None):
             self.return_ok = return_ok
+            if six.PY2 and output:
+                output = output.decode("utf-8")
             self.output = output
 
     def __init__(self, expectations=None):
@@ -183,15 +188,15 @@ class QbsGenericTest(unittest.TestCase):
     @staticmethod
     def _settings_to_test_against():
         return [
-            {'os': 'Windows', 'compiler': 'gcc', 'qbs_compiler': 'mingw'},
-            {'os': 'Windows', 'compiler': 'clang',
+            {'os': 'Windows', 'compiler': 'gcc', 'compiler.version': '6', 'qbs_compiler': 'mingw'},
+            {'os': 'Windows', 'compiler': 'clang', 'compiler.version': '3.9',
              'qbs_compiler': 'clang-cl'},
-            {'os': 'Windows', 'compiler': 'Visual Studio',
+            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '15',
              'qbs_compiler': 'cl'},
-            {'os': 'Windows', 'compiler': 'Visual Studio',
+            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '15',
              'compiler.toolset': 'ClangCL', 'qbs_compiler': 'clang-cl'},
-            {'os': 'Linux', 'compiler': 'gcc', 'qbs_compiler': 'gcc'},
-            {'os': 'Linux', 'compiler': 'clang', 'qbs_compiler': 'clang'}
+            {'os': 'Linux', 'compiler': 'gcc', 'compiler.version': '6', 'qbs_compiler': 'gcc'},
+            {'os': 'Linux', 'compiler': 'clang', 'compiler.version': '3.9', 'qbs_compiler': 'clang'}
         ]
 
     def test_convert_compiler_name_to_qbs_compiler_name(self):
@@ -209,8 +214,7 @@ class QbsGenericTest(unittest.TestCase):
 
     def test_setup_toolchain_without_any_env_values(self):
         for settings in self._settings_to_test_against():
-            conanfile = MockConanfileWithFolders(MockSettings(settings),
-                                                 runner=RunnerMock())
+            conanfile = MockConanfileWithFolders(MockSettings(settings), runner=RunnerMock())
             qbs._setup_toolchains(conanfile)
             self.assertEqual(len(conanfile.runner.command_called), 1)
             self.assertEqual(
@@ -222,8 +226,7 @@ class QbsGenericTest(unittest.TestCase):
     def test_setup_toolchain_with_compiler_from_env(self):
         compiler = 'compiler_from_env'
         for settings in self._settings_to_test_against():
-            conanfile = MockConanfileWithFolders(MockSettings(settings),
-                                                 runner=RunnerMock())
+            conanfile = MockConanfileWithFolders(MockSettings(settings), runner=RunnerMock())
             with tools.environment_append({'CC': compiler}):
                 qbs._setup_toolchains(conanfile)
             self.assertEqual(len(conanfile.runner.command_called), 1)
@@ -335,6 +338,7 @@ class QbsGenericTest(unittest.TestCase):
                             qbs._settings_dir(conanfile)))
         self.assertEqual(config, expected_config)
 
+    @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
     def test_toolchain_content(self):
         expected_content = textwrap.dedent('''\
             import qbs
