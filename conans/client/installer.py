@@ -215,11 +215,6 @@ class _PackageBuilder(object):
                         conanfile.layout.set_base_package_folder(package_folder)
                         # In local cache, install folder always is build_folder
                         conanfile.layout.set_base_install_folder(build_folder)
-
-                        mkdir(conanfile.layout.build_folder)
-                        mkdir(conanfile.layout.package_folder)
-                        mkdir(conanfile.layout.install_folder)
-
                         self._build(conanfile, pref)
                         clean_dirty(build_folder)
 
