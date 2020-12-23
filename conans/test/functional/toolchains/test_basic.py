@@ -144,6 +144,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("This 'MSBuild' build helper has been deprecated and moved.", client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
+    @pytest.mark.tool_compiler
     @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
     def test_old_gnu_tools_imports(self):
         conanfile = textwrap.dedent("""
@@ -160,6 +161,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("'from conans import MakeToolchain' has been deprecated and moved",
                       client.out)
 
+    @pytest.mark.tool_compiler
     @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
     def test_old_write_toolchain_files(self):
         conanfile = textwrap.dedent("""
