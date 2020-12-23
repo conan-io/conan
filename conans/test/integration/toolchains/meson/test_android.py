@@ -5,6 +5,7 @@ import textwrap
 import unittest
 
 from parameterized import parameterized
+import pytest
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.integration.toolchains.meson._base import get_meson_version
@@ -13,7 +14,7 @@ from conans.test.utils.tools import TestClient
 
 @pytest.mark.toolchain
 @pytest.mark.tool_meson
-@unittest.skipUnless(get_meson_version() >= "0.56.0", "requires meson >= 0.56.0")
+@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
 class AndroidToolchainMesonTestCase(unittest.TestCase):
 
     _conanfile_py = textwrap.dedent("""

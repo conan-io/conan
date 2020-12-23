@@ -352,7 +352,7 @@ class LinuxTest(Base):
         self._run_app(build_type, msg="AppImproved")
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Apple")
 class AppleTest(Base):
     @parameterized.expand([("Debug",  "14",  True),
                            ("Release", "", False)])

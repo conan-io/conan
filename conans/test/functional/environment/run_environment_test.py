@@ -133,7 +133,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Check SIP protection shell=False")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Check SIP protection shell=False")
     def test_command_as_list(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
