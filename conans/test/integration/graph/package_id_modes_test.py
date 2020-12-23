@@ -1,6 +1,6 @@
 from conans.client.tools import environment_append
 from conans.model.ref import ConanFileReference
-from conans.test.functional.graph.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 

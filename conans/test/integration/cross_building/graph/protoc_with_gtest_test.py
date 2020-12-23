@@ -2,7 +2,7 @@ import textwrap
 
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.model.profile import Profile
-from conans.test.functional.cross_building.graph.protoc_basic_test import ClassicProtocExampleBase
+from conans.test.integration.cross_building.graph.protoc_basic_test import ClassicProtocExampleBase
 
 
 class ProtocWithGTestExample(ClassicProtocExampleBase):

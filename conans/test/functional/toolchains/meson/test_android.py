@@ -8,7 +8,7 @@ from parameterized import parameterized
 import pytest
 
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.integration.toolchains.meson._base import get_meson_version
+from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 
