@@ -219,7 +219,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
 

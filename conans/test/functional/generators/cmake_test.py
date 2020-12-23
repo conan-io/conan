@@ -42,7 +42,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_check_compiler_package_id(self):
         # https://github.com/conan-io/conan/issues/6658
         file_content = textwrap.dedent("""
@@ -74,7 +74,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
             from conans import ConanFile, CMake

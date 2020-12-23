@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -381,7 +383,7 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_standard_version_default_matching(self):
         self._export("Hello", "1.2.0",
                      channel="user/testing",
@@ -628,7 +630,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         self.assertIn("pkg3/1.0: Updated ID: 283642385cc7b64ec7b5903f6895107e0848d238", t.out)
         self.assertIn("pkg3/1.0: Package '283642385cc7b64ec7b5903f6895107e0848d238' created", t.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
         t.save({

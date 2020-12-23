@@ -302,7 +302,7 @@ target_link_libraries(say_hello helloHello2)
         self.assertNotIn("-- Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target linked libs: lib1;sys1;;", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple Frameworks")
     def test_cmake_find_package_frameworks(self):
         conanfile = """from conans import ConanFile, tools
 class Test(ConanFile):

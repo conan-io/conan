@@ -2,6 +2,8 @@ import textwrap
 import unittest
 import platform
 
+import pytest
+
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.integration.utils import check_vs_runtime
@@ -49,7 +51,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         if not which("ninja"):
             raise unittest.SkipTest("Ninja expected in PATH")
 
-    @unittest.skip("Not tested yet")
+    @pytest.mark.skip("Not tested yet")
     def test_locally_build_linux(self):
         """ Ninja build must proceed using default profile and cmake build (Linux)
         """
@@ -74,7 +76,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
         # FIXME: Broken assert
         #  self.assertIn("with debug_info", self.client.out)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
     def test_locally_build_windows(self):
         """ Ninja build must proceed using default profile and cmake build (Windows Release)
         """
@@ -106,7 +108,7 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
         check_vs_runtime("App.exe", client, "15", build_type="Release", static=False)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
     def test_locally_build_windows_debug(self):
         """ Ninja build must proceed using default profile and cmake build (Windows Debug)
         """

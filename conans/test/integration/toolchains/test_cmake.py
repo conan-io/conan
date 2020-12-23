@@ -160,7 +160,7 @@ class Base(unittest.TestCase):
         self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
 
 
-@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False)]
@@ -294,7 +294,7 @@ class WinTest(Base):
         self._run_app(build_type, msg="AppImproved")
 
 
-@unittest.skipUnless(platform.system() == "Linux", "Only for Linux")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class LinuxTest(Base):
     @parameterized.expand([("Debug",  "14", "x86", "libstdc++", True),
                            ("Release", "gnu14", "x86_64", "libstdc++11", False)])
@@ -351,7 +351,7 @@ class LinuxTest(Base):
         self._run_app(build_type, msg="AppImproved")
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "Only for Apple")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Apple")
 class AppleTest(Base):
     @parameterized.expand([("Debug",  "14",  True),
                            ("Release", "", False)])

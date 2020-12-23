@@ -3,11 +3,13 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 
 
-@unittest.skipIf(platform.system() == "Windows", "symlink need admin privileges")
+@pytest.mark.skipif(platform.system() == "Windows", reason="symlink need admin privileges")
 class FixSymlinksTestCase(unittest.TestCase):
     name_ref = ConanFileReference.loads("name/version")
 

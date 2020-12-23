@@ -4,6 +4,8 @@ import stat
 import textwrap
 import unittest
 
+import pytest
+
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import save
@@ -129,7 +131,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.header_path = os.path.join(package_folder, "include", "header1.h")
         self.assertTrue(os.path.exists(self.header_path))
 
-    @unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Permissions in NIX systems only")
     def test_same_permissions(self):
         stat_info = os.stat(self.header_path)
         self.assertFalse(stat_info.st_mode & stat.S_IXUSR)
@@ -142,7 +144,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
         self.assertTrue(stat_info.st_mode & stat.S_IXUSR)
 
 
-@unittest.skipIf(platform.system() == "Windows", "Permissions in NIX systems only")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Permissions in NIX systems only")
 class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
     def setUp(self):
@@ -220,7 +222,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
         self.assertEqual(linkto, header_path)
 
 
-@unittest.skipIf(platform.system() == "Windows", "Symlinks in NIX systems only")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks in NIX systems only")
 class DeployGeneratorSymbolicLinkFolderTest(unittest.TestCase):
 
     def setUp(self):

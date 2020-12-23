@@ -2,13 +2,15 @@ import contextlib
 import io
 import unittest
 
+import pytest
+
 from conans.client.tools import environment_append, six
 from conans.test.utils.tools import TestClient
 from conans.util.env_reader import get_env
 
 
-@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Until conan config is implemented")
-@unittest.skipIf(six.PY2, "v2.0: Only testing for Python 3")
+@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Until conan config is implemented")
+@pytest.mark.skipif(six.PY2, reason="v2.0: Only testing for Python 3")
 class CliUserTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):

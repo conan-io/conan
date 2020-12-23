@@ -3,6 +3,8 @@ import platform
 import tempfile
 import unittest
 
+import pytest
+
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
@@ -41,7 +43,7 @@ class ConanLib(ConanFile):
 
 
 class PathLengthLimitTest(unittest.TestCase):
-    @unittest.skipUnless(platform.system() == "Windows", "requires Win")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
     def test_failure_copy(self):
         client = TestClient()
         conanfile = dedent("""

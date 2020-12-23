@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
@@ -7,7 +9,7 @@ from conans.util.env_reader import get_env
 
 class DownloadRevisionsTest(unittest.TestCase):
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_download_revs_disabled_with_rrev(self):
         # https://github.com/conan-io/conan/issues/6106
         client = TestClient(revisions_enabled=False)
@@ -16,7 +18,7 @@ class DownloadRevisionsTest(unittest.TestCase):
             "ERROR: Revisions not enabled in the client, specify a reference without revision",
             client.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_revs_enabled_with_fake_rrev(self):
         client = TestClient(default_server_user=True, revisions_enabled=True)
         client.save({"conanfile.py": GenConanfile()})
@@ -26,7 +28,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel'", client.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_revs_enabled_with_rrev(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
@@ -41,7 +43,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         search_result = client.search("pkg/1.0@user/channel --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_revs_enabled_with_rrev_no_user_channel(self):
         ref = ConanFileReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
@@ -59,7 +61,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         search_result = client.search("pkg/1.0@ --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_revs_enabled_with_prev(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")

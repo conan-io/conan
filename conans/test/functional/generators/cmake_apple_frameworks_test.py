@@ -3,13 +3,15 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from parameterized import parameterized
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "Only for MacOS")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
     lib_ref = ConanFileReference.loads("lib/version")
     lib_conanfile = textwrap.dedent("""
@@ -112,7 +114,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         self._check_frameworks_found(str(self.t.out))
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "Only for MacOS")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
                 from conans import ConanFile, CMake, tools

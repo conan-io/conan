@@ -2,6 +2,8 @@ import platform
 import pytest
 import unittest
 
+import pytest
+
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 from conans.util.files import decode_text
@@ -19,7 +21,7 @@ def get_meson_version():
 
 @pytest.mark.toolchain
 @pytest.mark.tool_meson
-@unittest.skipUnless(get_meson_version() >= "0.56.0", "requires meson >= 0.56.0")
+@pytest.mark.skipif(get_meson_version() < "0.56.0", reason="requires meson >= 0.56.0")
 class TestMesonBase(unittest.TestCase):
     def setUp(self):
         self.t = TestClient()

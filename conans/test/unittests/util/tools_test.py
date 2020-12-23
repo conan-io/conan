@@ -287,7 +287,7 @@ class HelloConan(ConanFile):
         self.assertEqual(os.getenv("B", None), None)
         self.assertEqual(os.getenv("Z", None), None)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires vswhere")
     def test_vswhere_description_strip(self):
         myoutput = """
 [
@@ -352,7 +352,7 @@ class HelloConan(ConanFile):
             json = vswhere()
             self.assertNotIn("descripton", json)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_run_in_bash(self):
 
         class MockConanfile(object):

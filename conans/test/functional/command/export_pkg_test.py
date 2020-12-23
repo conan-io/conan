@@ -6,6 +6,7 @@ import unittest
 from textwrap import dedent
 
 from parameterized import parameterized
+import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -211,9 +212,9 @@ class HelloPythonConan(ConanFile):
         self.assertIn("optionOne: 123", client.out)
 
     @parameterized.expand([(False, ), (True, )])
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False),
-                     "This test exports several RREVS assuming that the "
-                     "packages will be preserved and they will be removed")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
+                        reason="This test exports several RREVS assuming that the "
+                                "packages will be preserved and they will be removed")
     def test_basic(self, short_paths):
         client = TestClient()
         conanfile = """

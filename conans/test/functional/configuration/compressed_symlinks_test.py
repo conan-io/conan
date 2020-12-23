@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import PACKAGE_TGZ_NAME
 from conans.test.utils.tools import TestServer, TurboTestClient
@@ -9,7 +11,7 @@ from conans.test.utils.tools import TestServer, TurboTestClient
 
 class CompressSymlinksZeroSize(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_package_symlinks_zero_size(self):
         server = TestServer()
         client = TurboTestClient(servers={"default": server})

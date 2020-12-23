@@ -34,7 +34,7 @@ conanfile_py = textwrap.dedent("""
 @pytest.mark.tool_cmake
 @pytest.mark.tool_msbuild
 @pytest.mark.tool_icc
-@unittest.skipUnless(platform.system() == "Windows", "msbuild requires Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
 class MSBuildIntelTestCase(BaseIntelTestCase):
     def test_use_msbuild_toolchain(self):
         self.t.save({'profile': self.profile})

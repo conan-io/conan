@@ -3,6 +3,8 @@ import textwrap
 import time
 import unittest
 
+import pytest
+
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
@@ -164,7 +166,7 @@ class ReproducibleLockfiles(unittest.TestCase):
         self.assertIn('"path": "conanfile.txt"', lockfile)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class GraphLockRevisionTest(unittest.TestCase):
     rrev_b = "9b64caa2465f7660e6f613b7e87f0cd7"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
@@ -254,7 +256,7 @@ class GraphLockRevisionTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b, self.pkg_b_id, self.prev_b)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class RevisionsUpdateTest(unittest.TestCase):
 
     def test_revisions_update(self):

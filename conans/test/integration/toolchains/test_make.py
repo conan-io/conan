@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.toolchain
 class MakeToolchainTest(unittest.TestCase):
 
-    @unittest.skipUnless(platform.system() in ["Linux"], "Requires linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Requires linux")
     def test_toolchain_posix(self):
         client = TestClient(path_with_spaces=False)
         settings = {
@@ -105,8 +105,8 @@ class MakeToolchainTest(unittest.TestCase):
         client.run_command("nm -C out/libhello.a | grep 'hello()'")
         self.assertIn("hello()", client.out)
 
-    @unittest.skipUnless(platform.system() in ["Windows"], "Requires mingw32-make")
-    @unittest.skipIf(which("mingw32-make") is None, "Needs mingw32-make")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires mingw32-make")
+    @pytest.mark.skipif(which("mingw32-make") is None, reason="Needs mingw32-make")
     @pytest.mark.tool_mingw
     def test_toolchain_windows(self):
         client = TestClient(path_with_spaces=False)
