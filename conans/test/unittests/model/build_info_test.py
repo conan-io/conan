@@ -243,6 +243,16 @@ VAR2=23
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
                              list(deps_cpp_info["myname"].debug.build_modules_paths["other_gen"]))
 
+    def test_cpp_info_build_modules_old_behavior(self):
+        folder = temp_folder()
+        info = CppInfo("myname", folder)
+        info.build_modules = ["old.cmake"]  # Test old behavior with .cmake build modules as list
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.add("myname", DepCppInfo(info))
+        for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
+            self.assertListEqual([os.path.join(folder, "old.cmake")],
+                                 list(deps_cpp_info["myname"].build_modules_paths[gen]))
+
     def test_cppinfo_public_interface(self):
         folder = temp_folder()
         info = CppInfo("", folder)

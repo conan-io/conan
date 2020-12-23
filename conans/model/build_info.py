@@ -58,18 +58,28 @@ class BuildModulesDict(dict):
             self.append(item)
 
 
-def merge_dicts(dict1, dict2):
-    all_keys = set(list(dict1.keys()) + list(dict2.keys()))
-    temp = {}
-    for k in all_keys:
-        if k in dict1.keys() and k in dict2.keys():
-            temp[k] = [v for v in dict1[k] if v not in dict2[k]]
-            temp[k].extend(dict2[k])
-        elif k in dict1.keys():
-            temp[k] = dict1[k]
-        elif k in dict2.keys():
-            temp[k] = dict2[k]
-    return temp
+def build_modules_list_to_dict(build_modules):
+    the_dict = {"cmake": [], "cmake_multi": [], "cmake_find_package": [],
+                "cmake_find_package_multi": []}
+    for item in build_modules:
+        if item.endswith(".cmake"):
+            for gen in the_dict.keys():
+                the_dict[gen].append(item)
+    return the_dict
+
+
+def merge_lists(seq1, seq2):
+    return [s for s in seq1 if s not in seq2] + seq2
+
+
+def merge_dicts(d1, d2):
+    result = d1.copy()
+    for k, v in d2.items():
+        if k not in d1.keys():
+            result[k] = v
+        else:
+            result[k] = merge_lists(d1[k], d2[k])
+    return result
 
 
 class _CppInfo(object):
@@ -97,7 +107,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = BuildModulesDict()  # FIXME: Conan 2.0. This should be a plain dict
+        self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
@@ -126,6 +136,8 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+                self.build_modules = build_modules_list_to_dict(self.build_modules)
             self._build_modules_paths = {g: [os.path.join(self.rootpath, p) if not os.path.isabs(p)
                                          else p for p in l] for g, l in self.build_modules.items()}
         return self._build_modules_paths
