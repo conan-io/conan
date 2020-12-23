@@ -68,7 +68,7 @@ class FailOnReferencesUploader(BadConnectionUploader):
 
 
 @pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
-                    reason= "We cannot know the folder of the revision without knowing the hash of "
+                    reason="We cannot know the folder of the revision without knowing the hash of "
                             "the contents")
 class UploadTest(unittest.TestCase):
 

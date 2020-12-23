@@ -28,7 +28,7 @@ class MSBuildTest(unittest.TestCase):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows" and not six.PY3, reason="Requires MSBuild")
     def test_build_vs_project(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild

@@ -3,6 +3,8 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, TurboTestClient
 from conans.util.files import load, mkdir, save
@@ -40,7 +42,7 @@ Hello/0.1@lasote/stable
 """
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
     def _check(self, client, ref, build=True):
@@ -282,7 +284,7 @@ class ConanSymlink(ConanFile):
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))
 
 
-@unittest.skipUnless(platform.system() != "Windows", "Requires Symlinks")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymlinkExportSources(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake

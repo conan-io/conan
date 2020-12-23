@@ -213,7 +213,7 @@ class HelloPythonConan(ConanFile):
 
     @parameterized.expand([(False, ), (True, )])
     @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                        reason= "This test exports several RREVS assuming that the "
+                        reason="This test exports several RREVS assuming that the "
                                 "packages will be preserved and they will be removed")
     def test_basic(self, short_paths):
         client = TestClient()
