@@ -295,7 +295,7 @@ class WinTest(Base):
         self._run_app(build_type, msg="AppImproved")
 
 
-pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class LinuxTest(Base):
     @parameterized.expand([("Debug",  "14", "x86", "libstdc++", True),
                            ("Release", "gnu14", "x86_64", "libstdc++11", False)])
