@@ -35,6 +35,29 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class BuildModulesDict(dict):
+    """
+    A dictionary with append and extend for cmake build modules to keep it backwards compatible
+    with the list interface
+    """
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(BuildModulesDict, self).__setitem__(key, list())
+        return super(BuildModulesDict, self).__getitem__(key)
+
+    def append(self, item):
+        if item.endswith(".cmake"):
+            self["cmake"].append(item)
+            self["cmake_multi"].append(item)
+            self["cmake_find_package"].append(item)
+            self["cmake_find_package_multi"].append(item)
+
+    def extend(self, items):
+        for item in items:
+            self.append(item)
+
+
 def merge_dicts(dict1, dict2):
     all_keys = set(list(dict1.keys()) + list(dict2.keys()))
     temp = {}
@@ -74,7 +97,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = defaultdict(list)
+        self.build_modules = BuildModulesDict()  # FIXME: Conan 2.0. This should be a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""

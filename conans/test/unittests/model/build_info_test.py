@@ -228,10 +228,16 @@ VAR2=23
     def test_cpp_info_build_modules(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
+        info.build_modules.append("old.cmake")  # Test old behavior with .cmake build modules
+        info.build_modules.extend(["other_old.cmake", "file.pc"])  # .pc not considered
         info.build_modules["generator"].append("my_module.cmake")
         info.debug.build_modules["other_gen"] = ["mod-release.cmake"]
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
+        for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
+            self.assertListEqual([os.path.join(folder, "old.cmake"),
+                                  os.path.join(folder, "other_old.cmake")],
+                                 list(deps_cpp_info["myname"].build_modules_paths[gen]))
         self.assertListEqual([os.path.join(folder, "my_module.cmake")],
                              list(deps_cpp_info["myname"].build_modules_paths["generator"]))
         self.assertListEqual([os.path.join(folder, "mod-release.cmake")],
