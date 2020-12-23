@@ -47,9 +47,10 @@ def get_generator(conanfile):
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
     compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
     compiler_base = conanfile.settings.get_safe("compiler.base")
     arch = conanfile.settings.get_safe("arch")
-    compiler_version = conanfile.settings.get_safe("compiler.version")
+
     compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
     if hasattr(conanfile, 'settings_build'):
         os_build = conanfile.settings_build.get_safe('os')

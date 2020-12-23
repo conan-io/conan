@@ -52,11 +52,9 @@ class Base(unittest.TestCase):
     main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8)
+        cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
-        if(CONAN_TOOLCHAIN_INCLUDED AND CMAKE_VERSION VERSION_LESS "3.15")
-            include("${CMAKE_BINARY_DIR}/conan_project_include.cmake")
-        endif()
+
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(FATAL ">> Not using toolchain")
         endif()
@@ -164,10 +162,12 @@ class Base(unittest.TestCase):
 
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 class WinTest(Base):
-    @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
-                           ("Release", "MD", "15", "17", "x86_64", "", False)])
-    def test_toolchain_win(self, build_type, runtime, version, cppstd, arch, toolset, shared):
-        settings = {"compiler": "Visual Studio",
+    @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
+                           ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False)]
+                          )
+    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
+                           shared):
+        settings = {"compiler": compiler,
                     "compiler.version": version,
                     "compiler.toolset": toolset,
                     "compiler.runtime": runtime,
@@ -187,18 +187,17 @@ class WinTest(Base):
         else:
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
-        runtime = "MT" if "MT" in runtime else "MD"
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch = "x64" if arch == "x86_64" else "X86"
         shared_str = "ON" if shared else "OFF"
         vals = {"CMAKE_GENERATOR_PLATFORM": generator_platform,
                 "CMAKE_BUILD_TYPE": "",
-                "CMAKE_CXX_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /W3 /GR /EHsc",
-                "CMAKE_CXX_FLAGS_DEBUG": "/%sd /Zi /Ob0 /Od /RTC1" % runtime,
-                "CMAKE_CXX_FLAGS_RELEASE": "/%s /O2 /Ob2 /DNDEBUG" % runtime,
-                "CMAKE_C_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /W3",
-                "CMAKE_C_FLAGS_DEBUG": "/%sd /Zi /Ob0 /Od /RTC1" % runtime,
-                "CMAKE_C_FLAGS_RELEASE": "/%s /O2 /Ob2 /DNDEBUG" % runtime,
+                "CMAKE_CXX_FLAGS": "/MP1 /DWIN32 /D_WINDOWS /GR /EHsc",
+                "CMAKE_CXX_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
+                "CMAKE_CXX_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
+                "CMAKE_C_FLAGS": "/MP1 /DWIN32 /D_WINDOWS",
+                "CMAKE_C_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
+                "CMAKE_C_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": "/machine:%s" % arch,
                 "CMAKE_EXE_LINKER_FLAGS": "/machine:%s" % arch,
                 "CMAKE_CXX_STANDARD": cppstd,
@@ -217,14 +216,13 @@ class WinTest(Base):
 
         _verify_out()
 
-        toolchain = self.client.load("build/conan_toolchain.cmake")
-        include = self.client.load("build/conan_project_include.cmake")
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
+        if runtime == "MTd":
+            settings["compiler.runtime"] = "MT"
+        if runtime == "MD":
+            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
-        # The generated toolchain files must be identical because it is a multi-config
-        self.assertEqual(toolchain, self.client.load("build/conan_toolchain.cmake"))
-        self.assertEqual(include, self.client.load("build/conan_project_include.cmake"))
 
         self._run_app("Release", bin_folder=True)
         check_msc_ver(toolset or "v141", self.client.out)
@@ -232,10 +230,11 @@ class WinTest(Base):
         self._run_app("Debug", bin_folder=True)
         check_msc_ver(toolset or "v141", self.client.out)
         self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
+        static = "MT" in runtime
         check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
-                         static="MT" in runtime)
+                         static=static)
         check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug",
-                         static="MT" in runtime)
+                         static=static)
 
         self._modify_code()
         time.sleep(1)
@@ -263,26 +262,26 @@ class WinTest(Base):
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
 
         def _verify_out(marker=">>"):
-            vars = {"CMAKE_GENERATOR_PLATFORM": "",
-                    "CMAKE_BUILD_TYPE": build_type,
-                    "CMAKE_CXX_FLAGS": "-m64",
-                    "CMAKE_CXX_FLAGS_DEBUG": "-g",
-                    "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                    "CMAKE_C_FLAGS": "-m64",
-                    "CMAKE_C_FLAGS_DEBUG": "-g",
-                    "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
-                    "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                    "CMAKE_EXE_LINKER_FLAGS": "-m64",
-                    "CMAKE_CXX_STANDARD": cppstd,
-                    "CMAKE_CXX_EXTENSIONS": "OFF",
-                    "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
+            cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
+                          "CMAKE_BUILD_TYPE": build_type,
+                          "CMAKE_CXX_FLAGS": "-m64",
+                          "CMAKE_CXX_FLAGS_DEBUG": "-g",
+                          "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                          "CMAKE_C_FLAGS": "-m64",
+                          "CMAKE_C_FLAGS_DEBUG": "-g",
+                          "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
+                          "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+                          "CMAKE_EXE_LINKER_FLAGS": "-m64",
+                          "CMAKE_CXX_STANDARD": cppstd,
+                          "CMAKE_CXX_EXTENSIONS": "OFF",
+                          "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
             if shared:
                 self.assertIn("app_lib.dll", self.client.out)
             else:
                 self.assertNotIn("app_lib.dll", self.client.out)
 
             out = str(self.client.out).splitlines()
-            for k, v in vars.items():
+            for k, v in cmake_vars.items():
                 self.assertIn("%s %s: %s" % (marker, k, v), out)
 
         _verify_out()
