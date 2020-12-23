@@ -29,7 +29,7 @@ class AbsPathsTestCase(unittest.TestCase):
         self.assertListEqual(after_cpp_info[ref.name].includedirs, ["../an/absolute/dir"])
         self.assertListEqual(after_cpp_info[ref.name].include_paths, ["/rootdir/../an/absolute/dir"])
 
-    @unittest.skipUnless(platform.system() == "Windows", "Uses windows-like paths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Uses windows-like paths")
     def test_absolute_directory(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())

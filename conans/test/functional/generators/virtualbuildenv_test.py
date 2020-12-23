@@ -11,7 +11,7 @@ from conans.util.runners import check_output_runner
 
 class VirtualBuildEnvTest(unittest.TestCase):
 
-    @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="needs Windows")
     @pytest.mark.tool_visual_studio  # 15
     def test_delimiter_error(self):
         # https://github.com/conan-io/conan/issues/3080

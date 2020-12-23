@@ -24,7 +24,7 @@ class VCVarsTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_echo(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -46,7 +46,7 @@ class VCVarsTest(unittest.TestCase):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_with_store_echo(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "WindowsStore"
@@ -60,7 +60,7 @@ class VCVarsTest(unittest.TestCase):
             self.assertEqual("echo Conan:vcvars already set", cmd)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_env_not_duplicated_path(self):
         """vcvars is not looking at the current values of the env vars, with PATH it is a problem
         because you can already have set some of the vars and accumulate unnecessary entries."""
@@ -86,7 +86,7 @@ class VCVarsTest(unittest.TestCase):
                         self.fail("The key '%s' has been repeated" % value)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_filter_known_paths(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -107,7 +107,7 @@ class VCVarsTest(unittest.TestCase):
                 self.assertIn("WindowsFake", os.environ["PATH"])
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_amd64_32_cross_building_support(self):
         # amd64_x86 crossbuilder
         settings = Settings.loads(get_default_settings_yml())
@@ -141,7 +141,7 @@ compiler:
             tools.vcvars_command(settings, output=output)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_constrained(self):
         new_out = StringIO()
         output = ConanOutput(new_out)
@@ -197,7 +197,7 @@ class MyConan(ConanFile):
             self.assertIn("VCINSTALLDIR set to: None", client.out)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_vcvars_dict_diff(self):
         text = """
 os: [Windows]

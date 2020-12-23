@@ -2,6 +2,7 @@ import os
 import platform
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
@@ -119,7 +120,7 @@ class ConsumerFileTest(ConanFile):
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.out)
         self.assertIn("Manifest for '%s': OK" % str(pref), self.client.out)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Only Windows with shortpaths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only Windows with shortpaths")
     def test_capture_verify_short_paths_manifest(self):
         conanfile = """from conans import ConanFile
 

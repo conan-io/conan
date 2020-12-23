@@ -1428,7 +1428,7 @@ build_type: [ Release]
                            ('NMake Makefiles', 'clang', 6.0),
                            ('NMake Makefiles JOM', 'clang', 6.0)
                            ])
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows vcvars")
     def test_vcvars_applied(self, generator, compiler, version):
         conanfile = ConanFileMock()
         settings = Settings.loads(get_default_settings_yml())

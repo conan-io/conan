@@ -1,6 +1,8 @@
 import unittest
 from textwrap import dedent
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
@@ -179,7 +181,7 @@ class FullRevisionModeTest(unittest.TestCase):
             self.assertIn("%s/0.1@user/testing: Binary for updated ID from: Cache" % lib, client.out)
             self.assertIn("%s/0.1@user/testing: Already installed!" % lib, client.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_artifacts_after_build(self):
         # An unknown binary that after build results in the exact same PREF with PREV, doesn't
         # fire build of downstream

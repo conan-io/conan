@@ -121,7 +121,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
     @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
-    @unittest.skipUnless(platform.system() == "Windows", "msbuild requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
     def test_old_msbuild_tools_imports(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, MSBuildToolchain, MSBuild

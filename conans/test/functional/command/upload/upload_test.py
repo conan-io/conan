@@ -650,7 +650,7 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanfile.py", client.out)
         self.assertIn("Uploading conan_export.tgz", client.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_key_error(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
@@ -862,7 +862,7 @@ class MyPkg(ConanFile):
             "ERROR: Revisions not enabled in the client, specify a reference without revision",
             client.out)
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_upload_with_recipe_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)
@@ -875,7 +875,7 @@ class MyPkg(ConanFile):
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
-    @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_upload_with_package_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True, revisions_enabled=True)

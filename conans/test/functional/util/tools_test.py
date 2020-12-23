@@ -73,7 +73,7 @@ class FunctionalToolsTest(unittest.TestCase):
         self.assertEqual("a line\notherline\n", str(tools.load(fp)))
 
 
-@unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
 @pytest.mark.tool_visual_studio
 class VisualStudioToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()

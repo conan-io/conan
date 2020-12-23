@@ -15,7 +15,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 @pytest.mark.tool_visual_studio
-@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 class VCVarsClangClTest(unittest.TestCase):
     output = TestBufferConanOutput()
 

@@ -114,7 +114,7 @@ class ConanReuseLib(ConanFile):
         client.run("build .")
         self.assertIn("15", client.out)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows")
     @pytest.mark.tool_compiler
     def test_use_build_virtualenv_windows(self):
         files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)

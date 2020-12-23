@@ -162,7 +162,7 @@ class Base(unittest.TestCase):
         self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
 
 
-@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
     @parameterized.expand([("Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Release", "MD", "15", "17", "x86_64", "", False)])
