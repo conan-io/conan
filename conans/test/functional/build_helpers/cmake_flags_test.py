@@ -5,7 +5,7 @@ import unittest
 from textwrap import dedent
 
 import pytest
-from nose.plugins.attrib import attr
+
 from parameterized.parameterized import parameterized
 
 from conans.client.build.cmake import CMakeBuildHelper
@@ -61,7 +61,6 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFlagsTest(unittest.TestCase):

@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -12,7 +11,6 @@ from conans.test.assets.sources import gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):

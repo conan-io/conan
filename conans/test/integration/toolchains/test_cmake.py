@@ -5,7 +5,6 @@ import time
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -14,7 +13,6 @@ from conans.test.integration.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
@@ -167,7 +165,7 @@ class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
                            ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "19.11", "17", "x86_64", None, False)]
+                           ("msvc", "Release", "dynamic", "19.11", "17", "x86_64", None, False)
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -407,7 +405,6 @@ class AppleTest(Base):
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeInstallTest(unittest.TestCase):
@@ -466,7 +463,6 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeOverrideCacheTest(unittest.TestCase):

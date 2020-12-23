@@ -5,7 +5,6 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans import DEFAULT_REVISION_V1, load, ONLY_V2
@@ -16,7 +15,6 @@ from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
 
-@attr("artifactory_ready")
 @pytest.mark.artifactory_ready
 @unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
@@ -1350,7 +1348,6 @@ class SCMRevisions(unittest.TestCase):
                       "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
                       client.out)
 
-    @attr("svn")
     @pytest.mark.tool_svn
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.

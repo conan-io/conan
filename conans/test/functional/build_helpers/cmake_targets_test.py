@@ -2,7 +2,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 
@@ -47,7 +46,6 @@ int main(){
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 class CMakeTargetsTest(unittest.TestCase):
     def test_transitive_flags(self):

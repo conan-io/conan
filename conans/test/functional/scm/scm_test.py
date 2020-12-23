@@ -4,7 +4,6 @@ import unittest
 from collections import namedtuple
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.scm import Git, SVN
@@ -50,7 +49,6 @@ def _quoted(item):
     return '"{}"'.format(item)
 
 
-@attr('git')
 @pytest.mark.tool_git
 class GitSCMTest(unittest.TestCase):
 
@@ -634,7 +632,6 @@ class ConanLib(ConanFile):
         self.assertIn(commit, content)
 
 
-@attr('svn')
 @pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
 
@@ -990,7 +987,6 @@ class ConanLib(ConanFile):
         self.assertIn("Bla? bla2 bla2", self.client.out)
 
 
-@attr('svn')
 @pytest.mark.tool_svn
 class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 

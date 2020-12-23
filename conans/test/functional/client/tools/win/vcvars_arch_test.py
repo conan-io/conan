@@ -5,7 +5,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client import tools
 from conans.client.conf import get_default_settings_yml

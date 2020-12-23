@@ -4,7 +4,6 @@ import platform
 import subprocess
 import sys
 import unittest
-import warnings
 from collections import namedtuple
 
 import pytest
@@ -12,27 +11,24 @@ import requests
 import six
 from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 from requests.models import Response
 
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf import get_default_settings_yml, get_default_client_conf
+from conans.client.conf import get_default_client_conf
 from conans.client.output import ConanOutput
 from conans.client.tools import chdir
-from conans.client.tools.files import replace_in_file, which
+from conans.client.tools.files import replace_in_file
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import vswhere
 from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
-from conans.model.settings import Settings
 from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir
 from conans.tools import get_global_instances
-from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
 from conans.util.runners import check_output_runner
 
@@ -414,7 +410,6 @@ class HelloConan(ConanFile):
                            requester=requests,
                            retry=2, retry_wait=0)
 
-    @attr("slow")
     @pytest.mark.slow
     def test_download_retries(self):
         http_server = StoppableThreadBottle()
@@ -479,7 +474,6 @@ class HelloConan(ConanFile):
                        requester=requests, out=out, retry=0, retry_wait=0)
         http_server.stop()
 
-    @attr("slow")
     @pytest.mark.slow
     @patch("conans.tools._global_config")
     def test_download_unathorized(self, mock_config):
@@ -570,9 +564,7 @@ class HelloConan(ConanFile):
         else:
             self.assertEqual(str, type(result))
 
-    @attr('slow')
     @pytest.mark.slow
-    @attr('local_bottle')
     @pytest.mark.local_bottle
     def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
@@ -665,9 +657,7 @@ class HelloConan(ConanFile):
                 with chdir(zip_folder):
                     tools.get("file.zip", strip_root=True)
 
-    @attr('slow')
     @pytest.mark.slow
-    @attr('local_bottle')
     @pytest.mark.local_bottle
     def test_get_gunzip(self):
         # Create a tar file to be downloaded from server

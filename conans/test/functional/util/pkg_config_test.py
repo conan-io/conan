@@ -6,7 +6,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.pkg_config import PkgConfig
@@ -29,7 +28,6 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 """
 
 
-@attr("unix")
 @pytest.mark.unix
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):

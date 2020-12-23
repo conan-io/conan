@@ -1,7 +1,6 @@
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
@@ -58,7 +57,6 @@ int main(){
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class BuildRequiresTest(unittest.TestCase):

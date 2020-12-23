@@ -82,11 +82,6 @@ class CMakeToolchainBase(object):
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
-        {% if conan_project_include_cmake %}
-        # Will be executed after the 'project()' command
-        set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
-        {% endif %}
-
         {% block main %}
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'

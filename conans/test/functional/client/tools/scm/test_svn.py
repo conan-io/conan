@@ -9,7 +9,6 @@ import uuid
 import pytest
 import six
 from mock import patch
-from nose.plugins.attrib import attr
 from six.moves.urllib.parse import quote
 
 from conans.client.tools.scm import SVN
@@ -35,8 +34,6 @@ class SVNRemoteUrlTest(unittest.TestCase):
             self.assertEqual(svn.get_remote_url(remove_credentials=True), expected_url)
 
 
-@attr("slow")
-@attr('svn')
 @pytest.mark.slow
 @pytest.mark.tool_svn
 class SVNToolTestsBasic(SVNLocalRepoTestCase):
@@ -308,8 +305,6 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
             svn.get_tag()
 
 
-@attr("slow")
-@attr('svn')
 @pytest.mark.slow
 @pytest.mark.tool_svn
 class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
@@ -326,8 +321,6 @@ class SVNToolTestsBasicOldVersion(SVNToolTestsBasic):
     # Do not add tests to this class, all should be compatible with new version of SVN
 
 
-@attr("slow")
-@attr('svn')
 @pytest.mark.slow
 @pytest.mark.tool_svn
 class SVNToolTestsPristine(SVNLocalRepoTestCase):
@@ -431,7 +424,6 @@ class SVNToolTestsPristine(SVNLocalRepoTestCase):
         self.assertFalse(svn.is_pristine())
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
 
@@ -455,7 +447,6 @@ class SVNToolTestsPristineWithExternalFile(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
 
@@ -488,7 +479,6 @@ class SVNToolTestsPristineWithExternalsNotFixed(SVNLocalRepoTestCase):
         self.assertFalse(self.svn.is_pristine())
 
 
-@attr("svn")
 @pytest.mark.tool_svn
 class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
 
@@ -555,8 +545,6 @@ class SVNToolTestsPristineWithExternalsFixed(SVNLocalRepoTestCase):
         self.assertTrue(self.svn.is_pristine())
 
 
-@attr("slow")
-@attr('svn')
 @pytest.mark.slow
 @pytest.mark.tool_svn
 class SVNToolsTestsRecipe(SVNLocalRepoTestCase):

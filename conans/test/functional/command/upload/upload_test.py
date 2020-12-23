@@ -8,7 +8,6 @@ from collections import OrderedDict
 import pytest
 import requests
 from mock import patch
-from nose.plugins.attrib import attr
 
 from conans import REVISIONS
 from conans.client.cmd.uploader import CmdUpload
@@ -66,7 +65,6 @@ class UploadTest(unittest.TestCase):
         client.run("remove Hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
         client.run("upload * --all --confirm")
 
-    @attr("artifactory_ready")
     @pytest.mark.artifactory_ready
     def test_upload_force(self):
         ref = ConanFileReference.loads("Hello/0.1@conan/testing")
