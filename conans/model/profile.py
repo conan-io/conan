@@ -8,6 +8,43 @@ from conans.model.options import OptionsValues
 from conans.model.values import Values
 
 
+class Config(object):
+    def __init__(self):
+        self._components = {}  # Component => dict {config-name: value}
+
+    def __bool__(self):
+        return bool(self._components)
+
+    def __getitem__(self, item):
+        return self._components[item]
+
+    def __repr__(self):
+        return "Config: " + repr(self._components)
+
+    __nonzero__ = __bool__
+
+    def update(self, other):
+        self._components.update(other._components)
+
+    def dumps(self):
+        result = []
+        for name, values in self._components.items():
+            for k, v in values.items():
+                result.append("{}:{}={}".format(name, k, v))
+        return "\n".join(result)
+
+    def loads(self, text):
+        self._components = {}
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            left, value = line.split("=", 1)
+            component, name = left.split(":", 1)
+            self._components.setdefault(component, {})[name] = value
+        print(self)
+
+
 class Profile(object):
     """A profile contains a set of setting (with values), environment variables
     """
@@ -19,6 +56,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
+        self.config = Config()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -81,6 +119,10 @@ class Profile(object):
         result.append("[env]")
         result.append(self.env_values.dumps())
 
+        if self.config:
+            result.append("[config]")
+            result.append(self.config.dumps())
+
         return "\n".join(result).replace("\n\n", "\n")
 
     def update(self, other):
@@ -92,6 +134,7 @@ class Profile(object):
         self.options.update(other.options)
         for pattern, req_list in other.build_requires.items():
             self.build_requires.setdefault(pattern, []).extend(req_list)
+        self.config.update(other.config)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

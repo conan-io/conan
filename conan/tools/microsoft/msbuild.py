@@ -29,8 +29,12 @@ class MSBuild(object):
             cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
                                    platform_type=None, winsdk_version=None,
                                    vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
+        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s'
                % (cvars, sln, self.build_type, self.platform))
+
+        verbosity = self._conanfile.conf["tools.microsoft.MSBuild"]["verbosity"]
+        if verbosity:
+            cmd += ' /verbosity:%s' % verbosity
 
         return cmd
 
