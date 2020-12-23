@@ -28,8 +28,8 @@ class DefaultConfigTestCase(ConanV2ModeTestCase):
         # t.run('config get general.default_package_id_mode')
         # self.assertEqual(str(t.out).strip(), "semver_direct_mode")
 
-    @unittest.skipUnless(platform.system() == "Linux", "OLD ABI is only detected for Linux/gcc")
-    @pytest.mark.tool_gcc()
+    @pytest.mark.skipif(platform.system() != "Linux", reason="OLD ABI is only detected for Linux/gcc")
+    @pytest.mark.tool_gcc
     def test_default_libcxx(self):
         t = self.get_client()
         t.run('profile new --detect autodetected')

@@ -64,7 +64,7 @@ int main(){
 
 class BuildEnvironmenTest(unittest.TestCase):
 
-    @unittest.skipUnless(platform.system() == "Linux", "Requires Linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Requires Linux")
     @pytest.mark.tool_autotools
     def test_use_build_virtualenv(self):
         client = TestClient(path_with_spaces=False)
