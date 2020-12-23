@@ -6,7 +6,7 @@ import pytest
 
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_vs_runtime
+from conans.test.integration.utils import check_vs_runtime
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
 

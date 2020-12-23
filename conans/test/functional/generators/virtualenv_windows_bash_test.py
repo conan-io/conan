@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 
-from conans.test.integration.generators.virtualenv_test import _load_env_file
+from conans.test.functional.generators.virtualenv_test import _load_env_file
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import decode_text, save
