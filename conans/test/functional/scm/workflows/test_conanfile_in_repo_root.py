@@ -5,7 +5,7 @@ import unittest
 
 import pytest
 
-from conans.test.functional.scm.workflows.common import TestWorkflow
+from conans.test.integration.scm.workflows.common import TestWorkflow
 from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.tools import TestClient
 

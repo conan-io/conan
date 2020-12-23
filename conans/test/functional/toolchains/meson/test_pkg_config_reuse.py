@@ -3,7 +3,7 @@ import pytest
 import textwrap
 
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.integration.toolchains.meson._base import TestMesonBase
+from conans.test.functional.toolchains.meson._base import TestMesonBase
 
 
 @pytest.mark.tool_pkg_config

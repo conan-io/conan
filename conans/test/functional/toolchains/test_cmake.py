@@ -9,7 +9,7 @@ from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.integration.utils import check_vs_runtime, check_msc_ver
+from conans.test.functional.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 

@@ -9,7 +9,7 @@ import pytest
 
 from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.integration.toolchains.meson._base import get_meson_version
+from conans.test.functional.toolchains.meson._base import get_meson_version
 from conans.test.utils.tools import TestClient
 
 

@@ -7,7 +7,7 @@ import pytest
 
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.integration.utils import check_vs_runtime, check_msc_ver
+from conans.test.functional.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 
