@@ -5,7 +5,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans import MSBuild, tools
@@ -58,7 +57,6 @@ void hello(){
 """
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_visual_studio
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")

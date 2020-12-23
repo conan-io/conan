@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
@@ -400,7 +399,6 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):

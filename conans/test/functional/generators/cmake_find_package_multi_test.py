@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -13,7 +12,6 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, replace_
 from conans.util.files import load
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):

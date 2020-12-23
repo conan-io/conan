@@ -2,12 +2,10 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.test.utils.tools import TestClient
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 class TestTxtCommandLine(unittest.TestCase):
 

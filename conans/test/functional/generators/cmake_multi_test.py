@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 
 from conans.client.tools import remove_from_path, no_op
@@ -133,12 +132,11 @@ int main(){{
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @attr("mingw")
+    @pytest.mark.tool_mingw
     @pytest.mark.tool_gcc
     def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:

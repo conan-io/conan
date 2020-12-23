@@ -6,7 +6,6 @@ import unittest
 import pytest
 import six
 from mock import patch
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
@@ -17,7 +16,6 @@ from conans.test.utils.tools import temp_folder, TestClient
 from conans.util.files import save
 
 
-@attr('git')
 @pytest.mark.tool_git
 class GitRemoteUrlTest(unittest.TestCase):
 
@@ -34,7 +32,6 @@ class GitRemoteUrlTest(unittest.TestCase):
         self.assertEqual(git.get_remote_url(remove_credentials=True), expected_url)
 
 
-@attr('git')
 @pytest.mark.tool_git
 class GitToolTest(unittest.TestCase):
 
@@ -362,7 +359,7 @@ class HelloConan(ConanFile):
         self.assertEqual("dev", git.get_branch())
         self.assertEqual("first commit", git.get_commit_message())
 
-@attr('git')
+
 @pytest.mark.tool_git
 class GitToolsTests(unittest.TestCase):
 

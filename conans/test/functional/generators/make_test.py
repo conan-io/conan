@@ -3,7 +3,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.test.utils.tools import TestClient
@@ -11,7 +10,6 @@ from conans.test.utils.tools import TestClient
 
 class MakeGeneratorTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_autotools
     @unittest.skipUnless(platform.system() == "Linux", "Requires make")

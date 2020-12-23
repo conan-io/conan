@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
@@ -73,7 +72,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run_command('cmake .')
         self.assertIn("Conan: Checking correct version:", client.out)
 
-    @attr("slow")
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
@@ -105,7 +103,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
-    @attr('slow')
     @pytest.mark.slow
     def test_no_output(self):
         client = TestClient()

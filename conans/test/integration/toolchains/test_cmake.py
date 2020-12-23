@@ -5,7 +5,6 @@ import time
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -14,7 +13,6 @@ from conans.test.integration.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class Base(unittest.TestCase):
@@ -406,7 +404,6 @@ class AppleTest(Base):
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeInstallTest(unittest.TestCase):
@@ -465,7 +462,6 @@ class CMakeInstallTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 
-@attr("toolchain")
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 class CMakeOverrideCacheTest(unittest.TestCase):
