@@ -6,11 +6,11 @@ import pytest
 
 from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.integration.utils import check_vs_runtime
+from conans.test.functional.utils import check_vs_runtime
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
 
-
+@pytest.mark.tool_cmake
 class CMakeNinjaTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'Ninja' are available in the system
 
