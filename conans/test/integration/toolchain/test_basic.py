@@ -31,6 +31,7 @@ class BasicTest(unittest.TestCase):
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
 
+    @pytest.mark.tool_compiler
     def test_declarative(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -143,6 +144,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("This 'MSBuild' build helper has been deprecated and moved.", client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
+    @pytest.mark.tool_compiler
     @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
     def test_old_gnu_tools_imports(self):
         conanfile = textwrap.dedent("""
@@ -159,6 +161,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("'from conans import MakeToolchain' has been deprecated and moved",
                       client.out)
 
+    @pytest.mark.tool_compiler
     @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
     def test_old_write_toolchain_files(self):
         conanfile = textwrap.dedent("""
@@ -230,6 +233,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
         self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)
 
+    @pytest.mark.tool_compiler
     def test_conflict_user_generator(self):
         client = TestClient()
         generator = textwrap.dedent("""
