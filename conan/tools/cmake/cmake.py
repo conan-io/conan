@@ -1,8 +1,8 @@
 import os
 import platform
 
-from conan.tools.cmake.utils import get_generator, is_multi_configuration
 from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.utils import get_generator, is_multi_configuration
 from conans.client import tools
 from conans.client.build import join_arguments
 from conans.client.tools.files import chdir
