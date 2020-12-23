@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
@@ -7,7 +9,7 @@ from conans.util.env_reader import get_env
 
 class DownloadRevisionsTest(unittest.TestCase):
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_download_revs_disabled_with_rrev(self):
         # https://github.com/conan-io/conan/issues/6106
         client = TestClient(revisions_enabled=False)

@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -381,7 +383,7 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_standard_version_default_matching(self):
         self._export("Hello", "1.2.0",
                      channel="user/testing",

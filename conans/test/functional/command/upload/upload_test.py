@@ -854,7 +854,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_upload_with_rev_revs_disabled(self):
         client = TestClient(default_server_user=True, revisions_enabled=False)
         client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)

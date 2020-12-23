@@ -2,6 +2,7 @@ import unittest
 
 from bottle import request
 from parameterized.parameterized import parameterized
+import pytest
 
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.env_reader import get_env
@@ -89,7 +90,7 @@ class AuthorizeBearerTest(unittest.TestCase):
                 self.assertIn(auth_type, real_call[1])
 
     @parameterized.expand([(False,), (True,)])
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "ApiV1 test")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="ApiV1 test")
     def test_no_signature(self, artifacts_properties):
         auth = AuthorizationHeaderSpy()
         retur = ReturnHandlerPlugin()

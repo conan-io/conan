@@ -2,13 +2,15 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class RMdirFailTest(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() != "Windows", "needs windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="needs windows")
     def test_fail_rmdir(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})

@@ -5,6 +5,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.client.tools.win import get_cased_path
 from conans.test.utils.test_files import temp_folder
@@ -44,7 +46,7 @@ class UnixPathTest(unittest.TestCase):
     def test_none(self):
         self.assertEqual(None, tools.unix_path(path=None))
 
-    @unittest.skipIf(platform.system() == "Windows", "All but Windows")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="All but Windows")
     def test_not_windows(self):
         path = 'C:\\Windows\\System32'
         self.assertEqual(path, tools.unix_path(path))

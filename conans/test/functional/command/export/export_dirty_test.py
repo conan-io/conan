@@ -41,7 +41,7 @@ class Pkg(ConanFile):
         self.assertEqual(os.listdir(os.path.join(client.cache.package_layout(ref).source())), [])
 
 
-@unittest.skipIf(platform.system() != "Windows", "Needs windows for rmdir block")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for rmdir block")
 class ExportDirtyTest(unittest.TestCase):
     """ Make sure than when the source folder becomes dirty, due to a export of
     a new recipe with a rmdir failure, or to an uncomplete execution of source(),

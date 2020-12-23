@@ -19,7 +19,7 @@ class DefaultConfigTestCase(ConanV2ModeTestCase):
         # t.run('config get general.scm_to_conandata')  # FIXME: This should return a value
         # self.assertEqual(str(t.out).strip(), "1")
 
-    @unittest.expectedFailure
+    @pytest.mark.xfail
     def test_package_id_mode(self):
         # TODO: Define package_id_mode for Conan v2
         t = self.get_client()

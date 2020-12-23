@@ -1099,8 +1099,8 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
-    @unittest.skipIf(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
-                     "Not implemented in artifactory")
+    @pytest.mark.skipif(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
+                        reason="Not implemented in artifactory")
     def test_search_in_remote_by_revision_pattern(self, v1):
         """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
          1. With v2 client: We get the revs without refs matching the pattern

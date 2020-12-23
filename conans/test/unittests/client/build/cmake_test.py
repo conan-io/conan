@@ -8,6 +8,7 @@ import unittest
 import mock
 import six
 from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.client.build.cmake import CMake
@@ -1134,7 +1135,7 @@ build_type: [ Release]
                          '%s' % CMakeTest.scape('. --target test'),
                          conanfile.command)
 
-    @unittest.skipIf(platform.system() != "Windows", "Only for Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
     def test_clean_sh_path(self):
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")

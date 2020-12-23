@@ -67,7 +67,7 @@ Cflags: -I${includedir}
 """
 
 
-@unittest.skipIf(platform.system() == "Windows", ".pc files not in Win")
+@pytest.mark.skipif(platform.system() == "Windows", reason=".pc files not in Win")
 @pytest.mark.tool_pkg_config
 class PkgConfigTest(unittest.TestCase):
     """

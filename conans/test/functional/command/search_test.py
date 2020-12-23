@@ -8,6 +8,7 @@ import unittest
 from collections import OrderedDict
 
 from mock import patch
+import pytest
 
 from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
@@ -1265,7 +1266,7 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
-@unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
 class SearchOutdatedTest(unittest.TestCase):
     def test_search_outdated(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords

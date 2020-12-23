@@ -2,6 +2,7 @@ import unittest
 from collections import OrderedDict
 
 import time
+import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
@@ -11,7 +12,7 @@ from conans.util.env_reader import get_env
 
 class RemoteChecksTest(unittest.TestCase):
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_recipe_updates(self):
         servers = OrderedDict()
         servers["server1"] = TestServer()

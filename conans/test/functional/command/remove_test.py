@@ -3,6 +3,7 @@ import unittest
 
 import six
 from mock import Mock
+import pytest
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
@@ -88,7 +89,7 @@ class Test(ConanFile):
             self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             self.assertIn("There are no packages", client.out)
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_remove_outdated(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -462,9 +463,9 @@ class RemoveTest(unittest.TestCase):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "This test is insane to be "
-                                                                  "tested with revisions, in "
-                                                                  "general all the module")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="This test is insane to be "
+                                                                            "tested with revisions, in "
+                                                                            "general all the module")
     def test_query_remove_locally(self):
         self.client.run("remove notfoundname/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
                         assert_error=True)

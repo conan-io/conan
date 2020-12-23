@@ -213,7 +213,7 @@ class RestApiTest(unittest.TestCase):
         results = [r.copy_clear_rev() for r in results]
         self.assertEqual(results, [ref1])
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Not prepared with revs")
     def test_remove(self):
         # Upload a conans
         ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
@@ -225,7 +225,7 @@ class RestApiTest(unittest.TestCase):
         self.api.remove_recipe(ref)
         self.assertFalse(os.path.exists(path1))
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "Not prepared with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Not prepared with revs")
     def test_remove_packages(self):
         ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
                                        % DEFAULT_REVISION_V1)

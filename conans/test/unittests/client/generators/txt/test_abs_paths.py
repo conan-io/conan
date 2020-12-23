@@ -1,6 +1,8 @@
 import platform
 import unittest
 
+import pytest
+
 from conans.client.generators.text import TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -12,7 +14,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 class AbsPathsTestCase(unittest.TestCase):
 
-    @unittest.skipIf(platform.system() == "Windows", "Uses unix-like paths")
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Uses unix-like paths")
     def test_abs_path_unix(self):
         conanfile = ConanFile(TestBufferConanOutput(), None)
         conanfile.initialize(Settings({}), EnvValues())

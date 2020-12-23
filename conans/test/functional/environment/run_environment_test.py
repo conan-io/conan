@@ -166,7 +166,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         self.assertNotIn("DYLD_LIBRARY_PATH", client.out)
         self.assertIn("Hello Tool!", client.out)
 
-    @unittest.skipIf(platform.system() == "Darwin", "SIP protection (read comment)")
+    @pytest.mark.skipif(platform.system() == "Darwin", reason="SIP protection (read comment)")
     def test_with_tools_run_environment(self):
         # This test is excluded from OSX, because of the SIP protection. CMake helper will
         # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its

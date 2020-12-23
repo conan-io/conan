@@ -3,12 +3,14 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 from conans.test.utils.tools import TestServer, TurboTestClient
 
 
-@unittest.skipIf(platform.system() == "Windows", "Better to test only in NIX the symlinks")
+@pytest.mark.skipif(platform.system() == "Windows", reason="Better to test only in NIX the symlinks")
 class TestSkipBrokenSymlinks(unittest.TestCase):
 
     def test_package_broken_symlinks(self):
@@ -25,8 +27,8 @@ class HelloConan(ConanFile):
     def package(self):
         # Link to file.txt and then remove it
         tools.save(os.path.join(self.package_folder, "file.txt"), "contents")
-        os.symlink(os.path.join(self.package_folder, "file.txt"), 
-                   os.path.join(self.package_folder, "link.txt"))    
+        os.symlink(os.path.join(self.package_folder, "file.txt"),
+                   os.path.join(self.package_folder, "link.txt"))
         os.unlink(os.path.join(self.package_folder, "file.txt"))
 
 """

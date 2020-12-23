@@ -5,6 +5,8 @@ import subprocess
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -137,7 +139,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertIn(os.path.join(base_path, "build"), output)
         self.assertNotIn("package", output)
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for short_paths")
     def test_short_paths(self):
         cache_folder = temp_folder(False)
         short_folder = os.path.join(temp_folder(False), ".cn")
@@ -169,7 +171,7 @@ class InfoFoldersTest(unittest.TestCase):
                 self.assertFalse(os.path.exists(path))
                 self.assertTrue(os.path.exists(os.path.dirname(path)))
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for short_paths")
     def test_short_paths_home_set_acl(self):
         """
         When CONAN_USER_HOME_SHORT is living in NTFS file systems, current user needs to be
@@ -226,7 +228,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("build_folder", output)
         self.assertNotIn("package_folder", output)
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for short_paths")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for short_paths")
     def test_short_paths_folders(self):
         # https://github.com/conan-io/conan/issues/4612
         cache_folder = temp_folder(False)
