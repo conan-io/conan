@@ -1843,6 +1843,7 @@ os:
     Macos:
         version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
         sdk: [None, "macosx"]
+        subsystem: [None, "Catalyst"]
     Android:
         api_level: ANY
     iOS:

@@ -43,6 +43,13 @@ class CompilerFlagsTest(unittest.TestCase):
                                  "os": the_os})
         self.assertEqual(architecture_flag(settings), flag)
 
+    def test_catalyst(self):
+        settings = MockSettings({"compiler": "apple-clang",
+                                 "arch": "x86_64",
+                                 "os": "Macos",
+                                 "os.subsystem": "Catalyst"})
+        self.assertEqual(architecture_flag(settings), "-target=x86_64-apple-ios-macabi")
+
     @parameterized.expand([("gcc", "x86", "-m32"),
                            ("gcc", "x86_64", "-m64"),
                            ("Visual Studio", "x86", "/Qm32"),

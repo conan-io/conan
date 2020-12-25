@@ -55,7 +55,7 @@ def apple_deployment_target_env(os_, os_version):
     return {env_name: os_version}
 
 
-def apple_deployment_target_flag(os_, os_version, os_sdk=None, arch=None):
+def apple_deployment_target_flag(os_, os_version, os_sdk=None, os_subsystem=None, arch=None):
     """compiler flag name which controls deployment target"""
     os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)
     flag = {'macosx': '-mmacosx-version-min',
@@ -65,6 +65,9 @@ def apple_deployment_target_flag(os_, os_version, os_sdk=None, arch=None):
             'watchsimulator': '-mwatchos-simulator-version-min',
             'appletvos': '-mtvos-version-min',
             'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+    if os_subsystem == 'Catalyst':
+        # especial case, despite Catalyst is macOS, it requires an iOS version argument
+        flag = '-mios-version-min'
     if not flag:
         return ''
     return "%s=%s" % (flag, os_version)
