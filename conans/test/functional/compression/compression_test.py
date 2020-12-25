@@ -11,8 +11,8 @@ import time
 import uuid
 import zipfile
 
+import pytest
 import unittest
-from nose.plugins.attrib import attr
 from parameterized import parameterized_class
 
 from conans.client.tools.files import chdir, load, save
@@ -232,8 +232,8 @@ def hardlinks_supported():
         shutil.rmtree(tmpdir)
 
 
+@pytest.mark.slow
 @parameterized_class(compressors)
-@attr("slow")
 class CompressionTest(unittest.TestCase):
     @classmethod
     def get_file_list(cls, d):
