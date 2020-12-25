@@ -23,6 +23,10 @@ from conans.util.files import md5sum, save_files
 @six.add_metaclass(abc.ABCMeta)
 class Compressor:
     @abc.abstractmethod
+    def compress_one(self, filename, archname):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def compress(self, d):
         raise NotImplementedError()
 
@@ -33,6 +37,13 @@ class Compressor:
 
 class ZipCompressor(Compressor):
     ext = ".zip"
+
+    def _instance(self):
+        return zipfile.ZipFile(file='test' + self.ext, mode='w', compression=zipfile.ZIP_DEFLATED)
+
+    def compress_one(self, filename, archname):
+        with self._instance() as f:
+            f.write(filename, archname)
 
     def compress(self, d):
         def symlink_zipinfo(name):
@@ -47,7 +58,7 @@ class ZipCompressor(Compressor):
             zi.external_attr = permissions << 16
             return zi
 
-        with zipfile.ZipFile(file='test' + self.ext, mode='w', compression=zipfile.ZIP_DEFLATED) as f:
+        with self._instance() as f:
             for root, dirnames, filenames in os.walk(d):
                 for filename in filenames:
                     filename = os.path.join(root, filename)
@@ -70,6 +81,10 @@ class ZipCompressor(Compressor):
     def decompress(self, d):
         with zipfile.ZipFile(file='test' + self.ext, mode='r') as f:
             for zi in f.infolist():
+                if os.path.normpath(zi.filename).startswith(".."):
+                    continue
+                if zi.filename.startswith("/"):
+                    zi.filename = zi.filename[1:]
                 # type 4 bits are for file type, 0xA is for S_IFLNK (symbolic link)
                 if (zi.external_attr >> 28) == 0xA:
                     f.extract(zi, path=d)
@@ -91,8 +106,15 @@ class TarCompressor(Compressor):
     write_mode = "w"
     ext = ".tar"
 
+    def _instance(self):
+        return tarfile.open(name='test' + self.ext, mode=self.write_mode, format=tarfile.GNU_FORMAT)
+
+    def compress_one(self, filename, archname):
+        with self._instance() as f:
+            f.add(filename, archname)
+
     def compress(self, d):
-        with tarfile.open(name='test' + self.ext, mode=self.write_mode, format=tarfile.GNU_FORMAT) as f:
+        with self._instance() as f:
             inodes = dict()
             for root, dirnames, filenames in os.walk(d):
                 for filename in filenames:
@@ -137,10 +159,16 @@ class TarCompressor(Compressor):
                         ti.mode = st.st_mode
                         f.addfile(tarinfo=ti)
 
+    def _safe_members(self, members):
+        for member in members:
+            if not os.path.normpath(member.name).startswith(".."):
+                if member.name.startswith("/"):
+                    member.name = member.name[1:]
+                yield member
+
     def decompress(self, d):
         with tarfile.open(name='test' + self.ext, mode=self.read_mode) as f:
-            f.extractall(path=d)
-            f.close()
+            f.extractall(path=d, members=self._safe_members(f.getmembers()))
 
 
 class TarGzCompressor(TarCompressor):
@@ -535,3 +563,30 @@ class CompressionTest(unittest.TestCase):
             os.link(a, b)
 
         self.compress_decompress_check()
+
+    def test_absolute_names(self):
+        """
+        https://www.gnu.org/software/tar/manual/html_node/absolute.html
+        When tar extracts archive members from an archive, it strips any leading slashes (`/')
+        from the member name. This causes absolute member names in the archive to be treated as
+        relative file names. This allows you to have such members extracted wherever you want,
+        instead of being restricted to extracting the member in the exact directory named in the
+        archive. For example, if the archive member has the name `/etc/passwd', tar will extract
+        it as if the name were really `etc/passwd'.
+        """
+        save("passwd", "garbage")
+
+        self.compressor.compress_one("passwd", "/etc/passwd")
+        self.compressor.decompress(self.d2)
+
+        self.assertTrue(os.path.isfile(os.path.join(self.d2, "etc", "passwd")))
+
+    def test_relative_names(self):
+        """
+        https://www.gnu.org/software/tar/manual/html_node/absolute.html
+        File names containing `..' can cause problems when extracting, so tar normally warns you
+        about such files when creating an archive, and rejects attempts to extracts such files.
+        """
+        save("passwd", "garbage")
+        self.compressor.compress_one("passwd", "../../../../../../../../../../../../../../passwd")
+        self.compressor.decompress(self.d2)
