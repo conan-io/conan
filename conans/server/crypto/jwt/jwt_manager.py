@@ -22,10 +22,10 @@ class JWTManager(object):
         if self.expire_time:
             profile_fields["exp"] = datetime.utcnow() + self.expire_time
 
-        return jwt.encode(profile_fields, self.secret)
+        return jwt.encode(profile_fields, self.secret, algorithm="HS256")
 
     def get_profile(self, token):
         """Gets the user from credentials object. None if no credentials.
         Can raise jwt.ExpiredSignature and jwt.DecodeError"""
-        profile = jwt.decode(token, self.secret)
+        profile = jwt.decode(token, self.secret, algorithms=["HS256"])
         return profile
