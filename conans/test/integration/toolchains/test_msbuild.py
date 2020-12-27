@@ -219,6 +219,28 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
+@pytest.mark.tool_visual_studio
+def test_msvc_runtime_flag():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conan.tools.microsoft import msvc_runtime_flag
+       class App(ConanFile):
+           settings = "os", "arch", "compiler", "build_type"
+
+           def generate(self):
+               self.output.info("MSVC FLAG={}!!".format(msvc_runtime_flag(self)))
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s compiler="Visual Studio" -s compiler.version=15 -s compiler.runtime=MD')
+    assert "MSVC FLAG=MD!!" in client.out
+    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=static '
+               '-s compiler.runtime_type=Debug')
+    assert "MSVC FLAG=MTd!!" in client.out
+    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=dynamic')
+    assert "MSVC FLAG=MD!!" in client.out
+
+
 @unittest.skipUnless(platform.system() == "Windows", "Only for windows")
 @pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
