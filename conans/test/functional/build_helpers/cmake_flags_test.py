@@ -74,7 +74,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn('"', flags)
         return flags
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
     def test_vcvars_priority(self):
         # https://github.com/conan-io/conan/issues/5999
         client = TestClient()

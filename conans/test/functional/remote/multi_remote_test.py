@@ -302,9 +302,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.out)
         self.assertIn("Remote: remote2=http://", client2.out)
 
-    @unittest.skipIf(TestClient().cache.config.revisions_enabled,
-                     "This test is not valid for revisions, where we keep iterating the remotes "
-                     "for searching a package for the same recipe revision")
+    @pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
+                        reason="This test is not valid for revisions, where we keep iterating the remotes "
+                               "for searching a package for the same recipe revision")
     def test_package_binary_remote(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile

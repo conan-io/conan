@@ -113,7 +113,7 @@ class Alpha(ConanFile):
             self.assertIn("Generating done", client.out)
             self.assertIn("Build files have been written", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Macos")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
     def test_apple_framework(self):
 
         client = TestClient()
@@ -134,7 +134,7 @@ class Alpha(ConanFile):
         bili = client.load("conanbuildinfo.cmake")
         self.assertIn("-framework Foundation", bili)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Macos")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
     def test_custom_apple_framework(self):
         """Build a custom apple framework and reuse it"""
         client = TestClient()

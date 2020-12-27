@@ -198,7 +198,7 @@ class HelloConan(ConanFile):
             client.run_command('cmake . -G "%s" -DCMAKE_BUILD_TYPE=MinSizeRel' % generator)
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
-    @unittest.skipUnless(platform.system() in ["Windows", "Darwin"], "Exclude Linux")
+    @pytest.mark.skipif(platform.system() not in ["Windows", "Darwin"], reason="Exclude Linux")
     def test_cmake_multi(self):
         client = TestClient()
 

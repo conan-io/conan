@@ -12,7 +12,7 @@ from conans.util.files import save, load
 
 
 @pytest.mark.tool_cmake
-@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomConfigurationTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -99,7 +99,7 @@ class CustomConfigurationTest(unittest.TestCase):
 
 
 @pytest.mark.tool_cmake
-@unittest.skipUnless(platform.system() == "Windows", "Only for windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CustomSettingsTest(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile

@@ -19,7 +19,7 @@ class DefaultConfigTestCase(ConanV2ModeTestCase):
         # t.run('config get general.scm_to_conandata')  # FIXME: This should return a value
         # self.assertEqual(str(t.out).strip(), "1")
 
-    @unittest.expectedFailure
+    @pytest.mark.xfail
     def test_package_id_mode(self):
         # TODO: Define package_id_mode for Conan v2
         t = self.get_client()
@@ -28,8 +28,8 @@ class DefaultConfigTestCase(ConanV2ModeTestCase):
         # t.run('config get general.default_package_id_mode')
         # self.assertEqual(str(t.out).strip(), "semver_direct_mode")
 
-    @unittest.skipUnless(platform.system() == "Linux", "OLD ABI is only detected for Linux/gcc")
-    @pytest.mark.tool_gcc()
+    @pytest.mark.skipif(platform.system() != "Linux", reason="OLD ABI is only detected for Linux/gcc")
+    @pytest.mark.tool_gcc
     def test_default_libcxx(self):
         t = self.get_client()
         t.run('profile new --detect autodetected')

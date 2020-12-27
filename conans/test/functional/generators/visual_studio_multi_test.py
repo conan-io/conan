@@ -59,7 +59,7 @@ void hello(){
 
 @pytest.mark.slow
 @pytest.mark.tool_visual_studio
-@unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class VisualStudioMultiTest(unittest.TestCase):
 
     @parameterized.expand([("visual_studio", "conanbuildinfo.props"),

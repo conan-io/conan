@@ -396,7 +396,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 
 
 @pytest.mark.tool_visual_studio
-@unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class MSBuildGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow

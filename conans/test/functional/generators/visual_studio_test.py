@@ -28,7 +28,7 @@ class VisualStudioTest(unittest.TestCase):
     @pytest.mark.slow
     @pytest.mark.tool_cmake
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_build_vs_project_with_a(self):
         client = TestClient()
         conanfile = textwrap.dedent("""

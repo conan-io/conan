@@ -28,7 +28,7 @@ class MSBuildTest(unittest.TestCase):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows" and six.PY3, "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows" or six.PY2, reason="Requires MSBuild")
     def test_build_vs_project(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
@@ -111,7 +111,7 @@ class HelloConan(ConanFile):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_user_properties_file(self):
         conan_build_vs = textwrap.dedent("""
             from conans import ConanFile, MSBuild
@@ -164,7 +164,7 @@ class HelloConan(ConanFile):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_user_properties_multifile(self):
         conan_build_vs = textwrap.dedent("""
             from conans import ConanFile, MSBuild
@@ -231,7 +231,7 @@ class HelloConan(ConanFile):
         self.assertIn("<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>", content)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_reuse_msbuild_object(self):
         # https://github.com/conan-io/conan/issues/2865
         conan_build_vs = """
@@ -262,7 +262,7 @@ class HelloConan(ConanFile):
         self.assertIn("build() completed", client.out)
 
     @parameterized.expand([("True",), ("'my_log.binlog'",)])
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     @pytest.mark.tool_visual_studio
     def test_binary_log_build(self, value):
         conan_build_vs = """
@@ -296,7 +296,7 @@ class HelloConan(ConanFile):
         log_path = os.path.join(client.current_folder, log_name)
         self.assertTrue(os.path.exists(log_path))
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     @pytest.mark.tool_visual_studio
     def test_binary_logging_on(self):
         settings = MockSettings({"build_type": "Debug",
@@ -310,7 +310,7 @@ class HelloConan(ConanFile):
         self.assertIn("/bl", command)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_binary_logging_on_with_filename(self):
         bl_filename = "a_special_log.log"
         settings = MockSettings({"build_type": "Debug",
@@ -325,7 +325,7 @@ class HelloConan(ConanFile):
         self.assertIn(expected_command, command)
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
     def test_binary_logging_not_supported(self, mock_get_version):
         mock_get_version.return_value = Version("14")
@@ -344,7 +344,7 @@ class HelloConan(ConanFile):
         self.assertIn(except_text, str(exc.exception))
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_get_version(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -356,7 +356,7 @@ class HelloConan(ConanFile):
         self.assertGreater(version, "15.1")
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_skip_toolset(self):
         settings = MockSettings({"build_type": "Debug",
                                  "compiler": "Visual Studio",
@@ -387,7 +387,7 @@ class HelloConan(ConanFile):
             self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
 
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio installation path")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio installation path")
     def test_arch_override(self):
         settings = MockSettings({"build_type": "Release",
                                  "compiler": "Visual Studio",
