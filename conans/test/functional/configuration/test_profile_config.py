@@ -5,7 +5,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.fixture()
+@pytest.fixture
 def client():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -19,7 +19,7 @@ def client():
                 self.output.info(ms.command("Project.sln"))
         """)
     client.save({"conanfile.py": conanfile})
-    yield client
+    return client
 
 
 def test_msbuild_no_config(client):
@@ -34,7 +34,7 @@ def test_msbuild_no_config(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
-    assert "verbosity" not in client.out
+    assert "/verbosity" not in client.out
 
 
 def test_msbuild_config(client):
@@ -69,3 +69,22 @@ def test_msbuild_config_error(client):
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile", assert_error=True)
     assert "Uknown MSBuild verbosity: non-existing" in client.out
+
+
+def test_msbuild_config_package(client):
+    profile = textwrap.dedent("""\
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=Visual Studio
+        compiler.version=15
+        compiler.runtime=MD
+        build_type=Release
+        [conf]
+        dep:tools.microsoft.MSBuild:verbosity=Minimal
+        """)
+    client.save({"myprofile": profile})
+    client.run("create . pkg/0.1@ -pr=myprofile")
+    assert "/verbosity" not in client.out
+    client.run("create . dep/0.1@ -pr=myprofile")
+    assert "/verbosity:Minimal" in client.out

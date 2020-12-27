@@ -1,4 +1,5 @@
 import copy
+import fnmatch
 from collections import OrderedDict, defaultdict
 
 from conans.client import settings_preprocessor
@@ -29,44 +30,76 @@ class Conf(object):
     def __init__(self):
         self._conf_modules = {}  # Module => _ConfModule
 
-    def __bool__(self):
-        return bool(self._conf_modules)
-
-    __nonzero__ = __bool__
-
     def __getitem__(self, item):
         return self._conf_modules.get(item, _ConfModule())
 
     def __repr__(self):
         return "Conf: " + repr(self._conf_modules)
 
+    def items(self):
+        return self._conf_modules.items()
+
     def update(self, other):
+        """
+        :type other: Conf
+        """
         # FIXME: This doesn't update the inner per-module conf
         self._conf_modules.update(other._conf_modules)
+
+    def set_value(self, module_name, k, v):
+        self._conf_modules.setdefault(module_name, _ConfModule()).set_value(k, v)
 
 
 class ProfileConf(object):
     def __init__(self):
-        self._pattern_confs = {}  # pattern (including None) => Conf
+        self._pattern_confs = OrderedDict()  # pattern (including None) => Conf
+
+    def __bool__(self):
+        return bool(self._pattern_confs)
+
+    __nonzero__ = __bool__
+
+    def get_conanfile_conf(self, name):
+        result = Conf()
+        for pattern, conf in self._pattern_confs.items():
+            # TODO: standardize this package-pattern matching
+            if pattern is None or fnmatch.fnmatch(name, pattern):
+                result.update(conf)
+        return result
+
+    def update(self, other):
+        """
+        :type other: ProfileConf
+        """
+        self._pattern_confs.update(other._pattern_confs)
 
     def dumps(self):
         result = []
         for pattern, conf in self._pattern_confs.items():
             for name, values in conf.items():
                 for k, v in values.items():
-                    result.append("{}:{}:{}={}".format(pattern, name, k, v))
+                    if pattern:
+                        result.append("{}:{}:{}={}".format(pattern, name, k, v))
+                    else:
+                        result.append("{}:{}={}".format(name, k, v))
         return "\n".join(result)
 
     def loads(self, text):
-        self._conf_modules = {}
+        self._pattern_confs = {}
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             left, value = line.split("=", 1)
-            component, name = left.split(":", 1)
-            conf_module = self._conf_modules.setdefault(component, _ConfModule())
-            conf_module.set_value(name, value)
+            tokens = left.split(":", 2)
+            if len(tokens) == 3:
+                pattern, conf_module, name = tokens
+            else:
+                assert len(tokens) == 2
+                conf_module, name = tokens
+                pattern = None
+            conf = self._pattern_confs.setdefault(pattern, Conf())
+            conf.set_value(conf_module, name, value)
 
 
 class Profile(object):
@@ -80,7 +113,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
-        self.conf = Conf()
+        self.conf = ProfileConf()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
