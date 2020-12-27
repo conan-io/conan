@@ -22,6 +22,7 @@ def client():
     return client
 
 
+@pytest.mark.tool_visual_studio
 def test_msbuild_no_config(client):
     profile = textwrap.dedent("""\
         [settings]
@@ -37,6 +38,7 @@ def test_msbuild_no_config(client):
     assert "/verbosity" not in client.out
 
 
+@pytest.mark.tool_visual_studio
 def test_msbuild_config(client):
     profile = textwrap.dedent("""\
         [settings]
@@ -54,6 +56,7 @@ def test_msbuild_config(client):
     assert "/verbosity:Minimal" in client.out
 
 
+@pytest.mark.tool_visual_studio
 def test_msbuild_config_error(client):
     profile = textwrap.dedent("""\
         [settings]
@@ -71,6 +74,7 @@ def test_msbuild_config_error(client):
     assert "Uknown MSBuild verbosity: non-existing" in client.out
 
 
+@pytest.mark.tool_visual_studio
 def test_msbuild_config_package(client):
     profile = textwrap.dedent("""\
         [settings]
