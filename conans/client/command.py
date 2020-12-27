@@ -373,7 +373,8 @@ class Command(object):
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
-                                      profile_build=profile_build)
+                                      profile_build=profile_build,
+                                      conf=args.conf)
         except ConanException as exc:
             info = exc.info
             raise
@@ -2169,6 +2170,9 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
 
     parser.add_argument("-u", "--update", action='store_true', default=False,
                         help=update_help)
+
+    parser.add_argument("-c", "--conf", action=Extender, help="Specify conf")
+
     if lockfile:
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile")

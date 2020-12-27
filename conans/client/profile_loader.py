@@ -226,7 +226,7 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.conf.loads(doc.conf)
 
 
-def profile_from_args(profiles, settings, options, env, cwd, cache):
+def profile_from_args(profiles, settings, options, env, cwd, cache, conf=None):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
@@ -240,7 +240,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
             result.update(tmp)
 
-    args_profile = _profile_parse_args(settings, options, env)
+    args_profile = _profile_parse_args(settings, options, env, conf)
 
     if result:
         result.update(args_profile)
@@ -249,7 +249,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
     return result
 
 
-def _profile_parse_args(settings, options, envs):
+def _profile_parse_args(settings, options, envs, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -280,14 +280,14 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(env, package_env):
-        env_values = EnvValues()
-        for name, value in env:
-            env_values.add(name, EnvValues.load_value(value))
-        for package, data in package_env.items():
+    def _get_env_values(envs, package_env_values):
+        env_values_result = EnvValues()
+        for name, value in envs:
+            env_values_result.add(name, EnvValues.load_value(value))
+        for package, data in package_env_values.items():
             for name, value in data:
-                env_values.add(name, EnvValues.load_value(value), package)
-        return env_values
+                env_values_result.add(name, EnvValues.load_value(value), package)
+        return env_values_result
 
     result = Profile()
     options = _get_tuples_list_from_extender_arg(options)
@@ -299,4 +299,6 @@ def _profile_parse_args(settings, options, envs):
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
+    if conf:
+        result.conf.loads("\n".join(conf))
     return result
