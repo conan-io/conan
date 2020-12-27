@@ -150,7 +150,7 @@ def _load_profile(text, profile_path, default_folder):
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env", "scopes", "options",
-                                           "config"])
+                                           "conf"])
         if 'scopes' in doc._sections:
             conan_v2_behavior("Field 'scopes' in profile is deprecated")
 
@@ -222,8 +222,8 @@ def _apply_inner_profile(doc, base_profile):
     current_env_values.update(base_profile.env_values)
     base_profile.env_values = current_env_values
 
-    if doc.config:
-        base_profile.config.loads(doc.config)
+    if doc.conf:
+        base_profile.conf.loads(doc.conf)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):

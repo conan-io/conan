@@ -8,41 +8,65 @@ from conans.model.options import OptionsValues
 from conans.model.values import Values
 
 
-class Config(object):
+class _ConfModule(object):
     def __init__(self):
-        self._components = {}  # Component => dict {config-name: value}
+        self._confs = {}  # Component => dict {config-name: value}
 
-    def __bool__(self):
-        return bool(self._components)
+    def __getattr__(self, item):
+        return self._confs.get(item)
 
-    def __getitem__(self, item):
-        return self._components[item]
+    def set_value(self, k, v):
+        self._confs[k] = v
 
     def __repr__(self):
-        return "Config: " + repr(self._components)
+        return "_ConfModule: " + repr(self._confs)
+
+    def items(self):
+        return self._confs.items()
+
+
+class Conf(object):
+    def __init__(self):
+        self._conf_modules = {}  # Module => _ConfModule
+
+    def __bool__(self):
+        return bool(self._conf_modules)
 
     __nonzero__ = __bool__
 
+    def __getitem__(self, item):
+        return self._conf_modules.get(item, _ConfModule())
+
+    def __repr__(self):
+        return "Conf: " + repr(self._conf_modules)
+
     def update(self, other):
-        self._components.update(other._components)
+        # FIXME: This doesn't update the inner per-module conf
+        self._conf_modules.update(other._conf_modules)
+
+
+class ProfileConf(object):
+    def __init__(self):
+        self._pattern_confs = {}  # pattern (including None) => Conf
 
     def dumps(self):
         result = []
-        for name, values in self._components.items():
-            for k, v in values.items():
-                result.append("{}:{}={}".format(name, k, v))
+        for pattern, conf in self._pattern_confs.items():
+            for name, values in conf.items():
+                for k, v in values.items():
+                    result.append("{}:{}:{}={}".format(pattern, name, k, v))
         return "\n".join(result)
 
     def loads(self, text):
-        self._components = {}
+        self._conf_modules = {}
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             left, value = line.split("=", 1)
             component, name = left.split(":", 1)
-            self._components.setdefault(component, {})[name] = value
-        print(self)
+            conf_module = self._conf_modules.setdefault(component, _ConfModule())
+            conf_module.set_value(name, value)
 
 
 class Profile(object):
@@ -56,7 +80,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
-        self.config = Config()
+        self.conf = Conf()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -119,9 +143,9 @@ class Profile(object):
         result.append("[env]")
         result.append(self.env_values.dumps())
 
-        if self.config:
-            result.append("[config]")
-            result.append(self.config.dumps())
+        if self.conf:
+            result.append("[conf]")
+            result.append(self.conf.dumps())
 
         return "\n".join(result).replace("\n\n", "\n")
 
@@ -134,7 +158,7 @@ class Profile(object):
         self.options.update(other.options)
         for pattern, req_list in other.build_requires.items():
             self.build_requires.setdefault(pattern, []).extend(req_list)
-        self.config.update(other.config)
+        self.conf.update(other.conf)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

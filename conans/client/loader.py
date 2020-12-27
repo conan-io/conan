@@ -189,7 +189,7 @@ class ConanFileLoader(object):
                 tmp_settings.update_values(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
-        conanfile.conf = profile.config
+        conanfile.conf = profile.conf
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, lock_python_requires=None):
