@@ -8,6 +8,7 @@ CONAN_V2_MODE_ENVVAR = "CONAN_V2_MODE"
 
 
 def conan_v2_behavior(msg, v1_behavior=None):
+    # FIXME: to deprecate replace this by a "conan_v2_deprecate" that only raises if enabled
     if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
         raise ConanV2Exception(msg)
     else:

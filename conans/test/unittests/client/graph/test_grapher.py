@@ -2,7 +2,7 @@ import textwrap
 
 from conans.client.graph.grapher import Grapher, Node
 from conans.model.profile import Profile
-from conans.test.functional.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
+from conans.test.integration.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
 
 
 class GrapherTestCase(CrossBuildingBaseTestCase):

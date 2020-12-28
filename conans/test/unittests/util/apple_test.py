@@ -5,6 +5,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.client import tools
 
 
@@ -81,7 +83,7 @@ class AppleTest(unittest.TestCase):
                          '-mappletvos-version-min=10.1')
         self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires OSX")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
     def test_xcrun(self):
 
         def _common_asserts(xcrun_):
