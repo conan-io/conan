@@ -30,14 +30,14 @@ class Layout(object):
 
         self.source = _LayoutEntry()
         self.source.folder = ""
-        self.source.includedirs[""] = ["*.h", "*.hpp"]
+        self.source.includedirs[""] = ["*.h", "*.hpp", "*.hxx"]
 
         self.package = _LayoutEntry()  # Where the artifacts are installed
         self.package.includedirs["include"] = ["*"]
         self.package.bindirs["bin"] = ["*"]
         self.package.libdirs["lib"] = ["*"]
 
-    def __str__(self):
+    def __repr__(self):
         return str(self.__dict__)
 
     @property
@@ -54,8 +54,6 @@ class Layout(object):
 
     @property
     def build_folder(self):
-        print("Build folder: {}".format(self._base_build_folder))
-        print("Build folder: {}".format(self._base_build_folder))
         if self._base_build_folder is None:
             return None
         if not self.build.folder:
