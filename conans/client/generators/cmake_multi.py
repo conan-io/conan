@@ -4,8 +4,7 @@ from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dep
                                                    cmake_package_info, cmake_user_info_vars,
                                                    generate_targets_section, CMakeCommonMacros)
 from conans.model import Generator
-from conans.model.build_info import CppInfo
-from model.build_info import merge_dicts
+from conans.model.build_info import CppInfo, merge_dicts
 
 
 def extend(cpp_info, config):
