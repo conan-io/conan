@@ -340,7 +340,7 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None, conf=None):
+               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
         """
         API method to create a conan package
 
@@ -359,8 +359,7 @@ class ConanAPIV1(object):
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             graph_info = get_graph_info(profile_host, profile_build, cwd, None,
-                                        self.app.cache, self.app.out, lockfile=lockfile,
-                                        conf=conf)
+                                        self.app.cache, self.app.out, lockfile=lockfile)
 
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
@@ -1407,7 +1406,7 @@ Conan = ConanAPIV1
 
 
 def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, output,
-                   name=None, version=None, user=None, channel=None, lockfile=None, conf=None):
+                   name=None, version=None, user=None, channel=None, lockfile=None):
     if lockfile:
         try:
             graph_info_folder = lockfile if os.path.isdir(lockfile) else os.path.dirname(lockfile)
@@ -1456,13 +1455,12 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
                         % install_folder)
 
         phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
-                                  profile_host.env, cwd, cache, conf=conf)
+                                  profile_host.env, cwd, cache)
         phost.process_settings(cache)
         if profile_build:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, cwd, cache,
-                                       conf=conf)
+                                       profile_build.options, profile_build.env, cwd, cache)
             pbuild.process_settings(cache)
         else:
             pbuild = None

@@ -92,19 +92,3 @@ def test_msbuild_config_package(client):
     assert "/verbosity" not in client.out
     client.run("create . dep/0.1@ -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
-
-
-@pytest.mark.tool_visual_studio
-def test_msbuild_config_cmd_line(client):
-    profile = textwrap.dedent("""\
-        [settings]
-        os=Windows
-        arch=x86_64
-        compiler=Visual Studio
-        compiler.version=15
-        compiler.runtime=MD
-        build_type=Release
-        """)
-    client.save({"myprofile": profile})
-    client.run("create . pkg/0.1@ -pr=myprofile -c tools.microsoft.MSBuild:verbosity=Minimal")
-    assert "/verbosity:Minimal" in client.out

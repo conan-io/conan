@@ -226,7 +226,7 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.conf.loads(doc.conf)
 
 
-def profile_from_args(profiles, settings, options, env, cwd, cache, conf=None):
+def profile_from_args(profiles, settings, options, env, cwd, cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
@@ -240,7 +240,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache, conf=None):
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
             result.update(tmp)
 
-    args_profile = _profile_parse_args(settings, options, env, conf)
+    args_profile = _profile_parse_args(settings, options, env)
 
     if result:
         result.update(args_profile)
@@ -249,7 +249,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache, conf=None):
     return result
 
 
-def _profile_parse_args(settings, options, envs, conf):
+def _profile_parse_args(settings, options, envs):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -299,6 +299,4 @@ def _profile_parse_args(settings, options, envs, conf):
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
-    if conf:
-        result.conf.loads("\n".join(conf))
     return result
