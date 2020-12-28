@@ -12,7 +12,7 @@ def msvc_runtime_flag(conanfile):
         return runtime
     if compiler == "msvc":
         runtime_type = settings.get_safe("compiler.runtime_type")
-        if runtime == "static":
-            return "MTd" if runtime_type == "Debug" else "MT"
-        else:
-            return "MDd" if runtime_type == "Debug" else "MD"
+        runtime = "MT" if runtime == "static" else "MD"
+        if runtime_type == "Debug":
+            runtime = "{}d".format(runtime)
+        return runtime
