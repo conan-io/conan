@@ -8,6 +8,7 @@ import six
 from mock import Mock
 from mock.mock import call
 from parameterized import parameterized
+import pytest
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader,\
@@ -296,7 +297,7 @@ class ImportModuleLoaderTest(unittest.TestCase):
         return loaded, module_id, expected_return
 
     @parameterized.expand([(True, False), (False, True), (False, False)])
-    @unittest.skipIf(six.PY2, "Python 2 requires __init__.py file in modules")
+    @pytest.mark.skipif(six.PY2, reason="Python 2 requires __init__.py file in modules")
     def test_py3_recipe_colliding_init_filenames(self, sub1, sub2):
         myfunc1, value1 = "recipe1", 42
         myfunc2, value2 = "recipe2", 23

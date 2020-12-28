@@ -26,7 +26,7 @@ class FunctionalToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
     @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
-    @unittest.skipIf(which("file") is None, "Needs the 'file' command, not by default in linux")
+    @pytest.mark.skipif(which("file") is None, reason="Needs the 'file' command, not by default in linux")
     def test_unix_to_dos_unit(self):
         def save_file(contents):
             tmp = temp_folder()
@@ -73,12 +73,12 @@ class FunctionalToolsTest(unittest.TestCase):
         self.assertEqual("a line\notherline\n", str(tools.load(fp)))
 
 
-@unittest.skipUnless(platform.system() == "Windows", "Requires Visual Studio")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio")
 @pytest.mark.tool_visual_studio
 class VisualStudioToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
-    @unittest.skipIf(six.PY2, "Does not pass on Py2 with Pytest")
+    @pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
     def test_msvc_build_command(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"

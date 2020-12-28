@@ -5,6 +5,8 @@ import platform
 import unittest
 from parameterized.parameterized import parameterized
 
+import pytest
+
 from conans.client.build.compiler_flags import adjust_path, architecture_flag, build_type_define, \
     build_type_flags, format_defines, format_include_paths, format_libraries, \
     format_library_paths, libcxx_define, libcxx_flag, pic_flag, sysroot_flag
@@ -166,7 +168,7 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEqual('"home/www root"', adjust_path('home\\www root', MockSettings({})))
         self.assertEqual('"home/www root"', adjust_path('home\\www root', settings))
 
-    @unittest.skipUnless(platform.system() == "Windows", "requires Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="requires Windows")
     def test_adjust_path_visual_studio(self):
         #  NOTE : test cannot be run on *nix systems, as adjust_path uses
         # tools.unix_path which is Windows-only

@@ -12,7 +12,7 @@ class MakeGeneratorTest(unittest.TestCase):
 
     @pytest.mark.slow
     @pytest.mark.tool_autotools
-    @unittest.skipUnless(platform.system() == "Linux", "Requires make")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Requires make")
     def test_complete_creation_reuse(self):
         client = TestClient(path_with_spaces=False)
         client.run("new myhello/1.0.0 --sources")
