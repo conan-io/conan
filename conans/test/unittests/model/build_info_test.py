@@ -9,6 +9,7 @@ from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 from conans.model.build_info import CppInfo, DepCppInfo
+from model.build_info import BuildModulesDict
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -124,6 +125,19 @@ VAR2=23
         self.assertEqual(deps_cpp_info["Boost"].cxxflags,
                          deps_cpp_info2["Boost"].cxxflags)
         self.assertEqual(deps_cpp_info["Boost"].cxxflags, ["cxxmyflag"])
+
+    def test_BuildModulesDict(self):
+        build_modules = BuildModulesDict({"cmake": ["whatever.cmake"]})
+        build_modules.extend(["hello.cmake"])
+        assert build_modules["cmake"] == ["whatever.cmake", "hello.cmake"]
+        build_modules.to_abs_paths("root")
+        assert build_modules["cmake"] == [os.path.join("root", "whatever.cmake"),
+                                          os.path.join("root", "hello.cmake")]
+        build_modules = BuildModulesDict.from_list(["this.cmake", "this_not.pc"])
+        assert build_modules == {"cmake": ["this.cmake"],
+                                 "cmake_multi": ["this.cmake"],
+                                 "cmake_find_package": ["this.cmake"],
+                                 "cmake_find_package_multi": ["this.cmake"]}
 
     def test_configs(self):
         deps_cpp_info = DepsCppInfo()
