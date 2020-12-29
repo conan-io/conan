@@ -56,6 +56,7 @@ class CMake(object):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
+        # FIXME: This will be obtain from conf, not as an arg
         self._msbuild_verbosity = msbuild_verbosity
 
         self._build_folder = build_folder

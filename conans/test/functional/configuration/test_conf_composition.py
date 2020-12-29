@@ -86,6 +86,7 @@ def test_basic_inclusion(client):
 def test_composition_conan_conf(client):
     # FIXME: Big problem: conan.conf ConfigParser does not allow this syntax
     # What to do? New conan.conf alternative syntax (not based in ConfigParser)?
+    # , delimiters=("=",) work in Python3, but might be breaking if users are using ":"
     conf = textwrap.dedent("""\
         [conf]
         tools.microsoft.MSBuild:verbosity=Quiet
