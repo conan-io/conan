@@ -282,14 +282,14 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(envs, package_env_values):
-        env_values_result = EnvValues()
-        for name, value in envs:
-            env_values_result.add(name, EnvValues.load_value(value))
-        for package, data in package_env_values.items():
+    def _get_env_values(env, package_env):
+        env_values = EnvValues()
+        for name, value in env:
+            env_values.add(name, EnvValues.load_value(value))
+        for package, data in package_env.items():
             for name, value in data:
-                env_values_result.add(name, EnvValues.load_value(value), package)
-        return env_values_result
+                env_values.add(name, EnvValues.load_value(value), package)
+        return env_values
 
     result = Profile()
     options = _get_tuples_list_from_extender_arg(options)
