@@ -4,7 +4,7 @@ from collections import OrderedDict, defaultdict
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
-from conans.model.profile import Profile
+from conans.model.profile import Profile, ProfileConf
 from conans.model.ref import ConanFileReference
 from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import ConfigParser
@@ -223,7 +223,9 @@ def _apply_inner_profile(doc, base_profile):
     base_profile.env_values = current_env_values
 
     if doc.conf:
-        base_profile.conf.loads(doc.conf)
+        new_prof = ProfileConf()
+        new_prof.loads(doc.conf)
+        base_profile.conf.update(new_prof)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):

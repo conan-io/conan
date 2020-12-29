@@ -16,6 +16,12 @@ class _ConfModule(object):
     def __getattr__(self, item):
         return self._confs.get(item)
 
+    def update(self, other):
+        """
+        :type other: _ConfModule
+        """
+        self._confs.update(other._confs)
+
     def set_value(self, k, v):
         self._confs[k] = v
 
@@ -43,8 +49,12 @@ class Conf(object):
         """
         :type other: Conf
         """
-        # FIXME: This doesn't update the inner per-module conf
-        self._conf_modules.update(other._conf_modules)
+        for k, v in other._conf_modules.items():
+            existing = self._conf_modules.get(k)
+            if existing:
+                existing.update(v)
+            else:
+                self._conf_modules[k] = v
 
     def set_value(self, module_name, k, v):
         self._conf_modules.setdefault(module_name, _ConfModule()).set_value(k, v)
@@ -71,7 +81,12 @@ class ProfileConf(object):
         """
         :type other: ProfileConf
         """
-        self._pattern_confs.update(other._pattern_confs)
+        for k, v in other._pattern_confs.items():
+            existing = self._pattern_confs.get(k)
+            if existing:
+                existing.update(v)
+            else:
+                self._pattern_confs[k] = v
 
     def dumps(self):
         result = []
