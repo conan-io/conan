@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from copy import copy
 
 from conans.errors import ConanException
