@@ -52,6 +52,7 @@ from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NoRestV2Available, NotFoundException)
+from conans.model.conf import ConfDefinition
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
@@ -81,6 +82,12 @@ class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
         quiet = kwargs.pop("quiet", False)
+        config_file = kwargs.pop("config_file", None)
+        if config_file is not None:
+            conf = ConfDefinition()
+            conf.loads(load(config_file))
+        else:
+            conf = None
         try:  # getcwd can fail if Conan runs on an unexisting folder
             old_curdir = os.getcwd()
         except EnvironmentError:
@@ -88,7 +95,7 @@ def api_method(f):
         old_output = api.user_io.out
         quiet_output = ConanOutput(StringIO(), color=api.color) if quiet else None
         try:
-            api.create_app(quiet_output=quiet_output)
+            api.create_app(quiet_output=quiet_output, conf=conf)
             log_command(f.__name__, kwargs)
             with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
@@ -157,7 +164,8 @@ def _get_conanfile_path(path, cwd, py):
 
 
 class ConanApp(object):
-    def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None):
+    def __init__(self, cache_folder, user_io, http_requester=None, runner=None, quiet_output=None,
+                 conf=None):
         # User IO, interaction and logging
         self.user_io = user_io
         self.out = self.user_io.out
@@ -241,9 +249,9 @@ class ConanAPIV1(object):
             # FIXME Remove in Conan 2.0
             sys.path.append(os.path.join(self.cache_folder, "python"))
 
-    def create_app(self, quiet_output=None):
+    def create_app(self, quiet_output=None, conf=None):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
-                            self.runner, quiet_output=quiet_output)
+                            self.runner, quiet_output=quiet_output, conf=conf)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,

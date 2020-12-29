@@ -2160,6 +2160,8 @@ def _add_common_install_arguments(parser, build_help, update_help=None, lockfile
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
 
+    parser.add_argument("-cf", "--config-file", action=OnceArgument, help="Path to config file")
+
     if not update_help:
         update_help = ("Will check the remote and in case a newer version and/or revision of "
                        "the dependencies exists there, it will install those in the local cache. "

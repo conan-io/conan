@@ -88,7 +88,6 @@ def test_composition_conan_conf(client):
     # What to do? New conan.conf alternative syntax (not based in ConfigParser)?
     # , delimiters=("=",) work in Python3, but might be breaking if users are using ":"
     conf = textwrap.dedent("""\
-        [conf]
         tools.microsoft.MSBuild:verbosity=Quiet
         tools.microsoft.MSBuild:performance=Slow
         tools.cmake.CMake:verbosity=Extra
