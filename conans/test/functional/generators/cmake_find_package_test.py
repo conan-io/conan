@@ -428,6 +428,67 @@ message("Target libs: ${tmp}")
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
+    def test_build_modules_with_components(self):
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "test"
+                version = "1.0"
+                exports_sources = ["my-module.cmake"]
+
+                def package(self):
+                    self.copy("*.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "my-module.cmake")
+                    self.cpp_info.build_modules["cmake_find_package"] = [module]
+                    # Defining components is allowed
+                    self.cpp_info.components["comp1"].libs = ["libcomp1"]
+        """)
+        # This is a module that has some functionality
+        my_module = textwrap.dedent("""
+            function(custom_message MESSAGE_OUTPUT)
+                message(${ARGV${0}})
+            endfunction()
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile, "my-module.cmake": my_module})
+        client.run("create .")
+        ref = ConanFileReference("test", "1.0", None, None)
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
+        package_path = client.cache.package_layout(ref).package(pref)
+        modules_path = os.path.join(package_path, "share", "cmake")
+        self.assertEqual(set(os.listdir(modules_path)), {"my-module.cmake"})
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package"
+                requires = "test/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(test)
+            custom_message("Printing using a external module!")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        print(client.out)
+        self.assertIn("Printing using a external module!", client.out)
+
     def test_cpp_info_name(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
