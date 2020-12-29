@@ -63,8 +63,8 @@ def build_modules_list_to_dict(build_modules):
                 "cmake_find_package_multi": []}
     for item in build_modules:
         if item.endswith(".cmake"):
-            for gen in the_dict.keys():
-                the_dict[gen].append(item)
+            for val in the_dict.values():
+                val.append(item)
     return the_dict
 
 
