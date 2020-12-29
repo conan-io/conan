@@ -250,8 +250,8 @@ VAR2=23
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
-            self.assertListEqual([os.path.join(folder, "old.cmake")],
-                                 list(deps_cpp_info["myname"].build_modules_paths[gen]))
+            assert list(deps_cpp_info["myname"].build_modules_paths[gen]) ==\
+                   [os.path.join(folder, "old.cmake")]
 
     def test_cppinfo_public_interface(self):
         folder = temp_folder()

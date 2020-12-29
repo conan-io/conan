@@ -57,22 +57,25 @@ class BuildModulesDict(dict):
         for item in items:
             self.append(item)
 
+    @classmethod
+    def from_list(cls, build_modules):
+        the_dict = BuildModulesDict({"cmake": [], "cmake_multi": [], "cmake_find_package": [],
+                                     "cmake_find_package_multi": []})
+        for item in build_modules:
+            if item.endswith(".cmake"):
+                for val in the_dict.values():
+                    val.append(item)
+        return the_dict
 
-def build_modules_list_to_dict(build_modules):
-    the_dict = {"cmake": [], "cmake_multi": [], "cmake_find_package": [],
-                "cmake_find_package_multi": []}
-    for item in build_modules:
-        if item.endswith(".cmake"):
-            for val in the_dict.values():
-                val.append(item)
-    return the_dict
-
-
-def merge_lists(seq1, seq2):
-    return [s for s in seq1 if s not in seq2] + seq2
+    def to_abs_paths(self, rootpath):
+        for generator, values in self.items():
+            self[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
+                               for p in values]
 
 
 def merge_dicts(d1, d2):
+    def merge_lists(seq1, seq2):
+        return [s for s in seq1 if s not in seq2] + seq2
     result = d1.copy()
     for k, v in d2.items():
         if k not in d1.keys():
@@ -137,9 +140,9 @@ class _CppInfo(object):
     def build_modules_paths(self):
         if self._build_modules_paths is None:
             if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
-                self.build_modules = build_modules_list_to_dict(self.build_modules)
-            self._build_modules_paths = {g: [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in l] for g, l in self.build_modules.items()}
+                self.build_modules = BuildModulesDict.from_list(self.build_modules)
+            self._build_modules_paths = self.build_modules
+            self._build_modules_paths.to_abs_paths(self.rootpath)
         return self._build_modules_paths
 
     @property
@@ -451,7 +454,7 @@ class DepCppInfo(object):
         self._res_paths = None
         self._src_paths = None
         self._framework_paths = None
-        self._build_module_paths = None
+        self._build_modules_paths = None
         self._sorted_components = None
         self._check_component_requires()
 
@@ -488,17 +491,6 @@ class DepCppInfo(object):
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
                 paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
-        setattr(self, "_%s_paths" % item, paths)
-        return paths
-
-    def _aggregated_dict_paths(self, item):
-        paths = getattr(self, "_%s_paths" % item)
-        if paths is not None:
-            return paths
-        paths = getattr(self._cpp_info, "%s_paths" % item)
-        if self._cpp_info.components:
-            for component in self._get_sorted_components().values():
-                paths = merge_dicts(paths, getattr(component, "%s_paths" % item))
         setattr(self, "_%s_paths" % item, paths)
         return paths
 
@@ -549,7 +541,14 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_dict_paths("build_modules")
+        if self._build_modules_paths is not None:
+            return self._build_modules_paths
+        paths = self._cpp_info.build_modules_paths
+        if self._cpp_info.components:
+            for component in self._get_sorted_components().values():
+                paths = merge_dicts(paths, component.build_modules_paths)
+        self._build_modules_paths = paths
+        return self._build_modules_paths
 
     @property
     def include_paths(self):
