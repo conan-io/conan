@@ -39,12 +39,19 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_test = should_test
 
     try:
-        mkdir(build_folder)
-        os.chdir(build_folder)
-        conan_file.build_folder = build_folder
-        conan_file.source_folder = source_folder
-        conan_file.package_folder = package_folder
-        conan_file.install_folder = install_folder
+        conan_file.layout.set_base_build_folder(build_folder)
+        conan_file.layout.set_base_source_folder(source_folder)
+        conan_file.layout.set_base_package_folder(package_folder)
+        # FIXME: HACK! (This can be fixed when build computes the graph)
+        #        The user is passing the complete folder to the installed files
+        #        This adjust is done after the configure so the install folder from the layout is
+        #        overwritten
+        conan_file.layout.set_base_install_folder(install_folder)
+        conan_file.layout.install.folder = ""
+
+        mkdir(conan_file.build_folder)
+        os.chdir(conan_file.build_folder)
+
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):

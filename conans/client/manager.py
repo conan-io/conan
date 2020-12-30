@@ -90,14 +90,15 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         manifest_manager.print_log()
 
     if install_folder:
-        conanfile.install_folder = install_folder
+        conanfile.layout.set_base_install_folder(install_folder)
+        install_folder = conanfile.install_folder
         # Write generators
         output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:
             tmp = list(conanfile.generators)  # Add the command line specified generators
             tmp.extend([g for g in generators if g not in tmp])
             conanfile.generators = tmp
-            app.generator_manager.write_generators(conanfile, install_folder, output)
+            app.generator_manager.write_generators(conanfile, conanfile.install_folder, output)
             write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo

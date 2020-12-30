@@ -21,20 +21,31 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
+
+    conanfile.layout.set_base_build_folder(build_folder)
+    conanfile.layout.set_base_source_folder(source_folder)
+    conanfile.layout.set_base_package_folder(package_folder)
+    # FIXME: HACK! (This can be fixed when build computes the graph)
+    #        The user is passing the complete folder to the installed files
+    #        This adjust is done after the configure so the install folder from the layout is
+    #        overwritten
+    conanfile.layout.set_base_install_folder(install_folder)
+    conanfile.layout.install.folder = ""
+
+    if conanfile.package_folder == conanfile.build_folder:
+        raise ConanException("Cannot 'conan package' to the build folder. "
+                             "--build-folder and package folder can't be the same")
+
     mkdir(package_folder)
     output = conanfile.output
     # Make the copy of all the patterns
     output.info("Generating the package")
     output.info("Package folder %s" % package_folder)
 
-    conanfile.package_folder = package_folder
-    conanfile.source_folder = source_folder
-    conanfile.install_folder = install_folder
-    conanfile.build_folder = build_folder
-
     with get_env_context_manager(conanfile):
-        return _call_package(conanfile, package_id, source_folder, build_folder, package_folder,
-                             install_folder, hook_manager, conanfile_path, ref, copy_info)
+        return _call_package(conanfile, package_id, conanfile.source_folder, conanfile.build_folder,
+                             conanfile.package_folder, conanfile.install_folder, hook_manager,
+                             conanfile_path, ref, copy_info)
 
 
 def _call_package(conanfile, package_id, source_folder, build_folder, package_folder,

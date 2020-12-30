@@ -776,14 +776,16 @@ class ConanAPIV1(object):
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
-        default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        if package_folder == build_folder:
-            raise ConanException("Cannot 'conan package' to the build folder. "
-                                 "--build-folder and package folder can't be the same")
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
+
+        # If the layout declared a package folder follow it, do not invent a "package/"
+        # folder by default
+        default_pkg_folder = os.path.join(build_folder, "package") \
+            if not conanfile.layout.package.folder else None
+        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+
         run_package_method(conanfile, None, source_folder, build_folder, package_folder,
                            install_folder, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
@@ -797,7 +799,6 @@ class ConanAPIV1(object):
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
 
-        mkdir(source_folder)
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
