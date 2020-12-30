@@ -225,8 +225,8 @@ def _apply_inner_profile(doc, base_profile):
 
     if doc.conf:
         new_prof = ConfDefinition()
-        new_prof.loads(doc.conf)
-        base_profile.conf.update(new_prof)
+        new_prof.loads(doc.conf, profile=True)
+        base_profile.conf.update_conf_definition(new_prof)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):

@@ -1,6 +1,8 @@
 import fnmatch
 from collections import OrderedDict
 
+from conans.errors import ConanException
+
 
 class _ConfModule(object):
     def __init__(self):
@@ -25,7 +27,14 @@ class _ConfModule(object):
         return self._confs.items()
 
 
+def _is_profile_module(module_name):
+    # These are the modules that are propagated to profiles and user recipes
+    _user_modules = "tools.", "user."
+    return any(module_name.startswith(user_module) for user_module in _user_modules)
+
+
 class Conf(object):
+
     def __init__(self):
         self._conf_modules = {}  # module_name => _ConfModule
 
@@ -37,6 +46,13 @@ class Conf(object):
 
     def items(self):
         return self._conf_modules.items()
+
+    def filter_user_modules(self):
+        result = Conf()
+        for k, v in self._conf_modules.items():
+            if _is_profile_module(k):
+                result._conf_modules[k] = v
+        return result
 
     def update(self, other):
         """
@@ -70,11 +86,14 @@ class ConfDefinition(object):
                 result.update(conf)
         return result
 
-    def update(self, other):
+    def update_conf_definition(self, other, user_modules=False):
         """
+        :param user_modules: update only those user/recipe modules
         :type other: ConfDefinition
         """
         for k, v in other._pattern_confs.items():
+            if user_modules:
+                v = v.filter_user_modules()
             existing = self._pattern_confs.get(k)
             if existing:
                 existing.update(v)
@@ -92,7 +111,7 @@ class ConfDefinition(object):
                         result.append("{}:{}={}".format(name, k, v))
         return "\n".join(result)
 
-    def loads(self, text):
+    def loads(self, text, profile=False):
         self._pattern_confs = {}
         for line in text.splitlines():
             line = line.strip()
@@ -106,5 +125,7 @@ class ConfDefinition(object):
                 assert len(tokens) == 2
                 conf_module, name = tokens
                 pattern = None
+            if profile and not _is_profile_module(conf_module):
+                raise ConanException("Conf '{}' not allowed in profiles".format(conf_module))
             conf = self._pattern_confs.setdefault(pattern, Conf())
             conf.set_value(conf_module, name, value)

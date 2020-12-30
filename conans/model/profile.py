@@ -98,7 +98,7 @@ class Profile(object):
         self.options.update(other.options)
         for pattern, req_list in other.build_requires.items():
             self.build_requires.setdefault(pattern, []).extend(req_list)
-        self.conf.update(other.conf)
+        self.conf.update_conf_definition(other.conf)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.
