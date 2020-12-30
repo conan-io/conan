@@ -1472,9 +1472,9 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
-    graph_info.profile_host.conf.update_conf_definition(cache.new_config, user_modules=True)
+    graph_info.profile_host.conf.rebase_conf_definition(cache.new_config)
     if graph_info.profile_build is not None:
-        graph_info.profile_build.conf.update_conf_definition(cache.new_config, user_modules=True)
+        graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
     return graph_info
 
 

@@ -76,7 +76,15 @@ class ConfDefinition(object):
     def __bool__(self):
         return bool(self._pattern_confs)
 
+    def __repr__(self):
+        return "ConfDefinition: " + repr(self._pattern_confs)
+
     __nonzero__ = __bool__
+
+    def __getitem__(self, module_name):
+        """ if a module name is requested for this, always goes to the None-Global config
+        """
+        return self._pattern_confs.get(None, Conf())[module_name]
 
     def get_conanfile_conf(self, name):
         result = Conf()
@@ -86,19 +94,29 @@ class ConfDefinition(object):
                 result.update(conf)
         return result
 
-    def update_conf_definition(self, other, user_modules=False):
+    def update_conf_definition(self, other):
         """
-        :param user_modules: update only those user/recipe modules
+        This is used for composition of profiles [conf] section
         :type other: ConfDefinition
         """
         for k, v in other._pattern_confs.items():
-            if user_modules:
-                v = v.filter_user_modules()
             existing = self._pattern_confs.get(k)
             if existing:
                 existing.update(v)
             else:
                 self._pattern_confs[k] = v
+
+    def rebase_conf_definition(self, other):
+        """
+        for taking the new conan_conf.txt and composing with the profile [conf]
+        :type other: ConfDefinition
+        """
+        for k, v in other._pattern_confs.items():
+            new_v = v.filter_user_modules()  # Creates a copy, filtered
+            existing = self._pattern_confs.get(k)
+            if existing:
+                new_v.update(existing)
+            self._pattern_confs[k] = new_v
 
     def dumps(self):
         result = []
@@ -125,7 +143,10 @@ class ConfDefinition(object):
                 assert len(tokens) == 2
                 conf_module, name = tokens
                 pattern = None
-            if profile and not _is_profile_module(conf_module):
-                raise ConanException("[conf] '{}' not allowed in profiles".format(conf_module))
+            if not _is_profile_module(conf_module):
+                if profile:
+                    raise ConanException("[conf] '{}' not allowed in profiles".format(line))
+                if pattern is not None:
+                    raise ConanException("Conf '{}' cannot have a package pattern".format(line))
             conf = self._pattern_confs.setdefault(pattern, Conf())
             conf.set_value(conf_module, name, value)

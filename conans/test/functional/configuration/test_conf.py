@@ -1,8 +1,10 @@
 import textwrap
 
 import pytest
+from mock import patch
 
-from conans.util.files import load, save
+from conans.errors import ConanException
+from conans.util.files import save
 from conans.test.utils.tools import TestClient
 
 
@@ -82,19 +84,13 @@ def test_basic_inclusion(client):
     assert "tools.meson.Meson$verbosity$Super" in client.out
 
 
-@pytest.mark.skip("conan.conf does not support new config yet")
 def test_composition_conan_conf(client):
-    # FIXME: Big problem: conan.conf ConfigParser does not allow this syntax
-    # What to do? New conan.conf alternative syntax (not based in ConfigParser)?
-    # , delimiters=("=",) work in Python3, but might be breaking if users are using ":"
     conf = textwrap.dedent("""\
         tools.microsoft.MSBuild:verbosity=Quiet
         tools.microsoft.MSBuild:performance=Slow
         tools.cmake.CMake:verbosity=Extra
         """)
-    conan_conf = load(client.cache.conan_conf_path)
-    conan_conf += conf
-    save(client.cache.conan_conf_path, conan_conf)
+    save(client.cache.new_config_path, conf)
     profile = textwrap.dedent("""\
         [conf]
         tools.microsoft.MSBuild:verbosity=Minimal
@@ -119,8 +115,20 @@ def test_new_config_file(client):
         """)
     save(client.cache.new_config_path, conf)
     client.run("install .")
-    print(client.out)
     assert "tools.microsoft.MSBuild$verbosity$Minimal" in client.out
     assert "user.mycompany.MyHelper$myconfig$myvalue" in client.out
     assert "no_locks" not in client.out
     assert "read_only" not in client.out
+
+
+@patch("conans.client.conf.required_version.client_version", "1.26.0")
+def test_new_config_file_required_version():
+    client = TestClient()
+    conf = textwrap.dedent("""\
+        core:required_conan_version=>=2.0
+        """)
+    save(client.cache.new_config_path, conf)
+    with pytest.raises(ConanException) as excinfo:
+        client.run("install .")
+    assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
+            in str(excinfo.value))
