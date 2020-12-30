@@ -10,6 +10,7 @@ from parameterized import parameterized
 
 from conans.client.tools.oss import detected_architecture
 
+
 class DetectedArchitectureTest(unittest.TestCase):
 
     @parameterized.expand([
@@ -29,13 +30,13 @@ class DetectedArchitectureTest(unittest.TestCase):
         ['sparc', 'sparc'],
         ['sparc64', 'sparcv9'],
         ['s390', 's390'],
-        ['s390x', 's390x']
+        ['s390x', 's390x'],
+        ['arm64', "armv8"]
     ])
     def test_various(self, mocked_machine, expected_arch):
 
         with mock.patch("platform.machine", mock.MagicMock(return_value=mocked_machine)):
             self.assertEqual(expected_arch, detected_architecture(), "given '%s' expected '%s'" % (mocked_machine, expected_arch))
-
 
     def test_aix(self):
         with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
@@ -51,7 +52,6 @@ class DetectedArchitectureTest(unittest.TestCase):
                 mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value='64')),\
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
             self.assertEqual('ppc64', detected_architecture())
-
 
     def test_solaris(self):
         with mock.patch("platform.machine", mock.MagicMock(return_value='sun4v')),\

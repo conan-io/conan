@@ -70,7 +70,7 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is contraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
 
 
 @contextmanager
