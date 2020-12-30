@@ -3,6 +3,7 @@ import textwrap
 import pytest
 
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.fixture
@@ -25,6 +26,6 @@ def test_msbuild_config(client):
     conf = textwrap.dedent("""\
         tools.microsoft.MSBuild:verbosity=Minimal
         """)
-    client.save({"conf_file": conf})
-    client.run("create . pkg/0.1@ --config-file=conf_file")
-    assert "/verbosity:Minimal" in client.out
+    save(client.cache.new_config_path, conf)
+    client.run("create . pkg/0.1@")
+    assert "pkg/0.1: tools.microsoft.MSBuild$verbosity$Minimal" in client.out
