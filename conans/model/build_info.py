@@ -141,8 +141,9 @@ class _CppInfo(object):
         if self._build_modules_paths is None:
             if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
-            self._build_modules_paths = self.build_modules
-            self._build_modules_paths.to_abs_paths(self.rootpath)
+            tmp = BuildModulesDict(self.build_modules)
+            tmp.to_abs_paths(self.rootpath)
+            self._build_modules_paths = tmp
         return self._build_modules_paths
 
     @property
