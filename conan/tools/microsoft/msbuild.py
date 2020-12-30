@@ -3,6 +3,16 @@ from conans.client.tools import intel_compilervars_command
 from conans.errors import ConanException
 
 
+def msbuild_verbosity_cmd_line_arg(conanfile):
+    conf = conanfile.conf["tools.microsoft.MSBuild"]
+    verbosity = conf.verbosity
+    if verbosity:
+        if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
+            raise ConanException("Uknown MSBuild verbosity: {}".format(verbosity))
+        return '/verbosity:{}'.format(verbosity)
+    return
+
+
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -33,12 +43,9 @@ class MSBuild(object):
         cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s'
                % (cvars, sln, self.build_type, self.platform))
 
-        conf = self._conanfile.conf["tools.microsoft.MSBuild"]
-        verbosity = conf.verbosity
+        verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
         if verbosity:
-            if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-                raise ConanException("Uknown MSBuild verbosity: {}".format(verbosity))
-            cmd += ' /verbosity:%s' % verbosity
+            cmd += " {}".format(verbosity)
 
         return cmd
 

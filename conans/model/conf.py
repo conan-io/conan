@@ -126,6 +126,6 @@ class ConfDefinition(object):
                 conf_module, name = tokens
                 pattern = None
             if profile and not _is_profile_module(conf_module):
-                raise ConanException("Conf '{}' not allowed in profiles".format(conf_module))
+                raise ConanException("[conf] '{}' not allowed in profiles".format(conf_module))
             conf = self._pattern_confs.setdefault(pattern, Conf())
             conf.set_value(conf_module, name, value)

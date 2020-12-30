@@ -108,3 +108,19 @@ def test_composition_conan_conf(client):
     assert "tools.microsoft.MSBuild$robustness$High" in client.out
     assert "tools.cmake.CMake$verbosity$Extra" in client.out
     assert "tools.meson.Meson$verbosity$Super" in client.out
+
+
+def test_new_config_file(client):
+    conf = textwrap.dedent("""\
+        tools.microsoft.MSBuild:verbosity=Minimal
+        user.mycompany.MyHelper:myconfig=myvalue
+        cache:no_locks=True
+        cache:read_only=True
+        """)
+    save(client.cache.new_config_path, conf)
+    client.run("install .")
+    print(client.out)
+    assert "tools.microsoft.MSBuild$verbosity$Minimal" in client.out
+    assert "user.mycompany.MyHelper$myconfig$myvalue" in client.out
+    assert "no_locks" not in client.out
+    assert "read_only" not in client.out
