@@ -163,6 +163,10 @@ class ClientCache(object):
 
     @property
     def new_config(self):
+        """ this is the new conan_conf.txt to replace the old conan.conf that contains
+        configuration defined with the new syntax as in profiles, this config will be composed
+        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
+        """
         if self._new_config is None:
             self._new_config = ConfDefinition()
             if os.path.exists(self.new_config_path):

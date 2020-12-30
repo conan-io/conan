@@ -1469,7 +1469,8 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
         # Preprocess settings and convert to real settings
 
-    # Apply to the profiles the global one, so recipes get it too
+    # Apply the new_config to the profiles the global one, so recipes get it too
+    # TODO: This means lockfiles contain whole copy of the config here?
     graph_info.profile_host.conf.update(cache.new_config)
     if graph_info.profile_build is not None:
         graph_info.profile_build.conf.update(cache.new_config)
