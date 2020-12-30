@@ -226,7 +226,7 @@ class UploadTest(unittest.TestCase):
         client.run("create . user/testing")
         ref = ConanFileReference.loads("Hello0/1.2.1@user/testing")
 
-        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
@@ -252,10 +252,10 @@ class UploadTest(unittest.TestCase):
         client.run("create . user/testing")
         pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
 
-        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
-            return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
+            return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
