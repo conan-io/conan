@@ -85,7 +85,7 @@ def test_cmake_config_package(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        dep:tools.microsoft.MSBuild:verbosity=Minimal
+        dep*:tools.microsoft.MSBuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
@@ -109,15 +109,15 @@ def test_config_profile_forbidden(client):
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.microsoft import MSBuild
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
 
-            class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                def build(self):
-                    ms = MSBuild(self)
-                    self.output.info(ms.command("Project.sln"))
-            """)
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def build(self):
+                ms = MSBuild(self)
+                self.output.info(ms.command("Project.sln"))
+        """)
     client.save({"conanfile.py": conanfile})
     profile = textwrap.dedent("""\
         [settings]

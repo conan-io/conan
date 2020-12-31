@@ -175,14 +175,13 @@ class ConanFileLoader(object):
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
+        ref_str = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
+                                   conanfile._conan_user, conanfile._conan_channel)
         if package_settings_values:
             pkg_settings = package_settings_values.get(conanfile.name)
             if pkg_settings is None:
-                # FIXME: This seems broken for packages without user/channel
-                ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
-                                       conanfile._conan_user, conanfile._conan_channel)
                 for pattern, settings in package_settings_values.items():
-                    if fnmatch.fnmatchcase(ref, pattern):
+                    if fnmatch.fnmatchcase(ref_str, pattern):
                         pkg_settings = settings
                         break
             if pkg_settings:
@@ -190,7 +189,7 @@ class ConanFileLoader(object):
 
         conanfile.initialize(tmp_settings, profile.env_values)
         # FIXME: Name of the package, full name?
-        conanfile.conf = profile.conf.get_conanfile_conf(conanfile.name)
+        conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, lock_python_requires=None):
