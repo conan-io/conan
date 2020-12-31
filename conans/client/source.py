@@ -124,7 +124,6 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
     conanfile.layout.set_base_source_folder(src_folder)
     conanfile.layout.set_base_build_folder(None)
     conanfile.layout.set_base_package_folder(None)
-    conanfile.layout.set_base_install_folder(None)
 
     src_folder = conanfile.source_folder
     mkdir(src_folder)

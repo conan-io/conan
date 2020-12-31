@@ -4,21 +4,23 @@ import os
 class _LayoutEntry(object):
 
     def __init__(self):
-        self.folder = ""
+        self.folder = None
 
 
 class Layout(object):
     def __init__(self):
 
+        self.install_folder = None
+
         self._base_source_folder = None
         self._base_build_folder = None
-        self._base_install_folder = None
+        self._base_generators_folder = None
         self._base_package_folder = None
 
-        self.install = _LayoutEntry()
+        self.generators = _LayoutEntry()
         self.source = _LayoutEntry()
         self.build = _LayoutEntry()
-        self.package = _LayoutEntry()  # Where the artifacts are installed
+        self.package = _LayoutEntry()
 
     def __repr__(self):
         return str(self.__dict__)
@@ -47,16 +49,13 @@ class Layout(object):
         self._base_build_folder = folder
 
     @property
-    def install_folder(self):
-        if self._base_install_folder is None:
-            return self.build_folder  # If None, default to build_folder (review)
-        if not self.install.folder:
-            return self._base_install_folder
+    def generators_folder(self):
+        if self.generators.folder is None:
+            return self.install_folder
+        return os.path.join(self._base_generators_folder, self.generators.folder)
 
-        return os.path.join(self._base_install_folder, self.install.folder)
-
-    def set_base_install_folder(self, folder):
-        self._base_install_folder = folder
+    def set_base_generators_folder(self, folder):
+        self._base_generators_folder = folder
 
     @property
     def package_folder(self):

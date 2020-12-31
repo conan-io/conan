@@ -8,9 +8,9 @@ from conans.util.files import mkdir
 from conans.util.log import logger
 
 
-def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-              test=False, should_configure=True, should_build=True, should_install=True,
-              should_test=True):
+def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, package_folder,
+              install_folder, test=False, should_configure=True, should_build=True,
+              should_install=True, should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
@@ -39,15 +39,14 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_test = should_test
 
     try:
+        # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
+        #  Only base_path and conanfile_path will remain
         conan_file.layout.set_base_build_folder(build_folder)
         conan_file.layout.set_base_source_folder(source_folder)
         conan_file.layout.set_base_package_folder(package_folder)
-        # FIXME: HACK! (This can be fixed when build computes the graph)
-        #        The user is passing the complete folder to the installed files
-        #        This adjust is done after the configure so the install folder from the layout is
-        #        overwritten
-        conan_file.layout.set_base_install_folder(install_folder)
-        conan_file.layout.install.folder = ""
+        conan_file.layout.set_base_generators_folder(base_path)
+
+        conan_file.layout.install_folder = install_folder
 
         mkdir(conan_file.build_folder)
         os.chdir(conan_file.build_folder)

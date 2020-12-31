@@ -176,7 +176,7 @@ class ConanFileMock(ConanFile):
         self.layout = Layout()
         self.layout.set_base_source_folder(".")
         self.layout.set_base_build_folder(".")
-        self.layout.set_base_install_folder("myinstallfolder")
+        self.layout.install_folder = "myinstallfolder"
 
     def run(self, command):
         self.command = command

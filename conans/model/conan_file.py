@@ -199,12 +199,8 @@ class ConanFile(object):
         self.layout.set_base_build_folder(folder)
 
     @property
-    def install_folder(self):
-        return self.layout.install_folder
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
+    def generate_folder(self):
+        return self.layout.generate_folder
 
     @property
     def package_folder(self):
@@ -213,6 +209,15 @@ class ConanFile(object):
     @package_folder.setter
     def package_folder(self, folder):
         self.layout.set_base_package_folder(folder)
+
+    @property
+    def install_folder(self):
+        return self.layout.install_folder
+
+    @install_folder.setter
+    def install_folder(self, folder):
+        self.layout.install_folder = folder
+
 
     @property
     def env(self):
