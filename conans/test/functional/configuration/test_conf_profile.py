@@ -133,3 +133,31 @@ def test_msbuild_config():
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
+
+
+def test_msbuild_compile_options():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "MSBuildToolchain"
+        """)
+    client.save({"conanfile.py": conanfile})
+
+    profile = textwrap.dedent("""\
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=Visual Studio
+        compiler.version=15
+        compiler.runtime=MD
+        build_type=Release
+        [conf]
+        tools.microsoft.MSBuildToolchain:compile_options={"ExceptionHandling": "Async"}
+        """)
+    client.save({"myprofile": profile})
+    client.run("install . -pr=myprofile")
+    msbuild_tool = client.load("conantoolchain_release_x64.props")
+    assert "<ExceptionHandling>Async</ExceptionHandling>" in msbuild_tool
