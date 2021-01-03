@@ -1,10 +1,13 @@
 import fnmatch
-from collections import OrderedDict
 
 from conans.errors import ConanException
 
 
 class _ConfModule(object):
+    """
+    a dictionary of key: values for each config property of a module
+    like "tools.cmake.CMake"
+    """
     def __init__(self):
         self._confs = {}  # Component => dict {config-name: value}
 
@@ -68,10 +71,18 @@ class Conf(object):
     def set_value(self, module_name, k, v):
         self._conf_modules.setdefault(module_name, _ConfModule()).set_value(k, v)
 
+    @property
+    def sha(self):
+        result = []
+        for name, values in sorted(self.items()):
+            for k, v in sorted(values.items()):
+                result.append("{}:{}={}".format(name, k, v))
+        return "\n".join(result)
+
 
 class ConfDefinition(object):
     def __init__(self):
-        self._pattern_confs = OrderedDict()  # pattern (including None) => Conf
+        self._pattern_confs = {}  # pattern (including None) => Conf
 
     def __bool__(self):
         return bool(self._pattern_confs)
@@ -89,7 +100,6 @@ class ConfDefinition(object):
     def get_conanfile_conf(self, name):
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
-            # TODO: standardize this package-pattern matching
             if pattern is None or fnmatch.fnmatch(name, pattern):
                 result.update(conf)
         return result
@@ -120,9 +130,9 @@ class ConfDefinition(object):
 
     def dumps(self):
         result = []
-        for pattern, conf in self._pattern_confs.items():
-            for name, values in conf.items():
-                for k, v in values.items():
+        for pattern, conf in sorted(self._pattern_confs.items()):
+            for name, values in sorted(conf.items()):
+                for k, v in sorted(values.items()):
                     if pattern:
                         result.append("{}:{}:{}={}".format(pattern, name, k, v))
                     else:
