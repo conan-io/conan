@@ -188,7 +188,6 @@ class ConanFileLoader(object):
                 tmp_settings.update_values(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
-        # FIXME: Name of the package, full name?
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
@@ -258,6 +257,7 @@ class ConanFileLoader(object):
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
         conanfile.initialize(Settings(), profile.env_values)
+        conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
@@ -297,6 +297,7 @@ class ConanFileLoader(object):
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(profile_host.processed_settings.copy(),
                              profile_host.env_values)
+        conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         for reference in references:

@@ -97,10 +97,10 @@ class ConfDefinition(object):
         """
         return self._pattern_confs.get(None, Conf())[module_name]
 
-    def get_conanfile_conf(self, name):
+    def get_conanfile_conf(self, ref_str):
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
-            if pattern is None or fnmatch.fnmatch(name, pattern):
+            if pattern is None or (ref_str is not None and fnmatch.fnmatch(ref_str, pattern)):
                 result.update(conf)
         return result
 
