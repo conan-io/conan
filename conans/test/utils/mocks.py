@@ -173,7 +173,9 @@ class ConanFileMock(ConanFile):
         self.deps_user_info = DepsUserInfo()
         self._conan_env_values = EnvValues()
 
-    def run(self, command):
+    def run(self, command, win_bash=False, subsystem=None):
+        assert win_bash is False
+        assert subsystem is None
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}
