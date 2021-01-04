@@ -326,7 +326,8 @@ class ProfileTest(unittest.TestCase):
         profile = textwrap.dedent("""
             [settings]
             os=Windows
-            mypkg/0.1:os=Linux  # THIS FAILED BEFORE WITH NO MATCH
+            # THIS FAILED BEFORE WITH NO MATCH
+            mypkg/0.1:os=Linux
             mypkg/0.1@user/channel:os=FreeBSD
             """)
         client = TestClient()
