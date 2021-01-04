@@ -218,7 +218,6 @@ class ConanFile(object):
     def install_folder(self, folder):
         self.layout.install_folder = folder
 
-
     @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
