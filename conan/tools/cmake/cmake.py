@@ -73,7 +73,7 @@ class CMake(object):
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            os.path.join(generator_folder, CMakeToolchainBase.filename),
+            os.path.join(generator_folder, CMakeToolchainBase.filename).replace("\\", "/"),
             self._conanfile.package_folder.replace("\\", "/"),
             source)
 
