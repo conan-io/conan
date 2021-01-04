@@ -96,7 +96,8 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         client.run("build .", assert_error=True)  # No CMakeLists.txt
-        toolchain_path = os.path.join(client.current_folder, "conan_toolchain.cmake")
+        toolchain_path = os.path.join(client.current_folder,
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path),  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
@@ -119,7 +120,8 @@ class BasicTest(unittest.TestCase):
                       client.out)
         client.run("build .", assert_error=True)  # No CMakeLists.txt
         self.assertIn("This 'CMake' build helper has been deprecated and moved.", client.out)
-        toolchain_path = os.path.join(client.current_folder, "conan_toolchain.cmake")
+        toolchain_path = os.path.join(client.current_folder,
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
