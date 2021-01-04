@@ -126,19 +126,22 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        self._generator_manager.write_generators(conanfile, conanfile.build_folder, self._output)
+        self._generator_manager.write_generators(conanfile, conanfile.generators_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
-        write_toolchain(conanfile, conanfile.build_folder, self._output)
+        write_toolchain(conanfile, conanfile.generators_folder, self._output)
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
+        # FIXME: imports belong to layout too
         copied_files = run_imports(conanfile, conanfile.build_folder)
 
         try:
-            run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
-            self._output.success("Package '%s' built" % pref.id)
-            self._output.info("Build folder %s" % conanfile.build_folder)
+            mkdir(conanfile.build_folder)
+            with tools.chdir(conanfile.build_folder):
+                run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
+                self._output.success("Package '%s' built" % pref.id)
+                self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
             self._output.writeln("")
             self._output.error("Package '%s' build failed" % pref.id)
@@ -186,50 +189,50 @@ class _PackageBuilder(object):
         pref = node.pref
 
         package_layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        source_folder = package_layout.source()
+        base_source_folder = package_layout.source()
         conanfile_path = package_layout.conanfile()
-        package_folder = package_layout.package(pref)
+        base_package_folder = package_layout.package(pref)
 
-        build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
-                                                          pref, keep_build, recorder)
+        base_build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
+                                                               pref, keep_build, recorder)
         # PREPARE SOURCES
         if not skip_build:
             with package_layout.conanfile_write_lock(self._output):
-                set_dirty(build_folder)
+                set_dirty(base_build_folder)
                 self._prepare_sources(conanfile, pref, package_layout, remotes)
-                self._copy_sources(conanfile, source_folder, build_folder)
+                self._copy_sources(conanfile, base_source_folder, base_build_folder)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
-            mkdir(build_folder)
-            with tools.chdir(build_folder):
-                self._output.info('Building your package in %s' % build_folder)
-                try:
-                    if getattr(conanfile, 'no_copy_source', False):
-                        conanfile.source_folder = source_folder
-                    else:
-                        conanfile.source_folder = build_folder
+            self._output.info('Building your package in %s' % base_build_folder)
+            try:
+                if getattr(conanfile, 'no_copy_source', False):
+                    conanfile.layout.set_base_source_folder(base_source_folder)
+                else:
+                    conanfile.layout.set_base_source_folder(base_build_folder)
 
-                    if not skip_build:
-                        conanfile.build_folder = build_folder
-                        conanfile.package_folder = package_folder
-                        # In local cache, install folder always is build_folder
-                        conanfile.install_folder = build_folder
-                        self._build(conanfile, pref)
-                        clean_dirty(build_folder)
+                if not skip_build:
+                    conanfile.layout.set_base_build_folder(base_build_folder)
+                    conanfile.layout.set_base_package_folder(base_package_folder)
+                    # In local cache, generators folder always in build_folder
+                    conanfile.layout.set_base_generators_folder(base_build_folder)
+                    # In local cache, install folder always is build_folder
+                    conanfile.layout.install_folder = base_build_folder
+                    self._build(conanfile, pref)
+                    clean_dirty(base_build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path,
-                                         build_folder, package_folder)
-                    assert prev
-                    node.prev = prev
-                    log_file = os.path.join(build_folder, RUN_LOG_NAME)
-                    log_file = log_file if os.path.exists(log_file) else None
-                    log_package_built(pref, time.time() - t1, log_file)
-                    recorder.package_built(pref)
-                except ConanException as exc:
-                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
-                                                   remote_name=None)
-                    raise exc
+                prev = self._package(conanfile, pref, package_layout, conanfile_path,
+                                     base_build_folder, base_package_folder)
+                assert prev
+                node.prev = prev
+                log_file = os.path.join(base_build_folder, RUN_LOG_NAME)
+                log_file = log_file if os.path.exists(log_file) else None
+                log_package_built(pref, time.time() - t1, log_file)
+                recorder.package_built(pref)
+            except ConanException as exc:
+                recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
+                                               remote_name=None)
+                raise exc
 
             return node.pref
 
