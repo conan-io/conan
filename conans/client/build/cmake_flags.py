@@ -375,15 +375,15 @@ class CMakeDefinitionsBuilder(object):
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
-        generators_folder = self._conanfile.layout.generators_folder.replace("\\", "/")
+        install_folder = self._conanfile.install_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
-            definitions["CMAKE_MODULE_PATH"] = generators_folder
+            definitions["CMAKE_MODULE_PATH"] = install_folder
 
         if "cmake_find_package_multi" in self._conanfile.generators:
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
-            definitions["CMAKE_PREFIX_PATH"] = generators_folder
-            definitions["CMAKE_MODULE_PATH"] = generators_folder
+            definitions["CMAKE_PREFIX_PATH"] = install_folder
+            definitions["CMAKE_MODULE_PATH"] = install_folder
 
         definitions.update(self._get_make_program_definition())
 

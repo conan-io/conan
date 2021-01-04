@@ -88,10 +88,10 @@ class CMakeToolchainBase(object):
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
-            set(CMAKE_MODULE_PATH "{{ cmake_module_path }}" ${CMAKE_MODULE_PATH})
+            set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
             {%- endif %}
             {% if cmake_prefix_path -%}
-            set(CMAKE_PREFIX_PATH "{{ cmake_prefix_path }}" ${CMAKE_PREFIX_PATH})
+            set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
             {%- endif %}
         {% endblock %}
 
@@ -118,8 +118,8 @@ class CMakeToolchainBase(object):
         self.preprocessor_definitions = Variables()
 
         # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = self._conanfile.layout.generators_folder.replace("\\", "/")
-        self.cmake_module_path = self._conanfile.layout.generators_folder.replace("\\", "/")
+        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
         self.build_type = None
 

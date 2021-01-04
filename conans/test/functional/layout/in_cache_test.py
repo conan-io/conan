@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 
 def test_cache_in_layout():
     """The layout in the cache is used too, always relative to the "base" folders that the cache
-    requires. Also checking that the generators folder is used.
+    requires.
     """
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
@@ -26,7 +26,6 @@ def test_cache_in_layout():
         self.layout.source.folder = "my_sources"
         self.layout.build.folder = "my_build"
         self.layout.package.folder = "my_package"
-        self.layout.generators.folder = "my_generators"
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
@@ -49,19 +48,16 @@ def test_cache_in_layout():
     bf = client.cache.package_layout(ref).build(pref)
     pf = client.cache.package_layout(ref).package(pref)
 
+    csf = os.path.join(sf, "my_sources")
+    cbf = os.path.join(bf, "my_build")
+    cpf = os.path.join(pf, "my_package")
     # Check folders match with the declared by the layout
-    assert "Source folder: {}".format(os.path.join(sf, "my_sources") in client.out)
-    assert "Build folder: {}".format(os.path.join(bf, "my_build") in client.out)
-    assert "Package folder: {}".format(os.path.join(pf, "my_package") in client.out)
-
-    # Check the generators folder
-    gf = os.path.join(bf, "my_generators")
-    assert os.path.exists(os.path.join(gf, "Findbase.cmake"))
+    assert "Source folder: {}".format(csf in client.out)
+    assert "Build folder: {}".format(cbf in client.out)
+    assert "Package folder: {}".format(cpf in client.out)
 
     # Check the build folder
-    cbf = os.path.join(bf, "my_build")
     assert os.path.exists(os.path.join(cbf, "build.lib"))
 
     # Check the package folder
-    cpf = os.path.join(pf, "my_package")
     assert os.path.exists(os.path.join(cpf, "LICENSE"))

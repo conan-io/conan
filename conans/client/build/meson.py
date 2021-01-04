@@ -145,10 +145,10 @@ class Meson(object):
                                                     cache_build_folder)
 
         if pkg_config_paths:
-            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.layout.generators_folder)
+            pc_paths = os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
                                        for f in pkg_config_paths)
         else:
-            pc_paths = self._conanfile.layout.generators_folder
+            pc_paths = self._conanfile.install_folder
 
         mkdir(self.build_dir)
 

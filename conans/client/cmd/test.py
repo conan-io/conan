@@ -8,7 +8,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir
 
 
-def install_build_and_test(app, conanfile_abs_path, base_folder, reference, graph_info,
+def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                            remotes, update, build_modes=None, manifest_folder=None,
                            manifest_verify=False, manifest_interactive=False, keep_build=False,
                            test_build_folder=None, recorder=None):
@@ -16,9 +16,9 @@ def install_build_and_test(app, conanfile_abs_path, base_folder, reference, grap
     Installs the reference (specified by the parameters or extracted from the test conanfile)
     and builds the test_package/conanfile.py running the test() method.
     """
-    conanfile_folder = os.path.dirname(conanfile_abs_path)
+    base_folder = os.path.dirname(conanfile_abs_path)
     test_build_folder, delete_after_build = _build_folder(test_build_folder, graph_info.profile_host,
-                                                          conanfile_folder)
+                                                          base_folder)
     rmdir(test_build_folder)
     if build_modes is None:
         build_modes = ["never"]
@@ -27,7 +27,6 @@ def install_build_and_test(app, conanfile_abs_path, base_folder, reference, grap
                      create_reference=reference,
                      ref_or_path=conanfile_abs_path,
                      install_folder=test_build_folder,
-                     base_folder=base_folder,
                      remotes=remotes,
                      graph_info=graph_info,
                      update=update,
@@ -37,13 +36,13 @@ def install_build_and_test(app, conanfile_abs_path, base_folder, reference, grap
                      manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
                      recorder=recorder)
-        cmd_build(app, conanfile_abs_path, base_folder, conanfile_folder, test_build_folder,
+        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)
     finally:
         if delete_after_build:
             # Required for windows where deleting the cwd is not possible.
-            os.chdir(conanfile_folder)
+            os.chdir(base_folder)
             rmdir(test_build_folder)
 
 

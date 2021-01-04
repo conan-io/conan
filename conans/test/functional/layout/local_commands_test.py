@@ -3,66 +3,6 @@ import os
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
-
-def test_local_generators_folder():
-    """If we configure a generators folder in the layout, the generator files in a "conan install ."
-    go to the specified folder: "my_generators" but the conaninfo and conanbuildinfo.txt remains
-    in the install folder
-    """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
-    client = TestClient()
-    conan_file = str(GenConanfile())
-    conan_file += """
-    generators = "cmake"
-    def configure(self):
-        self.layout.generators.folder = "my_generators"
-    """
-    client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
-    conaninfo = os.path.join(client.current_folder, "my_install", "conaninfo.txt")
-    conanbuildinfo = os.path.join(client.current_folder, "my_install", "conanbuildinfo.txt")
-    assert os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
-
-    generators_folder = os.path.join(client.current_folder, "my_generators")
-    conaninfo = os.path.join(generators_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
-    assert not os.path.exists(conaninfo)
-    assert not os.path.exists(conanbuildinfo)
-    assert os.path.exists(cmake_generator_path)
-
-
-def test_local_generators_folder_():
-    """If we specify a generators directory and the txt generator, the conanbuildinfo.txt is written
-    both in the generators folder and in the install folder
-    """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
-    client = TestClient()
-    conan_file = str(GenConanfile())
-    conan_file += """
-    generators = "cmake", "txt"
-    def configure(self):
-        self.layout.generators.folder = "my_generators"
-    """
-    client.save({"conanfile.py": conan_file})
-    client.run("install . -if=my_install -g cmake")
-    conaninfo = os.path.join(client.current_folder, "my_install", "conaninfo.txt")
-    conanbuildinfo = os.path.join(client.current_folder, "my_install", "conanbuildinfo.txt")
-    assert os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
-
-    generators_folder = os.path.join(client.current_folder, "my_generators")
-    conaninfo = os.path.join(generators_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
-    cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
-    assert not os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
-    assert os.path.exists(cmake_generator_path)
-
-
 def test_local_build():
     """If we configure a build folder in the layout, the installed files in a "conan build ."
     go to the specified folder: "my_build"
@@ -74,11 +14,9 @@ def test_local_build():
     conan_file += """
 
     def configure(self):
-        self.layout.generators.folder = "my_generators"
         self.layout.build.folder = "my_build"
 
     def build(self):
-        self.output.warn("Generators folder: {}".format(self.layout.generators_folder))
         tools.save("build_file.dll", "bar")
 
 """
@@ -169,7 +107,6 @@ def test_local_package():
     no_copy_source = True
 
     def configure(self):
-        self.layout.generators.folder = "my_generators"
         self.layout.source.folder = "my_source"
         self.layout.build.folder = "my_build"
         self.layout.package.folder = "my_package"

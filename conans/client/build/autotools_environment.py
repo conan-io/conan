@@ -164,12 +164,12 @@ class AutoToolsBuildEnvironment(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       [os.pathsep.join(get_abs_path(f, self._conanfile.layout.generators_folder)
+                       [os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
                                         for f in pkg_config_paths)]}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
-            pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.layout.generators_folder]} \
+            pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else None
 
         configure_dir = self._adjust_path(configure_dir)

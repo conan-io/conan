@@ -25,7 +25,6 @@ def run_package_method(conanfile, package_id, source_folder, build_folder, packa
     conanfile.layout.set_base_build_folder(build_folder)
     conanfile.layout.set_base_source_folder(source_folder)
     conanfile.layout.set_base_package_folder(package_folder)
-    conanfile.layout.set_base_generators_folder(build_folder)
     conanfile.layout.install_folder = install_folder
 
     if conanfile.package_folder == conanfile.build_folder:

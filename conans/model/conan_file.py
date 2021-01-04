@@ -199,10 +199,6 @@ class ConanFile(object):
         self.layout.set_base_build_folder(folder)
 
     @property
-    def generators_folder(self):
-        return self.layout.generators_folder
-
-    @property
     def package_folder(self):
         return self.layout.package_folder
 
