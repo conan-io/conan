@@ -328,7 +328,7 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out, lockfile=lockfile)
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
-        install_build_and_test(self.app, conanfile_path, ref, graph_info, remotes,
+        install_build_and_test(self.app, conanfile_path, cwd, ref, graph_info, remotes,
                                update, build_modes=build_modes,
                                test_build_folder=test_build_folder, recorder=recorder)
 
@@ -544,20 +544,18 @@ class ConanAPIV1(object):
             graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                         self.app.cache, self.app.out, lockfile=lockfile)
 
-            if not generators:  # We don't want the default txt
-                generators = False
-
             install_folder = _make_abs_path(install_folder, cwd)
 
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                         remotes=remotes, graph_info=graph_info, build_modes=build,
+                         base_folder=cwd, remotes=remotes, graph_info=graph_info, build_modes=build,
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
                          generators=generators, recorder=recorder,
-                         lockfile_node_id=lockfile_node_id)
+                         lockfile_node_id=lockfile_node_id,
+                         add_txt_generator=False)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -598,6 +596,7 @@ class ConanAPIV1(object):
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
+                         base_folder=cwd,
                          remotes=remotes,
                          graph_info=graph_info,
                          build_modes=build,
@@ -761,7 +760,7 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        cmd_build(self.app, conanfile_path,
+        cmd_build(self.app, conanfile_path, cwd,
                   source_folder, build_folder, package_folder, install_folder,
                   should_configure=should_configure, should_build=should_build,
                   should_install=should_install, should_test=should_test)

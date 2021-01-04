@@ -302,14 +302,14 @@ class CMakeBuildHelper(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       os.pathsep.join(get_abs_path(f, self._conanfile.install_folder)
+                       os.pathsep.join(get_abs_path(f, self._conanfile.layout.generators_folder)
                                        for f in pkg_config_paths)}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could
             # read wrong files
             set_env = "pkg_config" in self._conanfile.generators \
                       and "PKG_CONFIG_PATH" not in os.environ
-            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.install_folder} if set_env else None
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.layout.generators_folder} if set_env else None
 
         with environment_append(pkg_env):
             command = "cd %s && %s %s" % (args_to_string([self.build_dir]), self._cmake_program,

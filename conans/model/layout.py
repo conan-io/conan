@@ -14,8 +14,10 @@ class Layout(object):
 
         self._base_source_folder = None
         self._base_build_folder = None
+        self._base_generators_folder = None
         self._base_package_folder = None
 
+        self.generators = _LayoutEntry()
         self.source = _LayoutEntry()
         self.build = _LayoutEntry()
         self.package = _LayoutEntry()
@@ -45,6 +47,15 @@ class Layout(object):
 
     def set_base_build_folder(self, folder):
         self._base_build_folder = folder
+
+    @property
+    def generators_folder(self):
+        if not self._base_generators_folder or not self.generators.folder:
+            return self.install_folder
+        return os.path.join(self._base_generators_folder, self.generators.folder)
+
+    def set_base_generators_folder(self, folder):
+        self._base_generators_folder = folder
 
     @property
     def install_folder(self):
