@@ -10,8 +10,7 @@ class _LayoutEntry(object):
 class Layout(object):
     def __init__(self):
 
-        self._install_folder = None
-
+        self._base_install_folder = None
         self._base_source_folder = None
         self._base_build_folder = None
         self._base_package_folder = None
@@ -48,11 +47,11 @@ class Layout(object):
 
     @property
     def install_folder(self):
-        return self._install_folder
+        return self._base_install_folder
 
     @install_folder.setter
     def install_folder(self, folder):
-        self._install_folder = folder
+        self._base_install_folder = folder
 
     @property
     def package_folder(self):
