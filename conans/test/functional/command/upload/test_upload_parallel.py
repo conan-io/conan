@@ -1,6 +1,7 @@
 import textwrap
 
 from mock import patch
+from requests import ConnectionError
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TestRequester

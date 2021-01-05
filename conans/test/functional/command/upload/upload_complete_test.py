@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 import six
-from requests.packages.urllib3.exceptions import ConnectionError
+from requests import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
