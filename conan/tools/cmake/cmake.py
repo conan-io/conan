@@ -1,10 +1,10 @@
 import os
 import platform
 
+from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.utils import get_generator, is_multi_configuration
 from conans.client import tools
 from conans.client.build import join_arguments
-from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -14,7 +14,7 @@ from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
-    forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
+    forbidden_generators = ["cmake", "cmake_multi"]
     if any(it in conanfile.generators for it in forbidden_generators):
         raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
                              " or 'cmake_find_package_multi' generators")

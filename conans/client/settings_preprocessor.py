@@ -49,14 +49,15 @@ def _check_cppstd(settings):
 
 def _fill_runtime(settings):
     try:
-        runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
         if settings.compiler == "Visual Studio":
             if settings.get_safe("compiler.runtime") is None:
+                runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
                 settings.compiler.runtime = runtime
                 msg = "Setting 'compiler.runtime' not declared, automatically adjusted to '%s'"
                 logger.info(msg % runtime)
         elif settings.compiler == "intel" and settings.get_safe("compiler.base") == "Visual Studio":
             if settings.get_safe("compiler.base.runtime") is None:
+                runtime = "MDd" if settings.get_safe("build_type") == "Debug" else "MD"
                 settings.compiler.base.runtime = runtime
                 msg = "Setting 'compiler.base.runtime' not declared, automatically adjusted to '%s'"
                 logger.info(msg % runtime)

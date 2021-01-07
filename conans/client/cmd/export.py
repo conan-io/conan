@@ -287,6 +287,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
         conandata_yml = {}
         if os.path.exists(conandata_path):
             conandata_yml = yaml.safe_load(load(conandata_path))
+            conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
             if '.conan' in conandata_yml:
                 raise ConanException("Field '.conan' inside '{}' file is reserved to "
                                      "Conan usage.".format(DATA_YML))

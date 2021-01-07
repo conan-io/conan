@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
@@ -43,7 +42,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_check_compiler_package_id(self):
         # https://github.com/conan-io/conan/issues/6658
         file_content = textwrap.dedent("""
@@ -73,10 +72,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run_command('cmake .')
         self.assertIn("Conan: Checking correct version:", client.out)
 
-    @attr("slow")
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -105,7 +103,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
-    @attr('slow')
     @pytest.mark.slow
     def test_no_output(self):
         client = TestClient()
@@ -431,10 +428,11 @@ class CMakeGeneratorTest(unittest.TestCase):
                     if consumer_generator == "cmake_find_package":
                         self.assertIn("comp compile options: one;two;three;four", client.out)
                     else:
-                        self.assertIn("$<$<CONFIG:Release>:;one;two;three;four>;"
-                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                        self.assertIn("$<$<CONFIG:Debug>:;>;"
                                       "$<$<CONFIG:MinSizeRel>:;>;"
-                                      "$<$<CONFIG:Debug>:;>", client.out)
+                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                                      "$<$<CONFIG:Release>:;one;two;three;four>"
+                                      , client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
                                consumer_generator, consumer_cmakelists)
@@ -484,7 +482,6 @@ class CMakeGeneratorTest(unittest.TestCase):
             message("comp compile options: ${tmp}")
             """)
         run_test("cmake_find_package", cmakelists)
-        print(client.out)
 
         # Test cmake_find_package generator without components
         run_test("cmake_find_package", cmakelists, with_components=False)

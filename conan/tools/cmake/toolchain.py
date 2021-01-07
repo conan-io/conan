@@ -1,6 +1,6 @@
-from .android import CMakeAndroidToolchain
-from .ios import CMakeiOSToolchain
-from .generic import CMakeGenericToolchain
+from conan.tools.cmake.android import CMakeAndroidToolchain
+from conan.tools.cmake.ios import CMakeiOSToolchain
+from conan.tools.cmake.generic import CMakeGenericToolchain
 
 
 def CMakeToolchain(conanfile, **kwargs):
