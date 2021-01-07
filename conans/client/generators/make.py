@@ -25,9 +25,9 @@ class MakeGenerator(Generator):
 
         deps_content = []
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
-            deps_content.extend(self.create_content_from_dep(pkg_name, cpp_info))
+            deps_content.extend(self._create_content_from_dep(pkg_name, cpp_info))
 
-        deps_content.extend(self.create_combined_content())
+        deps_content.extend(self._create_combined_content())
         for line_as_list in deps_content:
             content.append("".join(line_as_list))
 
@@ -35,7 +35,7 @@ class MakeGenerator(Generator):
         content.append(self.makefile_newline)
         return self.makefile_newline.join(content)
 
-    def create_content_from_dep(self, pkg_name, cpp_info):
+    def _create_content_from_dep(self, pkg_name, cpp_info):
         vars_info = [("ROOT", self.assignment_if_absent, [cpp_info.rootpath]),
                      ("SYSROOT", self.assignment_if_absent, [cpp_info.sysroot]),
                      ("INCLUDE_DIRS", self.assignment_append, cpp_info.include_paths),
@@ -53,20 +53,20 @@ class MakeGenerator(Generator):
                      ("FRAMEWORKS", self.assignment_append, cpp_info.frameworks),
                      ("FRAMEWORK_PATHS", self.assignment_append, cpp_info.framework_paths)]
 
-        return [self.create_makefile_var(var_name, operator, info, pkg=pkg_name)
+        return [self._create_makefile_var(var_name, operator, info, pkg=pkg_name)
                 for var_name, operator, info in vars_info]
 
-    def create_combined_content(self):
+    def _create_combined_content(self):
         content = []
         for var_name in ["root", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
                          "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
                          "exelinkflags", "frameworks", "framework_paths", "system_libs"]:
             values = ["$(CONAN_{var}_{pkg})".format(var=var_name.upper(), pkg=pkg.upper())
                       for pkg, _ in self.deps_build_info.dependencies]
-            content.append(self.create_makefile_var(var_name, self.assignment_append, values))
+            content.append(self._create_makefile_var(var_name, self.assignment_append, values))
         return content
 
-    def create_makefile_var(self, var_name, operator, values, pkg=None):
+    def _create_makefile_var(self, var_name, operator, values, pkg=None):
         pkg = "_{}".format(pkg.upper()) if pkg else ""
         make_var = ["CONAN_{var}{pkg}{op}".format(var=var_name.upper(), pkg=pkg, op=operator)]
         make_var.extend(value.replace("\\", "/") for value in values)
