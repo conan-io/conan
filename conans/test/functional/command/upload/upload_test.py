@@ -2,6 +2,7 @@ import itertools
 import os
 import platform
 import stat
+import textwrap
 import unittest
 from collections import OrderedDict
 
@@ -26,17 +27,6 @@ class MyPkg(ConanFile):
     name = "Hello0"
     version = "1.2.1"
     exports_sources = "*"
-
-    def package(self):
-        self.copy("*")
-"""
-
-conanfile_upload_query = """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Hello1"
-    version = "1.2.1"
-    exports_sources = "*"
-    settings = "os", "arch"
 
     def package(self):
         self.copy("*")
@@ -99,8 +89,7 @@ class UploadTest(unittest.TestCase):
             self.assertTrue(os.stat(package_file_path).st_mode & stat.S_IXUSR)
 
     def test_upload_binary_not_existing(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/testing")
         client.run("upload Hello/0.1@lasote/testing -p=123", assert_error=True)
@@ -125,20 +114,19 @@ class UploadTest(unittest.TestCase):
     def test_non_existing_recipe_error(self):
         """ Trying to upload a non-existing recipe must raise an Error
         """
-        client = TestClient(servers={"default": TestServer()})
+        client = TestClient(default_server_user=True)
         client.run("upload Pkg/0.1@user/channel", assert_error=True)
         self.assertIn("Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
     def test_non_existing_package_error(self):
         """ Trying to upload a non-existing package must raise an Error
         """
-        servers = {"default": TestServer()}
-        client = TestClient(servers=servers)
+        client = TestClient(default_server_user=True)
         client.run("upload Pkg/0.1@user/channel -p hash1", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'Pkg/0.1@user/channel'", client.out)
 
     def test_deprecated_p_arg(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing -p {} -c".format(NO_SETTINGS_PACKAGE_ID))
@@ -147,7 +135,7 @@ class UploadTest(unittest.TestCase):
                       "Hello0/1.2.1@user/testing:{}`".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
     def test_upload_with_pref(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing:{} -c".format(NO_SETTINGS_PACKAGE_ID))
@@ -159,7 +147,7 @@ class UploadTest(unittest.TestCase):
                       client.out)
 
     def test_upload_with_pref_and_p(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing:{} -c -p {}".format(NO_SETTINGS_PACKAGE_ID,
@@ -169,18 +157,8 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Use a full package reference (preferred) or the "
                       "`--package` command argument, but not both.", client.out)
 
-    def _client(self):
-        if not hasattr(self, "_servers"):
-            servers = {}
-            test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                     users={"lasote": "mypass"})
-            servers["default"] = test_server
-            self._servers = servers
-        client = TestClient(servers=self._servers, users={"default": [("lasote", "mypass")]})
-        return client
-
     def test_pattern_upload(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all")
@@ -189,7 +167,18 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conanfile.py", client.out)
 
     def test_query_upload(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
+        conanfile_upload_query = textwrap.dedent("""
+            from conans import ConanFile
+            class MyPkg(ConanFile):
+                name = "Hello1"
+                version = "1.2.1"
+                exports_sources = "*"
+                settings = "os", "arch"
+
+                def package(self):
+                    self.copy("*")
+            """)
         client.save({"conanfile.py": conanfile_upload_query})
 
         for _os, arch in itertools.product(["Macos", "Linux", "Windows"],
@@ -220,13 +209,13 @@ class UploadTest(unittest.TestCase):
 
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
         ref = ConanFileReference.loads("Hello0/1.2.1@user/testing")
 
-        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             raise ConanException("Error gzopen %s" % name)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm", assert_error=True)
@@ -246,16 +235,16 @@ class UploadTest(unittest.TestCase):
 
     def test_broken_package_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
         pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
 
-        def gzopen_patched(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
+        def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
                 raise ConanException("Error gzopen %s" % name)
-            return gzopen_without_timestamps(name, mode, fileobj, compresslevel, **kwargs)
+            return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
             self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
@@ -275,7 +264,7 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(is_dirty(tgz))
 
     def test_corrupt_upload(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
 
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
@@ -294,7 +283,7 @@ class UploadTest(unittest.TestCase):
                       client.out)
 
     def test_upload_modified_recipe(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": "int i=0"})
@@ -304,7 +293,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client.out)
 
-        client2 = self._client()
+        client2 = TestClient(servers=client.servers, users=client.users)
         client2.save({"conanfile.py": conanfile + "\r\n#end",
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
@@ -330,7 +319,7 @@ class UploadTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_unmodified_recipe(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
 
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
@@ -340,7 +329,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
                       client.out)
 
-        client2 = self._client()
+        client2 = TestClient(servers=client.servers, users=client.users)
         client2.save(files)
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
@@ -361,14 +350,14 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Recipe is up to date, upload skipped", client.out)
 
     def test_upload_unmodified_package(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
-        client2 = self._client()
+        client2 = TestClient(servers=client.servers, users=client.users)
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
         client2.run("create . frodo/stable")
@@ -394,7 +383,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Package is up to date, upload skipped", client2.out)
 
     def test_no_overwrite_argument_collision(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
         client.run("create . frodo/stable")
@@ -424,7 +413,7 @@ class MyPkg(ConanFile):
     def package(self):
         self.copy("*.h")
 """
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": "",
                      "hello.cpp": ""})
@@ -496,7 +485,7 @@ class MyPkg(ConanFile):
     def package(self):
         self.copy("*.h")
 """
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": "",
                      "hello.cpp": ""})
@@ -549,12 +538,11 @@ class MyPkg(ConanFile):
     def test_skip_upload(self):
         """ Check that the option --dry does not upload anything
         """
-        client = self._client()
+        client = TestClient(default_server_user=True)
 
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export . frodo/stable")
-        client.run("install Hello0/1.2.1@frodo/stable --build=missing")
+        client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip-upload")
 
         # dry run should not upload
@@ -583,11 +571,11 @@ class MyPkg(ConanFile):
         self.assertIn("Hello0/1.2.1@frodo/stable", client.out)
 
     def test_upload_without_sources(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
-        client2 = self._client()
+        client2 = TestClient(servers=client.servers, users=client.users)
         client2.run("install Pkg/0.1@user/testing")
         client2.run("remote remove default")
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
@@ -604,7 +592,7 @@ class MyPkg(ConanFile):
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
@@ -621,7 +609,7 @@ class MyPkg(ConanFile):
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
@@ -633,22 +621,20 @@ class MyPkg(ConanFile):
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
-        self.assertNotIn("Please enter a password for \"lasote\" account:", client.out)
+        self.assertNotIn("Please enter a password for", client.out)
 
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_user_authenticated(self):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
-        client = self._client()
-        client.save(files)
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
         client.run("config set general.non_interactive=True")
         client.run("create . user/testing")
         client.run("user -c")
-        client.run("user lasote -p mypass")
+        client.run("user user -p password")
         client.run("upload Hello0/1.2.1@user/testing")
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
-        self.assertIn("Uploading conan_export.tgz", client.out)
 
     @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
@@ -731,7 +717,7 @@ class MyPkg(ConanFile):
             self.assertNotIn("WARN", client2.out)
 
     def test_upload_with_pref_and_query(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing:{} "
@@ -741,7 +727,7 @@ class MyPkg(ConanFile):
         self.assertIn("'--query' argument cannot be used together with full reference", client.out)
 
     def test_upload_with_package_id_and_query(self):
-        client = self._client()
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . user/testing")
         client.run("upload Hello0/1.2.1@user/testing -p {} "

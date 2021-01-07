@@ -2,13 +2,11 @@ import json
 import os
 import platform
 import stat
-import textwrap
 import unittest
 
 import pytest
 import six
-from mock import patch
-from requests.packages.urllib3.exceptions import ConnectionError
+from requests import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
@@ -54,22 +52,9 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-class FailOnReferencesUploader(BadConnectionUploader):
-    fail_on = ["lib1", "lib3"]
-
-    def __init__(self, *args, **kwargs):
-        super(BadConnectionUploader, self).__init__(*args, **kwargs)
-
-    def put(self, *args, **kwargs):
-        if any(ref in args[0] for ref in self.fail_on):
-            raise ConnectionError("Connection fails with lib2 and lib4 references!")
-        else:
-            return super(BadConnectionUploader, self).put(*args, **kwargs)
-
-
 @pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
                     reason="We cannot know the folder of the revision without knowing the hash of "
-                            "the contents")
+                           "the contents")
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):
@@ -268,76 +253,6 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
 
-    def test_upload_parallel_error(self):
-        """Cause an error in the parallel transfer and see some message"""
-        client = TestClient(requester_class=FailOnReferencesUploader, default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run('user -p password -r default user')
-        for index in range(4):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
-        self.assertIn("Connection fails with lib2 and lib4 references!", client.out)
-        self.assertIn("Execute upload again to retry upload the failed files", client.out)
-
-    def test_upload_parallel_success(self):
-        """Upload 2 packages in parallel with success"""
-
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        client.run('create . lib0/1.0@user/channel')
-        self.assertIn("lib0/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
-                      client.out)
-        client.run('create . lib1/1.0@user/channel')
-        self.assertIn("lib1/1.0@user/channel: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
-                      client.out)
-        client.run('user -p password -r default user')
-        client.run('upload lib* --parallel -c --all -r default')
-        self.assertIn("Uploading lib0/1.0@user/channel to remote 'default'", client.out)
-        self.assertIn("Uploading lib1/1.0@user/channel to remote 'default'", client.out)
-        client.run('search lib0/1.0@user/channel -r default')
-        self.assertIn("lib0/1.0@user/channel", client.out)
-        client.run('search lib1/1.0@user/channel -r default')
-        self.assertIn("lib1/1.0@user/channel", client.out)
-
-    def test_upload_parallel_fail_on_interaction(self):
-        """Upload 2 packages in parallel and fail because non_interactive forced"""
-
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile()})
-        num_references = 2
-        for index in range(num_references):
-            client.run('create . lib{}/1.0@user/channel'.format(index))
-            self.assertIn("lib{}/1.0@user/channel: Package '{}' created".format(
-                index,
-                NO_SETTINGS_PACKAGE_ID),
-                client.out)
-        client.run('user -c')
-        client.run('upload lib* --parallel -c --all -r default', assert_error=True)
-        self.assertIn("ERROR: lib0/1.0@user/channel: Upload recipe to 'default' failed: "
-                      "Conan interactive mode disabled. [Remote: default]", client.out)
-
-    def test_beat_character_long_upload(self):
-        client = TestClient(default_server_user=True)
-        slow_conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class MyPkg(ConanFile):
-                exports = "*"
-                def package(self):
-                    self.copy("*")
-            """)
-        client.save({"conanfile.py": slow_conanfile,
-                     "hello.cpp": ""})
-        client.run("create . pkg/0.1@user/stable")
-        client.run("user user --password=password")
-        with patch("conans.util.progress_bar.TIMEOUT_BEAT_SECONDS", -1):
-            with patch("conans.util.progress_bar.TIMEOUT_BEAT_CHARACTER", "%&$"):
-                client.run("upload pkg/0.1@user/stable --all")
-        out = "".join(str(client.out).splitlines())
-        self.assertIn("Compressing package...%&$%&$Uploading conan_package.tgz -> "
-                      "pkg/0.1@user/stable:5ab8", out)
-        self.assertIn("%&$Uploading conan_export.tgz", out)
-        self.assertIn("%&$Uploading conaninfo.txt", out)
-
     def test_upload_with_pattern_and_package_error(self):
         files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
@@ -447,20 +362,12 @@ class TestConan(ConanFile):
 
         folder = uncompress_packaged_files(self.test_server.server_store, self.pref)
 
-        self.assertTrue(os.path.exists(os.path.join(folder,
-                                                    "include",
-                                                    "lib1.h")))
-        self.assertTrue(os.path.exists(os.path.join(folder,
-                                                    "lib",
-                                                    "my_lib/libd.a")))
-        self.assertTrue(os.path.exists(os.path.join(folder,
-                                                    "res",
-                                                    "shares/readme.txt")))
+        self.assertTrue(os.path.exists(os.path.join(folder, "include", "lib1.h")))
+        self.assertTrue(os.path.exists(os.path.join(folder, "lib", "my_lib/libd.a")))
+        self.assertTrue(os.path.exists(os.path.join(folder, "res", "shares/readme.txt")))
 
         if platform.system() != "Windows":
-            self.assertEqual(os.stat(os.path.join(folder,
-                                                  "bin",
-                                                  "my_bin/executable")).st_mode &
+            self.assertEqual(os.stat(os.path.join(folder, "bin", "my_bin/executable")).st_mode &
                              stat.S_IRWXU, stat.S_IRWXU)
 
     def test_upload_all(self):
