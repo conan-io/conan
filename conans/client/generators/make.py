@@ -1,5 +1,4 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_MAKE
 
 
 class MakeGenerator(Generator):
@@ -13,7 +12,7 @@ class MakeGenerator(Generator):
 
     @property
     def filename(self):
-        return BUILD_INFO_MAKE
+        return 'conanbuildinfo.mak'
 
     @property
     def content(self):
@@ -67,7 +66,9 @@ class MakeGenerator(Generator):
 
     def create_combined_content(self):
         content = []
-        for var_name in self.all_dep_vars():
+        for var_name in ["rootpath", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
+                         "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
+                         "exelinkflags", "frameworks", "framework_paths", "system_libs"]:
             content.append(self.create_makefile_var_global(var_name, self.assignment_append,
                                                            self.create_combined_var_list(var_name)))
         return content
@@ -75,38 +76,21 @@ class MakeGenerator(Generator):
     def create_combined_var_list(self, var_name):
         make_vars = []
         for pkg_name, _ in self.deps_build_info.dependencies:
-            pkg_var = self.create_makefile_var_name_pkg(var_name, pkg_name)
+            pkg_var = "CONAN_{var}_{lib}".format(var=var_name, lib=pkg_name).upper()
             make_vars.append("$({pkg_var})".format(pkg_var=pkg_var))
         return make_vars
 
     def create_makefile_var_global(self, var_name, operator, values):
-        make_var = [self.create_makefile_var_name_global(var_name)]
+        make_var = ["CONAN_{var}".format(var=var_name).upper()]
         make_var.extend(self.create_makefile_var_common(operator, values))
         return make_var
 
     def create_makefile_var_pkg(self, var_name, pkg_name, operator, values):
-        make_var = [self.create_makefile_var_name_pkg(var_name, pkg_name)]
+        make_var = ["CONAN_{var}_{pkg}".format(var=var_name, pkg=pkg_name).upper()]
         make_var.extend(self.create_makefile_var_common(operator, values))
         return make_var
 
     def create_makefile_var_common(self, operator, values):
-        return [operator, self.makefile_line_continuation, self.create_makefile_var_value(values),
-                self.makefile_newline]
-
-    @staticmethod
-    def create_makefile_var_name_global(var_name):
-        return "CONAN_{var}".format(var=var_name).upper()
-
-    @staticmethod
-    def create_makefile_var_name_pkg(var_name, pkg_name):
-        return "CONAN_{var}_{lib}".format(var=var_name, lib=pkg_name).upper()
-
-    def create_makefile_var_value(self, values):
         formatted_values = [value.replace("\\", "/") for value in values]
-        return self.makefile_line_continuation.join(formatted_values)
-
-    @staticmethod
-    def all_dep_vars():
-        return ["rootpath", "sysroot", "include_dirs", "lib_dirs", "bin_dirs", "build_dirs",
-                "res_dirs", "libs", "defines", "cflags", "cxxflags", "sharedlinkflags",
-                "exelinkflags", "frameworks", "framework_paths", "system_libs"]
+        formatted_values = self.makefile_line_continuation.join(formatted_values)
+        return [operator, self.makefile_line_continuation, formatted_values, self.makefile_newline]
