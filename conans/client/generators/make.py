@@ -53,8 +53,8 @@ class MakeGenerator(Generator):
                      ("FRAMEWORKS", self.assignment_append, cpp_info.frameworks),
                      ("FRAMEWORK_PATHS", self.assignment_append, cpp_info.framework_paths)]
 
-        return [self._create_makefile_var(var_name, operator, info, pkg=pkg_name)
-                for var_name, operator, info in vars_info]
+        return [self._create_makefile_var(var_name, operator, values, pkg=pkg_name)
+                for var_name, operator, values in vars_info]
 
     def _create_combined_content(self):
         content = []
