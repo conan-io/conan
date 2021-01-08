@@ -780,13 +780,12 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
 
-        # If the layout declared a package folder follow it, do not invent a "package/"
-        # folder by default
-        if not conanfile.layout.package.folder:
-            default_pkg_folder = os.path.join(build_folder, "package")
-            package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
-        else:
-            package_folder = None
+        # If the layout declared a package folder (conanfile.layout.package.folder) do not invent
+        # a default "/package" directory, the base directory should be "cwd" and the layout will be
+        # followed
+        default_pkg_folder = os.path.join(build_folder, "package") \
+            if not conanfile.layout.package.folder else cwd
+        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         run_package_method(conanfile, None, source_folder, build_folder, package_folder,
                            install_folder, self.app.hook_manager, conanfile_path, None,
