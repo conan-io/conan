@@ -3,7 +3,7 @@ import textwrap
 
 from conans.client.tools.files import which
 from conans.errors import ConanException
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 
 
 class CMakeAndroidToolchain(CMakeToolchainBase):
@@ -82,7 +82,7 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
         return android_ndk
 
     def _get_template_context_data(self):
-        ctxt_toolchain, _ = super(CMakeAndroidToolchain, self)._get_template_context_data()
+        ctxt_toolchain = super(CMakeAndroidToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             'CMAKE_SYSTEM_NAME': 'Android',
             'CMAKE_SYSTEM_VERSION': self._conanfile.settings.os.api_level,
@@ -90,4 +90,4 @@ class CMakeAndroidToolchain(CMakeToolchainBase):
             'CMAKE_ANDROID_STL_TYPE': self._get_android_stl(),
             'CMAKE_ANDROID_NDK': self._guess_android_ndk(),
         })
-        return ctxt_toolchain, {}
+        return ctxt_toolchain

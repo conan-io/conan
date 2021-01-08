@@ -1,110 +1,99 @@
 import os
-import unittest
 
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import uncompress_packaged_files
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
+
 
 @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
-class UploadCompressionTest(unittest.TestCase):
+def test_reuse_uploaded_tgz():
+    client = TestClient(default_server_user=True)
+    # Download packages from a remote, then copy to another channel
+    # and reupload them. Because they have not changed, the tgz is not created again
 
-    def setUp(self):
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+    # UPLOAD A PACKAGE
+    ref = ConanFileReference.loads("Hello0/0.1@user/stable")
+    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+    files["another_export_file.lib"] = "to compress"
+    client.save(files)
+    client.run("create . user/stable")
+    client.run("upload %s --all" % str(ref))
+    assert "Compressing recipe" in client.out
+    assert "Compressing package" in client.out
 
-    def test_reuse_uploaded_tgz(self):
-        # Download packages from a remote, then copy to another channel
-        # and reupload them. Because they have not changed, the tgz is not created again
+    # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
+    client.run("copy %s user/testing --all" % str(ref))
+    client.run("upload Hello0/0.1@user/testing --all")
+    assert "Compressing recipe" not in client.out
+    assert "Compressing package" not in client.out
 
-        # UPLOAD A PACKAGE
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-        files["another_export_file.lib"] = "to compress"
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(ref))
-        self.client.run("upload %s --all" % str(ref))
-        self.assertIn("Compressing recipe", self.client.out)
-        self.assertIn("Compressing package", self.client.out)
 
-        # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-        self.client.run("copy %s lasote/testing --all" % str(ref))
-        self.client.run("upload Hello0/0.1@lasote/testing --all")
-        self.assertNotIn("Compressing recipe", self.client.out)
-        self.assertNotIn("Compressing package", self.client.out)
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
+def test_reuse_downloaded_tgz():
+    # Download packages from a remote, then copy to another channel
+    # and reupload them. It needs to compress it again, not tgz is kept
+    client = TestClient(default_server_user=True)
+    # UPLOAD A PACKAGE
+    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+    files["another_export_file.lib"] = "to compress"
+    client.save(files)
+    client.run("create . user/stable")
+    client.run("upload Hello0/0.1@user/stable --all")
+    assert "Compressing recipe" in client.out
+    assert "Compressing package" in client.out
 
-    def test_reuse_downloaded_tgz(self):
-        # Download packages from a remote, then copy to another channel
-        # and reupload them. It needs to compress it again, not tgz is kept
+    # Other user downloads the package
+    # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
+    # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
+    other_client = TestClient(servers=client.servers, users={"default": [("user", "password")]})
+    other_client.run("download Hello0/0.1@user/stable")
+    other_client.run("upload Hello0/0.1@user/stable --all")
+    assert "Compressing recipe" in client.out
+    assert "Compressing package" in client.out
 
-        # UPLOAD A PACKAGE
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-        files["another_export_file.lib"] = "to compress"
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(ref))
-        self.client.run("upload %s --all" % str(ref))
-        self.assertIn("Compressing recipe", self.client.out)
-        self.assertIn("Compressing package", self.client.out)
 
-        # Other user downloads the package
-        # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
-        # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_client.run("download Hello0/0.1@lasote/stable")
-        other_client.run("upload Hello0/0.1@lasote/stable --all")
-        self.assertIn("Compressing recipe", self.client.out)
-        self.assertIn("Compressing package", self.client.out)
+@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
+def test_upload_only_tgz_if_needed():
+    client = TestClient(default_server_user=True)
+    ref = ConanFileReference.loads("Hello0/0.1@user/stable")
+    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+    files["lib/another_export_file.lib"] = "to compress"
+    client.save(files)
+    client.run("create . user/stable")
 
-    def test_upload_only_tgz_if_needed(self):
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-        files["lib/another_export_file.lib"] = "to compress"
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("install %s --build missing" % str(ref))
+    # Upload conans
+    client.run("upload %s" % str(ref))
+    assert "Compressing recipe" in client.out
 
-        # Upload conans
-        self.client.run("upload %s" % str(ref))
-        self.assertIn("Compressing recipe", str(self.client.out))
+    # Not needed to tgz again
+    client.run("upload %s" % str(ref))
+    assert "Compressing recipe" not in client.out
 
-        # Not needed to tgz again
-        self.client.run("upload %s" % str(ref))
-        self.assertNotIn("Compressing recipe", str(self.client.out))
+    # Check that conans exists on server
+    server_paths = client.servers["default"].server_store
+    conan_path = server_paths.conan_revisions_root(ref)
+    assert os.path.exists(conan_path)
+    package_ids = client.cache.package_layout(ref).package_ids()
+    pref = PackageReference(ref, package_ids[0])
 
-        # Check that conans exists on server
-        server_paths = self.servers["default"].server_store
-        conan_path = server_paths.conan_revisions_root(ref)
-        self.assertTrue(os.path.exists(conan_path))
-        package_ids = self.client.cache.package_layout(ref).package_ids()
-        pref = PackageReference(ref, package_ids[0])
+    # Upload package
+    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    assert "Compressing package" in client.out
 
-        # Upload package
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertIn("Compressing package", str(self.client.out))
+    # Not needed to tgz again
+    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    assert "Compressing package" not in client.out
 
-        # Not needed to tgz again
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.out))
+    # If we install the package again will be removed and re tgz
+    client.run("install %s --build missing" % str(ref))
+    # Upload package
+    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    assert "Compressing package" not in client.out
 
-        # If we install the package again will be removed and re tgz
-        self.client.run("install %s --build missing" % str(ref))
-        # Upload package
-        self.client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
-        self.assertNotIn("Compressing package", str(self.client.out))
-
-        # Check library on server
-        self._assert_library_exists_in_server(pref, server_paths)
-
-    def _assert_library_exists_in_server(self, pref, paths):
-        folder = uncompress_packaged_files(paths, pref)
-        self._assert_library_files(folder)
-
-    def _assert_library_files(self, path):
-        libraries = os.listdir(os.path.join(path, "lib"))
-        self.assertEqual(len(libraries), 1)
+    # Check library on server
+    folder = uncompress_packaged_files(server_paths, pref)
+    libraries = os.listdir(os.path.join(folder, "lib"))
+    assert len(libraries) == 1

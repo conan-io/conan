@@ -24,5 +24,5 @@ class CMakeFindPackageMultiTest(unittest.TestCase):
 
         generator = CMakeFindPackageMultiGenerator(conanfile)
         content = generator.content
-        config_version = content["my_pkgConfigVersion.cmake"]
+        config_version = content["my_pkg-config-version.cmake"]
         self.assertIn('set(PACKAGE_VERSION "0.1")', config_version)

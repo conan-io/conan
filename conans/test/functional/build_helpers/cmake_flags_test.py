@@ -5,7 +5,7 @@ import unittest
 from textwrap import dedent
 
 import pytest
-from nose.plugins.attrib import attr
+
 from parameterized.parameterized import parameterized
 
 from conans.client.build.cmake import CMakeBuildHelper
@@ -61,7 +61,6 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 """
 
 
-@attr("slow")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFlagsTest(unittest.TestCase):
@@ -75,7 +74,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn('"', flags)
         return flags
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
     def test_vcvars_priority(self):
         # https://github.com/conan-io/conan/issues/5999
         client = TestClient()
@@ -279,7 +278,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def cmake_test_needed_settings(self):
+    def test_cmake_needed_settings(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake

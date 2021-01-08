@@ -30,7 +30,8 @@ class DetectedArchitectureTest(unittest.TestCase):
         ['sparc', 'sparc'],
         ['sparc64', 'sparcv9'],
         ['s390', 's390'],
-        ['s390x', 's390x']
+        ['s390x', 's390x'],
+        ['arm64', "armv8"]
     ])
     def test_various(self, mocked_machine, expected_arch):
 

@@ -10,7 +10,7 @@ from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
-from conans.client.source import complete_recipe_sources
+from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
@@ -159,7 +159,7 @@ class CmdUpload(object):
               changes, do not allow uploading if the remote date is newer than the
               local cache one
             - Retrieve the sources (exports_sources), if they are not cached, and
-              uploading to a different remote. "complete_recipe_sources"
+              uploading to a different remote. "retrieve_exports_sources"
             - Gather files and create 2 .tgz (exports, exports_sources) with
               "_compress_recipe_files"
             - Decide which files have to be uploaded and deleted from the server
@@ -296,7 +296,7 @@ class CmdUpload(object):
         current_remote_name = layout.load_metadata().recipe.remote
 
         if remote.name != current_remote_name:
-            complete_recipe_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
+            retrieve_exports_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
 
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

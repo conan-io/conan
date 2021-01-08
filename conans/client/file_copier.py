@@ -143,8 +143,9 @@ class FileCopier(object):
                     pass
 
             relative_path = os.path.relpath(root, src)
+            compare_relative_path = relative_path.lower() if ignore_case else relative_path
             for exclude in excludes:
-                if fnmatch.fnmatch(relative_path, exclude):
+                if fnmatch.fnmatch(compare_relative_path, exclude):
                     subfolders[:] = []
                     files = []
                     break

@@ -5,7 +5,7 @@ from conans.client.tools import vswhere, which
 
 tools_available = [
     'cmake',
-    'gcc', 'clang', 'visual_studio',
+    'gcc', 'clang', 'visual_studio', 'mingw',
     'autotools', 'pkg_config', 'premake', 'meson',
     'file',
     'git', 'svn',
@@ -29,6 +29,8 @@ except ConanException:
 if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
     tools_available.remove("compiler")
 
+if not which("mingw32-make"):
+    tools_available.remove("mingw")
 
 if not which("file"):
     tools_available.remove("file")
