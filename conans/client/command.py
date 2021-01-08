@@ -11,6 +11,7 @@ from six.moves import input as user_input
 
 from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
+from conans.client.cmd.venv import cmd_venv
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
 from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
@@ -513,7 +514,7 @@ class Command(object):
 
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
                 manifest_interactive = args.manifests_interactive
-                info = self._conan.install_reference(ref,
+                info, _ = self._conan.install_reference(ref,
                                                      settings=args.settings_host,
                                                      options=args.options_host,
                                                      env=args.env_host,
@@ -1857,6 +1858,22 @@ class Command(object):
         """
         cmd_frogarian(self._out)
 
+    def venv(self, *args):
+        """
+        Launches the given command inside the conan virtual environment
+        """
+        parser = argparse.ArgumentParser(description=self.venv.__doc__,
+                                         prog="conan venv",
+                                         formatter_class=SmartFormatter)
+        parser.add_argument('reference', help=_REF_OR_PREF_HELP)
+        parser.add_argument('cmd', nargs=argparse.REMAINDER)
+        args = parser.parse_args(*args)
+
+        ref = ConanFileReference.loads(args.reference)
+        _, conanfile = self._conan.install_reference(ref)
+
+        cmd_venv(conanfile, args.cmd)
+
     def lock(self, *args):
         """
         Generates and manipulates lock files.
@@ -1950,7 +1967,8 @@ class Command(object):
                 ("Package development commands", ("source", "build", "package", "editable",
                                                   "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "inspect", "help", "lock", "frogarian"))]
+                                   "alias", "download", "inspect", "help", "lock", "frogarian",
+                                   "venv"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""

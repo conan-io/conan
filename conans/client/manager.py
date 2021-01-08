@@ -120,3 +120,4 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)
+    return conanfile

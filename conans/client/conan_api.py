@@ -551,7 +551,7 @@ class ConanAPIV1(object):
 
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
-            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+            conanfile = deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
                          remotes=remotes, graph_info=graph_info, build_modes=build,
                          update=update, manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
@@ -564,7 +564,7 @@ class ConanAPIV1(object):
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                                 graph_info.graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info(self.app.config.revisions_enabled)
+            return recorder.get_info(self.app.config.revisions_enabled), conanfile
         except ConanException as exc:
             recorder.error = True
             exc.info = recorder.get_info(self.app.config.revisions_enabled)
