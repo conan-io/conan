@@ -52,9 +52,12 @@ def test_cache_in_layout():
     cbf = os.path.join(bf, "my_build")
     cpf = os.path.join(pf, "my_package")
     # Check folders match with the declared by the layout
-    assert "Source folder: {}".format(csf in client.out)
-    assert "Build folder: {}".format(cbf in client.out)
-    assert "Package folder: {}".format(cpf in client.out)
+    assert "Source folder: {}".format(csf) in client.out
+    assert "Build folder: {}".format(cbf) in client.out
+    assert "Package folder: {}".format(cpf) in client.out
+
+    # Check the source folder
+    assert os.path.exists(os.path.join(csf, "source.h"))
 
     # Check the build folder
     assert os.path.exists(os.path.join(cbf, "build.lib"))

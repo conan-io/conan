@@ -782,9 +782,11 @@ class ConanAPIV1(object):
 
         # If the layout declared a package folder follow it, do not invent a "package/"
         # folder by default
-        default_pkg_folder = os.path.join(build_folder, "package") \
-            if not conanfile.layout.package.folder else None
-        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+        if not conanfile.layout.package.folder:
+            default_pkg_folder = os.path.join(build_folder, "package")
+            package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+        else:
+            package_folder = None
 
         run_package_method(conanfile, None, source_folder, build_folder, package_folder,
                            install_folder, self.app.hook_manager, conanfile_path, None,
