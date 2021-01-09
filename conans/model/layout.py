@@ -9,7 +9,6 @@ class _LayoutEntry(object):
 
 class Layout(object):
     def __init__(self):
-
         self._base_install_folder = None
         self._base_source_folder = None
         self._base_build_folder = None

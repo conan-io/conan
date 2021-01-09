@@ -4,6 +4,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
+
 def test_local_build():
     """If we configure a build folder in the layout, the installed files in a "conan build ."
     go to the specified folder: "my_build"
