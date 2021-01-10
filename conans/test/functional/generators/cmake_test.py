@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
@@ -43,7 +42,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_check_compiler_package_id(self):
         # https://github.com/conan-io/conan/issues/6658
         file_content = textwrap.dedent("""
@@ -73,10 +72,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run_command('cmake .')
         self.assertIn("Conan: Checking correct version:", client.out)
 
-    @attr("slow")
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -105,7 +103,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
-    @attr('slow')
     @pytest.mark.slow
     def test_no_output(self):
         client = TestClient()
