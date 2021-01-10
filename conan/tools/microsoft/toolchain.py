@@ -16,10 +16,10 @@ class MSBuildToolchain(object):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
         self.compile_options = {}
+        self.configuration = conanfile.settings.build_type
 
-    @staticmethod
-    def _name_condition(settings):
-        props = [("Configuration", settings.build_type),
+    def _name_condition(self, settings):
+        props = [("Configuration", self.configuration),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch")))]

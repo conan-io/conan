@@ -1,3 +1,5 @@
+import zipfile
+
 import os
 import tarfile
 import unittest
@@ -6,14 +8,28 @@ import six
 
 from conans.client.tools import untargz, unzip
 from conans.client.tools.files import chdir, save
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
 from conans.model.manifest import gather_files
-from conans.test.functional.command.config_install_test import zipdir
 from conans.util.files import gzopen_without_timestamps
 
 
 class ZipExtractPlainTest(unittest.TestCase):
+
+    def _zipdir(self, path, zipfilename, folder_entry=None):
+        with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
+            if folder_entry:
+                zif = zipfile.ZipInfo(folder_entry + "/")
+                z.writestr(zif, "")
+
+            for root, _, files in os.walk(path):
+                for f in files:
+                    file_path = os.path.join(root, f)
+                    if file_path == zipfilename:
+                        continue
+                    relpath = os.path.relpath(file_path, path)
+                    z.write(file_path, relpath)
 
     def test_plain_zip(self):
         tmp_folder = temp_folder()
@@ -28,11 +44,14 @@ class ZipExtractPlainTest(unittest.TestCase):
             save(file3, "")
 
         zip_file = os.path.join(tmp_folder, "myzip.zip")
-        zipdir(tmp_folder, zip_file)
+        # Zip with a "folder_entry" in the zip (not only for the files)
+        self._zipdir(tmp_folder, zip_file, folder_entry="subfolder-1.2.3")
 
-        # Tgz unzipped regularly
+        # ZIP unzipped regularly
         extract_folder = temp_folder()
-        unzip(zip_file, destination=extract_folder, strip_root=False)
+        output = TestBufferConanOutput()
+        unzip(zip_file, destination=extract_folder, strip_root=False, output=output)
+        self.assertNotIn("ERROR: Error extract", output)
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "file1")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3", "folder",
@@ -41,7 +60,9 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        unzip(zip_file, destination=extract_folder, strip_root=True)
+        output = TestBufferConanOutput()
+        unzip(zip_file, destination=extract_folder, strip_root=True, output=output)
+        self.assertNotIn("ERROR: Error extract", output)
         self.assertFalse(os.path.exists(os.path.join(extract_folder, "subfolder-1.2.3")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "file1")))
         self.assertTrue(os.path.exists(os.path.join(extract_folder, "folder", "file2")))
@@ -59,7 +80,7 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         zip_folder = temp_folder()
         zip_file = os.path.join(zip_folder, "file.zip")
-        zipdir(tmp_folder, zip_file)
+        self._zipdir(tmp_folder, zip_file)
 
         # Extract without the subfolder
         extract_folder = temp_folder()
@@ -74,7 +95,7 @@ class ZipExtractPlainTest(unittest.TestCase):
 
         zip_folder = temp_folder()
         zip_file = os.path.join(zip_folder, "file.zip")
-        zipdir(tmp_folder, zip_file)
+        self._zipdir(tmp_folder, zip_file)
 
         # Extract without the subfolder
         extract_folder = temp_folder()
@@ -84,11 +105,17 @@ class ZipExtractPlainTest(unittest.TestCase):
 
 class TarExtractPlainTest(unittest.TestCase):
 
-    def _compress_folder(self, folder, tgz_path):
-        # Create a tar.gz file with the files in the folder
+    def _compress_folder(self, folder, tgz_path, folder_entry=None):
+        # Create a tar.gz file with the files in the folder and an additional TarInfo entry
+        # for the folder_entry (the gather files doesn't return empty dirs)
         with open(tgz_path, "wb") as tgz_handle:
             tgz = gzopen_without_timestamps("name", mode="w", fileobj=tgz_handle)
-
+            if folder_entry:
+                # Create an empty folder in the tgz file
+                t = tarfile.TarInfo(folder_entry)
+                t.mode = 488
+                t.type = tarfile.DIRTYPE
+                tgz.addfile(t)
             files, _ = gather_files(folder)
             for filename, abs_path in files.items():
                 info = tarfile.TarInfo(name=filename)
@@ -112,7 +139,7 @@ class TarExtractPlainTest(unittest.TestCase):
 
         tgz_folder = temp_folder()
         tgz_file = os.path.join(tgz_folder, "file.tar.gz")
-        self._compress_folder(tmp_folder, tgz_file)
+        self._compress_folder(tmp_folder, tgz_file, folder_entry="subfolder-1.2.3")
 
         # Tgz unzipped regularly
         extract_folder = temp_folder()
