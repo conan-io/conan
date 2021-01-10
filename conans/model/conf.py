@@ -130,7 +130,9 @@ class ConfDefinition(object):
 
     def dumps(self):
         result = []
-        for pattern, conf in sorted(self._pattern_confs.items()):
+        # It is necessary to convert the None for sorting
+        for pattern, conf in sorted(self._pattern_confs.items(),
+                                    key=lambda x: ("", x[1]) if x[0] is None else x):
             for name, values in sorted(conf.items()):
                 for k, v in sorted(values.items()):
                     if pattern:
@@ -146,7 +148,8 @@ class ConfDefinition(object):
             if not line or line.startswith("#"):
                 continue
             left, value = line.split("=", 1)
-            tokens = left.split(":", 2)
+            value = value.strip()
+            tokens = left.strip().split(":", 2)
             if len(tokens) == 3:
                 pattern, conf_module, name = tokens
             else:

@@ -110,6 +110,7 @@ def test_new_config_file(client):
     conf = textwrap.dedent("""\
         tools.microsoft.MSBuild:verbosity=Minimal
         user.mycompany.MyHelper:myconfig=myvalue
+        *:tools.cmake.CMake:generator=X
         cache:no_locks=True
         cache:read_only=True
         """)
@@ -117,6 +118,7 @@ def test_new_config_file(client):
     client.run("install .")
     assert "tools.microsoft.MSBuild$verbosity$Minimal" in client.out
     assert "user.mycompany.MyHelper$myconfig$myvalue" in client.out
+    assert "tools.cmake.CMake$generator$X" in client.out
     assert "no_locks" not in client.out
     assert "read_only" not in client.out
 

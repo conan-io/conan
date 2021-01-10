@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 
 
@@ -59,3 +60,16 @@ def test_conf_rebase(conf_definition):
     assert c.dumps() == result
 
 
+def test_conf_error_per_package():
+    text = "*:core:verbosity=minimal"
+    c = ConfDefinition()
+    with pytest.raises(ConanException,
+                       match=r"Conf '\*:core:verbosity=minimal' cannot have a package pattern"):
+        c.loads(text)
+
+
+def test_parse_spaces():
+    text = "core:verbosity = minimal"
+    c = ConfDefinition()
+    c.loads(text)
+    assert c["core"].verbosity == "minimal"

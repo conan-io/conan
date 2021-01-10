@@ -10,15 +10,14 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
             raise ConanException("Uknown MSBuild verbosity: {}".format(verbosity))
         return '/verbosity:{}'.format(verbosity)
-    return
 
 
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.compiler = conanfile.settings.get_safe("compiler")
-        self.version = conanfile.settings.get_safe("compiler.base.version") or \
-                       conanfile.settings.get_safe("compiler.version")
+        self.version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
         self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
