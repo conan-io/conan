@@ -1,9 +1,10 @@
 import os
 import pytest
 
+from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.fixture
@@ -32,7 +33,13 @@ def conanfile():
     def package(self):
         self.output.warn("Package folder: {}".format(self.package_folder))
         tools.save(os.path.join(self.package_folder, "LICENSE"), "bar")
+        self.copy("*.h", dst="include")
+        self.copy("*.lib", dst="lib")
 
+    def package_info(self):
+        # This will be easier when the layout declares also the includedirs etc
+        self.cpp_info.includedirs = [os.path.join(self.layout.package.folder, "include")]
+        self.cpp_info.libdirs = [os.path.join(self.layout.package.folder, "lib")]
     """
     return conan_file
 
@@ -70,6 +77,21 @@ def test_cache_in_layout(conanfile):
 
     # Check the package folder
     assert os.path.exists(os.path.join(package_folder, "LICENSE"))
+    assert os.path.exists(os.path.join(package_folder, "include", "source.h"))
+    assert os.path.exists(os.path.join(package_folder, "lib", "build.lib"))
+
+    # Check the conaninfo
+    assert os.path.exists(os.path.join(pf, "conaninfo.txt"))
+
+    # Search the package in the cache
+    client.run("search lib/1.0@")
+    assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out
+
+    # Install the package and check the build info
+    client.run("install lib/1.0@ -g txt")
+    content = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+    assert "[includedirs]\n{}".format(os.path.join(package_folder, "include")) in content
+    assert "[libdirs]\n{}".format(os.path.join(package_folder, "lib")) in content
 
 
 def test_same_conanfile_local(conanfile):

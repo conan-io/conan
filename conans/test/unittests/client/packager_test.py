@@ -81,8 +81,12 @@ class ExporterTest(unittest.TestCase):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
-        run_package_method(conanfile, None, build_folder, build_folder, package_folder,
-                           install_folder, Mock(), conanfile_path, ref, copy_info=True)
+        conanfile.layout.set_base_build_folder(build_folder)
+        conanfile.layout.set_base_source_folder(build_folder)
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.install_folder = install_folder
+
+        run_package_method(conanfile, None, Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

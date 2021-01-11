@@ -787,8 +787,12 @@ class ConanAPIV1(object):
             if not conanfile.layout.package.folder else cwd
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                           install_folder, self.app.hook_manager, conanfile_path, None,
+        conanfile.layout.set_base_build_folder(build_folder)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.install_folder = install_folder
+
+        run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
 
     @api_method
@@ -806,7 +810,11 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        config_source_local(source_folder, conanfile, conanfile_path, self.app.hook_manager)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_build_folder(None)
+        conanfile.layout.set_base_package_folder(None)
+
+        config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method
     def imports(self, path, dest=None, info_folder=None, cwd=None):

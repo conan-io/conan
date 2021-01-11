@@ -6,15 +6,13 @@ from conans.paths import CONANINFO
 from conans.util.files import mkdir, save
 
 
-def export_pkg(conanfile, package_id, src_package_folder, base_package_folder, hook_manager,
-               conanfile_path, ref):
+def export_pkg(conanfile, package_id, src_package_folder, hook_manager, conanfile_path, ref):
 
-    conanfile.layout.set_base_package_folder(base_package_folder)
     mkdir(conanfile.package_folder)
 
     output = conanfile.output
     output.info("Exporting to cache existing package from user folder")
-    output.info("Package folder %s" % base_package_folder)
+    output.info("Package folder %s" % conanfile.package_folder)
     hook_manager.execute("pre_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
@@ -24,9 +22,9 @@ def export_pkg(conanfile, package_id, src_package_folder, base_package_folder, h
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    save(os.path.join(base_package_folder, CONANINFO), conanfile.info.dumps())
-    manifest = FileTreeManifest.create(base_package_folder)
-    manifest.save(base_package_folder)
+    save(os.path.join(conanfile.layout.base_package_folder, CONANINFO), conanfile.info.dumps())
+    manifest = FileTreeManifest.create(conanfile.layout.base_package_folder)
+    manifest.save(conanfile.layout.base_package_folder)
     report_files_from_manifest(output, manifest)
 
     output.success("Package '%s' created" % package_id)

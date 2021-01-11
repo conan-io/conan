@@ -34,6 +34,10 @@ class Layout(object):
         self._base_source_folder = folder
 
     @property
+    def base_source_folder(self):
+        return self._base_source_folder
+
+    @property
     def build_folder(self):
         if self._base_build_folder is None:
             return None
@@ -43,6 +47,10 @@ class Layout(object):
 
     def set_base_build_folder(self, folder):
         self._base_build_folder = folder
+
+    @property
+    def base_build_folder(self):
+        return self._base_build_folder
 
     @property
     def install_folder(self):
@@ -63,3 +71,7 @@ class Layout(object):
 
     def set_base_package_folder(self, folder):
         self._base_package_folder = folder
+
+    @property
+    def base_package_folder(self):
+        return self._base_package_folder
