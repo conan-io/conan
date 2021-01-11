@@ -115,7 +115,9 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
                 raise ConanException("The zip file contains more than 1 folder in the root")
             if len(names) == 1 and len(names[0].split("/", 1)) == 1:
                 raise ConanException("The zip file contains a file in the root")
-
+            # Remove the directory entry if present
+            # Note: The "zip" format contains the "/" at the end if it is a directory
+            zip_info = [m for m in zip_info if m.filename != (common_folder + "/")]
             for member in zip_info:
                 name = member.filename.replace("\\", "/")
                 member.filename = name.split("/", 1)[1]
@@ -167,7 +169,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
                     raise ConanException("The tgz file contains more than 1 folder in the root")
                 if len(names) == 1 and len(names[0].split("/", 1)) == 1:
                     raise ConanException("The tgz file contains a file in the root")
-
+                # Remove the directory entry if present
+                members = [m for m in members if m.name != common_folder]
                 for member in members:
                     name = member.name.replace("\\", "/")
                     member.name = name.split("/", 1)[1]
