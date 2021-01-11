@@ -28,10 +28,6 @@ def transform_conanfile(node):
         "conans.client.graph.python_requires").lookup("PyRequires")
 
     dynamic_fields = {
-        "source_folder": str_class,
-        "build_folder": str_class,
-        "package_folder": str_class,
-        "install_folder": str_class,
         "conan_data": str_class,
         "build_requires": build_requires_class,
         "info_build": info_class,
