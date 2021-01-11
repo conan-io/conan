@@ -3,7 +3,7 @@ import textwrap
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 
 
-class CppinfoestCase(ConanV2ModeTestCase):
+class CppinfoTestCase(ConanV2ModeTestCase):
 
     def test_deprecate_cppflags(self):
         t = self.get_client()
