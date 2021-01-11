@@ -117,3 +117,41 @@ def test_same_conanfile_local(conanfile):
     client.run("package .  -if=install")
     assert "Package folder: {}".format(package_folder) in client.out
     assert os.path.exists(os.path.join(package_folder, "LICENSE"))
+
+
+def test_package_layout_in_local_only(conanfile):
+    """We could keep the cache layout by using self.in_local_cache"""
+    conanfile = conanfile.replace('self.layout.package.folder = "my_package"',
+                                  'self.layout.package.folder = "my_package" '
+                                  'if not self.in_local_cache else ""')
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . base/1.0@")
+
+    client.save({"conanfile.py": conanfile})
+    client.run("create . lib/1.0@")
+
+    ref = ConanFileReference.loads("lib/1.0@")
+    pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
+
+    client.run("install . lib/1.0@ -if=install")
+    client.run("source .  -if=install")
+    client.run("build .  -if=install")
+    client.run("package .  -if=install")
+
+    # In local folder the layout the package is in "my_package"
+    local_package_folder = os.path.join(client.current_folder, "my_package")
+    assert os.path.exists(os.path.join(local_package_folder, "LICENSE"))
+    assert os.path.exists(os.path.join(local_package_folder, "include", "source.h"))
+    assert os.path.exists(os.path.join(local_package_folder, "lib", "build.lib"))
+
+    # Check the cache, the contents should be at the root of the package folder in the cache
+    pf = client.cache.package_layout(ref).package(pref)
+    assert os.path.exists(os.path.join(pf, "LICENSE"))
+    assert os.path.exists(os.path.join(pf, "include", "source.h"))
+    assert os.path.exists(os.path.join(pf, "lib", "build.lib"))
+    assert os.path.exists(os.path.join(pf, "conaninfo.txt"))
+
+    # Search the package in the cache
+    client.run("search lib/1.0@")
+    assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out
