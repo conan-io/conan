@@ -80,7 +80,7 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in generate() method, line 7", client.out)
+        self.assertIn("ERROR: conanfile.py: Error in generate() method, line 6", client.out)
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""

@@ -309,14 +309,14 @@ set_property(TARGET {{name}}::{{name}}
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
-                deps = DepsCppCmake(dep_cpp_info)
+                deps = DepsCppCmake(dep_cpp_info, self.name)
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
                 ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
-                pkg_info = DepsCppCmake(cpp_info)
+                pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
