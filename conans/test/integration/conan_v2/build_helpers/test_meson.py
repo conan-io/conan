@@ -1,6 +1,4 @@
 import textwrap
-import platform
-import unittest
 
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 
