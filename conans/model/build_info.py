@@ -46,16 +46,23 @@ class BuildModulesDict(dict):
             super(BuildModulesDict, self).__setitem__(key, list())
         return super(BuildModulesDict, self).__getitem__(key)
 
-    def append(self, item):
+    def _append(self, item):
         if item.endswith(".cmake"):
             self["cmake"].append(item)
             self["cmake_multi"].append(item)
             self["cmake_find_package"].append(item)
             self["cmake_find_package_multi"].append(item)
 
+    def append(self, item):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
+                          'instead'.format(item=item))
+        self._append(item)
+
     def extend(self, items):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
+                          "instead".format(items=items))
         for item in items:
-            self.append(item)
+            self._append(item)
 
     @classmethod
     def from_list(cls, build_modules):
@@ -63,10 +70,13 @@ class BuildModulesDict(dict):
         the_dict.extend(build_modules)
         return the_dict
 
-    def to_abs_paths(self, rootpath):
-        for generator, values in self.items():
-            self[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
+
+def dict_to_abs_paths(the_dict, rootpath):
+    new_dict = {}
+    for generator, values in the_dict.items():
+        new_dict[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
                                for p in values]
+    return new_dict
 
 
 def merge_dicts(d1, d2):
@@ -136,9 +146,10 @@ class _CppInfo(object):
     def build_modules_paths(self):
         if self._build_modules_paths is None:
             if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                                  "{the_list}' instead".format(the_list=self.build_modules))
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
-            tmp = BuildModulesDict(self.build_modules)
-            tmp.to_abs_paths(self.rootpath)
+            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
 

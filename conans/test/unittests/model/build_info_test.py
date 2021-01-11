@@ -9,6 +9,7 @@ from conans.model.user_info import DepsUserInfo
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
 from conans.model.build_info import BuildModulesDict, CppInfo, DepCppInfo
+from model.build_info import dict_to_abs_paths
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -129,7 +130,7 @@ VAR2=23
         build_modules = BuildModulesDict({"cmake": ["whatever.cmake"]})
         build_modules.extend(["hello.cmake"])
         assert build_modules["cmake"] == ["whatever.cmake", "hello.cmake"]
-        build_modules.to_abs_paths("root")
+        build_modules = dict_to_abs_paths(build_modules, "root")
         assert build_modules["cmake"] == [os.path.join("root", "whatever.cmake"),
                                           os.path.join("root", "hello.cmake")]
         build_modules = BuildModulesDict.from_list(["this.cmake", "this_not.pc"])
