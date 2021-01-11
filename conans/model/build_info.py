@@ -59,12 +59,8 @@ class BuildModulesDict(dict):
 
     @classmethod
     def from_list(cls, build_modules):
-        the_dict = BuildModulesDict({"cmake": [], "cmake_multi": [], "cmake_find_package": [],
-                                     "cmake_find_package_multi": []})
-        for item in build_modules:
-            if item.endswith(".cmake"):
-                for val in the_dict.values():
-                    val.append(item)
+        the_dict = BuildModulesDict()
+        the_dict.extend(build_modules)
         return the_dict
 
     def to_abs_paths(self, rootpath):
