@@ -35,6 +35,62 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class BuildModulesDict(dict):
+    """
+    A dictionary with append and extend for cmake build modules to keep it backwards compatible
+    with the list interface
+    """
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(BuildModulesDict, self).__setitem__(key, list())
+        return super(BuildModulesDict, self).__getitem__(key)
+
+    def _append(self, item):
+        if item.endswith(".cmake"):
+            self["cmake"].append(item)
+            self["cmake_multi"].append(item)
+            self["cmake_find_package"].append(item)
+            self["cmake_find_package_multi"].append(item)
+
+    def append(self, item):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
+                          'instead'.format(item=item))
+        self._append(item)
+
+    def extend(self, items):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
+                          "instead".format(items=items))
+        for item in items:
+            self._append(item)
+
+    @classmethod
+    def from_list(cls, build_modules):
+        the_dict = BuildModulesDict()
+        the_dict.extend(build_modules)
+        return the_dict
+
+
+def dict_to_abs_paths(the_dict, rootpath):
+    new_dict = {}
+    for generator, values in the_dict.items():
+        new_dict[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
+                               for p in values]
+    return new_dict
+
+
+def merge_dicts(d1, d2):
+    def merge_lists(seq1, seq2):
+        return [s for s in seq1 if s not in seq2] + seq2
+    result = d1.copy()
+    for k, v in d2.items():
+        if k not in d1.keys():
+            result[k] = v
+        else:
+            result[k] = merge_lists(d1[k], d2[k])
+    return result
+
+
 class _CppInfo(object):
     """ Object that stores all the necessary information to build in C/C++.
     It is intended to be system independent, translation to
@@ -60,7 +116,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = []
+        self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
@@ -89,8 +145,12 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                                  "{the_list}' instead".format(the_list=self.build_modules))
+                self.build_modules = BuildModulesDict.from_list(self.build_modules)
+            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
+            self._build_modules_paths = tmp
         return self._build_modules_paths
 
     @property
@@ -320,6 +380,7 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
+
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
@@ -333,7 +394,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
         self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
@@ -401,7 +462,7 @@ class DepCppInfo(object):
         self._res_paths = None
         self._src_paths = None
         self._framework_paths = None
-        self._build_module_paths = None
+        self._build_modules_paths = None
         self._sorted_components = None
         self._check_component_requires()
 
@@ -488,7 +549,14 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules")
+        if self._build_modules_paths is not None:
+            return self._build_modules_paths
+        paths = self._cpp_info.build_modules_paths
+        if self._cpp_info.components:
+            for component in self._get_sorted_components().values():
+                paths = merge_dicts(paths, component.build_modules_paths)
+        self._build_modules_paths = paths
+        return self._build_modules_paths
 
     @property
     def include_paths(self):
