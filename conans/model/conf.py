@@ -122,7 +122,7 @@ class ConfDefinition(object):
 
     def rebase_conf_definition(self, other):
         """
-        for taking the new conan_conf.txt and composing with the profile [conf]
+        for taking the new conan.cfg and composing with the profile [conf]
         :type other: ConfDefinition
         """
         for k, v in other._pattern_confs.items():

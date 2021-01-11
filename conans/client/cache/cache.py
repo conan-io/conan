@@ -159,11 +159,11 @@ class ClientCache(object):
 
     @property
     def new_config_path(self):
-        return os.path.join(self.cache_folder, "conan_conf.txt")
+        return os.path.join(self.cache_folder, "conan.cfg")
 
     @property
     def new_config(self):
-        """ this is the new conan_conf.txt to replace the old conan.conf that contains
+        """ this is the new conan.cfgto replace the old conan.conf that contains
         configuration defined with the new syntax as in profiles, this config will be composed
         to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
         """
