@@ -486,7 +486,6 @@ message("Target libs: ${tmp}")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
-        print(client.out)
         self.assertIn("Printing using a external module!", client.out)
 
     def test_cpp_info_name(self):
