@@ -6,13 +6,12 @@ from conans.paths import BUILD_INFO_CMAKE
 
 
 class DepsCppCmake(object):
-    def __init__(self, cpp_info):
+    def __init__(self, cpp_info, generator_name):
         def join_paths(paths):
             """
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
@@ -63,11 +62,12 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
-        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
-                                               path.endswith(".cmake")])
+        self.build_modules_paths = join_paths(cpp_info.build_modules_paths.get(generator_name, []))
 
 
 class CMakeGenerator(Generator):
+    name = "cmake"
+
     @property
     def filename(self):
         return BUILD_INFO_CMAKE
@@ -79,13 +79,13 @@ class CMakeGenerator(Generator):
 
         # Per requirement variables
         for _, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake")
-            deps = DepsCppCmake(dep_cpp_info)
+            dep_name = dep_cpp_info.get_name(self.name)
+            deps = DepsCppCmake(dep_cpp_info, self.name)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
-                deps = DepsCppCmake(cpp_info)
+                deps = DepsCppCmake(cpp_info, self.name)
                 dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
                 sections.append(dep_flags)
 
@@ -96,17 +96,17 @@ class CMakeGenerator(Generator):
         sections.append(cmake_settings_info(self.conanfile.settings))
         all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
-        deps = DepsCppCmake(self.deps_build_info)
+        deps = DepsCppCmake(self.deps_build_info, self.name)
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            deps = DepsCppCmake(cpp_info)
+            deps = DepsCppCmake(cpp_info, self.name)
             dep_flags = cmake_global_vars(deps=deps, build_type=config)
             sections.append(dep_flags)
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies, "cmake"))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, self.name))
 
         # MACROS
         sections.append(cmake_macros)
