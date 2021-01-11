@@ -21,6 +21,8 @@ class _ConfModule(object):
         self._confs.update(other._confs)
 
     def set_value(self, k, v):
+        if k != k.lower():
+            raise ConanException("Conf key '{}' must be lowercase".format(k))
         self._confs[k] = v
 
     def __repr__(self):
@@ -69,6 +71,8 @@ class Conf(object):
                 self._conf_modules[module_name] = module_conf
 
     def set_value(self, module_name, k, v):
+        if module_name != module_name.lower():
+            raise ConanException("Conf module '{}' must be lowercase".format(module_name))
         self._conf_modules.setdefault(module_name, _ConfModule()).set_value(k, v)
 
     @property

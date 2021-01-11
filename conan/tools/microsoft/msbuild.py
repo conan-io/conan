@@ -4,11 +4,10 @@ from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    conf = conanfile.conf["tools.microsoft.MSBuild"]
-    verbosity = conf.verbosity
+    verbosity = conanfile.conf["tools.microsoft"].msbuild_verbosity
     if verbosity:
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
-            raise ConanException("Uknown MSBuild verbosity: {}".format(verbosity))
+            raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
         return '/verbosity:{}'.format(verbosity)
 
 

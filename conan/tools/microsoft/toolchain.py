@@ -84,7 +84,7 @@ class MSBuildToolchain(object):
         # It is useless to set PlatformToolset in the config file, because the conditional checks it
         cppstd = "stdcpp%s" % cppstd if cppstd else ""
         toolset = toolset or ""
-        compile_options = self._conanfile.conf["tools.microsoft.MSBuildToolchain"].compile_options
+        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain"].compile_options
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)
