@@ -90,9 +90,11 @@ def test_cache_in_layout(conanfile):
     # Install the package and check the build info
     client.run("install lib/1.0@ -g txt")
     binfopath = os.path.join(client.current_folder, "conanbuildinfo.txt")
-    content = load(binfopath).replace("\r\n", "\n").replace("\\", "/")
-    assert "[includedirs]\n{}".format(os.path.join(package_folder, "include")) in content
-    assert "[libdirs]\n{}".format(os.path.join(package_folder, "lib")) in content
+    content = load(binfopath).replace("\r\n", "\n")
+    assert "[includedirs]\n{}".format(os.path.join(package_folder, "include")
+                                      .replace("\\", "/")) in content
+    assert "[libdirs]\n{}".format(os.path.join(package_folder, "lib")
+                                  .replace("\\", "/")) in content
 
 
 def test_same_conanfile_local(conanfile):
