@@ -13,7 +13,6 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@pytest.mark.slow
 @pytest.mark.tool_cmake
 class TestCMakeFindPackageGenerator:
 
