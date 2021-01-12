@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 from collections import OrderedDict
 from textwrap import dedent
@@ -313,6 +314,30 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler.version=12", info)
         self.assertNotIn("gcc", info)
         self.assertNotIn("libcxx", info)
+
+    def test_package_settings_no_user_channel(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os"
+                def build(self):
+                    self.output.info("SETTINGS! os={}!!".format(self.settings.os))
+                """)
+        profile = textwrap.dedent("""
+            [settings]
+            os=Windows
+            # THIS FAILED BEFORE WITH NO MATCH
+            mypkg/0.1:os=Linux
+            mypkg/0.1@user/channel:os=FreeBSD
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+
+        client.run("create . mypkg/0.1@user/channel -pr=profile")
+        assert "mypkg/0.1@user/channel: SETTINGS! os=FreeBSD!!" in client.out
+        client.run("create . mypkg/0.1@ -pr=profile")
+        assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
 
     @pytest.mark.tool_compiler
     def test_install_profile_options(self):

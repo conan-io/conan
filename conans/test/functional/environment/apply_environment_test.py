@@ -3,7 +3,6 @@ import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.client import tools
 from conans.client.generators.text import TXTGenerator
@@ -17,7 +16,6 @@ from conans.util.files import load
 
 class ConanEnvTest(unittest.TestCase):
 
-    @attr('slow')
     @pytest.mark.slow
     @pytest.mark.tool_cmake
     def test_shared_in_current_directory(self):

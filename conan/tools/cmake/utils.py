@@ -47,9 +47,10 @@ def get_generator(conanfile):
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
     compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
     compiler_base = conanfile.settings.get_safe("compiler.base")
     arch = conanfile.settings.get_safe("arch")
-    compiler_version = conanfile.settings.get_safe("compiler.version")
+
     compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
     if hasattr(conanfile, 'settings_build'):
         os_build = conanfile.settings_build.get_safe('os')
@@ -66,6 +67,7 @@ def get_generator(conanfile):
 
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
+        major_version = version.split('.', 1)[0]
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -73,7 +75,7 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(version, "UnknownVersion %s" % version)
+                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
