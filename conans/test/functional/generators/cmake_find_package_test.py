@@ -20,7 +20,6 @@ class TestCMakeFindPackageGenerator:
     @pytest.mark.parametrize("use_components", [False, True])
     def test_build_modules_alias_target(self, use_components):
         client = TestClient()
-        client.run("new hello/1.0 -s")
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -29,23 +28,14 @@ class TestCMakeFindPackageGenerator:
                 name = "hello"
                 version = "1.0"
                 settings = "os", "arch", "compiler", "build_type"
-                exports_sources = ["target-alias.cmake", "src/*"]
+                exports_sources = ["target-alias.cmake"]
                 generators = "cmake"
 
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure(source_folder="src")
-                    cmake.build()
-
                 def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
                     self.copy("target-alias.cmake", dst="share/cmake")
 
                 def package_info(self):
-                    builddir = os.path.join("share", "cmake")
-                    module = os.path.join(builddir, "target-alias.cmake")
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
             %s
             """)
         if use_components:
@@ -53,27 +43,17 @@ class TestCMakeFindPackageGenerator:
                 self.cpp_info.name = "namespace"
                 self.cpp_info.filenames["cmake_find_package"] = "hello"
                 self.cpp_info.components["comp"].libs = ["hello"]
-                self.cpp_info.components["comp"].build_modules.append(module)
-                self.cpp_info.components["comp"].builddirs = [builddir]
-                """)
-            target_alias = textwrap.dedent("""
-                if(NOT TARGET otherhello)
-                    add_library(otherhello INTERFACE IMPORTED)
-                    target_link_libraries(otherhello INTERFACE namespace::hello)
-                endif()
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append(module)
                 """)
         else:
             info = textwrap.dedent("""\
                 self.cpp_info.libs = ["hello"]
-                self.cpp_info.build_modules.append(module)
-                self.cpp_info.builddirs = [builddir]
+                self.cpp_info.build_modules["cmake_find_package"].append(module)
                 """)
-            target_alias = textwrap.dedent("""
-                if(NOT TARGET otherhello)
-                    add_library(otherhello INTERFACE IMPORTED)
-                    target_link_libraries(otherhello INTERFACE hello::hello)
-                endif()
-                """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE {target_name})
+            """).format(target_name="namespace::hello" if use_components else "hello::hello")
         conanfile = conanfile % textwrap.indent(info, "        ")
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
@@ -85,14 +65,13 @@ class TestCMakeFindPackageGenerator:
                 name = "consumer"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt", "main.cpp"]
+                exports_sources = ["CMakeLists.txt"]
                 generators = "cmake_find_package"
                 requires = "hello/1.0"
 
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-                    cmake.build()
             """)
         cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
@@ -101,15 +80,7 @@ class TestCMakeFindPackageGenerator:
             get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
             message("otherhello link libraries: ${tmp}")
             """)
-        main = textwrap.dedent("""
-            #include "hello.h"
-
-            int main() {
-                hello();
-                return 0;
-            }
-            """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists, "main.cpp": main})
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
         if use_components:
             assert "otherhello link libraries: namespace::hello" in client.out
