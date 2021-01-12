@@ -89,8 +89,7 @@ def test_cache_in_layout(conanfile):
 
     # Install the package and check the build info
     client.run("install lib/1.0@ -g txt")
-    content = load(os.path.join(client.current_folder, "conanbuildinfo.txt")).replace("\\r\\n",
-                                                                                      "\\n")
+    content = load(os.path.join(client.current_folder, "conanbuildinfo.txt")).replace("\r\n", "\n")
     assert "[includedirs]\n{}".format(os.path.join(package_folder, "include")) in content
     assert "[libdirs]\n{}".format(os.path.join(package_folder, "lib")) in content
 
