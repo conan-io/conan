@@ -74,7 +74,7 @@ class XCRun(object):
         def cmd_output(cmd):
             return check_output_runner(cmd).strip()
 
-        command = ['xcrun', '-find']
+        command = ['xcrun']
         if self.sdk:
             command.extend(['-sdk', self.sdk])
         command.extend(args)
