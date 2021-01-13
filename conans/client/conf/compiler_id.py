@@ -14,6 +14,7 @@ SUNCC = "suncc"
 MSVC = "Visual Studio"
 INTEL = "intel"
 QCC = "qcc"
+MCST_LCC = "mcst-lcc"
 
 
 class CompilerId(object):
@@ -102,7 +103,13 @@ MSVC_TO_VS_VERSION = {800: (1, 0),
 
 def _parse_compiler_version(defines):
     try:
-        if '__INTEL_COMPILER' in defines:
+        if '__LCC__' in defines and '__e2k__' in defines:
+            compiler = MCST_LCC
+            version = int(defines['__LCC__'])
+            major = int(version / 100)
+            minor = int(version % 100)
+            patch = int(defines['__LCC_MINOR__'])
+        elif '__INTEL_COMPILER' in defines:
             compiler = INTEL
             version = int(defines['__INTEL_COMPILER'])
             major = int(version / 100)

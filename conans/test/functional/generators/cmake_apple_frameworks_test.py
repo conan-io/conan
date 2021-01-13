@@ -12,6 +12,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool_cmake
 class CMakeAppleFrameworksTestCase(unittest.TestCase):
     lib_ref = ConanFileReference.loads("lib/version")
     lib_conanfile = textwrap.dedent("""
