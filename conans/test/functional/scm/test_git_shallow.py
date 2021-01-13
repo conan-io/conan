@@ -3,6 +3,7 @@
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
@@ -12,6 +13,7 @@ from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 
 
+@pytest.mark.tool_git
 @parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, {"shallow": "None"}])
 class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""

@@ -46,35 +46,37 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         ret = {}
         for depname, cpp_info in self.deps_build_info.dependencies:
             pkg_genname = cpp_info.get_name(PkgConfigGenerator.name)
+            self._validate_components(cpp_info)
             if not cpp_info.components:
-                ret["%s.pc" % pkg_genname] = self.single_pc_file_contents(pkg_genname, cpp_info,
-                                                                          cpp_info.public_deps)
+                public_deps = self.get_public_deps(cpp_info)
+                deps_names = [self._get_require_name(*it)[1] for it in public_deps]
+                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, cpp_info, deps_names)
             else:
                 components = self._get_components(depname, cpp_info)
                 for comp_genname, comp, comp_requires_gennames in components:
-                    ret["%s.pc" % comp_genname] = self.single_pc_file_contents(
+                    ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
                         comp,
-                        comp_requires_gennames,
-                        is_component=True)
+                        comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, cpp_info,
                                                                               comp_gennames)
         return ret
 
-    def single_pc_file_contents(self, name, cpp_info, comp_requires_gennames, is_component=False):
+    def _pc_file_content(self, name, cpp_info, requires_gennames):
         prefix_path = cpp_info.rootpath.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
         libdir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.lib_paths)
         if dir_lines:
             libdir_vars = varnames
             lines.extend(dir_lines)
 
         includedir_vars = []
-        dir_lines, varnames = _generate_dir_lines(prefix_path, "includedir", cpp_info.includedirs)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "includedir",
+                                                       cpp_info.include_paths)
         if dir_lines:
             includedir_vars = varnames
             lines.extend(dir_lines)
@@ -84,7 +86,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
         description = cpp_info.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % cpp_info.version)
-        libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
+        libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
 
@@ -103,7 +105,7 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
                                                         rpaths,
                                                         frameworks,
                                                         framework_paths]))
-        include_dirs_flags = ["-I${%s}" % name for name in includedir_vars]
+        include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
             [include_dirs_flags,
@@ -111,15 +113,8 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
              cpp_info.cflags,
              ["-D%s" % d for d in cpp_info.defines]]))
 
-        if comp_requires_gennames:
-            if is_component:
-                pkg_config_names = comp_requires_gennames
-            else:
-                pkg_config_names = []
-                for public_dep in cpp_info.public_deps:
-                    name = self.deps_build_info[public_dep].get_name(PkgConfigGenerator.name)
-                    pkg_config_names.append(name)
-            public_deps = " ".join(pkg_config_names)
+        if requires_gennames:
+            public_deps = " ".join(requires_gennames)
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
@@ -135,23 +130,23 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
+    @staticmethod
+    def _generate_dir_lines(prefix_path, varname, dirs):
+        lines = []
+        varnames = []
+        for i, directory in enumerate(dirs):
+            directory = os.path.normpath(directory).replace("\\", "/")
+            name = varname if i == 0 else "%s%d" % (varname, (i + 1))
+            prefix = ""
+            if not os.path.isabs(directory):
+                prefix = "${prefix}/"
+            elif directory.startswith(prefix_path):
+                prefix = "${prefix}/"
+                directory = os.path.relpath(directory, prefix_path).replace("\\", "/")
+            lines.append("%s=%s%s" % (name, prefix, directory))
+            varnames.append(name)
+        return lines, varnames
+
 
 def _concat_if_not_empty(groups):
     return " ".join([param for group in groups for param in group if param and param.strip()])
-
-
-def _generate_dir_lines(prefix_path, varname, dirs):
-    lines = []
-    varnames = []
-    for i, directory in enumerate(dirs):
-        directory = os.path.normpath(directory).replace("\\", "/")
-        name = varname if i == 0 else "%s%d" % (varname, (i + 1))
-        prefix = ""
-        if not os.path.isabs(directory):
-            prefix = "${prefix}/"
-        elif directory.startswith(prefix_path):
-            prefix = "${prefix}/"
-            directory = os.path.relpath(directory, prefix_path)
-        lines.append("%s=%s%s" % (name, prefix, directory))
-        varnames.append(name)
-    return lines, varnames

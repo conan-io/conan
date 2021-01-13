@@ -4,18 +4,19 @@ import shutil
 import textwrap
 import time
 import unittest
-import zipfile
 
+import pytest
 import six
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
-from conans.client.rest.file_downloader import FileDownloader
+from conans.client.downloaders.file_downloader import FileDownloader
 from conans.errors import ConanException
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, StoppableThreadBottle
+from conans.test.utils.tools import TestClient, StoppableThreadBottle, zipdir
 from conans.util.files import load, mkdir, save, save_files, make_file_read_only
 
 win_profile = """[settings]
@@ -41,7 +42,7 @@ settings_yml = """os:
 arch: [x86, x86_64]
 """
 
-conan_conf = """
+cache_conan_conf = """
 [log]
 run_to_output = False       # environment CONAN_LOG_RUN_TO_OUTPUT
 level = 10                  # environment CONAN_LOGGING_LEVEL
@@ -70,17 +71,6 @@ config_install_interval = 5m
 """
 
 
-def zipdir(path, zipfilename):
-    with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
-        for root, _, files in os.walk(path):
-            for f in files:
-                file_path = os.path.join(root, f)
-                if file_path == zipfilename:
-                    continue
-                relpath = os.path.relpath(file_path, path)
-                z.write(file_path, relpath)
-
-
 class ConfigInstallTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
@@ -99,14 +89,14 @@ class ConfigInstallTest(unittest.TestCase):
                             "hooks/custom/custom.py": "#hook custom",
                             ".git/hooks/foo": "foo",
                             "hooks/.git/hooks/before_push": "before_push",
-                            "config/conan.conf": conan_conf,
+                            "config/conan.conf": cache_conan_conf,
                             "pylintrc": "#Custom pylint",
                             "python/myfuncs.py": myfuncpy,
                             "python/__init__.py": ""
                             })
         return folder
 
-    def config_hooks_test(self):
+    def test_config_hooks(self):
         # Make sure the conan.conf hooks information is appended
         folder = temp_folder(path_with_spaces=False)
         conan_conf = textwrap.dedent("""
@@ -133,6 +123,20 @@ class ConfigInstallTest(unittest.TestCase):
         self.assertEqual(1, content.count("foo"))
         self.assertEqual(1, content.count("custom/custom"))
 
+    def test_config_fails_no_storage(self):
+        folder = temp_folder(path_with_spaces=False)
+        save_files(folder, {"remotes.txt": remotes})
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+        conf = load(client.cache.conan_conf_path)
+        conf = conf.replace("path = ./data", "")
+        save(client.cache.conan_conf_path, conf)
+        client.run('config install "%s"' % folder)
+        client.run("remote list")
+        self.assertIn("myrepo1: https://myrepourl.net [Verify SSL: False]", client.out)
+        self.assertIn("my-repo-2: https://myrepo2.com [Verify SSL: True]", client.out)
+
     def _create_zip(self, zippath=None):
         folder = self._create_profile_folder()
         zippath = zippath or os.path.join(folder, "myconfig.zip")
@@ -142,15 +146,15 @@ class ConfigInstallTest(unittest.TestCase):
     def _check(self, params):
         typ, uri, verify, args = [p.strip() for p in params.split(",")]
         configs = json.loads(load(self.client.cache.config_install_file))
-        config = _ConfigOrigin(configs[0])
+        config = _ConfigOrigin(configs[-1])  # Check the last one
         self.assertEqual(config.type, typ)
         self.assertEqual(config.uri, uri)
         self.assertEqual(str(config.verify_ssl), verify)
         self.assertEqual(str(config.args), args)
         settings_path = self.client.cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
-        remotes = self.client.cache.registry.load_remotes()
-        self.assertEqual(list(remotes.values()), [
+        cache_remotes = self.client.cache.registry.load_remotes()
+        self.assertEqual(list(cache_remotes.values()), [
             Remote("myrepo1", "https://myrepourl.net", False, False),
             Remote("my-repo-2", "https://myrepo2.com", True, False),
         ])
@@ -190,7 +194,7 @@ class ConfigInstallTest(unittest.TestCase):
                                                      ".git")))
         self.assertFalse(os.path.exists(os.path.join(self.client.cache_folder, ".git")))
 
-    def reuse_python_test(self):
+    def test_reuse_python(self):
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
         conanfile = """from conans import ConanFile
@@ -205,25 +209,50 @@ class Pkg(ConanFile):
         self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
-    def test_install_file_test(self):
+    def test_install_file(self):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
-        for type in ["", "--type=file"]:
-            self.client.run('config install "%s" %s' % (zippath, type))
+        for filetype in ["", "--type=file"]:
+            self.client.run('config install "%s" %s' % (zippath, filetype))
             self._check("file, %s, True, None" % zippath)
             self.assertTrue(os.path.exists(zippath))
 
-    def test_install_dir_test(self):
+    def test_install_config_file(self):
+        """ should install from a settings and remotes file in configuration directory
+        """
+        import tempfile
+        profile_folder = self._create_profile_folder()
+        self.assertTrue(os.path.isdir(profile_folder))
+        src_setting_file = os.path.join(profile_folder, "settings.yml")
+        src_remote_file = os.path.join(profile_folder, "remotes.txt")
+
+        # Install profile_folder without settings.yml + remotes.txt in order to install them manually
+        tmp_dir = tempfile.mkdtemp()
+        dest_setting_file = os.path.join(tmp_dir, "settings.yml")
+        dest_remote_file = os.path.join(tmp_dir, "remotes.txt")
+        shutil.move(src_setting_file, dest_setting_file)
+        shutil.move(src_remote_file, dest_remote_file)
+        self.client.run('config install "%s"' % profile_folder)
+        shutil.move(dest_setting_file, src_setting_file)
+        shutil.move(dest_remote_file, src_remote_file)
+        shutil.rmtree(tmp_dir)
+
+        for cmd_option in ["", "--type=file"]:
+            self.client.run('config install "%s" %s' % (src_setting_file, cmd_option))
+            self.client.run('config install "%s" %s' % (src_remote_file, cmd_option))
+            self._check("file, %s, True, None" % src_remote_file)
+
+    def test_install_dir(self):
         """ should install from a dir in current dir
         """
         folder = self._create_profile_folder()
         self.assertTrue(os.path.isdir(folder))
-        for type in ["", "--type=dir"]:
-            self.client.run('config install "%s" %s' % (folder, type))
+        for dirtype in ["", "--type=dir"]:
+            self.client.run('config install "%s" %s' % (folder, dirtype))
             self._check("dir, %s, True, None" % folder)
 
-    def install_source_target_folders_test(self):
+    def test_install_source_target_folders(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
@@ -233,7 +262,7 @@ class Pkg(ConanFile):
         content = load(os.path.join(self.client.cache_folder, "newsubf/subf/file2.txt"))
         self.assertEqual(content, "bye")
 
-    def install_multiple_configs_test(self):
+    def test_install_multiple_configs(self):
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello",
                             "subf2/file2.txt": "bye"})
@@ -308,21 +337,21 @@ class Pkg(ConanFile):
         """ should install from a URL
         """
 
-        for type in ["", "--type=url"]:
-            def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
-                self._create_zip(filename)
+        for origin in ["", "--type=url"]:
+            def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+                self._create_zip(file_path)
 
             with patch.object(FileDownloader, 'download', new=my_download):
-                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
                 # repeat the process to check
-                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % type)
+                self.client.run("config install http://myfakeurl.com/myconf.zip %s" % origin)
                 self._check("url, http://myfakeurl.com/myconf.zip, True, None")
 
-    def install_change_only_verify_ssl_test(self):
-        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
-            self._create_zip(filename)
+    def test_install_change_only_verify_ssl(self):
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
@@ -332,13 +361,13 @@ class Pkg(ConanFile):
             self.client.run("config install http://myfakeurl.com/myconf.zip --verify-ssl=False")
             self._check("url, http://myfakeurl.com/myconf.zip, False, None")
 
-    def failed_install_repo_test(self):
+    def test_failed_install_repo(self):
         """ should install from a git repo
         """
         self.client.run('config install notexistingrepo.git', assert_error=True)
         self.assertIn("ERROR: Failed conan config install: Can't clone repo", self.client.out)
 
-    def failed_install_http_test(self):
+    def test_failed_install_http(self):
         """ should install from a http zip
         """
         self.client.run("config set general.retry_wait=0")
@@ -346,7 +375,8 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: Failed conan config install: "
                       "Error while installing config from httpnonexisting", self.client.out)
 
-    def install_repo_test(self):
+    @pytest.mark.tool_git
+    def test_install_repo(self):
         """ should install from a git repo
         """
 
@@ -362,7 +392,8 @@ class Pkg(ConanFile):
         check_path = os.path.join(folder, ".git")
         self._check("git, %s, True, None" % check_path)
 
-    def install_repo_relative_test(self):
+    @pytest.mark.tool_git
+    def test_install_repo_relative(self):
         relative_folder = "./config"
         absolute_folder = os.path.join(self.client.current_folder, "config")
         mkdir(absolute_folder)
@@ -377,7 +408,8 @@ class Pkg(ConanFile):
         self.client.run('config install "%s/.git"' % relative_folder)
         self._check("git, %s, True, None" % os.path.join("%s" % folder, ".git"))
 
-    def install_custom_args_test(self):
+    @pytest.mark.tool_git
+    def test_install_custom_args(self):
         """ should install from a git repo
         """
 
@@ -415,13 +447,13 @@ class Pkg(ConanFile):
         self.assertIn("Error downloading file httpnonexisting: 'Invalid URL 'httpnonexisting'",
                       client.out)
 
-    def reinstall_error_test(self):
+    def test_reinstall_error(self):
         """ should use configured URL in conan.conf
         """
         self.client.run("config install", assert_error=True)
         self.assertIn("Called config install without arguments", self.client.out)
 
-    def removed_credentials_from_url_unit_test(self):
+    def test_removed_credentials_from_url_unit(self):
         """
         Unit tests to remove credentials in netloc from url when using basic auth
         # https://github.com/conan-io/conan/issues/2324
@@ -450,7 +482,7 @@ class Pkg(ConanFile):
         # Check works with empty string
         self.assertEqual(_hide_password(''), '')
 
-    def remove_credentials_config_installer_test(self):
+    def test_remove_credentials_config_installer(self):
         """ Functional test to check credentials are not displayed in output but are still present
         in conan configuration
         # https://github.com/conan-io/conan/issues/2324
@@ -458,9 +490,9 @@ class Pkg(ConanFile):
         fake_url_with_credentials = "http://test_user:test_password@myfakeurl.com/myconf.zip"
         fake_url_hidden_password = "http://test_user:<hidden>@myfakeurl.com/myconf.zip"
 
-        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
+        def my_download(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertEqual(url, fake_url_with_credentials)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=my_download):
             self.client.run("config install %s" % fake_url_with_credentials)
@@ -472,16 +504,16 @@ class Pkg(ConanFile):
             # Check credentials still stored in configuration
             self._check("url, %s, True, None" % fake_url_with_credentials)
 
-    def ssl_verify_test(self):
+    def test_ssl_verify(self):
         fake_url = "https://fakeurl.com/myconf.zip"
 
-        def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
+        def download_verify_false(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertFalse(obj._verify_ssl)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
-        def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
+        def download_verify_true(obj, url, file_path, **kwargs):  # @UnusedVariable
             self.assertTrue(obj._verify_ssl)
-            self._create_zip(filename)
+            self._create_zip(file_path)
 
         with patch.object(FileDownloader, 'download', new=download_verify_false):
             self.client.run("config install %s --verify-ssl=False" % fake_url)
@@ -489,6 +521,7 @@ class Pkg(ConanFile):
         with patch.object(FileDownloader, 'download', new=download_verify_true):
             self.client.run("config install %s --verify-ssl=True" % fake_url)
 
+    @pytest.mark.tool_git
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
         with self.client.chdir(folder):
@@ -661,6 +694,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
                       self.client.out)
 
+    @pytest.mark.tool_git
     def test_config_install_remove_git_repo(self):
         """ config_install_interval must break when remote git has been removed
         """
@@ -686,6 +720,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
             self.client.run("config --help")
             self.assertIn("Repo cloned!", self.client.out)
 
+    @pytest.mark.tool_git
     def test_config_install_remove_config_repo(self):
         """ config_install_interval should not run when config list is empty
         """

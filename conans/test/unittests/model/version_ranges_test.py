@@ -6,7 +6,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class BasicMaxVersionTest(unittest.TestCase):
-    def prereleases_versions_test(self):
+    def test_prereleases_versions(self):
         output = TestBufferConanOutput()
         result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
         self.assertEqual(result, "1.1.111")
@@ -23,7 +23,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.3")
 
-    def loose_versions_test(self):
+    def test_loose_versions(self):
         output = []
         result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,loose=False", output)
         self.assertEqual(result, "4.2.2")
@@ -36,7 +36,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
 
-    def include_prerelease_versions_test(self):
+    def test_include_prerelease_versions(self):
         output = TestBufferConanOutput()
         result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.1,include_prerelease = True", output)
         self.assertEqual(result, "4.2.3-pre")
@@ -55,7 +55,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.0.1-pre"], "~1.0, include_prerelease=True", output)
         self.assertEqual(result, "1.0.1-pre")
 
-    def basic_test(self):
+    def test_basic(self):
         output = []
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
         self.assertEqual(result, "2.1")

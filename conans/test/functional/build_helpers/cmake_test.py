@@ -1,9 +1,12 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_cmake
 class CMakeBuildHelper(unittest.TestCase):
     def test_get_version_no_toolchain(self):
         client = TestClient()

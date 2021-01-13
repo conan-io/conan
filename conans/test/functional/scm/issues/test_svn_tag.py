@@ -3,15 +3,14 @@
 import os
 import textwrap
 
-from nose.plugins.attrib import attr
+import pytest
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, \
-    load
 from conans.test.utils.scm import SVNLocalRepoTestCase
+from conans.test.utils.tools import TestClient, load
 
 
-@attr('svn')
+@pytest.mark.tool_svn
 class SVNTaggedComponentTest(SVNLocalRepoTestCase):
     # Reproducing https://github.com/conan-io/conan/issues/5017
 

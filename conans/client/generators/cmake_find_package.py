@@ -194,9 +194,9 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
             if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
                 add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
-                set_target_properties({{ pkg_name }}::{{ pkg_name }} PROPERTIES INTERFACE_LINK_LIBRARIES
-                                      "{{ '${'+pkg_name+'_COMPONENTS}' }}")
             endif()
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY
+                         INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
 
     """))
@@ -224,11 +224,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         return ret
 
     def _get_components(self, pkg_name, cpp_info):
-        generator_components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name,
-                                                                                      cpp_info)
+        components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name, cpp_info)
         ret = []
-        for comp_genname, comp, comp_requires_gennames in generator_components:
-            deps_cpp_cmake = DepsCppCmake(comp)
+        for comp_genname, comp, comp_requires_gennames in components:
+            deps_cpp_cmake = DepsCppCmake(comp, self.name)
             deps_cpp_cmake.public_deps = " ".join(
                 ["{}::{}".format(*it) for it in comp_requires_gennames])
             ret.append((comp_genname, deps_cpp_cmake))
@@ -236,18 +235,25 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
     def _find_for_dep(self, pkg_name, pkg_findname, pkg_filename, cpp_info):
         # return the content of the FindXXX.cmake file for the package "pkg_name"
+        self._validate_components(cpp_info)
+
+        public_deps = self.get_public_deps(cpp_info)
+        deps_names = []
+        for it in public_deps:
+            name = "{}::{}".format(*self._get_require_name(*it))
+            if name not in deps_names:
+                deps_names.append(name)
+        deps_names = ';'.join(deps_names)
+        pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
+                                     public_deps]
+
         pkg_version = cpp_info.version
-        pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
-                                     for public_dep in cpp_info.public_deps]
-        pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
-                                 for public_dep in cpp_info.public_deps]
-        deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
         if cpp_info.components:
             components = self._get_components(pkg_name, cpp_info)
             # Note these are in reversed order, from more dependent to less dependent
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
-            pkg_info = DepsCppCmake(cpp_info)
+            pkg_info = DepsCppCmake(cpp_info, self.name)
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                              build_type_suffix="",
                                                              deps_names=deps_names)
@@ -277,14 +283,14 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 dep_cpp_info = extend(dep_cpp_info, build_type.lower())
 
             # The find_libraries_block, all variables for the package, and creation of targets
-            deps = DepsCppCmake(dep_cpp_info)
+            deps = DepsCppCmake(dep_cpp_info, self.name)
             find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
                                                           build_type_suffix="",
                                                           deps_names=deps_names)
 
             # The find_transitive_dependencies block
             find_dependencies_block = ""
-            if dep_cpp_info.public_deps:
+            if pkg_public_deps_filenames:
                 # Here we are generating FindXXX, so find_modules=True
                 f = find_transitive_dependencies(pkg_public_deps_filenames, find_modules=True)
                 # proper indentation

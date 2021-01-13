@@ -95,6 +95,8 @@ def detected_architecture():
         return "sparc"
     elif "aarch64" in machine:
         return "armv8"
+    elif "arm64" in machine:
+        return "armv8"
     elif "64" in machine:
         return "x86_64"
     elif "86" in machine:
@@ -109,6 +111,8 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
+    elif "e2k" in machine:
+        return OSInfo.get_e2k_architecture()
 
     return None
 
@@ -343,6 +347,21 @@ class OSInfo(object):
             return "x86_64" if kernel_bitness == "64bit" else "x86"
 
     @staticmethod
+    def get_e2k_architecture():
+        return {
+            "E1C+": "e2k-v4",  # Elbrus 1C+ and Elbrus 1CK
+            "E2C+": "e2k-v2",  # Elbrus 2CM
+            "E2C+DSP": "e2k-v2",  # Elbrus 2C+
+            "E2C3": "e2k-v6",  # Elbrus 2C3
+            "E2S": "e2k-v3",  # Elbrus 2S (aka Elbrus 4C)
+            "E8C": "e2k-v4",  # Elbrus 8C and Elbrus 8C1
+            "E8C2": "e2k-v5",  # Elbrus 8C2 (aka Elbrus 8CB)
+            "E12C": "e2k-v6",  # Elbrus 12C
+            "E16C": "e2k-v6",  # Elbrus 16C
+            "E32C": "e2k-v7",  # Elbrus 32C
+        }.get(platform.processor())
+
+    @staticmethod
     def get_freebsd_version():
         return platform.release().split("-")[0]
 
@@ -459,7 +478,9 @@ def cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=Fa
     build_os, build_arch, host_os, host_arch = ret
 
     if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
-            host_arch is not None and (build_arch == "x86_64") and (host_arch == "x86"):
+            host_arch is not None and ((build_arch == "x86_64") and (host_arch == "x86") or
+                                       (build_arch == "sparcv9") and (host_arch == "sparc") or
+                                       (build_arch == "ppc64") and (host_arch == "ppc32")):
         return False
 
     if host_os is not None and (build_os != host_os):
@@ -537,6 +558,9 @@ def get_gnu_triplet(os_, arch, compiler=None):
             machine = "s390-ibm"
         elif "sh4" in arch:
             machine = "sh4"
+        elif "e2k" in arch:
+            # https://lists.gnu.org/archive/html/config-patches/2015-03/msg00000.html
+            machine = "e2k-unknown"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "

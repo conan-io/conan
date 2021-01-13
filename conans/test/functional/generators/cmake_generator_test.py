@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans import tools
 from conans.client.runner import ConanRunner
 from conans.test.utils.tools import TestClient
@@ -40,6 +42,7 @@ os_build={os_build}
 """
 
 
+@pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
     def _check_build_generator(self, os_build, generator):
@@ -61,14 +64,14 @@ class CMakeGeneratorTest(unittest.TestCase):
             self.assertNotIn("cmake -G", output)
             self.assertFalse(os.path.isfile(os.path.join(client.current_folder, "Makefile")))
 
-    @unittest.skipUnless(tools.os_info.is_linux, "Compilation with real gcc needed")
+    @pytest.mark.skipif(not tools.os_info.is_linux, reason="Compilation with real gcc needed")
     def test_cmake_default_generator_linux(self):
         self._check_build_generator("Linux", "Unix Makefiles")
 
-    @unittest.skipUnless(tools.os_info.is_windows, "Windows does not support default compiler")
+    @pytest.mark.skipif(not tools.os_info.is_windows, reason="Windows does not support default compiler")
     def test_cmake_default_generator_windows(self):
         self._check_build_generator("Windows", None)
 
-    @unittest.skipUnless(tools.os_info.is_macos, "Compilation with real clang is needed")
+    @pytest.mark.skipif(not tools.os_info.is_macos, reason="Compilation with real clang is needed")
     def test_cmake_default_generator_osx(self):
         self._check_build_generator("Macos", "Unix Makefiles")

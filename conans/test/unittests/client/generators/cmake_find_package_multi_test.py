@@ -11,7 +11,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class CMakeFindPackageMultiTest(unittest.TestCase):
 
-    def cmake_find_package_multi_version_test(self):
+    def test_cmake_find_package_multi_version(self):
         # https://github.com/conan-io/conan/issues/6908
         settings_mock = _MockSettings(build_type="Debug")
         conanfile = ConanFile(TestBufferConanOutput(), None)
@@ -24,5 +24,5 @@ class CMakeFindPackageMultiTest(unittest.TestCase):
 
         generator = CMakeFindPackageMultiGenerator(conanfile)
         content = generator.content
-        config_version = content["my_pkgConfigVersion.cmake"]
+        config_version = content["my_pkg-config-version.cmake"]
         self.assertIn('set(PACKAGE_VERSION "0.1")', config_version)

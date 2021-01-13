@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -8,10 +9,12 @@ from conans.client.generators.cmake_find_package_common import (find_transitive_
                                                                 target_template,
                                                                 CMakeFindPackageCommonMacros)
 from conans.client.generators.cmake_multi import extend
+from conans.util.files import save
 
 
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
+
     config_template = textwrap.dedent("""
         {macros_and_functions}
 
@@ -40,33 +43,31 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         endforeach()
         """)
 
-    target_properties = """
+    # This template takes the "name" of the target name::name and configs = ["Release", "Debug"..]
+    target_properties = Template("""
 # Assign target properties
-set_property(TARGET {name}::{name}
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
-                 $<$<CONFIG:Release>:${{{name}_LIBRARIES_TARGETS_RELEASE}} ${{{name}_LINKER_FLAGS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_LIBRARIES_TARGETS_RELWITHDEBINFO}} ${{{name}_LINKER_FLAGS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_LIBRARIES_TARGETS_MINSIZEREL}} ${{{name}_LINKER_FLAGS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_LIBRARIES_TARGETS_DEBUG}} ${{{name}_LINKER_FLAGS_DEBUG_LIST}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
+                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                 $<$<CONFIG:Release>:${{{name}_INCLUDE_DIRS_RELEASE}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_INCLUDE_DIRS_RELWITHDEBINFO}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_INCLUDE_DIRS_MINSIZEREL}}>
-                 $<$<CONFIG:Debug>:${{{name}_INCLUDE_DIRS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                 $<$<CONFIG:Release>:${{{name}_COMPILE_DEFINITIONS_RELEASE}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_DEFINITIONS_RELWITHDEBINFO}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_DEFINITIONS_MINSIZEREL}}>
-                 $<$<CONFIG:Debug>:${{{name}_COMPILE_DEFINITIONS_DEBUG}}>)
-set_property(TARGET {name}::{name}
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>
+             {%- endfor %})
+set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-                 $<$<CONFIG:Release>:${{{name}_COMPILE_OPTIONS_RELEASE_LIST}}>
-                 $<$<CONFIG:RelWithDebInfo>:${{{name}_COMPILE_OPTIONS_RELWITHDEBINFO_LIST}}>
-                 $<$<CONFIG:MinSizeRel>:${{{name}_COMPILE_OPTIONS_MINSIZEREL_LIST}}>
-                 $<$<CONFIG:Debug>:${{{name}_COMPILE_OPTIONS_DEBUG_LIST}}>)
-    """
+             {%- for config in configs %}
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
+             {%- endfor %})
+    """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
     config_version_template = textwrap.dedent("""
@@ -218,38 +219,31 @@ set_property(TARGET {name}::{name}
 
         ########## TARGETS PROPERTIES ###############################################################
         #############################################################################################
-
+        {%- macro tvalue(pkg_name, comp_name, var, config) -%}
+        {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
+        {%- endmacro -%}
         {%- for comp_name, comp in components %}
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELEASE}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELEASE}' }}>
-                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_RELWITHDEBINFO}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_RELWITHDEBINFO}' }}>
-                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_MINSIZEREL}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_MINSIZEREL}' }}>
-                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_LINK_LIBS_DEBUG}' }} {{ '${'+pkg_name+'_'+comp_name+'_LINKER_FLAGS_LIST_DEBUG}' }}>)
+                     {%- for config in configs %}
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
+                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS_LIST', config)}}>
+                     {%- endfor %})
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELEASE}' }}>
-                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_RELWITHDEBINFO}' }}>
-                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_MINSIZEREL}' }}>
-                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_INCLUDE_DIRS_DEBUG}' }}>)
+                     {%- for config in configs %}
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config)}}>
+                     {%- endfor %})
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                         $<$<CONFIG:Release>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELEASE}' }}>
-                         $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_RELWITHDEBINFO}' }}>
-                         $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_MINSIZEREL}' }}>
-                         $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_'+comp_name+'_COMPILE_DEFINITIONS_DEBUG}' }}>)
+                     {%- for config in configs %}
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config)}}>
+                     {%- endfor %})
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                         $<$<CONFIG:Release>:
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELEASE}' }}
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELEASE}' }}>
-                         $<$<CONFIG:RelWithDebInfo>:
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_RELWITHDEBINFO}' }}
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_RELWITHDEBINFO}' }}>
-                         $<$<CONFIG:MinSizeRel>:
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_MINSIZEREL}' }}
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_MINSIZEREL}' }}>
-                         $<$<CONFIG:Debug>:
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_C_DEBUG}' }}
-                             {{ '${'+pkg_name+'_'+comp_name+'_COMPILE_OPTIONS_CXX_DEBUG}' }}>)
+                     {%- for config in configs %}
+                     $<$<CONFIG:{{config}}>:
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config)}}
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', config)}}>
+                     {%- endfor %})
         set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}
@@ -257,13 +251,25 @@ set_property(TARGET {name}::{name}
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                             $<$<CONFIG:Release>:{{ '${'+pkg_name+'_COMPONENTS_RELEASE}' }}>
-                             $<$<CONFIG:RelWithDebInfo>:{{ '${'+pkg_name+'_COMPONENTS_RELWITHDEBINFO}' }}>
-                             $<$<CONFIG:MinSizeRel>:{{ '${'+pkg_name+'_COMPONENTS_MINSIZEREL}' }}>
-                             $<$<CONFIG:Debug>:{{ '${'+pkg_name+'_COMPONENTS_DEBUG}' }}>)
+            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                         {%- for config in configs %}
+                         $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
+                         {%- endfor %})
         endif()
         """))
+
+    def __init__(self, conanfile):
+        super(CMakeFindPackageMultiGenerator, self).__init__(conanfile)
+        self.configuration = str(self.conanfile.settings.build_type)
+        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
+        # FIXME: Ugly way to define the output path
+        self.output_path = os.getcwd()
+
+    def generate(self):
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.join(self.output_path, generator_file)
+            save(generator_file, content)
 
     @property
     def filename(self):
@@ -273,45 +279,44 @@ set_property(TARGET {name}::{name}
     def content(self):
         ret = {}
         build_type = str(self.conanfile.settings.build_type).upper()
-        build_type_suffix = "_{}".format(build_type) if build_type else ""
+        build_type_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
+            self._validate_components(cpp_info)
             pkg_filename = self._get_filename(cpp_info)
             pkg_findname = self._get_name(cpp_info)
             pkg_version = cpp_info.version
-            pkg_public_deps_names = [self._get_name(self.deps_build_info[public_dep])
-                                     for public_dep in cpp_info.public_deps]
-            pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[public_dep])
-                                         for public_dep in cpp_info.public_deps]
-            ret["{}ConfigVersion.cmake".format(pkg_filename)] = self.config_version_template. \
-                format(version=pkg_version)
+
+            public_deps = self.get_public_deps(cpp_info)
+            deps_names = []
+            for it in public_deps:
+                name = "{}::{}".format(*self._get_require_name(*it))
+                if name not in deps_names:
+                    deps_names.append(name)
+            deps_names = ';'.join(deps_names)
+            pkg_public_deps_filenames = [self._get_filename(self.deps_build_info[it[0]]) for it in
+                                         public_deps]
+            config_version = self.config_version_template.format(version=pkg_version)
+            ret[self._config_version_filename(pkg_filename)] = config_version
             if not cpp_info.components:
-                public_deps_names = [
-                    {
-                      "name": self.deps_build_info[dep].get_name("cmake_find_package_multi"),
-                      "filename": self.deps_build_info[dep].get_filename("cmake_find_package_multi")
-                    }
-                    for dep in cpp_info.public_deps
-                ]
-                ret["{}Config.cmake".format(pkg_filename)] = self._config(
+                ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
                     version=cpp_info.version,
                     public_deps_names=pkg_public_deps_filenames
                 )
-                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(filename=pkg_filename, name=pkg_findname)
+                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
+                    filename=pkg_filename, name=pkg_findname)
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
-                deps = DepsCppCmake(dep_cpp_info)
-                deps_names = ";".join(["{n}::{n}".format(n=n['name']) for n in public_deps_names])
+                deps = DepsCppCmake(dep_cpp_info, self.name)
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
-                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
+                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
-                pkg_info = DepsCppCmake(cpp_info)
-                deps_names = ";".join(["{n}::{n}".format(n=n) for n in pkg_public_deps_names])
+                pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
@@ -341,10 +346,23 @@ set_property(TARGET {name}::{name}
                     pkg_filename=pkg_filename,
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
-                    conan_message=CMakeFindPackageCommonMacros.conan_message
+                    conan_message=CMakeFindPackageCommonMacros.conan_message,
+                    configs=self.configurations
                 )
-                ret["{}Config.cmake".format(pkg_filename)] = target_config
+                ret[self._config_filename(pkg_filename)] = target_config
         return ret
+
+    def _config_filename(self, pkg_filename):
+        if pkg_filename == pkg_filename.lower():
+            return "{}-config.cmake".format(pkg_filename)
+        else:
+            return "{}Config.cmake".format(pkg_filename)
+
+    def _config_version_filename(self, pkg_filename):
+        if pkg_filename == pkg_filename.lower():
+            return "{}-config-version.cmake".format(pkg_filename)
+        else:
+            return "{}ConfigVersion.cmake".format(pkg_filename)
 
     def _config(self, filename, name, version, public_deps_names):
         # Builds the XXXConfig.cmake file for one package
@@ -357,8 +375,7 @@ set_property(TARGET {name}::{name}
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.format(name=name)
-
+        targets_props = self.target_properties.render(name=name, configs=self.configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:

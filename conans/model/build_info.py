@@ -35,6 +35,62 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class BuildModulesDict(dict):
+    """
+    A dictionary with append and extend for cmake build modules to keep it backwards compatible
+    with the list interface
+    """
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(BuildModulesDict, self).__setitem__(key, list())
+        return super(BuildModulesDict, self).__getitem__(key)
+
+    def _append(self, item):
+        if item.endswith(".cmake"):
+            self["cmake"].append(item)
+            self["cmake_multi"].append(item)
+            self["cmake_find_package"].append(item)
+            self["cmake_find_package_multi"].append(item)
+
+    def append(self, item):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
+                          'instead'.format(item=item))
+        self._append(item)
+
+    def extend(self, items):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
+                          "instead".format(items=items))
+        for item in items:
+            self._append(item)
+
+    @classmethod
+    def from_list(cls, build_modules):
+        the_dict = BuildModulesDict()
+        the_dict.extend(build_modules)
+        return the_dict
+
+
+def dict_to_abs_paths(the_dict, rootpath):
+    new_dict = {}
+    for generator, values in the_dict.items():
+        new_dict[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
+                               for p in values]
+    return new_dict
+
+
+def merge_dicts(d1, d2):
+    def merge_lists(seq1, seq2):
+        return [s for s in seq1 if s not in seq2] + seq2
+    result = d1.copy()
+    for k, v in d2.items():
+        if k not in d1.keys():
+            result[k] = v
+        else:
+            result[k] = merge_lists(d1[k], d2[k])
+    return result
+
+
 class _CppInfo(object):
     """ Object that stores all the necessary information to build in C/C++.
     It is intended to be system independent, translation to
@@ -60,10 +116,11 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = []
+        self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
+        self.requires = []
         self._build_modules_paths = None
         self._include_paths = None
         self._lib_paths = None
@@ -88,8 +145,12 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                                  "{the_list}' instead".format(the_list=self.build_modules))
+                self.build_modules = BuildModulesDict.from_list(self.build_modules)
+            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
+            self._build_modules_paths = tmp
         return self._build_modules_paths
 
     @property
@@ -241,54 +302,77 @@ class CppInfo(_CppInfo):
         return self._configs.setdefault(config, _get_cpp_info())
 
     def _raise_incorrect_components_definition(self, package_name, package_requires):
-        if not self.components:
+        if not self.components and not self.requires:
             return
+
         # Raise if mixing components
-        if (self.includedirs != [DEFAULT_INCLUDE] or
-            self.libdirs != [DEFAULT_LIB] or
-            self.bindirs != [DEFAULT_BIN] or
-            self.resdirs != [DEFAULT_RES] or
-            self.builddirs != [DEFAULT_BUILD] or
-            self.frameworkdirs != [DEFAULT_FRAMEWORK] or
-            self.libs or
-            self.system_libs or
-            self.frameworks or
-            self.defines or
-            self.cflags or
-            self.cxxflags or
-            self.sharedlinkflags or
-            self.exelinkflags or
-            self.build_modules):
+        if self.components and \
+            (self.includedirs != [DEFAULT_INCLUDE] or
+             self.libdirs != [DEFAULT_LIB] or
+             self.bindirs != [DEFAULT_BIN] or
+             self.resdirs != [DEFAULT_RES] or
+             self.builddirs != [DEFAULT_BUILD] or
+             self.frameworkdirs != [DEFAULT_FRAMEWORK] or
+             self.libs or
+             self.system_libs or
+             self.frameworks or
+             self.defines or
+             self.cflags or
+             self.cxxflags or
+             self.sharedlinkflags or
+             self.exelinkflags or
+             self.build_modules or
+             self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
         if self._configs:
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info configs"
                                  " (release/debug/...) at the same time")
 
-        # Raise on component name
-        for comp_name, comp in self.components.items():
-            if comp_name == package_name:
-                raise ConanException("Component name cannot be the same as the package name: '%s'"
-                                     % comp_name)
-
-        # check that requires are used in components and check that components exists in requires
-        comp_requires = set()
-        for comp_name, comp in self.components.items():
-            for comp_require in comp.requires:
-                if COMPONENT_SCOPE in comp_require:
-                    comp_requires.add(
-                        comp_require[:comp_require.find(COMPONENT_SCOPE)])
         pkg_requires = [require.ref.name for require in package_requires.values()]
-        # Raise on components requires without package requires
-        for pkg_require in pkg_requires:
-            if pkg_require not in comp_requires:
-                raise ConanException("Package require '%s' not used in components requires"
-                                     % pkg_require)
-        # Raise on components requires requiring inexistent package requires
-        for comp_require in comp_requires:
-            if comp_require not in pkg_requires:
-                raise ConanException("Package require '%s' declared in components requires "
-                                     "but not defined as a recipe requirement" % comp_require)
+
+        def _check_components_requires_instersection(comp_requires):
+            reqs = [it.split(COMPONENT_SCOPE)[0] for it in comp_requires if COMPONENT_SCOPE in it]
+            # Raise on components requires without package requires
+            for pkg_require in pkg_requires:
+                if package_requires[pkg_require].private or package_requires[pkg_require].override:
+                    # Not standard requires, skip
+                    continue
+                if pkg_require not in reqs:
+                    raise ConanException("Package require '%s' not used in components requires"
+                                         % pkg_require)
+            # Raise on components requires requiring inexistent package requires
+            for comp_require in reqs:
+                reason = None
+                if comp_require not in pkg_requires:
+                    reason = "not defined as a recipe requirement"
+                elif package_requires[comp_require].private and package_requires[comp_require].override:
+                    reason = "it was defined as an overridden private recipe requirement"
+                elif package_requires[comp_require].private:
+                    reason = "it was defined as a private recipe requirement"
+                elif package_requires[comp_require].override:
+                    reason = "it was defined as an overridden recipe requirement"
+
+                if reason is not None:
+                    raise ConanException("Package require '%s' declared in components requires "
+                                         "but %s" % (comp_require, reason))
+
+        if self.components:
+            # Raise on component name
+            for comp_name, comp in self.components.items():
+                if comp_name == package_name:
+                    raise ConanException(
+                        "Component name cannot be the same as the package name: '%s'"
+                        % comp_name)
+
+            # check that requires are used in components and check that components exists in requires
+            requires_from_components = set()
+            for comp_name, comp in self.components.items():
+                requires_from_components.update(comp.requires)
+
+            _check_components_requires_instersection(requires_from_components)
+        else:
+            _check_components_requires_instersection(self.requires)
 
 
 class _BaseDepsCppInfo(_CppInfo):
@@ -296,6 +380,7 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
+
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
@@ -309,7 +394,8 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
         # Note these are in reverse order
@@ -367,6 +453,7 @@ class DepCppInfo(object):
         self._cflags = None
         self._sharedlinkflags = None
         self._exelinkflags = None
+        self._requires = None
 
         self._include_paths = None
         self._lib_paths = None
@@ -375,7 +462,7 @@ class DepCppInfo(object):
         self._res_paths = None
         self._src_paths = None
         self._framework_paths = None
-        self._build_module_paths = None
+        self._build_modules_paths = None
         self._sorted_components = None
         self._check_component_requires()
 
@@ -462,7 +549,14 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules")
+        if self._build_modules_paths is not None:
+            return self._build_modules_paths
+        paths = self._cpp_info.build_modules_paths
+        if self._cpp_info.components:
+            for component in self._get_sorted_components().values():
+                paths = merge_dicts(paths, component.build_modules_paths)
+        self._build_modules_paths = paths
+        return self._build_modules_paths
 
     @property
     def include_paths(self):
@@ -523,6 +617,10 @@ class DepCppInfo(object):
     @property
     def exelinkflags(self):
         return self._aggregated_values("exelinkflags")
+
+    @property
+    def requires(self):
+        return self._aggregated_values("requires")
 
 
 class DepsCppInfo(_BaseDepsCppInfo):

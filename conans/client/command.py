@@ -280,7 +280,7 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
-                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
+                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='pkg/version@user/channel of the package to be tested')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -473,6 +473,8 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+        parser.add_argument("--lockfile-node-id", action=OnceArgument,
+                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
@@ -525,7 +527,8 @@ class Command(object):
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
-                                                     lockfile_out=args.lockfile_out)
+                                                     lockfile_out=args.lockfile_out,
+                                                     lockfile_node_id=args.lockfile_node_id)
 
         except ConanException as exc:
             info = exc.info
@@ -559,7 +562,7 @@ class Command(object):
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local folder or zip file (local or "
+                                       help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
@@ -629,7 +632,8 @@ class Command(object):
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
-                             "required", "date", "author", "description", "None"]
+                             "required", "date", "author", "description", "provides", "deprecated",
+                             "None"]
         path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
         str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
@@ -1034,8 +1038,9 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", nargs='?', default=None,
-                            help="user/channel, or Pkg/version@user/channel (if name "
-                                 "and version are not declared in the conanfile.py")
+                            help="user/channel, Pkg/version@user/channel (if name "
+                                 "and version are not declared in the conanfile.py) "
+                                 "Pkg/version@ if user/channel is not relevant.")
         parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
                             help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
@@ -1259,6 +1264,7 @@ class Command(object):
     def search(self, *args):
         """
         Searches package recipes and binaries in the local cache or a remote.
+        Unless a remote is specified only the local cache is searched.
 
         If you provide a pattern, then it will search for existing package
         recipes matching it.  If a full reference is provided
@@ -1422,8 +1428,10 @@ class Command(object):
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the upload information will be written to')
         parser.add_argument("--parallel", action='store_true', default=False,
-                            help='Upload files in parallel using multiple threads '
-                                 'The default number of launched threads is 8')
+                            help='Upload files in parallel using multiple threads. '
+                                 'The default number of launched threads is set to the value of '
+                                 'cpu_count and can be configured using the CONAN_CPU_COUNT '
+                                 'environment variable or defining cpu_count in conan.conf')
 
         args = parser.parse_args(*args)
 
@@ -1526,8 +1534,10 @@ class Command(object):
         parser_rename.add_argument('remote', help='The old remote name')
         parser_rename.add_argument('new_remote', help='The new remote name')
 
-        subparsers.add_parser('list_ref',
-                              help='List the package recipes and its associated remotes')
+        parser_list_ref = subparsers.add_parser('list_ref', help='List the package recipes '
+                                                                 'and its associated remotes')
+        parser_list_ref.add_argument("--no-remote", action='store_true', default=False,
+                                     help='List the ones without remote')
         parser_padd = subparsers.add_parser('add_ref',
                                             help="Associate a recipe's reference to a remote")
         parser_padd.add_argument('reference', help='Package recipe reference')
@@ -1543,6 +1553,8 @@ class Command(object):
         list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
                                                             'its associated remotes')
         list_pref.add_argument('reference', help='Package recipe reference')
+        list_pref.add_argument("--no-remote", action='store_true', default=False,
+                               help='List the ones without remote')
 
         add_pref = subparsers.add_parser('add_pref',
                                          help="Associate a package reference to a remote")
@@ -1589,7 +1601,7 @@ class Command(object):
         elif args.subcommand == "update":
             return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
-            refs = self._conan.remote_list_ref()
+            refs = self._conan.remote_list_ref(args.no_remote)
             self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
             return self._conan.remote_add_ref(reference, remote_name)
@@ -1598,7 +1610,7 @@ class Command(object):
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
-            refs = self._conan.remote_list_pref(reference)
+            refs = self._conan.remote_list_pref(reference, args.no_remote)
             self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)

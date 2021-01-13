@@ -3,7 +3,6 @@ import shutil
 
 from conans import DEFAULT_REVISION_V1
 from conans.client import migrations_settings
-from conans.client.cache.cache import CONAN_CONF, PROFILES_FOLDER
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import migrate_registry_file
 from conans.client.conf.config_installer import _ConfigOrigin, _save_configs
@@ -14,8 +13,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
-from conans.paths import CONANFILE
-from conans.paths import EXPORT_SOURCES_DIR_OLD
+from conans.paths import CONANFILE, EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.paths import PACKAGE_METADATA
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, save
@@ -24,14 +22,13 @@ from conans.util.files import list_folder_subdirs, load, save
 class ClientMigrator(Migrator):
 
     def __init__(self, cache_folder, current_version, out):
-        self.cache = ClientCache(cache_folder, out)
-        super(ClientMigrator, self).__init__(self.cache.cache_folder, self.cache.store,
-                                             current_version, out)
+        self.cache_folder = cache_folder
+        super(ClientMigrator, self).__init__(cache_folder, current_version, out)
 
-    def _update_settings_yml(self, old_version):
+    def _update_settings_yml(self, cache, old_version):
 
         from conans.client.conf import get_default_settings_yml
-        settings_path = self.cache.settings_path
+        settings_path = cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
             self.out.warn("Nothing to migrate here, settings will be generated automatically")
@@ -40,7 +37,7 @@ class ClientMigrator(Migrator):
         var_name = "settings_{}".format(old_version.replace(".", "_"))
 
         def save_new():
-            new_path = self.cache.settings_path + ".new"
+            new_path = cache.settings_path + ".new"
             save(new_path, get_default_settings_yml())
             self.out.warn("*" * 40)
             self.out.warn("settings.yml is locally modified, can't be updated")
@@ -51,11 +48,11 @@ class ClientMigrator(Migrator):
         if hasattr(migrations_settings, var_name):
             version_default_contents = getattr(migrations_settings, var_name)
             if version_default_contents != get_default_settings_yml():
-                current_settings = load(self.cache.settings_path)
+                current_settings = load(cache.settings_path)
                 if current_settings != version_default_contents:
                     save_new()
                 else:
-                    save(self.cache.settings_path, get_default_settings_yml())
+                    save(cache.settings_path, get_default_settings_yml())
             else:
                 self.out.info("Migration: Settings already up to date")
         else:
@@ -69,46 +66,36 @@ class ClientMigrator(Migrator):
             return
 
         # Migrate the settings if they were the default for that version
-        self._update_settings_yml(old_version)
-
-        if old_version < Version("0.25"):
-            from conans.paths import DEFAULT_PROFILE_NAME
-            default_profile_path = os.path.join(self.cache.cache_folder, PROFILES_FOLDER,
-                                                DEFAULT_PROFILE_NAME)
-            if not os.path.exists(default_profile_path):
-                self.out.warn("Migration: Moving default settings from %s file to %s"
-                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-                conf_path = os.path.join(self.cache.cache_folder, CONAN_CONF)
-
-                migrate_to_default_profile(conf_path, default_profile_path)
-
-                self.out.warn("Migration: export_source cache new layout")
-                migrate_c_src_export_source(self.cache, self.out)
+        cache = ClientCache(self.cache_folder, self.out)
+        self._update_settings_yml(cache, old_version)
 
         if old_version < Version("1.0"):
-            _migrate_lock_files(self.cache, self.out)
+            _migrate_lock_files(cache, self.out)
 
         if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(self.cache)
+            migrate_plugins_to_hooks(cache)
 
         if old_version < Version("1.13.0"):
             # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
-            _migrate_create_metadata(self.cache, self.out)
+            _migrate_create_metadata(cache, self.out)
 
         if old_version < Version("1.14.0"):
-            migrate_config_install(self.cache)
+            migrate_config_install(cache)
 
         if old_version < Version("1.14.2"):
-            _migrate_full_metadata(self.cache, self.out)
+            _migrate_full_metadata(cache, self.out)
 
         if old_version < Version("1.15.0"):
-            migrate_registry_file(self.cache, self.out)
+            migrate_registry_file(cache, self.out)
 
         if old_version < Version("1.19.0"):
-            migrate_localdb_refresh_token(self.cache, self.out)
+            migrate_localdb_refresh_token(cache, self.out)
 
         if old_version < Version("1.26.0"):
-            migrate_editables_use_conanfile_name(self.cache, self.out)
+            migrate_editables_use_conanfile_name(cache)
+
+        if old_version < Version("1.31.0"):
+            migrate_tgz_location(cache, self.out)
 
 
 def _get_refs(cache):
@@ -122,12 +109,31 @@ def _get_prefs(layout):
     return [PackageReference(layout.ref, s) for s in folders]
 
 
+def migrate_tgz_location(cache, out):
+    """ In Conan 1.31, the temporary .tgz are no longer stored in the content folders. In case
+    they are found there, they can be removed, and the next time they are needed (upload), they
+    will be compressed again
+    """
+    out.info("Removing temporary .tgz files, they are stored in a different location now")
+    refs = _get_refs(cache)
+    for ref in refs:
+        try:
+            base_folder = os.path.normpath(os.path.join(cache.store, ref.dir_repr()))
+            for d, _, fs in os.walk(base_folder):
+                for f in fs:
+                    if f in (EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME):
+                        tgz_file = os.path.join(d, f)
+                        os.remove(tgz_file)
+        except Exception as e:
+            raise ConanException("Something went wrong while removing temporary .tgz files "
+                                 "in the cache, please try to fix the issue or wipe the cache: {}"
+                                 ":{}".format(ref, e))
+
+
 def migrate_localdb_refresh_token(cache, out):
-    from conans.client.store.localdb import LocalDB
     from sqlite3 import OperationalError
 
-    localdb = LocalDB.create(cache.localdb)
-    with localdb._connect() as connection:
+    with cache.localdb._connect() as connection:
         try:
             statement = connection.cursor()
             statement.execute("ALTER TABLE users_remotes ADD refresh_token TEXT;")
@@ -287,20 +293,6 @@ def migrate_to_default_profile(conf_path, default_profile_path):
         save(default_profile_path, new_profile)
 
 
-def migrate_c_src_export_source(cache, out):
-    package_folders = list_folder_subdirs(cache.store, 4)
-    for package in package_folders:
-        package_folder = os.path.join(cache.store, package)
-        c_src = os.path.join(package_folder, "export/%s" % EXPORT_SOURCES_DIR_OLD)
-        if os.path.exists(c_src):
-            out.warn("Migration: Removing package with old export_sources layout: %s" % package)
-            try:
-                shutil.rmtree(package_folder)
-            except Exception:
-                out.warn("Migration: Can't remove the '%s' directory, "
-                         "remove it manually" % package_folder)
-
-
 def migrate_plugins_to_hooks(cache, output=None):
     plugins_path = os.path.join(cache.cache_folder, "plugins")
     if os.path.exists(plugins_path) and not os.path.exists(cache.hooks_path):
@@ -309,7 +301,7 @@ def migrate_plugins_to_hooks(cache, output=None):
     replace_in_file(conf_path, "[plugins]", "[hooks]", strict=False, output=output)
 
 
-def migrate_editables_use_conanfile_name(cache, output=None):
+def migrate_editables_use_conanfile_name(cache):
     """
     In Conan v1.26 we store full path to the conanfile in the editable_package.json file, before
     it Conan was storing just the directory and assume that the 'conanfile' was a file
