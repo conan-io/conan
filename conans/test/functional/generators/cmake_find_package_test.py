@@ -53,7 +53,7 @@ class TestCMakeFindPackageGenerator:
             add_library(otherhello INTERFACE IMPORTED)
             target_link_libraries(otherhello INTERFACE {target_name})
             """).format(target_name="namespace::comp" if use_components else "hello::hello")
-        conanfile = conanfile % textwrap.indent(info, "        ")
+        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
 
