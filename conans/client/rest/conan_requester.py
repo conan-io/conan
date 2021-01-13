@@ -5,6 +5,8 @@ import platform
 import time
 import warnings
 
+import http
+import urllib3
 import requests
 from requests.adapters import HTTPAdapter
 
@@ -25,7 +27,8 @@ class ConanRequester(object):
             self._http_requester = http_requester
         else:
             self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=config.retry)
+            adapter = HTTPAdapter(max_retries=self._get_retries(config.retry, config.retry_wait))
+
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
 
@@ -60,6 +63,20 @@ class ConanRequester(object):
                                              self._client_cert_key_path)
             else:
                 self._client_certificates = self._client_cert_path
+
+    def _get_retries(self, retry, retry_wait):
+        retry = retry if retry is not None else 2
+        retry_wait = retry_wait if retry_wait is not None else 5
+        retry_status_code_set = set()
+        for status in http.HTTPStatus:
+            code = int(status)
+            if code // 100 == 5:
+                retry_status_code_set.add(code)
+        return urllib3.Retry(
+            total=retry,
+            backoff_factor=(retry * retry_wait) / (2**(retry-1)),
+            status_forcelist=retry_status_code_set
+        )
 
     def _should_skip_proxy(self, url):
         for entry in self._no_proxy_match:
