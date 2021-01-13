@@ -272,13 +272,16 @@ endforeach()
         ########## BUILD MODULES ####################################################################
         #############################################################################################
 
-        ########## GLOBAL BUILD MODULES #############################################################
+        {%- for comp_name, comp in components %}
+
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
 
         {%- for config in configs %}
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
             include(${_BUILD_MODULE_PATH})
         endforeach()
+        {%- endfor %}
 
         {%- endfor %}
         """))

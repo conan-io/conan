@@ -40,8 +40,8 @@ class TestCMakeFindPackageMultiGenerator:
             info = textwrap.dedent("""\
                 self.cpp_info.name = "namespace"
                 self.cpp_info.filenames["cmake_find_package_multi"] = "hello"
-                self.cpp_info.components["comp"].libs = ["hello"]
-                self.cpp_info.components["comp"].build_modules["cmake_find_package_multi"].append(
+                self.cpp_info.components["hello"].libs = ["hello"]
+                self.cpp_info.components["hello"].build_modules["cmake_find_package_multi"].append(
                 module)
                 """)
         else:
@@ -52,7 +52,7 @@ class TestCMakeFindPackageMultiGenerator:
         target_alias = textwrap.dedent("""
             add_library(otherhello INTERFACE IMPORTED)
             target_link_libraries(otherhello INTERFACE {target_name})
-            """).format(target_name="namespace::hello" if use_components else "hello::hello")
+            """).format(target_name="namespace::comp" if use_components else "hello::hello")
         conanfile = conanfile % textwrap.indent(info, "        ")
         client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
         client.run("create .")
