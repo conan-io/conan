@@ -75,13 +75,6 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
             cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
-        msvc:
-            version: ["19.0",
-                      "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
-                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28"]
-            runtime: [static, dynamic]
-            runtime_type: [Debug, Release]
-            cppstd: [None, 14, 17, 20]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
             version: ["8", "9", "10", "11", "12", "14", "15", "16"]
@@ -90,6 +83,13 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       LLVM-vs2013, LLVM-vs2013_xp, LLVM-vs2014, LLVM-vs2014_xp,
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
                       llvm, ClangCL]
+            cppstd: [None, 14, 17, 20]
+        msvc:
+            version: ["19.0",
+                      "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
+                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28"]
+            runtime: [static, dynamic]
+            runtime_type: [Debug, Release]
             cppstd: [None, 14, 17, 20]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
