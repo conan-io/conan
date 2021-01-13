@@ -57,8 +57,12 @@ class CMakeGenericToolchain(CMakeToolchainBase):
 
         {% block before_try_compile %}
             {{ super() }}
-            {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
-            {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
+            if(CMAKE_GENERATOR MATCHES "Visual Studio")
+                # TODO: This IF might be a temporary solution, as the toolchain should be aware of
+                # which generator is going to be used and define this accordingly
+                {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
+                {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
+            endif()
             {% if compiler %}
             set(CMAKE_C_COMPILER {{ compiler }})
             set(CMAKE_CXX_COMPILER {{ compiler }})
