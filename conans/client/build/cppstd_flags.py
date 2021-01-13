@@ -32,6 +32,7 @@ def cppstd_flag(compiler, compiler_version, cppstd, compiler_base=None):
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
             "Visual Studio": _cppstd_visualstudio,
+            "msvc": _cppstd_msvc,
             "intel": cppstd_intel,
             "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
     flag = None
@@ -105,6 +106,23 @@ def _cppstd_visualstudio(visual_version, cppstd):
         v14 = "c++14"
         v17 = "c++latest"
     if Version(visual_version) >= "15":
+        v17 = "c++17"
+        v20 = "c++latest"
+
+    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    return "/std:%s" % flag if flag else None
+
+
+def _cppstd_msvc(visual_version, cppstd):
+    # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
+    v14 = None
+    v17 = None
+    v20 = None
+
+    if Version(visual_version) >= "19.0":
+        v14 = "c++14"
+        v17 = "c++latest"
+    if Version(visual_version) >= "19.1":
         v17 = "c++17"
         v20 = "c++latest"
 
