@@ -1,16 +1,54 @@
+import os
+import re
 import textwrap
 
-from conans.client.build.cmake_flags import get_generator, get_generator_platform, get_toolset, \
-    is_multi_configuration
-from conans.client.build.compiler_flags import architecture_flag
 from conans.client.tools import cpu_count
+from conans.util.files import load
 from conans.errors import ConanException
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.utils import get_generator, is_multi_configuration, architecture_flag
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
 # https://cmake.org/cmake/help/v3.6/manual/cmake-toolchains.7.html
 # https://github.com/microsoft/vcpkg/tree/master/scripts/buildsystems
+
+
+def get_toolset(settings, generator):
+    compiler = settings.get_safe("compiler")
+    compiler_base = settings.get_safe("compiler.base")
+    if compiler == "Visual Studio":
+        subs_toolset = settings.get_safe("compiler.toolset")
+        if subs_toolset:
+            return subs_toolset
+    elif compiler == "intel" and compiler_base == "Visual Studio" and "Visual" in generator:
+        compiler_version = settings.get_safe("compiler.version")
+        if compiler_version:
+            compiler_version = compiler_version if "." in compiler_version else \
+                "%s.0" % compiler_version
+            return "Intel C++ Compiler " + compiler_version
+    return None
+
+
+def get_generator_platform(settings, generator):
+    # Returns the generator platform to be used by CMake
+    if "CONAN_CMAKE_GENERATOR_PLATFORM" in os.environ:
+        return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
+
+    compiler = settings.get_safe("compiler")
+    compiler_base = settings.get_safe("compiler.base")
+    arch = settings.get_safe("arch")
+
+    if settings.get_safe("os") == "WindowsCE":
+        return settings.get_safe("os.platform")
+
+    if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
+            generator and "Visual" in generator:
+        return {"x86": "Win32",
+                "x86_64": "x64",
+                "armv7": "ARM",
+                "armv8": "ARM64"}.get(arch)
+    return None
 
 
 class CMakeGenericToolchain(CMakeToolchainBase):
@@ -72,6 +110,15 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
             {%- endif %}
 
+            {% if vs_runtimes %}
+            {% set genexpr = namespace(str='') %}
+            {%- for config, value in vs_runtimes.items() -%}
+                {%- set genexpr.str = genexpr.str +
+                                      '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
+            {%- endfor -%}
+            set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
+            {% endif %}
+
             set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
             set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
@@ -79,49 +126,12 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {% endblock %}
         """)
 
-    _project_include_filename_tpl = textwrap.dedent("""
-        # When using a Conan toolchain, this file is included as the last step of `project()` calls.
-        #  https://cmake.org/cmake/help/latest/variable/CMAKE_PROJECT_INCLUDE.html
-
-        if (NOT CONAN_TOOLCHAIN_INCLUDED)
-            message(FATAL_ERROR "This file is expected to be used together with the Conan toolchain")
-        endif()
-
-        ########### Utility macros and functions ###########
-        function(conan_get_policy policy_id policy)
-            if(POLICY "${policy_id}")
-                cmake_policy(GET "${policy_id}" _policy)
-                set(${policy} "${_policy}" PARENT_SCOPE)
-            else()
-                set(${policy} "" PARENT_SCOPE)
-            endif()
-        endfunction()
-        ########### End of Utility macros and functions ###########
-
-        # Adjustments that depends on the build_type
-        {% if vs_static_runtime %}
-        conan_get_policy(CMP0091 policy_0091)
-        if(policy_0091 STREQUAL "NEW")
-            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-        else()
-            foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
-                         CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
-                         CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL
-                         CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
-                if(DEFINED ${flag})
-                    string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
-                endif()
-            endforeach()
-        endif()
-        {% endif %}
-        """)
-
     def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
                  toolset=None, parallel=True):
         super(CMakeGenericToolchain, self).__init__(conanfile)
 
         self.fpic = self._deduce_fpic()
-        self.vs_static_runtime = self._deduce_vs_static_runtime()
+        self.vs_runtimes = self._runtimes()
         self.parallel = parallel
 
         self.generator = generator or get_generator(self._conanfile)
@@ -159,8 +169,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
     def _get_templates(self):
         templates = super(CMakeGenericToolchain, self)._get_templates()
         templates.update({
-            CMakeToolchainBase.filename: self._toolchain_tpl,
-            CMakeToolchainBase.project_include_filename: self._project_include_filename_tpl
+            CMakeToolchainBase.filename: self._toolchain_tpl
         })
         return templates
 
@@ -183,12 +192,28 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         # This should be factorized and make it toolchain-private
         return architecture_flag(self._conanfile.settings)
 
-    def _deduce_vs_static_runtime(self):
+    def _runtimes(self):
+        # Parsing existing toolchain file to get existing configured runtimes
+        config_dict = {}
+        if os.path.exists(self.filename):
+            existing_include = load(self.filename)
+            msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
+                                           existing_include)
+            if msvc_runtime_value:
+                capture = msvc_runtime_value.group(1)
+                matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([A-Za-z]*)>", capture)
+                config_dict = dict(matches)
+
         settings = self._conanfile.settings
-        if (settings.get_safe("compiler") == "Visual Studio" and
-            "MT" in settings.get_safe("compiler.runtime")):
-            return True
-        return False
+        compiler = settings.get_safe("compiler")
+        build_type = settings.get_safe("build_type")  # FIXME: change for configuration
+        runtime = settings.get_safe("compiler.runtime")
+        if compiler == "Visual Studio":
+            config_dict[build_type] = {"MT": "MultiThreaded",
+                                       "MTd": "MultiThreadedDebug",
+                                       "MD": "MultiThreadedDLL",
+                                       "MDd": "MultiThreadedDebugDLL"}[runtime]
+        return config_dict
 
     def _get_libcxx(self):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
@@ -233,8 +258,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         return cppstd, cppstd_extensions
 
     def _get_template_context_data(self):
-        ctxt_toolchain, ctxt_project_include = \
-            super(CMakeGenericToolchain, self)._get_template_context_data()
+        ctxt_toolchain = super(CMakeGenericToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
@@ -247,7 +271,7 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
             "architecture": self.architecture,
-            "compiler": self.compiler
+            "compiler": self.compiler,
+            'vs_runtimes': self.vs_runtimes
         })
-        ctxt_project_include.update({'vs_static_runtime': self.vs_static_runtime})
-        return ctxt_toolchain, ctxt_project_include
+        return ctxt_toolchain

@@ -362,6 +362,16 @@ class GraphBinariesAnalyzer(object):
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
             self._propagate_options(node)
 
+            # Make sure that locked options match
+            if (node.graph_lock_node is not None and
+                    node.graph_lock_node.options is not None and
+                    node.conanfile.options.values != node.graph_lock_node.options):
+                raise ConanException("{}: Locked options do not match computed options\n"
+                                     "Locked options:\n{}\n"
+                                     "Computed options:\n{}".format(node.ref,
+                                                                    node.graph_lock_node.options,
+                                                                    node.conanfile.options.values))
+
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue

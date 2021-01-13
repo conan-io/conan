@@ -176,11 +176,16 @@ class ConanFileLoader(object):
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
         if package_settings_values:
+            # First, try to get a match directly by name (without needing *)
+            # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
             pkg_settings = package_settings_values.get(conanfile.name)
-            if pkg_settings is None:
-                # FIXME: This seems broken for packages without user/channel
-                ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
-                                       conanfile._conan_user, conanfile._conan_channel)
+            if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
+                if conanfile._conan_user is not None:
+                    ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
+                                           conanfile._conan_user, conanfile._conan_channel)
+                else:
+                    ref = "%s/%s" % (conanfile.name, conanfile.version)
+
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref, pattern):
                         pkg_settings = settings

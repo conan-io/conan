@@ -6,7 +6,6 @@ from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
 from conans.util.log import logger
@@ -40,7 +39,7 @@ class ProfileParser(object):
             else:
                 try:
                     name, value = line.split("=", 1)
-                except ValueError as error:
+                except ValueError:
                     raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
                 name = name.strip()
                 if " " in name:
@@ -81,10 +80,10 @@ class ProfileParser(object):
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
-    def valid_path(profile_path):
-        if exists and not os.path.isfile(profile_path):
-            raise ConanException("Profile not found: %s" % profile_path)
-        return profile_path
+    def valid_path(_profile_path):
+        if exists and not os.path.isfile(_profile_path):
+            raise ConanException("Profile not found: %s" % _profile_path)
+        return _profile_path
 
     if os.path.isabs(profile_name):
         return valid_path(profile_name)
@@ -149,9 +148,7 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
-        if 'scopes' in doc._sections:
-            conan_v2_behavior("Field 'scopes' in profile is deprecated")
+                           allowed_fields=["build_requires", "settings", "env", "options"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -185,15 +182,15 @@ def _apply_inner_profile(doc, base_profile):
 
     def get_package_name_value(item):
         """Parse items like package:name=value or name=value"""
-        package_name = None
+        packagename = None
         if ":" in item:
             tmp = item.split(":", 1)
-            package_name, item = tmp
+            packagename, item = tmp
 
-        name, value = item.split("=", 1)
-        name = name.strip()
-        value = unquote(value)
-        return package_name, name, value
+        result_name, result_value = item.split("=", 1)
+        result_name = result_name.strip()
+        result_value = unquote(result_value)
+        return packagename, result_name, result_value
 
     for setting in doc.settings.splitlines():
         setting = setting.strip()
@@ -276,14 +273,14 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(env, package_env):
-        env_values = EnvValues()
-        for name, value in env:
-            env_values.add(name, EnvValues.load_value(value))
-        for package, data in package_env.items():
+    def _get_env_values(_env, _package_env):
+        _env_values = EnvValues()
+        for name, value in _env:
+            _env_values.add(name, EnvValues.load_value(value))
+        for package, data in _package_env.items():
             for name, value in data:
-                env_values.add(name, EnvValues.load_value(value), package)
-        return env_values
+                _env_values.add(name, EnvValues.load_value(value), package)
+        return _env_values
 
     result = Profile()
     options = _get_tuples_list_from_extender_arg(options)

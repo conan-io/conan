@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import os
+import platform
 import unittest
 import warnings
 
 import pytest
-from nose.plugins.attrib import attr
 from six import StringIO
 
 from conans.client import tools
@@ -20,8 +20,6 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
 
 
-@attr('visual_studio')
-@pytest.mark.tool_visual_studio
 class BuildSLNCommandTest(unittest.TestCase):
 
     def test_no_configuration(self):

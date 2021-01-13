@@ -3,7 +3,6 @@ import time
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
@@ -12,7 +11,6 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
 
 
-@attr("slow")
 @pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 
