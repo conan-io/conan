@@ -41,9 +41,7 @@ def apple_sdk_name(settings):
     arch = settings.get_safe('arch')
     os_ = settings.get_safe('os')
     os_sdk = settings.get_safe('os.sdk')
-    if os_sdk:
-        return os_sdk.lower()
-    return _guess_apple_sdk_name(os_, arch)
+    return os_sdk or _guess_apple_sdk_name(os_, arch)
 
 
 def apple_deployment_target_env(os_, os_version):
@@ -59,7 +57,7 @@ def apple_deployment_target_env(os_, os_version):
 
 def apple_deployment_target_flag(os_, os_version, os_sdk=None, arch=None):
     """compiler flag name which controls deployment target"""
-    os_sdk = os_sdk.lower() if os_sdk else _guess_apple_sdk_name(os_, arch)
+    os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)
     flag = {'macosx': '-mmacosx-version-min',
             'iphoneos': '-mios-version-min',
             'iphonesimulator': '-mios-simulator-version-min',

@@ -58,9 +58,9 @@ class AppleTest(unittest.TestCase):
         self.assertIsNone(tools.apple_sdk_name(FakeSettings('Windows', 'x86')))
 
         self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8')), 'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iPhoneOS')),
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphoneos')),
                          'iphoneos')
-        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iPhoneSimulator')),
+        self.assertEqual(tools.apple_sdk_name(FakeSettings('iOS', 'armv8', 'iphonesimulator')),
                          'iphonesimulator')
 
     def test_apple_sdk_name_custom_settings(self):
@@ -85,34 +85,34 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1"),
                          '-mmacosx-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1", 'MacOSX'),
+        self.assertEqual(tools.apple_deployment_target_flag('Macos', "10.1", 'macosx'),
                          '-mmacosx-version-min=10.1')
 
         self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1"),
                          '-mios-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iPhoneOS'),
+        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphoneos'),
                          '-mios-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iPhoneSimulator'),
+        self.assertEqual(tools.apple_deployment_target_flag('iOS', "10.1", 'iphonesimulator'),
                          '-mios-simulator-version-min=10.1')
 
         self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1"),
                          '-mwatchos-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchOS'),
+        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchos'),
                          '-mwatchos-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchSimulator'),
+        self.assertEqual(tools.apple_deployment_target_flag('watchOS', "10.1", 'watchsimulator'),
                          '-mwatchos-simulator-version-min=10.1')
 
         self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1"),
                          '-mtvos-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'AppleTVOS'),
+        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvos'),
                          '-mtvos-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'AppleTVSimulator'),
+        self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvsimulator'),
                          '-mtvos-simulator-version-min=10.1')
 
         self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
