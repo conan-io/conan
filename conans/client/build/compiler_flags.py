@@ -63,6 +63,13 @@ def architecture_flag(settings):
             return "/Qm32" if str(compiler_base) == "Visual Studio" else "-m32"
         elif str(arch) == "x86_64":
             return "/Qm64" if str(compiler_base) == "Visual Studio" else "-m64"
+    elif str(compiler) == "mcst-lcc":
+        return {"e2k-v2": "-march=elbrus-v2",
+                "e2k-v3": "-march=elbrus-v3",
+                "e2k-v4": "-march=elbrus-v4",
+                "e2k-v5": "-march=elbrus-v5",
+                "e2k-v6": "-march=elbrus-v6",
+                "e2k-v7": "-march=elbrus-v7"}.get(str(arch), "")
     return ""
 
 
@@ -145,7 +152,7 @@ def build_type_flags(settings):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc"]:
+        if str(compiler) in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
             # FIXME: It is not clear that the "-s" is something related with the build type
             # cmake is not adjusting it
             # -s: Remove all symbol table and relocation information from the executable.

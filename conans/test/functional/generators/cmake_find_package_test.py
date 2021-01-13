@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
@@ -14,7 +13,6 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):
@@ -304,7 +302,7 @@ target_link_libraries(say_hello helloHello2)
         self.assertNotIn("-- Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target linked libs: lib1;sys1;;", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple Frameworks")
     def test_cmake_find_package_frameworks(self):
         conanfile = """from conans import ConanFile, tools
 class Test(ConanFile):
@@ -390,7 +388,7 @@ message("Target libs: ${tmp}")
             """)
         # This is a module that defines some functionality
         find_module = textwrap.dedent("""
-            function(conan_message MESSAGE_OUTPUT)
+            function(custom_message MESSAGE_OUTPUT)
                 message(${ARGV${0}})
             endfunction()
             """)
@@ -424,7 +422,7 @@ message("Target libs: ${tmp}")
             cmake_minimum_required(VERSION 3.0)
             project(test)
             find_package(test)
-            conan_message("Printing using a external module!")
+            custom_message("Printing using a external module!")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")

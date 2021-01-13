@@ -4,16 +4,16 @@ from xml.dom import minidom
 
 from conans.client.tools import VALID_LIB_EXTENSIONS
 from conans.errors import ConanException
-from conans.model import Generator
-from conans.util.files import load
+from conans.util.files import load, save
 
 
-class MSBuildDeps(Generator):
+class MSBuildDeps(object):
 
     _vars_conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup Label="ConanVariables">
+            <Conan{name}RootFolder>{root_folder}</Conan{name}RootFolder>
             <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
             <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
             <Conan{name}PreprocessorDefinitions>{definitions}</Conan{name}PreprocessorDefinitions>
@@ -65,20 +65,44 @@ class MSBuildDeps(Generator):
         </Project>
         """)
 
-    @property
-    def filename(self):
-        return None
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+        self.configuration = conanfile.settings.build_type
+        self.platform = {'x86': 'Win32',
+                         'x86_64': 'x64'}.get(str(conanfile.settings.arch))
+        # TODO: this is ugly, improve this
+        self.output_path = os.getcwd()
 
-    @ staticmethod
-    def _name_condition(settings):
-        props = [("Configuration", settings.build_type),
-                 # FIXME: This probably requires mapping ARM architectures
-                 ("Platform", {'x86': 'Win32',
-                               'x86_64': 'x64'}.get(settings.get_safe("arch")))]
+    def generate(self):
+        # TODO: Apply config from command line, something like
+        # configuration = self.conanfile.config.generators["msbuild"].configuration
+        # if configuration is not None:
+        #     self.configuration = configuration
+        # platform
+        # config_filename
+        # TODO: This is duplicated in write_generators() function, would need to be moved
+        # to generators and called from there
+        if self.configuration is None:
+            raise ConanException("MSBuildDeps.configuration is None, it should have a value")
+        if self.platform is None:
+            raise ConanException("MSBuildDeps.platform is None, it should have a value")
+        generator_files = self._content()
+        for generator_file, content in generator_files.items():
+            generator_file_path = os.path.join(self.output_path, generator_file)
+            save(generator_file_path, content)
 
-        name = "".join("_%s" % v for _, v in props if v is not None)
-        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
-        return name.lower(), condition
+    def _config_filename(self):
+        # Default name
+        props = [("Configuration", self.configuration),
+                 ("Platform", self.platform)]
+        name = "".join("_%s" % v for _, v in props)
+        return name.lower()
+
+    def _condition(self):
+        props = [("Configuration", self.configuration),
+                 ("Platform", self.platform)]
+        condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
+        return condition
 
     def _deps_props(self, name_general, deps):
         """ this is a .props file including all declared dependencies
@@ -128,6 +152,7 @@ class MSBuildDeps(Generator):
 
         fields = {
             'name': name,
+            'root_folder': cpp_info.rootpath,
             'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
             'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
             'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
@@ -187,17 +212,18 @@ class MSBuildDeps(Generator):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    @property
-    def content(self):
+    def _content(self):
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
-        if not self.conanfile.settings.get_safe("build_type"):
+        if not self._conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
-        general_name = "conan_deps.props"
-        conf_name, condition = self._name_condition(self.conanfile.settings)
-        public_deps = self.conanfile.requires.keys()
-        result[general_name] = self._deps_props(general_name, public_deps)
-        for dep_name, cpp_info in self._deps_build_info.dependencies:
+        general_name = "conandeps.props"
+        conf_name = self._config_filename()
+        condition = self._condition()
+        # Include all direct build_requires for host context. This might change
+        direct_deps = self._conanfile.deps_cpp_info.direct_host_deps
+        result[general_name] = self._deps_props(general_name, direct_deps)
+        for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)
             vars_conf_content = self._pkg_config_props(dep_name, cpp_info)

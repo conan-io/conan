@@ -84,6 +84,16 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be.make()
         self.assertIsNone(conan_file.command)
 
+    def test_nmake_no_parallel(self):
+        conan_file = ConanFileMock()
+        conan_file.deps_cpp_info = self._creat_deps_cpp_info()
+        conan_file.settings = Settings()
+        be = AutoToolsBuildEnvironment(conan_file)
+        be.make(make_program="nmake")
+        assert "-j" not in conan_file.command
+        be.make(make_program="make")
+        assert "-j" in conan_file.command
+
     def test_warn_when_no_triplet(self):
         conan_file = ConanFileMock()
         conan_file.deps_cpp_info = self._creat_deps_cpp_info()

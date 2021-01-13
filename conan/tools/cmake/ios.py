@@ -1,6 +1,6 @@
 import textwrap
 
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 
 
 class CMakeiOSToolchain(CMakeToolchainBase):
@@ -72,7 +72,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                 "x86_64": "x86_64",
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
-        return None
 
     # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
@@ -92,11 +91,11 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                     'tvOS': 'appletvos'}.get(str(os_), None)
 
     def _get_template_context_data(self):
-        ctxt_toolchain, _ = super(CMakeiOSToolchain, self)._get_template_context_data()
+        ctxt_toolchain = super(CMakeiOSToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             "CMAKE_OSX_ARCHITECTURES": self.host_architecture,
             "CMAKE_SYSTEM_NAME": self.host_os,
             "CMAKE_SYSTEM_VERSION": self.host_os_version,
             "CMAKE_OSX_SYSROOT": self.host_sdk_name
         })
-        return ctxt_toolchain, {}
+        return ctxt_toolchain

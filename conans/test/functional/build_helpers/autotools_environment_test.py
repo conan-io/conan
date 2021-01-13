@@ -53,7 +53,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
-    @unittest.skipUnless(platform.system() == "Linux", "Requires Autotools")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
     @pytest.mark.tool_autotools()
     def test_autotools_real_install_dirs(self):
         body = gen_function_cpp(name="hello", msg="Hola Mundo!")
