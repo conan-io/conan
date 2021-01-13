@@ -37,14 +37,18 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         Linux:
         Macos:
             version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
+            sdk: [None, "macosx"]
         Android:
             api_level: ANY
         iOS:
             version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0", "13.1", "13.2", "13.3", "13.4", "13.5", "13.6"]
+            sdk: [None, "iphoneos", "iphonesimulator"]
         watchOS:
             version: ["4.0", "4.1", "4.2", "4.3", "5.0", "5.1", "5.2", "5.3", "6.0", "6.1"]
+            sdk: [None, "watchos", "watchsimulator"]
         tvOS:
             version: ["11.0", "11.1", "11.2", "11.3", "11.4", "12.0", "12.1", "12.2", "12.3", "12.4", "13.0"]
+            sdk: [None, "appletvos", "appletvsimulator"]
         FreeBSD:
         SunOS:
         AIX:
