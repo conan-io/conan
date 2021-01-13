@@ -545,7 +545,13 @@ class HelloConan(ConanFile):
         ["Neutrino", "armv7", None, "arm-nto-qnx"],
         ["Neutrino", "armv8", None, "aarch64-nto-qnx"],
         ["Neutrino", "sh4le", None, "sh4-nto-qnx"],
-        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"]
+        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"],
+        ["Linux", "e2k-v2", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v3", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v4", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v5", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v6", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v7", None, "e2k-unknown-linux-gnu"],
     ])
     def test_get_gnu_triplet(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)

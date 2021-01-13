@@ -2,7 +2,7 @@ import unittest
 from parameterized import parameterized
 
 from conans.client.conf.compiler_id import detect_compiler_id, CompilerId, UNKNOWN_COMPILER, \
-    GCC, LLVM_GCC, CLANG, APPLE_CLANG, SUNCC, MSVC, INTEL, QCC
+    GCC, LLVM_GCC, CLANG, APPLE_CLANG, SUNCC, MSVC, INTEL, QCC, MCST_LCC
 from conans.test.unittests.util.tools_test import RunnerMock
 
 
@@ -127,3 +127,11 @@ class CompilerIdTest(unittest.TestCase):
                         "#define __GNUC_PATCHLEVEL__ 4\n"
         compiler_id = detect_compiler_id("qcc", runner=runner)
         self.assertEqual(CompilerId(QCC, 4, 2, 4), compiler_id)
+
+    def test_mcst_lcc(self):
+        runner = RunnerMock()
+        runner.output = "#define __LCC__ 125\n" \
+                        "#define __LCC_MINOR__ 6\n" \
+                        "#define __e2k__ 1\n"
+        compiler_id = detect_compiler_id("lcc", runner=runner)
+        self.assertEqual(CompilerId(MCST_LCC, 1, 25, 6), compiler_id)
