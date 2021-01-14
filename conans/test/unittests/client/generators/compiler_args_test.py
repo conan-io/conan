@@ -156,7 +156,7 @@ class CompilerArgsTest(unittest.TestCase):
         args = CompilerArgsGenerator(conan_file)
         self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
                          ' cxx_flag1 c_flag1 -m32 -O3 -DNDEBUG'
-                         ' -Wl,-rpath="/root/lib" -Wl,-rpath="/root/path/to/lib1"'
+                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
                          ' -L/root/lib -L/root/path/to/lib1 -lmylib'
                          ' -F /root/Frameworks', args.content)
 
