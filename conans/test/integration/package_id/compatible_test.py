@@ -492,3 +492,20 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing:1ebf4db7209535776307f9cd06e00d5a8034bc84 - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
+
+
+def test_msvc_visual_incompatible():
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+               '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
+    client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
+               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
+               "-s compiler.cppstd=14")
+    assert "Using compatible package" in client.out
+    client.run("config set general.msvc_visual_incompatible=1")
+    client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
+               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
+               "-s compiler.cppstd=14", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

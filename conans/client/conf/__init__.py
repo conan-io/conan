@@ -85,6 +85,13 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       LLVM-vs2017, LLVM-vs2017_xp, v141, v141_xp, v141_clang_c2, v142,
                       llvm, ClangCL]
             cppstd: [None, 14, 17, 20]
+        msvc:
+            version: ["19.0",
+                      "19.1", "19.10", "19.11", "19.12", "19.13", "19.14", "19.15", "19.16",
+                      "19.2", "19.20", "19.21", "19.22", "19.23", "19.24", "19.25", "19.26", "19.27", "19.28"]
+            runtime: [static, dynamic]
+            runtime_type: [Debug, Release]
+            cppstd: [14, 17, 20]
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
@@ -496,6 +503,14 @@ class ConanClientConfigParser(ConfigParser, object):
             return fix_id.lower() in ("1", "true")
         except ConanException:
             return None
+
+    @property
+    def msvc_visual_incompatible(self):
+        try:
+            visual_comp = self.get_item("general.msvc_visual_incompatible")
+            return visual_comp.lower() in ("1", "true")
+        except ConanException:
+            return False
 
     @property
     def short_paths_home(self):

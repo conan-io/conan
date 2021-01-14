@@ -61,6 +61,10 @@ def _fill_runtime(settings):
                 settings.compiler.base.runtime = runtime
                 msg = "Setting 'compiler.base.runtime' not declared, automatically adjusted to '%s'"
                 logger.info(msg % runtime)
+        elif settings.compiler == "msvc":
+            if settings.get_safe("compiler.runtime_type") is None:
+                runtime = "Debug" if settings.get_safe("build_type") == "Debug" else "Release"
+                settings.compiler.runtime_type = runtime
     except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass
