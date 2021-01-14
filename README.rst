@@ -110,9 +110,9 @@ Contributing to the project
 
 Feedback and contribution are always welcome in this project.
 Please read our `contributing guide <https://github.com/conan-io/conan/blob/develop/.github/CONTRIBUTING.md>`_.
-Also, if you plan to contribuite, please add some testing for your changes. You can read the `Conan
+Also, if you plan to contribute, please add some testing for your changes. You can read the `Conan
 tests guidelines section <https://github.com/conan-io/conan/blob/develop/conans/test/README.md>`_ for
-some advise on how to write your tests for Conan.
+some advise on how to write tests for Conan.
 
 Running the tests
 =================
