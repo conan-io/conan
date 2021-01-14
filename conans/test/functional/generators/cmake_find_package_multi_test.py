@@ -560,7 +560,8 @@ class TestNoNamespaceTarget:
             def package_info(self):
                 self.cpp_info.libs = ["library"]
                 module = os.path.join("share", "cmake", "build-module.cmake")
-                self.cpp_info.build_modules = module
+                self.cpp_info.build_modules['cmake_find_package'] = [module, ]
+                self.cpp_info.build_modules['cmake_find_package_multi'] = [module, ]
     """)
 
     build_module = textwrap.dedent("""
