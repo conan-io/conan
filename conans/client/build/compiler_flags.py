@@ -25,7 +25,6 @@ def _base_compiler(settings):
 # FIXME : pass conanfile instead of settings and os_build
 def rpath_flags(settings, os_build, lib_paths):
     compiler = _base_compiler(settings)
-    os_host = settings.get_safe("os")
     if not os_build:
         return []
     if compiler in GCC_LIKE:
