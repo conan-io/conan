@@ -80,4 +80,5 @@ Please, if you need to run several combinations of the same testing code use par
 
 ### Running tests locally
 
-If you want to run the Coman test suite locally, please check the [README in the front page](https://github.com/conan-io/conan/blob/develop/README.rst).
+If you want to run the Coman test suite locally, please check the [README in the front
+page](https://github.com/conan-io/conan).
