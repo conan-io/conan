@@ -79,9 +79,14 @@ def dict_to_abs_paths(the_dict, rootpath):
     return new_dict
 
 
+def merge_lists(seq1, seq2):
+    return seq1 + [s for s in seq2 if s not in seq1]
+
+
 def merge_dicts(d1, d2):
     def merge_lists(seq1, seq2):
         return [s for s in seq1 if s not in seq2] + seq2
+
     result = d1.copy()
     for k, v in d2.items():
         if k not in d1.keys():
@@ -346,7 +351,8 @@ class CppInfo(_CppInfo):
                 reason = None
                 if comp_require not in pkg_requires:
                     reason = "not defined as a recipe requirement"
-                elif package_requires[comp_require].private and package_requires[comp_require].override:
+                elif package_requires[comp_require].private and package_requires[
+                    comp_require].override:
                     reason = "it was defined as an overridden private recipe requirement"
                 elif package_requires[comp_require].private:
                     reason = "it was defined as a private recipe requirement"
@@ -380,7 +386,6 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
-
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
@@ -476,31 +481,16 @@ class DepCppInfo(object):
             attr = self._cpp_info.__getattr__(item)
         return attr
 
-    @staticmethod
-    def _merge_lists(seq1, seq2):
-        return seq1 + [s for s in seq2 if s not in seq1]
-
-    def _aggregated_values(self, item):
+    def _aggregated_values(self, item, agg_func=merge_lists):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
-                values = self._merge_lists(values, getattr(component, item))
+                values = agg_func(values, getattr(component, item))
         setattr(self, "_%s" % item, values)
         return values
-
-    def _aggregated_paths(self, item):
-        paths = getattr(self, "_%s_paths" % item)
-        if paths is not None:
-            return paths
-        paths = getattr(self._cpp_info, "%s_paths" % item)
-        if self._cpp_info.components:
-            for component in self._get_sorted_components().values():
-                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
-        setattr(self, "_%s_paths" % item, paths)
-        return paths
 
     @staticmethod
     def _filter_component_requires(requires):
@@ -549,42 +539,35 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        if self._build_modules_paths is not None:
-            return self._build_modules_paths
-        paths = self._cpp_info.build_modules_paths
-        if self._cpp_info.components:
-            for component in self._get_sorted_components().values():
-                paths = merge_dicts(paths, component.build_modules_paths)
-        self._build_modules_paths = paths
-        return self._build_modules_paths
+        return self._aggregated_values("build_modules_paths", agg_func=merge_dicts)
 
     @property
     def include_paths(self):
-        return self._aggregated_paths("include")
+        return self._aggregated_values("include_paths")
 
     @property
     def lib_paths(self):
-        return self._aggregated_paths("lib")
+        return self._aggregated_values("lib_paths")
 
     @property
     def src_paths(self):
-        return self._aggregated_paths("src")
+        return self._aggregated_values("src_paths")
 
     @property
     def bin_paths(self):
-        return self._aggregated_paths("bin")
+        return self._aggregated_values("bin_paths")
 
     @property
     def build_paths(self):
-        return self._aggregated_paths("build")
+        return self._aggregated_values("build_paths")
 
     @property
     def res_paths(self):
-        return self._aggregated_paths("res")
+        return self._aggregated_values("res_paths")
 
     @property
     def framework_paths(self):
-        return self._aggregated_paths("framework")
+        return self._aggregated_values("framework_paths")
 
     @property
     def libs(self):
