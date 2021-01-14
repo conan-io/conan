@@ -126,7 +126,6 @@ class {package_name}Conan(ConanFile):
         self.cpp_info.libs = ["{name}"]
 """
 
-
 conanfile_header = """import os
 
 from conans import ConanFile, tools
@@ -187,7 +186,6 @@ class {package_name}TestConan(ConanFile):
             self.run(".%sexample" % os.sep)
 """
 
-
 test_cmake = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest CXX)
 
@@ -203,7 +201,6 @@ target_link_libraries(example ${CONAN_LIBS})
 #          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 #          COMMAND example)
 """
-
 
 test_cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest C)
@@ -281,13 +278,6 @@ conan_basic_setup()
 
 add_library({name} {name}.cpp)
 """
-
-cmake_v2 = """cmake_minimum_required(VERSION 3.15)
-project({name} CXX)
-
-add_library({name} {name}.cpp)
-"""
-
 
 gitignore_template = """
 *.pyc

@@ -15,6 +15,7 @@ class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.compiler = conanfile.settings.get_safe("compiler")
+        # This is assuming this is the Visual Studio IDE version, used for the vcvars
         self.version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
         if self.compiler == "msvc":

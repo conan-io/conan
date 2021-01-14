@@ -12,7 +12,7 @@ from parameterized import parameterized
 from conans.client.tools import chdir
 from conans.util.files import mkdir
 from conan.tools.microsoft.visual import vcvars_command
-from conans.client.tools import vs_installation_path, environment_append
+from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_vs_runtime, check_msc_ver
 from conans.test.utils.tools import TestClient
@@ -416,8 +416,7 @@ class WinTest(unittest.TestCase):
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
-        with environment_append({"CONAN_V2_BEHAVIOR": "1"}):
-            client.run("new hello/0.1 -s")
+        client.run("new hello/0.1 -m=v2_cmake")
         client.run("create . hello/0.1@ %s" % (settings, ))
 
         # Prepare the actual consumer package
