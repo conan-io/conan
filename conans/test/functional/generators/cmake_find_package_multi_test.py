@@ -601,7 +601,6 @@ class TestNoNamespaceTarget:
     @classmethod
     def setup_class(cls):
         cls.t = t = TestClient()
-        t.current_folder = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpiq_fqfmfconans/path with spaces'
         # Create a library providing a build-module
         t.run('new library/version -s')
         t.save({'conanfile.py': cls.conanfile,
