@@ -388,7 +388,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
                                '-F one/framework/path -m64 --sysroot=/path/to/folder '
-                               '-Wl,-rpath="one/lib/path" -Lone/lib/path',
+                               '-Wl,-rpath,"one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEqual(be.vars, expected)
