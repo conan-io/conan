@@ -587,7 +587,7 @@ class TestNoNamespaceTarget:
         message(">> nonamespace libs: ${LIBS2}")
 
         add_executable(consumer main.cpp)
-        target_link_libraries(consumer library::library)
+        target_link_libraries(consumer nonamespace)
     """)
 
     main = textwrap.dedent("""
