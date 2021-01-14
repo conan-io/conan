@@ -7,7 +7,6 @@ from conans import __version__ as client_version
 from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.util.conan_v2_mode import conan2_behavior
 from conans.util.files import load
 
 
@@ -127,48 +126,6 @@ class {package_name}Conan(ConanFile):
         self.cpp_info.libs = ["{name}"]
 """
 
-conanfile_sources_v2 = """from conans import ConanFile
-from conan.tools.cmake import CMakeToolchain, CMake
-
-
-class {package_name}Conan(ConanFile):
-    name = "{name}"
-    version = "{version}"
-    license = "<Put the package license here>"
-    author = "<Put your name here> <And your email here>"
-    url = "<Package recipe repository url here, for issues about the package>"
-    description = "<Description of {package_name} here>"
-    topics = ("<Put some tag here>", "<here>", "<and here>")
-    settings = "os", "compiler", "build_type", "arch"
-    options = {{"shared": [True, False], "fPIC": [True, False]}}
-    default_options = {{"shared": False, "fPIC": True}}
-    exports_sources = "src/*"
-
-{configure}
-    def config_options(self):
-        if self.settings.os == "Windows":
-            del self.options.fPIC
-
-    def generate(self):
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure(source_folder="src")
-        cmake.build()
-
-    def package(self):
-        self.copy("*.h", dst="include", src="src")
-        self.copy("*.lib", dst="lib", keep_path=False)
-        self.copy("*.dll", dst="bin", keep_path=False)
-        self.copy("*.dylib*", dst="lib", keep_path=False)
-        self.copy("*.so", dst="lib", keep_path=False)
-        self.copy("*.a", dst="lib", keep_path=False)
-
-    def package_info(self):
-        self.cpp_info.libs = ["{name}"]
-"""
 
 conanfile_header = """import os
 
@@ -230,36 +187,6 @@ class {package_name}TestConan(ConanFile):
             self.run(".%sexample" % os.sep)
 """
 
-test_conanfile_v2 = """import os
-
-from conans import ConanFile, tools
-from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
-
-
-class {package_name}TestConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
-
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-        cmake.build()
-
-    def imports(self):
-        self.copy("*.dll", dst="bin", src="bin")
-        self.copy("*.dylib*", dst="bin", src="lib")
-        self.copy('*.so*', dst='bin', src='lib')
-
-    def test(self):
-        if not tools.cross_building(self):
-            os.chdir("bin")
-            self.run(".%sexample" % os.sep)
-"""
 
 test_cmake = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest CXX)
@@ -277,21 +204,6 @@ target_link_libraries(example ${CONAN_LIBS})
 #          COMMAND example)
 """
 
-test_cmake_v2 = """cmake_minimum_required(VERSION 3.15)
-project(PackageTest CXX)
-
-# TODO: Remove this when layouts are available
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${{CMAKE_CURRENT_BINARY_DIR}}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
-
-find_package({name})
-
-add_executable(example example.cpp)
-target_link_libraries(example {name}::{name})
-"""
 
 test_cmake_pure_c = """cmake_minimum_required(VERSION 3.1)
 project(PackageTest C)
@@ -454,20 +366,12 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                                          package_name=package_name)}
     elif exports_sources:
         if not pure_c:
-            if conan2_behavior("Using new CMakeToolchain helper"):
-                files = {"conanfile.py": conanfile_sources_v2.format(name=name, version=version,
-                                                                     package_name=package_name,
-                                                                     configure=""),
-                         "src/{}.cpp".format(name): hello_cpp.format(name=name, version=version),
-                         "src/{}.h".format(name): hello_h.format(name=name, version=version),
-                         "src/CMakeLists.txt": cmake_v2.format(name=name, version=version)}
-            else:
-                files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
-                                                                  package_name=package_name,
-                                                                  configure=""),
-                         "src/{}.cpp".format(name): hello_cpp.format(name=name, version=version),
-                         "src/{}.h".format(name): hello_h.format(name=name, version=version),
-                         "src/CMakeLists.txt": cmake.format(name=name, version=version)}
+            files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
+                                                              package_name=package_name,
+                                                              configure=""),
+                     "src/{}.cpp".format(name): hello_cpp.format(name=name, version=version),
+                     "src/{}.h".format(name): hello_h.format(name=name, version=version),
+                     "src/CMakeLists.txt": cmake.format(name=name, version=version)}
         else:
             config = ("\n    def configure(self):\n"
                       "        del self.settings.compiler.libcxx\n"
@@ -496,6 +400,9 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                         version=version,
                                         package_name=package_name)
             files = {"conanfile.py": replaced}
+        elif template == "v2_cmake":
+            from conans.assets.templates.new_v2_cmake import get_files
+            files = get_files(name, version, user, channel, package_name)
         else:
             if not os.path.isabs(template):
                 template = os.path.join(cache.cache_folder, "templates", "command/new", template)
@@ -511,25 +418,16 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                                   package_name=package_name)}
 
     if test:
-        if conan2_behavior("Using new CMakeToolchain helper in test_package"):
-            files["test_package/conanfile.py"] = test_conanfile_v2.format(name=name, version=version,
-                                                                          user=user, channel=channel,
-                                                                          package_name=package_name)
-        else:
-            files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
-                                                                       user=user, channel=channel,
-                                                                       package_name=package_name)
+        files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
+                                                                   user=user, channel=channel,
+                                                                   package_name=package_name)
         if pure_c:
             files["test_package/example.c"] = test_main.format(name=name)
             files["test_package/CMakeLists.txt"] = test_cmake_pure_c
         else:
             include_name = name if exports_sources else "hello"
-            if conan2_behavior():
-                files["test_package/example.cpp"] = test_main.format(name=include_name)
-                files["test_package/CMakeLists.txt"] = test_cmake_v2.format(name=name)
-            else:
-                files["test_package/example.cpp"] = test_main.format(name=include_name)
-                files["test_package/CMakeLists.txt"] = test_cmake
+            files["test_package/example.cpp"] = test_main.format(name=include_name)
+            files["test_package/CMakeLists.txt"] = test_cmake
 
     if gitignore:
         files[".gitignore"] = gitignore_template

@@ -2,7 +2,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -10,7 +9,6 @@ from conans.test.assets.sources import gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
@@ -848,7 +846,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.copy("*.h", dst="include", src="src")
                     self.copy("*.lib", dst="lib", keep_path=False)
                     self.copy("*.a", dst="lib", keep_path=False)
-                
+
                 def package_info(self):
                     self.cpp_info.libs = ["middle"]
             """)

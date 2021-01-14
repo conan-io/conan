@@ -11,6 +11,7 @@ from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
+from conans.model.layout import Layout
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -69,7 +70,7 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is contraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
 
 
 @contextmanager
@@ -132,6 +133,9 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
+    # layout
+    layout = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
@@ -143,6 +147,8 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
+
+        self.layout = Layout()
 
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
@@ -175,6 +181,38 @@ class ConanFile(object):
 
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
+
+    @property
+    def source_folder(self):
+        return self.layout.source_folder
+
+    @source_folder.setter
+    def source_folder(self, folder):
+        self.layout.set_base_source_folder(folder)
+
+    @property
+    def build_folder(self):
+        return self.layout.build_folder
+
+    @build_folder.setter
+    def build_folder(self, folder):
+        self.layout.set_base_build_folder(folder)
+
+    @property
+    def install_folder(self):
+        return self.layout.install_folder
+
+    @install_folder.setter
+    def install_folder(self, folder):
+        self.layout.set_base_install_folder(folder)
+
+    @property
+    def package_folder(self):
+        return self.layout.package_folder
+
+    @package_folder.setter
+    def package_folder(self, folder):
+        self.layout.set_base_package_folder(folder)
 
     @property
     def env(self):

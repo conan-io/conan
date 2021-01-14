@@ -41,6 +41,8 @@ class AutoToolsBuildEnvironment(object):
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
         self._os_version = conanfile.settings.get_safe("os.version")
+        self._os_sdk = conanfile.settings.get_safe("os.sdk")
+        self._os_subsystem = conanfile.settings.get_safe("os.subsystem")
         self._arch = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
 
@@ -240,7 +242,8 @@ class AutoToolsBuildEnvironment(object):
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
             cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
-                                if "-j" not in str_args else None)
+                                if ("-j" not in str_args and "nmake" not in make_program.lower())
+                                else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
@@ -352,7 +355,15 @@ class AutoToolsBuildEnvironment(object):
                 concat += " " + os.environ.get("CXXFLAGS", None)
             if self._os_version and "-version-min" not in concat and "-target" not in concat:
                 tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
-                                                                                self._os_version))
+                                                                                self._os_version,
+                                                                                self._os_sdk,
+                                                                                self._os_subsystem,
+                                                                                self._arch))
+            if "-isysroot" not in concat and platform.system() == "Darwin":
+                tmp_compilation_flags.extend(["-isysroot",
+                                              tools.XCRun(self._conanfile.settings).sdk_path])
+            if "-arch" not in concat and self._arch:
+                tmp_compilation_flags.extend(["-arch", tools.to_apple_arch(self._arch)])
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags

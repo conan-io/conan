@@ -175,20 +175,25 @@ class ConanFileLoader(object):
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
-        if package_settings_values:
-            pkg_settings = package_settings_values.get(conanfile.name)
-            if pkg_settings is None:
-                # FIXME: This seems broken for packages without user/channel
-                ref = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
+        if conanfile._conan_user is not None:
+            ref_str = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
                                        conanfile._conan_user, conanfile._conan_channel)
+        else:
+            ref_str = "%s/%s" % (conanfile.name, conanfile.version)
+        if package_settings_values:
+            # First, try to get a match directly by name (without needing *)
+            # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
+            pkg_settings = package_settings_values.get(conanfile.name)
+            if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
                 for pattern, settings in package_settings_values.items():
-                    if fnmatch.fnmatchcase(ref, pattern):
+                    if fnmatch.fnmatchcase(ref_str, pattern):
                         pkg_settings = settings
                         break
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
 
         conanfile.initialize(tmp_settings, profile.env_values)
+        conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
                       channel=None, lock_python_requires=None):
@@ -257,6 +262,7 @@ class ConanFileLoader(object):
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
         conanfile.initialize(Settings(), profile.env_values)
+        conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
@@ -296,6 +302,7 @@ class ConanFileLoader(object):
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(profile_host.processed_settings.copy(),
                              profile_host.env_values)
+        conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         for reference in references:

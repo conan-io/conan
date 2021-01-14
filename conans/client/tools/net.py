@@ -8,7 +8,7 @@ from conans.util.fallbacks import default_output, default_requester
 
 def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_permissions=False,
         pattern=None, requester=None, output=None, verify=True, retry=None, retry_wait=None,
-        overwrite=False, auth=None, headers=None):
+        overwrite=False, auth=None, headers=None, strip_root=False):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
 
@@ -23,7 +23,7 @@ def get(url, md5='', sha1='', sha256='', destination=".", filename="", keep_perm
              retry_wait=retry_wait, overwrite=overwrite, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(filename, destination=destination, keep_permissions=keep_permissions, pattern=pattern,
-          output=output)
+          output=output, strip_root=strip_root)
     os.unlink(filename)
 
 
