@@ -2,8 +2,6 @@ import os
 from collections import OrderedDict
 from copy import copy
 
-import six
-
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_behavior
 
@@ -84,7 +82,6 @@ def dict_to_abs_paths(the_dict, rootpath):
 def merge_dicts(d1, d2):
     def merge_lists(seq1, seq2):
         return [s for s in seq1 if s not in seq2] + seq2
-
     result = d1.copy()
     for k, v in d2.items():
         if k not in d1.keys():
@@ -148,12 +145,7 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            # FIXME: This should be just a plain dict
-            if isinstance(self.build_modules, six.string_types):
-                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                                  "{the_list}' instead".format(the_list=[self.build_modules, ]))
-                self.build_modules = BuildModulesDict.from_list([self.build_modules, ])
-            if isinstance(self.build_modules, list):
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
                 conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
                                   "{the_list}' instead".format(the_list=self.build_modules))
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
@@ -354,8 +346,7 @@ class CppInfo(_CppInfo):
                 reason = None
                 if comp_require not in pkg_requires:
                     reason = "not defined as a recipe requirement"
-                elif package_requires[comp_require].private and package_requires[
-                    comp_require].override:
+                elif package_requires[comp_require].private and package_requires[comp_require].override:
                     reason = "it was defined as an overridden private recipe requirement"
                 elif package_requires[comp_require].private:
                     reason = "it was defined as a private recipe requirement"
@@ -389,6 +380,7 @@ class _BaseDepsCppInfo(_CppInfo):
         super(_BaseDepsCppInfo, self).__init__()
 
     def update(self, dep_cpp_info):
+
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
