@@ -526,3 +526,118 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         self.assertIn("component libs: $<$<CONFIG:Debug>:;>;$<$<CONFIG:MinSizeRel>:;>;"
                       "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:Release>:system_lib_component;",
                       t.out)
+
+
+@pytest.mark.tool_cmake
+class TestNoNamespaceTarget:
+    """ This test case uses build-modules feature to create a target without a namespace. This
+        target uses targets create by Conan (build_modules are included after Conan targets)
+    """
+
+    conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, CMake
+
+        class Recipe(ConanFile):
+            settings = "os", "compiler", "arch"
+            exports_sources = ["src/*", "build-module.cmake"]
+            generators = "cmake"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure(source_folder="src")
+                cmake.build()
+
+            def package(self):
+                self.copy("*.h", dst="include", src="src")
+                self.copy("*.lib", dst="lib", keep_path=False)
+                self.copy("*.dll", dst="bin", keep_path=False)
+                self.copy("*.dylib*", dst="lib", keep_path=False)
+                self.copy("*.so", dst="lib", keep_path=False)
+                self.copy("*.a", dst="lib", keep_path=False)
+                self.copy("build-module.cmake", dst="share/cmake")
+
+            def package_info(self):
+                self.cpp_info.libs = ["library"]
+                module = os.path.join("share", "cmake", "build-module.cmake")
+                self.cpp_info.build_modules = module
+    """)
+
+    build_module = textwrap.dedent("""
+        message(">> Build-module is included")
+
+        if(NOT TARGET nonamespace)
+            add_library(nonamespace INTERFACE IMPORTED)
+            target_link_libraries(nonamespace INTERFACE library::library)
+        endif()
+    """)
+
+    consumer = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.0)
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        project(consumer)
+
+        find_package(library)
+
+        get_target_property(LIBS1 library::library INTERFACE_LINK_LIBRARIES)
+        message(">> library::library libs: ${LIBS1}")
+
+        get_target_property(LIBS2 nonamespace INTERFACE_LINK_LIBRARIES)
+        message(">> nonamespace libs: ${LIBS2}")
+
+        add_executable(consumer main.cpp)
+        target_link_libraries(consumer library::library)
+    """)
+
+    main = textwrap.dedent("""
+        #include "library.h"
+
+        int main() {
+            library();
+        }
+    """)
+
+    @classmethod
+    def setup_class(cls):
+        cls.t = t = TestClient()
+        t.current_folder = '/private/var/folders/fc/6mvcrc952dqcjfhl4c7c11ph0000gn/T/tmpiq_fqfmfconans/path with spaces'
+        # Create a library providing a build-module
+        t.run('new library/version -s')
+        t.save({'conanfile.py': cls.conanfile,
+                'build-module.cmake': cls.build_module})
+        t.run('create conanfile.py library/version@')
+        # Prepare project to consume the targets
+        t.save({'CMakeLists.txt': cls.consumer, 'main.cpp': cls.main}, clean_first=True)
+
+    def test_non_multi_generator(self):
+        t = self.t
+        with t.chdir('not_multi'):
+            t.run('install library/version@ -g cmake_find_package -s build_type=Release')
+            t.run_command('cmake .. -DCMAKE_MODULE_PATH="{}"'.format(t.current_folder))
+            assert str(t.out).count('>> Build-module is included') == 1
+            assert '>> nonamespace libs: library::library' in t.out
+            t.run_command('cmake --build .') # Compiles and links.
+
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+    def test_multi_generator_windows(self):
+        t = self.t
+        with t.chdir('multi_macos'):
+            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
+            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
+            generator = '-G "Visual Studio 15 2017" -A "x64"'
+            t.run_command('cmake .. {} -DCMAKE_PREFIX_PATH="{}"'.format(generator, t.current_folder))
+            assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
+            assert '>> nonamespace libs: library::library' in t.out
+            t.run_command('cmake --build . --config Release')  # Compiles and links.
+
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
+    def test_multi_generator_macos(self):
+        t = self.t
+        with t.chdir('multi_macos'):
+            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
+            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
+            t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH="{}"'.format(t.current_folder))
+            assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
+            assert '>> nonamespace libs: library::library' in t.out
+            t.run_command('cmake --build . --config Release')  # Compiles and links.
