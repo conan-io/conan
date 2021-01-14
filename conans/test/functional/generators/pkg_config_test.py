@@ -44,9 +44,7 @@ class PkgConfigConan(ConanFile):
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
         expected_rpaths = ""
-        if platform.system() == "Linux":
-            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir2}"'
-        elif platform.system() == "Darwin":
+        if platform.system() in ("Linux", "Darwin"):
             expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir2=${prefix}/lib2
@@ -138,7 +136,7 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
+        self.assertIn("-Wl,-rpath,\"${libdir}\"", pc_content)
 
     def test_system_libs(self):
         conanfile = """
