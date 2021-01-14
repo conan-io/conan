@@ -615,20 +615,21 @@ class TestNoNamespaceTarget:
         t = self.t
         with t.chdir('not_multi'):
             t.run('install library/version@ -g cmake_find_package -s build_type=Release')
-            t.run_command('cmake .. -DCMAKE_MODULE_PATH="{}"'.format(t.current_folder))
+            t.run_command('cmake .. -DCMAKE_MODULE_PATH:PATH="{}"'.format(t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 1
             assert '>> nonamespace libs: library::library' in t.out
-            t.run_command('cmake --build .') # Compiles and links.
+            t.run_command('cmake --build .')  # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
     @pytest.mark.tool_visual_studio
     def test_multi_generator_windows(self):
         t = self.t
-        with t.chdir('multi_macos'):
+        with t.chdir('multi_windows'):
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
             generator = '-G "Visual Studio 15 2017" -A "x64"'
-            t.run_command('cmake .. {} -DCMAKE_PREFIX_PATH="{}"'.format(generator, t.current_folder))
+            t.run_command(
+                'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
@@ -640,7 +641,7 @@ class TestNoNamespaceTarget:
         with t.chdir('multi_macos'):
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
-            t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH="{}"'.format(t.current_folder))
+            t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH:PATH="{}"'.format(t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
