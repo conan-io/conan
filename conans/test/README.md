@@ -54,9 +54,10 @@ class TestSomeFunctionality:
 
 ### Marking tests
 
-Please mark your tests if they need to. Besides the builtin Pytest markers we interpret some markers
-related to external tools: `cmake`, `gcc`, `clang`, `visual_studio`, `mingw`, `autotools`,
-`pkg_config`, `premake`, `meson`, `file`, `git`, `svn`, `compiler`, `conan`. For example:
+Please mark your tests if they need to. Besides the [builtin Pytest
+markers](https://docs.pytest.org/en/stable/mark.html#mark) we interpret some markers related to
+external tools: `cmake`, `gcc`, `clang`, `visual_studio`, `mingw`, `autotools`, `pkg_config`,
+`premake`, `meson`, `file`, `git`, `svn`, `compiler`, `conan`. For example:
 
 ```python
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
