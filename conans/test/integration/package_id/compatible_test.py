@@ -501,9 +501,11 @@ def test_msvc_visual_incompatible():
     client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
     client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
-               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64")
+               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
+               "-s compiler.cppstd=14")
     assert "Using compatible package" in client.out
     client.run("config set general.msvc_visual_incompatible=1")
     client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
-               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64", assert_error=True)
+               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
+               "-s compiler.cppstd=14", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

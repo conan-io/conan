@@ -321,9 +321,10 @@ def test_msvc_runtime_flag():
     client.run('install . -s compiler="Visual Studio" -s compiler.version=15 -s compiler.runtime=MD')
     assert "MSVC FLAG=MD!!" in client.out
     client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=static '
-               '-s compiler.runtime_type=Debug')
+               '-s compiler.runtime_type=Debug -s compiler.cppstd=14')
     assert "MSVC FLAG=MTd!!" in client.out
-    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=dynamic')
+    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=dynamic '
+               '-s compiler.cppstd=14')
     assert "MSVC FLAG=MD!!" in client.out
 
 

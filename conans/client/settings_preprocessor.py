@@ -15,6 +15,14 @@ def _check_cppstd(settings):
     cppstd = settings.get_safe("cppstd")
     compiler_cppstd = settings.get_safe("compiler.cppstd")
 
+    if compiler == "msvc":
+        # This is hardcoded at the moment, because the minimum defined version is 19.0, with c++14
+        # TODO: When older versions of msvc are defined in settings, cppstd can be None
+        if compiler_cppstd is None:
+            raise ConanException("compiler.cppstd is not defined for 'msvc' compiler. The minimum "
+                                 "and compiler version default is 'compiler.cppstd=14'")
+        return
+
     if not cppstd and not compiler_cppstd:
         return
 
