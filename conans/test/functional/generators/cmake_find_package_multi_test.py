@@ -539,7 +539,7 @@ class TestNoNamespaceTarget:
         from conans import ConanFile, CMake
 
         class Recipe(ConanFile):
-            settings = "os", "compiler", "arch"
+            settings = "os", "compiler", "arch", "build_type"
             exports_sources = ["src/*", "build-module.cmake"]
             generators = "cmake"
 
@@ -606,7 +606,8 @@ class TestNoNamespaceTarget:
         t.run('new library/version -s')
         t.save({'conanfile.py': cls.conanfile,
                 'build-module.cmake': cls.build_module})
-        t.run('create conanfile.py library/version@')
+        t.run('create conanfile.py library/version@ -s build_type=Debug')
+        t.run('create conanfile.py library/version@ -s build_type=Release')
         # Prepare project to consume the targets
         t.save({'CMakeLists.txt': cls.consumer, 'main.cpp': cls.main}, clean_first=True)
 
@@ -627,7 +628,7 @@ class TestNoNamespaceTarget:
         with t.chdir('multi_windows'):
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
             t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
-            generator = '-G "Visual Studio 15 2017" -A "x64"'
+            generator = '-G "Visual Studio 15 Win64"'
             t.run_command(
                 'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
