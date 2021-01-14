@@ -28,7 +28,7 @@ important things to have in mind regarding test discovery and style.
 
 Pytest follows this [convention](https://docs.pytest.org/en/stable/goodpractices.html) for test
 discovery:
-- Name your Python test files ending in `_test.py`.
+- Name your Python test files starting in `test_`.
 
 ```
 test
@@ -36,7 +36,7 @@ test
 ├── conftest.py
 ├── unittests
 │   ├── __init__.py
-│   ├── basic_build_test.py
+│   ├── test_mytest.py
 │   ...
 ...
 ```
