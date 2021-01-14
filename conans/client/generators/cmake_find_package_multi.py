@@ -26,6 +26,7 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
 
         {target_props_block}
+        {build_modules_block}
         {find_dependencies_block}
         """)
 
@@ -67,6 +68,15 @@ set_property(TARGET {{name}}::{{name}}
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
              {%- endfor %})
+    """)
+
+    build_modules = Template("""
+# Build modules
+{%- for config in configs %}
+foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
+    include(${_BUILD_MODULE_PATH})
+endforeach()
+{%- endfor %}
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -222,7 +232,9 @@ set_property(TARGET {{name}}::{{name}}
         {%- macro tvalue(pkg_name, comp_name, var, config) -%}
         {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
         {%- endmacro -%}
+
         {%- for comp_name, comp in components %}
+
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
@@ -256,6 +268,22 @@ set_property(TARGET {{name}}::{{name}}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
         endif()
+
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        {%- for config in configs %}
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+        {%- endfor %}
+
+        {%- endfor %}
         """))
 
     def __init__(self, conanfile):
@@ -376,6 +404,8 @@ set_property(TARGET {{name}}::{{name}}
 
         # Define the targets properties
         targets_props = self.target_properties.render(name=name, configs=self.configurations)
+        # Add build modules
+        build_modules_block = self.build_modules.render(name=name, configs=self.configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
@@ -386,6 +416,7 @@ set_property(TARGET {{name}}::{{name}}
         tmp = self.config_template.format(name=name, version=version,
                                           filename=filename,
                                           target_props_block=targets_props,
+                                          build_modules_block=build_modules_block,
                                           find_dependencies_block=find_dependencies_block,
                                           macros_and_functions=macros_and_functions)
         return tmp

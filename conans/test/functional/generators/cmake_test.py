@@ -504,3 +504,57 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         # Test cmake_find_package_multi generator without components
         run_test("cmake_find_package_multi", cmakelists, with_components=False)
+
+    def test_build_modules_alias_target(self, use_components=False):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake"]
+
+                def package(self):
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
+                    self.cpp_info.libs = ["hello"]
+                    self.cpp_info.build_modules["cmake"].append(module)
+            """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE hello::hello)
+            """)
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup(TARGETS)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        assert "otherhello link libraries: hello::hello" in client.out

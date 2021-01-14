@@ -46,6 +46,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 {find_dependencies_block}
             endif()
         endif()
+
+        foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS}})
+            include(${{_BUILD_MODULE_PATH}})
+        endforeach()
         """)
 
     find_components_tpl = Template(textwrap.dedent("""\
@@ -156,10 +160,6 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
-            include(${_BUILD_MODULE_PATH})
-        endforeach()
-
         {%- endfor %}
 
 
@@ -198,6 +198,18 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
             set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY
                          INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
+
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+
+        {%- endfor %}
 
     """))
 
