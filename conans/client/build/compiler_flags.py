@@ -29,7 +29,7 @@ def rpath_flags(settings, os_build, lib_paths):
     if not os_build:
         return []
     if compiler in GCC_LIKE:
-        rpath_separator = "," if (is_apple_os(os_host) and (os_build == "Linux" or is_apple_os(os_build))) else "="
+        rpath_separator = ","
 #        rpath_separator = "," if is_apple_os(os_host) else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
