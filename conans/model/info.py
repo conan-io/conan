@@ -557,6 +557,8 @@ class ConanInfo(object):
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)
+        if hasattr(self, "conf"):
+            result.append(self.conf.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 

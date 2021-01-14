@@ -42,11 +42,14 @@ def architecture_flag(settings):
     compiler_base = settings.get_safe("compiler.base")
     arch = settings.get_safe("arch")
     the_os = settings.get_safe("os")
+    subsystem = settings.get_safe("os.subsystem")
     if not compiler or not arch:
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(arch) in ['x86_64', 'sparcv9', 's390x']:
+        if str(the_os) == 'Macos' and str(subsystem) == 'Catalyst' and str(arch) == 'x86_64':
+            return '-target=x86_64-apple-ios-macabi'
+        elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:
             return '-m32'

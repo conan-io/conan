@@ -1,13 +1,22 @@
 from conan.tools.microsoft.visual import vcvars_arch, vcvars_command
 from conans.client.tools import intel_compilervars_command
+from conans.errors import ConanException
+
+
+def msbuild_verbosity_cmd_line_arg(conanfile):
+    verbosity = conanfile.conf["tools.microsoft"].msbuild_verbosity
+    if verbosity:
+        if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
+            raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
+        return '/verbosity:{}'.format(verbosity)
 
 
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.compiler = conanfile.settings.get_safe("compiler")
-        self.version = conanfile.settings.get_safe("compiler.base.version") or \
-                       conanfile.settings.get_safe("compiler.version")
+        self.version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
         self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
@@ -29,8 +38,12 @@ class MSBuild(object):
             cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
                                    platform_type=None, winsdk_version=None,
                                    vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s '
+        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s'
                % (cvars, sln, self.build_type, self.platform))
+
+        verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
+        if verbosity:
+            cmd += " {}".format(verbosity)
 
         return cmd
 

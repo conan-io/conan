@@ -115,6 +115,12 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvsimulator'),
                          '-mtvos-simulator-version-min=10.1')
 
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", None, "Catalyst"),
+                         '-mios-version-min=10.1')
+
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", "macosx", "Catalyst"),
+                         '-mios-version-min=10.1')
+
         self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")

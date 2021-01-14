@@ -688,7 +688,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertEqual("", expected)
+        self.assertNotIn("-mmacosx-version-min", expected)
 
         settings = MockSettings({"os": "Macos",
                                  "os.version": "10.13",
@@ -696,15 +696,15 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("10.13", expected)
+        self.assertIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertIn("10.9", expected)
-            self.assertNotIn("10.13", expected)
+            self.assertIn("-mmacosx-version-min=10.9", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CXXFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertNotIn("10.13", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)
