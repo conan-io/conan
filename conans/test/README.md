@@ -3,15 +3,15 @@
 
 Conan tests are divided in three categories:
 
-- Unit tests in `conans/test/unittests` folder. These tests should test small pieces of code such as
+- **Unit tests** in `conans/test/unittests` folder. These tests should test small pieces of code such as
   functions, methods or properties. As long as it is possible they should not rely on anything
   external like the file system or system configuration and in case they need to do, that should be
   mocked.
-- Integration tests in `conans/test/integration` folder. We consider integration tests the ones that
+- **Integration tests** in `conans/test/integration` folder. We consider integration tests the ones that
   only will need pure python to execute but that may test interaction between different Conan
   modules. They may test the result of the execution of one or several Conan commands but should
   never depend on any external tools like compilers, build systems or version-control system tools.
-- Functional tests in `conans/test/functional` folder. Under this category we add tests that are
+- **Functional tests** in `conans/test/functional` folder. Under this category we add tests that are
   testing the complete Conan functionality. They may call external tools (please read the section
   bellow to check the tools we have installed in the CI). These tests should be avoided as long as
   it's possible as they may take considerable CI time.
