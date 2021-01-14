@@ -610,6 +610,7 @@ class TestNoNamespaceTarget:
         # Prepare project to consume the targets
         t.save({'CMakeLists.txt': cls.consumer, 'main.cpp': cls.main}, clean_first=True)
 
+    @pytest.mark.tool_compiler
     def test_non_multi_generator(self):
         t = self.t
         with t.chdir('not_multi'):
@@ -620,6 +621,7 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build .') # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+    @pytest.mark.tool_visual_studio
     def test_multi_generator_windows(self):
         t = self.t
         with t.chdir('multi_macos'):
@@ -632,6 +634,7 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build . --config Release')  # Compiles and links.
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
+    @pytest.mark.tool_xcode
     def test_multi_generator_macos(self):
         t = self.t
         with t.chdir('multi_macos'):
