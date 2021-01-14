@@ -82,7 +82,7 @@ Please, if you need to run several combinations of the same testing code use par
         ...
 ```
 
-### Running tests locally
+## Running tests locally
 
 If you want to run the Coman test suite locally, please check the [README on the front
 page](https://github.com/conan-io/conan#running-the-tests).
