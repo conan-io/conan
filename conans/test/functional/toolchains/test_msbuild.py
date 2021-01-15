@@ -1,7 +1,6 @@
 import os
 import platform
 import shutil
-import re
 import textwrap
 import unittest
 
@@ -12,7 +11,7 @@ from conans.util.files import mkdir
 from conan.tools.microsoft.visual import vcvars_command
 from conans.client.tools import vs_installation_path
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_vs_runtime, check_msc_ver
+from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
 
 
@@ -373,7 +372,8 @@ class WinTest(unittest.TestCase):
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"],
                            preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_CONFIG"])
 
-    def _run_app(self, client, arch, build_type, shared=None):
+    @staticmethod
+    def _run_app(client, arch, build_type, shared=None):
         if build_type == "Release" and shared:
             configuration = "ReleaseShared"
         else:
@@ -389,14 +389,6 @@ class WinTest(unittest.TestCase):
             mkdir(os.path.dirname(new_cmd))
             shutil.copy(command_str, new_cmd)
         client.run_command(new_cmd)
-        if arch == "x86":
-            self.assertIn("main _M_IX86 defined", client.out)
-        else:
-            self.assertIn("main _M_X64 defined", client.out)
-        self.assertIn("Hello World %s" % build_type, client.out)
-        self.assertIn("main: %s!" % build_type, client.out)
-        self.assertIn("DEFINITIONS_BOTH: True", client.out)
-        self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
     @pytest.mark.tool_cmake
     def test_toolchain_win(self):
@@ -426,12 +418,14 @@ class WinTest(unittest.TestCase):
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         client.run("build . -if=conan")
-
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
+
         self._run_app(client, "x86", "Release")
-        check_msc_ver("v141", client.out)
-        self.assertIn("main _MSVC_LANG2017", client.out)
+        self.assertIn("Hello World Release", client.out)
+        check_exe_run(client.out, "main", "msvc", "19.1", "Release", "x86", "17",
+                      {"DEFINITIONS_BOTH": "True",
+                       "DEFINITIONS_CONFIG": "Release"})
         check_vs_runtime("Release/MyApp.exe", client, "15", static=True, build_type="Release")
 
     @pytest.mark.tool_cmake
@@ -465,8 +459,10 @@ class WinTest(unittest.TestCase):
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
-        check_msc_ver("v140", client.out)
-        self.assertIn("main _MSVC_LANG2014", client.out)
+        self.assertIn("Hello World Debug", client.out)
+        check_exe_run(client.out, "main", "msvc", "19.0", "Debug", "x86_64", "14",
+                      {"DEFINITIONS_BOTH": "True",
+                       "DEFINITIONS_CONFIG": "Debug"})
         check_vs_runtime("x64/Debug/MyApp.exe", client, "15", static=False, build_type="Debug")
 
     @pytest.mark.tool_cmake
@@ -517,10 +513,9 @@ class WinTest(unittest.TestCase):
             self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
 
             self._run_app(client, arch, build_type, shared)
-            version = re.search("main _MSC_VER19([0-9]*)", str(client.out)).group(1)
-            version = int(version)
-            self.assertTrue(10 <= version < 20)
-            self.assertIn("main _MSVC_LANG2017", client.out)
+            check_exe_run(client.out, "main", "msvc", "19.1", build_type, arch, "17",
+                          {"DEFINITIONS_BOTH": "True",
+                           "DEFINITIONS_CONFIG": build_type})
 
             new_cmd = "conan\\%s\\%s\\MyApp.exe" % (arch, configuration)
             vcvars = vcvars_command(version="15", architecture="amd64")

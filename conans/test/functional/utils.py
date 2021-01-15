@@ -1,5 +1,3 @@
-import re
-
 from conan.tools.microsoft.visual import vcvars_command
 
 
@@ -25,12 +23,38 @@ def check_vs_runtime(exe, client, vs_version, build_type, static, architecture="
             raise NotImplementedError()
 
 
-def check_msc_ver(toolset, output):
-    if toolset == "v140":
-        assert "main _MSC_VER1900" in output, "Error:{}".format(output)
-    elif toolset == "v141":
-        version = re.search("main _MSC_VER19([0-9]*)", str(output)).group(1)
-        version = int(version)
-        assert 10 <= version < 20, "Error:{}".format(output)
-    else:
-        raise NotImplementedError()
+def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None):
+    output = str(output)
+    print(output)
+    names = names if isinstance(names, list) else [names]
+
+    for name in names:
+        assert "{}: {}".format(name, build_type) in output
+        if compiler == "msvc":
+            if arch == "x86":
+                assert "{} _M_IX86 defined".format(name) in output
+            elif arch == "x86_64":
+                assert "{} _M_X64 defined".format(name) in output
+            else:
+                assert arch is None, "checked don't know how to validate this architecture"
+
+            assert "{} _MSC_VER{}".format(name, version.replace(".", "")) in output
+            assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
+
+        elif compiler == "gcc":
+            if arch == "x86":
+                assert "{} __i386__ defined".format(name) in output
+            elif arch == "x86_64":
+                assert "{} __x86_64__ defined".format(name) in output
+            else:
+                assert arch is None, "checked don't know how to validate this architecture"
+
+            major, minor = version.split(".")[0:2]
+            assert "{} __GNUC__{}".format(name, major) in output
+            assert "{} __GNUC_MINOR__{}".format(name, minor) in output
+            cppstd_value = {"98": "199711", "11": "201103", "14": "201402", "17": "201703"}[cppstd]
+            assert "{} __cplusplus{}".format(name, cppstd_value) in output
+
+        if definitions:
+            for k, v in definitions.items():
+                assert "{}: {}".format(k, v) in output
