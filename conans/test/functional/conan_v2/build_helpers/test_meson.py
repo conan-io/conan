@@ -1,8 +1,11 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 
 
+@pytest.mark.tool_compiler
 class MesonBuildHelperTestCase(ConanV2ModeTestCase):
 
     def test_no_build_type(self):
