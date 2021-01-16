@@ -1877,10 +1877,14 @@ class Command(object):
         update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
                                 'information that is going to be updated into the first lockfile')
 
+        update_multi_cmd = subparsers.add_parser('update-multi', help=update_help)
+        update_multi_cmd.add_argument('lockfile', help='Path to lockfile multi')
+
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
+        build_order_cmd.add_argument("--multi", action="store_true", default=False)
 
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
@@ -1907,19 +1911,28 @@ class Command(object):
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
+        multi_cmd = subparsers.add_parser('multi', help='Create a multi')
+        multi_cmd.add_argument("-l", "--lockfile", action=Extender, help="Path to lockfile")
+        multi_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                               help="Filename of the created lockfile")
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
         if args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
+        elif args.subcommand == "update-multi":
+            self._conan.lock_update_multi(args.lockfile)
         elif args.subcommand == "build-order":
-            build_order = self._conan.lock_build_order(args.lockfile)
+            build_order = self._conan.lock_build_order(args.lockfile, args.multi)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "clean-modified":
             self._conan.lock_clean_modified(args.lockfile)
+        elif args.subcommand == "multi":
+            self._conan.lock_multi(args.lockfile, args.lockfile_out)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)
