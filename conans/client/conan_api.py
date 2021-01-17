@@ -1313,35 +1313,17 @@ class ConanAPIV1(object):
         old_lock.save(old_lockfile)
 
     @api_method
-    def lock_update_multi(self, multi_lock, cwd=None):
-        cwd = cwd or os.getcwd()
-        multi_lock = _make_abs_path(multi_lock, cwd)
-        lock = LockMulti()
-        lock.loads(load(multi_lock))
-        for ref, packages in lock.nodes.items():
-            for package_id, lock_info in packages["package_id"].items():
-                for lockfile, nodes_ids in lock_info["lockfiles"].items():
-                    pass
-                    # FIXME: This is incomplete
-
-
-    @api_method
-    def lock_build_order(self, lockfile, multi=False, cwd=None):
+    def lock_build_order(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
 
-        if multi:
-            multi_lockfile = LockMulti()
-            multi_lockfile.loads(load(lockfile))
-            build_order = multi_lockfile.build_order()
-        else:
-            graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
-            if graph_lock_file.profile_host is None:
-                raise ConanException("Lockfiles with --base do not contain profile information, "
-                                     "cannot be used. Create a full lockfile")
+        graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        if graph_lock_file.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
 
-            graph_lock = graph_lock_file.graph_lock
-            build_order = graph_lock.build_order()
+        graph_lock = graph_lock_file.graph_lock
+        build_order = graph_lock.build_order()
         return build_order
 
     @api_method
@@ -1355,39 +1337,25 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
-    def lock_multi(self, lockfiles, lockfile_out, cwd=None):
-        def ref_convert(r):
-            # Necessary so "build-order" output is usable by install
-            if "@" not in r:
-                if "#" in r:
-                    r = r.replace("#", "@#")
-                else:
-                    r += "@"
-            return r
+    def lock_build_order_multi(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
-        result = LockMulti()
-        for lockfile_name in lockfiles:
-            lockfile_abs = _make_abs_path(lockfile_name, cwd)
-            lockfile = GraphLockFile.load(lockfile_abs, self.app.cache.config.revisions_enabled)
+        lockfile = _make_abs_path(lockfile, cwd)
+        multi_lockfile = LockMulti()
+        multi_lockfile.loads(load(lockfile))
+        build_order = multi_lockfile.build_order()
+        return build_order
 
-            lock = lockfile.graph_lock
-            for id_, node in lock.nodes.items():
-                ref_str = node.ref.full_str()
-                ref_str = ref_convert(ref_str)
-                ref_node = result.nodes.setdefault(ref_str, {})
-                pids_node = ref_node.setdefault("package_id", {})
-                pid_node = pids_node.setdefault(node.package_id, {})
-                # TODO: Handle multiple repeated refs in same lockfile
-                ids = pid_node.setdefault("lockfiles", {})
-                ids.setdefault(lockfile_name, []).append(id_)
-                for require in node.requires:
-                    require_node = lock.nodes[require]
-                    ref = require_node.ref.full_str()
-                    ref = ref_convert(ref)
-                    requires = ref_node.setdefault("requires", [])
-                    if ref not in requires:
-                        requires.append(ref)
+    @api_method
+    def lock_update_multi(self, multi_lock_path, cwd=None):
+        cwd = cwd or os.getcwd()
+        multi_lock_path = _make_abs_path(multi_lock_path, cwd)
+        revisions_enabled = self.app.cache.config.revisions_enabled
+        LockMulti.update_multi(multi_lock_path, revisions_enabled)
 
+    @api_method
+    def lock_multi(self, lockfiles, lockfile_out, cwd=None):
+        cwd = cwd or os.getcwd()
+        result = LockMulti.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
         lockfile_out = _make_abs_path(lockfile_out, cwd)
         save(lockfile_out, result.dumps())
 

@@ -1877,14 +1877,10 @@ class Command(object):
         update_cmd.add_argument('new_lockfile', help='Path to lockfile containing the new '
                                 'information that is going to be updated into the first lockfile')
 
-        update_multi_cmd = subparsers.add_parser('update-multi', help=update_help)
-        update_multi_cmd.add_argument('lockfile', help='Path to lockfile multi')
-
         build_order_cmd = subparsers.add_parser('build-order', help='Returns build-order')
         build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
-        build_order_cmd.add_argument("--multi", action="store_true", default=False)
 
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
@@ -1916,23 +1912,38 @@ class Command(object):
         multi_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                help="Filename of the created lockfile")
 
+        build_order_multi_cmd = subparsers.add_parser('build-order-multi',
+                                                      help='Returns build-order')
+        build_order_multi_cmd.add_argument('lockfile', help='lockfile file')
+        build_order_multi_cmd.add_argument("--json", action=OnceArgument,
+                                           help="generate output file in json format")
+
+        update_multi_cmd = subparsers.add_parser('update-multi', help=update_help)
+        update_multi_cmd.add_argument('lockfile', help='Path to lockfile multi')
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
         if args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
+        elif args.subcommand == "multi":
+            self._conan.lock_multi(args.lockfile, args.lockfile_out)
         elif args.subcommand == "update-multi":
             self._conan.lock_update_multi(args.lockfile)
+        elif args.subcommand == "build-order-multi":
+            build_order = self._conan.lock_build_order_multi(args.lockfile)
+            self._out.writeln(build_order)
+            if args.json:
+                json_file = _make_abs_path(args.json)
+                save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "build-order":
-            build_order = self._conan.lock_build_order(args.lockfile, args.multi)
+            build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)
                 save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "clean-modified":
             self._conan.lock_clean_modified(args.lockfile)
-        elif args.subcommand == "multi":
-            self._conan.lock_multi(args.lockfile, args.lockfile_out)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build)

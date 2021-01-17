@@ -26,21 +26,30 @@ def test_basic():
 
     client.run("lock multi --lockfile=app1_windows.lock --lockfile=app1_linux.lock "
                "--lockfile=app2_windows.lock --lockfile=app2_linux.lock --lockfile-out=multi.lock")
-    print(client.load("multi.lock"))
 
-    client.run("lock build-order multi.lock --multi --json=bo.json")
+    client.run("lock build-order-multi multi.lock --json=bo.json")
     order = client.load("bo.json")
     multi = client.load("multi.lock")
+    print(multi)
     print(order)
     order = json.loads(order)
     multi = json.loads(multi)
     for level in order:
         for ref in level:
+            print("Processing ", ref)
             # Now get the package_id, lockfile
             pkg_ids = multi[ref]["package_id"]
             for pkg_id, lockfile_info in pkg_ids.items():
+                print("    Processing ", pkg_id)
                 lockfiles = lockfile_info["lockfiles"]
                 lockfile = next(iter(lockfiles))
+                print("    install ", ref, lockfile)
                 client.run("install {ref} --build={ref} --lockfile={lockfile} "
                            "--lockfile-out={lockfile}".format(ref=ref, lockfile=lockfile))
                 client.run("lock update-multi multi.lock")
+
+    print(client.load("multi.lock"))
+    print(client.load("app1_windows.lock"))
+    print(client.load("app1_linux.lock"))
+    print(client.load("app2_windows.lock"))
+    print(client.load("app2_linux.lock"))
