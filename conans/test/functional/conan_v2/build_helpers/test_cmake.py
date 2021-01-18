@@ -26,7 +26,6 @@ class CMakeBuildHelperTestCase(ConanV2ModeTestCase):
         t = self.get_client()
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
-
             class Pkg(ConanFile):
                 settings = "os", "arch", "build_type"
                 def build(self):
@@ -43,7 +42,6 @@ class CMakeBuildHelperTestCase(ConanV2ModeTestCase):
             from conans import ConanFile, CMake
             class Pkg(ConanFile):
                 toolchain = "cmake"
-
                 def build(self):
                     cmake = CMake(self)
                     cmake.build()
