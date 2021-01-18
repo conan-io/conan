@@ -315,6 +315,7 @@ class GraphBinariesAnalyzer(object):
         neighbors = node.neighbors()
 
         direct_reqs, indirect_reqs = self.package_id_transitive_reqs(node)
+        print("NODE ", node, "TRANSITIVE REQS ", [(r, r.revision) for r in direct_reqs], indirect_reqs)
 
         # FIXME: Conan v2.0 This is introducing a bug for backwards compatibility, it will add
         #   only the requirements available in the 'neighbour.info' object, not all the closure

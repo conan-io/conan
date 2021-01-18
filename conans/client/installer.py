@@ -511,6 +511,10 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
+            else:
+
+                print("********************** ", node, " in processed, skipping its update")
+                print(pref.full_str(), [p.full_str() for p in processed_package_references])
 
             package_folder = layout.package(pref)
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"

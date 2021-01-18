@@ -326,14 +326,14 @@ def test_package_revision_mode_full_transitive_package_id():
     client = TestClient()
     client.run("config set general.default_package_id_mode=package_revision_mode")
     client.run("config set general.full_transitive_package_id=1")
-    client.save({"pkga/conanfile.py": GenConanfile(),
-                 "pkgb/conanfile.py": GenConanfile().with_require("pkga/0.1"),
-                 "pkgc/conanfile.py": GenConanfile().with_require("pkgb/0.1"),
-                 "pkgd/conanfile.py": GenConanfile().with_require("pkgc/0.1")})
+    client.save({"tool/conanfile.py": GenConanfile(),
+                 "pkga/conanfile.py": GenConanfile(),
+                 "pkgb/conanfile.py": GenConanfile().with_requires("tool/0.1", "pkga/0.1"),
+                 "profile": "[build_requires]\ntool/0.1"})
+    client.run("export tool tool/0.1@")
     client.run("export pkga pkga/0.1@")
-    client.run("export pkgb pkgb/0.1@")
-    client.run("export pkgc pkgc/0.1@")
-    client.run("create pkgd pkgd/0.1@ --build=missing")
+    client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
+    print(client.out)
     assert "pkgc/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgc/0.1: Unknown binary for pkgc/0.1, computing updated ID" in client.out
     assert "pkgc/0.1: Package '1d602da5278b24bf3aa0e19e6e199126cdfb7094' created" in client.out
