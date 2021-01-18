@@ -10,6 +10,7 @@ from conans.test.functional.utils import check_vs_runtime
 from conans.test.utils.tools import TestClient
 from conans.client.tools import which
 
+
 @pytest.mark.tool_cmake
 class CMakeNinjaTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'Ninja' are available in the system
