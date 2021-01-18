@@ -190,7 +190,7 @@ class MesonToolchain(object):
     def _native_content(self):
         return self._render(self._native_file_template, self._context)
 
-    def _to_meson_machine(self, machine_os, machine_arch):
+    def _to_meson_machine(self, machine_os, machine_arch, conf):
         # https://mesonbuild.com/Reference-tables.html#operating-system-names
         system_map = {'Android': 'android',
                       'Macos': 'darwin',
@@ -232,10 +232,12 @@ class MesonToolchain(object):
                           'wasm': ('wasm32', 'wasm32', 'little'),
                           'x86': ('x86', 'x86', 'little'),
                           'x86_64': ('x86_64', 'x86_64', 'little')}
-        system = system_map.get(machine_os, machine_os.lower())
+        system = conf.system or system_map.get(machine_os, machine_os.lower())
         default_cpu_tuple = (machine_arch.lower(), machine_arch.lower(), 'little')
         cpu_tuple = cpu_family_map.get(machine_arch, default_cpu_tuple)
-        cpu_family, cpu, endian = cpu_tuple[0], cpu_tuple[1], cpu_tuple[2]
+        cpu_family = conf.cpu_family or cpu_tuple[0]
+        cpu = conf.cpu or cpu_tuple[1]
+        endian = conf.endian or cpu_tuple[2]
         context = {
             'system': self._to_meson_value(system),
             'cpu_family': self._to_meson_value(cpu_family),
@@ -249,9 +251,13 @@ class MesonToolchain(object):
         os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
         os_target, arch_target = os_host, arch_host  # TODO: assume target the same as a host for now?
 
-        build_machine = self._to_meson_machine(os_build, arch_build)
-        host_machine = self._to_meson_machine(os_host, arch_host)
-        target_machine = self._to_meson_machine(os_target, arch_target)
+        build_machine_conf = self._conanfile.conf["tools.meson.mesontoolchain.build_machine"]
+        host_machine_conf = self._conanfile.conf["tools.meson.mesontoolchain.host_machine"]
+        target_machine_conf = self._conanfile.conf["tools.meson.mesontoolchain.target_machine"]
+
+        build_machine = self._to_meson_machine(os_build, arch_build, build_machine_conf)
+        host_machine = self._to_meson_machine(os_host, arch_host, host_machine_conf)
+        target_machine = self._to_meson_machine(os_target, arch_target, target_machine_conf)
 
         context = self._context
         context['build_machine'] = build_machine
