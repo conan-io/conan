@@ -616,7 +616,9 @@ class TestNoNamespaceTarget:
         t = self.t
         with t.chdir('not_multi'):
             t.run('install library/version@ -g cmake_find_package -s build_type=Release')
-            t.run_command('cmake .. -DCMAKE_MODULE_PATH:PATH="{}"'.format(t.current_folder))
+            generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ''
+            t.run_command(
+                'cmake .. {} -DCMAKE_MODULE_PATH:PATH="{}"'.format(generator, t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 1
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build .')  # Compiles and links.
