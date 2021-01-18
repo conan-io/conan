@@ -90,7 +90,7 @@ class MSBuildToolchain(object):
                                    "dynamic": "MultiThreadedDLL"}.get(runtime, "")
             else:
                 runtime_library = {"static": "MultiThreadedDebug",
-                                   "dyanmic": "MultiThreadedDebugDLL"}.get(runtime, "")
+                                   "dynamic": "MultiThreadedDebugDLL"}.get(runtime, "")
         else:
             runtime_library = {"MT": "MultiThreaded",
                                "MTd": "MultiThreadedDebug",
