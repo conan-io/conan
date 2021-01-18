@@ -87,7 +87,7 @@ class MSBuildToolchain(object):
             build_type = settings.get_safe("build_type")
             if build_type != "Debug":
                 runtime_library = {"static": "MultiThreaded",
-                                   "dyanmic": "MultiThreadedDLL"}.get(runtime, "")
+                                   "dynamic": "MultiThreadedDLL"}.get(runtime, "")
             else:
                 runtime_library = {"static": "MultiThreadedDebug",
                                    "dyanmic": "MultiThreadedDebugDLL"}.get(runtime, "")
