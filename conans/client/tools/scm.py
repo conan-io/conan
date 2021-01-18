@@ -83,8 +83,9 @@ class SCMBase(object):
         if password and self._password:
             self._output.warn("SCM password got from URL, ignoring 'password' parameter")
 
-        the_user = user or self._username
-        the_password = password or self._password
+        the_user = quote_plus(user or self._username)
+        the_password = quote_plus(password or self._password)
+
         if the_password and the_user and scheme != "ssh":
             return "{scheme}://{user}:{password}@{url}".format(scheme=scheme, user=the_user,
                                                                password=the_password, url=url)

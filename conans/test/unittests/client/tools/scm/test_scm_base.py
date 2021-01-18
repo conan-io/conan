@@ -102,6 +102,11 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
         self.assertEqual('https://user:pass@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
 
+    def test_url_with_user_password_characters_param(self):
+        scm = SCMBase(username="el niño", password="la contra%seña")
+        self.assertEqual('https://el+ni%C3%B1o:la+contra%25se%C3%B1a@github.com/conan-io/conan.git',
+                         scm.get_url_with_credentials("https://github.com/conan-io/conan.git"))
+
     def test_url_user_with_user_param(self):
         output = OutputMock()
         scm = SCMBase(username="user", output=output)
