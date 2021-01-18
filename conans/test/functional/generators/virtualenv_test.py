@@ -13,7 +13,7 @@ from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
-from conans.test.functional.graph.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile

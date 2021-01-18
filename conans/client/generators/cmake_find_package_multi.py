@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -8,11 +9,11 @@ from conans.client.generators.cmake_find_package_common import (find_transitive_
                                                                 target_template,
                                                                 CMakeFindPackageCommonMacros)
 from conans.client.generators.cmake_multi import extend
+from conans.util.files import save
 
 
 class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
     name = "cmake_find_package_multi"
-    _configurations = ["Release", "RelWithDebInfo", "MinSizeRel", "Debug"]
 
     config_template = textwrap.dedent("""
         {macros_and_functions}
@@ -25,6 +26,7 @@ class CMakeFindPackageMultiGenerator(CMakeFindPackageGenerator):
         include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
 
         {target_props_block}
+        {build_modules_block}
         {find_dependencies_block}
         """)
 
@@ -66,6 +68,15 @@ set_property(TARGET {{name}}::{{name}}
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
              {%- endfor %})
+    """)
+
+    build_modules = Template("""
+# Build modules
+{%- for config in configs %}
+foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
+    include(${_BUILD_MODULE_PATH})
+endforeach()
+{%- endfor %}
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -221,7 +232,9 @@ set_property(TARGET {{name}}::{{name}}
         {%- macro tvalue(pkg_name, comp_name, var, config) -%}
         {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
         {%- endmacro -%}
+
         {%- for comp_name, comp in components %}
+
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
 
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
@@ -255,7 +268,36 @@ set_property(TARGET {{name}}::{{name}}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
                          {%- endfor %})
         endif()
+
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        {%- for config in configs %}
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+        {%- endfor %}
+
+        {%- endfor %}
         """))
+
+    def __init__(self, conanfile):
+        super(CMakeFindPackageMultiGenerator, self).__init__(conanfile)
+        self.configuration = str(self.conanfile.settings.build_type)
+        self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
+        # FIXME: Ugly way to define the output path
+        self.output_path = os.getcwd()
+
+    def generate(self):
+        generator_files = self.content
+        for generator_file, content in generator_files.items():
+            generator_file = os.path.join(self.output_path, generator_file)
+            save(generator_file, content)
 
     @property
     def filename(self):
@@ -265,7 +307,7 @@ set_property(TARGET {{name}}::{{name}}
     def content(self):
         ret = {}
         build_type = str(self.conanfile.settings.build_type).upper()
-        build_type_suffix = "_{}".format(build_type) if build_type else ""
+        build_type_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
             self._validate_components(cpp_info)
             pkg_filename = self._get_filename(cpp_info)
@@ -295,14 +337,14 @@ set_property(TARGET {{name}}::{{name}}
 
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
-                deps = DepsCppCmake(dep_cpp_info)
+                deps = DepsCppCmake(dep_cpp_info, self.name)
                 find_lib = target_template.format(name=pkg_findname, deps=deps,
                                                   build_type_suffix=build_type_suffix,
                                                   deps_names=deps_names)
-                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = find_lib
+                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
-                pkg_info = DepsCppCmake(cpp_info)
+                pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
@@ -333,7 +375,7 @@ set_property(TARGET {{name}}::{{name}}
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
                     conan_message=CMakeFindPackageCommonMacros.conan_message,
-                    configs=self._configurations
+                    configs=self.configurations
                 )
                 ret[self._config_filename(pkg_filename)] = target_config
         return ret
@@ -361,7 +403,9 @@ set_property(TARGET {{name}}::{{name}}
         ])
 
         # Define the targets properties
-        targets_props = self.target_properties.render(name=name, configs=self._configurations)
+        targets_props = self.target_properties.render(name=name, configs=self.configurations)
+        # Add build modules
+        build_modules_block = self.build_modules.render(name=name, configs=self.configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
@@ -372,6 +416,7 @@ set_property(TARGET {{name}}::{{name}}
         tmp = self.config_template.format(name=name, version=version,
                                           filename=filename,
                                           target_props_block=targets_props,
+                                          build_modules_block=build_modules_block,
                                           find_dependencies_block=find_dependencies_block,
                                           macros_and_functions=macros_and_functions)
         return tmp

@@ -10,6 +10,7 @@ from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
+from conans.model.layout import Layout
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 
@@ -123,6 +124,7 @@ class MockDepsCppInfo(defaultdict):
 class MockConanfile(ConanFile):
 
     def __init__(self, settings, options=None, runner=None):
+        self.layout = Layout()
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
@@ -137,6 +139,7 @@ class MockConanfile(ConanFile):
 
         self.package_folder = None
 
+
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -149,7 +152,6 @@ class ConanFileMock(ConanFile):
         options = options or ""
         self.command = None
         self.path = None
-        self.source_folder = self.build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(options))
         if options_values:
@@ -159,7 +161,6 @@ class ConanFileMock(ConanFile):
         self.deps_cpp_info.sysroot = "/path/to/sysroot"
         self.output = TestBufferConanOutput()
         self.in_local_cache = False
-        self.install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
         self.should_configure = True
@@ -172,8 +173,14 @@ class ConanFileMock(ConanFile):
         self.env_info = EnvInfo()
         self.deps_user_info = DepsUserInfo()
         self._conan_env_values = EnvValues()
+        self.layout = Layout()
+        self.layout.set_base_source_folder(".")
+        self.layout.set_base_build_folder(".")
+        self.layout.set_base_install_folder("myinstallfolder")
 
-    def run(self, command):
+    def run(self, command, win_bash=False, subsystem=None):
+        assert win_bash is False
+        assert subsystem is None
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}

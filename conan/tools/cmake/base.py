@@ -1,4 +1,3 @@
-import os
 import textwrap
 import warnings
 from collections import OrderedDict, defaultdict
@@ -33,7 +32,6 @@ class Variables(OrderedDict):
 
 class CMakeToolchainBase(object):
     filename = "conan_toolchain.cmake"
-    project_include_filename = "conan_project_include.cmake"
 
     _toolchain_macros_tpl = textwrap.dedent("""
         {% macro iterate_configs(var_config, action) -%}
@@ -84,25 +82,6 @@ class CMakeToolchainBase(object):
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
-        {% if conan_project_include_cmake %}
-        if(CMAKE_VERSION VERSION_LESS "3.15")
-            message(WARNING
-                " CMake version less than 3.15 doesn't support CMAKE_PROJECT_INCLUDE variable\\n"
-                " used by Conan toolchain to work. In order to get the same behavior you will\\n"
-                " need to manually include the generated file after your 'project()' call in the\\n"
-                " main CMakeLists.txt file:\\n"
-                " \\n"
-                "     project(YourProject C CXX)\\n"
-                "     include(\\"\\${CMAKE_BINARY_DIR}/conan_project_include.cmake\\")\\n"
-                " \\n"
-                " This file contains some definitions and extra adjustments that depend on\\n"
-                " the build_type and it cannot be done in the toolchain.")
-        else()
-            # Will be executed after the 'project()' command
-            set(CMAKE_PROJECT_INCLUDE "{{ conan_project_include_cmake }}")
-        endif()
-        {% endif %}
-
         {% block main %}
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
@@ -115,6 +94,27 @@ class CMakeToolchainBase(object):
             set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
             {%- endif %}
         {% endblock %}
+
+        {% if shared_libs -%}
+            message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+            set(BUILD_SHARED_LIBS {{ shared_libs }})
+        {%- endif %}
+
+        {% if parallel -%}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
+        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
+        {%- endif %}
+
+        {% if cppstd -%}
+        message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        set(CMAKE_CXX_STANDARD {{ cppstd }})
+        set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
+        {%- endif %}
+
+        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
 
         # Variables
         {% for it, value in variables.items() %}
@@ -151,8 +151,7 @@ class CMakeToolchainBase(object):
         }
 
     def _get_template_context_data(self):
-        """ Returns two dictionaries, the context for the '_template_toolchain' and
-            the context for the '_template_project_include' templates.
+        """ Returns dict, the context for the '_template_toolchain'
         """
         ctxt_toolchain = {
             "variables": self.variables,
@@ -163,7 +162,7 @@ class CMakeToolchainBase(object):
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
         }
-        return ctxt_toolchain, {}
+        return ctxt_toolchain
 
     def write_toolchain_files(self):
         # Warning
@@ -185,17 +184,7 @@ class CMakeToolchainBase(object):
         dict_loader = DictLoader(self._get_templates())
         env = Environment(loader=dict_loader)
 
-        ctxt_toolchain, ctxt_project_include = self._get_template_context_data()
-        if ctxt_project_include:
-            # Make it absolute, wrt to current folder, set by the caller
-            conan_project_include_cmake = os.path.abspath(self.project_include_filename)
-            conan_project_include_cmake = conan_project_include_cmake.replace("\\", "/")
-            t = env.get_template(self.project_include_filename)
-            content = t.render(**ctxt_project_include)
-            save(conan_project_include_cmake, content)
-
-            ctxt_toolchain.update({'conan_project_include_cmake': conan_project_include_cmake})
-
+        ctxt_toolchain = self._get_template_context_data()
         t = env.get_template(self.filename)
         content = t.render(**ctxt_toolchain)
         save(self.filename, content)

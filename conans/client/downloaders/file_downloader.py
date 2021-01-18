@@ -6,12 +6,22 @@ import traceback
 import six
 
 from conans.client.rest import response_to_str
+from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
     ForbiddenException, ConanConnectionError, RequestErrorException
 from conans.util import progress_bar
 from conans.util.files import mkdir
 from conans.util.log import logger
 from conans.util.tracer import log_download
+
+
+def check_checksum(file_path, md5, sha1, sha256):
+    if md5:
+        check_md5(file_path, md5)
+    if sha1:
+        check_sha1(file_path, sha1)
+    if sha256:
+        check_sha256(file_path, sha256)
 
 
 class FileDownloader(object):
@@ -23,7 +33,7 @@ class FileDownloader(object):
         self._config = config
 
     def download(self, url, file_path=None, auth=None, retry=None, retry_wait=None, overwrite=False,
-                 headers=None):
+                 headers=None, md5=None, sha1=None, sha256=None):
         retry = retry if retry is not None else self._config.retry
         retry = retry if retry is not None else 2
         retry_wait = retry_wait if retry_wait is not None else self._config.retry_wait
@@ -41,8 +51,16 @@ class FileDownloader(object):
                 # the dest folder before
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
-        return _call_with_retry(self._output, retry, retry_wait, self._download_file, url, auth,
-                                headers, file_path)
+        try:
+            r = _call_with_retry(self._output, retry, retry_wait, self._download_file, url, auth,
+                                 headers, file_path)
+            if file_path:
+                check_checksum(file_path, md5, sha1, sha256)
+            return r
+        except Exception:
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+            raise
 
     def _download_file(self, url, auth, headers, file_path, try_resume=False):
         t1 = time.time()

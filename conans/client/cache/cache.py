@@ -15,6 +15,7 @@ from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
@@ -77,6 +78,7 @@ class ClientCache(object):
         # Caching
         self._no_lock = None
         self._config = None
+        self._new_config = None
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
@@ -154,6 +156,22 @@ class ClientCache(object):
             self.initialize_config()
             self._config = ConanClientConfigParser(self.conan_conf_path)
         return self._config
+
+    @property
+    def new_config_path(self):
+        return os.path.join(self.cache_folder, "conan.cfg")
+
+    @property
+    def new_config(self):
+        """ this is the new conan.cfgto replace the old conan.conf that contains
+        configuration defined with the new syntax as in profiles, this config will be composed
+        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
+        """
+        if self._new_config is None:
+            self._new_config = ConfDefinition()
+            if os.path.exists(self.new_config_path):
+                self._new_config.loads(load(self.new_config_path))
+        return self._new_config
 
     @property
     def localdb(self):

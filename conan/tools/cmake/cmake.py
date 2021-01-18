@@ -1,10 +1,11 @@
 import os
 import platform
 
+from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake.utils import get_generator, is_multi_configuration
+from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
 from conans.client import tools
 from conans.client.build import join_arguments
-from conans.client.build.cmake_flags import is_multi_configuration, get_generator
-from conan.tools.cmake.base import CMakeToolchainBase
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -14,13 +15,13 @@ from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
-    forbidden_generators = ["cmake", "cmake_multi", "cmake_paths"]
+    forbidden_generators = ["cmake", "cmake_multi"]
     if any(it in conanfile.generators for it in forbidden_generators):
         raise ConanException("Usage of toolchain is only supported with 'cmake_find_package'"
                              " or 'cmake_find_package_multi' generators")
 
 
-def _cmake_cmd_line_args(conanfile, generator, parallel, msbuild_verbosity):
+def _cmake_cmd_line_args(conanfile, generator, parallel):
     args = []
     compiler_version = conanfile.settings.get_safe("compiler.version")
     if generator and parallel:
@@ -30,9 +31,10 @@ def _cmake_cmd_line_args(conanfile, generator, parallel, msbuild_verbosity):
             # Parallel for building projects in the solution
             args.append("/m:%i" % cpu_count(output=conanfile.output))
 
-    if generator and msbuild_verbosity:
-        if "Visual Studio" in generator and compiler_version and Version(compiler_version) >= "10":
-            args.append("/verbosity:%s" % msbuild_verbosity)
+    if generator and "Visual Studio" in generator:
+        verbosity = msbuild_verbosity_cmd_line_arg(conanfile)
+        if verbosity:
+            args.append(verbosity)
 
     return args
 
@@ -44,9 +46,7 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, generator=None, build_folder=None, parallel=True,
-                 msbuild_verbosity="minimal"):
-
+    def __init__(self, conanfile, generator=None, build_folder=None, parallel=True):
         _validate_recipe(conanfile)
 
         # assert generator is None, "'generator' is handled by the toolchain"
@@ -56,7 +56,6 @@ class CMake(object):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
-        self._msbuild_verbosity = msbuild_verbosity
 
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
@@ -115,8 +114,7 @@ class CMake(object):
         if target is not None:
             args = ["--target", target]
 
-        cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator, self._parallel,
-                                             self._msbuild_verbosity)
+        cmd_line_args = _cmake_cmd_line_args(self._conanfile, self._generator, self._parallel)
         if cmd_line_args:
             args += ['--'] + cmd_line_args
 

@@ -15,10 +15,11 @@ class MSBuildToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.preprocessor_definitions = {}
+        self.compile_options = {}
+        self.configuration = conanfile.settings.build_type
 
-    @staticmethod
-    def _name_condition(settings):
-        props = [("Configuration", settings.build_type),
+    def _name_condition(self, settings):
+        props = [("Configuration", self.configuration),
                  # FIXME: This probably requires mapping ARM architectures
                  ("Platform", {'x86': 'Win32',
                                'x86_64': 'x64'}.get(settings.get_safe("arch")))]
@@ -70,7 +71,7 @@ class MSBuildToolchain(object):
                      {};%(PreprocessorDefinitions)
                   </PreprocessorDefinitions>
                   <RuntimeLibrary>{}</RuntimeLibrary>
-                  <LanguageStandard>{}</LanguageStandard>
+                  <LanguageStandard>{}</LanguageStandard>{}
                 </ClCompile>
               </ItemDefinitionGroup>
               <PropertyGroup Label="Configuration">
@@ -83,7 +84,14 @@ class MSBuildToolchain(object):
         # It is useless to set PlatformToolset in the config file, because the conditional checks it
         cppstd = "stdcpp%s" % cppstd if cppstd else ""
         toolset = toolset or ""
-        config_props = content.format(preprocessor_definitions, runtime_library, cppstd, toolset)
+        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain"].compile_options
+        if compile_options is not None:
+            compile_options = eval(compile_options)
+            self.compile_options.update(compile_options)
+        compile_options = "".join("\n      <{k}>{v}</{k}>".format(k=k, v=v)
+                                  for k, v in self.compile_options.items())
+        config_props = content.format(preprocessor_definitions, runtime_library, cppstd,
+                                      compile_options, toolset)
         config_filepath = os.path.abspath(config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)

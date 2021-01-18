@@ -513,10 +513,8 @@ class BinaryInstaller(object):
                     self._recorder.package_fetched_from_cache(pref)
 
             package_folder = layout.package(pref)
-            if not os.path.isdir(package_folder):
-                raise ConanException("Package '%s' corrupted. Package folder must exist: %s\n"
-                                     "Try removing the package with 'conan remove'"
-                                     % (str(pref), package_folder))
+            assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                                   % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
@@ -588,6 +586,8 @@ class BinaryInstaller(object):
                     env_info.PATH.extend(dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
+        conan_file.deps_cpp_info.direct_host_deps = [n.name for n in node.neighbors()
+                                                     if n.context == CONTEXT_HOST]
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [node.ref.name for node in node_order]
