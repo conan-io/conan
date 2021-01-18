@@ -30,7 +30,7 @@ def test_basic():
     client.run("lock create --ref=app2/0.1 -s os=Linux  --lockfile=app2_base.lock "
                "--lockfile-out=app2_linux.lock")
 
-    client.run("lock multi --lockfile=app1_windows.lock --lockfile=app1_linux.lock "
+    client.run("lock create-multi --lockfile=app1_windows.lock --lockfile=app1_linux.lock "
                "--lockfile=app2_windows.lock --lockfile=app2_linux.lock --lockfile-out=multi.lock")
 
     client.run("lock build-order-multi multi.lock --json=bo.json")

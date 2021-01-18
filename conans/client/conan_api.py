@@ -1337,6 +1337,13 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
+    def lock_create_multi(self, lockfiles, lockfile_out, cwd=None):
+        cwd = cwd or os.getcwd()
+        result = LockMulti.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
+        lockfile_out = _make_abs_path(lockfile_out, cwd)
+        save(lockfile_out, result.dumps())
+
+    @api_method
     def lock_build_order_multi(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
@@ -1351,13 +1358,6 @@ class ConanAPIV1(object):
         multi_lock_path = _make_abs_path(multi_lock_path, cwd)
         revisions_enabled = self.app.cache.config.revisions_enabled
         LockMulti.update_multi(multi_lock_path, revisions_enabled)
-
-    @api_method
-    def lock_multi(self, lockfiles, lockfile_out, cwd=None):
-        cwd = cwd or os.getcwd()
-        result = LockMulti.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
-        lockfile_out = _make_abs_path(lockfile_out, cwd)
-        save(lockfile_out, result.dumps())
 
     @api_method
     def lock_create(self, path, lockfile_out,

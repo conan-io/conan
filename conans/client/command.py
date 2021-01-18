@@ -1907,7 +1907,7 @@ class Command(object):
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
-        multi_cmd = subparsers.add_parser('multi', help='Create a multi')
+        multi_cmd = subparsers.add_parser('create-multi', help='Create a multi')
         multi_cmd.add_argument("-l", "--lockfile", action=Extender, help="Path to lockfile")
         multi_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
                                help="Filename of the created lockfile")
@@ -1926,8 +1926,8 @@ class Command(object):
 
         if args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
-        elif args.subcommand == "multi":
-            self._conan.lock_multi(args.lockfile, args.lockfile_out)
+        elif args.subcommand == "create-multi":
+            self._conan.lock_create_multi(args.lockfile, args.lockfile_out)
         elif args.subcommand == "update-multi":
             self._conan.lock_update_multi(args.lockfile)
         elif args.subcommand == "build-order-multi":
