@@ -24,8 +24,6 @@ class AutotoolsBuildHelperTestCase(ConanV2ModeTestCase):
         t = self.get_client()
         t.save({"conanfile.py": self.conanfile.format("compiler")})
         t.run("create . pkg/0.1@user/testing", assert_error=True)
-        jander = t.out
-        print(jander)
         self.assertIn("Conan v2 incompatible: build_type setting should be defined.", t.out)
 
     def test_no_compiler(self):
