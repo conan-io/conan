@@ -28,6 +28,8 @@ class MesonToolchain(object):
     {% if pkgconfig %}pkgconfig = {{pkgconfig}}{% endif %}
 
     [built-in options]
+    preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
+    '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
     {% if buildtype %}buildtype = {{buildtype}}{% endif %}
     {% if debug %}debug = {{debug}}{% endif %}
     {% if default_library %}default_library = {{default_library}}{% endif %}
@@ -35,10 +37,10 @@ class MesonToolchain(object):
     {% if b_ndebug %}b_ndebug = {{b_ndebug}}{% endif %}
     {% if b_staticpic %}b_staticpic = {{b_staticpic}}{% endif %}
     {% if cpp_std %}cpp_std = {{cpp_std}}{% endif %}
-    {% if c_args %}c_args = {{c_args}}{% endif %}
-    {% if c_link_args %}c_link_args = {{c_link_args}}{% endif %}
-    {% if cpp_args %}cpp_args = {{cpp_args}}{% endif %}
-    {% if cpp_link_args %}cpp_link_args = {{cpp_link_args}}{% endif %}
+    c_args = {{c_args}} + preprocessor_definitions
+    c_link_args = {{c_link_args}}
+    cpp_args = {{cpp_args}} + preprocessor_definitions
+    cpp_link_args = {{cpp_link_args}}
     {% if pkg_config_path %}pkg_config_path = {{pkg_config_path}}{% endif %}
     """)
 
@@ -71,6 +73,7 @@ class MesonToolchain(object):
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
         self.definitions = dict()
+        self.preprocessor_definitions = dict()
         self._env = env
 
     @staticmethod
@@ -137,6 +140,10 @@ class MesonToolchain(object):
     def _none_if_empty(value):
         return "'%s'" % value if value.strip() else None
 
+    def _env_array(self, name):
+        import shlex
+        return shlex.split(self._env.get(name, ''))
+
     @property
     def _context(self):
         project_options = []
@@ -171,13 +178,12 @@ class MesonToolchain(object):
             "b_ndebug": self._to_meson_value(self._ndebug) if self._build_type else None,
             # https://mesonbuild.com/Builtin-options.html#compiler-options
             "cpp_std": self._to_meson_cppstd(self._cppstd) if self._cppstd else None,
-            "c_args": self._none_if_empty(self._env.get("CPPFLAGS", '') +
-                                          self._env.get("CFLAGS", '')),
-            "c_link_args": self._env.get("LDFLAGS", None),
-            "cpp_args": self._none_if_empty(self._env.get("CPPFLAGS", '') +
-                                            self._env.get("CXXFLAGS", '')),
-            "cpp_link_args": self._env.get("LDFLAGS", None),
-            "pkg_config_path": "'%s'" % os.getcwd()
+            "c_args": self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS')),
+            "c_link_args": self._to_meson_value(self._env_array('LDFLAGS')),
+            "cpp_args": self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CXXFLAGS')),
+            "cpp_link_args": self._to_meson_value(self._env_array('LDFLAGS')),
+            "pkg_config_path": "'%s'" % os.getcwd(),
+            "preprocessor_definitions": self.preprocessor_definitions
         }
         return context
 
