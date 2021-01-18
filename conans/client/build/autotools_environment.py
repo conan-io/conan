@@ -152,6 +152,11 @@ class AutoToolsBuildEnvironment(object):
 
         triplet_args = []
 
+        if hasattr(self._conanfile, "conf"):
+            build = self._conanfile.conf["tools.autotoolsbuildenvironment"].build or build
+            host = self._conanfile.conf["tools.autotoolsbuildenvironment"].host or host
+            target = self._conanfile.conf["tools.autotoolsbuildenvironment"].target or target
+
         if build is not False:  # Skipped by user
             if build or self.build:  # User specified value or automatic
                 triplet_args.append("--build=%s" % (build or self.build))
