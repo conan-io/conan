@@ -333,7 +333,6 @@ def test_package_revision_mode_full_transitive_package_id():
     client.run("export tool tool/0.1@")
     client.run("export pkga pkga/0.1@")
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
-    print(client.out)
-    assert "pkgc/0.1:Package_ID_unknown - Unknown" in client.out
-    assert "pkgc/0.1: Unknown binary for pkgc/0.1, computing updated ID" in client.out
-    assert "pkgc/0.1: Package '1d602da5278b24bf3aa0e19e6e199126cdfb7094' created" in client.out
+    assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
+    assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
+    assert "pkgb/0.1: Package 'f524f1981a44932e1445e13ae4cf9e2ff8112027' created" in client.out

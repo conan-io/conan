@@ -376,9 +376,10 @@ class BinaryInstaller(object):
         download_nodes = []
         for node in downloads:
             pref = node.pref
-            if pref in processed_package_refs:
+            bare_pref = PackageReference(pref.ref, pref.id)
+            if bare_pref in processed_package_refs:
                 continue
-            processed_package_refs.add(pref)
+            processed_package_refs[bare_pref] = pref.revision
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
@@ -414,7 +415,7 @@ class BinaryInstaller(object):
                 msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
-        processed_package_refs = set()
+        processed_package_refs = {}
         self._download(downloads, processed_package_refs)
 
         for level in nodes_by_level:
@@ -493,8 +494,9 @@ class BinaryInstaller(object):
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
 
         with layout.package_lock(pref):
-            if pref not in processed_package_references:
-                processed_package_references.add(pref)
+            bare_pref = PackageReference(pref.ref, pref.id)
+            processed_prev = processed_package_references.get(bare_pref)
+            if processed_prev is None:  # This package-id has not been processed before
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     layout.package_remove(pref)
@@ -511,10 +513,11 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
+                processed_package_references[bare_pref] = node.prev
             else:
-
-                print("********************** ", node, " in processed, skipping its update")
-                print(pref.full_str(), [p.full_str() for p in processed_package_references])
+                # We need to update the PREV of this node, as its processing has been skipped,
+                # but it could be that another node with same PREF was built and obtained a new PREV
+                node.prev = processed_prev
 
             package_folder = layout.package(pref)
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
