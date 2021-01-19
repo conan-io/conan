@@ -69,11 +69,16 @@ class SCMBase(object):
         return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
 
     def _handle_url_pattern(self, scheme, url, user=None, password=None):
-        if scheme == "file":
+        if scheme in ["file", "git"]:
             if self._username:
-                self._output.warn("SCM username cannot be set for file url, ignoring parameter")
+                self._output.warn("SCM username cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
             if self._password:
-                self._output.warn("SCM password cannot be set for file url, ignoring parameter")
+                self._output.warn("SCM password cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
+            if user or password:
+                self._output.warn("Username/Password in URL cannot be set for '{}' SCM type, "
+                                  "removing it".format(scheme))
             return "{scheme}://{url}".format(scheme=scheme, url=url)
         elif scheme == "ssh" and self._password:
             self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
