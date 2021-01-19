@@ -55,6 +55,7 @@ def get_generator(conanfile):
 
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
+        major_version = version.split('.', 1)[0]
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -62,7 +63,7 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(version, "UnknownVersion %s" % version)
+                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
@@ -237,13 +238,15 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":

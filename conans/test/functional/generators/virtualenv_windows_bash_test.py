@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import decode_text, save
 
 
-@unittest.skipIf(platform.system() != "Windows", "Only for Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
 class VirtualenvWindowsBashTestCase(unittest.TestCase):
     """
     We are running the full example inside Bash (generation of environment files and activate/deactivate), so we need

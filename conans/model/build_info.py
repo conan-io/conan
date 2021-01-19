@@ -35,6 +35,67 @@ class DefaultOrderedDict(OrderedDict):
         return the_copy
 
 
+class BuildModulesDict(dict):
+    """
+    A dictionary with append and extend for cmake build modules to keep it backwards compatible
+    with the list interface
+    """
+
+    def __getitem__(self, key):
+        if key not in self.keys():
+            super(BuildModulesDict, self).__setitem__(key, list())
+        return super(BuildModulesDict, self).__getitem__(key)
+
+    def _append(self, item):
+        if item.endswith(".cmake"):
+            self["cmake"].append(item)
+            self["cmake_multi"].append(item)
+            self["cmake_find_package"].append(item)
+            self["cmake_find_package_multi"].append(item)
+
+    def append(self, item):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
+                          'instead'.format(item=item))
+        self._append(item)
+
+    def extend(self, items):
+        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
+                          "instead".format(items=items))
+        for item in items:
+            self._append(item)
+
+    @classmethod
+    def from_list(cls, build_modules):
+        the_dict = BuildModulesDict()
+        the_dict.extend(build_modules)
+        return the_dict
+
+
+def dict_to_abs_paths(the_dict, rootpath):
+    new_dict = {}
+    for generator, values in the_dict.items():
+        new_dict[generator] = [os.path.join(rootpath, p) if not os.path.isabs(p) else p
+                               for p in values]
+    return new_dict
+
+
+def merge_lists(seq1, seq2):
+    return seq1 + [s for s in seq2 if s not in seq1]
+
+
+def merge_dicts(d1, d2):
+    def merge_lists(seq1, seq2):
+        return [s for s in seq1 if s not in seq2] + seq2
+
+    result = d1.copy()
+    for k, v in d2.items():
+        if k not in d1.keys():
+            result[k] = v
+        else:
+            result[k] = merge_lists(d1[k], d2[k])
+    return result
+
+
 class _CppInfo(object):
     """ Object that stores all the necessary information to build in C/C++.
     It is intended to be system independent, translation to
@@ -60,7 +121,7 @@ class _CppInfo(object):
         self.cxxflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
-        self.build_modules = []
+        self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
         self.rootpath = ""
         self.sysroot = ""
@@ -89,8 +150,12 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            self._build_modules_paths = [os.path.join(self.rootpath, p) if not os.path.isabs(p)
-                                         else p for p in self.build_modules]
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                                  "{the_list}' instead".format(the_list=self.build_modules))
+                self.build_modules = BuildModulesDict.from_list(self.build_modules)
+            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
+            self._build_modules_paths = tmp
         return self._build_modules_paths
 
     @property
@@ -286,7 +351,8 @@ class CppInfo(_CppInfo):
                 reason = None
                 if comp_require not in pkg_requires:
                     reason = "not defined as a recipe requirement"
-                elif package_requires[comp_require].private and package_requires[comp_require].override:
+                elif package_requires[comp_require].private and package_requires[
+                    comp_require].override:
                     reason = "it was defined as an overridden private recipe requirement"
                 elif package_requires[comp_require].private:
                     reason = "it was defined as a private recipe requirement"
@@ -333,7 +399,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_lists(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
         self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
@@ -401,7 +467,7 @@ class DepCppInfo(object):
         self._res_paths = None
         self._src_paths = None
         self._framework_paths = None
-        self._build_module_paths = None
+        self._build_modules_paths = None
         self._sorted_components = None
         self._check_component_requires()
 
@@ -415,31 +481,16 @@ class DepCppInfo(object):
             attr = self._cpp_info.__getattr__(item)
         return attr
 
-    @staticmethod
-    def _merge_lists(seq1, seq2):
-        return seq1 + [s for s in seq2 if s not in seq1]
-
-    def _aggregated_values(self, item):
+    def _aggregated_values(self, item, agg_func=merge_lists):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
         values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
             for component in self._get_sorted_components().values():
-                values = self._merge_lists(values, getattr(component, item))
+                values = agg_func(values, getattr(component, item))
         setattr(self, "_%s" % item, values)
         return values
-
-    def _aggregated_paths(self, item):
-        paths = getattr(self, "_%s_paths" % item)
-        if paths is not None:
-            return paths
-        paths = getattr(self._cpp_info, "%s_paths" % item)
-        if self._cpp_info.components:
-            for component in self._get_sorted_components().values():
-                paths = self._merge_lists(paths, getattr(component, "%s_paths" % item))
-        setattr(self, "_%s_paths" % item, paths)
-        return paths
 
     @staticmethod
     def _filter_component_requires(requires):
@@ -488,35 +539,35 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_paths("build_modules")
+        return self._aggregated_values("build_modules_paths", agg_func=merge_dicts)
 
     @property
     def include_paths(self):
-        return self._aggregated_paths("include")
+        return self._aggregated_values("include_paths")
 
     @property
     def lib_paths(self):
-        return self._aggregated_paths("lib")
+        return self._aggregated_values("lib_paths")
 
     @property
     def src_paths(self):
-        return self._aggregated_paths("src")
+        return self._aggregated_values("src_paths")
 
     @property
     def bin_paths(self):
-        return self._aggregated_paths("bin")
+        return self._aggregated_values("bin_paths")
 
     @property
     def build_paths(self):
-        return self._aggregated_paths("build")
+        return self._aggregated_values("build_paths")
 
     @property
     def res_paths(self):
-        return self._aggregated_paths("res")
+        return self._aggregated_values("res_paths")
 
     @property
     def framework_paths(self):
-        return self._aggregated_paths("framework")
+        return self._aggregated_values("framework_paths")
 
     @property
     def libs(self):

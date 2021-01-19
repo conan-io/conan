@@ -1,6 +1,6 @@
 import textwrap
 
-from .base import CMakeToolchainBase
+from conan.tools.cmake.base import CMakeToolchainBase
 
 
 class CMakeiOSToolchain(CMakeToolchainBase):
@@ -20,26 +20,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
             if(NOT DEFINED CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM)
               set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "123456789A" CACHE INTERNAL "")
             endif()
-        {% endblock %}
-        {% block main %}
-            {{ super() }}
-            {% if shared_libs -%}
-            message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
-            set(BUILD_SHARED_LIBS {{ shared_libs }})
-            {%- endif %}
-            {% if parallel -%}
-            set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
-            set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
-            {%- endif %}
-            {% if cppstd -%}
-            message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
-            set(CMAKE_CXX_STANDARD {{ cppstd }})
-            set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
-            {%- endif %}
-            set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
         {% endblock %}
     """)
 
@@ -72,7 +52,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                 "x86_64": "x86_64",
                 "armv8": "arm64",
                 "armv8_32": "arm64_32"}.get(arch, arch)
-        return None
 
     # TODO: refactor, comes from conans.client.tools.apple.py
     def _apple_sdk_name(self):
@@ -92,11 +71,11 @@ class CMakeiOSToolchain(CMakeToolchainBase):
                     'tvOS': 'appletvos'}.get(str(os_), None)
 
     def _get_template_context_data(self):
-        ctxt_toolchain, _ = super(CMakeiOSToolchain, self)._get_template_context_data()
+        ctxt_toolchain = super(CMakeiOSToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             "CMAKE_OSX_ARCHITECTURES": self.host_architecture,
             "CMAKE_SYSTEM_NAME": self.host_os,
             "CMAKE_SYSTEM_VERSION": self.host_os_version,
             "CMAKE_OSX_SYSROOT": self.host_sdk_name
         })
-        return ctxt_toolchain, {}
+        return ctxt_toolchain

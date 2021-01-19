@@ -11,16 +11,16 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files, FileCopier
 from conans.client.generators import TXTGenerator, write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
-from conans.client.source import complete_recipe_sources, config_source
+from conans.client.source import retrieve_exports_sources, config_source
 from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
+                           conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
@@ -97,21 +97,24 @@ class _PackageBuilder(object):
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, package_layout, conanfile_path, source_folder,
-                         build_folder, remotes):
+    def _prepare_sources(self, conanfile, pref, package_layout, remotes):
         export_folder = package_layout.export()
         export_source_folder = package_layout.export_sources()
         scm_sources_folder = package_layout.scm_sources()
+        conanfile_path = package_layout.conanfile()
+        source_folder = package_layout.source()
 
-        complete_recipe_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
-        _remove_folder_raising(build_folder)
-
+        retrieve_exports_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
         config_source(export_folder, export_source_folder, scm_sources_folder, source_folder,
                       conanfile, self._output, conanfile_path, pref.ref,
                       self._hook_manager, self._cache)
 
+    @staticmethod
+    def _copy_sources(conanfile, source_folder, build_folder):
+        # Copies the sources to the build-folder, unless no_copy_source is defined
+        _remove_folder_raising(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
-            self._output.info('Copying sources to build folder')
+            conanfile.output.info('Copying sources to build folder')
             try:
                 inodes = dict()
 
@@ -229,8 +232,8 @@ class _PackageBuilder(object):
         if not skip_build:
             with package_layout.conanfile_write_lock(self._output):
                 set_dirty(build_folder)
-                self._prepare_sources(conanfile, pref, package_layout, conanfile_path, source_folder,
-                                      build_folder, remotes)
+                self._prepare_sources(conanfile, pref, package_layout, remotes)
+                self._copy_sources(conanfile, source_folder, build_folder)
 
         # BUILD & PACKAGE
         with package_layout.conanfile_read_lock(self._output):
@@ -342,14 +345,16 @@ class BinaryInstaller(object):
 
     @staticmethod
     def _classify(nodes_by_level):
-        missing, downloads = [], []
+        missing, invalid, downloads = [], [], []
         for level in nodes_by_level:
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
+                elif node.binary == BINARY_INVALID:
+                    invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
-        return missing, downloads
+        return missing, invalid, downloads
 
     def _raise_missing(self, missing):
         if not missing:
@@ -407,9 +412,10 @@ class BinaryInstaller(object):
         download_nodes = []
         for node in downloads:
             pref = node.pref
-            if pref in processed_package_refs:
+            bare_pref = PackageReference(pref.ref, pref.id)
+            if bare_pref in processed_package_refs:
                 continue
-            processed_package_refs.add(pref)
+            processed_package_refs[bare_pref] = pref.revision
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
@@ -438,9 +444,14 @@ class BinaryInstaller(object):
 
     def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
         using_build_profile = bool(graph_info.profile_build)
-        missing, downloads = self._classify(nodes_by_level)
+        missing, invalid, downloads = self._classify(nodes_by_level)
+        if invalid:
+            msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
+            for node in invalid:
+                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+            raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
-        processed_package_refs = set()
+        processed_package_refs = {}
         self._download(downloads, processed_package_refs)
 
         for level in nodes_by_level:
@@ -519,8 +530,9 @@ class BinaryInstaller(object):
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
 
         with layout.package_lock(pref):
-            if pref not in processed_package_references:
-                processed_package_references.add(pref)
+            bare_pref = PackageReference(pref.ref, pref.id)
+            processed_prev = processed_package_references.get(bare_pref)
+            if processed_prev is None:  # This package-id has not been processed before
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     layout.package_remove(pref)
@@ -537,6 +549,11 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
+                processed_package_references[bare_pref] = node.prev
+            else:
+                # We need to update the PREV of this node, as its processing has been skipped,
+                # but it could be that another node with same PREF was built and obtained a new PREV
+                node.prev = processed_prev
 
             package_folder = layout.package(pref)
             if not os.path.isdir(package_folder):
@@ -557,8 +574,8 @@ class BinaryInstaller(object):
             for python_require in python_requires.values():
                 assert python_require.ref.revision is not None, \
                     "Installer should receive python_require.ref always"
-                complete_recipe_sources(self._remote_manager, self._cache,
-                                        python_require.conanfile, python_require.ref, remotes)
+                retrieve_exports_sources(self._remote_manager, self._cache,
+                                         python_require.conanfile, python_require.ref, remotes)
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
@@ -615,6 +632,8 @@ class BinaryInstaller(object):
                     env_info.PATH.extend(dep_cpp_info.bin_paths)
                     conan_file.deps_env_info.update(env_info, n.ref.name)
 
+        conan_file.deps_cpp_info.direct_host_deps = [n.name for n in node.neighbors()
+                                                     if n.context == CONTEXT_HOST]
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [node.ref.name for node in node_order]

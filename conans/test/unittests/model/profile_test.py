@@ -24,7 +24,7 @@ os=Windows
                           OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                        ("compiler", "2"), ("compiler.version", "3")]))
 
-    def env_vars_test_inheritance(self):
+    def test_env_vars_inheritance(self):
         tmp_dir = temp_folder()
         p1 = '''[env]\nVAR=1'''
         p2 = '''include(p1)\n[env]\nVAR=2'''

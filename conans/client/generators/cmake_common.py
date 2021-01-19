@@ -524,7 +524,7 @@ class CMakeCommonMacros:
                 if(NOT ${_CHECK_VERSION} VERSION_EQUAL ${_CONAN_VERSION})
                     conan_error_compiler_version()
                 endif()
-            elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc")
+            elseif(CONAN_COMPILER STREQUAL "apple-clang" OR CONAN_COMPILER STREQUAL "sun-cc" OR CONAN_COMPILER STREQUAL "mcst-lcc")
                 conan_split_version(${CONAN_COMPILER_VERSION} CONAN_COMPILER_MAJOR CONAN_COMPILER_MINOR)
                 if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL ${CONAN_COMPILER_MAJOR}.${CONAN_COMPILER_MINOR})
                    conan_error_compiler_version()
@@ -583,7 +583,9 @@ class CMakeCommonMacros:
             # If using VS, verify toolset
             if (CONAN_COMPILER STREQUAL "Visual Studio")
                 if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
-                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "llvm" OR
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang" OR
+                    CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Clang")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
                 elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
                     set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")

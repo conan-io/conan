@@ -9,6 +9,7 @@ import pytest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -52,6 +53,7 @@ class ExportsSourcesMissingTest(unittest.TestCase):
         self.assertIn("Probably it was installed from a remote that is no longer available.",
                       client2.out)
 
+
 @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemotesTest(unittest.TestCase):
 
@@ -61,6 +63,19 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.servers["default"] = default_server
         self.servers["local"] = local_server
+
+    def test_list_ref_no_remote(self):
+        client = TestClient(servers=self.servers)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkg/1.0@")
+        client.run("remote list_ref")
+        self.assertNotIn("pkg", client.out)
+        client.run("remote list_pref pkg/1.0@")
+        self.assertNotIn("pkg", client.out)
+        client.run("remote list_ref --no-remote")
+        self.assertIn("pkg/1.0: None", client.out)
+        client.run("remote list_pref pkg/1.0 --no-remote")
+        self.assertIn("pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: None", client.out)
 
     @staticmethod
     def _create(client, number, version, deps=None, export=True, modifier=""):
@@ -175,6 +190,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("install Hello0/0.0@lasote/stable --update")
         self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
+
 @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemoteTest(unittest.TestCase):
 
@@ -286,9 +302,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.out)
         self.assertIn("Remote: remote2=http://", client2.out)
 
-    @unittest.skipIf(TestClient().cache.config.revisions_enabled,
-                     "This test is not valid for revisions, where we keep iterating the remotes "
-                     "for searching a package for the same recipe revision")
+    @pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
+                        reason="This test is not valid for revisions, where we keep iterating the remotes "
+                               "for searching a package for the same recipe revision")
     def test_package_binary_remote(self):
         # https://github.com/conan-io/conan/issues/3882
         conanfile = """from conans import ConanFile
