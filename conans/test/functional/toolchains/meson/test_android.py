@@ -101,12 +101,14 @@ class AndroidToolchainMesonTestCase(unittest.TestCase):
         ar = self._tool('ar')
         cflags = '--target=%s' % self._target
         cxxflags = '--target=%s' % self._target
+        ldflags = '--target=%s' % self._target
 
         return {'CC': cc,
                 'CXX': cxx,
                 'AR': ar,
                 'CFLAGS': cflags,
-                'CXXFLAGS': cxxflags}
+                'CXXFLAGS': cxxflags,
+                'LDFLAGS': ldflags}
 
     def profile(self):
         template = textwrap.dedent("""

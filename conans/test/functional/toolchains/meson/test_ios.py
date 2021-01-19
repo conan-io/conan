@@ -71,11 +71,13 @@ class IOSMesonTestCase(unittest.TestCase):
         cflags += " -isysroot " + self.xcrun.sdk_path
         cflags += " -arch " + to_apple_arch(self.arch)
         cxxflags = cflags
+        ldflags = cflags
 
         return {'CC': cc,
                 'CXX': cxx,
                 'CFLAGS': cflags,
-                'CXXFLAGS': cxxflags}
+                'CXXFLAGS': cxxflags,
+                'LDFLAGS': ldflags}
 
     def profile(self):
         template = textwrap.dedent("""

@@ -74,7 +74,8 @@ class MesonToolchain(object):
         self._fpic = self._conanfile.options.get_safe("fPIC")
         self.definitions = dict()
         self.preprocessor_definitions = dict()
-        self._env = env
+        self._env = env.copy()
+        self._env.update(self._conanfile.env)
 
     @staticmethod
     def _to_meson_value(value):
