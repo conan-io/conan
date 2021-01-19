@@ -209,28 +209,33 @@ class GetUrlWithCredentialsTest(unittest.TestCase):
     def test_ssh_url_with_username_password_and_only_password(self):
         output = OutputMock()
         scm = SCMBase(password="password", output=output)
-        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+        self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
-        self.assertEqual(1, len(output.out))
+        self.assertEqual(2, len(output.out))
         self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
+        self.assertIn("WARN: Password in URL cannot be set for 'ssh' SCM type, removing it",
+                      output.out)
 
     def test_ssh_url_with_username_password_and_only_username(self):
         output = OutputMock()
         scm = SCMBase(username="dani", output=output)
-        self.assertEqual('ssh://git:pass@github.com/conan-io/conan.git',
+        self.assertEqual('ssh://git@github.com/conan-io/conan.git',
                          scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
-        self.assertEqual(1, len(output.out))
-        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter",
+        self.assertEqual(2, len(output.out))
+        self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+        self.assertIn("WARN: Password in URL cannot be set for 'ssh' SCM type, removing it",
                       output.out)
 
     def test_ssh_url_with_username_password_and_username_password(self):
         output = OutputMock()
         scm = SCMBase(password="password", username="dani", output=output)
-        self.assertEqual("ssh://git:pass@github.com/conan-io/conan.git",
+        self.assertEqual("ssh://git@github.com/conan-io/conan.git",
                          scm.get_url_with_credentials("ssh://git:pass@github.com/conan-io/conan.git"))
-        self.assertEqual(2, len(output.out))
+        self.assertEqual(3, len(output.out))
         self.assertIn("WARN: SCM password cannot be set for ssh url, ignoring parameter", output.out)
         self.assertIn("WARN: SCM username got from URL, ignoring 'username' parameter", output.out)
+        self.assertIn("WARN: Password in URL cannot be set for 'ssh' SCM type, removing it",
+                      output.out)
 
     def test_scp(self):
         scm = SCMBase()
