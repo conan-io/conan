@@ -351,7 +351,7 @@ class InfoTest(unittest.TestCase):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+            "\n    Revision: 951f0a931adfb0d6c1070c766f32527f"
             "\n    Package revision: None",
             "\n    Revision: b2600f68000fa492234c0452214e0bbc"
             "\n    Package revision: None",) \
@@ -432,7 +432,7 @@ class InfoTest(unittest.TestCase):
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[0]["description"], "blah")
-        self.assertEqual(content[0]["revision"], "22b1dc946e5566f5b2549e1b285d3fa7")
+        self.assertEqual(content[0]["revision"], "6ccd8ff0db5c8b7f735cf2fc83228953")
         self.assertEqual(content[0]["package_revision"], None)
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")

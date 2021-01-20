@@ -358,7 +358,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': 'e309305959502e16f8a57439bb6a4107',
+                         'conanfile.py': 'b6b7a8c202b79eeaef6efaf97e65f388',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
         self.assertEqual(expected_sums, digest3.file_sums)
