@@ -4,11 +4,105 @@ import textwrap
 from jinja2 import Template
 
 # FIXME: Remove the dependency to this find_common
-from conans.client.generators.cmake_find_package_common import CMakeFindPackageCommonMacros, \
-    find_transitive_dependencies, target_template
+from conans.client.generators.cmake_find_package_common import CMakeFindPackageCommonMacros
+from conans.errors import ConanException
 from conans.model.build_info import CppInfo, merge_dicts
-from conans.model.conan_generator import GeneratorComponentsMixin
 from conans.util.files import save
+
+COMPONENT_SCOPE = "::"
+
+
+target_template = """
+set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
+set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
+set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
+set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
+set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
+set({name}_LINKER_FLAGS{build_type_suffix}_LIST
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{deps.sharedlinkflags_list}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{deps.exelinkflags_list}>"
+)
+set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
+set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_C{build_type_suffix} "{deps.cflags_list}")
+set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} "{deps.cxxflags_list}")
+set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
+set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
+set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
+set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
+set({name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
+set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
+set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
+set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
+
+conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}" "${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
+
+mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
+                 {name}_INCLUDE_DIR{build_type_suffix}
+                 {name}_INCLUDES{build_type_suffix}
+                 {name}_DEFINITIONS{build_type_suffix}
+                 {name}_LINKER_FLAGS{build_type_suffix}_LIST
+                 {name}_COMPILE_DEFINITIONS{build_type_suffix}
+                 {name}_COMPILE_OPTIONS{build_type_suffix}_LIST
+                 {name}_LIBRARIES{build_type_suffix}
+                 {name}_LIBS{build_type_suffix}
+                 {name}_LIBRARIES_TARGETS{build_type_suffix})
+
+# Find the real .lib/.a and add them to {name}_LIBS and {name}_LIBRARY_LIST
+set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
+set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
+
+# Gather all the libraries that should be linked to the targets (do not touch existing variables):
+set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
+
+conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
+                              "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+                              "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
+                              {name}_LIBRARIES{build_type_suffix}            # out_libraries
+                              {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
+                              "{build_type_suffix}"                          # build_type
+                              "{name}")                                      # package_name
+
+set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
+
+foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_FRAMEWORK}})
+    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_FRAMEWORK}})
+endforeach()
+
+foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{build_type_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_SYSTEM_LIB}})
+    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
+endforeach()
+
+# We need to add our requirements too
+set({name}_LIBRARIES_TARGETS{build_type_suffix} "${{{name}_LIBRARIES_TARGETS{build_type_suffix}}};{deps_names}")
+set({name}_LIBRARIES{build_type_suffix} "${{{name}_LIBRARIES{build_type_suffix}}};{deps_names}")
+
+set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
+"""
+
+
+def find_transitive_dependencies(public_deps_filenames):
+    # https://github.com/conan-io/conan/issues/4994
+    # https://github.com/conan-io/conan/issues/5040
+    find = textwrap.dedent("""
+        if(NOT {dep_filename}_FOUND)
+            if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
+                find_package({dep_filename} REQUIRED NO_MODULE)
+            else()
+                find_dependency({dep_filename} REQUIRED NO_MODULE)
+            endif()
+        else()
+            message(STATUS "Dependency {dep_filename} already found")
+        endif()
+        """)
+    lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
+    for dep_filename in public_deps_filenames:
+        lines.append(find.format(dep_filename=dep_filename))
+    return "\n".join(lines)
 
 
 # FIXME: Can we remove the config (multi-config package_info with .debug .release)?
@@ -99,7 +193,7 @@ class DepsCppCmake(object):
         self.build_modules_paths = join_paths(cpp_info.build_modules_paths.get(generator_name, []))
 
 
-class CMakeDeps(GeneratorComponentsMixin):
+class CMakeDeps(object):
     name = "CMakeDeps"
 
     config_template = textwrap.dedent("""
@@ -377,6 +471,63 @@ endforeach()
         # FIXME: Ugly way to define the output path
         self.output_path = os.getcwd()
 
+    def _validate_components(self, cpp_info):
+        """ Check that all required components are provided by the dependencies """
+
+        def _check_component_in_requirements(require):
+            if COMPONENT_SCOPE in require:
+                req_name, req_comp_name = require.split(COMPONENT_SCOPE)
+                if req_name == req_comp_name:
+                    return
+                if req_comp_name not in self._conanfile.deps_cpp_info[req_name].components:
+                    raise ConanException("Component '%s' not found in '%s' package requirement"
+                                         % (require, req_name))
+
+        for comp_name, comp in cpp_info.components.items():
+            for cmp_require in comp.requires:
+                _check_component_in_requirements(cmp_require)
+
+        for pkg_require in cpp_info.requires:
+            _check_component_in_requirements(pkg_require)
+
+    def _get_require_name(self, pkg_name, req):
+        pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
+        pkg_cpp_info = self._conanfile.deps_cpp_info[pkg]
+        pkg_name = pkg_cpp_info.get_name(self.name)
+        if cmp in pkg_cpp_info.components:
+            cmp_name = pkg_cpp_info.components[cmp].get_name(self.name)
+        else:
+            cmp_name = pkg_name
+        return pkg_name, cmp_name
+
+    def _get_components(self, pkg_name, cpp_info):
+        ret = []
+        sorted_comps = cpp_info._get_sorted_components()
+
+        for comp_name, comp in sorted_comps.items():
+            comp_genname = cpp_info.components[comp_name].get_name(self.name)
+            comp_requires_gennames = []
+            for require in comp.requires:
+                comp_requires_gennames.append(self._get_require_name(pkg_name, require))
+            ret.append((comp_genname, comp, comp_requires_gennames))
+        ret.reverse()
+
+        result = []
+        for comp_genname, comp, comp_requires_gennames in ret:
+            deps_cpp_cmake = DepsCppCmake(comp, self.name)
+            deps_cpp_cmake.public_deps = " ".join(
+                ["{}::{}".format(*it) for it in comp_requires_gennames])
+            result.append((comp_genname, deps_cpp_cmake))
+        return result
+
+    @classmethod
+    def get_public_deps(cls, cpp_info):
+        if cpp_info.requires:
+            deps = [it for it in cpp_info.requires if COMPONENT_SCOPE in it]
+            return [it.split(COMPONENT_SCOPE) for it in deps]
+        else:
+            return [(it, it) for it in cpp_info.public_deps]
+
     def generate(self):
         generator_files = self.content
         for generator_file, content in generator_files.items():
@@ -463,13 +614,15 @@ endforeach()
                 ret[self._config_filename(pkg_filename)] = target_config
         return ret
 
-    def _config_filename(self, pkg_filename):
+    @staticmethod
+    def _config_filename(pkg_filename):
         if pkg_filename == pkg_filename.lower():
             return "{}-config.cmake".format(pkg_filename)
         else:
             return "{}Config.cmake".format(pkg_filename)
 
-    def _config_version_filename(self, pkg_filename):
+    @staticmethod
+    def _config_version_filename(pkg_filename):
         if pkg_filename == pkg_filename.lower():
             return "{}-config-version.cmake".format(pkg_filename)
         else:
@@ -485,8 +638,7 @@ endforeach()
         find_dependencies_block = ""
         if public_deps_names:
             # Here we are generating only Config files, so do not search for FindXXX modules
-            find_dependencies_block = find_transitive_dependencies(public_deps_names,
-                                                                   find_modules=False)
+            find_dependencies_block = find_transitive_dependencies(public_deps_names)
 
         tmp = self.config_template.format(name=name, version=version,
                                           filename=filename,
@@ -494,4 +646,3 @@ endforeach()
                                           build_modules_block=build_modules_block,
                                           find_dependencies_block=find_dependencies_block)
         return tmp
-
