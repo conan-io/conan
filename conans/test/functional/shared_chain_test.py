@@ -48,9 +48,8 @@ class SharedChainTest(unittest.TestCase):
             if platform.system() != "Windows"
             else ""
         )
-        p = os.sep.join([".", "bin", "say_hello"])
-        client.run_command("ldd {}".format(p))
-        command = ld_path + os.sep.join([".", "bin", "say_hello"])
+        cmd_path = os.sep.join([".", "bin", "say_hello"])
+        command = ld_path + cmd_path
 
         client.run_command(command)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
