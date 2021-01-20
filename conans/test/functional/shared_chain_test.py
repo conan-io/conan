@@ -1,6 +1,7 @@
 import os
 import shutil
 import unittest
+import platform
 
 import pytest
 
@@ -37,7 +38,12 @@ class SharedChainTest(unittest.TestCase):
 
         client.run("install .")
         client.run("build .")
-        command = os.sep.join([".", "bin", "say_hello"])
+        ld_path = (
+            "LD_LIBRARY_PATH='{}' ".format(client.current_folder)
+            if platform.system() != "Windows"
+            else ""
+        )
+        command = ld_path + os.sep.join([".", "bin", "say_hello"])
         client.run_command(command)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])

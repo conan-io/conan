@@ -156,6 +156,7 @@ class {name}Conan(ConanFile):
 {additional_info}
     def imports(self):
         self.copy(pattern="*.dylib", dst=".", src="lib")
+        self.copy(pattern="*.so", dst=".", src="lib")
         self.copy(pattern="*.dll", dst=".", src="bin")
         self.copy(pattern="*", dst="bin", src="bin")
 """
