@@ -3,13 +3,83 @@ import textwrap
 
 from jinja2 import Template
 
-# FIXME: Remove the dependency to this find_common
-from conans.client.generators.cmake_find_package_common import CMakeFindPackageCommonMacros
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, merge_dicts
 from conans.util.files import save
 
 COMPONENT_SCOPE = "::"
+
+conan_message = textwrap.dedent("""
+    function(conan_message MESSAGE_OUTPUT)
+        if(NOT CONAN_CMAKE_SILENT_OUTPUT)
+            message(${ARGV${0}})
+        endif()
+    endfunction()
+    """)
+
+
+apple_frameworks_macro = textwrap.dedent("""
+   macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
+       if(APPLE)
+           foreach(_FRAMEWORK ${FRAMEWORKS})
+               # https://cmake.org/pipermail/cmake-developers/2017-August/030199.html
+               find_library(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND NAME ${_FRAMEWORK} PATHS ${FRAMEWORKS_DIRS} CMAKE_FIND_ROOT_PATH_BOTH)
+               if(CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND)
+                   list(APPEND ${FRAMEWORKS_FOUND} ${CONAN_FRAMEWORK_${_FRAMEWORK}_FOUND})
+               else()
+                   message(FATAL_ERROR "Framework library ${_FRAMEWORK} not found in paths: ${FRAMEWORKS_DIRS}")
+               endif()
+           endforeach()
+       endif()
+   endmacro()
+   """)
+
+
+conan_package_library_targets = textwrap.dedent("""
+   function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target build_type package_name)
+       unset(_CONAN_ACTUAL_TARGETS CACHE)
+       unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
+       foreach(_LIBRARY_NAME ${libraries})
+           find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
+                        NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+           if(CONAN_FOUND_LIBRARY)
+               conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+               list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
+               if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
+                   # Create a micro-target for each lib/a found
+                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
+                   if(NOT TARGET ${_LIB_NAME})
+                       # Create a micro-target for each lib/a found
+                       add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                       set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                       set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
+                   else()
+                       conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
+                   endif()
+                   list(APPEND _out_libraries_target ${_LIB_NAME})
+               endif()
+               conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
+           else()
+               conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
+               list(APPEND _out_libraries_target ${_LIBRARY_NAME})
+               list(APPEND _out_libraries ${_LIBRARY_NAME})
+               set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
+           endif()
+           unset(CONAN_FOUND_LIBRARY CACHE)
+       endforeach()
+
+       if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
+           # Add all dependencies to all targets
+           string(REPLACE " " ";" deps_list "${deps}")
+           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
+           endforeach()
+       endif()
+
+       set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
+       set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
+   endfunction()
+   """)
 
 
 target_template = """
@@ -540,9 +610,9 @@ endforeach()
         build_type = str(self._conanfile.settings.build_type).upper()
         build_type_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         ret["cmakedeps_macros.cmake"] = "\n".join([
-            CMakeFindPackageCommonMacros.conan_message,
-            CMakeFindPackageCommonMacros.apple_frameworks_macro,
-            CMakeFindPackageCommonMacros.conan_package_library_targets,
+            conan_message,
+            apple_frameworks_macro,
+            conan_package_library_targets,
         ])
 
         for pkg_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
