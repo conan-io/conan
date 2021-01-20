@@ -100,9 +100,8 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
                                 def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"
-                                def configVenv = "pyenv global \$${pythonVersion} && " \
-                                                + "virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
-                                                + "source ${workDir}${venvName}/bin/activate && "
+                                def configVenv =  "${pythonLocation} -m virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
+                                                + "source ${workDir}${venvName}/bin/activate && python --version && "
                                 def launchCommand = configVenv + pipInstalls + launchTests
                                 sh(script: launchCommand)
                         }
