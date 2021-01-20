@@ -58,6 +58,7 @@ class SharedChainTest(unittest.TestCase):
         client.run_command(command)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
+        raise
 
 
 '''client = TestClient(default_server_user=True)
