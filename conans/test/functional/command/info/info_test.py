@@ -353,7 +353,7 @@ class InfoTest(unittest.TestCase):
         expected_output = expected_output % (
             "\n    Revision: 951f0a931adfb0d6c1070c766f32527f"
             "\n    Package revision: None",
-            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+            "\n    Revision: c013bee3f38e90019a34bbc7f41d788e"
             "\n    Package revision: None",) \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
