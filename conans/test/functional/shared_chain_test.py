@@ -1,8 +1,10 @@
 import os
+import platform
 import shutil
 import unittest
 
 import pytest
+
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -33,11 +35,22 @@ class SharedChainTest(unittest.TestCase):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], static=True)
+        c = files["conanfile.py"]
+        c = c.replace("def imports(self):", "def imports(self):\n"
+                                            '        self.copy(pattern="*.so", dst=".", src="lib")')
+        files["conanfile.py"] = c
         client.save(files)
 
         client.run("install .")
         client.run("build .")
-        command = os.sep.join([".", "bin", "say_hello"])
+        ld_path = (
+            "LD_LIBRARY_PATH='{}' ".format(client.current_folder)
+            if platform.system() != "Windows"
+            else ""
+        )
+        cmd_path = os.sep.join([".", "bin", "say_hello"])
+        command = ld_path + cmd_path
+
         client.run_command(command)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
