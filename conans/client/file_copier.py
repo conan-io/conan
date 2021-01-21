@@ -90,10 +90,9 @@ class FileCopier(object):
     def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
               excluded_folders):
         # Check for ../ patterns and allow them
-        if pattern.startswith(".."):
-            rel_dir = os.path.abspath(os.path.join(base_src, pattern))
-            base_src = os.path.dirname(rel_dir)
-            pattern = os.path.basename(rel_dir)
+        while pattern.startswith(".."):
+            base_src = os.path.abspath(os.path.join(base_src, ".."))
+            pattern = pattern[3:]
 
         src = os.path.join(base_src, src)
         dst = os.path.join(self._dst_folder, dst)

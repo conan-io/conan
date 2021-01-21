@@ -270,3 +270,17 @@ class FileCopierTest(unittest.TestCase):
                          sorted(os.listdir(os.path.join(dst_folder, "include"))))
         self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
+
+    def test_dotdot_with_keep_path(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "libfoo/file.c"), "")
+
+        sub_folder = os.path.join(src_folder, "build")
+
+        dst_folder = temp_folder()
+        copier = FileCopier([sub_folder], dst_folder)
+        copier("../libfoo/*.c", keep_path=True)
+
+        # Ensure that directories are preserved by the copy.
+        self.assertEqual(["libfoo"], os.listdir(dst_folder))
+        self.assertEqual(["file.c"], os.listdir(os.path.join(dst_folder, "libfoo")))
