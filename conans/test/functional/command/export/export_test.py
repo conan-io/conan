@@ -142,7 +142,7 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
         export_path = client.cache.package_layout(ref).export()
-        content = load(os.path.join(export_path, "file.txt"))
+        content = load(os.path.join(export_path, "sibling/file.txt"))
         self.assertEqual("Hello World!", content)
 
     def test_code_several_sibling(self):
@@ -163,8 +163,12 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
         export_path = client.cache.package_layout(ref).export_sources()
-        self.assertEqual(sorted(['file.txt', 'file.cpp', 'file.h']),
+        self.assertEqual(sorted(['test', 'cpp', 'include']),
                          sorted(os.listdir(export_path)))
+        self.assertEqual(['src'], os.listdir(os.path.join(export_path, 'test')))
+        self.assertEqual(['file.txt'], os.listdir(os.path.join(export_path, 'test', 'src')))
+        self.assertEqual(['file.cpp'], os.listdir(os.path.join(export_path, 'cpp')))
+        self.assertEqual(['file.h'], os.listdir(os.path.join(export_path, 'include')))
 
     @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
     def test_filename(self, filename):
