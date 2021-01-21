@@ -1,14 +1,11 @@
 import json
 import os
-import re
 import textwrap
 import unittest
 from datetime import datetime
 
 
 from conans import __version__ as client_version
-from conans.model.ref import ConanFileReference
-
 
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save, load
@@ -23,7 +20,8 @@ class InfoTest(unittest.TestCase):
                 name = "{name}"
                 version = "{version}"
                 license = {license}
-                description = "
+                description = "blah"
+                url = "myurl"
                 {requires}
             """)
         requires = ""
@@ -54,50 +52,16 @@ class InfoTest(unittest.TestCase):
             "Hello10": [],
         }
 
-        def create_export(test_deps, name):
-            deps = test_deps[name]
+        def create_export(testdeps, name):
+            deps = testdeps[name]
             for dep in deps:
-                create_export(test_deps, dep)
+                create_export(testdeps, dep)
 
             expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
             export = False if name == "Hello0" else True
             self._create(name, "0.1", expanded_deps, export=export)
 
-        def check_ref(ref):
-            self.assertEqual(ref.version, "0.1")
-            self.assertEqual(ref.user, "lasote")
-            self.assertEqual(ref.channel, "stable")
-
-        def check_digraph_line(line):
-            self.assertTrue(dot_regex.match(line))
-
-            node_matches = node_regex.findall(line)
-
-            parent_reference = node_matches[0]
-            deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
-
-            if parent_reference == "conanfile.py (Hello0/0.1)":
-                parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
-            else:
-                parent_ref = ConanFileReference.loads(parent_reference)
-                check_ref(parent_ref)
-            for dep in deps_ref:
-                check_ref(dep)
-                self.assertIn(dep.name, test_deps[parent_ref.name])
-
-        def check_file(filename):
-            dot_file_contents = load(filename)
-            print(dot_file_contents)
-            lines = dot_file_contents.splitlines()
-            self.assertEqual(lines[0], "digraph {\n")
-            for line in lines[1:-1]:
-                check_digraph_line(line)
-            self.assertEqual(lines[-1], "}\n")
-
         create_export(test_deps, "Hello0")
-
-        node_regex = re.compile(r'"([^"]+)"')
-        dot_regex = re.compile(r'^\s+"[^"]+" -> "[^"]+"\s+$')
 
         self.client.run("info . --graph", assert_error=True)
 
@@ -105,7 +69,21 @@ class InfoTest(unittest.TestCase):
         arg_filename = "test.dot"
         self.client.run("info . --graph=%s" % arg_filename)
         dot_file = os.path.join(self.client.current_folder, arg_filename)
-        check_file(dot_file)
+        contents = load(dot_file)
+        expected = textwrap.dedent("""
+            "Hello8/0.1@lasote/stable" -> "Hello9/0.1@lasote/stable"
+            "Hello8/0.1@lasote/stable" -> "Hello10/0.1@lasote/stable"
+            "Hello4/0.1@lasote/stable" -> "Hello5/0.1@lasote/stable"
+            "Hello4/0.1@lasote/stable" -> "Hello6/0.1@lasote/stable"
+            "Hello3/0.1@lasote/stable" -> "Hello7/0.1@lasote/stable"
+            "Hello7/0.1@lasote/stable" -> "Hello8/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello1/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello2/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello3/0.1@lasote/stable"
+            "Hello1/0.1@lasote/stable" -> "Hello4/0.1@lasote/stable"
+            """)
+        for line in expected.splitlines():
+            assert line in contents
 
     def test_graph_html(self):
         self.client = TestClient()
@@ -209,10 +187,8 @@ class InfoTest(unittest.TestCase):
                     Hello0/0.1@lasote/stable
             conanfile.py (Hello2/0.1)
                 URL: myurl
-                Licenses: MIT, GPL
-                Description: Yo no creo en brujas,
-                             pero que las hay,
-                             las hay
+                License: MIT
+                Description: blah
                 Provides: Hello2
                 Requires:
                     Hello1/0.1@lasote/stable""")
@@ -257,7 +233,7 @@ class InfoTest(unittest.TestCase):
                 License: MIT
             conanfile.py (Hello2/0.1)
                 URL: myurl
-                Licenses: MIT, GPL""")
+                License: MIT""")
 
         self.assertIn(expected_output, clean_output(self.client.out))
 
@@ -273,10 +249,8 @@ class InfoTest(unittest.TestCase):
                 Description: blah
             conanfile.py (Hello2/0.1)
                 URL: myurl
-                Licenses: MIT, GPL
-                Description: Yo no creo en brujas,
-                             pero que las hay,
-                             las hay""")
+                License: MIT
+                Description: blah""")
         self.assertIn(expected_output, clean_output(self.client.out))
 
     def test_json_info_outputs(self):
@@ -298,7 +272,7 @@ class InfoTest(unittest.TestCase):
         self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
         self.assertEqual(content[0]["license"][0], "MIT")
         self.assertEqual(content[0]["description"], "blah")
-        self.assertEqual(content[0]["revision"], "22b1dc946e5566f5b2549e1b285d3fa7")
+        self.assertEqual(content[0]["revision"], "33574249dee63395e86d2caee3f6c638")
         self.assertEqual(content[0]["package_revision"], None)
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
