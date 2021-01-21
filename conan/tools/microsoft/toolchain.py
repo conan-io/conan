@@ -1,6 +1,5 @@
 import os
 import textwrap
-import warnings
 from xml.dom import minidom
 
 from conans.errors import ConanException
@@ -29,21 +28,6 @@ class MSBuildToolchain(object):
         name = "".join("_%s" % v for _, v in props if v is not None)
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props if v is not None)
         return name.lower(), condition
-
-    def write_toolchain_files(self):
-        # Warning
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "'write_toolchain_files()' has been deprecated and moved.\n"
-               "It will be removed in next Conan release.\n"
-               "Use 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        from conans.client.output import Color, ConanOutput
-        ConanOutput(self._conanfile.output._stream,
-                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
-        warnings.warn(msg)
-        self.generate()
 
     def generate(self):
         name, condition = self._name_condition(self._conanfile.settings)
@@ -100,8 +84,8 @@ class MSBuildToolchain(object):
 
     def _write_config_toolchain(self, config_filename):
 
-        def format_macro(k, value):
-            return '%s="%s"' % (k, value) if value is not None else k
+        def format_macro(key, value):
+            return '%s="%s"' % (key, value) if value is not None else key
 
         toolchain_file = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>

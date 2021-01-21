@@ -163,7 +163,7 @@ class GitToolTest(unittest.TestCase):
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
         with six.assertRaisesRegex(self, ConanException, "specify a branch to checkout"):
-            git.clone("https://github.com/conan-community/conan-zlib.git")
+            git.clone("https://github.com/conan-io/hooks.git")
 
     def test_credentials(self):
         tmp = temp_folder()
