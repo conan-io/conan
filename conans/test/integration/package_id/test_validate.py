@@ -247,3 +247,43 @@ class TestValidate(unittest.TestCase):
                       "exist for this configuration):", client.out)
         self.assertIn("dep/0.1: Invalid ID: Windows not supported", client.out)
         self.assertIn("pkg/0.1: Invalid ID: Invalid transitive dependencies", client.out)
+
+    def test_override(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+
+            class Lib(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+
+                def config_options(self):
+                    if not self.options.shared:
+                        del self.options.fPIC
+
+                def build(self):
+                    pass
+        """)
+
+        client.save({"conanfile.py": conanfile})
+        client.run("export . dep/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools
+
+
+            class App(ConanFile):
+                requires = "dep/1.0"
+
+                def configure(self):
+                    self.options["dep"].shared = True
+
+                def validate(self):
+                    assert self.options["dep"].shared == True
+                    assert self.options["dep"].fPIC == True
+        """)
+
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create . pkg/0.1@ --build missing")
