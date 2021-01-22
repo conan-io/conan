@@ -25,7 +25,6 @@ def check_vs_runtime(exe, client, vs_version, build_type, static, architecture="
 
 def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None):
     output = str(output)
-    print(output)
     names = names if isinstance(names, list) else [names]
 
     for name in names:
@@ -49,11 +48,16 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             else:
                 assert arch is None, "checked don't know how to validate this architecture"
 
-            major, minor = version.split(".")[0:2]
-            assert "{} __GNUC__{}".format(name, major) in output
-            assert "{} __GNUC_MINOR__{}".format(name, minor) in output
-            cppstd_value = {"98": "199711", "11": "201103", "14": "201402", "17": "201703"}[cppstd]
-            assert "{} __cplusplus{}".format(name, cppstd_value) in output
+            if version:  # FIXME: At the moment, the GCC version is not controlled, will change
+                major, minor = version.split(".")[0:2]
+                assert "{} __GNUC__{}".format(name, major) in output
+                assert "{} __GNUC_MINOR__{}".format(name, minor) in output
+            if cppstd:
+                cppstd_value = {"98": "199711",
+                                "11": "201103",
+                                "14": "201402",
+                                "17": "201703"}[cppstd]
+                assert "{} __cplusplus{}".format(name, cppstd_value) in output
 
         if definitions:
             for k, v in definitions.items():
