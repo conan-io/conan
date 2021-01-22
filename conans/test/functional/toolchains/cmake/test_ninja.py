@@ -10,7 +10,6 @@ from conan.tools.cmake.base import CMakeToolchainBase
 from conans.test.functional.utils import check_vs_runtime, check_msvc_library
 from conans.test.utils.tools import TestClient
 from conans.test.functional.toolchains.ios._utils import create_library
-from parameterized.parameterized import parameterized
 
 
 @pytest.mark.tool_cmake
@@ -61,7 +60,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.client.save({'conanfile.py': self.conanfile})
 
     @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
-    @parameterized.expand([("Release", False), ("Debug", True)])
+    @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
+    @pytest.mark.tool_compiler
     def test_locally_build_linux(self, build_type, shared):
         """ Ninja build must proceed using default profile and cmake build (Linux)
         """
@@ -88,7 +88,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
             self.assertIn("architecture: i386:x86-64", self.client.out)
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-    @parameterized.expand([("Release", False), ("Debug", True)])
+    @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
+    @pytest.mark.tool_compiler
     def test_locally_build_windows(self, build_type, shared):
         """ Ninja build must proceed using default profile and cmake build (Windows Release)
         """
@@ -110,7 +111,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-    @parameterized.expand([("Release", False), ("Debug", True)])
+    @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
+    @pytest.mark.tool_compiler
     def test_locally_build_windows_debug(self):
         """ Ninja build must proceed using default profile and cmake build (Windows Debug)
         """
@@ -146,7 +148,8 @@ class CMakeNinjaTestCase(unittest.TestCase):
 
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
-    @parameterized.expand([("Release", False), ("Debug", True)])
+    @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
+    @pytest.mark.tool_compiler
     def test_locally_build_macos(self, build_type, shared):
         self.client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                         .format(build_type, shared))
