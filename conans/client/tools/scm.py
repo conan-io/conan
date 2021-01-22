@@ -69,27 +69,38 @@ class SCMBase(object):
         return "{user}@{domain}:{url}".format(user=user, domain=domain, url=url)
 
     def _handle_url_pattern(self, scheme, url, user=None, password=None):
-        if scheme == "file":
+        if scheme in ["file", "git"]:
             if self._username:
-                self._output.warn("SCM username cannot be set for file url, ignoring parameter")
+                self._output.warn("SCM username cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
             if self._password:
-                self._output.warn("SCM password cannot be set for file url, ignoring parameter")
+                self._output.warn("SCM password cannot be set for {} url, ignoring "
+                                  "parameter".format(scheme))
+            if user or password:
+                self._output.warn("Username/Password in URL cannot be set for '{}' SCM type, "
+                                  "removing it".format(scheme))
             return "{scheme}://{url}".format(scheme=scheme, url=url)
         elif scheme == "ssh" and self._password:
             self._output.warn("SCM password cannot be set for ssh url, ignoring parameter")
+        elif password and self._password:
+            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
 
         if user and self._username:
             self._output.warn("SCM username got from URL, ignoring 'username' parameter")
-        if password and self._password:
-            self._output.warn("SCM password got from URL, ignoring 'password' parameter")
 
         the_user = user or self._username
         the_password = password or self._password
+
         if the_password and the_user and scheme != "ssh":
-            return "{scheme}://{user}:{password}@{url}".format(scheme=scheme, user=the_user,
-                                                               password=the_password, url=url)
+            return "{scheme}://{user}:{password}@{url}".format(scheme=scheme,
+                                                               user=quote_plus(the_user),
+                                                               password=quote_plus(the_password),
+                                                               url=url)
         elif the_user:
-            return "{scheme}://{user}@{url}".format(scheme=scheme, user=the_user, url=url)
+            if scheme == "ssh" and password:
+                self._output.warn("Password in URL cannot be set for 'ssh' SCM type, removing it")
+            return "{scheme}://{user}@{url}".format(scheme=scheme, user=quote_plus(the_user),
+                                                    url=url)
         else:
             return "{scheme}://{url}".format(scheme=scheme, url=url)
 
@@ -98,8 +109,8 @@ class SCMBase(object):
             return url
 
         scp_regex = re.compile("^(?P<user>[a-zA-Z0-9_]+)@(?P<domain>[a-zA-Z0-9._-]+):(?P<url>.*)$")
-        url_user_pass_regex = re.compile("^(?P<scheme>file|http|https|git):\/\/(?P<user>\S+):(?P<password>\S+)@(?P<url>.*)$")
-        url_user_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\S+)@(?P<url>.*)$")
+        url_user_pass_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\w+):(?P<password>\w+)@(?P<url>.*)$")
+        url_user_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\w+)@(?P<url>.*)$")
         url_basic_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<url>.*)$")
 
         url_patterns = [

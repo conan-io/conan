@@ -6,7 +6,6 @@ from collections import OrderedDict
 
 import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.build_info.conan_build_info import get_build_info
 from conans.client import tools
@@ -127,7 +126,6 @@ class MyBuildInfo(unittest.TestCase):
             module = _get_module(data, "Hello1/1.0@lasote/stable")
             self.assertEqual(0, len(module["dependencies"]))
 
-    @attr('ide_fail')
     @pytest.mark.ide_fail
     def test_trace_command(self):
         from conans.build_info.command import run

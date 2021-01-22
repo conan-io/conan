@@ -5,7 +5,6 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized.parameterized import parameterized
 
 from conans import DEFAULT_REVISION_V1, load, ONLY_V2
@@ -16,9 +15,8 @@ from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
 
-@attr("artifactory_ready")
 @pytest.mark.artifactory_ready
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -380,7 +378,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIsNotNone(ref.revision)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class RevisionsInLocalCacheTest(unittest.TestCase):
 
     def setUp(self):
@@ -465,7 +463,7 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, pref.ref)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class RemoveWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
@@ -752,7 +750,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
                           remover_client.out)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class SearchingPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
@@ -1101,8 +1099,8 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
     @parameterized.expand([(True,), (False,)])
-    @unittest.skipIf(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
-                     "Not implemented in artifactory")
+    @pytest.mark.skipif(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
+                        reason="Not implemented in artifactory")
     def test_search_in_remote_by_revision_pattern(self, v1):
         """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
          1. With v2 client: We get the revs without refs matching the pattern
@@ -1201,7 +1199,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertIn(" UTC)", c_v2.out)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class UploadPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
@@ -1317,7 +1315,7 @@ class UploadPackagesWithRevisions(unittest.TestCase):
                               pref2.revision)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class SCMRevisions(unittest.TestCase):
 
     def test_auto_revision_even_without_scm_git(self):
@@ -1350,7 +1348,6 @@ class SCMRevisions(unittest.TestCase):
                       "'{f}': Unable to get git commit from '{f}'".format(f=client.current_folder),
                       client.out)
 
-    @attr("svn")
     @pytest.mark.tool_svn
     def test_auto_revision_even_without_scm_svn(self):
         """Even without using the scm feature, the revision is detected from repo.
@@ -1372,7 +1369,7 @@ class SCMRevisions(unittest.TestCase):
         self.assertIn("New changes!", client.out)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class CapabilitiesRevisionsTest(unittest.TestCase):
 
     def test_server_without_revisions_capability(self):
@@ -1398,7 +1395,7 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
                       "at the 'conan.conf'. [Remote: default]".format(server.fake_url), c_v2.out)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class InfoRevisions(unittest.TestCase):
 
     @parameterized.expand([(True,), (False,)])
@@ -1419,7 +1416,7 @@ class InfoRevisions(unittest.TestCase):
             self.assertIn("Revision: {}".format(revision), client.out)
 
 
-@unittest.skipUnless(get_env("TESTING_REVISIONS_ENABLED", False), "Only revisions")
+@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):

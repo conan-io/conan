@@ -138,8 +138,9 @@ def msvs_toolset(conanfile):
         settings = conanfile
     toolset = settings.get_safe("compiler.toolset")
     if not toolset:
+        compiler = settings.get_safe("compiler")
         compiler_version = settings.get_safe("compiler.version")
-        if settings.get_safe("compiler") == "intel":
+        if compiler == "intel":
             compiler_version = compiler_version if "." in compiler_version else \
                 "%s.0" % compiler_version
             toolset = "Intel C++ Compiler " + compiler_version

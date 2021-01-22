@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
@@ -7,101 +8,49 @@ import pytest
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
+from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.mocks import MockConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-
-default_dirs_flags = ["--bindir", "--libdir", "--includedir", "--datarootdir", "--libdir",
-                      "--sbindir", "--oldincludedir", "--libexecdir"]
-
-
-class MockConanfileWithOutput(MockConanfile):
-    def run(self, *args, **kwargs):
-        if self.runner:
-            self.runner(*args, **kwargs)
-
-
-class RunnerMockWithHelp(RunnerMock):
-
-    def __init__(self, return_ok=True, available_args=None):
-        self.command_called = None
-        self.return_ok = return_ok
-        self.available_args = available_args or []
-
-    def __call__(self, command, output=None, win_bash=False, subsystem=None):  # @UnusedVariable
-        if "configure --help" in command:
-            output.write(" ".join(self.available_args))
-        else:
-            return super(RunnerMockWithHelp, self).__call__(command, output, win_bash, subsystem)
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
 
-    def _set_deps_info(self, conanfile):
-        conanfile.deps_cpp_info.include_paths.append("path/includes")
-        conanfile.deps_cpp_info.include_paths.append("other\include\path")
-        # To test some path in win, to be used with MinGW make or MSYS etc
-        conanfile.deps_cpp_info.lib_paths.append("one\lib\path")
-        conanfile.deps_cpp_info.libs.append("onelib")
-        conanfile.deps_cpp_info.libs.append("twolib")
-        conanfile.deps_cpp_info.defines.append("onedefinition")
-        conanfile.deps_cpp_info.defines.append("twodefinition")
-        conanfile.deps_cpp_info.cflags.append("a_c_flag")
-        conanfile.deps_cpp_info.cxxflags.append("a_cxx_flag")
-        conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
-        conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
-        conanfile.deps_cpp_info.sysroot = "/path/to/folder"
-
-    @unittest.skipUnless(platform.system() == "Linux", "Requires Autotools")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
     @pytest.mark.tool_autotools()
     def test_autotools_real_install_dirs(self):
         body = gen_function_cpp(name="hello", msg="Hola Mundo!")
         header = gen_function_h(name="hello")
         main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+        makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp", lib="libhello.a",
+                                      lib_srcs="hello.cpp")
+        configure_ac = gen_configure_ac()
 
-        conanfile = """
-from conans import ConanFile, AutoToolsBuildEnvironment, tools
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, AutoToolsBuildEnvironment
 
-class TestConan(ConanFile):
-    name = "test"
-    version = "1.0"
-    settings = "os", "compiler", "arch", "build_type"
-    exports_sources = "*"
+            class TestConan(ConanFile):
+                name = "test"
+                version = "1.0"
+                settings = "os", "compiler", "arch", "build_type"
+                exports_sources = "*"
 
-    def build(self):
-        makefile_am = '''
-bin_PROGRAMS = main
-lib_LIBRARIES = libhello.a
-libhello_a_SOURCES = hello.cpp
-main_SOURCES = main.cpp
-main_LDADD = libhello.a
-'''
-        configure_ac = '''
-AC_INIT([main], [1.0], [luism@jfrog.com])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_PROG_CXX
-AC_PROG_RANLIB
-AM_PROG_AR
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
-'''
-        tools.save("Makefile.am", makefile_am)
-        tools.save("configure.ac", configure_ac)
-        self.run("aclocal")
-        self.run("autoconf")
-        self.run("automake --add-missing --foreign")
-        autotools = AutoToolsBuildEnvironment(self)
-        autotools.configure()
-        autotools.make()
-        autotools.install()
+                def build(self):
+                    self.run("aclocal")
+                    self.run("autoconf")
+                    self.run("automake --add-missing --foreign")
+                    autotools = AutoToolsBuildEnvironment(self)
+                    autotools.configure()
+                    autotools.make()
+                    autotools.install()
 
-    def package_id(self):
-        # easier to have same package_id for the test
-        self.info.header_only()
-"""
+                def package_id(self):
+                    # easier to have same package_id for the test
+                    self.info.header_only()
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile,
+                     "configure.ac": configure_ac,
+                     "Makefile.am": makefile_am,
                      "main.cpp": main,
                      "hello.h": header,
                      "hello.cpp": body})
@@ -118,25 +67,23 @@ AC_OUTPUT
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
         [self.assertNotIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
     def test_pkg_config_paths(self):
-        if platform.system() == "Windows":
-            return
         client = TestClient()
-        conanfile = """
-from conans import ConanFile, tools, AutoToolsBuildEnvironment
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, tools, AutoToolsBuildEnvironment
 
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-    generators = %s
+            class HelloConan(ConanFile):
+                name = "Hello"
+                version = "1.2.1"
+                generators = %s
 
-    def build(self):
-        tools.save("configure", "printenv")
-        self.run("chmod +x configure")
-        autot = AutoToolsBuildEnvironment(self)
-        autot.configure(%s)
-
-"""
+                def build(self):
+                    tools.save("configure", "printenv")
+                    self.run("chmod +x configure")
+                    autot = AutoToolsBuildEnvironment(self)
+                    autot.configure(%s)
+            """)
 
         client.save({CONANFILE: conanfile % ("'txt'", "")})
         client.run("create . conan/testing")

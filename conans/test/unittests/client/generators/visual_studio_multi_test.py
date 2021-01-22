@@ -1,8 +1,8 @@
 import os
+import platform
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client.conf import get_default_settings_yml
@@ -17,8 +17,6 @@ from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 
 
-@attr('visual_studio')
-@pytest.mark.tool_visual_studio
 class VisualStudioMultiGeneratorTest(unittest.TestCase):
 
     @parameterized.expand([(False, ), (True, )])
