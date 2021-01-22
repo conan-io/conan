@@ -2,91 +2,52 @@ import textwrap
 import unittest
 import platform
 import os
-
 import pytest
 
+from conans.client.tools.files import which
 from conan.tools.microsoft.visual import vcvars_command
 from conan.tools.cmake.base import CMakeToolchainBase
-from conans.test.assets.sources import gen_function_cpp
-from conans.test.functional.utils import check_vs_runtime
+from conans.test.functional.utils import check_vs_runtime, check_msvc_library
 from conans.test.utils.tools import TestClient
+from conans.test.functional.toolchains.ios._utils import create_library
+from parameterized.parameterized import parameterized
 
 
 @pytest.mark.tool_cmake
 class CMakeNinjaTestCase(unittest.TestCase):
     # This test assumes that 'CMake' and 'Ninja' are available in the system
 
-    main_cpp = gen_function_cpp(name="main")
-    cmake = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(App CXX)
-        set(CMAKE_VERBOSE_MAKEFILE ON)
-        add_executable(App main.cpp)
-        install(TARGETS App RUNTIME DESTINATION bin)
-        """)
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.cmake import CMake, CMakeToolchain
 
-        class Foobar(ConanFile):
-            name = "foobar"
-            settings = "os", "arch", "compiler", "build_type"
-            exports_sources = "*"
+        class Library(ConanFile):
+            name = 'hello'
+            version = '1.0'
+            settings = 'os', 'arch', 'compiler', 'build_type'
+            exports_sources = 'hello.h', 'hello.cpp', 'CMakeLists.txt'
+            options = {'shared': [True, False]}
+            default_options = {'shared': False}
+            _cmake = None
+
+            def _configure_cmake(self):
+                if not self._cmake:
+                    self._cmake = CMake(self, generator="Ninja", parallel=False)
+                    self._cmake.configure()
+                return self._cmake
 
             def generate(self):
-                tc = CMakeToolchain(self, generator="Ninja")
+                tc = CMakeToolchain(self)
                 tc.generate()
 
             def build(self):
-                cmake = CMake(self)
+                cmake = self._configure_cmake()
                 cmake.configure()
                 cmake.build()
 
             def package(self):
-                cmake = CMake(self)
-                cmake.configure()
+                cmake = self._configure_cmake()
                 cmake.install()
-        """)
-
-    conanfile_lib = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.tools import replace_in_file
-        from conan.tools.cmake import CMake, CMakeToolchain
-
-        class foobarConan(ConanFile):
-            name = "foobar"
-            version = "0.1.0"
-            options = {"shared": [True, False]}
-            default_options = {"shared": False}
-            settings = "os", "compiler", "arch", "build_type"
-            exports = '*'
-
-            def generate(self):
-                tc = CMakeToolchain(self, generator="Ninja")
-                tc.generate()
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-
-            def package(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.install()
-
-            def package_info(self):
-                self.cpp_info.libs = ["foobar"]
-    """)
-    cmake_lib = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8.12)
-        project(foobar CXX)
-        if(CMAKE_VERSION VERSION_LESS "3.15")
-            include(${CMAKE_BINARY_DIR}/conan_project_include.cmake)
-        endif()
-        set(CMAKE_VERBOSE_MAKEFILE ON)
-        add_library(foobar hello.cpp hellofoobar.h)
-        install(TARGETS foobar RUNTIME DESTINATION bin ARCHIVE DESTINATION lib)
         """)
 
     @classmethod
@@ -94,66 +55,62 @@ class CMakeNinjaTestCase(unittest.TestCase):
         if not which("ninja"):
             raise unittest.SkipTest("Ninja expected in PATH")
 
-    @pytest.mark.skip("Not tested yet")
-    def test_locally_build_linux(self):
+    def setUp(self):
+        self.client = TestClient(path_with_spaces=False)
+        create_library(self.client)
+        self.client.save({'conanfile.py': self.conanfile})
+
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
+    @parameterized.expand([("Release", False), ("Debug", True)])
+    def test_locally_build_linux(self, build_type, shared):
         """ Ninja build must proceed using default profile and cmake build (Linux)
         """
-        client = TestClient(path_with_spaces=False)
-        client.save({"linux_host": textwrap.dedent("""
-            [settings]
-            os=Linux
-            arch=x86_64
-            compiler=gcc
-            compiler.version=10
-            compiler.libcxx=libstdc++11
-            build_type=Release
-            """)})
-        self._build_locally(client, "linux_host")
-        client.run_command("objdump -f libfoobar.a")
-        self.assertIn("architecture: i386:x86-64", client.out)
+        print(self.client.current_folder)
+        self.client.run('install . -s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}'
+                        .format(build_type, shared))
+        self.client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
+                                .format(CMakeToolchainBase.filename))
+        ninja_build_file = open(os.path.join(self.client.current_folder, 'build.ninja'), 'r').read()
+        if build_type == "Release":
+            self.assertIn("CONFIGURATION = Release", ninja_build_file)
+        else:
+            self.assertIn("CONFIGURATION = Debug", ninja_build_file)
 
-        self._build_locally(client, "linux_host", "Debug", True)
-        client.run_command("objdump -f libfoobard.so")
-        self.assertIn("architecture: i386:x86-64", client.out)
-        self.assertIn("DYNAMIC", client.out)
-        client.run_command("file libfoobard.so")
-        # FIXME: Broken assert
-        #  self.assertIn("with debug_info", client.out)
+        self.client.run_command('ninja')
+        if shared:
+            self.assertIn("Linking CXX shared library libhello.so", self.client.out)
+            self.client.run_command("objdump -f libhello.so")
+            self.assertIn("architecture: i386:x86-64", self.client.out)
+            self.assertIn("DYNAMIC", self.client.out)
+        else:
+            self.assertIn("Linking CXX static library libhello.a", self.client.out)
+            self.client.run_command("objdump -f libhello.a")
+            self.assertIn("architecture: i386:x86-64", self.client.out)
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-    def test_locally_build_windows(self):
+    @parameterized.expand([("Release", False), ("Debug", True)])
+    def test_locally_build_windows(self, build_type, shared):
         """ Ninja build must proceed using default profile and cmake build (Windows Release)
         """
-        client = TestClient(path_with_spaces=False)
-        client.save({"conanfile.py": self.conanfile,
-                     "main.cpp": self.main_cpp,
-                     "CMakeLists.txt": self.cmake})
-        win_host = textwrap.dedent("""
-            [settings]
-            os=Windows
-            arch=x86_64
-            compiler=Visual Studio
-            compiler.version={}
-            compiler.runtime=MD
-            build_type={}
-            """.format(msvc_version, build_type))
-        client.save({"win": win_host})
-        client.run("install . -pr=win")
+        self.client.run("install . -s os=Windows -s arch=x86_64 -s compiler='Visual Studio'"
+                        " -s compiler.version=16 -s build_type={} -o hello:shared={}"
+                        .format(build_type, shared))
         # Ninja is single-configuration
-        vcvars = vcvars_command(msvc_version, architecture="amd64")
-        client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                           .format(vcvars))
-        client.run_command("{} && cmake --build .".format(vcvars))
-        client.run_command("App")
-        self.assertIn("main: {}!".format(build_type), client.out)
-        self.assertIn("main _M_X64 defined", client.out)
+        vcvars = vcvars_command("16", architecture="amd64")
+        self.client.run_command('{} && cmake . -G "Ninja" '
+                                '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(vcvars))
 
-        self.assertIn("main _MSC_VER19", client.out)
-        self.assertIn("main _MSVC_LANG2014", client.out)
+        # self.client.run_command("{} && cmake --build .".format(vcvars))
+        self.client.run_command("{} && ninja".format(vcvars))
 
-        check_vs_runtime("App.exe", client, "15", build_type="Release", static=False)
+        # TODO
+        # self.assertIn("main: {}!".format(build_type), self.client.out)
+        # check_msvc_library("")
+
+
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+    @parameterized.expand([("Release", False), ("Debug", True)])
     def test_locally_build_windows_debug(self):
         """ Ninja build must proceed using default profile and cmake build (Windows Debug)
         """
@@ -186,3 +143,26 @@ class CMakeNinjaTestCase(unittest.TestCase):
         self.assertIn("main _MSVC_LANG2014", client.out)
 
         check_vs_runtime("App.exe", client, "15", build_type="Debug", static=True)
+
+
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
+    @parameterized.expand([("Release", False), ("Debug", True)])
+    def test_locally_build_macos(self, build_type, shared):
+        self.client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
+                        .format(build_type, shared))
+
+        self.client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
+                                .format(CMakeToolchainBase.filename))
+        ninja_build_file = open(os.path.join(self.client.current_folder, 'build.ninja'), 'r').read()
+        if build_type == "Release":
+            self.assertIn("CONFIGURATION = Release", ninja_build_file)
+        else:
+            self.assertIn("CONFIGURATION = Debug", ninja_build_file)
+
+        self.client.run_command('ninja')
+
+        if shared:
+            pass
+        else:
+            self.client.run_command("lipo -info libhello.a")
+            self.assertIn("Non-fat file: libhello.a is architecture: arm64", self.client.out)
