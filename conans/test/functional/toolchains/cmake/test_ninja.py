@@ -90,58 +90,19 @@ class TestCMakeNinja:
     def test_locally_build_windows(self, build_type, shared):
         """ Ninja build must proceed using default profile and cmake build (Windows Release)
         """
+        msvc_version = "16"
         self.client.run("install . -s os=Windows -s arch=x86_64 -s compiler='Visual Studio'"
-                        " -s compiler.version=16 -s build_type={} -o hello:shared={}"
-                        .format(build_type, shared))
+                        " -s compiler.version={} -s build_type={} -o hello:shared={}"
+                        .format(msvc_version, build_type, shared))
+
         # Ninja is single-configuration
-        vcvars = vcvars_command("16", architecture="amd64")
+        vcvars = vcvars_command(msvc_version, architecture="x86_64")
         self.client.run_command('{} && cmake . -G "Ninja" '
                                 '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(vcvars))
 
-        # self.client.run_command("{} && cmake --build .".format(vcvars))
         self.client.run_command("{} && ninja".format(vcvars))
-
-        # TODO
-        # self.assertIn("main: {}!".format(build_type), self.client.out)
-        # check_msvc_library("")
-
-
-
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-    @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-    @pytest.mark.tool_compiler
-    def test_locally_build_windows_debug(self, build_type, shared):
-        """ Ninja build must proceed using default profile and cmake build (Windows Debug)
-        """
-        self.client = TestClient(path_with_spaces=False)
-        self.client.save({"conanfile.py": self.conanfile,
-                     "main.cpp": self.main_cpp,
-                     "CMakeLists.txt": self.cmake})
-        win_host = textwrap.dedent("""
-            [settings]
-            os=Windows
-            arch=x86
-            compiler=Visual Studio
-            compiler.version=15
-            compiler.runtime=MTd
-            build_type=Debug
-             """)
-        self.client.save({"win": win_host})
-        self.client.run("install . -pr=win")
-        # Ninja is single-configuration
-        # It is necessary to set architecture=x86 here, otherwise final architecture is wrong
-        vcvars = vcvars_command("15", architecture="x86")
-        self.client.run("install . -pr=win")
-        self.client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
-                           .format(vcvars))
-        self.client.run_command("{} && cmake --build .".format(vcvars))
-        self.client.run_command("App")
-        assert "main: Debug!" in self.client.out
-        assert "main _M_IX86 defined" in self.client.out
-        assert "main _MSC_VER19" in self.client.out
-        assert "main _MSVC_LANG2014" in self.client.out
-
-        check_vs_runtime("App.exe", self.client, "15", build_type="Debug", static=True)
+        libname = "hello.dll" if shared else "hello.lib"
+        check_msvc_library(libname, self.client, msvc_version, build_type, not shared, architecture="amd64")
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
     @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
