@@ -8,8 +8,8 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
-@pytest.mark.tool_autotools()
+#@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
+#@pytest.mark.tool_autotools()
 def test_autotools():
     client = TestClient()
     client.run("new hello/0.1 --template=v2_cmake")
@@ -22,6 +22,7 @@ def test_autotools():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
+        from conans.tools import environment_append
 
         class TestConan(ConanFile):
             requires = "hello/0.1"
@@ -29,10 +30,11 @@ def test_autotools():
             exports_sources = "*"
 
             def generate(self):
-                deps = AutotoolsDeps(self)
-                deps.generate()
-                tc = AutotoolsToolchain(self)
-                tc.generate()
+                with environment_append({"CPPFLAGS": "Hello!!!!!!!"}):
+                    deps = AutotoolsDeps(self)
+                    deps.generate()
+                    #tc = AutotoolsToolchain(self)
+                    #tc.generate()
 
             def build(self):
                 self.run("aclocal")
@@ -43,11 +45,11 @@ def test_autotools():
                 autotools.make()
                 autotools.install()
         """)
-    client = TestClient()
+
     client.save({"conanfile.py": conanfile,
                  "configure.ac": configure_ac,
                  "Makefile.am": makefile_am,
-                 "main.cpp": main})
+                 "main.cpp": main}, clean_first=True)
     print(client.current_folder)
     client.run("install .")
     client.run("build .")

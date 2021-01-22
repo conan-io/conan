@@ -141,6 +141,7 @@ def _format_values(flavor, variables, append_with_spaces):
             value = list(OrderedDict.fromkeys(value))  # Avoid repeated entries, while keeping order
             append_space = name in append_with_spaces
             placeholder = _variable_placeholder(flavor, name, append_space)
+            print("PLACEHOLDER!!!!", placeholder)
             if append_space:
                 # Variables joined with spaces look like: CPPFLAGS="one two three"
                 value = " ".join(value+[placeholder])
@@ -174,7 +175,7 @@ def _files(env_vars, vars_with_spaces, flavor, activate_tpl, deactivate_tpl, ven
     activate_content = activate_tpl.render(environment_file=env_filepath,
                                            modified_vars=modified_vars, new_vars=new_vars,
                                            venv_name=venv_name)
-    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars, 
+    deactivate_content = deactivate_tpl.render(modified_vars=modified_vars, new_vars=new_vars,
                                                venv_name=venv_name)
 
     environment_lines = ["{}={}".format(name, value) for name, value, _ in ret]

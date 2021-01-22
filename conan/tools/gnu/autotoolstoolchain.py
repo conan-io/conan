@@ -20,6 +20,7 @@ class AutotoolsToolchain(object):
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
                 return True if (fpic or shared) else None
+
     def _configure_link_flags(self):
         """Not the -L"""
         ret = list(self._deps_cpp_info.sharedlinkflags)
