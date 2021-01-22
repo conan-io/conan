@@ -1,10 +1,12 @@
 import platform
+import textwrap
 import unittest
 from textwrap import dedent
 
 import pytest
 
 from conans.paths import CONANFILE
+from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.utils.tools import TestClient
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 
@@ -71,41 +73,28 @@ class BuildEnvironmenTest(unittest.TestCase):
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export . lasote/stable")
 
-        makefile_am = '''
-bin_PROGRAMS = main
-main_SOURCES = main.cpp
-'''
+        makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+        configure_ac = gen_configure_ac()
 
-        configure_ac = '''
-AC_INIT([main], [1.0], [luism@jfrog.com])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_PROG_CXX
-AC_PROG_RANLIB
-AM_PROG_AR
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
-'''
+        reuse_conanfile = textwrap.dedent('''
+            import platform
+            from conans import ConanFile
 
-        reuse_conanfile = '''
-import platform
-from conans import ConanFile
+            class ConanReuseLib(ConanFile):
+                requires = "Mean/0.1@lasote/stable"
+                generators = "virtualbuildenv"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = "*"
 
-class ConanReuseLib(ConanFile):
-
-    requires = "Mean/0.1@lasote/stable"
-    generators = "virtualbuildenv"
-    settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "*"
-
-    def build(self):
-        self.run("aclocal")
-        self.run("autoconf")
-        self.run("automake --add-missing --foreign")
-        self.run("ls")
-        self.run("bash -c 'source activate_build.sh && ./configure'")
-        self.run("bash -c 'source activate_build.sh && make'")
-        self.run("./main")
-'''
+                def build(self):
+                    self.run("aclocal")
+                    self.run("autoconf")
+                    self.run("automake --add-missing --foreign")
+                    self.run("ls")
+                    self.run("bash -c 'source activate_build.sh && ./configure'")
+                    self.run("bash -c 'source activate_build.sh && make'")
+                    self.run("./main")
+            ''')
         client.save({CONANFILE: reuse_conanfile,
                      "Makefile.am": makefile_am,
                      "configure.ac": configure_ac,
