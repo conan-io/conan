@@ -629,3 +629,31 @@ class InfoTest2(unittest.TestCase):
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
         self.assertNotIn("shared", client.out)
+
+
+def test_scm_info():
+    # https://github.com/conan-io/conan/issues/8377
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            scm = {"type": "git",
+                   "url": "some-url/path",
+                   "revision": "some commit hash"}
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("export . pkg/0.1@")
+
+    client.run("info .")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info pkg/0.1@")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info . --json=file.json")
+    file_json = client.load("file.json")
+    info_json = json.loads(file_json)
+    node = info_json[0]
+    assert node["scm"] == {"type": "git", "url": "some-url/path", "revision": "some commit hash"}

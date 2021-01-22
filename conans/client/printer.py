@@ -122,6 +122,8 @@ class Printer(object):
 
             _print("creation_date", show_field="date", name="Creation date")
 
+            _print("scm", show_field="scm", name="scm")
+
             if show("required") and "required_by" in it:
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in it["required_by"]:
