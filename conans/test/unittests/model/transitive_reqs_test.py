@@ -1,5 +1,5 @@
 import unittest
-from collections import namedtuple, Counter
+from collections import namedtuple, Counter, defaultdict
 
 import six
 from mock import Mock
@@ -87,6 +87,7 @@ class GraphTest(unittest.TestCase):
                                         self.resolver, None)
         cache = Mock()
         cache.config.default_package_id_mode = "semver_direct_mode"
+        cache.new_config = defaultdict(Mock)
         self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
 
     def build_graph(self, content, options="", settings=""):

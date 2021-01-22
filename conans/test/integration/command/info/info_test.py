@@ -1,21 +1,358 @@
 import json
 import os
-import re
 import textwrap
 import unittest
 from datetime import datetime
 
-import pytest
 
 from conans import __version__ as client_version
-from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import save
+from conans.util.files import save, load
 
 
 class InfoTest(unittest.TestCase):
+
+    def _create(self, name, version, deps=None, export=True):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "{name}"
+                version = "{version}"
+                license = {license}
+                description = "blah"
+                url = "myurl"
+                {requires}
+            """)
+        requires = ""
+        if deps:
+            requires = "requires = {}".format(", ".join('"{}"'.format(d) for d in deps))
+
+        conanfile = conanfile.format(name=name, version=version, requires=requires,
+                                     license='"MIT"')
+
+        self.client.save({"conanfile.py": conanfile}, clean_first=True)
+        if export:
+            self.client.run("export . lasote/stable")
+
+    def test_graph(self):
+        self.client = TestClient()
+
+        test_deps = {
+            "Hello0": ["Hello1", "Hello2", "Hello3"],
+            "Hello1": ["Hello4"],
+            "Hello2": [],
+            "Hello3": ["Hello7"],
+            "Hello4": ["Hello5", "Hello6"],
+            "Hello5": [],
+            "Hello6": [],
+            "Hello7": ["Hello8"],
+            "Hello8": ["Hello9", "Hello10"],
+            "Hello9": [],
+            "Hello10": [],
+        }
+
+        def create_export(testdeps, name):
+            deps = testdeps[name]
+            for dep in deps:
+                create_export(testdeps, dep)
+
+            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
+            export = False if name == "Hello0" else True
+            self._create(name, "0.1", expanded_deps, export=export)
+
+        create_export(test_deps, "Hello0")
+
+        self.client.run("info . --graph", assert_error=True)
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.dot"
+        self.client.run("info . --graph=%s" % arg_filename)
+        dot_file = os.path.join(self.client.current_folder, arg_filename)
+        contents = load(dot_file)
+        expected = textwrap.dedent("""
+            "Hello8/0.1@lasote/stable" -> "Hello9/0.1@lasote/stable"
+            "Hello8/0.1@lasote/stable" -> "Hello10/0.1@lasote/stable"
+            "Hello4/0.1@lasote/stable" -> "Hello5/0.1@lasote/stable"
+            "Hello4/0.1@lasote/stable" -> "Hello6/0.1@lasote/stable"
+            "Hello3/0.1@lasote/stable" -> "Hello7/0.1@lasote/stable"
+            "Hello7/0.1@lasote/stable" -> "Hello8/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello1/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello2/0.1@lasote/stable"
+            "conanfile.py (Hello0/0.1)" -> "Hello3/0.1@lasote/stable"
+            "Hello1/0.1@lasote/stable" -> "Hello4/0.1@lasote/stable"
+            """)
+        for line in expected.splitlines():
+            assert line in contents
+
+    def test_graph_html(self):
+        self.client = TestClient()
+
+        test_deps = {
+            "Hello0": ["Hello1"],
+            "Hello1": [],
+        }
+
+        def create_export(testdeps, name):
+            deps = testdeps[name]
+            for dep in deps:
+                create_export(testdeps, dep)
+
+            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
+            export = False if name == "Hello0" else True
+            self._create(name, "0.1", expanded_deps, export=export)
+
+        create_export(test_deps, "Hello0")
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.html"
+        self.client.run("info . --graph=%s" % arg_filename)
+        html = self.client.load(arg_filename)
+        self.assertIn("<body>", html)
+        self.assertIn("{ from: 0, to: 1 }", html)
+        self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script>"
+                      " JFrog LTD. <a>https://conan.io</a>"
+                      .format(client_version, datetime.today().year), html)
+
+    def test_only_names(self):
+        self.client = TestClient()
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("info . --only None")
+        self.assertEqual(["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable",
+                          "conanfile.py (Hello2/0.1)"],
+                         str(self.client.out).splitlines()[-3:])
+        self.client.run("info . --only=date")
+        lines = [(line if "date" not in line else "Date")
+                 for line in str(self.client.out).splitlines()]
+        self.assertEqual(["Hello0/0.1@lasote/stable", "Date",
+                          "Hello1/0.1@lasote/stable", "Date",
+                          "conanfile.py (Hello2/0.1)"], lines)
+
+        self.client.run("info . --only=invalid", assert_error=True)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertNotIn("with --path specified, allowed values:", self.client.out)
+
+        self.client.run("info . --paths --only=bad", assert_error=True)
+        self.assertIn("Invalid --only value", self.client.out)
+        self.assertIn("with --path specified, allowed values:", self.client.out)
+
+    def test_info_virtual(self):
+        # Checking that "Required by: virtual" doesnt appear in the output
+        self.client = TestClient()
+        self._create("Hello", "0.1")
+        self.client.run("info Hello/0.1@lasote/stable")
+        self.assertNotIn("virtual", self.client.out)
+        self.assertNotIn("Required", self.client.out)
+
+    def test_reuse(self):
+        self.client = TestClient()
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("info . -u")
+
+        self.assertIn("Creation date: ", self.client.out)
+        self.assertIn("ID: ", self.client.out)
+        self.assertIn("BuildID: ", self.client.out)
+
+        expected_output = textwrap.dedent("""\
+            Hello0/0.1@lasote/stable
+                Remote: None
+                URL: myurl
+                License: MIT
+                Description: blah
+                Provides: Hello0
+                Recipe: No remote%s
+                Binary: Missing
+                Binary remote: None
+                Required by:
+                    Hello1/0.1@lasote/stable
+            Hello1/0.1@lasote/stable
+                Remote: None
+                URL: myurl
+                License: MIT
+                Description: blah
+                Provides: Hello1
+                Recipe: No remote%s
+                Binary: Missing
+                Binary remote: None
+                Required by:
+                    conanfile.py (Hello2/0.1)
+                Requires:
+                    Hello0/0.1@lasote/stable
+            conanfile.py (Hello2/0.1)
+                URL: myurl
+                License: MIT
+                Description: blah
+                Provides: Hello2
+                Requires:
+                    Hello1/0.1@lasote/stable""")
+
+        expected_output = expected_output % (
+            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+            "\n    Package revision: None",
+            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+            "\n    Package revision: None",) \
+            if self.client.cache.config.revisions_enabled else expected_output % ("", "")
+
+        def clean_output(output):
+            return "\n".join([line for line in str(output).splitlines()
+                              if not line.strip().startswith("Creation date") and
+                              not line.strip().startswith("ID") and
+                              not line.strip().startswith("BuildID") and
+                              not line.strip().startswith("export_folder") and
+                              not line.strip().startswith("build_folder") and
+                              not line.strip().startswith("source_folder") and
+                              not line.strip().startswith("package_folder")])
+
+        # The timestamp is variable so we can't check the equality
+        self.assertIn(expected_output, clean_output(self.client.out))
+
+        self.client.run("info . -u --only=url")
+        expected_output = textwrap.dedent("""\
+            Hello0/0.1@lasote/stable
+                URL: myurl
+            Hello1/0.1@lasote/stable
+                URL: myurl
+            conanfile.py (Hello2/0.1)
+                URL: myurl""")
+
+        self.assertIn(expected_output, clean_output(self.client.out))
+        self.client.run("info . -u --only=url --only=license")
+        expected_output = textwrap.dedent("""\
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+            conanfile.py (Hello2/0.1)
+                URL: myurl
+                License: MIT""")
+
+        self.assertIn(expected_output, clean_output(self.client.out))
+
+        self.client.run("info . -u --only=url --only=license --only=description")
+        expected_output = textwrap.dedent("""\
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Description: blah
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Description: blah
+            conanfile.py (Hello2/0.1)
+                URL: myurl
+                License: MIT
+                Description: blah""")
+        self.assertIn(expected_output, clean_output(self.client.out))
+
+    def test_json_info_outputs(self):
+        self.client = TestClient()
+        self._create("LibA", "0.1")
+        self._create("LibE", "0.1")
+        self._create("LibF", "0.1")
+
+        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+
+        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+                     export=False)
+
+        self.client.run("info . -u --json=output.json")
+
+        # Check a couple of values in the generated JSON
+        content = json.loads(self.client.load("output.json"))
+        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
+        self.assertEqual(content[0]["license"][0], "MIT")
+        self.assertEqual(content[0]["description"], "blah")
+        self.assertEqual(content[0]["revision"], "33574249dee63395e86d2caee3f6c638")
+        self.assertEqual(content[0]["package_revision"], None)
+        self.assertEqual(content[1]["url"], "myurl")
+        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
+
+    def test_build_order(self):
+        self.client = TestClient()
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable")
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
+                      self.client.out)
+
+        self.client.run("info conanfile.py -bo=Hello1/0.1@lasote/stable")
+        self.assertIn("[Hello1/0.1@lasote/stable]", self.client.out)
+
+        self.client.run("info ./ -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
+                      self.client.out)
+
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n", self.client.out)
+
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
+                        "--json=file.json")
+        self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
+                         self.client.load("file.json"))
+
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
+        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
+                      self.client.out)
+
+        self.client.run("info Hello1/0.1@lasote/stable --build-order=Hello0/0.1@lasote/stable "
+                        "--graph=index.html", assert_error=True)
+        self.assertIn("--build-order cannot be used together with --graph", self.client.out)
+
+    def test_diamond_build_order(self):
+        self.client = TestClient()
+        self._create("LibA", "0.1")
+        self._create("LibE", "0.1")
+        self._create("LibF", "0.1")
+
+        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
+
+        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
+                     export=False)
+
+        self.client.run("info . -bo=LibA/0.1@lasote/stable")
+        self.assertIn("[LibA/0.1@lasote/stable], "
+                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
+                      self.client.out)
+        self.client.run("info . -bo=LibB/0.1@lasote/stable")
+        self.assertIn("[LibB/0.1@lasote/stable]", self.client.out)
+        self.client.run("info . -bo=LibE/0.1@lasote/stable")
+        self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable]",
+                      self.client.out)
+        self.client.run("info . -bo=LibF/0.1@lasote/stable")
+        self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
+                      self.client.out)
+        self.client.run("info . -bo=Dev1/0.1@lasote/stable")
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
+        self.client.run("info . -bo=LibG/0.1@lasote/stable")
+        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
+                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
+
+        self.client.run("info . --build-order=ALL")
+        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
+                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
+                      self.client.out)
+
+        self.client.run("info . --build-order=ALL")
+        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
+                      "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
+                      self.client.out)
+
+
+class InfoTest2(unittest.TestCase):
 
     def test_not_found_package_dirty_cache(self):
         # Conan does a lock on the cache, and even if the package doesn't exist
@@ -36,45 +373,6 @@ class InfoTest(unittest.TestCase):
         client.run("search")
         self.assertIn("There are no packages", client.out)
         self.assertNotIn("Pkg/1.0.x@user/testing", client.out)
-
-    def _create(self, number, version, deps=None, deps_dev=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps, build=False)
-        files[CONANFILE] = files[CONANFILE].replace("config(", "configure(")
-        if deps_dev:
-            files[CONANFILE] = files[CONANFILE].replace("exports = '*'", """exports = '*'
-    dev_requires=%s
-""" % ",".join('"%s"' % d for d in deps_dev))
-
-        self.client.save(files, clean_first=True)
-        if export:
-            self.client.run("export . lasote/stable")
-            expected_output = textwrap.dedent(
-                """\
-                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'url'. It is recommended to add it as attribute
-                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'license'. It is recommended to add it as attribute
-                [HOOK - attribute_checker.py] pre_export(): WARN: Conanfile doesn't have 'description'. It is recommended to add it as attribute
-                """)
-            self.assertIn(expected_output, self.client.out)
-
-        if number != "Hello2":
-            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
-                                                        'version = "0.1"\n'
-                                                        '    url= "myurl"\n'
-                                                        '    license = "MIT"\n'
-                                                        '    description = "blah"')
-        else:
-            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
-                                                        'version = "0.1"\n'
-                                                        '    url= "myurl"\n'
-                                                        '    license = "MIT", "GPL"\n'
-                                                        '    description = """Yo no creo en brujas,\n'
-                                                        '                 pero que las hay,\n'
-                                                        '                 las hay"""')
-
-        self.client.save(files)
-        if export:
-            self.client.run("export . lasote/stable")
-            self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.out)
 
     def test_install_folder(self):
         conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
@@ -107,107 +405,6 @@ class InfoTest(unittest.TestCase):
 
         self.assertIn("--install-folder cannot be used together with a"
                       " host profile (-s, -o, -e or -pr)", client.out)
-
-    @pytest.mark.tool_compiler
-    def test_graph(self):
-        self.client = TestClient()
-
-        test_deps = {
-            "Hello0": ["Hello1", "Hello2", "Hello3"],
-            "Hello1": ["Hello4"],
-            "Hello2": [],
-            "Hello3": ["Hello7"],
-            "Hello4": ["Hello5", "Hello6"],
-            "Hello5": [],
-            "Hello6": [],
-            "Hello7": ["Hello8"],
-            "Hello8": ["Hello9", "Hello10"],
-            "Hello9": [],
-            "Hello10": [],
-        }
-
-        def create_export(test_deps, name):
-            deps = test_deps[name]
-            for dep in deps:
-                create_export(test_deps, dep)
-
-            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
-            export = False if name == "Hello0" else True
-            self._create(name, "0.1", expanded_deps, export=export)
-
-        def check_ref(ref):
-            self.assertEqual(ref.version, "0.1")
-            self.assertEqual(ref.user, "lasote")
-            self.assertEqual(ref.channel, "stable")
-
-        def check_digraph_line(line):
-            self.assertTrue(dot_regex.match(line))
-
-            node_matches = node_regex.findall(line)
-
-            parent_reference = node_matches[0]
-            deps_ref = [ConanFileReference.loads(references) for references in node_matches[1:]]
-
-            if parent_reference == "conanfile.py (Hello0/0.1)":
-                parent_ref = ConanFileReference("Hello0", None, None, None, validate=False)
-            else:
-                parent_ref = ConanFileReference.loads(parent_reference)
-                check_ref(parent_ref)
-            for dep in deps_ref:
-                check_ref(dep)
-                self.assertIn(dep.name, test_deps[parent_ref.name])
-
-        def check_file(filename):
-            with open(filename) as dot_file_contents:
-                lines = dot_file_contents.readlines()
-                self.assertEqual(lines[0], "digraph {\n")
-                for line in lines[1:-1]:
-                    check_digraph_line(line)
-                self.assertEqual(lines[-1], "}\n")
-
-        create_export(test_deps, "Hello0")
-
-        node_regex = re.compile(r'"([^"]+)"')
-        dot_regex = re.compile(r'^\s+"[^"]+" -> "[^"]+"\s+$')
-
-        self.client.run("info . --graph", assert_error=True)
-
-        # arbitrary case - file will be named according to argument
-        arg_filename = "test.dot"
-        self.client.run("info . --graph=%s" % arg_filename)
-        dot_file = os.path.join(self.client.current_folder, arg_filename)
-        check_file(dot_file)
-
-    @pytest.mark.tool_compiler
-    def test_graph_html(self):
-        self.client = TestClient()
-
-        test_deps = {
-            "Hello0": ["Hello1"],
-            "Hello1": [],
-        }
-
-        def create_export(testdeps, name):
-            deps = testdeps[name]
-            for dep in deps:
-                create_export(testdeps, dep)
-
-            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
-            export = False if name == "Hello0" else True
-            self._create(name, "0.1", expanded_deps, export=export)
-
-        create_export(test_deps, "Hello0")
-
-        # arbitrary case - file will be named according to argument
-        arg_filename = "test.html"
-        self.client.run("info . --graph=%s" % arg_filename)
-        html = self.client.load(arg_filename)
-        self.assertIn("<body>", html)
-        self.assertIn("{ from: 0, to: 1 }", html)
-        self.assertIn("id: 0,\n                        label: 'Hello0/0.1',", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script>"
-                      " JFrog LTD. <a>https://conan.io</a>"
-                      .format(client_version, datetime.today().year), html)
 
     def test_graph_html_embedded_visj(self):
         client = TestClient()
@@ -254,32 +451,6 @@ class InfoTest(unittest.TestCase):
                       "shape: 'ellipse',\n                        "
                       "color: { background: 'SkyBlue'},", html)
 
-    @pytest.mark.tool_compiler
-    def test_only_names(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info . --only None")
-        self.assertEqual(["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable",
-                          "conanfile.py (Hello2/0.1)"],
-                         str(self.client.out).splitlines()[-3:])
-        self.client.run("info . --only=date")
-        lines = [(line if "date" not in line else "Date")
-                 for line in str(self.client.out).splitlines()]
-        self.assertEqual(["Hello0/0.1@lasote/stable", "Date",
-                          "Hello1/0.1@lasote/stable", "Date",
-                          "conanfile.py (Hello2/0.1)"], lines)
-
-        self.client.run("info . --only=invalid", assert_error=True)
-        self.assertIn("Invalid --only value", self.client.out)
-        self.assertNotIn("with --path specified, allowed values:", self.client.out)
-
-        self.client.run("info . --paths --only=bad", assert_error=True)
-        self.assertIn("Invalid --only value", self.client.out)
-        self.assertIn("with --path specified, allowed values:", self.client.out)
-
     def test_cwd(self):
         client = TestClient()
         conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
@@ -292,184 +463,6 @@ class InfoTest(unittest.TestCase):
         client.run("info ./subfolder --build-order Pkg/0.1@lasote/testing --json=jsonfile.txt")
         path = os.path.join(client.current_folder, "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
-
-    @pytest.mark.tool_compiler
-    def test_info_virtual(self):
-        # Checking that "Required by: virtual" doesnt appear in the output
-        self.client = TestClient()
-        self._create("Hello", "0.1")
-        self.client.run("info Hello/0.1@lasote/stable")
-        self.assertNotIn("virtual", self.client.out)
-        self.assertNotIn("Required", self.client.out)
-
-    @pytest.mark.tool_compiler
-    def test_reuse(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info . -u")
-
-        self.assertIn("Creation date: ", self.client.out)
-        self.assertIn("ID: ", self.client.out)
-        self.assertIn("BuildID: ", self.client.out)
-
-        expected_output = textwrap.dedent("""\
-            Hello0/0.1@lasote/stable
-                Remote: None
-                URL: myurl
-                License: MIT
-                Description: blah
-                Provides: Hello0
-                Recipe: No remote%s
-                Binary: Missing
-                Binary remote: None
-                Required by:
-                    Hello1/0.1@lasote/stable
-            Hello1/0.1@lasote/stable
-                Remote: None
-                URL: myurl
-                License: MIT
-                Description: blah
-                Provides: Hello1
-                Recipe: No remote%s
-                Binary: Missing
-                Binary remote: None
-                Required by:
-                    conanfile.py (Hello2/0.1)
-                Requires:
-                    Hello0/0.1@lasote/stable
-            conanfile.py (Hello2/0.1)
-                URL: myurl
-                Licenses: MIT, GPL
-                Description: Yo no creo en brujas,
-                             pero que las hay,
-                             las hay
-                Provides: Hello2
-                Requires:
-                    Hello1/0.1@lasote/stable""")
-
-        expected_output = expected_output % (
-            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
-            "\n    Package revision: None",
-            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
-            "\n    Package revision: None",) \
-            if self.client.cache.config.revisions_enabled else expected_output % ("", "")
-
-        def clean_output(output):
-            return "\n".join([line for line in str(output).splitlines()
-                              if not line.strip().startswith("Creation date") and
-                              not line.strip().startswith("ID") and
-                              not line.strip().startswith("BuildID") and
-                              not line.strip().startswith("export_folder") and
-                              not line.strip().startswith("build_folder") and
-                              not line.strip().startswith("source_folder") and
-                              not line.strip().startswith("package_folder")])
-
-        # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-        self.client.run("info . -u --only=url")
-        expected_output = textwrap.dedent("""\
-            Hello0/0.1@lasote/stable
-                URL: myurl
-            Hello1/0.1@lasote/stable
-                URL: myurl
-            conanfile.py (Hello2/0.1)
-                URL: myurl""")
-
-        self.assertIn(expected_output, clean_output(self.client.out))
-        self.client.run("info . -u --only=url --only=license")
-        expected_output = textwrap.dedent("""\
-            Hello0/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-            Hello1/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-            conanfile.py (Hello2/0.1)
-                URL: myurl
-                Licenses: MIT, GPL""")
-
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-        self.client.run("info . -u --only=url --only=license --only=description")
-        expected_output = textwrap.dedent("""\
-            Hello0/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Description: blah
-            Hello1/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Description: blah
-            conanfile.py (Hello2/0.1)
-                URL: myurl
-                Licenses: MIT, GPL
-                Description: Yo no creo en brujas,
-                             pero que las hay,
-                             las hay""")
-        self.assertIn(expected_output, clean_output(self.client.out))
-
-    @pytest.mark.tool_compiler
-    def test_json_info_outputs(self):
-        self.client = TestClient()
-        self._create("LibA", "0.1")
-        self._create("LibE", "0.1")
-        self._create("LibF", "0.1")
-
-        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
-        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
-
-        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
-                     export=False)
-
-        self.client.run("info . -u --json=output.json")
-
-        # Check a couple of values in the generated JSON
-        content = json.loads(self.client.load("output.json"))
-        self.assertEqual(content[0]["reference"], "LibA/0.1@lasote/stable")
-        self.assertEqual(content[0]["license"][0], "MIT")
-        self.assertEqual(content[0]["description"], "blah")
-        self.assertEqual(content[0]["revision"], "22b1dc946e5566f5b2549e1b285d3fa7")
-        self.assertEqual(content[0]["package_revision"], None)
-        self.assertEqual(content[1]["url"], "myurl")
-        self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
-
-    @pytest.mark.tool_compiler
-    def test_build_order(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info conanfile.py -bo=Hello1/0.1@lasote/stable")
-        self.assertIn("[Hello1/0.1@lasote/stable]", self.client.out)
-
-        self.client.run("info ./ -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n", self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
-                        "--json=file.json")
-        self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                         self.client.load("file.json"))
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
-        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                      self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable --build-order=Hello0/0.1@lasote/stable "
-                        "--graph=index.html", assert_error=True)
-        self.assertIn("--build-order cannot be used together with --graph", self.client.out)
 
     def test_build_order_build_requires(self):
         # https://github.com/conan-io/conan/issues/3267
@@ -506,59 +499,17 @@ class InfoTest(unittest.TestCase):
                       "[Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
                       client.out)
 
-    @pytest.mark.tool_compiler
-    def test_diamond_build_order(self):
-        self.client = TestClient()
-        self._create("LibA", "0.1")
-        self._create("LibE", "0.1")
-        self._create("LibF", "0.1")
-
-        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
-        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
-
-        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
-                     export=False)
-
-        self.client.run("info . -bo=LibA/0.1@lasote/stable")
-        self.assertIn("[LibA/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=LibB/0.1@lasote/stable")
-        self.assertIn("[LibB/0.1@lasote/stable]", self.client.out)
-        self.client.run("info . -bo=LibE/0.1@lasote/stable")
-        self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=LibF/0.1@lasote/stable")
-        self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=Dev1/0.1@lasote/stable")
-        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
-        self.client.run("info . -bo=LibG/0.1@lasote/stable")
-        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
-
-        self.client.run("info . --build-order=ALL")
-        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info . --build-order=ALL")
-        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
-                      "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-
     def test_wrong_path_parameter(self):
-        self.client = TestClient()
+        client = TestClient()
 
-        self.client.run("info", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+        client.run("info", assert_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
 
-        self.client.run("info not_real_path", assert_error=True)
-        self.assertIn("ERROR: Conanfile not found", self.client.out)
+        client.run("info not_real_path", assert_error=True)
+        self.assertIn("ERROR: Conanfile not found", client.out)
 
-        self.client.run("info conanfile.txt", assert_error=True)
-        self.assertIn("ERROR: Conanfile not found", self.client.out)
+        client.run("info conanfile.txt", assert_error=True)
+        self.assertIn("ERROR: Conanfile not found", client.out)
 
     def test_common_attributes(self):
         client = TestClient()
@@ -678,3 +629,31 @@ class InfoTest(unittest.TestCase):
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
         self.assertNotIn("shared", client.out)
+
+
+def test_scm_info():
+    # https://github.com/conan-io/conan/issues/8377
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            scm = {"type": "git",
+                   "url": "some-url/path",
+                   "revision": "some commit hash"}
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("export . pkg/0.1@")
+
+    client.run("info .")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info pkg/0.1@")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info . --json=file.json")
+    file_json = client.load("file.json")
+    info_json = json.loads(file_json)
+    node = info_json[0]
+    assert node["scm"] == {"type": "git", "url": "some-url/path", "revision": "some commit hash"}

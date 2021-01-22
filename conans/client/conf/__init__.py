@@ -505,14 +505,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return None
 
     @property
-    def msvc_visual_incompatible(self):
-        try:
-            visual_comp = self.get_item("general.msvc_visual_incompatible")
-            return visual_comp.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
         if short_paths_home:
