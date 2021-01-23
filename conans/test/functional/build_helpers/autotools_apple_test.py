@@ -12,6 +12,41 @@ from conans.test.utils.tools import TestClient
 
 @unittest.skipUnless(platform.system() == "Darwin", "requires Xcode")
 class AutoToolsAppleTest(unittest.TestCase):
+    makefile = textwrap.dedent("""
+        .PHONY: all
+        all: libhello.a app
+
+        app: main.o libhello.a
+        	$(CXX) $(CFLAGS) -o app main.o -lhello -L.
+
+        libhello.a: hello.o
+        	$(AR) rcs libhello.a hello.o
+
+        main.o: main.cpp
+        	$(CXX) $(CFLAGS) -c -o main.o main.cpp
+
+        hello.o: hello.cpp
+        	$(CXX) $(CFLAGS) -c -o hello.o hello.cpp
+        """)
+
+    conanfile_py = textwrap.dedent("""
+        from conans import ConanFile, tools, AutoToolsBuildEnvironment
+
+
+        class App(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            def config_options(self):
+                if self.settings.os == "Windows":
+                    del self.options.fPIC
+
+            def build(self):
+                env_build = AutoToolsBuildEnvironment(self)
+                env_build.make()
+        """)
+
     @parameterized.expand([("x86_64", "Macos", "10.14"),
                            ("armv8", "iOS", "10.0"),
                            ("armv7", "iOS", "10.0"),
@@ -23,23 +58,6 @@ class AutoToolsAppleTest(unittest.TestCase):
         self.os = os_
         self.os_version = os_version
 
-        makefile = textwrap.dedent("""
-            .PHONY: all
-            all: libhello.a app
-
-            app: main.o libhello.a
-            	$(CXX) $(CFLAGS) -o app main.o -lhello -L.
-
-            libhello.a: hello.o
-            	$(AR) rcs libhello.a hello.o
-
-            main.o: main.cpp
-            	$(CXX) $(CFLAGS) -c -o main.o main.cpp
-
-            hello.o: hello.cpp
-            	$(CXX) $(CFLAGS) -c -o hello.o hello.cpp
-            """)
-
         profile = textwrap.dedent("""
             include(default)
             [settings]
@@ -48,34 +66,16 @@ class AutoToolsAppleTest(unittest.TestCase):
             arch = {arch}
             """).format(os=self.os, arch=self.arch, os_version=self.os_version)
 
-        conanfile_py = textwrap.dedent("""
-            from conans import ConanFile, tools, AutoToolsBuildEnvironment
-
-
-            class App(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                options = {"shared": [True, False], "fPIC": [True, False]}
-                default_options = {"shared": False, "fPIC": True}
-
-                def config_options(self):
-                    if self.settings.os == "Windows":
-                        del self.options.fPIC
-
-                def build(self):
-                    env_build = AutoToolsBuildEnvironment(self)
-                    env_build.make()
-            """)
-
         self.t = TestClient()
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello")
         main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
-        self.t.save({"Makefile": makefile,
+        self.t.save({"Makefile": self.makefile,
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
                      "main.cpp": main_cpp,
-                     "conanfile.py": conanfile_py,
+                     "conanfile.py": self.conanfile_py,
                      "profile": profile})
 
         self.t.run("install . --profile:host=profile")
@@ -93,3 +93,56 @@ class AutoToolsAppleTest(unittest.TestCase):
 
         self.t.run_command('lipo -info "%s"' % app)
         self.assertIn("architecture: %s" % expected_arch, self.t.out)
+
+    def test_catalyst(self):
+        profile = textwrap.dedent("""
+            include(default)
+            [settings]
+            os = Macos
+            os.version = 13.0
+            os.sdk = macosx
+            os.subsystem = catalyst
+            arch = x86_64
+            """)
+
+        self.t = TestClient()
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello")
+        main_cpp = textwrap.dedent("""
+            #include "hello.h"
+            #include <TargetConditionals.h>
+            #include <iostream>
+
+            int main()
+            {
+            #if TARGET_OS_MACCATALYST
+                std::cout << "running catalyst " << __IPHONE_OS_VERSION_MIN_REQUIRED << std::endl;
+            #else
+                #error "not building for Apple Catalyst"
+            #endif
+            }
+            """)
+
+        self.t.save({"Makefile": self.makefile,
+                     "hello.h": hello_h,
+                     "hello.cpp": hello_cpp,
+                     "main.cpp": main_cpp,
+                     "conanfile.py": self.conanfile_py,
+                     "profile": profile})
+
+        self.t.run("install . --profile:host=profile")
+        self.t.run("build .")
+
+        libhello = os.path.join(self.t.current_folder, "libhello.a")
+        app = os.path.join(self.t.current_folder, "app")
+        self.assertTrue(os.path.isfile(libhello))
+        self.assertTrue(os.path.isfile(app))
+
+        self.t.run_command('lipo -info "%s"' % libhello)
+        self.assertIn("architecture: x86_64", self.t.out)
+
+        self.t.run_command('lipo -info "%s"' % app)
+        self.assertIn("architecture: x86_64", self.t.out)
+
+        self.t.run_command('"%s"' % app)
+        self.assertIn("running catalyst 130000", self.t.out)
