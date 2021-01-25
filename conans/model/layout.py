@@ -9,6 +9,7 @@ class _LayoutEntry(object):
 
 class Layout(object):
     def __init__(self):
+
         self._base_install_folder = None
         self._base_source_folder = None
         self._base_build_folder = None
@@ -17,6 +18,9 @@ class Layout(object):
         self.source = _LayoutEntry()
         self.build = _LayoutEntry()
         self.package = _LayoutEntry()
+
+        # Do not follow the package layout in the cache
+        self.cache_package_layout = False
 
     def __repr__(self):
         return str(self.__dict__)

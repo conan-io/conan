@@ -38,22 +38,26 @@ def conanfile():
 
     def package_info(self):
         # This will be easier when the layout declares also the includedirs etc
-        self.cpp_info.includedirs = [os.path.join(self.layout.package.folder, "include")]
-        self.cpp_info.libdirs = [os.path.join(self.layout.package.folder, "lib")]
+        self.cpp_info.includedirs = [os.path.join(self.package_folder, "include")]
+        self.cpp_info.libdirs = [os.path.join(self.package_folder, "lib")]
     """
     return conan_file
 
 
-def test_cache_in_layout(conanfile):
+@pytest.mark.parametrize("cache_package_layout", [True, False])
+def test_cache_in_layout(conanfile, cache_package_layout):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
-    requires.
+    requires. But by the default, the "package" is not followed
     """
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . base/1.0@")
 
+    if cache_package_layout:
+        conanfile  = conanfile.replace('self.layout.package.folder = "my_package"',
+                                       'self.layout.package.folder = "my_package"\n'
+                                       '        self.layout.cache_package_layout = True')
     client.save({"conanfile.py": conanfile})
-    client.run("create . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
     sf = client.cache.package_layout(ref).source()
@@ -62,8 +66,9 @@ def test_cache_in_layout(conanfile):
 
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")
-    package_folder = os.path.join(pf, "my_package")
+    package_folder = os.path.join(pf, "my_package") if cache_package_layout else pf
 
+    client.run("create . lib/1.0@")
     # Check folders match with the declared by the layout
     assert "Source folder: {}".format(source_folder) in client.out
     assert "Build folder: {}".format(build_folder) in client.out

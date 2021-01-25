@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -96,7 +97,8 @@ def test_local_source_change_base():
     assert os.path.exists(header)
 
 
-def test_local_package():
+@pytest.mark.parametrize("cache_package_layout", [True, False])
+def test_local_package(cache_package_layout):
     """If we configure a package folder in the layout, the packaged files in a "conan package ."
     go to the specified folder: "my_package" and takes everything from the correct build and
     source declared folders
@@ -112,6 +114,7 @@ def test_local_package():
         self.layout.source.folder = "my_source"
         self.layout.build.folder = "my_build"
         self.layout.package.folder = "my_package"
+        %s
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -124,6 +127,10 @@ def test_local_package():
         self.copy("*.h")
         self.copy("*.lib")
     """
+
+    conan_file = conan_file % ("self.layout.cache_package_layout = True"
+                               if cache_package_layout else "")
+
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     # FIXME: This should change to "source ." when "conan source" computes the graph
@@ -172,8 +179,9 @@ def test_local_package():
     assert os.path.exists(build_library)
 
 
-def test_export_pkg():
-    """The export-pkg, calling the "package" method, follows the layout"""
+@pytest.mark.parametrize("cache_package_layout", [True, False])
+def test_export_pkg(cache_package_layout):
+    """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     # FIXME: The configure is not valid to change the layout, we need the settings and options
     #        ready
     client = TestClient()
@@ -185,6 +193,7 @@ def test_export_pkg():
             self.layout.source.folder = "my_source"
             self.layout.build.folder = "my_build"
             self.layout.package.folder = "my_package"
+            %s
 
         def source(self):
             tools.save("downloaded.h", "bar")
@@ -200,6 +209,10 @@ def test_export_pkg():
             self.copy("*.h")
             self.copy("*.lib")
         """
+
+    conan_file = conan_file % ("self.layout.cache_package_layout = True"
+                               if cache_package_layout else "")
+
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     client.run("source . -if=my_install")
@@ -209,7 +222,10 @@ def test_export_pkg():
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = os.path.join(client.cache.package_layout(ref).package(pref), "my_package")
+    pf = client.cache.package_layout(ref).package(pref)
+    if cache_package_layout:
+        pf = os.path.join(pf, "my_package")
+
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
     assert "WARN: Package folder: {}".format(pf) in client.out
@@ -219,7 +235,8 @@ def test_export_pkg():
     assert os.path.exists(os.path.join(pf, "library.lib"))
 
 
-def test_export_pkg_local():
+@pytest.mark.parametrize("cache_package_layout", [True, False])
+def test_export_pkg_local(cache_package_layout):
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     # FIXME: The configure is not valid to change the layout, we need the settings and options
     #        ready
@@ -232,6 +249,7 @@ def test_export_pkg_local():
             self.layout.source.folder = "my_source"
             self.layout.build.folder = "my_build"
             self.layout.package.folder = "my_package"
+            %s
 
         def source(self):
             tools.save("downloaded.h", "bar")
@@ -247,6 +265,9 @@ def test_export_pkg_local():
             self.copy("*.h")
             self.copy("*.lib")
         """
+    conan_file = conan_file % ("self.layout.cache_package_layout = True"
+                               if cache_package_layout else "")
+
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     client.run("source . -if=my_install")
@@ -262,7 +283,8 @@ def test_export_pkg_local():
     client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-    pf_cache = os.path.join(client.cache.package_layout(ref).package(pref), "my_package")
+    pf = client.cache.package_layout(ref).package(pref)
+    pf_cache = os.path.join(pf, "my_package") if cache_package_layout else pf
 
     # Check the artifacts packaged
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
