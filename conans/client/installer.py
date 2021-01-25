@@ -152,7 +152,6 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
-
         # FIXME: Is weak to assign here the recipe_hash
         manifest = package_layout.recipe_manifest()
         conanfile.info.recipe_hash = manifest.summary_hash
@@ -298,14 +297,16 @@ class BinaryInstaller(object):
         for generator_path in app.cache.generators:
             app.loader.load_generators(generator_path)
 
-    def install(self, deps_graph, remotes, build_mode, update, keep_build=False, graph_info=None):
+    def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
+                graph_lock, keep_build=False):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update)
+        self._build(nodes_by_level, keep_build, root_node, profile_host, profile_build,
+                    graph_lock, remotes, build_mode, update)
 
     @staticmethod
     def _classify(nodes_by_level):
@@ -406,8 +407,9 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, layout, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, nodes_by_level, keep_build, root_node, graph_info, remotes, build_mode, update):
-        using_build_profile = bool(graph_info.profile_build)
+    def _build(self, nodes_by_level, keep_build, root_node, profile_host, profile_build, graph_lock,
+               remotes, build_mode, update):
+        using_build_profile = bool(profile_build)
         missing, invalid, downloads = self._classify(nodes_by_level)
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
@@ -425,7 +427,7 @@ class BinaryInstaller(object):
 
                 self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node, graph_info)
+                    self._handle_node_editable(node, profile_host, profile_build, graph_lock)
                     # Need a temporary package revision for package_revision_mode
                     # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
                     node.prev = "editable"
@@ -443,7 +445,7 @@ class BinaryInstaller(object):
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
 
-    def _handle_node_editable(self, node, graph_info):
+    def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.base_folder()
@@ -468,13 +470,12 @@ class BinaryInstaller(object):
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)
+                graph_info_node = GraphInfo(profile_host, root_ref=node.ref)
                 graph_info_node.options = node.conanfile.options.values
-                graph_info_node.graph_lock = graph_info.graph_lock
+                graph_info_node.graph_lock = graph_lock
                 graph_info_node.save(build_folder)
                 output.info("Generated graphinfo")
-                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
-                                                graph_info.graph_lock)
+                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
 
                 save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
