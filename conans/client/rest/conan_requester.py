@@ -5,7 +5,6 @@ import platform
 import time
 import warnings
 
-import http
 import urllib3
 import requests
 from requests.adapters import HTTPAdapter
@@ -69,11 +68,15 @@ class ConanRequester(object):
         retry_wait = retry_wait if retry_wait is not None else 5
         if retry == 0:
             return 0
-        retry_status_code_set = set()
-        for status in http.HTTPStatus:
-            code = int(status)
-            if code // 100 == 5:
-                retry_status_code_set.add(code)
+        retry_status_code_set = {
+            requests.codes.internal_server_error,
+            requests.codes.bad_gateway,
+            requests.codes.service_unavailable,
+            requests.codes.gateway_timeout,
+            requests.codes.variant_also_negotiates,
+            requests.codes.insufficient_storage,
+            requests.codes.bandwidth_limit_exceeded
+        }
         return urllib3.Retry(
             total=retry,
             backoff_factor=(retry * retry_wait) / (2**(retry-1)),
