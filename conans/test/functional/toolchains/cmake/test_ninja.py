@@ -6,7 +6,7 @@ import pytest
 from conans.client.tools.files import which
 from conan.tools.microsoft.visual import vcvars_command
 from conan.tools.cmake.base import CMakeToolchainBase
-from conans.test.functional.utils import check_vs_runtime, check_msvc_library
+from conans.test.functional.utils import check_vs_runtime
 from conans.test.utils.tools import TestClient
 from conans.test.functional.toolchains.ios._utils import create_library
 
@@ -104,7 +104,7 @@ def test_locally_build_windows(build_type, shared, client):
 
     client.run_command("{} && ninja".format(vcvars))
     libname = "hello.dll" if shared else "hello.lib"
-    check_msvc_library(libname, client, msvc_version, build_type, not shared, architecture="amd64")
+    check_vs_runtime(libname, client, msvc_version, build_type, not shared, architecture="amd64")
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
