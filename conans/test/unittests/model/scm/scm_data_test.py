@@ -27,7 +27,7 @@ class GetDictValueTestCase(unittest.TestCase):
             _get_dict_value({"str": b"value"}, "str", str)
 
         with self.assertRaisesRegex(ConanException, exception_msg.format(found="bool")):
-            _get_dict_value({"str": True}, "str", six.string_types)
+            _get_dict_value({"str": True}, "str", str)
 
         with self.assertRaisesRegex(ConanException, exception_msg.format(found="function")):
             _get_dict_value({"str": lambda: "value"}, "str", str)
