@@ -194,9 +194,9 @@ class InfoTest(unittest.TestCase):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+            "\n    Revision: d6727bc577b5c6bd8ac7261eff98be93"
             "\n    Package revision: None",
-            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+            "\n    Revision: 7c5e142433a3ee0acaeffb4454a6d42f"
             "\n    Package revision: None",) \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 
@@ -629,3 +629,31 @@ class InfoTest2(unittest.TestCase):
         client.run("info pkg/0.1@user/testing")
         self.assertIn("pkg/0.1@user/testing", client.out)
         self.assertNotIn("shared", client.out)
+
+
+def test_scm_info():
+    # https://github.com/conan-io/conan/issues/8377
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            scm = {"type": "git",
+                   "url": "some-url/path",
+                   "revision": "some commit hash"}
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("export . pkg/0.1@")
+
+    client.run("info .")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info pkg/0.1@")
+    assert "'revision': 'some commit hash'" in client.out
+    assert "'url': 'some-url/path'" in client.out
+
+    client.run("info . --json=file.json")
+    file_json = client.load("file.json")
+    info_json = json.loads(file_json)
+    node = info_json[0]
+    assert node["scm"] == {"type": "git", "url": "some-url/path", "revision": "some commit hash"}
