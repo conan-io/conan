@@ -3,8 +3,6 @@ import re
 import time
 import traceback
 
-import six
-
 from conans.client.rest import response_to_str
 from conans.client.tools.files import check_md5, check_sha1, check_sha256
 from conans.errors import ConanException, NotFoundException, AuthenticationException, \
@@ -101,8 +99,7 @@ class FileDownloader(object):
                 mode = "ab" if range_start else "wb"
                 with open(path, mode) as file_handler:
                     for chunk in chunks:
-                        assert ((six.PY3 and isinstance(chunk, bytes)) or
-                                (six.PY2 and isinstance(chunk, str)))
+                        assert isinstance(chunk, bytes)
                         file_handler.write(chunk)
                         downloaded_size += len(chunk)
             else:

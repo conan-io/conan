@@ -1,7 +1,6 @@
 import sys
 import unittest
 
-import six
 import pytest
 
 from conans.test.utils.tools import TestClient
@@ -16,7 +15,6 @@ class PythonVersionTest(unittest.TestCase):
         self.client.run("--help")
         self.assertIn(expected_message, str(self.client.out))
 
-    @pytest.mark.skipif(not six.PY2, reason="Requires Python 2.7")
     def test_py2_warning_message(self):
         self._validate_message("Python 2 is deprecated as of 01/01/2020 and Conan has stopped\n"
                                "supporting it officially")

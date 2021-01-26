@@ -9,7 +9,6 @@ import unittest
 import uuid
 
 import six
-import pytest
 
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.graph.python_requires import ConanPythonRequire
@@ -24,7 +23,7 @@ class ASTReplacementTest(unittest.TestCase):
                 'url': 'this-is-the-url',
                 'revision': '42'}
 
-    conanfile = six.u("""{header}
+    conanfile = """{header}
 from conans import ConanFile
 
 class LibConan(ConanFile):
@@ -34,7 +33,7 @@ class LibConan(ConanFile):
            "url": "auto",
            "revision": "auto"}}
 {footer}
-    """)
+    """
 
     def run(self, *args, **kwargs):
         self._tmp_folder = tempfile.mkdtemp(suffix='_conans')
@@ -71,15 +70,14 @@ class LibConan(ConanFile):
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
 
-    @pytest.mark.skipif(not six.PY3, reason="Works only in Py3 (assumes utf-8 for source files)")
     def test_author_non_ascii(self):
-        conanfile = self._get_conanfile(author=six.u("¡ÑÁí!"), encoding='utf-8')
+        conanfile = self._get_conanfile(author="¡ÑÁí!", encoding='utf-8')
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
 
     def test_shebang_utf8(self):
         header = "#!/usr/bin/env python2\n# -*- coding: utf-8 -*-"
-        conanfile = self._get_conanfile(author=six.u("¡Ñandú!"), header=header, encoding='utf-8')
+        conanfile = self._get_conanfile(author="¡Ñandú!", header=header, encoding='utf-8')
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
 
@@ -91,7 +89,7 @@ class LibConan(ConanFile):
 
     def test_shebang_several(self):
         header = "#!/usr/bin/env python2\n# -*- coding: utf-8 -*-\n# -*- coding: utf-8 -*-"
-        conanfile = self._get_conanfile(author=six.u("¡Ñandú!"), header=header, encoding='utf-8')
+        conanfile = self._get_conanfile(author="¡Ñandú!", header=header, encoding='utf-8')
         _replace_scm_data_in_conanfile(conanfile, self.scm_data)
         self._check_result(conanfile)
 

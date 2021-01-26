@@ -1,10 +1,8 @@
 import os
-import six
 import sys
 from colorama import Fore, Style
 
 from conans.util.env_reader import get_env
-from conans.util.files import decode_text
 
 
 def colorama_initialize():
@@ -101,10 +99,6 @@ class ConanOutput(object):
         self._stream_err.write(data)
 
     def write(self, data, front=None, back=None, newline=False, error=False):
-        if six.PY2:
-            if isinstance(data, str):
-                data = decode_text(data)  # Keep python 2 compatibility
-
         if self._color and (front or back):
             data = "%s%s%s%s" % (front or '', back or '', data, Style.RESET_ALL)
 

@@ -2,7 +2,7 @@ import textwrap
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
-import six
+
 
 class PythonBuildTest(ConanV2ModeTestCase):
     conanfile = textwrap.dedent("""
@@ -57,7 +57,4 @@ class PythonBuildTest(ConanV2ModeTestCase):
         t.run("create .", assert_error=True)
         packages_path = t.cache.package_layout(conantool_ref).packages().replace('\\', '/')
         self.assertIn("consumer/0.1: PYTHONPATH: ['{}".format(packages_path), t.out)
-        if six.PY2:
-            self.assertIn("ImportError: No module named tooling", t.out)
-        else:
-            self.assertIn("ModuleNotFoundError: No module named 'tooling'", t.out)
+        self.assertIn("ModuleNotFoundError: No module named 'tooling'", t.out)
