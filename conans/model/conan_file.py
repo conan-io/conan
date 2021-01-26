@@ -200,10 +200,7 @@ class ConanFile(object):
 
     @property
     def package_folder(self):
-        if not self.in_local_cache or self.layout.cache_package_layout:
-            return self.layout.package_folder
-        else:
-            return self.layout.base_package_folder
+        return self.layout.base_package_folder
 
     @package_folder.setter
     def package_folder(self, folder):

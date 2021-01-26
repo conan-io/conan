@@ -20,7 +20,6 @@ def conanfile():
     def configure(self):
         self.layout.source.folder = "my_sources"
         self.layout.build.folder = "my_build"
-        self.layout.package.folder = "my_package"
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
@@ -44,8 +43,7 @@ def conanfile():
     return conan_file
 
 
-@pytest.mark.parametrize("cache_package_layout", [True, False])
-def test_cache_in_layout(conanfile, cache_package_layout):
+def test_cache_in_layout(conanfile):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed
     """
@@ -53,10 +51,6 @@ def test_cache_in_layout(conanfile, cache_package_layout):
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . base/1.0@")
 
-    if cache_package_layout:
-        conanfile  = conanfile.replace('self.layout.package.folder = "my_package"',
-                                       'self.layout.package.folder = "my_package"\n'
-                                       '        self.layout.cache_package_layout = True')
     client.save({"conanfile.py": conanfile})
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
@@ -66,24 +60,16 @@ def test_cache_in_layout(conanfile, cache_package_layout):
 
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")
-    package_folder = os.path.join(pf, "my_package") if cache_package_layout else pf
 
     client.run("create . lib/1.0@")
     # Check folders match with the declared by the layout
     assert "Source folder: {}".format(source_folder) in client.out
     assert "Build folder: {}".format(build_folder) in client.out
-    assert "Package folder: {}".format(package_folder) in client.out
-
     # Check the source folder
     assert os.path.exists(os.path.join(source_folder, "source.h"))
 
     # Check the build folder
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
-
-    # Check the package folder
-    assert os.path.exists(os.path.join(package_folder, "LICENSE"))
-    assert os.path.exists(os.path.join(package_folder, "include", "source.h"))
-    assert os.path.exists(os.path.join(package_folder, "lib", "build.lib"))
 
     # Check the conaninfo
     assert os.path.exists(os.path.join(pf, "conaninfo.txt"))
@@ -96,9 +82,9 @@ def test_cache_in_layout(conanfile, cache_package_layout):
     client.run("install lib/1.0@ -g txt")
     binfopath = os.path.join(client.current_folder, "conanbuildinfo.txt")
     content = load(binfopath).replace("\r\n", "\n")
-    assert "[includedirs]\n{}".format(os.path.join(package_folder, "include")
+    assert "[includedirs]\n{}".format(os.path.join(pf, "include")
                                       .replace("\\", "/")) in content
-    assert "[libdirs]\n{}".format(os.path.join(package_folder, "lib")
+    assert "[libdirs]\n{}".format(os.path.join(pf, "lib")
                                   .replace("\\", "/")) in content
 
 
@@ -111,7 +97,6 @@ def test_same_conanfile_local(conanfile):
 
     source_folder = os.path.join(client.current_folder, "my_sources")
     build_folder = os.path.join(client.current_folder, "my_build")
-    package_folder = os.path.join(client.current_folder, "my_package")
 
     client.run("install . lib/1.0@ -if=install")
     client.run("source .  -if=install")
@@ -123,43 +108,7 @@ def test_same_conanfile_local(conanfile):
     assert os.path.exists(os.path.join(build_folder, "build.lib"))
 
     client.run("package .  -if=install")
-    assert "Package folder: {}".format(package_folder) in client.out
-    assert os.path.exists(os.path.join(package_folder, "LICENSE"))
-
-
-def test_package_layout_in_local_only(conanfile):
-    """We could keep the cache layout by using self.in_local_cache"""
-    conanfile = conanfile.replace('self.layout.package.folder = "my_package"',
-                                  'self.layout.package.folder = "my_package" '
-                                  'if not self.in_local_cache else ""')
-    client = TestClient()
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . base/1.0@")
-
-    client.save({"conanfile.py": conanfile})
-    client.run("create . lib/1.0@")
-
-    ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
-
-    client.run("install . lib/1.0@ -if=install")
-    client.run("source .  -if=install")
-    client.run("build .  -if=install")
-    client.run("package .  -if=install")
-
-    # In local folder the layout the package is in "my_package"
-    local_package_folder = os.path.join(client.current_folder, "my_package")
-    assert os.path.exists(os.path.join(local_package_folder, "LICENSE"))
-    assert os.path.exists(os.path.join(local_package_folder, "include", "source.h"))
-    assert os.path.exists(os.path.join(local_package_folder, "lib", "build.lib"))
-
-    # Check the cache, the contents should be at the root of the package folder in the cache
-    pf = client.cache.package_layout(ref).package(pref)
+    # By default, the "package" folder is still used (not breaking)
+    pf = os.path.join(client.current_folder, "package")
+    assert "Package folder: {}".format(pf) in client.out
     assert os.path.exists(os.path.join(pf, "LICENSE"))
-    assert os.path.exists(os.path.join(pf, "include", "source.h"))
-    assert os.path.exists(os.path.join(pf, "lib", "build.lib"))
-    assert os.path.exists(os.path.join(pf, "conaninfo.txt"))
-
-    # Search the package in the cache
-    client.run("search lib/1.0@")
-    assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out

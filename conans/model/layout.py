@@ -17,10 +17,6 @@ class Layout(object):
 
         self.source = _LayoutEntry()
         self.build = _LayoutEntry()
-        self.package = _LayoutEntry()
-
-        # Do not follow the package layout in the cache
-        self.cache_package_layout = False
 
     def __repr__(self):
         return str(self.__dict__)
@@ -63,15 +59,6 @@ class Layout(object):
     @install_folder.setter
     def install_folder(self, folder):
         self._base_install_folder = folder
-
-    @property
-    def package_folder(self):
-        if self._base_package_folder is None:
-            return None
-        if not self.package.folder:
-            return self._base_package_folder
-
-        return os.path.join(self._base_package_folder, self.package.folder)
 
     def set_base_package_folder(self, folder):
         self._base_package_folder = folder
