@@ -29,7 +29,6 @@ def intel_installation_path(version, arch):
         installation_path = os.path.join(os.sep, "opt", "intel",
                                          "compilers_and_libraries_%s" % year, subdir)
     elif system == "Windows":
-        import winreg
         if arch == "x86":
             intel_arch = "IA32"
         elif arch == "x86_64":
@@ -44,6 +43,7 @@ def intel_installation_path(version, arch):
         base = r"{base}\Intel\Suites\{intel_version}".format(
             base=base, intel_version=intel_version
         )
+        import winreg
         path = base + r"\Defaults\C++\{arch}".format(arch=intel_arch)
         subkey = _system_registry_key(winreg.HKEY_LOCAL_MACHINE, path, "SubKey")
         if not subkey:
