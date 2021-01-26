@@ -2,9 +2,7 @@ import os
 import sys
 from collections import Counter, defaultdict, namedtuple
 
-
-import six
-from six import StringIO
+from io import StringIO
 
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
@@ -199,10 +197,7 @@ class TestBufferConanOutput(ConanOutput):
 
     def __repr__(self):
         # FIXME: I'm sure there is a better approach. Look at six docs.
-        if six.PY2:
-            return str(self._stream.getvalue().encode("ascii", "ignore"))
-        else:
-            return self._stream.getvalue()
+        return self._stream.getvalue()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()

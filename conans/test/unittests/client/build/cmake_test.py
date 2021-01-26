@@ -6,7 +6,6 @@ import sys
 import unittest
 
 import mock
-import six
 from parameterized.parameterized import parameterized
 import pytest
 
@@ -578,7 +577,7 @@ class CMakeTest(unittest.TestCase):
                                                                         flags=flags_in_local_cache)))
 
             # Raise mixing
-            with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
+            with self.assertRaisesRegex(ConanException, "Use 'build_folder'/'source_folder'"):
                 cmake = CMake(conanfile)
                 cmake.configure(source_folder="source", build_dir="build")
 

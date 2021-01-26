@@ -2,9 +2,9 @@ import os
 import platform
 import textwrap
 import unittest
+from io import StringIO
 
 import pytest
-import six
 
 from conans.client.runner import ConanRunner
 from conans.client.tools import environment_append
@@ -57,7 +57,7 @@ class ConanFileToolsTest(ConanFile):
                              generate_run_log_file=True,
                              log_run_to_output=True)
 
-        out = six.StringIO()
+        out = StringIO()
         runner("python --version", output=out)
         self.assertIn("""---Running------
 > python --version

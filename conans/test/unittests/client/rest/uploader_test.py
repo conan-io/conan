@@ -2,8 +2,6 @@ import tempfile
 import unittest
 from collections import namedtuple
 
-import six
-
 from conans.client.rest.file_uploader import FileUploader
 from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -35,24 +33,24 @@ class UploaderUnitTest(unittest.TestCase):
 
     def test_401_raises_unauthoirzed_exception(self):
         uploader = FileUploader(MockRequester(401), self.out, verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "tururu"):
+        with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_unauthoirzed_exception_if_no_token(self):
         auth = namedtuple("auth", "token")(None)
         uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "tururu"):
+        with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
 
     def test_403_raises_unauthorized_exception_if_no_auth(self):
         uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "tururu"):
+        with self.assertRaisesRegex(AuthenticationException, "tururu"):
             uploader.upload("fake_url", self.f)
 
     def test_403_raises_forbidden_exception_if_token(self):
         auth = namedtuple("auth", "token")("SOMETOKEN")
         uploader = FileUploader(MockRequester(403), self.out, verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, ForbiddenException, "tururu"):
+        with self.assertRaisesRegex(ForbiddenException, "tururu"):
             uploader.upload("fake_url", self.f, auth=auth)
 
     def test_500_raises_internal_error(self):
@@ -60,5 +58,5 @@ class UploaderUnitTest(unittest.TestCase):
         uploader = FileUploader(MockRequester(500), out, verify=False, config=_ConfigMock())
         f = tempfile.mktemp()
         save(f, "some contents")
-        with six.assertRaisesRegex(self, InternalErrorException, "tururu"):
+        with self.assertRaisesRegex(InternalErrorException, "tururu"):
             uploader.upload("fake_url", self.f, dedup=True)

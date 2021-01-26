@@ -1,9 +1,8 @@
-import io
 import subprocess
 import sys
 from subprocess import PIPE, Popen, STDOUT
+from io import StringIO
 
-import six
 
 from conans.client.tools import environment_append
 from conans.errors import ConanException
@@ -36,10 +35,6 @@ class ConanRunner(object):
         @param log_filepath: If specified, also log to a file
         @param cwd: Move to directory to execute
         """
-        if output and isinstance(output, io.StringIO) and six.PY2:
-            # in py2 writing to a StringIO requires unicode, otherwise it fails
-            print("*** WARN: Invalid output parameter of type io.StringIO(), "
-                  "use six.StringIO() instead ***")
 
         user_output = output if output and hasattr(output, "write") else None
         stream_output = user_output or self._output or sys.stdout
@@ -79,12 +74,12 @@ class ConanRunner(object):
             # if the other fills the pip. So piping stdout, and redirecting stderr to stdout,
             # so both are merged and use just a single get_stream_lines() call
             capture_output = log_handler or not self._log_run_to_output or user_output \
-                             or (stream_output and isinstance(stream_output._stream, six.StringIO))
+                             or (stream_output and isinstance(stream_output._stream, StringIO))
             if capture_output:
-                proc = Popen(command, shell=isinstance(command, six.string_types), stdout=PIPE,
+                proc = Popen(command, shell=isinstance(command, str), stdout=PIPE,
                              stderr=STDOUT, cwd=cwd)
             else:
-                proc = Popen(command, shell=isinstance(command, six.string_types), cwd=cwd)
+                proc = Popen(command, shell=isinstance(command, str), cwd=cwd)
 
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
@@ -106,7 +101,7 @@ class ConanRunner(object):
                 if log_handler:
                     # Write decoded in PY2 causes some ASCII encoding problems
                     # tried to open the log_handler binary but same result.
-                    log_handler.write(line if six.PY2 else decoded_line)
+                    log_handler.write(decoded_line)
 
         if capture_output:
             get_stream_lines(proc.stdout)
@@ -118,6 +113,6 @@ class ConanRunner(object):
     @staticmethod
     def _simple_os_call(command, cwd):
         try:
-            return subprocess.call(command, cwd=cwd, shell=isinstance(command, six.string_types))
+            return subprocess.call(command, cwd=cwd, shell=isinstance(command, str))
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))

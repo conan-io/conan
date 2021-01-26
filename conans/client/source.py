@@ -1,8 +1,6 @@
 import os
 import shutil
 
-import six
-
 from conans.client import tools
 from conans.client.cmd.export import export_recipe, export_source
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, \
@@ -81,8 +79,6 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
             rmdir(src_folder)
         except BaseException as e_rm:
             msg = str(e_rm)
-            if six.PY2:
-                msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
             output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
             output.warn("**** Please delete it manually ****")
             raise ConanException("Unable to remove source folder")

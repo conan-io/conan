@@ -5,7 +5,6 @@ import stat
 import unittest
 
 import pytest
-import six
 from requests import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
@@ -125,7 +124,7 @@ class UploadTest(unittest.TestCase):
         self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         os.unlink(os.path.join(self.client.cache.package_layout(ref).export(), CONAN_MANIFEST))
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
             self.client.run("upload %s" % str(ref))
 
         self.assertIn("Cannot upload corrupted recipe", self.client.out)

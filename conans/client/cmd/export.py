@@ -3,7 +3,6 @@ import os
 import shutil
 import sys
 
-import six
 import yaml
 
 from conans.client.file_copier import FileCopier
@@ -306,17 +305,6 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
     headers = []
-
-    if six.PY2:
-        # Workaround for https://bugs.python.org/issue22221
-        lines_without_headers = []
-        lines = content.splitlines(True)
-        for line in lines:
-            if not lines_without_headers and line.startswith("#"):
-                headers.append(line)
-            else:
-                lines_without_headers.append(line)
-        content = ''.join(lines_without_headers)
 
     lines = content.splitlines(True)
     tree = ast.parse(content)

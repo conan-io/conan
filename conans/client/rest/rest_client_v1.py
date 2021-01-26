@@ -3,7 +3,7 @@ import time
 import traceback
 from collections import namedtuple
 
-from six.moves.urllib.parse import parse_qs, urljoin, urlparse, urlsplit
+from urllib.parse import parse_qs, urljoin, urlparse, urlsplit
 
 from conans.client.downloaders.download import run_downloader
 from conans.client.downloaders.file_downloader import FileDownloader

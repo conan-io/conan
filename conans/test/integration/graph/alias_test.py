@@ -1,4 +1,3 @@
-import six
 
 from conans.errors import ConanException
 from conans.test.integration.graph.graph_manager_base import GraphManagerTest
@@ -36,7 +35,7 @@ class AliasTest(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/latest"])
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in app/0.1:\n"
                                    "    'app/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
                                    "    To fix this conflict you need to override the package 'liba' in your root package."):
@@ -51,7 +50,7 @@ class AliasTest(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/0.2"])
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in app/0.1:\n"
                                    "    'app/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
                                    "    To fix this conflict you need to override the package 'liba' in your root package."):

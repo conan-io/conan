@@ -19,7 +19,7 @@ class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conans.errors import ConanException
-        from six import StringIO
+        from io import StringIO
 
         class Lib(ConanFile):
             scm = {{"type": "git", "url": "{url}", "revision": "{rev}", {shallow_attrib} }}

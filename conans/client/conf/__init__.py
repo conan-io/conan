@@ -3,7 +3,7 @@ import os
 import textwrap
 
 from jinja2 import Template
-from six.moves.configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote

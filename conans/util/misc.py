@@ -1,4 +1,3 @@
-import six
 
 try:
     from collections.abc import Iterable
@@ -14,7 +13,7 @@ def make_tuple(value):
     if value is None:
         return None
 
-    if isinstance(value, six.string_types):
+    if isinstance(value, str):
         return value,
 
     if isinstance(value, Iterable):

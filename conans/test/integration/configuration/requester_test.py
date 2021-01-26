@@ -3,7 +3,6 @@
 import os
 import unittest
 
-import six
 from mock import Mock, MagicMock
 
 from conans import __version__
@@ -71,7 +70,7 @@ class ConanRequesterCacertPathTests(unittest.TestCase):
         file_path = os.path.join(temp_folder(), "whatever_cacert")
         self.assertFalse(os.path.exists(file_path))
         with environment_append({"CONAN_CACERT_PATH": file_path}):
-            with six.assertRaisesRegex(self, ConanException, "Configured file for 'cacert_path'"
+            with self.assertRaisesRegex(ConanException, "Configured file for 'cacert_path'"
                                                              " doesn't exist"):
                 self._create_requesters()
 

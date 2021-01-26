@@ -1,8 +1,6 @@
 import re
 from collections import namedtuple
 
-from six import string_types
-
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
@@ -120,7 +118,7 @@ class ConanName(object):
     @staticmethod
     def validate_string(value, reference_token=None):
         """Check for string"""
-        if not isinstance(value, string_types):
+        if not isinstance(value, str):
             message = "Value provided{ref_token}, '{value}' (type {type}), {reason}".format(
                 ref_token=" for {}".format(reference_token) if reference_token else "",
                 value=value, type=type(value).__name__,

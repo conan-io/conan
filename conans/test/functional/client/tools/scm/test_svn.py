@@ -7,9 +7,8 @@ import unittest
 import uuid
 
 import pytest
-import six
 from mock import patch
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 from conans.client.tools.scm import SVN
 from conans.errors import ConanException
@@ -56,7 +55,7 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        with six.assertRaisesRegex(self, ConanException, "Not a valid 'svn' repository"):
+        with self.assertRaisesRegex(ConanException, "Not a valid 'svn' repository"):
             svn.check_repo()
         svn.checkout(url=project_url)
         try:
@@ -275,7 +274,7 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
         self.assertIsNone(svn.get_branch())
 
         svn = SVN(folder=self.gimme_tmp())
-        with six.assertRaisesRegex(self, ConanException, "Unable to get svn branch"):
+        with self.assertRaisesRegex(ConanException, "Unable to get svn branch"):
             svn.get_branch()
 
     def test_tag(self):
@@ -301,7 +300,7 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
         self.assertEqual("v12.3.4", svn.get_tag())
 
         svn = SVN(folder=self.gimme_tmp())
-        with six.assertRaisesRegex(self, ConanException, "Unable to get svn tag"):
+        with self.assertRaisesRegex(ConanException, "Unable to get svn tag"):
             svn.get_tag()
 
 

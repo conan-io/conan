@@ -1,8 +1,6 @@
 import os
 import unittest
 
-import six
-
 from conans.model.profile import Profile
 from conans.paths import CONANFILE
 from conans.test.utils.tools import  TestClient
@@ -47,7 +45,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         self.client.run("install . --build=missing -pr scopes_env")
         self.client.run("build .")
-        six.assertRegex(self, str(self.client.out), "PATH=['\"]*/path/to/my/folder")
+        self.assertRegex(str(self.client.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
 

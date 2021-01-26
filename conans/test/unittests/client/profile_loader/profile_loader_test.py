@@ -2,8 +2,6 @@ import os
 import textwrap
 import unittest
 
-import six
-
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
@@ -231,7 +229,7 @@ VARIABLE WITH SPACES=12
 [env]
 MYVAR=$VARIABLE WITH SPACES
                         '''
-        with six.assertRaisesRegex(self, ConanException, "The names of the variables cannot contain spaces"):
+        with self.assertRaisesRegex(ConanException, "The names of the variables cannot contain spaces"):
             self._get_profile(tmp, txt)
 
     def test_profiles_includes(self):

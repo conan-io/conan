@@ -7,7 +7,6 @@ import unittest
 import warnings
 
 import pytest
-import six
 
 from conans.client import tools
 from conans.client.conf import get_default_settings_yml
@@ -78,7 +77,6 @@ class FunctionalToolsTest(unittest.TestCase):
 class VisualStudioToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
-    @pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
     def test_msvc_build_command(self):
         settings = Settings.loads(get_default_settings_yml())
         settings.os = "Windows"
@@ -97,14 +95,14 @@ class VisualStudioToolsTest(unittest.TestCase):
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
-        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
+        with self.assertRaisesRegex(ConanException, "Cannot build_sln_command"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
                 self.assertEqual(len(w), 2)
                 self.assertTrue(issubclass(w[0].category, DeprecationWarning))
         settings.arch = "x86"
-        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
+        with self.assertRaisesRegex(ConanException, "Cannot build_sln_command"):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
                 tools.msvc_build_command(settings, "project.sln", output=self.output)
@@ -128,7 +126,7 @@ class VisualStudioToolsTest(unittest.TestCase):
         """
         # vswhere not found
         with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
-            with six.assertRaisesRegex(self, ConanException, "Cannot locate vswhere"):
+            with self.assertRaisesRegex(ConanException, "Cannot locate vswhere"):
                 vswhere()
         # vswhere in ProgramFiles but not in PATH
         program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")

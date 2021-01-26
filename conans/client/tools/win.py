@@ -42,7 +42,7 @@ def _visual_compiler_cygwin(output, version):
 
 
 def _system_registry_key(key, subkey, query):
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     try:
         hkey = winreg.OpenKey(key, subkey)
     except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2)
@@ -58,7 +58,7 @@ def _system_registry_key(key, subkey, query):
 
 
 def is_win64():
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     return _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
                                 r"SOFTWARE\Microsoft\Windows\CurrentVersion",
                                 "ProgramFilesDir (x86)") is not None
@@ -80,7 +80,7 @@ def _visual_compiler(output, version):
 
     version = "%s.0" % version
 
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     if is_win64():
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
@@ -344,7 +344,7 @@ def vs_comntools(compiler_version):
 def find_windows_10_sdk():
     """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
     # uses the same method as VCVarsQueryRegistry.bat
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     hives = [
         (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Wow6432Node'),
         (winreg.HKEY_CURRENT_USER, r'SOFTWARE\Wow6432Node'),

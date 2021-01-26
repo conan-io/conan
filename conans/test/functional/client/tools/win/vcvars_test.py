@@ -4,9 +4,8 @@ import unittest
 
 import mock
 import pytest
-import six
 from mock.mock import patch
-from six import StringIO
+from io import StringIO
 
 from conans import Settings
 from conans.client import tools
@@ -135,7 +134,7 @@ compiler:
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "5"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "VS non-existing installation: Visual Studio 5"):
             output = ConanOutput(StringIO())
             tools.vcvars_command(settings, output=output)
@@ -154,7 +153,7 @@ compiler:
         settings = Settings.loads(text)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings, output=output)
 
@@ -164,7 +163,7 @@ compiler:
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings, output=output)
             with tools.environment_append({"VisualStudioVersion": "12"}):
-                with six.assertRaisesRegex(self, ConanException,
+                with self.assertRaisesRegex(ConanException,
                                            "Error, Visual environment already set to 12"):
                     tools.vcvars_command(settings, output=output)
 

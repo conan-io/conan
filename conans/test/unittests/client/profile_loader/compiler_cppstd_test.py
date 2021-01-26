@@ -4,7 +4,6 @@ import os
 import textwrap
 import unittest
 
-import six
 from jinja2 import Template
 
 from conans.client.cache.cache import ClientCache
@@ -55,7 +54,7 @@ class SettingsCppStdTests(unittest.TestCase):
         save(self.cache.settings_path, settings_1_14_0)
         save(fullpath, t)
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
             r.process_settings(self.cache)
 
@@ -87,7 +86,7 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="13")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with six.assertRaisesRegex(self, ConanException, "Invalid setting '13' is not a valid "
+        with self.assertRaisesRegex(ConanException, "Invalid setting '13' is not a valid "
                                                          "'settings.compiler.cppstd' value"):
             r.process_settings(self.cache)
         self.assertNotIn("cppstd", r.settings)
@@ -104,7 +103,7 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="11", cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
+        with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one."):
             with catch_deprecation_warning(self):
@@ -116,7 +115,7 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(cppstd="14", compiler_cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
+        with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one"):
             with catch_deprecation_warning(self):

@@ -1,6 +1,5 @@
 import textwrap
 
-import six
 from parameterized import parameterized
 
 from conans.client import settings_preprocessor
@@ -20,7 +19,7 @@ class SettingsCppstdTestCase(ConanV2ModeTestCase):
         # If a recipe declares 'settings = "os", ..., "cppstd", it fails
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-            
+
             class Recipe(ConanFile):
                 settings = "os", "cppstd"
         """)
@@ -38,10 +37,10 @@ class SettingsCppstdTestCase(ConanV2ModeTestCase):
         settings = Settings.loads(get_default_settings_yml(force_v1=use_settings_v1))
         if use_settings_v1:
             settings.cppstd = "11"
-            with six.assertRaisesRegex(self, ConanV2Exception, "Setting 'cppstd' is deprecated"):
+            with self.assertRaisesRegex(ConanV2Exception, "Setting 'cppstd' is deprecated"):
                 settings_preprocessor.preprocess(settings=settings)
         else:
-            with six.assertRaisesRegex(self, ConanException, "'settings.cppstd' doesn't exist"):
+            with self.assertRaisesRegex(ConanException, "'settings.cppstd' doesn't exist"):
                 settings.cppstd = "11"
                 settings_preprocessor.preprocess(settings=settings)
 

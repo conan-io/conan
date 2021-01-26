@@ -8,7 +8,6 @@ from collections import namedtuple
 
 import pytest
 import requests
-import six
 from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
 from parameterized import parameterized
@@ -147,7 +146,7 @@ class ToolsTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEqual(tools.cpu_count(output=output), 34)
         with tools.environment_append({"CONAN_CPU_COUNT": "null"}):
-            with six.assertRaisesRegex(self, ConanException, "Invalid CONAN_CPU_COUNT value"):
+            with self.assertRaisesRegex(ConanException, "Invalid CONAN_CPU_COUNT value"):
                 tools.cpu_count(output=output)
 
     @patch("conans.client.tools.oss.CpuProperties.get_cpu_period")
@@ -343,9 +342,7 @@ class HelloConan(ConanFile):
 ]
 
 """
-        if six.PY3:
-            # In python3 the output from subprocess.check_output are bytes, not str
-            myoutput = myoutput.encode()
+        myoutput = myoutput.encode()
         myrunner = mock_open()
         myrunner.check_output = lambda x: myoutput
         with patch('conans.client.tools.win.subprocess', myrunner):
@@ -395,7 +392,7 @@ class HelloConan(ConanFile):
         out = TestBufferConanOutput()
 
         # Retry arguments override defaults
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+        with self.assertRaisesRegex(ConanException, "Error downloading"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            requester=requests,
@@ -403,7 +400,7 @@ class HelloConan(ConanFile):
         self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
 
         # Not found error
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Not found: http://google.es/FILE_NOT_FOUND"):
             tools.download("http://google.es/FILE_NOT_FOUND",
                            os.path.join(temp_folder(), "README.txt"), out=out,
@@ -489,7 +486,7 @@ class HelloConan(ConanFile):
         out = TestBufferConanOutput()
         dest = os.path.join(temp_folder(), "manual.html")
         # Not authorized
-        with six.assertRaisesRegex(self, AuthenticationException, "403"):
+        with self.assertRaisesRegex(AuthenticationException, "403"):
             tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
                            requester=requests, out=out)
 
@@ -628,7 +625,7 @@ class HelloConan(ConanFile):
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
-        with six.assertRaisesRegex(self, ConanException, "Error"):
+        with self.assertRaisesRegex(ConanException, "Error"):
             tools.get("http://localhost:%s/error_url" % thread.port,
                       filename="fake_sample.tar.gz", requester=requests, output=out, verify=False,
                       retry=2, retry_wait=0)
@@ -657,7 +654,7 @@ class HelloConan(ConanFile):
                 zip_file = os.path.join(zip_folder, "file.zip")
                 zipdir(tmp_folder, zip_file)
 
-        with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 "
+        with self.assertRaisesRegex(ConanException, "The zip file contains more than 1 "
                                                          "folder in the root"):
             with patch('conans.client.tools.net.download', new=mock_download):
                 with chdir(zip_folder):

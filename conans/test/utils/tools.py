@@ -17,7 +17,7 @@ import bottle
 import requests
 from mock import Mock
 from requests.exceptions import HTTPError
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load

@@ -4,7 +4,7 @@ import unittest
 from types import MethodType
 
 from parameterized import parameterized
-from six import StringIO
+from io import StringIO
 
 from conans.client.output import ConanOutput, colorama_initialize
 from mock import mock

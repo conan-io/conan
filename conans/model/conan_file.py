@@ -1,9 +1,6 @@
 import os
 from contextlib import contextmanager
 
-import six
-from six import string_types
-
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -33,7 +30,7 @@ def create_options(conanfile):
             elif isinstance(default_options, (list, tuple)):
                 conan_v2_behavior("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues(default_options)
-            elif isinstance(default_options, six.string_types):
+            elif isinstance(default_options, str):
                 conan_v2_behavior("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues.loads(default_options)
             else:
@@ -179,7 +176,7 @@ class ConanFile(object):
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
 
-        if self.description is not None and not isinstance(self.description, six.string_types):
+        if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")
 
     @property
@@ -316,7 +313,7 @@ class ConanFile(object):
             # When using_build_profile the required environment is already applied through 'conanfile.env'
             # in the contextmanager 'get_env_context_manager'
             with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
-                if OSInfo().is_macos and isinstance(command, string_types):
+                if OSInfo().is_macos and isinstance(command, str):
                     # Security policy on macOS clears this variable when executing /bin/sh. To
                     # keep its value, set it again inside the shell when running the command.
                     command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \

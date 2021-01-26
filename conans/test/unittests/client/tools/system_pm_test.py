@@ -1,8 +1,7 @@
 import mock
 import platform
-import six
 import unittest
-from six import StringIO
+from io import StringIO
 
 from conans import tools
 from conans.client.output import ConanOutput
@@ -76,7 +75,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         patched_with_apt.return_value = False
 
-        with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
+        with self.assertRaisesRegex(ConanException, "add_repository not implemented"):
             new_out = StringIO()
             spt = SystemPackageTool(os_info=os_info, output=ConanOutput(new_out))
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
@@ -516,7 +515,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
         msg = platform_update_error_msg.get(platform.system(), None)
         if msg is not None:
-            with six.assertRaisesRegex(self, ConanException, msg):
+            with self.assertRaisesRegex(ConanException, msg):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything

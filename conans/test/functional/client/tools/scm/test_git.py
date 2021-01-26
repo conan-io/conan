@@ -4,7 +4,6 @@ import subprocess
 import unittest
 
 import pytest
-import six
 from mock import patch
 from parameterized import parameterized
 
@@ -162,7 +161,7 @@ class GitToolTest(unittest.TestCase):
         tmp = temp_folder()
         save(os.path.join(tmp, "file"), "dummy contents")
         git = Git(tmp)
-        with six.assertRaisesRegex(self, ConanException, "specify a branch to checkout"):
+        with self.assertRaisesRegex(ConanException, "specify a branch to checkout"):
             git.clone("https://github.com/conan-io/hooks.git")
 
     def test_credentials(self):
@@ -219,7 +218,7 @@ class GitToolTest(unittest.TestCase):
         tmp, submodule_path, _ = _create_paths()
         git = Git(tmp)
         git.clone(path)
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Invalid 'submodule' attribute value in the 'scm'."):
             git.checkout(commit, submodule="invalid")
 
@@ -398,7 +397,7 @@ class GitToolsTests(unittest.TestCase):
     def test_get_tag_no_git_repo(self):
         # Try to get tag out of a git repo
         git = Git(folder=temp_folder())
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Not a valid 'git' repository or 'git' not found"):
             git.get_tag()
 

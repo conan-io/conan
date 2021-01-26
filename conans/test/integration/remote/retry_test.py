@@ -4,7 +4,6 @@ import os
 import unittest
 from collections import namedtuple, Counter
 
-import six
 from requests.exceptions import HTTPError
 
 from conans.client.rest.file_uploader import FileUploader
@@ -59,7 +58,7 @@ class RetryDownloadTests(unittest.TestCase):
         output = TestBufferConanOutput()
         uploader = FileUploader(requester=_RequesterMock(401, "content"), output=output,
                                 verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "content"):
+        with self.assertRaisesRegex(AuthenticationException, "content"):
             uploader.upload(url="fake", abs_path=self.filename, retry=2)
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
@@ -70,7 +69,7 @@ class RetryDownloadTests(unittest.TestCase):
         output = TestBufferConanOutput()
         uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
                                 verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, ForbiddenException, "content"):
+        with self.assertRaisesRegex(ForbiddenException, "content"):
             auth = namedtuple("auth", "token")
             uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth("token"))
         output_lines = str(output).splitlines()
@@ -82,7 +81,7 @@ class RetryDownloadTests(unittest.TestCase):
         output = TestBufferConanOutput()
         uploader = FileUploader(requester=_RequesterMock(403, "content"), output=output,
                                 verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, AuthenticationException, "content"):
+        with self.assertRaisesRegex(AuthenticationException, "content"):
             auth = namedtuple("auth", "token")
             uploader.upload(url="fake", abs_path=self.filename, retry=2, auth=auth(None))
         output_lines = str(output).splitlines()
@@ -99,7 +98,7 @@ class RetryDownloadTests(unittest.TestCase):
         output = TestBufferConanOutput()
         uploader = FileUploader(requester=_RequesterMock(), output=output,
                                 verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, Exception, "any exception"):
+        with self.assertRaisesRegex(Exception, "any exception"):
             uploader.upload(url="fake", abs_path=self.filename, retry=2)
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
@@ -110,7 +109,7 @@ class RetryDownloadTests(unittest.TestCase):
         output = TestBufferConanOutput()
         uploader = FileUploader(requester=_RequesterMock(500, "content"), output=output,
                                 verify=False, config=_ConfigMock())
-        with six.assertRaisesRegex(self, Exception, "500 Server Error: content"):
+        with self.assertRaisesRegex(Exception, "500 Server Error: content"):
             uploader.upload(url="fake", abs_path=self.filename, retry=2)
         output_lines = str(output).splitlines()
         counter = Counter(output_lines)
