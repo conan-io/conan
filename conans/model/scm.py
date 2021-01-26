@@ -36,7 +36,7 @@ class SCMData(object):
         data = getattr(conanfile, "scm")
         self.type = _get_dict_value(data, "type", str)
         self.url = _get_dict_value(data, "url", str)
-        self.revision = _get_dict_value(data, "revision", (int, str),
+        self.revision = _get_dict_value(data, "revision", (str, int),
                                         disallowed_type=bool)  # bool is subclass of integer
         self.verify_ssl = _get_dict_value(data, "verify_ssl", bool, SCMData.VERIFY_SSL_DEFAULT)
         self.username = _get_dict_value(data, "username", str)
