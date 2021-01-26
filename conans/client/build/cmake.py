@@ -4,7 +4,7 @@ import re
 import warnings
 from itertools import chain
 
-from six import StringIO  # Python 2 and 3 compatible
+from io import StringIO
 
 
 from conans.client import tools

@@ -3,7 +3,7 @@ import os
 import textwrap
 import unittest
 
-from six import StringIO
+from io import StringIO
 
 from conans import __version__
 from conans.client.cache.editable import EDITABLE_PACKAGES_FILE

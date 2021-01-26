@@ -2,7 +2,7 @@ import mock
 import platform
 import six
 import unittest
-from six import StringIO
+from io import StringIO
 
 from conans import tools
 from conans.client.output import ConanOutput

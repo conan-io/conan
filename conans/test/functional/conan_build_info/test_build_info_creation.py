@@ -6,7 +6,7 @@ import unittest
 
 import pytest
 from mock import patch, Mock
-from six import StringIO
+from io import StringIO
 
 from conans.client.cache.cache import ClientCache
 from conans.model.graph_lock import LOCKFILE

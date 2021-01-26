@@ -4,7 +4,7 @@ from collections import Counter, defaultdict, namedtuple
 
 
 import six
-from six import StringIO
+from io import StringIO
 
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput

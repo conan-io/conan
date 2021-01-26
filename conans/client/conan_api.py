@@ -4,7 +4,7 @@ import sys
 from collections import OrderedDict
 from collections import namedtuple
 
-from six import StringIO
+from io import StringIO
 
 import conans
 from conans import __version__ as client_version

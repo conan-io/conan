@@ -2,7 +2,7 @@ import sys
 import unittest
 import textwrap
 
-from six import StringIO
+from io import StringIO
 
 from conans import __version__
 from conans.test.utils.tools import TestClient

@@ -4,7 +4,7 @@ import unittest
 from unittest import TestCase
 
 import six
-from six import StringIO
+from io import StringIO
 import pytest
 
 from conans import DEFAULT_REVISION_V1

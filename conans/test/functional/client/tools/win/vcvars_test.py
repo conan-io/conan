@@ -6,7 +6,7 @@ import mock
 import pytest
 import six
 from mock.mock import patch
-from six import StringIO
+from io import StringIO
 
 from conans import Settings
 from conans.client import tools
