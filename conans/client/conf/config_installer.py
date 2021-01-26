@@ -6,7 +6,7 @@ from datetime import datetime
 from dateutil.tz import gettz
 
 from contextlib import contextmanager
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools

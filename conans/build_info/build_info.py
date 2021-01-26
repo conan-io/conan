@@ -4,7 +4,7 @@ import os
 from collections import defaultdict, namedtuple
 
 import requests
-from six.moves.urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin
 
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str

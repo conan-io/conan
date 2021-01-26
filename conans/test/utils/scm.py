@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import uuid
 
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 from conans.client.tools import get_cased_path, Git, chdir, SVN
 from conans.test.utils.test_files import temp_folder

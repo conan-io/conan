@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from subprocess import CalledProcessError
 
-from six.moves.urllib.parse import quote_plus, unquote, urlparse
+from urllib.parse import quote_plus, unquote, urlparse
 
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.files import chdir

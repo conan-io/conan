@@ -3,7 +3,7 @@ import shutil
 from contextlib import contextmanager
 from threading import Lock
 
-from six.moves.urllib_parse import urlsplit, urlunsplit
+from urllib_parse import urlsplit, urlunsplit
 
 from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException

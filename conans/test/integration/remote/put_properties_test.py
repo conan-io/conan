@@ -2,7 +2,7 @@ import os
 import re
 import unittest
 
-from six.moves.urllib.parse import unquote
+from urllib.parse import unquote
 
 from conans import MATRIX_PARAMS
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files

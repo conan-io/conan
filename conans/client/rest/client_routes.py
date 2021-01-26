@@ -1,4 +1,4 @@
-from six.moves.urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode
 
 from conans.model.ref import ConanFileReference
 from conans.model.rest_routes import RestRoutes
