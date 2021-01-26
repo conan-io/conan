@@ -4,6 +4,7 @@ import platform
 import re
 import subprocess
 import warnings
+import winreg
 from collections import namedtuple
 from contextlib import contextmanager
 

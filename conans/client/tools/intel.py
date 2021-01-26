@@ -29,6 +29,7 @@ def intel_installation_path(version, arch):
         installation_path = os.path.join(os.sep, "opt", "intel",
                                          "compilers_and_libraries_%s" % year, subdir)
     elif system == "Windows":
+        import winreg
         if arch == "x86":
             intel_arch = "IA32"
         elif arch == "x86_64":
