@@ -30,11 +30,9 @@ def check_vs_runtime(artifact, client, vs_version, build_type, static, architect
         if static:
             client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
             if build_type == "Debug":
-                assert "RuntimeLibrary=MDd_DynamicDebug" in client.out, "Error:{}"
-                       .format(client.out)
+                assert "RuntimeLibrary=MDd_DynamicDebug" in client.out, "Error:{}".format(client.out)
             else:
-                assert "RuntimeLibrary=MD_DynamicRelease" in client.out, "Error:{}"
-                       .format(client.out)
+                assert "RuntimeLibrary=MD_DynamicRelease" in client.out, "Error:{}".format(client.out)
 
         client.run_command('{} && DUMPBIN /NOLOGO /HEADERS "{}"'.format(vcvars, artifact))
         if architecture == "amd64":
