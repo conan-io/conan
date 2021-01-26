@@ -8,8 +8,6 @@ import tempfile
 import unittest
 import uuid
 
-import six
-
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import parse_conanfile
