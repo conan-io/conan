@@ -98,7 +98,7 @@ def test_locally_build_windows(build_type, shared, client):
                .format(msvc_version, build_type, shared))
 
     # Ninja is single-configuration
-    vcvars = vcvars_command(msvc_version, architecture="x86_64")
+    vcvars = vcvars_command(msvc_version, architecture="amd64")
     client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'
                        .format(vcvars))
 
