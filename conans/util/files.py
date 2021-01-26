@@ -14,21 +14,10 @@ import tempfile
 from os.path import abspath, join as joinpath, realpath
 from contextlib import contextmanager
 
-import six
-
 from conans.util.log import logger
 
 
 def walk(top, **kwargs):
-    if six.PY2:
-        # If py2 os.walk receives a unicode object, it will fail if a non-ascii file name is found
-        # during the iteration. More info:
-        # https://stackoverflow.com/questions/21772271/unicodedecodeerror-when-performing-os-walk
-        try:
-            top = str(top)
-        except UnicodeDecodeError:
-            pass
-
     return os.walk(top, **kwargs)
 
 
@@ -214,11 +203,8 @@ def mkdir_tmp():
 
 
 def to_file_bytes(content, encoding="utf-8"):
-    if six.PY3:
-        if not isinstance(content, bytes):
-            content = bytes(content, encoding)
-    elif isinstance(content, unicode):
-        content = content.encode(encoding)
+    if not isinstance(content, bytes):
+        content = bytes(content, encoding)
     return content
 
 
