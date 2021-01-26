@@ -5,7 +5,7 @@ import tarfile
 import tempfile
 
 import time
-from six import BytesIO
+from io import BytesIO
 
 from conans.client.tools.files import untargz
 from conans.client.tools.win import get_cased_path

@@ -37,9 +37,8 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         _validate_fpic(conanfile)
 
         if conanfile.deprecated:
-            from six import string_types
             message = "Recipe '%s' is deprecated" % conanfile.display_name
-            if isinstance(conanfile.deprecated, string_types):
+            if isinstance(conanfile.deprecated, str):
                 message += " in favor of '%s'" % conanfile.deprecated
             message += ". Please, consider changing your requirements."
             conanfile.output.warn(message)
