@@ -92,7 +92,7 @@ def test_locally_build_linux(build_type, shared, client):
 def test_locally_build_windows(build_type, shared, client):
     """ Ninja build must proceed using default profile and cmake build (Windows Release)
     """
-    msvc_version = "16"
+    msvc_version = "15"
     client.run("install . -s os=Windows -s arch=x86_64 -s compiler='Visual Studio'"
                " -s compiler.version={} -s build_type={} -o hello:shared={}"
                .format(msvc_version, build_type, shared))
