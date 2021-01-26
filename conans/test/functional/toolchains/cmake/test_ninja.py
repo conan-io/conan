@@ -31,7 +31,7 @@ conanfile = textwrap.dedent("""
             return self._cmake
 
         def generate(self):
-            tc = CMakeToolchain(self)
+            tc = CMakeToolchain(self, generator="Ninja")
             tc.generate()
 
         def build(self):
@@ -97,10 +97,11 @@ def test_locally_build_windows(build_type, shared, client):
                " -s compiler.version={} -s build_type={} -o hello:shared={}"
                .format(msvc_version, build_type, shared))
 
-    # Ninja is single-configuration
+    # Ninja is single-configuration and we have to CMAKE_BUILD_TYPE,
+    # otherwise ninja.build will be generated for Debug only.
     vcvars = vcvars_command(msvc_version, architecture="amd64")
     client.run_command('{} && cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'
-                       .format(vcvars))
+                       ' -DCMAKE_BUILD_TYPE={}'.format(vcvars, build_type))
 
     client.run_command("{} && ninja".format(vcvars))
     libname = "hello.dll" if shared else "hello.lib"
