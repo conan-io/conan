@@ -76,18 +76,17 @@ class MesonToolchain(object):
     @staticmethod
     def _to_meson_value(value):
         # https://mesonbuild.com/Machine-files.html#data-types
-        import six
 
         try:
             from collections.abc import Iterable
         except ImportError:
             from collections import Iterable
 
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             return "'%s'" % value
         elif isinstance(value, bool):
             return 'true' if value else "false"
-        elif isinstance(value, six.integer_types):
+        elif isinstance(value, int):
             return value
         elif isinstance(value, Iterable):
             return '[%s]' % ', '.join([str(MesonToolchain._to_meson_value(v)) for v in value])

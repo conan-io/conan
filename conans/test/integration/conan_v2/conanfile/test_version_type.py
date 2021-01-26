@@ -8,7 +8,6 @@ from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 class VersionTypeTestCase(ConanV2ModeTestCase):
 
     conanfile_tpl = Template(textwrap.dedent("""
-        import six
         from conans import ConanFile
         from conans.errors import ConanException
         from conans.model.version import Version
@@ -23,7 +22,7 @@ class VersionTypeTestCase(ConanV2ModeTestCase):
             {% endif %}
 
             def _checks(self, function_name):
-                version_is_str = isinstance(self.version, six.string_types)
+                version_is_str = isinstance(self.version, str)
                 if version_is_str:
                     self.output.info("> {}: version ok".format(function_name))
                 else:
