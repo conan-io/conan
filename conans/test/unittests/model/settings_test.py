@@ -1,7 +1,5 @@
 import unittest
 
-import six
-
 from conans.errors import ConanException
 from conans.model.settings import Settings, bad_value_msg, undefined_field, undefined_value
 
@@ -28,7 +26,7 @@ class SettingsLoadsTest(unittest.TestCase):
     def test_any(self):
         yml = "os: ANY"
         settings = Settings.loads(yml)
-        with six.assertRaisesRegex(self, ConanException, "'settings.os' value not defined"):
+        with self.assertRaisesRegex(ConanException, "'settings.os' value not defined"):
             settings.validate()  # Raise exception if unset
         settings.os = "None"
         settings.validate()
@@ -58,7 +56,7 @@ class SettingsLoadsTest(unittest.TestCase):
         # removing a definition which is not contained shall not raise an exception
         settings.os.remove("invalid")
         settings.os.remove("ANY")
-        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
+        with self.assertRaisesRegex(ConanException, "Invalid setting 'Windows'"):
             settings.os.remove("Windows")
 
     def test_none_any_remove(self):
@@ -67,13 +65,13 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "Windows"
         # removing a definition which is not contained shall not raise an exception
         settings.os.remove("invalid")
-        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
+        with self.assertRaisesRegex(ConanException, "Invalid setting 'Windows'"):
             settings.os.remove("ANY")
 
         settings = Settings.loads(yml)
         settings.os = "None"
         settings.os.remove("ANY")  # "None" is still valid
-        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'None'"):
+        with self.assertRaisesRegex(ConanException, "Invalid setting 'None'"):
             settings.os.remove("None")  # "None" is not valid anymore
 
     def test_any_remove(self):
@@ -82,7 +80,7 @@ class SettingsLoadsTest(unittest.TestCase):
         settings.os = "Windows"
         # removing a definition which is not contained shall not raise an exception
         settings.os.remove("invalid")
-        with six.assertRaisesRegex(self, ConanException, "Invalid setting 'Windows'"):
+        with self.assertRaisesRegex(ConanException, "Invalid setting 'Windows'"):
             settings.os.remove("ANY")
 
     def test_getattr_none(self):
@@ -133,7 +131,7 @@ class SettingsLoadsTest(unittest.TestCase):
         subsystem: [None, cygwin]
     Windows:
 """
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "settings.yml: None setting can't have subsettings"):
             Settings.loads(yml)
 
@@ -378,26 +376,26 @@ os: [Windows, Linux]
         self.sut.compiler = "gcc"
 
     def test_validate(self):
-        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.compiler"))):
+        with self.assertRaisesRegex(ConanException, str(undefined_value("settings.compiler"))):
             self.sut.validate()
 
         self.sut.compiler = "gcc"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    str(undefined_value("settings.compiler.arch"))):
             self.sut.validate()
 
         self.sut.compiler.arch = "x86"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    str(undefined_value("settings.compiler.arch.speed"))):
             self.sut.validate()
 
         self.sut.compiler.arch.speed = "A"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    str(undefined_value("settings.compiler.version"))):
             self.sut.validate()
 
         self.sut.compiler.version = "4.8"
-        with six.assertRaisesRegex(self, ConanException, str(undefined_value("settings.os"))):
+        with self.assertRaisesRegex(ConanException, str(undefined_value("settings.os"))):
             self.sut.validate()
 
         self.sut.os = "Windows"
@@ -411,12 +409,12 @@ os: [Windows, Linux]
     def test_validate2(self):
         self.sut.os = "Windows"
         self.sut.compiler = "Visual Studio"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    str(undefined_value("settings.compiler.runtime"))):
             self.sut.validate()
 
         self.sut.compiler.runtime = "MD"
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    str(undefined_value("settings.compiler.version"))):
             self.sut.validate()
 

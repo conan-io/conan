@@ -4,7 +4,6 @@
 import unittest
 from collections import namedtuple
 
-import six
 from mock import mock
 
 from conans.client.cmd.export import _update_revision_in_metadata
@@ -60,6 +59,6 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         revision_mode = "auto"
         digest = path = None
 
-        with six.assertRaisesRegex(self, ConanException, "Revision mode should be"):
+        with self.assertRaisesRegex(ConanException, "Revision mode should be"):
             _update_revision_in_metadata(self.package_layout, True, self.output,
                                            path, digest, revision_mode)

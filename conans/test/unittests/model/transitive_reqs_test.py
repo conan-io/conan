@@ -1,7 +1,6 @@
 import unittest
 from collections import namedtuple, Counter, defaultdict
 
-import six
 from mock import Mock
 
 from conans import DEFAULT_REVISION_V1
@@ -401,7 +400,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(say_ref2, say_content2)
         self.retriever.save_recipe(hello_ref, hello_content)
         self.retriever.save_recipe(bye_ref, bye_content2)
-        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in Bye/0.2@user/testing:\n"
                                    "    'Bye/0.2@user/testing' requires 'Say/0.2@user/testing' "
                                    "while 'Hello/1.2@user/testing' requires 'Say/0.1@user/testing'.\n"
                                    "    To fix this conflict you need to override the package 'Say'"
@@ -422,7 +421,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(hello_ref, hello_content)
         self.retriever.save_recipe(bye_ref, bye_content2)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in Bye/0.2@user/testing:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in Bye/0.2@user/testing:\n"
                                    "    'Bye/0.2@user/testing' requires 'Say/0.2@user/testing'"
                                    " while 'Hello/1.2@user/testing' requires 'Say/0.1@user/testing'.\n"
                                    "    To fix this conflict you need to override the package 'Say'"
@@ -861,7 +860,7 @@ class ChatConan(ConanFile):
         self.retriever.save_recipe(hello_ref, hello_content)
         self.retriever.save_recipe(bye_ref, bye_content)
 
-        with six.assertRaisesRegex(self, ConanException, "tried to change"):
+        with self.assertRaisesRegex(ConanException, "tried to change"):
             self.build_graph(chat_content)
 
     def test_diamond_conflict_options_solved(self):
@@ -1506,7 +1505,7 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(libd_ref, libd_content)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in LibB/0.1@user/testing:\n"
                                    "    'LibB/0.1@user/testing' requires 'LibA/0.2@user/testing' "
                                    "while 'LibB/0.1@user/testing' requires 'LibA/0.1@user/testing'.\n"
                                    "    To fix this conflict you need to override the package 'LibA' "
@@ -1529,7 +1528,7 @@ class LibDConan(ConanFile):
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(libd_ref, libd_content)
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in LibB/0.1@user/testing:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in LibB/0.1@user/testing:\n"
                                    "    'LibB/0.1@user/testing' requires 'LibA/0.2@user/testing' "
                                    "while 'LibB/0.1@user/testing' requires 'LibA/0.1@user/testing'.\n"
                                    "    To fix this conflict you need to override the package 'LibA' in "
@@ -1574,7 +1573,7 @@ class LibDConan(ConanFile):
                                                            .with_require(libb_ref)
                                                            .with_default_option("LibA:shared", False))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
                                    "option LibA:shared to True"):
             self.build_graph(self.consumer_content)
@@ -1635,10 +1634,10 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=1", "os=Linux")
 
     def test_errors(self):
-        with six.assertRaisesRegex(self, ConanException, "root.py: No subclass of ConanFile"):
+        with self.assertRaisesRegex(ConanException, "root.py: No subclass of ConanFile"):
             self.build_graph("")
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "root.py: More than 1 conanfile in the file"):
             self.build_graph("""from conans import ConanFile
 class HelloConan(ConanFile):pass

@@ -1,7 +1,6 @@
 import os
 import unittest
 
-import six
 from mock import Mock
 import pytest
 
@@ -274,7 +273,7 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Other", "Bye"], folders)
+        self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_basic_mocked(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -285,7 +284,7 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Other", "Bye"], folders)
+        self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_basic_packages(self):
         self.client.run("remove hello/* -p -f")
@@ -294,12 +293,12 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+        self.assertCountEqual(["Hello", "Other", "Bye"], folders)
+        self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["build", "source", "export", "export_source", "metadata.json",
+        self.assertCountEqual(["build", "source", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
@@ -310,7 +309,7 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Other", "Bye"], folders)
+        self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_remove_any_package_version(self):
         self.client.run("remove Hello/*@myuser/testing -f")
@@ -330,7 +329,7 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": None, "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": False, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
+        self.assertCountEqual(["Hello", "Other", "Bye"], folders)
 
     def test_remove_any_package_user(self):
         self.client.run("remove Hello/1.4.10@*/testing -f")
@@ -349,12 +348,12 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
+        self.assertCountEqual(["Hello", "Other", "Bye"], folders)
+        self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "dl", "source", "export", "export_source",
+        self.assertCountEqual(["package", "dl", "source", "export", "export_source",
                                     "metadata.json", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
@@ -368,12 +367,12 @@ class RemoveTest(unittest.TestCase):
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+        self.assertCountEqual(["Hello", "Other", "Bye"], folders)
+        self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/myuser/testing")))
-        six.assertCountEqual(self, ["package", "build", "export", "export_source", "metadata.json",
+        self.assertCountEqual(["package", "build", "export", "export_source", "metadata.json",
                                     "dl", "metadata.json.lock"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/myuser/testing")))
@@ -410,7 +409,7 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         remote_folder = os.path.join(self.server_folder, ".conan_server/data")
         folders = os.listdir(remote_folder)
-        six.assertCountEqual(self, ["Other", "Bye"], folders)
+        self.assertCountEqual(["Other", "Bye"], folders)
 
     def test_remove_specific_package(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f")
@@ -455,11 +454,11 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def test_try_remove_using_query_and_packages_or_builds(self):
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -p=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-p' parameters can't be used at the same time", self.client.out)
 
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 

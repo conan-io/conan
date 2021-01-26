@@ -2,7 +2,6 @@ import os
 import re
 import unittest
 
-import six
 from mock import patch
 
 import conans
@@ -449,7 +448,7 @@ class CMakeCppInfoNameTest(unittest.TestCase):
     def test_cmake_find_package_multi(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
-        six.assertCountEqual(self, ['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
+        self.assertCountEqual(['MyPkG2Targets.cmake', 'MyPkGConfig.cmake', 'MyPkG2Config.cmake',
                                     'MyPkGTargets.cmake', 'MyPkGTarget-debug.cmake',
                                     'MyPkG2Target-debug.cmake', 'MyPkGConfigVersion.cmake',
                                     'MyPkG2ConfigVersion.cmake'], content.keys())
@@ -526,7 +525,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
     def test_cmake_find_package_multi(self):
         generator = CMakeFindPackageMultiGenerator(self.conanfile)
         content = generator.content
-        six.assertCountEqual(self, ['MyCMakeFindPackageMultiName2Targets.cmake',
+        self.assertCountEqual(['MyCMakeFindPackageMultiName2Targets.cmake',
                                     'MyCMakeFindPackageMultiNameConfig.cmake',
                                     'MyCMakeFindPackageMultiName2Config.cmake',
                                     'MyCMakeFindPackageMultiNameTargets.cmake',

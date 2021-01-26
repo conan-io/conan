@@ -1,4 +1,3 @@
-import six
 from parameterized import parameterized
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
@@ -203,7 +202,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in libc/0.1:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in libc/0.1:\n"
             "    'libc/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
             "    To fix this conflict you need to override the package 'liba' in your root "
             "package."):
@@ -218,14 +217,14 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
             self.build_consumer(consumer)
 
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
             self.build_consumer(consumer)
 
@@ -286,7 +285,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_build_requires(tool_ref))
 
-        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+        with self.assertRaisesRegex(ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing' requires"
                                                          " 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
@@ -347,7 +346,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                   .with_require(zlib_ref)
                                                   .with_build_requires(gtest_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in gtest/0.1@user/testing:\n"
                                    "    'gtest/0.1@user/testing' requires 'zlib/0.2@user/testing' "
                                    "while 'lib/0.1@user/testing' requires 'zlib/0.1@user/testing'."
@@ -447,7 +446,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                   .with_require(zlib_ref)
                                                   .with_build_requires(gtest_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "tried to change zlib/0.1@user/testing option shared to True"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
@@ -600,7 +599,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                    .with_require(liba_ref))
         self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
                                                    .with_require(liba_ref2))
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in libc/0.1@user/testing:\n"
                                    "    'libc/0.1@user/testing' requires 'liba/0.2@user/testing' "
                                    "while 'libb/0.1@user/testing' requires 'liba/0.1@user/testing'."
@@ -620,7 +619,7 @@ class TransitiveGraphTest(GraphManagerTest):
                                                    .with_require(lib_ref, private=True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(tool_ref, private=True))
-        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+        with self.assertRaisesRegex(ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing'"
                                                          " requires 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
@@ -671,7 +670,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
                                                       .with_require(grass01_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in cheetah/0.1:\n"
             "    'cheetah/0.1' requires 'grass/0.2@user/testing' while 'gazelle/0.1@user/testing'"
             " requires 'grass/0.1@user/testing'.\n"
@@ -694,7 +693,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
                                                       .with_require(grass01_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in cheetah/0.1:\n"
                                    "    'cheetah/0.1' requires 'grass/0.2@user/testing' while "
                                    "'gazelle/0.1@user/testing' requires 'grass/0.1@user/testing'.\n"

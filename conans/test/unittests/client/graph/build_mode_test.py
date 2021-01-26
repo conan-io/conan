@@ -1,7 +1,5 @@
 import unittest
 
-import six
-
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -35,7 +33,7 @@ class BuildModeTest(unittest.TestCase):
 
     def test_invalid_configuration(self):
         for mode in ["outdated", "missing", "cascade"]:
-            with six.assertRaisesRegex(self, ConanException,
+            with self.assertRaisesRegex(ConanException,
                                        "--build=never not compatible with other options"):
                 BuildMode([mode, "never"], self.output)
 

@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from collections import namedtuple
 
-import six
 from parameterized import parameterized
 
 from conans.errors import ConanException
@@ -181,7 +180,7 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@myuser/testing", %s
 """
         if valid is False:
-            with six.assertRaisesRegex(self, ConanException, "not valid"):
+            with self.assertRaisesRegex(ConanException, "not valid"):
                 self.build_graph(chat_content % version_range)
             return
 

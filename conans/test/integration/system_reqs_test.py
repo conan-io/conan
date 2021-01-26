@@ -2,8 +2,6 @@ import os
 import stat
 import unittest
 
-import six
-
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
@@ -51,7 +49,7 @@ class SystemReqsTest(unittest.TestCase):
 
         files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "self.run('fake command!')")}
         client.save(files)
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
+        with self.assertRaisesRegex(Exception, "Command failed"):
             client.run("install .")
 
     def test_per_package(self):
@@ -213,17 +211,17 @@ class SystemReqsTest(unittest.TestCase):
     def test_invalid_remove_reqs(self):
         client = TestClient()
 
-        with six.assertRaisesRegex(self, Exception,
+        with self.assertRaisesRegex(Exception,
                                    "ERROR: Please specify a valid pattern or reference to be cleaned"):
             client.run("remove --system-reqs")
 
         # wrong file reference should be treated as error
-        with six.assertRaisesRegex(self, Exception, "ERROR: Unable to remove system_reqs: "
+        with self.assertRaisesRegex(Exception, "ERROR: Unable to remove system_reqs: "
                                    "foo/version@bar/testing does not exist"):
             client.run("remove --system-reqs foo/version@bar/testing")
 
         # package is not supported with system_reqs
-        with six.assertRaisesRegex(self, Exception, "ERROR: '-t' and '-p' parameters "
+        with self.assertRaisesRegex(Exception, "ERROR: '-t' and '-p' parameters "
                                    "can't be used at the same time"):
             client.run("remove --system-reqs foo/bar@foo/bar "
                        "-p f0ba3ca2c218df4a877080ba99b65834b9413798")
@@ -246,7 +244,7 @@ class SystemReqsTest(unittest.TestCase):
         os.chmod(system_reqs_path, current & ~stat.S_IWRITE)
 
         # friendly message for permission error
-        with six.assertRaisesRegex(self, Exception, "ERROR: Unable to remove system_reqs:"):
+        with self.assertRaisesRegex(Exception, "ERROR: Unable to remove system_reqs:"):
             client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertTrue(os.path.exists(system_reqs_path))
 

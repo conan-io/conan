@@ -6,7 +6,6 @@ import time
 import unittest
 
 import pytest
-import six
 from mock import patch
 
 from conans.client.cache.remote_registry import Remote
@@ -174,7 +173,7 @@ class ConfigInstallTest(unittest.TestCase):
                          "full_package_mode")
         self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
         self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
-        with six.assertRaisesRegex(self, ConanException, "'config_install' doesn't exist"):
+        with self.assertRaisesRegex(ConanException, "'config_install' doesn't exist"):
             conan_conf.get_item("general.config_install")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")

@@ -3,8 +3,6 @@
 
 import unittest
 
-import six
-
 from conans.client.tools.version import Version
 from conans.errors import ConanException
 
@@ -17,7 +15,7 @@ class ToolVersionMainComponentsTests(unittest.TestCase):
         self.assertRaises(ConanException, Version, "a1.2.3")
 
     def test_invalid_message(self):
-        with six.assertRaisesRegex(self, ConanException, "Invalid version 'not-valid'"):
+        with self.assertRaisesRegex(ConanException, "Invalid version 'not-valid'"):
             Version("not-valid")
 
     def test_valid_values(self):
