@@ -1,6 +1,6 @@
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.log import logger
 
 
@@ -23,8 +23,7 @@ def _check_cppstd(settings):
         raise ConanException("Do not use settings 'compiler.cppstd' together with 'cppstd'."
                              " Use only the former one.")
 
-    if cppstd:
-        conan_v2_behavior("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'")
+    conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", cppstd)
 
     if compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return

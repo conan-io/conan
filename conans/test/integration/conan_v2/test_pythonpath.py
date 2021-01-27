@@ -43,21 +43,3 @@ class PythonBuildTest(ConanV2ModeTestCase):
                 import tooling
                 tooling.bar(self.output)
         """)
-
-    def test_deprecate_pythonpath(self):
-        conantool_ref = ConanFileReference.loads("conantool/1.0@conan/stable")
-        # Create a package that exports python code
-        t = self.get_client()
-        t.save({'conanfile.py': self.conanfile,
-                'tooling.py': self.tooling})
-        t.run("export . conan/stable")
-
-        # Try to reuse it
-        t.save({'conanfile.py': self.reuse}, clean_first=True)
-        t.run("create .", assert_error=True)
-        packages_path = t.cache.package_layout(conantool_ref).packages().replace('\\', '/')
-        self.assertIn("consumer/0.1: PYTHONPATH: ['{}".format(packages_path), t.out)
-        if six.PY2:
-            self.assertIn("ImportError: No module named tooling", t.out)
-        else:
-            self.assertIn("ModuleNotFoundError: No module named 'tooling'", t.out)

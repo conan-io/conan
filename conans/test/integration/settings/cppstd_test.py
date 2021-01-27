@@ -1,7 +1,6 @@
 import unittest
 
 from conans.paths import CONANFILE
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 
 
@@ -19,17 +18,15 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        with catch_deprecation_warning(self):
-            client.run('create . user/testing -s compiler="gcc" '
-                       '-s compiler.libcxx="libstdc++11" '
-                       '-s compiler.version="4.6" -s cppstd=17', assert_error=True)
+        client.run('create . user/testing -s compiler="gcc" '
+                   '-s compiler.libcxx="libstdc++11" '
+                   '-s compiler.version="4.6" -s cppstd=17', assert_error=True)
 
         self.assertIn("The specified 'cppstd=17' is not available for 'gcc 4.6'", client.out)
         self.assertIn("Possible values are ['11', '98', 'gnu11', 'gnu98']", client.out)
 
-        with catch_deprecation_warning(self):
-            client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
-                       '-s compiler.version="6.3" -s cppstd=17')
+        client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
+                   '-s compiler.version="6.3" -s cppstd=17')
 
     def test_gcc_8_std_20(self):
         client = TestClient()
@@ -43,10 +40,9 @@ class TestConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        with catch_deprecation_warning(self):
-            client.run('create . user/testing -s compiler="gcc" '
-                       '-s compiler.libcxx="libstdc++11" '
-                       '-s compiler.version="8" -s cppstd=20')
+        client.run('create . user/testing -s compiler="gcc" '
+                   '-s compiler.libcxx="libstdc++11" '
+                   '-s compiler.version="8" -s cppstd=20')
 
     def test_set_default_package_id(self):
         client = TestClient()
@@ -69,11 +65,10 @@ class TestConan(ConanFile):
 
         # Add the setting but with the default value, should not build again
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        with catch_deprecation_warning(self):
-            client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
-                       '-s compiler.libcxx="libstdc++" '
-                       '-s cppstd=gnu14 '
-                       '--build missing')
+        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+                   '-s compiler.libcxx="libstdc++" '
+                   '-s cppstd=gnu14 '
+                   '--build missing')
 
         if client.cache.config.revisions_enabled:
             self.assertIn("doesn't belong to the installed recipe revision, removing folder",
@@ -83,10 +78,9 @@ class TestConan(ConanFile):
             self.assertNotIn("BUILDING!", client.out)
 
         # Add the setting but with a non-default value, should build again
-        client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
-        with catch_deprecation_warning(self):
-            client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
-                       '-s compiler.libcxx="libstdc++" '
-                       '-s cppstd=gnu17 '
-                       '--build missing')
+        client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting:
+        client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
+                   '-s compiler.libcxx="libstdc++" '
+                   '-s cppstd=gnu17 '
+                   '--build missing')
         self.assertIn("BUILDING!", client.out)
