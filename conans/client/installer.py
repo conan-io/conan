@@ -613,6 +613,7 @@ class BinaryInstaller(object):
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
         # Minimal pythonpath, not the whole context, make it 50% slower
+        # FIXME Conan 2.0, Remove old ways of reusing python code
         with pythonpath(conanfile):
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
