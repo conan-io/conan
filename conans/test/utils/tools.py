@@ -551,7 +551,7 @@ class TestClient(object):
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
-        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
+        self.tune_conan_conf(cache_folder, cpu_count)
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -605,7 +605,7 @@ class TestClient(object):
         self._set_revisions(False)
         assert not self.cache.config.revisions_enabled
 
-    def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
+    def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
         cache = self.cache
         _ = cache.config
@@ -615,11 +615,7 @@ class TestClient(object):
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
 
-        if revisions_enabled is not None:
-            self._set_revisions(revisions_enabled)
-        elif "TESTING_REVISIONS_ENABLED" in os.environ:
-            value = get_env("TESTING_REVISIONS_ENABLED", True)
-            self._set_revisions(value)
+        self._set_revisions(True)
 
     def update_servers(self):
         cache = self.cache
