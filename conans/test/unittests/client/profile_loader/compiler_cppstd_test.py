@@ -126,7 +126,6 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with catch_deprecation_warning(self):
-            r.process_settings(self.cache)
+        r.process_settings(self.cache)
         self.assertNotIn('compiler.cppstd', r.settings)
         self.assertEqual(r.settings["cppstd"], "11")

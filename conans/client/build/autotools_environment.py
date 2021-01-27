@@ -49,7 +49,7 @@ class AutoToolsBuildEnvironment(object):
         self._build_type = conanfile.settings.get_safe("build_type")
 
         self._compiler = conanfile.settings.get_safe("compiler")
-        conan_v2_error("compiler setting should be defined.", not self._compilern)
+        conan_v2_error("compiler setting should be defined.", not self._compiler)
 
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
