@@ -74,6 +74,7 @@ def create_settings(conanfile, settings):
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
+        # FIXME Conan 2.0, Remove old ways of reusing python code
         with pythonpath(conanfile):
             yield
 
