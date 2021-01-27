@@ -49,11 +49,7 @@ class Pkg(ConanFile):
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         revisions_enabled = self.client.cache.config.revisions_enabled
-        self.client.disable_revisions()
-        # Trick to allow export a new recipe without removing old binary packages
         self.client.run("export . %s" % (channel or "lasote/stable"))
-        if revisions_enabled:
-            self.client.enable_revisions()
 
     @property
     def conaninfo(self):
@@ -177,6 +173,9 @@ class Pkg(ConanFile):
                          clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
+        pkg_id = "586c42dfdef8986cde85cda46b44133db925baae"
+        self.assertIn("Hello2/2.3.8@lasote/stable:{} - Build".format(pkg_id),
+                      self.client.out)
 
         # If we change the user and channel should be needed to rebuild
         self._export("Hello", "1.2.0", package_id_text=None, requires=None,
@@ -204,7 +203,9 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        self.client.run("install .")
+        with self.assertRaises(Exception):
+            self.client.run("install .")
+        self.assertIn("Hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
