@@ -430,7 +430,6 @@ class OSInfo(object):
                 return None
         try:
             output = OSInfo.uname()
-            print("UNAME ", output)
         except ConanException:
             return None
         if not output:
