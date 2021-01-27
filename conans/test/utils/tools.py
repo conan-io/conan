@@ -593,18 +593,6 @@ class TestClient(object):
             else:
                 return TestRequester(self.servers)
 
-    def _set_revisions(self, value):
-        value = "1" if value else "0"
-        self.run("config set general.revisions_enabled={}".format(value))
-
-    def enable_revisions(self):
-        self._set_revisions(True)
-        assert self.cache.config.revisions_enabled
-
-    def disable_revisions(self):
-        self._set_revisions(False)
-        assert not self.cache.config.revisions_enabled
-
     def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
         cache = self.cache
@@ -614,8 +602,6 @@ class TestClient(object):
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
-
-        self._set_revisions(True)
 
     def update_servers(self):
         cache = self.cache
