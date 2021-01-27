@@ -8,7 +8,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
@@ -203,7 +203,7 @@ class ConanPythonRequire(object):
         return python_require
 
     def __call__(self, reference):
-        conan_v2_behavior("Old syntax for python_requires is deprecated")
+        conan_v2_error("Old syntax for python_requires is deprecated")
         if not self.valid:
             raise ConanException("Invalid use of python_requires(%s)" % reference)
         try:

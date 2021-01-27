@@ -55,9 +55,6 @@ class ConanAPIV2(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
-        if not get_env(CONAN_V2_MODE_ENVVAR, False):
-            # FIXME Remove in Conan 2.0
-            sys.path.append(os.path.join(self.cache_folder, "python"))
 
     @api_method
     def user_list(self, remote_name=None):

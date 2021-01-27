@@ -31,7 +31,6 @@ from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
@@ -613,9 +612,8 @@ class BinaryInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
         # Minimal pythonpath, not the whole context, make it 50% slower
-        with pythonpath(conanfile) if not conan_v2 else no_op():
+        with pythonpath(conanfile):
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder
