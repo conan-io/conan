@@ -438,13 +438,7 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def revisions_enabled(self):
-        try:
-            revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
-            if revisions_enabled is None:
-                revisions_enabled = self.get_item("general.revisions_enabled")
-            return revisions_enabled.lower() in ("1", "true")
-        except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+        return True
 
     @property
     def parallel_download(self):
