@@ -193,9 +193,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     # cacert_path                         # environment CONAN_CACERT_PATH
     # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
-    {% if conan_v2 %}
-    revisions_enabled = 1
-    {% endif %}
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
