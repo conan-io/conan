@@ -1753,8 +1753,6 @@ class SayConan(ConanFile):
 """
         deps_graph = self.build_graph(content, settings="os=Windows\n compiler=gcc\narch=x86\n"
                                       "compiler.libcxx=libstdc++")
-        self.assertIn("WARN: config() has been deprecated. Use config_options() and configure()",
-                      self.output)
         self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = _get_nodes(deps_graph, "Say")[0]
