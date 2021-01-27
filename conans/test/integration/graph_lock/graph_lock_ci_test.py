@@ -37,7 +37,6 @@ conanfile = textwrap.dedent("""
 class GraphLockCITest(unittest.TestCase):
 
     @parameterized.expand([("recipe_revision_mode",), ("package_revision_mode",)])
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_revisions(self, package_id_mode):
         test_server = TestServer(users={"user": "mypass"})
         client = TestClient(servers={"default": test_server},
@@ -375,7 +374,6 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgB/0.1@user/channel: PACKAGE_INFO OPTION: 4!!", client2.out)
         self.assertIn("PkgA/0.1@user/channel: PACKAGE_INFO OPTION: 5!!", client2.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_package_revisions_unkown_id_update(self):
         # https://github.com/conan-io/conan/issues/7588
         client = TestClient()

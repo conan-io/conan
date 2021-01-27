@@ -190,7 +190,6 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(win["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(win["options"], "")
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_lose_rrev(self):
         # https://github.com/conan-io/conan/issues/7595
         client = TestClient()
@@ -215,7 +214,6 @@ class LockRecipeTest(unittest.TestCase):
         client.run("create pkgb libb/0.1@ --lockfile=libb_release.lock")
         self.assertIn("libb/0.1: Created package", client.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_missing_configuration(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
@@ -239,7 +237,6 @@ class LockRecipeTest(unittest.TestCase):
                    "--build=libb/0.1 --build=missing")
         self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_missing_configuration_build_require(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
