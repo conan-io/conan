@@ -7,7 +7,6 @@ import pytest
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -397,22 +396,19 @@ class Pkg(ConanFile):
                      channel="user/testing",
                      settings=["compiler", "cppstd", ])
 
-        with catch_deprecation_warning(self):
-            self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
-                            '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
-                            '-s cppstd=gnu14')
-        with catch_deprecation_warning(self):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
+        self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
+                        '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
+                        '-s cppstd=gnu14')
+
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
 
         # Should NOT have binary available
-        with catch_deprecation_warning(self):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu11',
-                            assert_error=True)
-
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu11',
+                        assert_error=True)
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_std_non_matching_with_cppstd(self):
