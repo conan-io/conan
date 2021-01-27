@@ -48,7 +48,6 @@ class Pkg(ConanFile):
                 conanfile = conanfile.with_require(ConanFileReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
-        revisions_enabled = self.client.cache.config.revisions_enabled
         self.client.run("export . %s" % (channel or "lasote/stable"))
 
     @property
@@ -203,8 +202,8 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        with self.assertRaises(Exception):
-            self.client.run("install .")
+        assert_error = True if self.client.cache.config.revisions_enabled else False
+        self.client.run("install .", assert_error=assert_error)
         self.assertIn("Hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
