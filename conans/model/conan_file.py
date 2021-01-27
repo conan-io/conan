@@ -16,9 +16,7 @@ from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.env_reader import get_env
 
 
 def create_options(conanfile):
@@ -76,11 +74,8 @@ def create_settings(conanfile, settings):
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
-        if get_env(CONAN_V2_MODE_ENVVAR, False):
+        with pythonpath(conanfile):
             yield
-        else:
-            with pythonpath(conanfile):
-                yield
 
 
 def get_env_context_manager(conanfile, without_python=False):
@@ -230,8 +225,7 @@ class ConanFile(object):
     def channel(self):
         if not self._conan_channel:
             _env_channel = os.getenv("CONAN_CHANNEL")
-            if _env_channel:
-                conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
             self._conan_channel = _env_channel or self.default_channel
             if not self._conan_channel:
                 raise ConanException("channel not defined, but self.channel is used in conanfile")
@@ -241,16 +235,14 @@ class ConanFile(object):
     def user(self):
         if not self._conan_user:
             _env_username = os.getenv("CONAN_USERNAME")
-            if _env_username:
-                conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
             self._conan_user = _env_username or self.default_user
             if not self._conan_user:
                 raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
-        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                          v1_behavior=self.output.warn)
+        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property
