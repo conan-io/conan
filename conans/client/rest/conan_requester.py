@@ -26,7 +26,7 @@ class ConanRequester(object):
             self._http_requester = http_requester
         else:
             self._http_requester = requests.Session()
-            adapter = HTTPAdapter(max_retries=self._get_retries(config.retry, config.retry_wait))
+            adapter = HTTPAdapter(max_retries=self._get_retries(config.retry))
 
             self._http_requester.mount("http://", adapter)
             self._http_requester.mount("https://", adapter)
@@ -63,7 +63,7 @@ class ConanRequester(object):
             else:
                 self._client_certificates = self._client_cert_path
 
-    def _get_retries(self, retry, retry_wait):
+    def _get_retries(self, retry):
         retry = retry if retry is not None else 2
         if retry == 0:
             return 0
@@ -78,6 +78,7 @@ class ConanRequester(object):
         }
         return urllib3.Retry(
             total=retry,
+            backoff_factor = 0.05,
             status_forcelist=retry_status_code_set
         )
 
