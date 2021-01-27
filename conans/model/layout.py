@@ -53,11 +53,10 @@ class Layout(object):
         return self._base_build_folder
 
     @property
-    def install_folder(self):
+    def base_install_folder(self):
         return self._base_install_folder
 
-    @install_folder.setter
-    def install_folder(self, folder):
+    def set_base_install_folder(self, folder):
         self._base_install_folder = folder
 
     def set_base_package_folder(self, folder):

@@ -99,15 +99,15 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
 
     if not os.path.exists(conanfile.layout.base_source_folder):  # No source folder, need to get it
         with set_dirty_context_manager(conanfile.layout.base_source_folder):
-            mkdir(conanfile.layout.source_folder)
+            mkdir(conanfile.source_folder)
 
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
                 _run_cache_scm(conanfile, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, conanfile.layout.source_folder)
+                merge_directories(export_folder, conanfile.source_folder)
                 # Now move the export-sources to the right location
-                merge_directories(export_source_folder, conanfile.layout.source_folder)
+                merge_directories(export_source_folder, conanfile.source_folder)
 
             _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                         get_sources_from_exports=get_sources_from_exports)
@@ -183,9 +183,9 @@ def _run_cache_scm(conanfile, scm_sources_folder, output):
         return
 
     if scm_data.subfolder:
-        dest_dir = os.path.normpath(os.path.join(conanfile.layout.source_folder, scm_data.subfolder))
+        dest_dir = os.path.normpath(os.path.join(conanfile.source_folder, scm_data.subfolder))
     else:
-        dest_dir = conanfile.layout.source_folder
+        dest_dir = conanfile.source_folder
     if os.path.exists(scm_sources_folder):
         output.info("Copying previously cached scm sources")
         merge_directories(scm_sources_folder, dest_dir)

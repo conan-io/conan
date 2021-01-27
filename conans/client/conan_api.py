@@ -786,7 +786,7 @@ class ConanAPIV1(object):
         conanfile.layout.set_base_build_folder(build_folder)
         conanfile.layout.set_base_source_folder(source_folder)
         conanfile.layout.set_base_package_folder(package_folder)
-        conanfile.layout.install_folder = install_folder
+        conanfile.layout.set_base_install_folder(install_folder)
 
         run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)

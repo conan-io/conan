@@ -57,7 +57,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     conanfile.layout.set_base_build_folder(build_folder)
     conanfile.layout.set_base_source_folder(source_folder)
     conanfile.layout.set_base_package_folder(dest_package_folder)
-    conanfile.layout.install_folder = install_folder
+    conanfile.layout.set_base_install_folder(install_folder)
 
     with layout.set_dirty_context_manager(pref):
         if package_folder:

@@ -173,7 +173,7 @@ class _PackageBuilder(object):
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
         # While installing, the infos goes to build folder
-        conanfile.layout.install_folder = conanfile.layout.base_build_folder
+        conanfile.layout.set_base_install_folder(conanfile.layout.base_build_folder)
 
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
@@ -219,7 +219,7 @@ class _PackageBuilder(object):
                     conanfile.layout.set_base_build_folder(build_folder)
                     conanfile.layout.set_base_package_folder(package_folder)
                     # In local cache, install folder always is build_folder
-                    conanfile.layout.install_folder = build_folder
+                    conanfile.layout.set_base_install_folder(build_folder)
 
                     if not skip_build:
                         self._build(conanfile, pref)
@@ -617,10 +617,10 @@ class BinaryInstaller(object):
         with pythonpath(conanfile) if not conan_v2 else no_op():
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    conanfile.package_folder = package_folder
-                    conanfile.source_folder = None
-                    conanfile.build_folder = None
-                    conanfile.install_folder = None
+                    conanfile.layout.set_base_package_folder(package_folder)
+                    conanfile.layout.set_base_source_folder(None)
+                    conanfile.layout.set_base_build_folder(None)
+                    conanfile.layout.set_base_install_folder(None)
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()

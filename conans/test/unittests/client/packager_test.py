@@ -84,7 +84,7 @@ class ExporterTest(unittest.TestCase):
         conanfile.layout.set_base_build_folder(build_folder)
         conanfile.layout.set_base_source_folder(build_folder)
         conanfile.layout.set_base_package_folder(package_folder)
-        conanfile.layout.install_folder = install_folder
+        conanfile.layout.set_base_install_folder(install_folder)
 
         run_package_method(conanfile, None, Mock(), conanfile_path, ref, copy_info=True)
 
