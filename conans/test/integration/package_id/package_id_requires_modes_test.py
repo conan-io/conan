@@ -424,11 +424,10 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        with catch_deprecation_warning(self, n=1):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu14',
-                            assert_error=True)  # Default
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu14',
+                        assert_error=True)  # Default
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_std_non_matching_with_compiler_cppstd(self):
