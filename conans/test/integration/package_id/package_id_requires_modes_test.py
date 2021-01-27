@@ -383,38 +383,6 @@ class Pkg(ConanFile):
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_standard_version_default_matching(self):
-        self._export("Hello", "1.2.0",
-                     channel="user/testing",
-                     settings=["compiler", ])
-
-        self.client.run('install Hello/1.2.0@user/testing '
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 --build')
-
-        self._export("Hello", "1.2.0",
-                     channel="user/testing",
-                     settings=["compiler", "cppstd", ])
-
-        with catch_deprecation_warning(self):
-            self.client.run('info Hello/1.2.0@user/testing  -s compiler="gcc" '
-                            '-s compiler.libcxx=libstdc++11  -s compiler.version=7.2 '
-                            '-s cppstd=gnu14')
-        with catch_deprecation_warning(self):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
-
-        # Should NOT have binary available
-        with catch_deprecation_warning(self):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu11',
-                            assert_error=True)
-
-        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
-
     def test_std_non_matching_with_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",

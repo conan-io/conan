@@ -9,15 +9,6 @@ from conans.util.env_reader import get_env
 
 class DownloadRevisionsTest(unittest.TestCase):
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_download_revs_disabled_with_rrev(self):
-        # https://github.com/conan-io/conan/issues/6106
-        client = TestClient(revisions_enabled=False)
-        client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
-        self.assertIn(
-            "ERROR: Revisions not enabled in the client, specify a reference without revision",
-            client.out)
-
     @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_download_revs_enabled_with_fake_rrev(self):
         client = TestClient(default_server_user=True, revisions_enabled=True)
