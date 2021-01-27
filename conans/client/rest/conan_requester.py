@@ -65,7 +65,6 @@ class ConanRequester(object):
 
     def _get_retries(self, retry, retry_wait):
         retry = retry if retry is not None else 2
-        retry_wait = retry_wait if retry_wait is not None else 5
         if retry == 0:
             return 0
         retry_status_code_set = {
@@ -79,7 +78,6 @@ class ConanRequester(object):
         }
         return urllib3.Retry(
             total=retry,
-            backoff_factor=(retry * retry_wait) / (2**(retry-1)),
             status_forcelist=retry_status_code_set
         )
 
