@@ -23,6 +23,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
 from conans.unicode import get_cwd
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -2038,6 +2039,8 @@ class Command(object):
             raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
     def _warn_python_version(self):
+        conan_v2_error("Conan requires Python>=3.6",
+                       sys.version_info.major < 3 or sys.version_info.minor < 6)
         import textwrap
 
         width = 70
