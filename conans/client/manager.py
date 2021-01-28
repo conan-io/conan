@@ -87,7 +87,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    conanfile.layout.install_folder = install_folder
+    conanfile.layout.set_base_install_folder(install_folder)
     conanfile.layout.set_base_generators_folder(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out

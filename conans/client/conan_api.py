@@ -778,14 +778,15 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
 
-        # If the layout declared a package folder follow it, do not invent a "package/"
-        # folder by default
-        default_pkg_folder = os.path.join(build_folder, "package") \
-            if not conanfile.layout.package.folder else None
+        default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                           install_folder, self.app.hook_manager, conanfile_path, None,
+        conanfile.layout.set_base_build_folder(build_folder)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.set_base_install_folder(install_folder)
+
+        run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
 
     @api_method
@@ -797,12 +798,17 @@ class ConanAPIV1(object):
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
 
+        mkdir(source_folder)
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        config_source_local(source_folder, conanfile, conanfile_path, self.app.hook_manager)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_build_folder(None)
+        conanfile.layout.set_base_package_folder(None)
+
+        config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method
     def imports(self, path, dest=None, info_folder=None, cwd=None):
