@@ -58,16 +58,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Downloading conan_package.tgz", new_client.out)
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", new_client.out)
 
-        # With revisions makes no sense, it won't download an outdated package, it belongs to
-        # a different recipe
-        if not new_client.cache.config.revisions_enabled:
-            # But if we remove the full Hello0 local package, will retrieve the updated
-            # recipe and the outdated package
-            new_client.run("remove Hello0* -f")
-            new_client.run("install Hello1/0.1@lasote/stable --build outdated")
-            self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.out)
-            self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.out)
-
     def test_install_outdated_and_dep(self):
         # regression test for https://github.com/conan-io/conan/issues/1053
         # A new recipe that depends on Hello0/0.1
