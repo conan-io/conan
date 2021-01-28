@@ -435,39 +435,6 @@ class RemoveTest(unittest.TestCase):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="This test is insane to be "
-                                                                            "tested with revisions, in "
-                                                                            "general all the module")
-    def test_query_remove_locally(self):
-        self.client.run("remove notfoundname/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
-                        assert_error=True)
-        self.assertIn("Recipe not found: 'notfoundname/1.4.10@myuser/testing'", self.client.out)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.1" -f')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f -r default')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
-
 
 class RemoveWithoutUserChannel(unittest.TestCase):
 
