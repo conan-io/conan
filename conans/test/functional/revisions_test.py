@@ -5,7 +5,6 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-from parameterized.parameterized import parameterized
 
 from conans import DEFAULT_REVISION_V1, load, ONLY_V2
 from conans.client.tools import environment_append
@@ -23,8 +22,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.server2 = TestServer()
         self.servers = OrderedDict([("default", self.server),
                                     ("remote2", self.server2)])
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers=self.servers)
+        self.c_v2 = TurboTestClient(servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_install_missing_prev_deletes_outdated_prev(self):
@@ -175,44 +173,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Read current revision
         self.assertEqual(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_install_rev0(self, v1):
-        """If we upload a revision with a v1 client it is stored as rev0 in the server then:
-         0. In the cache the revision is kept, not overwrite with the "0"
-
-         If we install it with a fresh client:
-
-         1. With revisions enabled, it is 0 in the metadata (not supported)
-         2. Without revisions,  it is 0 in the metadata"""
-
-        # Upload with v1
-        pref = self.c_v1.create(self.ref)
-        self.assertNotEqual(pref.revision, DEFAULT_REVISION_V1)
-        self.assertNotEqual(pref.ref.revision, DEFAULT_REVISION_V1)
-
-        remote_ref = self.c_v1.upload_all(self.ref)
-        self.assertEqual(remote_ref.revision, DEFAULT_REVISION_V1)
-
-        # Check remote revision and time
-        remote_rev_time = self.server.recipe_revision_time(remote_ref)
-        self.assertIsNotNone(remote_rev_time)
-
-        local_rev = self.c_v1.recipe_revision(self.ref)
-
-        self.assertNotEqual(local_rev, DEFAULT_REVISION_V1)
-
-        self.assertEqual(local_rev, pref.ref.revision)
-
-        # Remove all from c_v1
-        self.c_v1.remove_all()
-
-        client = self.c_v1 if v1 else self.c_v2
-        client.run("install {}".format(self.ref))
-        local_rev = client.recipe_revision(self.ref)
-        local_prev = client.package_revision(pref)
-        self.assertEqual(local_rev, DEFAULT_REVISION_V1)
-        self.assertEqual(local_prev, DEFAULT_REVISION_V1)
-
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get
         the revision from upstream"""
@@ -235,8 +195,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         A client v2 upload a recipe revision
         Another client v2 upload a new recipe revision
         The first client can upgrade from the remote"""
-        client = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        client2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
+        client = TurboTestClient(servers={"default": self.server})
+        client2 = TurboTestClient(servers={"default": self.server})
 
         pref1 = client.create(self.ref)
         client.upload_all(self.ref)
@@ -270,8 +230,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         Another client v2 upload the same RREV with PREV2
         The first client can upgrade from the remote, only
         in the package, because the recipe is the same and it is not updated"""
-        client = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        client2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
+        client = TurboTestClient(servers={"default": self.server})
+        client2 = TurboTestClient(servers={"default": self.server})
 
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
@@ -295,12 +255,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev = client.package_revision(pref)
         self.assertIsNotNone(prev)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_revision_mismatch_packages_in_local(self, v1):
-        """If we have a recipe that doesn't match the local package:
-         1. With revisions enabled, it is not resolved.
-         2. Without revisions enabled it is resolved"""
-        client = self.c_v1 if v1 else self.c_v2
+    def test_revision_mismatch_packages_in_local(self):
+        """If we have a recipe that doesn't match the local package
+           it is not resolved."""
+        client = self.c_v2
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
         # Now we have two RREVs and a PREV corresponding to the first one
@@ -309,64 +267,47 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Now we try to install the self.ref, the binary is missing when using revisions
         command = "install {}".format(self.ref)
-        if v1:
-            client.run(command)
-            self.assertIn("{} - Cache".format(pref), client.out)
-        else:
-            client.run(command, assert_error=True)
-            self.assertIn("The package {} doesn't belong to the installed "
-                          "recipe".format(pref), client.out)
-            self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
+        client.run(command, assert_error=True)
+        self.assertIn("The package {} doesn't belong to the installed "
+                      "recipe".format(pref), client.out)
+        self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_revision_install_explicit_mismatch_rrev(self, v1):
+    def test_revision_install_explicit_mismatch_rrev(self):
         # If we have a recipe in local, but we request to install a different one with RREV
-        # 1. With revisions enabled, it fail and won't look the remotes unless --update
-        # 2. Without revisions enabled it raises an input error
-        client = self.c_v1 if v1 else self.c_v2
+        # It fail and won't look the remotes unless --update
+        client = self.c_v2
         ref = client.export(self.ref)
         command = "install {}#fakerevision".format(ref)
-        if v1:
-            client.run(command, assert_error=True)
-            self.assertIn("ERROR: Revisions not enabled in the client, "
-                          "specify a reference without revision", client.out)
-        else:
-            client.run(command, assert_error=True)
-            self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
-                          "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
-                          "Use '--update' to check in the remote", client.out)
-            command = "install {}#fakerevision --update".format(ref)
-            client.run(command, assert_error=True)
-            self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
+        client.run(command, assert_error=True)
+        self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
+                      "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
+                      "Use '--update' to check in the remote", client.out)
+        command = "install {}#fakerevision --update".format(ref)
+        client.run(command, assert_error=True)
+        self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
-            # Now create a new revision with other client and upload it, we will request it
-            new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
-            pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-            new_client.upload_all(self.ref)
+        # Now create a new revision with other client and upload it, we will request it
+        new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
+        new_client.upload_all(self.ref)
 
-            # Repeat the install --update pointing to the new reference
-            client.run("install {} --update".format(pref.ref.full_str()))
-            self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
+        # Repeat the install --update pointing to the new reference
+        client.run("install {} --update".format(pref.ref.full_str()))
+        self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_revision_mismatch_packages_remote(self, v1):
+    def test_revision_mismatch_packages_remote(self):
         """If we have a recipe that doesn't match a remote recipe:
-         1. With revisions enabled, it is not resolved in the remote.
-         2. Without revisions enabled it is resolved"""
+         It is not resolved in the remote."""
         self.c_v2.create(self.ref)
         self.c_v2.upload_all(self.ref)
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         client.remove_all()
         client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
         command = "install {}".format(self.ref)
 
-        if v1:
-            client.run(command)
-            self.assertIn("{}: Package installed".format(self.ref), client.out)
-        else:
-            client.run(command, assert_error=True)
-            self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
+        client.run(command, assert_error=True)
+        self.assertIn("Can't find a '{}' package".format(self.ref), client.out)
 
     def test_json_output(self):
         client = TurboTestClient()
@@ -381,14 +322,12 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    @parameterized.expand([(True,), (False,)])
-    def test_create_metadata(self, v1):
+    def test_create_metadata(self):
         """When a create is executed, the recipe & package revision are updated in the cache"""
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         pref = client.create(self.ref)
         # Check recipe revision
         rev = client.recipe_revision(self.ref)
@@ -411,28 +350,21 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNotNone(rev2)
         self.assertIsNotNone(prev2)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_new_exported_recipe_clears_outdated_packages(self, v1):
-        client = self.c_v1 if v1 else self.c_v2
+    def test_new_exported_recipe_clears_outdated_packages(self):
+        client = self.c_v2
         conanfile = GenConanfile().with_setting("os")
         pref_outdated = client.create(self.ref, conanfile=conanfile, args="-s os=Windows")
         pref_ok = client.create(self.ref, conanfile=conanfile.with_build_msg("rev2"),
                                 args="-s os=Linux")
 
         msg = "Removing the local binary packages from different recipe revisions"
-        if v1:
-            self.assertNotIn(msg, client.out)
-            self.assertTrue(client.package_exists(pref_outdated.copy_clear_revs()))
-        else:
-            self.assertIn(msg, client.out)
-            self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
-
+        self.assertIn(msg, client.out)
+        self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
         self.assertTrue(client.package_exists(pref_ok))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_export_metadata(self, v1):
+    def test_export_metadata(self):
         """When a export is executed, the recipe revision is updated in the cache"""
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         ref = client.export(self.ref)
         # Check recipe revision
         rev = client.recipe_revision(self.ref)
@@ -465,90 +397,12 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    def test_remove_oudated_packages_locally_removes_orphan_prevs(self):
-        """if we run 'conan remove --outdated' locally, it removes the PREVS belonging to a
-        different RREV"""
-
-        # V1 client exports two recipes, no packages are removed in the second
-        # create, even belonging to a different recipe
-        pref = self.c_v1.create(self.ref, conanfile=GenConanfile().with_setting("os"),
-                                args="-s os=Windows")
-        pref2 = self.c_v1.create(self.ref, conanfile=GenConanfile().with_setting("os").
-                                 with_build_msg("I'm rev 2"),
-                                 args="-s os=Linux")
-        self.assertNotIn("Removing the local binary packages from different recipe revisions",
-                         self.c_v1.out)
-
-        # Now we enable the revisions in the c_v1, to make sure that with revisions
-        # the orphan is also removed
-        self.c_v1.enable_revisions()
-        layout = self.c_v1.cache.package_layout(pref.ref.copy_clear_rev())
-
-        # Assert pref (outdated) is in the cache
-        self.assertTrue(layout.package_exists(pref.copy_clear_revs()))
-
-        # Assert pref2 is also in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
-
-        self.c_v1.run("remove {} --outdated -f".format(pref.ref))
-
-        # Assert pref (outdated) is not in the cache anymore
-        self.assertFalse(layout.package_exists(pref.copy_clear_revs()))
-
-        # Assert pref2 is in the cache
-        self.assertTrue(layout.package_exists(pref2.copy_clear_revs()))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_remove_oudated_packages_remote(self, v1):
-        """In a server with revisions uploaded no package is oudated so nothing is done, unless
-        a v1 upload mixed packages to a v1 or some hardcoded revision happen"""
-        self.c_v1.create(self.ref, conanfile=GenConanfile().
-                         with_setting("os").
-                         with_build_msg("I'm revision 1"),
-                         args="-s os=Windows")
-        self.c_v1.upload_all(self.ref)
-
-        # Different revision, different package_id (but everything uploaded to rev0)
-        self.c_v1.create(self.ref, conanfile=GenConanfile().
-                         with_setting("os").
-                         with_build_msg("I'm revision 2"),
-                         args="-s os=Linux")
-        self.c_v1.upload_all(self.ref)
-
-        # Verify in the server there is only one revision "0"
-        revs = self.server.server_store.get_recipe_revisions(self.ref)
-        self.assertEqual([r.revision for r in revs], [DEFAULT_REVISION_V1])
-
-        # Verify using v1 we can search for the outdated
-        data = self.c_v1.search(self.ref, remote="default", args="--outdated")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Windows"]), set(oss))
-        self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
-
-        # Verify we can remove it both using v1 or v2
-        client = self.c_v1 if v1 else self.c_v2
-        client.run("remove {} -r default --outdated -f".format(self.ref))
-
-        # The Windows package is not there anymore
-        data = self.c_v1.search(self.ref, remote="default", args="--outdated")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual([], oss)
-
-        # But the Linux package is there, not outdated
-        data = self.c_v1.search(self.ref, remote="default")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Linux"]), set(oss))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_remove_local_recipe(self, v1):
-        """Locally:
-            When I remove a recipe without RREV, everything is removed.
-            When I remove a recipe with RREV only if the local revision matches is removed"""
-        client = self.c_v1 if v1 else self.c_v2
+    def test_remove_local_recipe(self):
+        """Locally: When I remove a recipe with RREV only if the local revision matches is removed"""
+        client = self.c_v2
 
         # If I remove the ref, the revision is gone, of course
         ref1 = client.export(self.ref)
@@ -558,19 +412,18 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # If I remove a ref with a wrong revision, the revision is not removed
         ref1 = client.export(self.ref)
         fakeref = ref1.copy_with_rev("fakerev")
-        full_ref = fakeref.full_str() if not v1 else str(fakeref)
+        full_ref = fakeref.full_str()
         client.run("remove {} -f".format(fakeref.full_str()), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % full_ref, client.out)
         self.assertTrue(client.recipe_exists(self.ref))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_remove_local_package(self, v1):
+    def test_remove_local_package(self):
         """Locally:
             When I remove a recipe without RREV, the package is removed.
             When I remove a recipe with RREV only if the local revision matches is removed
             When I remove a package with PREV and not RREV it raises an error
             When I remove a package with RREV and PREV only when both matches is removed"""
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
 
         # If I remove the ref without RREV, the packages are also removed
         pref1 = client.create(self.ref)
@@ -580,7 +433,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # If I remove the ref with fake RREV, the packages are not removed
         pref1 = client.create(self.ref)
         fakeref = pref1.ref.copy_with_rev("fakerev")
-        str_ref = fakeref.full_str() if not v1 else str(fakeref)
+        str_ref = fakeref.full_str()
         client.run("remove {} -f".format(fakeref.full_str()), assert_error=True)
         self.assertTrue(client.package_exists(pref1))
         self.assertIn("Recipe not found: '{}'".format(str_ref), client.out)
@@ -611,8 +464,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         client.run(command)
         self.assertFalse(client.package_exists(pref1))
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_remove_remote_recipe(self, v1):
+    def test_remove_remote_recipe(self):
         """When a client removes a reference, it removes ALL revisions, no matter
         if the client is v1 or v2"""
         pref1 = self.c_v2.create(self.ref)
@@ -624,7 +476,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         self.assertNotEqual(pref1, pref2)
 
-        remover_client = self.c_v1 if v1 else self.c_v2
+        remover_client = self.c_v2
 
         # Remove ref without revision in a remote
         remover_client.run("remove {} -f -r default".format(self.ref))
@@ -634,10 +486,8 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertFalse(self.server.package_exists(pref1))
         self.assertFalse(self.server.package_exists(pref2))
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_remove_remote_recipe_revision(self, v1):
+    def test_remove_remote_recipe_revision(self):
         """If a client removes a recipe with revision:
-             - If the client is v1 will fail (it can't send the revision through the API)
              - If the client is v2 will remove only that revision"""
         pref1 = self.c_v2.create(self.ref)
         self.c_v2.upload_all(pref1.ref)
@@ -648,20 +498,15 @@ class RemoveWithRevisionsTest(unittest.TestCase):
 
         self.assertNotEqual(pref1, pref2)
 
-        remover_client = self.c_v1 if v1 else self.c_v2
+        remover_client = self.c_v2
 
         # Remove ref without revision in a remote
         command = "remove {} -f -r default".format(pref1.ref.full_str())
-        if v1:
-            remover_client.run(command, assert_error=True)
-            self.assertIn("Revisions not enabled in the client", remover_client.out)
-        else:
-            remover_client.run(command)
-            self.assertFalse(self.server.recipe_exists(pref1.ref))
-            self.assertTrue(self.server.recipe_exists(pref2.ref))
+        remover_client.run(command)
+        self.assertFalse(self.server.recipe_exists(pref1.ref))
+        self.assertTrue(self.server.recipe_exists(pref2.ref))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_remove_remote_package(self, v1):
+    def test_remove_remote_package(self):
         """When a client removes a package, without RREV, it removes the package from ALL
         RREVs"""
         pref1 = self.c_v2.create(self.ref)
@@ -676,7 +521,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertFalse(self.c_v2.package_exists(pref1))
         self.assertTrue(self.c_v2.package_exists(pref2))
 
-        remover_client = self.c_v1 if v1 else self.c_v2
+        remover_client = self.c_v2
 
         # Remove pref without RREV in a remote
         remover_client.run("remove {} -p {} -f -r default".format(self.ref, pref2.id))
@@ -685,8 +530,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertFalse(self.server.package_exists(pref1))
         self.assertFalse(self.server.package_exists(pref2))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_remove_remote_package_revision(self, v1):
+    def test_remove_remote_package_revision(self):
         """When a client removes a package with PREV
           (conan remove zlib/1.0@conan/stable -p 12312#PREV)
             - If not RREV, the client fails
@@ -715,7 +559,7 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.assertEqual(pref2.ref.revision, pref2b.ref.revision)
         self.assertNotEqual(pref2.revision, pref2b.revision)
 
-        remover_client = self.c_v1 if v1 else self.c_v2
+        remover_client = self.c_v2
 
         # Remove PREV without RREV in a remote, the client has to fail
         command = "remove {} -p {}#{} -f -r default".format(self.ref, pref2.id, pref2.revision)
@@ -726,25 +570,21 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         # Remove package with RREV and PREV
         command = "remove {} -p {}#{} -f -r default".format(pref2.ref.full_str(),
                                                             pref2.id, pref2.revision)
-        if v1:
-            remover_client.run(command, assert_error=True)
-            self.assertIn("Revisions not enabled in the client", remover_client.out)
-        else:
-            remover_client.run(command)
-            self.assertTrue(self.server.recipe_exists(pref1.ref))
-            self.assertTrue(self.server.recipe_exists(pref2.ref))
-            self.assertTrue(self.server.recipe_exists(pref2b.ref))
-            self.assertTrue(self.server.package_exists(pref1))
-            self.assertTrue(self.server.package_exists(pref2b))
-            self.assertFalse(self.server.package_exists(pref2))
+        remover_client.run(command)
+        self.assertTrue(self.server.recipe_exists(pref1.ref))
+        self.assertTrue(self.server.recipe_exists(pref2.ref))
+        self.assertTrue(self.server.recipe_exists(pref2b.ref))
+        self.assertTrue(self.server.package_exists(pref1))
+        self.assertTrue(self.server.package_exists(pref2b))
+        self.assertFalse(self.server.package_exists(pref2))
 
-            # Try to remove a missing revision
-            command = "remove {} -p {}#fakerev -f -r default".format(pref2.ref.full_str(),
-                                                                     pref2.id)
-            remover_client.run(command, assert_error=True)
-            fakeref = pref2.copy_with_revs(pref2.ref.revision, "fakerev")
-            self.assertIn("Binary package not found: '{}'".format(fakeref.full_str()),
-                          remover_client.out)
+        # Try to remove a missing revision
+        command = "remove {} -p {}#fakerev -f -r default".format(pref2.ref.full_str(),
+                                                                 pref2.id)
+        remover_client.run(command, assert_error=True)
+        fakeref = pref2.copy_with_revs(pref2.ref.revision, "fakerev")
+        self.assertIn("Binary package not found: '{}'".format(fakeref.full_str()),
+                      remover_client.out)
 
 
 class SearchingPackagesWithRevisions(unittest.TestCase):
@@ -754,33 +594,16 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.server2 = TestServer()
         servers = OrderedDict([("default", self.server),
                                ("remote2", self.server2)])
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers=servers)
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers=servers)
+        self.c_v2 = TurboTestClient(servers=servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_outdated_packages_locally_without_rrev(self, v1):
-        """If we search for the packages of a ref without specifying the RREV using --outdated:
-           it shows the packages not matching the current recipe revision"""
-        # Create locally a package outdated, because we export a new recipe revision
-        self.c_v1.create(self.ref)
-        ref = self.c_v1.export(self.ref, conanfile=GenConanfile().
-                               with_build_msg("I'm your father, rev2"))
-
-        if not v1:
-            self.c_v1.enable_revisions()
-
-        data = self.c_v1.search(ref, args="--outdated")
-        self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
-
-    @parameterized.expand([(True,), (False,)])
-    def test_search_outdated_packages_locally_with_rrev(self, v1):
+    def test_search_outdated_packages_locally_with_rrev(self):
         """If we search for the packages of a ref specifying the RREV using --outdated:
             - If the RREV do not exists it will raise
             - If the RREV exists it won't show anything, if the recipe is there, is the current one
         """
         # Create locally a package outdated, because we export a new recipe revision
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         client.create(self.ref)
         ref = client.export(self.ref, conanfile=GenConanfile().
                             with_build_msg("I'm your father, rev2"))
@@ -791,57 +614,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         client.search("{}#fakerev".format(ref), args="--outdated", assert_error=True)
         self.assertIn("Recipe not found: 'lib/1.0@conan/testing#fakerev'", client.out)
 
-    def test_search_outdated_packages_remote(self):
-        """If we search for outdated packages in a remote, it has to be
-        always empty, unless it is the "0" revision that contain some mixed packages uploaded with
-        a client with revisions disabled
-        """
-        self.c_v1.create(self.ref, conanfile=GenConanfile().
-                         with_setting("os").
-                         with_build_msg("I'm revision 1"),
-                         args="-s os=Windows")
-        self.c_v1.upload_all(self.ref)
-
-        # Different revision, different package_id (but everything uploaded to rev0)
-        self.c_v1.create(self.ref, conanfile=GenConanfile().
-                         with_setting("os").
-                         with_build_msg("I'm revision 2"),
-                         args="-s os=Linux")
-        self.c_v1.upload_all(self.ref)
-
-        # Verify in the server there is only one revision "0"
-        revs = self.server.server_store.get_recipe_revisions(self.ref)
-        self.assertEqual([r.revision for r in revs], [DEFAULT_REVISION_V1])
-
-        # Verify if we can reach both packages with v1 (The Windows is outdated)
-        data = self.c_v1.search(self.ref, remote="default")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Windows", "Linux"]), set(oss))
-
-        # Verify using v1 we can search for the outdated
-        data = self.c_v1.search(self.ref, remote="default", args="--outdated")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Windows"]), set(oss))
-        self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
-
-        # Verify using v2 if we can get the outdated
-        data = self.c_v2.search(self.ref, remote="default", args="--outdated")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Windows"]), set(oss))
-        self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
-
-        # Verify using v2 and specifying RREV we can get the outdated
-        data = self.c_v2.search(self.ref.copy_with_rev(DEFAULT_REVISION_V1),
-                                remote="default", args="--outdated")
-        oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        self.assertEqual(set(["Windows"]), set(oss))
-        self.assertTrue(data["results"][0]["items"][0]["packages"][0]["outdated"])
-
-    @parameterized.expand([(True,), (False,)])
-    def test_search_all_remotes_with_rrev(self, v1):
+    def test_search_all_remotes_with_rrev(self):
         """If we search for the packages of a ref with the RREV in the "all" remote:
 
-         - With an v1 client, it fails
          - With an v2 client, it shows the packages for that specific RREV, in all the remotes,
            in an isolated way, just as we made it calling Conan N times
 
@@ -868,24 +643,17 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertTrue(self.server.package_exists(refs[0][0]))
         self.assertTrue(self.server2.package_exists(refs2[0][0]))
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
 
-        if v1:
-            client.search(revision_ref.full_str(), remote="all", assert_error=True)
-            self.assertIn("ERROR: Revisions not enabled in the client, "
-                          "specify a reference without revision", client.out)
-        else:
-            data = client.search(revision_ref.full_str(), remote="all")
-            oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-            oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
-            self.assertEqual(["Windows"], oss_r1)
-            self.assertEqual(["Linux"], oss_r2)
+        data = client.search(revision_ref.full_str(), remote="all")
+        oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
+        oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
+        self.assertEqual(["Windows"], oss_r1)
+        self.assertEqual(["Linux"], oss_r2)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_all_remotes_without_rrev(self, v1):
+    def test_search_all_remotes_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV in the "all" remote:
 
-         - With an v1 client, it shows all the packages for all the revisions, in all the remotes
          - With an v2 client, it shows the packages for the latest, in all the remotes,
            in an isolated way, just as we made it calling Conan N times
 
@@ -903,23 +671,17 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2.massive_uploader(self.ref, revisions, remote="remote2", num_prev=2)
         self.c_v2.remove_all()
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
 
         data = client.search(str(self.ref), remote="all")
         oss_r1 = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
         oss_r2 = [p["settings"]["os"] for p in data["results"][1]["items"][0]["packages"]]
-        if v1:
-            self.assertEqual(set(["Windows", "Macos", "SunOS", "FreeBSD"]), set(oss_r1))
-            self.assertEqual(set(["Linux"]), set(oss_r2))
-        else:
-            self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss_r1))
-            self.assertEqual(set(["Linux"]), set(oss_r2))
+        self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss_r1))
+        self.assertEqual(set(["Linux"]), set(oss_r2))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_a_remote_package_without_rrev(self, v1):
+    def test_search_a_remote_package_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV:
 
-         - With an v1 client, it shows all the packages for all the revisions
          - With an v2 client, it shows the packages for the latest
 
          No matter how many PREVS are uploaded it returns package references not duplicated"""
@@ -935,24 +697,19 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                     [{"os": "SunOS"}, {"os": "FreeBSD"}]
         self.c_v2.massive_uploader(self.ref, revisions, num_prev=2)
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         client.remove_all()
 
         data = client.search(str(self.ref), remote="default")
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
-        if v1:
-            self.assertEqual(set(["Linux", "Windows", "Macos", "SunOS", "FreeBSD"]), set(oss))
-        else:
-            self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss))
+        self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_a_local_package_without_rrev(self, v1):
+    def test_search_a_local_package_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV:
 
-         - With an v1 client, it shows all the packages in local.
          - With an v2 client, it shows the packages in local for the latest, not showing the
            packages that doesn't belong to the recipe"""
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
 
         # Create two RREVs, first with Linux and Windows, second with Mac only (one PREV)
         conanfile = GenConanfile().with_build_msg("Rev1").with_setting("os")
@@ -968,16 +725,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search(self.ref)
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
 
-        if v1:
-            self.assertEqual(set(["Linux", "Windows", "Macos"]), set(oss))
-        else:
-            self.assertEqual(set(["Macos"]), set(oss))
+        self.assertEqual(set(["Macos"]), set(oss))
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_a_remote_package_with_rrev(self, v1):
+    def test_search_a_remote_package_with_rrev(self):
         """If we search for the packages of a ref specifying the RREV:
-         1. With v2 client it shows the packages for that RREV
-         2. With v1 client it fails, because it cannot propagate the rrev with v1"""
+         1. With v2 client it shows the packages for that RREV"""
 
         # Upload to the server two rrevs for "lib" and two rrevs for "lib2"
         conanfile = GenConanfile().with_build_msg("REV1").with_setting("os")
@@ -991,27 +743,20 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         # Ensure we have uploaded two different revisions
         self.assertNotEqual(pref.ref.revision, pref2.ref.revision)
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         client.remove_all()
-        if v1:
-            client.search(pref.ref.full_str(), remote="default", assert_error=True)
-            self.assertIn("ERROR: Revisions not enabled in the client, specify "
-                          "a reference without revision", client.out)
-        else:
-            data = client.search(pref.ref.full_str(), remote="default")
-            items = data["results"][0]["items"][0]["packages"]
-            self.assertEqual(1, len(items))
-            oss = items[0]["settings"]["os"]
-            self.assertEqual(oss, "Linux")
+        data = client.search(pref.ref.full_str(), remote="default")
+        items = data["results"][0]["items"][0]["packages"]
+        self.assertEqual(1, len(items))
+        oss = items[0]["settings"]["os"]
+        self.assertEqual(oss, "Linux")
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_a_local_package_with_rrev(self, v1):
+    def test_search_a_local_package_with_rrev(self):
         """If we search for the packages of a ref specifying the RREV in the local cache:
          1. With v2 client it shows the packages for that RREV and only if it is the one
-            in the cache, otherwise it is not returned.
-         2. With v1 client: the same"""
+            in the cache, otherwise it is not returned."""
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         pref1 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev1"),
                               args="-s os=Windows")
 
@@ -1025,13 +770,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertIn("Existing packages for recipe {}:".format(pref2.ref), client.out)
         self.assertIn("os: Linux", client.out)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_recipes_in_local_by_pattern(self, v1):
+    def test_search_recipes_in_local_by_pattern(self):
         """If we search for recipes with a pattern:
-         1. With v2 client it return the refs matching, the refs doesn't contain RREV
-         2. With v1 client, same"""
+         1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         # Create a couple of recipes locally
         client.export(self.ref)
         ref2 = ConanFileReference.loads("lib2/1.0@conan/testing")
@@ -1044,13 +787,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         expected = [str(self.ref), str(ref2)]
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_recipes_in_local_by_revision_pattern(self, v1):
+    def test_search_recipes_in_local_by_revision_pattern(self):
         """If we search for recipes with a pattern containing even the RREV:
-         1. With v2 client it return the refs matching, the refs doesn't contain RREV
-         2. With v1 client, same"""
+         1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         # Create a couple of recipes locally
         client.export(self.ref)
         ref2 = ConanFileReference.loads("lib2/1.0@conan/testing")
@@ -1063,11 +804,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         expected = [str(self.ref)]
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
-    @parameterized.expand([(True,), (False,)])
-    def test_search_recipes_in_remote_by_pattern(self, v1):
+    def test_search_recipes_in_remote_by_pattern(self):
         """If we search for recipes with a pattern:
-         1. With v2 client it return the refs matching of the latests, the refs doesnt contain RREV
-         2. With v1 client it return the refs matching, the refs without the RREV"""
+         1. With v2 client it return the refs matching of the latests, the refs doesnt contain RREV"""
 
         # Upload to the server two rrevs for "lib" and two rrevs for "lib2"
         self.c_v2.create(self.ref)
@@ -1085,7 +824,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         # Search from the client for "lib*"
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         client.remove_all()
         data = client.search("lib*", remote="default")
         items = data["results"][0]["items"]
@@ -1094,13 +833,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
-    @parameterized.expand([(True,), (False,)])
     @pytest.mark.skipif(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
                         reason="Not implemented in artifactory")
-    def test_search_in_remote_by_revision_pattern(self, v1):
+    def test_search_in_remote_by_revision_pattern(self):
         """If we search for recipes with a pattern like "lib/1.0@conan/stable#rev*"
          1. With v2 client: We get the revs without refs matching the pattern
-         2. With v1 client: Same
 
          The same for "lib/*@conan/stable#rev" and "*lib/*@conan/stable#rev"
 
@@ -1118,7 +855,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2.create(ref2)
         self.c_v2.upload_all(ref2)
 
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
 
         data = client.search("{}*".format(pref2_lib.ref.full_str()), remote="default")
         items = data["results"][0]["items"]
@@ -1143,43 +880,6 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         expected = []
         self.assertEqual(expected, items)
 
-    def test_search_revisions_locally_with_v1_server(self):
-        """If I upload a recipe to a v1 server and then I check the revisions locally, it
-        will return None to the time because the v1 doesn't support revisions"""
-        old_server = TestServer(server_capabilities=[])
-        servers = OrderedDict([("default", old_server)])
-        c_v1 = TurboTestClient(revisions_enabled=False, servers=servers)
-        pref = c_v1.create(self.ref)
-        c_v1.upload_all(self.ref)
-        c_v1.enable_revisions()
-
-        # Local searchs
-        c_v1.run("search {} --revisions".format(pref.ref))
-        self.assertIn("{} (No time)".format(pref.ref.revision), c_v1.out)
-
-        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
-        c_v1.run("search {} --revisions".format(pref_rev.full_str()))
-        self.assertIn("{} (No time)".format(pref.revision), c_v1.out)
-
-    def test_search_revisions_remotely_with_v1_server(self):
-        """If I upload a recipe to a v1 server and then I check the revisions locally, it
-        will return None to the time because the v1 doesn't support revisions"""
-        old_server = TestServer(server_capabilities=[])
-        servers = OrderedDict([("default", old_server)])
-        c_v1 = TurboTestClient(revisions_enabled=False, servers=servers)
-        pref = c_v1.create(self.ref)
-        c_v1.upload_all(self.ref)
-        c_v1.enable_revisions()
-
-        # Local searchs
-        c_v1.run("search {} --revisions -r default".format(pref.ref), assert_error=True)
-        self.assertIn("The remote doesn't support revisions", c_v1.out)
-
-        pref_rev = pref.copy_with_revs(pref.ref.revision, None)
-        c_v1.run("search {} --revisions -r default".format(pref_rev.full_str()),
-                 assert_error=True)
-        self.assertIn("The remote doesn't support revisions", c_v1.out)
-
     def test_search_revisions_regular_results(self):
         """If I upload several revisions to a server, we can list the times"""
         server = TestServer()
@@ -1199,69 +899,26 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    @parameterized.expand([(True,), (False,)])
-    def test_upload_a_recipe(self, v1):
+    def test_upload_a_recipe(self):
         """If we upload a package to a server:
-        1. Using v1 client it will upload "0" revision to the server. The rev time is NOT updated.
-        2. Using v2 client it will upload RREV revision to the server. The rev time is NOT updated.
+        Using v2 client it will upload RREV revision to the server. The rev time is NOT updated.
         """
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         pref = client.create(self.ref)
         client.upload_all(self.ref)
         revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
 
-        if v1:
-            self.assertEqual(revs, [DEFAULT_REVISION_V1])
-        else:
-            self.assertEqual(revs, [pref.ref.revision])
+        self.assertEqual(revs, [pref.ref.revision])
 
-    @parameterized.expand([(True,), (False,)])
-    def test_upload_discarding_outdated_packages(self, v1):
-        """If we upload all packages to a server,
-           if a package doesn't belong to the current recipe:
-        1. Using v1 client it will upload all the binaries as revision "0".
-        2. Using v2 client it will upload only the matching packages.
-        """
-        conanfile = GenConanfile().with_setting("os")
-        pref = self.c_v1.create(self.ref, conanfile=conanfile, args=" -s os=Windows")
-        if not v1:
-            self.c_v1.enable_revisions()  # Ensure we upload with v2 both revisions
-        self.c_v1.upload_all(self.ref)
-
-        # To allow creating a non-matching revision binary package
-        self.c_v1.disable_revisions()
-        pref2 = self.c_v1.create(self.ref, conanfile=conanfile.with_build_msg("rev2"),
-                                 args=" -s os=Linux")
-
-        # Now pref is outdated in the client, should not be uploaded with v2
-        client = self.c_v1
-        if not v1:
-            client.enable_revisions()
-
-        client.upload_all(self.ref)
-
-        if not v1:
-            self.assertIn("Skipping package '%s', "
-                          "it doesn't belong to the current recipe revision" % pref.id, client.out)
-
-        revs = [r.revision for r in self.server.server_store.get_recipe_revisions(self.ref)]
-        if v1:
-            self.assertEqual(revs, [DEFAULT_REVISION_V1])
-        else:
-            self.assertEqual(set(revs), set([pref.ref.revision, pref2.ref.revision]))
-
-    @parameterized.expand([(True,), (False,)])
-    def test_upload_no_overwrite_recipes(self, v1):
+    def test_upload_no_overwrite_recipes(self):
         """If we upload a RREV to the server and create a new RREV in the client,
         when we upload with --no-overwrite
-        1. Using v1 client it will fail because it cannot overwrite.
-        2. Using v2 client it will warn an upload a new revision.
+        Using v2 client it will warn an upload a new revision.
         """
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         pref = client.create(self.ref, conanfile=GenConanfile().with_setting("os"),
                              args=" -s os=Windows")
         client.upload_all(self.ref)
@@ -1269,25 +926,16 @@ class UploadPackagesWithRevisions(unittest.TestCase):
                               conanfile=GenConanfile().with_setting("os").with_build_msg("rev2"),
                               args=" -s os=Linux")
 
-        if v1:
-            client.upload_all(self.ref, args="--no-overwrite", assert_error=True)
-            self.assertIn("Local recipe is different from the remote recipe. "
-                          "Forbidden overwrite.", client.out)
-        else:
-            self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0],
-                              pref.ref.revision)
-            client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0],
-                              pref2.ref.revision)
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref.ref.revision)
+        client.upload_all(self.ref, args="--no-overwrite")
+        self.assertEqual(self.server.server_store.get_last_revision(self.ref)[0], pref2.ref.revision)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_upload_no_overwrite_packages(self, v1):
+    def test_upload_no_overwrite_packages(self):
         """If we upload a PREV to the server and create a new PREV in the client,
         when we upload with --no-overwrite
-        1. Using v1 client it will fail because it cannot overwrite.
-        2. Using v2 client it will warn and upload a new revision.
+        Using v2 client it will warn and upload a new revision.
         """
-        client = self.c_v1 if v1 else self.c_v2
+        client = self.c_v2
         conanfile = GenConanfile().with_package_file("file", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
             pref = client.create(self.ref, conanfile=conanfile)
@@ -1298,16 +946,11 @@ class UploadPackagesWithRevisions(unittest.TestCase):
 
         self.assertNotEqual(pref.revision, pref2.revision)
 
-        if v1:
-            client.upload_all(self.ref, args="--no-overwrite", assert_error=True)
-            self.assertIn("Local package is different from the remote package. "
-                          "Forbidden overwrite.", client.out)
-        else:
-            self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
-                              pref.revision)
-            client.upload_all(self.ref, args="--no-overwrite")
-            self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
-                              pref2.revision)
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
+                         pref.revision)
+        client.upload_all(self.ref, args="--no-overwrite")
+        self.assertEqual(self.server.server_store.get_last_package_revision(pref2).revision,
+                         pref2.revision)
 
 
 class SCMRevisions(unittest.TestCase):
@@ -1365,11 +1008,12 @@ class SCMRevisions(unittest.TestCase):
 
 class CapabilitiesRevisionsTest(unittest.TestCase):
 
+    # FIXME: This test should fail when we completely remove revisions support
     def test_server_without_revisions_capability(self):
         """If a server doesn't have the revisions capability, a modern client will still
         talk v1"""
         server = TestServer(server_capabilities=[])
-        c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": server})
+        c_v2 = TurboTestClient(servers={"default": server})
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         c_v2.create(ref)
         c_v2.upload_all(ref)
@@ -1378,42 +1022,32 @@ class CapabilitiesRevisionsTest(unittest.TestCase):
         self.assertEqual(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
 
     def test_server_with_only_v2_capability(self):
-        server = TestServer(server_capabilities=[ONLY_V2])
-        c_v2 = TurboTestClient(revisions_enabled=False, servers={"default": server})
+        server = TestServer(server_capabilities=[])
+        c_v2 = TurboTestClient(servers={"default": server})
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
         c_v2.create(ref)
-        c_v2.upload_all(ref, remote="default", assert_error=True)
-        self.assertIn("The remote at '{}' only works with revisions enabled. "
-                      "Set CONAN_REVISIONS_ENABLED=1 or set 'general.revisions_enabled = 1' "
-                      "at the 'conan.conf'. [Remote: default]".format(server.fake_url), c_v2.out)
+        c_v2.upload_all(ref, remote="default")
 
 
 class InfoRevisions(unittest.TestCase):
 
-    @parameterized.expand([(True,), (False,)])
-    def test_info_command_showing_revision(self, v1):
+    def test_info_command_showing_revision(self):
         """If I run 'conan info ref' I get information about the revision only in a v2 client"""
         server = TestServer(server_capabilities=[])
-        c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": server})
-        c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": server})
+        client = TurboTestClient(servers={"default": server})
         ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-        client = c_v1 if v1 else c_v2
         client.create(ref)
         client.run("info {}".format(ref))
         revision = client.recipe_revision(ref)
-        if v1:
-            self.assertNotIn("Revision:", client.out)
-        else:
-            self.assertIn("Revision: {}".format(revision), client.out)
+        self.assertIn("Revision: {}".format(revision), client.out)
 
 
 class ServerRevisionsIndexes(unittest.TestCase):
 
     def setUp(self):
         self.server = TestServer()
-        self.c_v1 = TurboTestClient(revisions_enabled=False, servers={"default": self.server})
-        self.c_v2 = TurboTestClient(revisions_enabled=True, servers={"default": self.server})
+        self.c_v2 = TurboTestClient(servers={"default": self.server})
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
     def test_rotation_deleting_recipe_revisions(self):
@@ -1547,23 +1181,3 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])
-
-    def test_v1_get_always_latest(self):
-        conanfile = GenConanfile()
-        self.c_v1.create(self.ref, conanfile=conanfile)
-        self.c_v1.upload_all(self.ref)
-
-        pref = self.c_v2.create(self.ref, conanfile=conanfile.with_build_msg("Rev2"))
-        self.c_v2.upload_all(self.ref)
-
-        latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEqual(latest.revision, pref.ref.revision)
-
-        if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
-            time.sleep(62)
-
-        self.c_v1.create(self.ref, conanfile=conanfile.with_build_msg("Rev3"))
-        self.c_v1.upload_all(self.ref)
-
-        latest = self.server.server_store.get_last_revision(self.ref)
-        self.assertEqual(latest.revision, DEFAULT_REVISION_V1)
