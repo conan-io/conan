@@ -176,9 +176,11 @@ class ConanFileMock(ConanFile):
         self.layout = Layout()
         self.layout.set_base_source_folder(".")
         self.layout.set_base_build_folder(".")
-        self.layout.install_folder = "myinstallfolder"
+        self.layout.set_base_install_folder("myinstallfolder")
 
-    def run(self, command):
+    def run(self, command, win_bash=False, subsystem=None):
+        assert win_bash is False
+        assert subsystem is None
         self.command = command
         self.path = os.environ["PATH"]
         self.captured_env = {key: value for key, value in os.environ.items()}

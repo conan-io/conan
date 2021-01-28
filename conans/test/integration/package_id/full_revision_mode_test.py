@@ -319,3 +319,20 @@ class PackageRevisionModeTest(unittest.TestCase):
         self.client.run("install StationinterfaceRpm.py")
         for pkg, id_ in ids.items():
             self.assertIn("%s:%s - Cache" % (pkg, id_), self.client.out)
+
+
+def test_package_revision_mode_full_transitive_package_id():
+    # https://github.com/conan-io/conan/issues/8310
+    client = TestClient()
+    client.run("config set general.default_package_id_mode=package_revision_mode")
+    client.run("config set general.full_transitive_package_id=1")
+    client.save({"tool/conanfile.py": GenConanfile(),
+                 "pkga/conanfile.py": GenConanfile(),
+                 "pkgb/conanfile.py": GenConanfile().with_requires("tool/0.1", "pkga/0.1"),
+                 "profile": "[build_requires]\ntool/0.1"})
+    client.run("export tool tool/0.1@")
+    client.run("export pkga pkga/0.1@")
+    client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
+    assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
+    assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
+    assert "pkgb/0.1: Package 'f524f1981a44932e1445e13ae4cf9e2ff8112027' created" in client.out

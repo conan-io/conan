@@ -1,5 +1,4 @@
 import textwrap
-import warnings
 from collections import OrderedDict, defaultdict
 
 from jinja2 import DictLoader, Environment
@@ -95,6 +94,27 @@ class CMakeToolchainBase(object):
             {%- endif %}
         {% endblock %}
 
+        {% if shared_libs -%}
+            message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+            set(BUILD_SHARED_LIBS {{ shared_libs }})
+        {%- endif %}
+
+        {% if parallel -%}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
+        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
+        {%- endif %}
+
+        {% if cppstd -%}
+        message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
+        set(CMAKE_CXX_STANDARD {{ cppstd }})
+        set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
+        {%- endif %}
+
+        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+
         # Variables
         {% for it, value in variables.items() %}
         set({{ it }} "{{ value }}" CACHE STRING "Variable {{ it }} conan-toolchain defined")
@@ -142,21 +162,6 @@ class CMakeToolchainBase(object):
             "build_type": self.build_type,
         }
         return ctxt_toolchain
-
-    def write_toolchain_files(self):
-        # Warning
-        msg = ("\n*****************************************************************\n"
-               "******************************************************************\n"
-               "'write_toolchain_files()' has been deprecated and moved.\n"
-               "It will be removed in next Conan release.\n"
-               "Use 'generate()' method instead.\n"
-               "********************************************************************\n"
-               "********************************************************************\n")
-        from conans.client.output import Color, ConanOutput
-        ConanOutput(self._conanfile.output._stream,
-                    color=self._conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
-        warnings.warn(msg)
-        self.generate()
 
     def generate(self):
         # Prepare templates to be loaded

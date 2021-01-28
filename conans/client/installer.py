@@ -31,7 +31,6 @@ from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger
@@ -379,9 +378,10 @@ class BinaryInstaller(object):
         download_nodes = []
         for node in downloads:
             pref = node.pref
-            if pref in processed_package_refs:
+            bare_pref = PackageReference(pref.ref, pref.id)
+            if bare_pref in processed_package_refs:
                 continue
-            processed_package_refs.add(pref)
+            processed_package_refs[bare_pref] = pref.revision
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
@@ -417,7 +417,7 @@ class BinaryInstaller(object):
                 msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
-        processed_package_refs = set()
+        processed_package_refs = {}
         self._download(downloads, processed_package_refs)
 
         for level in nodes_by_level:
@@ -496,8 +496,9 @@ class BinaryInstaller(object):
         layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
 
         with layout.package_lock(pref):
-            if pref not in processed_package_references:
-                processed_package_references.add(pref)
+            bare_pref = PackageReference(pref.ref, pref.id)
+            processed_prev = processed_package_references.get(bare_pref)
+            if processed_prev is None:  # This package-id has not been processed before
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     layout.package_remove(pref)
@@ -514,6 +515,11 @@ class BinaryInstaller(object):
                     output.success('Already installed!')
                     log_package_got_from_local_cache(pref)
                     self._recorder.package_fetched_from_cache(pref)
+                processed_package_references[bare_pref] = node.prev
+            else:
+                # We need to update the PREV of this node, as its processing has been skipped,
+                # but it could be that another node with same PREF was built and obtained a new PREV
+                node.prev = processed_prev
 
             package_folder = layout.package(pref)
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
@@ -609,9 +615,9 @@ class BinaryInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        conan_v2 = get_env(CONAN_V2_MODE_ENVVAR, False)
         # Minimal pythonpath, not the whole context, make it 50% slower
-        with pythonpath(conanfile) if not conan_v2 else no_op():
+        # FIXME Conan 2.0, Remove old ways of reusing python code
+        with pythonpath(conanfile):
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     conanfile.package_folder = package_folder

@@ -11,7 +11,7 @@ from conans.client.tools.oss import args_to_string
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import decode_text, get_abs_path, mkdir
 from conans.util.runners import version_runner
 
@@ -32,9 +32,7 @@ class Meson(object):
         self._os = self._ss("os")
 
         self._compiler = self._ss("compiler")
-        if not self._compiler:
-            conan_v2_behavior("compiler setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("compiler setting should be defined.", not self._compiler)
 
         self._compiler_version = self._ss("compiler.version")
 
@@ -214,9 +212,7 @@ class Meson(object):
     def build(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_build:
             return
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("build_type setting should be defined.", not self._build_type)
         self._run_ninja_targets(args=args, build_dir=build_dir, targets=targets)
 
     def install(self, args=None, build_dir=None):

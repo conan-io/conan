@@ -42,7 +42,7 @@ def get_generator_platform(settings, generator):
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
+    if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
             generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
@@ -68,11 +68,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         {% block main %}
             {{ super() }}
 
-            {% if shared_libs -%}
-                message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
-                set(BUILD_SHARED_LIBS {{ shared_libs }})
-            {%- endif %}
-
             {% if fpic -%}
                 message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
                 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -84,11 +79,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
                 set(CMAKE_INSTALL_NAME_DIR "")
             {% endif -%}
-
-            {% if parallel -%}
-                set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ parallel }}")
-                set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ parallel }}")
-            {%- endif %}
 
             {% if architecture -%}
                 set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ architecture }}")
@@ -104,12 +94,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
             {%- endif %}
 
-            {% if cppstd -%}
-                message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}")
-                set(CMAKE_CXX_STANDARD {{ cppstd }})
-                set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
-            {%- endif %}
-
             {% if vs_runtimes %}
             {% set genexpr = namespace(str='') %}
             {%- for config, value in vs_runtimes.items() -%}
@@ -118,11 +102,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             {%- endfor -%}
             set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
             {% endif %}
-
-            set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-            set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
         {% endblock %}
         """)
 
@@ -213,6 +192,12 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                                        "MTd": "MultiThreadedDebug",
                                        "MD": "MultiThreadedDLL",
                                        "MDd": "MultiThreadedDebugDLL"}[runtime]
+        if compiler == "msvc":
+            runtime_type = settings.get_safe("compiler.runtime_type")
+            rt = "MultiThreadedDebug" if runtime_type == "Debug" else "MultiThreaded"
+            if runtime != "static":
+                rt += "DLL"
+            config_dict[build_type] = rt
         return config_dict
 
     def _get_libcxx(self):

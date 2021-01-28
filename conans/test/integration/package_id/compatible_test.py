@@ -4,6 +4,7 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import save
 
 
 class CompatibleIDsTest(unittest.TestCase):
@@ -492,3 +493,28 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing:1ebf4db7209535776307f9cd06e00d5a8034bc84 - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
+
+
+def test_msvc_visual_incompatible():
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=19.1
+        compiler.runtime=dynamic
+        compiler.cppstd=14
+        build_type=Release
+        arch=x86_64
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+               '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
+    client.run("install pkg/0.1@ -pr=profile")
+    assert "Using compatible package" in client.out
+    new_config = "core.package_id:msvc_visual_incompatible=1"
+    save(client.cache.new_config_path, new_config)
+    client.run("install pkg/0.1@ -pr=profile", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

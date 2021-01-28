@@ -1,15 +1,14 @@
 import os
 import unittest
 
-import pytest
 
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
+
 class InfoTest(unittest.TestCase):
 
     def setUp(self):
@@ -49,15 +48,21 @@ class InfoTest(unittest.TestCase):
         self._export("H2a", "0.1", deps=["H1a/0.1@lu/st"])
         self._export("H2c", "0.1", deps=["H1c/0.1@lu/st"])
 
-        self._export("H3", "0.1", deps=["H2a/0.1@lu/st",
-                                        "H2c/0.1@lu/st"])
+        self._export("H3", "0.1", deps=["H2a/0.1@lu/st", "H2c/0.1@lu/st"])
 
     def _export(self, name=0, version=None, deps=None):
         client = TestClient(servers=self.servers, users={"default": [("lu", "mypass")]})
         self.clients[name] = client
         # Not necessary to actually build binaries
-        files = cpp_hello_conan_files(name, version, deps, build=False)
-        client.save(files, clean_first=True)
+        conanfile = GenConanfile(name, version)
+        for dep in deps or []:
+            try:
+                ref, private = dep
+            except ValueError:
+                ref, private = dep, None
+            conanfile.with_require(ref, private=private)
+
+        client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . lu/st")
         client.run("upload %s/%s@lu/st" % (name, version))
 
@@ -136,6 +141,3 @@ class InfoTest(unittest.TestCase):
 
         self.clients["H3"].run("info . --build missing --json")
         self.assert_last_line(self.clients["H3"], json_output)
-
-
-
