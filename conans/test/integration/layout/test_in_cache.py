@@ -37,8 +37,8 @@ def conanfile():
 
     def package_info(self):
         # This will be easier when the layout declares also the includedirs etc
-        self.cpp_info.includedirs = [os.path.join(self.package_folder, "include")]
-        self.cpp_info.libdirs = [os.path.join(self.package_folder, "lib")]
+        self.cpp_info.includedirs = ["include"]
+        self.cpp_info.libdirs = ["lib"]
     """
     return conan_file
 
