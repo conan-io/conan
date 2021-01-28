@@ -852,8 +852,6 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = None
         result = conanfile.collect_libs()
         self.assertEqual([], result)
-        self.assertIn("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                      conanfile.output)
 
         # Default behavior
         conanfile.package_folder = temp_folder()

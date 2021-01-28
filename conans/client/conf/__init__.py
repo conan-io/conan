@@ -8,7 +8,6 @@ from configparser import ConfigParser, NoSectionError
 from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -128,15 +127,13 @@ _t_default_settings_yml = Template(textwrap.dedent("""
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
-    {% if not conan_v2 %}
+
     cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
-    {% endif %}
     """))
 
 
-def get_default_settings_yml(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_settings_yml.render(conan_v2=conan_v2)
+def get_default_settings_yml():
+    return _t_default_settings_yml.render()
 
 
 _t_default_client_conf = Template(textwrap.dedent("""
@@ -218,18 +215,14 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
 
-    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
     [hooks]    # environment CONAN_HOOKS
     attribute_checker
-    {% endif %}
 
-    # Default settings now declared in the default profile
     """))
 
 
 def get_default_client_conf(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
+    return _t_default_client_conf.render(default_profile=DEFAULT_PROFILE_NAME)
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -465,7 +458,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 scm_to_conandata = self.get_item("general.scm_to_conandata")
             return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+            return False
 
     @property
     def default_package_id_mode(self):

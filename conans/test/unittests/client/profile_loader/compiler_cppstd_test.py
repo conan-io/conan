@@ -10,7 +10,6 @@ from conans.client.cache.cache import ClientCache
 from conans.client.migrations_settings import settings_1_14_0
 from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
@@ -106,8 +105,7 @@ class SettingsCppStdTests(unittest.TestCase):
         with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one."):
-            with catch_deprecation_warning(self):
-                r.process_settings(self.cache)
+            r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
 
@@ -118,14 +116,12 @@ class SettingsCppStdTests(unittest.TestCase):
         with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one"):
-            with catch_deprecation_warning(self):
-                r.process_settings(self.cache)
+            r.process_settings(self.cache)
 
     def test_value_from_cppstd(self):
         self._save_profile(cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with catch_deprecation_warning(self):
-            r.process_settings(self.cache)
+        r.process_settings(self.cache)
         self.assertNotIn('compiler.cppstd', r.settings)
         self.assertEqual(r.settings["cppstd"], "11")

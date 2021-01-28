@@ -7,7 +7,6 @@ import pytest
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -48,12 +47,7 @@ class Pkg(ConanFile):
                 conanfile = conanfile.with_require(ConanFileReference.loads(require))
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
-        revisions_enabled = self.client.cache.config.revisions_enabled
-        self.client.disable_revisions()
-        # Trick to allow export a new recipe without removing old binary packages
         self.client.run("export . %s" % (channel or "lasote/stable"))
-        if revisions_enabled:
-            self.client.enable_revisions()
 
     @property
     def conaninfo(self):
@@ -177,6 +171,9 @@ class Pkg(ConanFile):
                          clean_first=True)
         self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
+        pkg_id = "586c42dfdef8986cde85cda46b44133db925baae"
+        self.assertIn("Hello2/2.3.8@lasote/stable:{} - Build".format(pkg_id),
+                      self.client.out)
 
         # If we change the user and channel should be needed to rebuild
         self._export("Hello", "1.2.0", package_id_text=None, requires=None,
@@ -204,7 +201,9 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        self.client.run("install .")
+        assert_error = True if self.client.cache.config.revisions_enabled else False
+        self.client.run("install .", assert_error=assert_error)
+        self.assertIn("Hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -392,11 +391,10 @@ class Pkg(ConanFile):
                         ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
                         ' -s compiler.version=7.2 --build')
 
-        with catch_deprecation_warning(self, n=1):
-            self.client.run('install Hello/1.2.0@user/testing'
-                            ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                            ' -s compiler.version=7.2 -s cppstd=gnu14',
-                            assert_error=True)  # Default
+        self.client.run('install Hello/1.2.0@user/testing'
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu14',
+                        assert_error=True)  # Default
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
     def test_std_non_matching_with_compiler_cppstd(self):
