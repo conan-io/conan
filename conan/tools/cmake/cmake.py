@@ -70,7 +70,7 @@ class CMake(object):
             source = os.path.join(self._conanfile.source_folder, source_folder)
 
         build_folder = self._conanfile.build_folder
-        generator_folder = self._conanfile.layout.generators_folder
+        generator_folder = self._conanfile.generators_folder
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(

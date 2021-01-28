@@ -20,6 +20,7 @@ def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref,
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
+
     if conanfile.package_folder == conanfile.build_folder:
         raise ConanException("Cannot 'conan package' to the build folder. "
                              "--build-folder and package folder can't be the same")

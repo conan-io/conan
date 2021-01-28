@@ -163,13 +163,11 @@ def test_export_pkg():
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
+        no_copy_source = True
 
-    no_copy_source = True
-
-    def configure(self):
-        self.layout.generators.folder = "my_generators"
-        self.layout.source.folder = "my_source"
-        self.layout.build.folder = "my_build"
+        def configure(self):
+            self.layout.source.folder = "my_source"
+            self.layout.build.folder = "my_build"
 
         def source(self):
             tools.save("downloaded.h", "bar")

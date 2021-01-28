@@ -214,9 +214,10 @@ class _PackageBuilder(object):
                 else:
                     conanfile.layout.set_base_source_folder(base_build_folder)
 
+                conanfile.layout.set_base_build_folder(base_build_folder)
+                conanfile.layout.set_base_package_folder(base_package_folder)
+
                 if not skip_build:
-                    conanfile.layout.set_base_build_folder(base_build_folder)
-                    conanfile.layout.set_base_package_folder(base_package_folder)
                     # In local cache, generators folder always in build_folder
                     conanfile.layout.set_base_generators_folder(base_build_folder)
                     # In local cache, install folder always is build_folder

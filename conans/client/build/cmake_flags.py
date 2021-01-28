@@ -375,7 +375,7 @@ class CMakeDefinitionsBuilder(object):
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi
-        generators_folder = self._conanfile.layout.generators_folder.replace("\\", "/")
+        generators_folder = self._conanfile.generators_folder.replace("\\", "/")
         if "cmake_find_package" in self._conanfile.generators:
             definitions["CMAKE_MODULE_PATH"] = generators_folder
 

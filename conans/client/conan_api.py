@@ -824,7 +824,6 @@ class ConanAPIV1(object):
         dest = _make_abs_path(dest, cwd)
 
         self.app.load_remotes()
-        mkdir(dest)
         conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_abs_path, info_folder,
                                                                    deps_info_required=True)
