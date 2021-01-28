@@ -51,9 +51,7 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-@pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
-                    reason="We cannot know the folder of the revision without knowing the hash of "
-                           "the contents")
+# TODO: FIXME will fail when removing revisions in code
 class UploadTest(unittest.TestCase):
 
     def _get_client(self, requester=None):
@@ -326,8 +324,6 @@ class TestConan(ConanFile):
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
 
         self.assertTrue(os.path.exists(self.server_reg_folder))
-        if not self.client.cache.config.revisions_enabled:
-            self.assertFalse(os.path.exists(self.server_pack_folder))
 
         # Upload package
         self.client.run('upload %s -p %s' % (str(self.ref), str(self.pref.id)))
@@ -386,12 +382,12 @@ class TestConan(ConanFile):
                                  "Uploading conaninfo.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  "Uploading conanmanifest.txt -> Hello/1.2.1@frodo/stable:myfa",
                                  ])
-        if self.client.cache.config.revisions_enabled:
-            layout = self.client.cache.package_layout(self.ref)
-            rev = layout.recipe_revision()
-            self.ref = self.ref.copy_with_rev(rev)
-            prev = layout.package_revision(self.pref)
-            self.pref = self.pref.copy_with_revs(rev, prev)
+
+        layout = self.client.cache.package_layout(self.ref)
+        rev = layout.recipe_revision()
+        self.ref = self.ref.copy_with_rev(rev)
+        prev = layout.package_revision(self.pref)
+        self.pref = self.pref.copy_with_revs(rev, prev)
 
         server_reg_folder = self.test_server.server_store.export(self.ref)
         server_pack_folder = self.test_server.server_store.package(self.pref)
@@ -404,12 +400,11 @@ class TestConan(ConanFile):
         # Upload all recipes and packages
         self.client.run('upload %s --all' % str(self.ref))
 
-        if self.client.cache.config.revisions_enabled:
-            layout = self.client.cache.package_layout(self.ref)
-            rev = layout.recipe_revision()
-            self.ref = self.ref.copy_with_rev(rev)
-            prev = layout.package_revision(self.pref)
-            self.pref = self.pref.copy_with_revs(rev, prev)
+        layout = self.client.cache.package_layout(self.ref)
+        rev = layout.recipe_revision()
+        self.ref = self.ref.copy_with_rev(rev)
+        prev = layout.package_revision(self.pref)
+        self.pref = self.pref.copy_with_revs(rev, prev)
 
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
