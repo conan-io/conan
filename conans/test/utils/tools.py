@@ -499,7 +499,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1, default_server_user=None,
+                 cpu_count=1, default_server_user=None,
                  cache_autopopulate=True):
         """
         current_folder: Current execution folder
