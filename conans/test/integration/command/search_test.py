@@ -1265,17 +1265,7 @@ class SearchOrder(unittest.TestCase):
         client.run("search -r=default")
         self.assertIn(output, client.out)
 
-    def test_exception_client_without_revs(self):
-        client = TestClient()
-        client.run("search whatever --revisions")
-        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
 
-        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
-        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
-
-
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False),
-                    reason="set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def test_search_recipe_revisions(self):
