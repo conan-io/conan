@@ -3,7 +3,7 @@ from collections import OrderedDict
 from copy import copy
 
 from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 
 DEFAULT_INCLUDE = "include"
 DEFAULT_LIB = "lib"
@@ -54,13 +54,13 @@ class BuildModulesDict(dict):
             self["cmake_find_package_multi"].append(item)
 
     def append(self, item):
-        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
-                          'instead'.format(item=item))
+        conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"].append(\"{item}\")' "
+                       'instead'.format(item=item))
         self._append(item)
 
     def extend(self, items):
-        conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
-                          "instead".format(items=items))
+        conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"].extend({items})' "
+                       "instead".format(items=items))
         for item in items:
             self._append(item)
 
@@ -151,8 +151,8 @@ class _CppInfo(object):
     def build_modules_paths(self):
         if self._build_modules_paths is None:
             if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
-                conan_v2_behavior("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                                  "{the_list}' instead".format(the_list=self.build_modules))
+                conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                               "{the_list}' instead".format(the_list=self.build_modules))
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
             tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
             self._build_modules_paths = tmp
@@ -202,7 +202,7 @@ class _CppInfo(object):
 
     @property
     def name(self):
-        conan_v2_behavior("Use 'get_name(generator)' instead")
+        conan_v2_error("Use 'get_name(generator)' instead")
         return self._name
 
     @name.setter
@@ -220,11 +220,11 @@ class _CppInfo(object):
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
-        conan_v2_behavior("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
+        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
         return self.cxxflags
 
     def set_cppflags(self, value):
-        conan_v2_behavior("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
+        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
         self.cxxflags = value
 
     cppflags = property(get_cppflags, set_cppflags)
@@ -279,10 +279,10 @@ class CppInfo(_CppInfo):
         if generator == PkgConfigGenerator.name:
             fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
             if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
-                conan_v2_behavior("Generated file and name for {gen} generator will change in"
-                                  " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
-                                  " = \"{fallback}\"' in your recipe to continue using current name."
-                                  .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
+                conan_v2_error("Generated file and name for {gen} generator will change in"
+                               " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
+                               " = \"{fallback}\"' in your recipe to continue using current name."
+                               .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
             name = self.names.get(generator, fallback)
         return name
 
