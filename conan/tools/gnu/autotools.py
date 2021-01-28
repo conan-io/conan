@@ -3,14 +3,6 @@ import os
 import platform
 
 from conans.client.build import join_arguments
-from conans.client.build.compiler_flags import (architecture_flag, build_type_define,
-                                                build_type_flags, format_defines,
-                                                format_include_paths, format_libraries,
-                                                format_library_paths, libcxx_define, libcxx_flag,
-                                                pic_flag, rpath_flags, sysroot_flag,
-                                                format_frameworks, format_framework_paths)
-from conans.client.build.cppstd_flags import cppstd_from_settings, \
-    cppstd_flag_new as cppstd_flag
 from conans.client import tools
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
@@ -18,7 +10,6 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
-from conans.util.conan_v2_mode import conan_v2_behavior
 from conans.util.files import get_abs_path
 
 
@@ -201,8 +192,7 @@ class Autotools(object):
         if not self._conanfile.should_build:
             return
         if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+            raise ConanException("build_type setting should be defined.")
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)

@@ -141,7 +141,6 @@ def _format_values(flavor, variables, append_with_spaces):
             value = list(OrderedDict.fromkeys(value))  # Avoid repeated entries, while keeping order
             append_space = name in append_with_spaces
             placeholder = _variable_placeholder(flavor, name, append_space)
-            print("PLACEHOLDER!!!!", placeholder)
             if append_space:
                 # Variables joined with spaces look like: CPPFLAGS="one two three"
                 value = " ".join(value+[placeholder])
