@@ -14,7 +14,6 @@ class CorruptedPackagesTest(unittest.TestCase):
     """
 
     def setUp(self):
-        revisions_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
         self.server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         self.client = TestClient(servers={"default": self.server})
         self.client.save({"conanfile.py": GenConanfile()})
@@ -25,9 +24,9 @@ class CorruptedPackagesTest(unittest.TestCase):
         order2 = str(self.client.out).find("Uploading conaninfo.txt", order1)
         order3 = str(self.client.out).find("Uploading conanmanifest.txt", order2)
         self.assertTrue(order1 < order2 < order3)
-        rrev = "f3367e0e7d170aa12abccb175fee5f97" if revisions_enabled else "0"
+        rrev = "f3367e0e7d170aa12abccb175fee5f97"
         pref_str = "Pkg/0.1@user/testing#%s" % rrev
-        prev = "83c38d3b4e5f1b8450434436eec31b00" if revisions_enabled else "0"
+        prev = "83c38d3b4e5f1b8450434436eec31b00"
         self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
                                             NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,
