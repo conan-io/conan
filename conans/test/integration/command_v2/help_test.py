@@ -1,10 +1,7 @@
 import unittest
 
-import pytest
-
 from conans.client.tools import environment_append
 from conans.test.utils.tools import TestClient
-from conans.util.env_reader import get_env
 
 
 class CliHelpTest(unittest.TestCase):
