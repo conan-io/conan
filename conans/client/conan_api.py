@@ -63,8 +63,7 @@ from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.unicode import get_cwd
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.env_reader import get_env
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
@@ -237,9 +236,9 @@ class ConanAPIV1(object):
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
         check_required_conan_version(self.cache_folder, self.out)
-        if not get_env(CONAN_V2_MODE_ENVVAR, False):
-            # FIXME Remove in Conan 2.0
-            sys.path.append(os.path.join(self.cache_folder, "python"))
+        python_folder = os.path.join(self.cache_folder, "python")
+        conan_v2_error("Using code from cache/python not allowed", os.path.isdir(python_folder))
+        sys.path.append(python_folder)
 
     def create_app(self, quiet_output=None):
         self.app = ConanApp(self.cache_folder, self.user_io, self.http_requester,
@@ -295,8 +294,8 @@ class ConanAPIV1(object):
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
-            conanfile.version = str(ref.version) \
-                if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
+            # FIXME: Conan 2.0, this should be a string, not a Version object
+            conanfile.version = ref.version
 
         result = OrderedDict()
         if not attributes:
@@ -1475,6 +1474,13 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
         # Preprocess settings and convert to real settings
+
+    # Apply the new_config to the profiles the global one, so recipes get it too
+    # TODO: This means lockfiles contain whole copy of the config here?
+    # FIXME: Apply to locked graph-info as well
+    graph_info.profile_host.conf.rebase_conf_definition(cache.new_config)
+    if graph_info.profile_build is not None:
+        graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
     return graph_info
 
 

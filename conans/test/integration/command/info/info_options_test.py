@@ -1,17 +1,18 @@
+import textwrap
 import unittest
 
-import pytest
-
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_compiler
 class InfoOptionsTest(unittest.TestCase):
 
     def test_info_options(self):
         # packages with dash
         client = TestClient()
-        client.run('new My-Package/1.3@myuser/testing -t')
+        client.save({"conanfile.py":
+                         GenConanfile("My-Package", "1.3").with_option("shared", [True, False])
+                                                          .with_default_option("shared", False)})
         # assert they are correct at least
         client.run("export . myuser/testing")
         client.run("search")
@@ -32,11 +33,12 @@ class InfoOptionsTest(unittest.TestCase):
     def test_info_wrong_options(self):
         # https://github.com/conan-io/conan/issues/2202
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    options = {{"option{0}1": "ANY", "option{0}2": "ANY"}}
-    default_options = "option{0}1=1", "option{0}2=2"
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                options = {{"option{0}1": "ANY", "option{0}2": "ANY"}}
+                default_options = "option{0}1=1", "option{0}2=2"
+            """)
         client.save({"conanfile.py": conanfile.format("A")})
         client.run("create . PkgA/0.1@user/testing")
         client.save({"conanfile.py": conanfile.format("B")})

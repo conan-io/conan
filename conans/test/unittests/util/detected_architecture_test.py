@@ -67,3 +67,20 @@ class DetectedArchitectureTest(unittest.TestCase):
                 mock.patch("platform.architecture", mock.MagicMock(return_value=('64bit', 'ELF'))),\
                 mock.patch("platform.release", mock.MagicMock(return_value='5.11')):
             self.assertEqual('x86_64', detected_architecture())
+
+    @parameterized.expand([
+        ["E1C+", "e2k-v4"],
+        ["E2C+", "e2k-v2"],
+        ["E2C+DSP", "e2k-v2"],
+        ["E2C3", "e2k-v6"],
+        ["E2S", "e2k-v3"],
+        ["E8C", "e2k-v4"],
+        ["E8C2", "e2k-v5"],
+        ["E12C", "e2k-v6"],
+        ["E16C", "e2k-v6"],
+        ["E32C", "e2k-v7"]
+    ])
+    def test_e2k(self, processor, expected_arch):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='e2k')), \
+                mock.patch("platform.processor", mock.MagicMock(return_value=processor)):
+            self.assertEqual(expected_arch, detected_architecture())

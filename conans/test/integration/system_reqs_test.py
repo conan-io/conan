@@ -250,6 +250,9 @@ class SystemReqsTest(unittest.TestCase):
             client.run("remove --system-reqs Test/0.1@user/channel")
         self.assertTrue(os.path.exists(system_reqs_path))
 
+        # restore write permission so the temporal folder can be deleted later
+        os.chmod(system_reqs_path, current | stat.S_IWRITE)
+
     def test_duplicate_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()

@@ -13,6 +13,80 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
+@pytest.mark.tool_cmake
+class TestCMakeFindPackageGenerator:
+
+    @pytest.mark.parametrize("use_components", [False, True])
+    def test_build_modules_alias_target(self, use_components):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake"]
+                generators = "cmake"
+
+                def package(self):
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
+            %s
+            """)
+        if use_components:
+            info = textwrap.dedent("""\
+                self.cpp_info.name = "namespace"
+                self.cpp_info.filenames["cmake_find_package"] = "hello"
+                self.cpp_info.components["comp"].libs = ["hello"]
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append(module)
+                """)
+        else:
+            info = textwrap.dedent("""\
+                self.cpp_info.libs = ["hello"]
+                self.cpp_info.build_modules["cmake_find_package"].append(module)
+                """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE {target_name})
+            """).format(target_name="namespace::comp" if use_components else "hello::hello")
+        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(hello)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        if use_components:
+            assert "otherhello link libraries: namespace::comp" in client.out
+        else:
+            assert "otherhello link libraries: hello::hello" in client.out
+
+
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):
@@ -388,7 +462,7 @@ message("Target libs: ${tmp}")
             """)
         # This is a module that defines some functionality
         find_module = textwrap.dedent("""
-            function(conan_message MESSAGE_OUTPUT)
+            function(custom_message MESSAGE_OUTPUT)
                 message(${ARGV${0}})
             endfunction()
             """)
@@ -422,7 +496,7 @@ message("Target libs: ${tmp}")
             cmake_minimum_required(VERSION 3.0)
             project(test)
             find_package(test)
-            conan_message("Printing using a external module!")
+            custom_message("Printing using a external module!")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")

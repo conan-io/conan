@@ -388,7 +388,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'CXXFLAGS': 'a_c_flag -m64 -O3 -s --sysroot=/path/to/folder a_cxx_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -framework oneframework -framework twoframework '
                                '-F one/framework/path -m64 --sysroot=/path/to/folder '
-                               '-Wl,-rpath="one/lib/path" -Lone/lib/path',
+                               '-Wl,-rpath,"one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib -lonesystemlib -ltwosystemlib'}
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEqual(be.vars, expected)
@@ -688,7 +688,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertEqual("", expected)
+        self.assertNotIn("-mmacosx-version-min", expected)
 
         settings = MockSettings({"os": "Macos",
                                  "os.version": "10.13",
@@ -696,15 +696,15 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("10.13", expected)
+        self.assertIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertIn("10.9", expected)
-            self.assertNotIn("10.13", expected)
+            self.assertIn("-mmacosx-version-min=10.9", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)
 
         with tools.environment_append({"CXXFLAGS": "-mmacosx-version-min=10.9"}):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = be.vars["CFLAGS"]
-            self.assertNotIn("10.13", expected)
+            self.assertNotIn("-mmacosx-version-min=10.13", expected)

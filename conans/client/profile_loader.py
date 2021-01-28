@@ -2,6 +2,7 @@ import os
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException, ConanV2Exception
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
@@ -148,7 +149,7 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "options"])
+                           allowed_fields=["build_requires", "settings", "env", "options", "conf"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -217,6 +218,11 @@ def _apply_inner_profile(doc, base_profile):
     current_env_values = EnvValues.loads(doc.env)
     current_env_values.update(base_profile.env_values)
     base_profile.env_values = current_env_values
+
+    if doc.conf:
+        new_prof = ConfDefinition()
+        new_prof.loads(doc.conf, profile=True)
+        base_profile.conf.update_conf_definition(new_prof)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):

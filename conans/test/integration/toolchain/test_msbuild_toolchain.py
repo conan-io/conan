@@ -1,0 +1,43 @@
+import textwrap
+
+from parameterized import parameterized
+
+from conans.test.utils.tools import TestClient
+
+
+@parameterized.expand([("msvc", "19.0", "dynamic"),
+                       ("msvc", "19.1", "static")]
+                      )
+def test_toolchain_win(compiler, version, runtime):
+    client = TestClient(path_with_spaces=False)
+    settings = {"compiler": compiler,
+                "compiler.version": version,
+                "compiler.cppstd": "17",
+                "compiler.runtime": runtime,
+                "build_type": "Release",
+                "arch": "x86_64"}
+
+    # Build the profile according to the settings provided
+    settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuildToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            def generate(self):
+                msbuild = MSBuildToolchain(self)
+                msbuild.generate()
+            """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . {}".format(settings))
+    props = client.load("conantoolchain_release_x64.props")
+    assert "<LanguageStandard>stdcpp17</LanguageStandard>" in props
+    if version == "19.0":
+        assert "<PlatformToolset>v140</PlatformToolset>" in props
+    else:
+        assert "<PlatformToolset>v141</PlatformToolset>" in props
+    if runtime == "dynamic":
+        assert "<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>" in props
+    else:
+        assert "<RuntimeLibrary>MultiThreaded</RuntimeLibrary>" in props

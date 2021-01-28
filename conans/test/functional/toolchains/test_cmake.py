@@ -163,7 +163,9 @@ class Base(unittest.TestCase):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
-                           ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False)]
+                           ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
+                           ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
+                           ("msvc", "Release", "dynamic", "19.11", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -230,7 +232,7 @@ class WinTest(Base):
         self._run_app("Debug", bin_folder=True)
         check_msc_ver(toolset or "v141", self.client.out)
         self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
-        static = "MT" in runtime
+        static = (runtime == "static" or "MT" in runtime)
         check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
                          static=static)
         check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug",

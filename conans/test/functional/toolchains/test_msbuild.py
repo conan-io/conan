@@ -6,6 +6,8 @@ import textwrap
 import unittest
 
 import pytest
+from parameterized import parameterized
+
 
 from conans.client.tools import chdir
 from conans.util.files import mkdir
@@ -305,6 +307,29 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
+@pytest.mark.tool_visual_studio
+def test_msvc_runtime_flag():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conan.tools.microsoft import msvc_runtime_flag
+       class App(ConanFile):
+           settings = "os", "arch", "compiler", "build_type"
+
+           def generate(self):
+               self.output.info("MSVC FLAG={}!!".format(msvc_runtime_flag(self)))
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -s compiler="Visual Studio" -s compiler.version=15 -s compiler.runtime=MD')
+    assert "MSVC FLAG=MD!!" in client.out
+    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=static '
+               '-s compiler.runtime_type=Debug -s compiler.cppstd=14')
+    assert "MSVC FLAG=MTd!!" in client.out
+    client.run('install . -s compiler=msvc -s compiler.version=19.1 -s compiler.runtime=dynamic '
+               '-s compiler.cppstd=14')
+    assert "MSVC FLAG=MD!!" in client.out
+
+
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool_visual_studio
 class WinTest(unittest.TestCase):
@@ -376,19 +401,22 @@ class WinTest(unittest.TestCase):
         self.assertIn("DEFINITIONS_CONFIG: %s" % build_type, client.out)
 
     @pytest.mark.tool_cmake
-    def test_toolchain_win(self):
+    @parameterized.expand([("Visual Studio", "15", "MT"),
+                           ("msvc", "19.1", "static")]
+                          )
+    def test_toolchain_win(self, compiler, version, runtime):
         client = TestClient(path_with_spaces=False)
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
+        settings = {"compiler": compiler,
+                    "compiler.version": version,
                     "compiler.cppstd": "17",
-                    "compiler.runtime": "MT",
+                    "compiler.runtime": runtime,
                     "build_type": "Release",
                     "arch": "x86"}
 
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
-        client.run("new hello/0.1 -s")
+        client.run("new hello/0.1 -m=v2_cmake")
         client.run("create . hello/0.1@ %s" % (settings, ))
 
         # Prepare the actual consumer package

@@ -1091,7 +1091,7 @@ class Command(object):
                             help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. "
-                                 "This flag can only be used with a reference")
+                                 "This flag can only be used with a pattern or a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Remove all packages of the specified reference if "
                                  "no specific package ID is provided")
