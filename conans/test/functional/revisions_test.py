@@ -884,7 +884,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         """If I upload several revisions to a server, we can list the times"""
         server = TestServer()
         servers = OrderedDict([("default", server)])
-        c_v2 = TurboTestClient(revisions_enabled=True, servers=servers)
+        c_v2 = TurboTestClient(servers=servers)
         pref = c_v2.create(self.ref)
         c_v2.upload_all(self.ref)
         pref_rev = pref.copy_with_revs(pref.ref.revision, None)

@@ -37,22 +37,14 @@ class LockRecipeTest(unittest.TestCase):
         lock = json.loads(client.load("base.lock"))
         self.assertEqual(2, len(lock["graph_lock"]["nodes"]))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
-        else:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1")
+        self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
         client.run("lock create conanfile.py -s os=Linux "
                    "--lockfile-out=linux.lock --lockfile=base.lock")
         lock = json.loads(client.load("linux.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
-            self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
-            self.assertEqual(pkg_node["prev"], "9e99cfd92d0d7df79d687b01512ce844")
-        else:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1")
-            self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
-            self.assertEqual(pkg_node["prev"], "0")
+        self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
+        self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
+        self.assertEqual(pkg_node["prev"], "9e99cfd92d0d7df79d687b01512ce844")
         self.assertEqual(pkg_node["options"], "")
         self.assertIsNone(pkg_node.get("modified"))
 
@@ -60,14 +52,9 @@ class LockRecipeTest(unittest.TestCase):
                    "--lockfile-out=windows.lock --lockfile=base.lock")
         lock = json.loads(client.load("windows.lock"))
         pkg_node = lock["graph_lock"]["nodes"]["1"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
-            self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-            self.assertEqual(pkg_node["prev"], "d0f0357277b3417d3984b5a9a85bbab6")
-        else:
-            self.assertEqual(pkg_node["ref"], "pkg/0.1")
-            self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-            self.assertEqual(pkg_node["prev"], "0")
+        self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
+        self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        self.assertEqual(pkg_node["prev"], "d0f0357277b3417d3984b5a9a85bbab6")
         self.assertEqual(pkg_node["options"], "")
 
         # Now it is possible to obtain the base one again from the full ones
@@ -102,10 +89,7 @@ class LockRecipeTest(unittest.TestCase):
             for id_, ref, rrev in ("1", "LibB/1.0", "6e5c7369c3d3f7a7a5a60ddec16a941f"), \
                                   ("2", "LibA/1.0", "f3367e0e7d170aa12abccb175fee5f97"):
                 pkg_node = lock["graph_lock"]["nodes"][id_]
-                if client.cache.config.revisions_enabled:
-                    self.assertEqual(pkg_node["ref"], "%s#%s" % (ref, rrev))
-                else:
-                    self.assertEqual(pkg_node["ref"], ref)
+                self.assertEqual(pkg_node["ref"], "%s#%s" % (ref, rrev))
                 self.assertIsNone(pkg_node.get("package_id"))
                 self.assertIsNone(pkg_node.get("prev"))
                 self.assertIsNone(pkg_node.get("options"))
@@ -134,12 +118,8 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]
         win = lock["graph_lock"]["nodes"]["2"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(win["ref"], "win/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        else:
-            self.assertEqual(common["ref"], "common/0.1")
-            self.assertEqual(win["ref"], "win/0.1")
+        self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(win["ref"], "win/0.1#f3367e0e7d170aa12abccb175fee5f97")
         self.assertIsNone(common.get("package_id"))
         self.assertIsNone(common.get("prev"))
         self.assertIsNone(common.get("options"))
@@ -154,16 +134,10 @@ class LockRecipeTest(unittest.TestCase):
         common = lock["graph_lock"]["nodes"]["1"]
         linux = lock["graph_lock"]["nodes"]["3"]
         self.assertNotIn("2", lock["graph_lock"]["nodes"])
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-            self.assertEqual(linux["ref"], "linux/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(linux["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-        else:
-            self.assertEqual(common["ref"], "common/0.1")
-            self.assertEqual(common["prev"], "0")
-            self.assertEqual(linux["ref"], "linux/0.1")
-            self.assertEqual(linux["prev"], "0")
+        self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(linux["ref"], "linux/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(linux["prev"], "83c38d3b4e5f1b8450434436eec31b00")
         self.assertEqual(common["options"], "")
         self.assertEqual(common["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(linux["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -175,16 +149,10 @@ class LockRecipeTest(unittest.TestCase):
         self.assertEqual(3, len(lock["graph_lock"]["nodes"]))
         common = lock["graph_lock"]["nodes"]["1"]
         win = lock["graph_lock"]["nodes"]["2"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-            self.assertEqual(win["ref"], "win/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(win["prev"], "83c38d3b4e5f1b8450434436eec31b00")
-        else:
-            self.assertEqual(common["ref"], "common/0.1")
-            self.assertEqual(common["prev"], "0")
-            self.assertEqual(win["ref"], "win/0.1")
-            self.assertEqual(win["prev"], "0")
+        self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(win["ref"], "win/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(win["prev"], "83c38d3b4e5f1b8450434436eec31b00")
         self.assertEqual(common["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(common["options"], "")
         self.assertEqual(win["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
