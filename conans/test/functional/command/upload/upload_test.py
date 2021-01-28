@@ -307,15 +307,9 @@ class UploadTest(unittest.TestCase):
                       client2.out)
 
         # first client tries to upload again
-        if not client.cache.config.revisions_enabled:
-            client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
-            self.assertIn("Remote recipe is newer than local recipe", client.out)
-            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.out)
-            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.out)
-        else:
-            # The client tries to upload exactly the same revision already uploaded, so no changes
-            client.run("upload Hello0/1.2.1@frodo/stable")
-            self.assertIn("Recipe is up to date, upload skipped", client.out)
+        # The client tries to upload exactly the same revision already uploaded, so no changes
+        client.run("upload Hello0/1.2.1@frodo/stable")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
 
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_unmodified_recipe(self):
@@ -445,29 +439,15 @@ class MyPkg(ConanFile):
         client.run("create . frodo/stable")
         # upload recipe and packages
         # *1
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.cache.config.revisions_enabled)
-        if not client.cache.config.revisions_enabled:
-            # The --no-overwrite makes no sense with revisions
-            self.assertIn("Forbidden overwrite", client.out)
-            self.assertNotIn("Uploading conan_package.tgz", client.out)
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")
         with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
         # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.cache.config.revisions_enabled)
-        if not client.cache.config.revisions_enabled:
-            self.assertIn("Recipe is up to date, upload skipped", client.out)
-            self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-                          ": Upload package to 'default' failed: "
-                          "Local package is different from the remote package", client.out)
-            self.assertIn("Forbidden overwrite", client.out)
-            self.assertNotIn("Uploading conan_package.tgz", client.out)
-        else:
-            self.assertIn("Uploading conan_package.tgz", client.out)
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
+        self.assertIn("Uploading conan_package.tgz", client.out)
 
     def test_upload_no_overwrite_recipe(self):
         conanfile_new = """from conans import ConanFile, tools
@@ -516,23 +496,8 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
         # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
-                   assert_error=not client.cache.config.revisions_enabled)
-        if not client.cache.config.revisions_enabled:
-            self.assertIn("Forbidden overwrite", client.out)
-            self.assertNotIn("Uploading package", client.out)
-
-            # Create with package changes
-            client.run("upload Hello0/1.2.1@frodo/stable --all")
-            with environment_append({"MY_VAR": "True"}):
-                client.run("create . frodo/stable")
-            # upload recipe and packages
-            client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-            self.assertIn("Recipe is up to date, upload skipped", client.out)
-            self.assertIn("Uploading conan_package.tgz", client.out)
-            self.assertNotIn("Forbidden overwrite", client.out)
-        else:
-            self.assertIn("Uploading conan_package.tgz", client.out)
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertIn("Uploading conan_package.tgz", client.out)
 
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_skip_upload(self):
@@ -636,7 +601,6 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_key_error(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
@@ -831,8 +795,7 @@ class MyPkg(ConanFile):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")],
                             server_capabilities=[REVISIONS])
         servers = {"default": server}
-        client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
-                            revisions_enabled=True)
+        client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("create . user/testing")
@@ -840,18 +803,9 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_upload_with_rev_revs_disabled(self):
-        client = TestClient(default_server_user=True, revisions_enabled=False)
-        client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
-        self.assertIn(
-            "ERROR: Revisions not enabled in the client, specify a reference without revision",
-            client.out)
-
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_upload_with_recipe_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel#fakerevision --confirm", assert_error=True)
         self.assertIn("ERROR: Recipe revision fakerevision does not match the one stored in "
@@ -861,10 +815,9 @@ class MyPkg(ConanFile):
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_upload_with_package_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel#{}:{}#fakeprev --confirm".format(pref.ref.revision,
                                                                                  pref.id),

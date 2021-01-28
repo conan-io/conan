@@ -45,8 +45,7 @@ class InfoCommandTest(unittest.TestCase):
 
         self.t.run('info {}'.format(project_name))
         revision = "    Revision: None\n"\
-                   "    Package revision: None\n" \
-                   if self.t.cache.config.revisions_enabled else ""
+                   "    Package revision: None\n"
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"

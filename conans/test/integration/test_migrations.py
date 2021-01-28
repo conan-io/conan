@@ -243,13 +243,9 @@ the old general
         self.assertTrue(os.path.isfile(pkg_tgz))
         save(os.path.join(client.cache_folder, "version.txt"), "1.30.0")
         client2 = TestClient(client.cache_folder)
-        if client2.cache.config.revisions_enabled:
-            self.assertIn("Removing temporary .tgz files, they are stored in a different "
-                          "location now", client2.out)
-        else:
-            client2.run("-h")
-            self.assertIn("Removing temporary .tgz files, they are stored in a different "
-                          "location now", client2.out)
+        client2.run("-h")
+        self.assertIn("Removing temporary .tgz files, they are stored in a different "
+                      "location now", client2.out)
         self.assertFalse(os.path.isfile(export_tgz))
         self.assertFalse(os.path.isfile(export_src_tgz))
         self.assertFalse(os.path.isfile(pkg_tgz))

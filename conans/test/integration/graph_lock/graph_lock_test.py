@@ -95,7 +95,7 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock")
         client.run("install PkgA/0.1@ --build=PkgA --lockfile=conan.lock --lockfile-out=conan.lock",
                    assert_error=True)
-        rev = "#fa090239f8ba41ad559f8e934494ee2a" if client.cache.config.revisions_enabled else ""
+        rev = "#fa090239f8ba41ad559f8e934494ee2a"
         self.assertIn("Cannot build 'PkgA/0.1{}' because it is already locked".format(rev),
                       client.out)
 
@@ -166,7 +166,6 @@ class ReproducibleLockfiles(unittest.TestCase):
         self.assertIn('"path": "conanfile.txt"', lockfile)
 
 
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class GraphLockRevisionTest(unittest.TestCase):
     rrev_b = "9b64caa2465f7660e6f613b7e87f0cd7"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
@@ -256,7 +255,6 @@ class GraphLockRevisionTest(unittest.TestCase):
         self._check_lock("PkgB/0.1@user/channel#%s" % self.rrev_b, self.pkg_b_id, self.prev_b)
 
 
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
 class RevisionsUpdateTest(unittest.TestCase):
 
     def test_revisions_update(self):
@@ -473,7 +471,7 @@ class GraphInstallArgumentsUpdated(unittest.TestCase):
         previous_lock = client.load("somelib.lock")
         # This should fail, because somelib is locked
         client.run("install somelib/1.0@ --lockfile=somelib.lock --build somelib", assert_error=True)
-        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        rev = "#f3367e0e7d170aa12abccb175fee5f97"
         self.assertIn("Cannot build 'somelib/1.0{}' because it "
                       "is already locked in the input lockfile".format(rev), client.out)
         new_lock = client.load("somelib.lock")
@@ -488,12 +486,8 @@ class BuildLockedTest(unittest.TestCase):
         client.run("lock create --reference=flac/1.0@ --lockfile-out=conan.lock --build")
         lock = json.loads(client.load("conan.lock"))
         flac = lock["graph_lock"]["nodes"]["1"]
-        if client.cache.config.revisions_enabled:
-            ref = "flac/1.0#f3367e0e7d170aa12abccb175fee5f97"
-            prev = "83c38d3b4e5f1b8450434436eec31b00"
-        else:
-            ref = "flac/1.0"
-            prev = "0"
+        ref = "flac/1.0#f3367e0e7d170aa12abccb175fee5f97"
+        prev = "83c38d3b4e5f1b8450434436eec31b00"
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(flac.get("prev"))

@@ -29,39 +29,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_install_outdated(self):
-        # If we try to install the same package with --build oudated it's already ok
-        self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", self.client.out)
-
-        # Then we can export a modified recipe and try to install without --build outdated
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] += "\n#Otherline"
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("install Hello0/0.1@lasote/stable")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.out)
-        self.assertNotIn("Package is up to date", self.client.out)
-        self.assertNotIn("Outdated package!", self.client.out)
-
-        # Try now with the --build outdated
-        self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertNotIn("Package is up to date", self.client.out)
-        self.assertIn("Outdated package!", self.client.out)
-        self.assertIn("Building your package", self.client.out)
-
-        # Remove all local references, export again (the modified version not uploaded)
-        # and try to install, it will discard the remote package too
-        self.client.run("remove Hello0* -f")
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("remote add_ref Hello0/0.1@lasote/stable default")
-        self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertNotIn("Hello0/0.1@lasote/stable: Already installed!", self.client.out)
-        self.assertNotIn("Package is up to date", self.client.out)
-        self.assertIn("Building your package", self.client.out)
-
     def test_install_outdated_dep(self):
         # A new recipe that depends on Hello0/0.1
         new_client = TestClient(servers=self.servers,
@@ -90,16 +57,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         new_client.run("install Hello1/0.1@lasote/stable --build outdated")
         self.assertIn("Downloading conan_package.tgz", new_client.out)
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", new_client.out)
-
-        # With revisions makes no sense, it won't download an outdated package, it belongs to
-        # a different recipe
-        if not new_client.cache.config.revisions_enabled:
-            # But if we remove the full Hello0 local package, will retrieve the updated
-            # recipe and the outdated package
-            new_client.run("remove Hello0* -f")
-            new_client.run("install Hello1/0.1@lasote/stable --build outdated")
-            self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.out)
-            self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.out)
 
     def test_install_outdated_and_dep(self):
         # regression test for https://github.com/conan-io/conan/issues/1053

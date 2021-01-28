@@ -1,13 +1,9 @@
 import unittest
 
-import pytest
-
 from conans.client.tools import environment_append
 from conans.test.utils.tools import TestClient
-from conans.util.env_reader import get_env
 
 
-@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Until conan config is implemented")
 class CliHelpTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):

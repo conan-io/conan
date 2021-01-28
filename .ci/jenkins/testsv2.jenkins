@@ -83,7 +83,6 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                             def command = "su - conan -c \"" \
                                           + "export PYENV_ROOT=${pyenvdir} && " \
                                           + "export PATH=\"${pyenvdir}/bin:\$PATH\" && " \
-                                          + "export TESTING_REVISIONS_ENABLED=1 && " \
                                           + "pyenv global \$${pythonVersion} && " \
                                           + pipInstalls \
                                           + "${launchTests}\""
@@ -94,9 +93,8 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="Macos") {
                     def localDir = "/Users/jenkins"
-                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.12", "PY38=3.8.6", "PY39=3.9.0", 
-                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-                             "TESTING_REVISIONS_ENABLED=1"]) {
+                    withEnv(["CONAN_TEST_FOLDER=${workDir}", "PY27=2.7.18", "PY36=3.6.12", "PY38=3.8.6", "PY39=3.9.0",
+                             "PYENV_ROOT=${localDir}/.pyenv", "PATH+EXTRA=${localDir}/.pyenv/shims:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
                                 def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"
@@ -112,7 +110,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                 }
                 else if (nodeName=="Windows") {
                     withEnv(["CONAN_TEST_FOLDER=${workDir}", "CONAN_BASH_PATH=c:/tools/msys64/usr/bin/bash",
-                             "CONAN_USER_HOME_SHORT=${workDir}.conan", "TESTING_REVISIONS_ENABLED=1",
+                             "CONAN_USER_HOME_SHORT=${workDir}.conan",
                              "PY27=Python27", "PY36=Python36", "PY38=Python38-64"]) {
                         try {
                             bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")
@@ -154,7 +152,7 @@ try {
     def branchName = env.BRANCH_NAME
     def jobName = env.JOB_NAME
 
-    testModules.each { moduleName -> 
+    testModules.each { moduleName ->
         runTestsModule(moduleName, branchName, jobName)
     }
 

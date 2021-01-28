@@ -1266,44 +1266,6 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
-@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-class SearchOutdatedTest(unittest.TestCase):
-    def test_search_outdated(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        conanfile = """from conans import ConanFile
-class Test(ConanFile):
-    name = "Test"
-    version = "0.1"
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
-        client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
-        client.run("upload * --all --confirm")
-        for remote in ("", "-r=default"):
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-            client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertNotIn("os: Linux", client.out)
-
-    def test_exception_client_without_revs(self):
-        client = TestClient()
-        client.run("search whatever --revisions")
-        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
-
-        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
-        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
-
-
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False),
-                    reason="set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def test_search_recipe_revisions(self):

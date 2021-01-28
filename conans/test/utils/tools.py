@@ -499,7 +499,7 @@ class TestClient(object):
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, users=None,
                  requester_class=None, runner=None, path_with_spaces=True,
-                 revisions_enabled=None, cpu_count=1, default_server_user=None,
+                 cpu_count=1, default_server_user=None,
                  cache_autopopulate=True):
         """
         current_folder: Current execution folder
@@ -551,7 +551,7 @@ class TestClient(object):
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
-        self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
+        self.tune_conan_conf(cache_folder, cpu_count)
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
@@ -593,19 +593,7 @@ class TestClient(object):
             else:
                 return TestRequester(self.servers)
 
-    def _set_revisions(self, value):
-        value = "1" if value else "0"
-        self.run("config set general.revisions_enabled={}".format(value))
-
-    def enable_revisions(self):
-        self._set_revisions(True)
-        assert self.cache.config.revisions_enabled
-
-    def disable_revisions(self):
-        self._set_revisions(False)
-        assert not self.cache.config.revisions_enabled
-
-    def tune_conan_conf(self, cache_folder, cpu_count, revisions_enabled):
+    def tune_conan_conf(self, cache_folder, cpu_count):
         # Create the default
         cache = self.cache
         _ = cache.config
@@ -614,12 +602,6 @@ class TestClient(object):
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
                             output=TestBufferConanOutput(), strict=not bool(cache_folder))
-
-        if revisions_enabled is not None:
-            self._set_revisions(revisions_enabled)
-        elif "TESTING_REVISIONS_ENABLED" in os.environ:
-            value = get_env("TESTING_REVISIONS_ENABLED", True)
-            self._set_revisions(value)
 
     def update_servers(self):
         cache = self.cache

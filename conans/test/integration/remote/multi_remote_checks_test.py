@@ -12,75 +12,6 @@ from conans.util.env_reader import get_env
 
 class RemoteChecksTest(unittest.TestCase):
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_recipe_updates(self):
-        servers = OrderedDict()
-        servers["server1"] = TestServer()
-        servers["server2"] = TestServer()
-        servers["server3"] = TestServer()
-
-        client = TestClient(servers=servers, users={"server1": [("lasote", "mypass")],
-                                                    "server2": [("lasote", "mypass")],
-                                                    "server3": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-from conans.tools import load
-class Pkg(ConanFile):
-    exports_sources = "*.data"
-    def package(self):
-        self.copy("*")
-    def package_info(self):
-        self.output.info("%s")
-        self.output.info("DATA: {}".format(load("data.data")))
-"""
-
-        for server in (1, 2, 3):
-            server_name = "Server%s!" % server
-            client.save({"conanfile.py": conanfile % server_name,
-                         "data.data": "MyData%s" % server})
-            client.run("create . Pkg/0.1@lasote/testing")
-            inc_recipe_manifest_timestamp(client.cache, "Pkg/0.1@lasote/testing", (server - 1) * 20)
-            inc_package_manifest_timestamp(client.cache,
-                                           "Pkg/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID,
-                                           (server-1) * 20)
-            client.run("upload Pkg* -r=server%s --confirm --all" % server)
-
-        # Fresh install from server1
-        client.run("remove * -f")
-        client.run("install Pkg/0.1@lasote/testing -r=server1")
-        self.assertIn("Pkg/0.1@lasote/testing: Server1!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: DATA: MyData1", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Downloaded", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Download" % NO_SETTINGS_PACKAGE_ID, client.out)
-
-        # install without updates
-        client.run("install Pkg/0.1@lasote/testing -r=server2")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Server1!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: DATA: MyData1", client.out)
-
-        # Update from server2
-        client.run("install Pkg/0.1@lasote/testing -r=server2 --update")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Updated", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Update" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package %s"
-                      " from remote 'server2' " % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Server2!", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: DATA: MyData2", client.out)
-        client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server2", client.out)
-
-        # Update from server3
-        client.run("install Pkg/0.1@lasote/testing -r=server3 --update")
-        self.assertIn("Pkg/0.1@lasote/testing from 'server3' - Updated", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:%s - Update" % NO_SETTINGS_PACKAGE_ID,
-                      client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
-                      "%s from remote 'server3' " % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Server3!", client.out)
-        client.run("remote list_ref")
-        self.assertIn("Pkg/0.1@lasote/testing: server3", client.out)
-
     def test_multiple_remotes_single_upload(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer())])
@@ -118,8 +49,7 @@ class Pkg(ConanFile):
         # Remove all, install a package for debug
         client.run('remove -f "*"')
         # If revision it is able to fetch the binary from server2
-        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug',
-                   assert_error=not client.cache.config.revisions_enabled)
+        client.run('install Pkg/0.1@lasote/testing -s build_type=Debug')
         # Force binary from server2
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug -r server2')
 

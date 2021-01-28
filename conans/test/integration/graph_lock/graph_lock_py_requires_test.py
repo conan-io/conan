@@ -30,12 +30,8 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install . pkg/0.1@user/channel")
         lockfile = client.load("conan.lock")
-        if client.cache.config.revisions_enabled:
-            self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
-            self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
-        else:
-            self.assertIn("base/1.0@user/channel", lockfile)
-            self.assertIn("helper/1.0@user/channel", lockfile)
+        self.assertIn("base/1.0@user/channel#f3367e0e7d170aa12abccb175fee5f97", lockfile)
+        self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
 
         client.run("source .")
         self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
@@ -77,10 +73,7 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
 
 
 class GraphLockPyRequiresTest(unittest.TestCase):
-    if get_env("TESTING_REVISIONS_ENABLED", False):
-        pkg_ref = "Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28"
-    else:
-        pkg_ref = "Pkg/0.1@user/channel"
+    pkg_ref = "Pkg/0.1@user/channel#67fdc942d6157fc4db1971fd6d6c5c28"
     pkg_id = "1e1576940da80e70cd2d2ce2dddeb0571f91c6e3"
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -130,10 +123,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertEqual(1, len(nodes))
         pkg = nodes["0"]
         self.assertEqual(pkg["ref"], ref_b)
-        if self.client.cache.config.revisions_enabled:
-            tool = "Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"
-        else:
-            tool = "Tool/0.1@user/channel"
+        tool = "Tool/0.1@user/channel#ac4036130c39cab7715b1402e8c211d3"
         self.assertEqual(pkg["python_requires"], [tool])
         self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
@@ -178,10 +168,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
 
 class GraphLockPythonRequiresTest(GraphLockPyRequiresTest):
-    if get_env("TESTING_REVISIONS_ENABLED", False):
-        pkg_ref = "Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5"
-    else:
-        pkg_ref = "Pkg/0.1@user/channel"
+    pkg_ref = "Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5"
     pkg_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
     consumer = textwrap.dedent("""
        from conans import ConanFile, python_requires

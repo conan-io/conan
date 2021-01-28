@@ -88,33 +88,6 @@ class Test(ConanFile):
             self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
             self.assertIn("There are no packages", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_remove_outdated(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        conanfile = """from conans import ConanFile
-class Test(ConanFile):
-    name = "Test"
-    version = "0.1"
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
-        client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
-        client.run("upload * --all --confirm")
-        for remote in ("", "-r=default"):
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-            client.run("remove Test/0.1@lasote/testing -p --outdated -f %s" % remote)
-            client.run("search Test/0.1@lasote/testing  %s" % remote)
-            self.assertNotIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-
 
 fake_recipe_hash = "999999999"
 conaninfo = '''
@@ -211,15 +184,12 @@ class RemoveTest(unittest.TestCase):
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
                 ref = ConanFileReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
-                    if self.client.cache.config.revisions_enabled:
-                        try:
-                            rev = self.client.cache.package_layout(ref).recipe_revision()
-                        except:
-                            # This whole test is a crap, we cannot guess remote revision
-                            # if the package is not in local anymore
-                            continue
-                    else:
-                        rev = DEFAULT_REVISION_V1
+                    try:
+                        rev = self.client.cache.package_layout(ref).recipe_revision()
+                    except:
+                        # This whole test is a crap, we cannot guess remote revision
+                        # if the package is not in local anymore
+                        continue
                     folder += "/%s" % rev
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
@@ -228,17 +198,14 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            if self.client.cache.config.revisions_enabled:
-                                pref = PackageReference(ref, sha)
-                                try:
-                                    layout = self.client.cache.package_layout(pref.ref)
-                                    prev = layout.package_revision(pref)
-                                except:
-                                    # This whole test is a crap, we cannot guess remote revision
-                                    # if the package is not in local anymore
-                                    continue
-                            else:
-                                prev = DEFAULT_REVISION_V1
+                            pref = PackageReference(ref, sha)
+                            try:
+                                layout = self.client.cache.package_layout(pref.ref)
+                                prev = layout.package_revision(pref)
+                            except:
+                                # This whole test is a crap, we cannot guess remote revision
+                                # if the package is not in local anymore
+                                continue
                             package_folder += "/%s" % prev if prev else ""
                         if value in shas:
                             self.assertTrue(os.path.exists(package_folder),
@@ -461,39 +428,6 @@ class RemoveTest(unittest.TestCase):
         with self.assertRaisesRegex(Exception, "Command failed"):
             self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
             self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.out)
-
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="This test is insane to be "
-                                                                            "tested with revisions, in "
-                                                                            "general all the module")
-    def test_query_remove_locally(self):
-        self.client.run("remove notfoundname/1.4.10@myuser/testing -q='compiler.version=4.4' -f",
-                        assert_error=True)
-        self.assertIn("Recipe not found: 'notfoundname/1.4.10@myuser/testing'", self.client.out)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.1" -f')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
-
-        self.client.run('remove Hello/1.4.10@myuser/testing -q="compiler.version=8.2" -f -r default')
-        self.assertNotIn("No packages matching the query", self.client.out)
-        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
 
 class RemoveWithoutUserChannel(unittest.TestCase):

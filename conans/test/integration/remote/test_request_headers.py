@@ -23,7 +23,6 @@ class RequesterClass(TestRequester):
 
 class RequestHeadersTestCase(unittest.TestCase):
     """ Conan adds a header with the settings used to compute the package ID """
-    revs_enabled = get_env("TESTING_REVISIONS_ENABLED", False)
 
     profile = textwrap.dedent("""
         [settings]
@@ -52,13 +51,10 @@ class RequestHeadersTestCase(unittest.TestCase):
 
     def _get_header(self, requester, header_name):
         hits = sum([header_name in headers for _, headers in requester.requests])
-        self.assertEquals(hits, 2 if self.revs_enabled else 1)
+        self.assertEquals(hits, 2)
         for url, headers in requester.requests:
             if header_name in headers:
-                if self.revs_enabled:
-                    self.assertTrue(url.endswith('/latest'), msg=url)
-                else:
-                    self.assertTrue(url.endswith('/download_urls'), msg=url)
+                self.assertTrue(url.endswith('/latest'), msg=url)
                 return headers.get(header_name)
 
     def _assert_settings_headers(self, settings_header, compiler_version='11.0'):
@@ -80,7 +76,6 @@ class RequestHeadersTestCase(unittest.TestCase):
     def _get_test_client(self):
         t = TestClient(requester_class=RequesterClass, servers=self.servers,
                        users={"default": [("user", "mypass")]})
-        t.run('config set general.revisions_enabled={}'.format('1' if self.revs_enabled else '0'))
         return t
 
     def test_install_recipe_mismatch(self):

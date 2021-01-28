@@ -38,15 +38,10 @@ class BuildOrderTest(unittest.TestCase):
         else:
             client.run("create .")
             client.run("lock create --reference=test4/0.1@ --build=test4 --lockfile-out=conan.lock")
-        if client.cache.config.revisions_enabled:
-            ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
-            prev = "92cf292e73488c3527dab5f5ba81b947"
-            build_order = [[["test4/0.1@#f876ec9ea0f44cb7adb1588e431b391a",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "1"]]]
-        else:
-            ref = "test4/0.1"
-            prev = "0"
-            build_order = [[["test4/0.1@", "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "1"]]]
+        ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
+        prev = "92cf292e73488c3527dab5f5ba81b947"
+        build_order = [[["test4/0.1@#f876ec9ea0f44cb7adb1588e431b391a",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "1"]]]
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
         self.assertEqual(test4["ref"], ref)
@@ -75,12 +70,8 @@ class BuildOrderTest(unittest.TestCase):
         client.run("lock create --reference=test4/0.1@ --lockfile-out=conan.lock")
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
-        if client.cache.config.revisions_enabled:
-            ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
-            prev = "92cf292e73488c3527dab5f5ba81b947"
-        else:
-            ref = "test4/0.1"
-            prev = "0"
+        ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
+        prev = "92cf292e73488c3527dab5f5ba81b947"
         self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(test4["prev"], prev)
@@ -89,7 +80,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual([], jsonbo)
         # if we try to build anyway, error
         client.run("install test4/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        rev = "#f876ec9ea0f44cb7adb1588e431b391a" if client.cache.config.revisions_enabled else ""
+        rev = "#f876ec9ea0f44cb7adb1588e431b391a"
         self.assertIn("Cannot build 'test4/0.1{}' because it is "
                       "already locked in the input lockfile".format(rev), client.out)
 
@@ -113,26 +104,15 @@ class BuildOrderTest(unittest.TestCase):
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
 
-        if client.cache.config.revisions_enabled:
-            build_order = [[["dep/0.1@#f3367e0e7d170aa12abccb175fee5f97",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
-                           [["pkg/0.1@#447b56f0334b7e2a28aa86e218c8b3bd",
-                             "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6", "host", "2"]],
-                           [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
-                             "745ccd40fd696b66b0cb160fd5251a533563bbb4", "host", "1"]]]
-            prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
-            prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
-            prev_app = "9f30558ce471f676e3e06b633aabcf99"
-        else:
-            build_order = [[["dep/0.1@",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
-                           [["pkg/0.1@",
-                             "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6", "host", "2"]],
-                           [["app/0.1@",
-                             "745ccd40fd696b66b0cb160fd5251a533563bbb4", "host", "1"]]]
-            prev_dep = "0"
-            prev_pkg = "0"
-            prev_app = "0"
+        build_order = [[["dep/0.1@#f3367e0e7d170aa12abccb175fee5f97",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
+                       [["pkg/0.1@#447b56f0334b7e2a28aa86e218c8b3bd",
+                         "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6", "host", "2"]],
+                       [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
+                         "745ccd40fd696b66b0cb160fd5251a533563bbb4", "host", "1"]]]
+        prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
+        prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
+        prev_app = "9f30558ce471f676e3e06b633aabcf99"
 
         for level in build_order:
             for item in level:
@@ -168,7 +148,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        rev = "#f3367e0e7d170aa12abccb175fee5f97"
         self.assertIn("Cannot build 'dep/0.1{}' because it is "
                       "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
@@ -188,7 +168,7 @@ class BuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        rev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        rev = "#f3367e0e7d170aa12abccb175fee5f97"
         self.assertIn("Cannot build 'dep/0.1{}' because it is "
                       "already locked in the input lockfile".format(rev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
@@ -210,7 +190,6 @@ class BuildOrderTest(unittest.TestCase):
         jsonbo = json.loads(client.load("bo.json"))
         self.assertEqual([], jsonbo)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_package_revision_mode_build_order(self):
         # https://github.com/conan-io/conan/issues/6232
         client = TestClient()
@@ -276,27 +255,15 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
 
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
 
-        if client.cache.config.revisions_enabled:
-            build_order = [[["dep/0.1@#f3367e0e7d170aa12abccb175fee5f97",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
-                           [["pkg/0.1@#1364f701b47130c7e38f04c5e5fab985",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
-                           [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
-                             "a925a8281740e4cb4bcad9cf41ecc4c215210604", "host", "1"]]]
-            prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
-            prev_pkg = "5d3d587702b55a456c9b6b71e5f40cfa"
-            prev_app = "eeb6de9b69fb0905e15788315f77a8e2"
-
-        else:
-            build_order = [[["dep/0.1@",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
-                           [["pkg/0.1@",
-                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
-                           [["app/0.1@",
-                             "a925a8281740e4cb4bcad9cf41ecc4c215210604", "host", "1"]]]
-            prev_dep = "0"
-            prev_pkg = "0"
-            prev_app = "0"
+        build_order = [[["dep/0.1@#f3367e0e7d170aa12abccb175fee5f97",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
+                       [["pkg/0.1@#1364f701b47130c7e38f04c5e5fab985",
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
+                       [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
+                         "a925a8281740e4cb4bcad9cf41ecc4c215210604", "host", "1"]]]
+        prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
+        prev_pkg = "5d3d587702b55a456c9b6b71e5f40cfa"
+        prev_app = "eeb6de9b69fb0905e15788315f77a8e2"
 
         for level in build_order:
             for item in level:
@@ -333,7 +300,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[1:], jsonbo)
 
         client.run("install pkg/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        rrev = "#f3367e0e7d170aa12abccb175fee5f97" if client.cache.config.revisions_enabled else ""
+        rrev = "#f3367e0e7d170aa12abccb175fee5f97"
         self.assertIn("Cannot build 'dep/0.1{}' because it is "
                       "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
@@ -353,7 +320,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         self.assertEqual(build_order[2:], jsonbo)
 
         client.run("install app/0.1@ --lockfile=conan.lock --build", assert_error=True)
-        rrev = "#1364f701b47130c7e38f04c5e5fab985" if client.cache.config.revisions_enabled else ""
+        rrev = "#1364f701b47130c7e38f04c5e5fab985"
         self.assertIn("Cannot build 'pkg/0.1{}' because it is "
                       "already locked in the input lockfile".format(rrev), client.out)
         client.run("install {0} --lockfile=conan.lock --lockfile-out=conan.lock "
@@ -425,32 +392,18 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("lock create variant.py --build cascade --build outdated "
                    "--lockfile-out=conan.lock")
 
-        if client.cache.config.revisions_enabled:
-            fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
-            font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"
-            harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
-            zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97"
-            expected = [[['fontconfig/1.0@#f3367e0e7d170aa12abccb175fee5f97',
-                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2'],
-                        ['zlib/1.0@#f3367e0e7d170aa12abccb175fee5f97',
-                         '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
-                        [['harfbuzz/1.0@#3172f5e84120f235f75f8dd90fdef84f',
-                          'ea61889683885a5517800e8ebb09547d1d10447a', 'host', '3']],
-                        [['ffmpeg/1.0@#5522e93e2abfbd455e6211fe4d0531a2',
-                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1']]]
-        else:
-            fmpe = "ffmpeg/1.0"
-            font = "fontconfig/1.0"
-            harf = "harfbuzz/1.0"
-            zlib = "zlib/1.0"
-            expected = [[['fontconfig/1.0@',
-                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2'],
-                        ['zlib/1.0@',
-                         '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
-                        [['harfbuzz/1.0@',
-                          'ea61889683885a5517800e8ebb09547d1d10447a', 'host', '3']],
-                        [['ffmpeg/1.0@',
-                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1']]]
+        fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
+        font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"
+        harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
+        zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97"
+        expected = [[['fontconfig/1.0@#f3367e0e7d170aa12abccb175fee5f97',
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2'],
+                    ['zlib/1.0@#f3367e0e7d170aa12abccb175fee5f97',
+                     '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                    [['harfbuzz/1.0@#3172f5e84120f235f75f8dd90fdef84f',
+                      'ea61889683885a5517800e8ebb09547d1d10447a', 'host', '3']],
+                    [['ffmpeg/1.0@#5522e93e2abfbd455e6211fe4d0531a2',
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1']]]
 
         lock1 = client.load("conan.lock")
         lock = json.loads(lock1)
@@ -486,14 +439,9 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         app = lock["1"]
         liba = lock["2"]
         tool = lock["3"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(app["ref"], "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c")
-            self.assertEqual(liba["ref"], "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b")
-            self.assertEqual(tool["ref"], "tool/1.0#f3367e0e7d170aa12abccb175fee5f97")
-        else:
-            self.assertEqual(app["ref"], "app/1.0")
-            self.assertEqual(liba["ref"], "libA/1.0")
-            self.assertEqual(tool["ref"], "tool/1.0")
+        self.assertEqual(app["ref"], "app/1.0#ac2e355bf59f54e838c9d2f1d8d1126c")
+        self.assertEqual(liba["ref"], "libA/1.0#3fb401b4f9169fab06be253aa3fbcc1b")
+        self.assertEqual(tool["ref"], "tool/1.0#f3367e0e7d170aa12abccb175fee5f97")
 
         self.assertEqual(app["package_id"], "8a4d75100b721bfde375a978c780bf3880a22bab")
         self.assertIsNone(app.get("prev"))
@@ -504,14 +452,9 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
 
         client.run("lock build-order conan.lock --json=bo.json")
         bo0 = client.load("bo.json")
-        if client.cache.config.revisions_enabled:
-            tool = "tool/1.0@#f3367e0e7d170aa12abccb175fee5f97"
-            liba = "libA/1.0@#3fb401b4f9169fab06be253aa3fbcc1b"
-            app = "app/1.0@#ac2e355bf59f54e838c9d2f1d8d1126c"
-        else:
-            tool = "tool/1.0@"
-            liba = "libA/1.0@"
-            app = "app/1.0@"
+        tool = "tool/1.0@#f3367e0e7d170aa12abccb175fee5f97"
+        liba = "libA/1.0@#3fb401b4f9169fab06be253aa3fbcc1b"
+        app = "app/1.0@#ac2e355bf59f54e838c9d2f1d8d1126c"
         expected = [
             [[tool, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
             [[liba, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
