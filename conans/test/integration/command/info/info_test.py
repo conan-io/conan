@@ -197,8 +197,7 @@ class InfoTest(unittest.TestCase):
             "\n    Revision: d6727bc577b5c6bd8ac7261eff98be93"
             "\n    Package revision: None",
             "\n    Revision: 7c5e142433a3ee0acaeffb4454a6d42f"
-            "\n    Package revision: None",) \
-            if self.client.cache.config.revisions_enabled else expected_output % ("", "")
+            "\n    Package revision: None",)
 
         def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()

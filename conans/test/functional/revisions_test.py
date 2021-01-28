@@ -91,7 +91,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         time.sleep(1)
 
-        other_v2 = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        other_v2 = TurboTestClient(servers=self.servers)
         # Same RREV, different new PREV
         with environment_append({"MY_VAR": "2"}):
             other_v2.create(self.ref, conanfile=conanfile)
@@ -287,7 +287,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
 
         # Now create a new revision with other client and upload it, we will request it
-        new_client = TurboTestClient(revisions_enabled=True, servers=self.servers)
+        new_client = TurboTestClient(servers=self.servers)
         pref = new_client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
         new_client.upload_all(self.ref)
 

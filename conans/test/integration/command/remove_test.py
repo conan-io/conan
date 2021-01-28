@@ -184,15 +184,12 @@ class RemoveTest(unittest.TestCase):
                 folder = os.path.join(root_folder, self.root_folder[k].replace("@", "/"))
                 ref = ConanFileReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
-                    if self.client.cache.config.revisions_enabled:
-                        try:
-                            rev = self.client.cache.package_layout(ref).recipe_revision()
-                        except:
-                            # This whole test is a crap, we cannot guess remote revision
-                            # if the package is not in local anymore
-                            continue
-                    else:
-                        rev = DEFAULT_REVISION_V1
+                    try:
+                        rev = self.client.cache.package_layout(ref).recipe_revision()
+                    except:
+                        # This whole test is a crap, we cannot guess remote revision
+                        # if the package is not in local anymore
+                        continue
                     folder += "/%s" % rev
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
@@ -201,17 +198,14 @@ class RemoveTest(unittest.TestCase):
                         sha = "%s_%s" % (value, k)
                         package_folder = os.path.join(folder, "package", sha)
                         if isinstance(base_path, ServerStore):
-                            if self.client.cache.config.revisions_enabled:
-                                pref = PackageReference(ref, sha)
-                                try:
-                                    layout = self.client.cache.package_layout(pref.ref)
-                                    prev = layout.package_revision(pref)
-                                except:
-                                    # This whole test is a crap, we cannot guess remote revision
-                                    # if the package is not in local anymore
-                                    continue
-                            else:
-                                prev = DEFAULT_REVISION_V1
+                            pref = PackageReference(ref, sha)
+                            try:
+                                layout = self.client.cache.package_layout(pref.ref)
+                                prev = layout.package_revision(pref)
+                            except:
+                                # This whole test is a crap, we cannot guess remote revision
+                                # if the package is not in local anymore
+                                continue
                             package_folder += "/%s" % prev if prev else ""
                         if value in shas:
                             self.assertTrue(os.path.exists(package_folder),

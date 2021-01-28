@@ -10,7 +10,7 @@ from conans.util.env_reader import get_env
 class DownloadRevisionsTest(unittest.TestCase):
 
     def test_download_revs_enabled_with_fake_rrev(self):
-        client = TestClient(default_server_user=True, revisions_enabled=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/1.0@user/channel")
         client.run("upload * --all --confirm")
@@ -20,7 +20,7 @@ class DownloadRevisionsTest(unittest.TestCase):
 
     def test_download_revs_enabled_with_rrev(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel --all --confirm")
         # create new revision from recipe
@@ -36,7 +36,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         ref = ConanFileReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                          users={"user": "password"})}
-        client = TurboTestClient(servers=servers, revisions_enabled=True,
+        client = TurboTestClient(servers=servers,
                                  users={"default": [("user", "password")]})
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@ --all --confirm")
@@ -52,7 +52,7 @@ class DownloadRevisionsTest(unittest.TestCase):
     def test_download_revs_enabled_with_prev(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
-        client = TurboTestClient(default_server_user=True, revisions_enabled=True)
+        client = TurboTestClient(default_server_user=True)
         pref = client.create(ref, conanfile=GenConanfile())
         client.run("upload pkg/1.0@user/channel --all --confirm")
         client.create(ref, conanfile=GenConanfile().with_build_msg("new revision"))

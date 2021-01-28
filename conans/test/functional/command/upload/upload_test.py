@@ -307,15 +307,9 @@ class UploadTest(unittest.TestCase):
                       client2.out)
 
         # first client tries to upload again
-        if not client.cache.config.revisions_enabled:
-            client.run("upload Hello0/1.2.1@frodo/stable", assert_error=True)
-            self.assertIn("Remote recipe is newer than local recipe", client.out)
-            self.assertIn("Local 'conanfile.py' using '\\n' line-ends", client.out)
-            self.assertIn("Remote 'conanfile.py' using '\\r\\n' line-ends", client.out)
-        else:
-            # The client tries to upload exactly the same revision already uploaded, so no changes
-            client.run("upload Hello0/1.2.1@frodo/stable")
-            self.assertIn("Recipe is up to date, upload skipped", client.out)
+        # The client tries to upload exactly the same revision already uploaded, so no changes
+        client.run("upload Hello0/1.2.1@frodo/stable")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
 
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_unmodified_recipe(self):
@@ -445,20 +439,14 @@ class MyPkg(ConanFile):
         client.run("create . frodo/stable")
         # upload recipe and packages
         # *1
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.cache.config.revisions_enabled)
-        if not client.cache.config.revisions_enabled:
-            # The --no-overwrite makes no sense with revisions
-            self.assertIn("Forbidden overwrite", client.out)
-            self.assertNotIn("Uploading conan_package.tgz", client.out)
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
 
         # CASE: When package changes
         client.run("upload Hello0/1.2.1@frodo/stable --all")
         with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
         # upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
-                   assert_error=not client.cache.config.revisions_enabled)
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         if not client.cache.config.revisions_enabled:
             self.assertIn("Recipe is up to date, upload skipped", client.out)
             self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"

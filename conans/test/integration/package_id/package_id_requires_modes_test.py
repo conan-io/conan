@@ -76,21 +76,15 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        if not self.client.cache.config.revisions_enabled:
-            self.client.run("install .")
-            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
-                          self.client.out)
-            self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
-        else:
-            # As we have changed Hello2, the binary is not valid anymore so it won't find it
-            # but will look for the same package_id
-            self.client.run("install .", assert_error=True)
-            self.assertIn("WARN: The package Hello2/2.3.8@lasote/stable:"
-                          "e0d17b497b58c730aac949f374cf0bdb533549ab doesn't belong to the "
-                          "installed recipe revision, removing folder",
-                          self.client.out)
-            self.assertIn("- Package ID: e0d17b497b58c730aac949f374cf0bdb533549ab",
-                          self.client.out)
+        # As we have changed Hello2, the binary is not valid anymore so it won't find it
+        # but will look for the same package_id
+        self.client.run("install .", assert_error=True)
+        self.assertIn("WARN: The package Hello2/2.3.8@lasote/stable:"
+                      "e0d17b497b58c730aac949f374cf0bdb533549ab doesn't belong to the "
+                      "installed recipe revision, removing folder",
+                      self.client.out)
+        self.assertIn("- Package ID: e0d17b497b58c730aac949f374cf0bdb533549ab",
+                      self.client.out)
 
         # Try to change user and channel too, should be the same, not rebuilt needed
         self._export("Hello", "1.5.0", package_id_text=None, requires=None,
@@ -103,15 +97,9 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        if not self.client.cache.config.revisions_enabled:
-            self.client.run("install .")
-            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
-                          self.client.out)
-            self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
-        else:
-            self.client.run("install .", assert_error=True)
-            self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
-                          self.client.out)
+        self.client.run("install .", assert_error=True)
+        self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
+                      self.client.out)
 
     def test_version_full_version_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -135,16 +123,11 @@ class Pkg(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
-        if not self.client.cache.config.revisions_enabled:
-            self.client.run("install .")
-            self.assertIn("Hello2/2.3.8@lasote/stable:3ec60bb399a8bcb937b7af196f6685ba878aab02",
-                          self.client.out)
-        else:
-            # As we have changed Hello2, the binary is not valid anymore so it won't find it
-            # but will look for the same package_id
-            self.client.run("install .", assert_error=True)
-            self.assertIn("- Package ID: 3ec60bb399a8bcb937b7af196f6685ba878aab02",
-                          self.client.out)
+        # As we have changed Hello2, the binary is not valid anymore so it won't find it
+        # but will look for the same package_id
+        self.client.run("install .", assert_error=True)
+        self.assertIn("- Package ID: 3ec60bb399a8bcb937b7af196f6685ba878aab02",
+                      self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
         # needed the --build needed because Hello2 needs to be build
@@ -201,8 +184,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
 
-        assert_error = True if self.client.cache.config.revisions_enabled else False
-        self.client.run("install .", assert_error=assert_error)
+        self.client.run("install .", assert_error=True)
         self.assertIn("Hello2/2.3.8@lasote/stable:{}".format(pkg_id), self.client.out)
 
     def test_version_full_package_schema(self):
@@ -251,16 +233,14 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         # Not needed to rebuild Hello2, it doesn't matter its requires
-        if not self.client.cache.config.revisions_enabled:
-            self.client.run("install .")
-        else:  # We have changed hello2, so a new binary is required, but same id
-            self.client.run("install .", assert_error=True)
-            self.assertIn("The package "
-                          "Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 "
-                          "doesn't belong to the installed recipe revision, removing folder",
-                          self.client.out)
-            self.assertIn("Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 -"
-                          " Missing", self.client.out)
+        # We have changed hello2, so a new binary is required, but same id
+        self.client.run("install .", assert_error=True)
+        self.assertIn("The package "
+                      "Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 "
+                      "doesn't belong to the installed recipe revision, removing folder",
+                      self.client.out)
+        self.assertIn("Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 -"
+                      " Missing", self.client.out)
 
     def test_toolset_visual_compatibility(self):
         # By default is the same to build with native visual or the toolchain

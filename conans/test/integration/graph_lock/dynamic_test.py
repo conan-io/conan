@@ -151,14 +151,9 @@ class GraphLockDynamicTest(unittest.TestCase):
         libc = lock["1"]
         liba = lock["2"]
         libb = lock["3"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(libb["ref"], "LibB/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(libc["ref"], "LibC/0.1#3cc68234fe3b976e1cb15c61afdace6d")
-        else:
-            self.assertEqual(liba["ref"], "LibA/0.1")
-            self.assertEqual(libb["ref"], "LibB/0.1")
-            self.assertEqual(libc["ref"], "LibC/0.1")
+        self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(libb["ref"], "LibB/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(libc["ref"], "LibC/0.1#3cc68234fe3b976e1cb15c61afdace6d")
         self.assertEqual(libc["requires"], ["2", "3"])
 
         # Remove one dep (LibB) in LibC, will fail to create
@@ -180,12 +175,8 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertEqual(3, len(new_lock_json))
         libc = new_lock_json["1"]
         liba = new_lock_json["2"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
-            self.assertEqual(libc["ref"], "LibC/0.1#ec5e114a9ad4f4269bc4a221b26eb47a")
-        else:
-            self.assertEqual(liba["ref"], "LibA/0.1")
-            self.assertEqual(libc["ref"], "LibC/0.1")
+        self.assertEqual(liba["ref"], "LibA/0.1#f3367e0e7d170aa12abccb175fee5f97")
+        self.assertEqual(libc["ref"], "LibC/0.1#ec5e114a9ad4f4269bc4a221b26eb47a")
         self.assertEqual(libc["requires"], ["2"])
 
     def test_add_dep(self):
@@ -208,10 +199,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         lock_file_json = json.loads(new)
         self.assertEqual(2, len(lock_file_json["graph_lock"]["nodes"]))
         zlib = lock_file_json["graph_lock"]["nodes"]["1"]["ref"]
-        if client.cache.config.revisions_enabled:
-            self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97", zlib)
-        else:
-            self.assertEqual("zlib/1.0", zlib)
+        self.assertEqual("zlib/1.0#f3367e0e7d170aa12abccb175fee5f97", zlib)
 
         # augment the existing one, works only because it is a consumer only, not package
         client.run("lock create conanfile.py --lockfile=conan.lock --lockfile-out=updated.lock")
@@ -236,12 +224,8 @@ class GraphLockDynamicTest(unittest.TestCase):
         dep = json_lock1["graph_lock"]["nodes"]["1"]
         self.assertEqual(dep["build_requires"], ["2"])
         self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
-            self.assertEqual(dep.get("prev"), None)
-        else:
-            self.assertEqual(dep["ref"], "dep/0.1")
-            self.assertEqual(dep.get("prev"), None)
+        self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
+        self.assertEqual(dep.get("prev"), None)
 
         client.run("create . --lockfile=conan.lock --lockfile-out=conan.lock "
                    "--build=missing")
@@ -252,12 +236,8 @@ class GraphLockDynamicTest(unittest.TestCase):
         dep = json_lock2["graph_lock"]["nodes"]["1"]
         self.assertEqual(dep["build_requires"], ["2"])
         self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        if client.cache.config.revisions_enabled:
-            self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
-            self.assertEqual(dep["prev"], "08cd3e7664b886564720123959c05bdf")
-        else:
-            self.assertEqual(dep["ref"], "dep/0.1")
-            self.assertEqual(dep["prev"], "0")
+        self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
+        self.assertEqual(dep["prev"], "08cd3e7664b886564720123959c05bdf")
 
     def test_conditional_env_var(self):
         client = TestClient()
