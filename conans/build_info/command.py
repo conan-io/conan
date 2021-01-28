@@ -121,10 +121,9 @@ def runv2():
             check_credential_arguments()
             publish_build_info(args.buildinfo, args.url, args.user, args.password,
                                args.apikey)
-    except ConanException as exc:
-        output.error(exc)
     except Exception as exc:
         output.error(exc)
+        exit(1)
 
 
 if __name__ == "__main__":
