@@ -88,37 +88,3 @@ class AuthorizeBearerTest(unittest.TestCase):
             self.assertEqual(method, real_call[0])
             if auth_type:
                 self.assertIn(auth_type, real_call[1])
-
-    @parameterized.expand([(False,), (True,)])
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="ApiV1 test")
-    def test_no_signature(self, artifacts_properties):
-        auth = AuthorizationHeaderSpy()
-        retur = ReturnHandlerPlugin()
-        server = TestServer(plugins=[auth, retur])
-        servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        if artifacts_properties:
-            save(client.cache.artifacts_properties_path, "key=value")
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/stable")
-        # Upload will fail, as conan_server is expecting a signed URL
-        errors = client.run("upload Hello/0.1@lasote/stable", assert_error=True)
-        self.assertTrue(errors)
-
-        expected_calls = [('ping', None),
-                          ('get_recipe_manifest_url', None),
-                          ('check_credentials', None),
-                          ('authenticate', 'Basic'),
-                          ('get_recipe_snapshot', 'Bearer'),
-                          ('get_conanfile_upload_urls', 'Bearer'),
-                          ('put', 'Bearer')]
-
-        self.assertEqual(len(expected_calls), len(auth.auths))
-        for i, (method, auth_type) in enumerate(expected_calls):
-            real_call = auth.auths[i]
-            self.assertEqual(method, real_call[0])
-            if auth_type:
-                self.assertIn(auth_type, real_call[1])
-
-        # The Bearer of the last two calls must be identical
-        self.assertEqual(auth.auths[-1][1], auth.auths[-2][1])
