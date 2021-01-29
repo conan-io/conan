@@ -1,7 +1,7 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import OnlyV2Available, AuthenticationException, ConanException
+from conans.errors import AuthenticationException, ConanException
 from conans.search.search import filter_packages
 from conans.util.log import logger
 
@@ -56,8 +56,6 @@ class RestApiClient(object):
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
-            if not self._revisions_enabled and ONLY_V2 in capabilities:
-                raise OnlyV2Available(self._remote_url)
         return capability in capabilities
 
     def _get_api(self):
