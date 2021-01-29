@@ -1479,15 +1479,6 @@ class Test(ConanFile):
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
 
-    def test_search_fail_if_v1_server(self):
-        # V1 server
-        test_server = TestServer(users={"conan": "password"}, server_capabilities=[])
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("conan", "password")]})
-        client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
-        self.assertIn("ERROR: The remote doesn't support revisions. Conan 2.0 is no longer "
-                      "compatible with remotes that don't accept revisions.", client.out)
-
     def test_invalid_references(self):
         client = TestClient()
         # Local errors
