@@ -34,10 +34,10 @@ def runv1():
 
         if not os.path.exists(args.trace_path):
             output.error("Conan trace log not found! '%s'" % args.trace_path)
-            exit(1)
+            sys.exit(1)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
             output.error("Output file directory not found! '%s'" % args.trace_path)
-            exit(1)
+            sys.exit(1)
 
         info = get_build_info(args.trace_path)
         the_json = json.dumps(info.serialize())
@@ -47,7 +47,7 @@ def runv1():
             output.write(the_json)
     except Exception as exc:
         output.error(exc)
-        exit(1)
+        sys.exit(1)
     except SystemExit:
         output.writeln("")
         output.warn("Use 'conan_build_info --v2' to see the usage of the new recommended way to "
@@ -123,7 +123,7 @@ def runv2():
                                args.apikey)
     except Exception as exc:
         output.error(exc)
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
