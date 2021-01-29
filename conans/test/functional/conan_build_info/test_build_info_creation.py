@@ -52,7 +52,7 @@ class MyBuildInfoCreation(unittest.TestCase):
                 kwargs["headers"]["X-JFrog-Art-Api"] != "apikey"):
             mock_resp.status_code = 401
         buildinfo = json.load(data)
-        if not buildinfo["name"] == "MyBuildInfo" or not buildinfo["number"] == "42":
+        if not buildinfo["name"] == "MyBuildName" or not buildinfo["number"] == "42":
             mock_resp.status_code = 400
         mock_resp.content = None
         return mock_resp
@@ -271,6 +271,7 @@ class MyBuildInfoCreation(unittest.TestCase):
             result = StringIO()
             sys.stderr = result
             run()
+        except SystemExit:
             result = result.getvalue()
             self.assertIn("This lockfile was created with an incompatible version of Conan", result)
         finally:
