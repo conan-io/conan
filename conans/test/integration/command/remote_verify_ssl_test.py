@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 resp = Response()
 resp._content = b'{"results": []}'
 resp.status_code = 200
-resp.headers = {"Content-Type": "application/json", "X-Conan-Server-Capabilities": "revisions"}
+resp.headers = {"Content-Type": "application/json"}
 
 
 class RequesterMockTrue(object):
