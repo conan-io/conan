@@ -20,6 +20,7 @@ class Layout(object):
         self._base_source_folder = None
         self._base_build_folder = None
         self._base_package_folder = None
+        self._base_generators_folder = None
 
         self.source = _LayoutEntry()
         # Supported info in source layout:
@@ -29,10 +30,12 @@ class Layout(object):
         self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
 
         self.build = _LayoutEntry()
+
         self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.build.bin_patterns = ["*.exe", "*.dll"]
 
         self.package = _LayoutEntry()
+        self.generators = _LayoutEntry()
 
     def __repr__(self):
         return str(self.__dict__)
@@ -75,6 +78,10 @@ class Layout(object):
     def set_base_install_folder(self, folder):
         self._base_install_folder = folder
 
+    @property
+    def base_package_folder(self):
+        return self._base_package_folder
+
     def set_base_package_folder(self, folder):
         self._base_package_folder = folder
 
@@ -105,3 +112,12 @@ class Layout(object):
         cpp_info.resdirs.extend(self.source.cpp_info.res_paths)
         # TODO: only supported these things from source layout
         return cpp_info
+
+    def generators_folder(self):
+        if not self.generators.folder:
+            return self.base_install_folder
+        return os.path.join(self._base_generators_folder, self.generators.folder)
+
+    def set_base_generators_folder(self, folder):
+        self._base_generators_folder = folder
+

@@ -46,7 +46,8 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, generator=None, build_folder=None, parallel=True):
+    def __init__(self, conanfile, generator=None, parallel=True):
+
         _validate_recipe(conanfile)
 
         # assert generator is None, "'generator' is handled by the toolchain"
@@ -57,7 +58,6 @@ class CMake(object):
         self._conanfile = conanfile
         self._parallel = parallel
 
-        self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     def configure(self, source_folder=None):
@@ -70,12 +70,11 @@ class CMake(object):
             source = os.path.join(self._conanfile.source_folder, source_folder)
 
         build_folder = self._conanfile.build_folder
-        if self._build_folder:
-            build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
+        generator_folder = self._conanfile.generators_folder
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            CMakeToolchainBase.filename,
+            os.path.join(generator_folder, CMakeToolchainBase.filename).replace("\\", "/"),
             self._conanfile.package_folder.replace("\\", "/"),
             source)
 
@@ -93,9 +92,6 @@ class CMake(object):
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
-        if self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
-
         if build_type and not self._is_multiconfiguration:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "
                                          "single-config build systems")

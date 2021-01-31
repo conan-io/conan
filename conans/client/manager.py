@@ -18,10 +18,11 @@ from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
 
-def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
-                 update=False, manifest_folder=None, manifest_verify=False,
+def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remotes=None,
+                 build_modes=None, update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
+                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
+                 add_txt_generator=True):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -32,16 +33,13 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param manifest_verify: Verify dependencies manifests against stored ones
     @param manifest_interactive: Install deps manifests in folder for later verify, asking user
     for confirmation
-    @param generators: List of generators from command line. If False, no generator will be
-    written
+    @param generators: List of generators from command line.
     @param no_imports: Install specified packages but avoid running imports
+    @param add_txt_generator: Add the txt to the list of generators
 
     """
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
-    if generators is not False:
-        generators = set(generators) if generators else set()
-        generators.add("txt")  # Add txt generator by default
 
     if graph_info.profile_build:
         out.info("Configuration (profile_host):")
@@ -89,16 +87,24 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    if install_folder:
-        conanfile.layout.set_base_install_folder(install_folder)
+    conanfile.layout.set_base_install_folder(install_folder)
+    conanfile.layout.set_base_generators_folder(base_folder)
+
+    output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
+    if conanfile.layout.generators_folder:
         # Write generators
-        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
-        if generators is not False:
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            tmp.extend([g for g in generators if g not in tmp])
-            conanfile.generators = tmp
+        tmp = list(conanfile.generators)  # Add the command line specified generators
+        generators = set(generators) if generators else set()
+        tmp.extend([g for g in generators if g not in tmp])
+        conanfile.generators = tmp
+        app.generator_manager.write_generators(conanfile, conanfile.layout.generators_folder,
+                                               output)
+        write_toolchain(conanfile, conanfile.layout.generators_folder, output)
+    if install_folder:
+        if add_txt_generator:
+            # FIXME: This should be removed in 2.0, the local commmands need the txt generator
+            conanfile.generators = ["txt"]
             app.generator_manager.write_generators(conanfile, install_folder, output)
-            write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())

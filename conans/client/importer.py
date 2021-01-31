@@ -10,7 +10,7 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
-from conans.util.files import load, md5sum
+from conans.util.files import load, md5sum, mkdir
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -73,6 +73,7 @@ def _make_files_writable(file_names):
 def run_imports(conanfile, dest_folder):
     if not hasattr(conanfile, "imports"):
         return []
+    mkdir(dest_folder)
     file_importer = _FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
     conanfile.imports_folder = dest_folder
