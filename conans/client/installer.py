@@ -452,12 +452,20 @@ class BinaryInstaller(object):
         # Get source of information
         package_layout = self._cache.package_layout(node.ref)
         base_path = package_layout.base_folder()
+        node.conanfile.layout.set_base_package_folder(base_path)
+        node.conanfile.layout.set_base_build_folder(base_path)
+        node.conanfile.layout.set_base_source_folder(base_path)
+        node.conanfile.cpp_info = node.conanfile.layout.get_editable_cppinfo(node.conanfile.name)
+        node.conanfile.cpp_info.version = node.conanfile.version
+        node.conanfile.cpp_info.description = node.conanfile.description
+
         self._call_package_info(node.conanfile, package_folder=base_path, ref=node.ref)
 
         node.conanfile.cpp_info.filter_empty = False
+
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
-        if editable_cpp_info:
+        if editable_cpp_info:  # !!! FIXME: Por qué hay que generar el conaninfo y demas mandangas?
             editable_cpp_info.apply_to(node.ref,
                                        node.conanfile.cpp_info,
                                        settings=node.conanfile.settings,
@@ -528,6 +536,8 @@ class BinaryInstaller(object):
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                    % (str(pref), package_folder))
             # Call the info method
+            conanfile.layout.set_base_package_folder(package_folder)
+            conanfile.cpp_info = conanfile.layout.get_package_cppinfo(conanfile.name)
             self._call_package_info(conanfile, package_folder, ref=pref.ref)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
@@ -606,7 +616,6 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
-        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()
