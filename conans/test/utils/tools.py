@@ -392,8 +392,6 @@ class TestServer(object):
             write_permissions = []
         if users is None:
             users = {"lasote": "mypass", "conan": "password"}
-        if server_capabilities is None:
-            server_capabilities = [REVISIONS]
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
