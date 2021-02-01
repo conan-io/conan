@@ -5,9 +5,9 @@ import platform
 import threading
 from contextlib import contextmanager
 
-
 import fasteners
 
+from conans.client.tools.oss import OSInfo
 from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
@@ -16,14 +16,15 @@ from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER
-from conans.util.files import load, save, rmdir
+    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, rm_conandir
+from conans.util.env_reader import get_env
+from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
 
 
 def short_path(func):
-    if platform.system() == "Windows":
+    if platform.system() == "Windows" or OSInfo().is_cygwin:  # Not for other subsystems
         from conans.util.windows import path_shortener
 
         def wrap(self, *args, **kwargs):
@@ -110,6 +111,75 @@ class PackageCacheLayout(object):
         assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
         return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
 
+    @contextmanager
+    def set_dirty_context_manager(self, pref):
+        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+        set_dirty(pkg_folder)
+        yield
+        clean_dirty(pkg_folder)
+
+    def download_package(self, pref):
+        return os.path.join(self._base_folder, "dl", "pkg", pref.id)
+
+    def download_export(self):
+        return os.path.join(self._base_folder, "dl", "export")
+
+    def package_is_dirty(self, pref):
+        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+        return is_dirty(pkg_folder)
+
+    def package_id_exists(self, package_id):
+        # The package exists if the folder exists, also for short_paths case
+        pkg_folder = self.package(PackageReference(self._ref, package_id))
+        return os.path.isdir(pkg_folder)
+
+    def package_remove(self, pref):
+        # Here we could validate and check we own a write lock over this package
+        assert isinstance(pref, PackageReference)
+        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
+        # Remove the tgz storage
+        tgz_folder = self.download_package(pref)
+        rmdir(tgz_folder)
+        # This is NOT the short paths, but the standard cache one
+        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+        try:
+            rm_conandir(pkg_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (pkg_folder, str(e)))
+        if is_dirty(pkg_folder):
+            clean_dirty(pkg_folder)
+        # FIXME: This fails at the moment, but should be fixed
+        # with self.update_metadata() as metadata:
+        #    metadata.clear_package(pref.id)
+
+    def sources_remove(self):
+        src_folder = os.path.join(self._base_folder, SRC_FOLDER)
+        try:
+            rm_conandir(src_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (src_folder, str(e)))
+        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        try:
+            rm_conandir(scm_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (scm_folder, str(e)))
+
+    def export_remove(self):
+        export_folder = self.export()
+        rmdir(export_folder)
+        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+        rm_conandir(export_src_folder)
+        download_export = self.download_export()
+        rmdir(download_export)
+        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        rm_conandir(scm_folder)
+
     def package_metadata(self):
         return os.path.join(self._base_folder, PACKAGE_METADATA)
 
@@ -127,6 +197,7 @@ class PackageCacheLayout(object):
                (not self._ref.revision or self.recipe_revision() == self._ref.revision)
 
     def package_exists(self, pref):
+        # used only for Remover, to check if package_id provided by users exists
         assert isinstance(pref, PackageReference)
         assert pref.ref == self._ref
         return (self.recipe_exists() and
@@ -154,7 +225,9 @@ class PackageCacheLayout(object):
             builds = []
         return builds
 
-    def conan_packages(self):
+    def package_ids(self):
+        """ get a list of all package_ids for this recipe
+        """
         packages_dir = self.packages()
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
@@ -238,14 +311,8 @@ class PackageCacheLayout(object):
         if not os.path.exists(abs_path):
             raise NotFoundException("The specified path doesn't exist")
         if os.path.isdir(abs_path):
-            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
+            keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path,
+                                                                                       keep_python)])
         else:
             return load(abs_path)
-
-    def packages_ids(self):
-        packages_folder = self.packages()
-        if os.path.exists(packages_folder):
-            pkg_ids = [d for d in os.listdir(packages_folder)]
-        else:
-            pkg_ids = []
-        return pkg_ids

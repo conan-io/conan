@@ -4,7 +4,7 @@ from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph_builder import DepsGraph, Node
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class DepsGraphTest(unittest.TestCase):
@@ -24,7 +24,7 @@ class DepsGraphTest(unittest.TestCase):
 
         self.assertNotEqual(n1, n2)
 
-    def basic_levels_test(self):
+    def test_basic_levels(self):
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
         ref3 = ConanFileReference.loads("Hello/3.0@user/stable")
@@ -40,7 +40,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n3, None)
         self.assertEqual([[n3], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test(self):
+    def test_multi_levels(self):
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
         ref31 = ConanFileReference.loads("Hello/31.0@user/stable")
@@ -60,7 +60,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test2(self):
+    def test_multi_levels_2(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
@@ -85,7 +85,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n5, n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test3(self):
+    def test_multi_levels_3(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")

@@ -38,21 +38,21 @@ def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
             raise ConanInvalidConfiguration("The cppstd GNU extension is required")
 
     def deduced_cppstd():
-        cppstd = conanfile.settings.get_safe("compiler.cppstd")
-        if cppstd:
-            return cppstd
+        settings_cppstd = conanfile.settings.get_safe("compiler.cppstd")
+        if settings_cppstd:
+            return settings_cppstd
 
         compiler = conanfile.settings.get_safe("compiler")
         compiler_version = conanfile.settings.get_safe("compiler.version")
         if not compiler or not compiler_version:
             raise ConanException("Could not obtain cppstd because there is no declared "
                                  "compiler in the 'settings' field of the recipe.")
-        cppstd = cppstd_default(compiler, compiler_version)
-        if cppstd is None:
+        settings_cppstd = cppstd_default(conanfile.settings)
+        if settings_cppstd is None:
             raise ConanInvalidConfiguration("Could not detect the current default cppstd for "
                                             "the compiler {}-{}.".format(compiler,
                                                                          compiler_version))
-        return cppstd
+        return settings_cppstd
 
     current_cppstd = deduced_cppstd()
     check_required_gnu_extension(current_cppstd)
@@ -75,3 +75,16 @@ def valid_min_cppstd(conanfile, cppstd, gnu_extensions=False):
     except ConanInvalidConfiguration:
         return False
     return True
+
+
+def stdcpp_library(conanfile):
+    libcxx = conanfile.settings.get_safe("compiler.libcxx")
+    if libcxx in ["libstdc++", "libstdc++11"]:
+        return "stdc++"
+    elif libcxx in ["libc++"]:
+        return "c++"
+    elif libcxx in ["c++_shared"]:
+        return "c++_shared"
+    elif libcxx in ["c++_static"]:
+        return "c++_static"
+    return None

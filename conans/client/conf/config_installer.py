@@ -2,17 +2,20 @@ import json
 import os
 import shutil
 
+from datetime import datetime
+from dateutil.tz import gettz
+
 from contextlib import contextmanager
 from six.moves.urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt,\
-    migrate_registry_file
+from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, walk, save
+from conans.util.files import mkdir, rmdir, walk, save, touch, remove
+from conans.client.cache.cache import ClientCache
 
 
 def _hide_password(resource):
@@ -59,9 +62,9 @@ def _process_git_repo(config, cache, output):
         _process_folder(config, tmp_folder, cache, output)
 
 
-def _process_zip_file(config, zippath, cache, output, tmp_folder, remove=False):
+def _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=False):
     unzip(zippath, tmp_folder, output=output)
-    if remove:
+    if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache, output)
 
@@ -74,14 +77,55 @@ def _handle_conan_conf(current_conan_conf, new_conan_conf_path):
 
 def _filecopy(src, filename, dst):
     # https://github.com/conan-io/conan/issues/6556
+    # This is just a local convenience for "conan config install", using copyfile to avoid
+    # copying with permissions that later cause bugs
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
     if os.path.exists(dst):
-        os.remove(dst)
-    shutil.copy(src, dst)
+        remove(dst)
+    shutil.copyfile(src, dst)
+
+
+def _process_file(directory, filename, config, cache, output, folder):
+    if filename == "settings.yml":
+        output.info("Installing settings.yml")
+        _filecopy(directory, filename, cache.cache_folder)
+    elif filename == "conan.conf":
+        output.info("Processing conan.conf")
+        _handle_conan_conf(cache.config, os.path.join(directory, filename))
+    elif filename == "remotes.txt":
+        output.info("Defining remotes from remotes.txt")
+        _handle_remotes(cache, os.path.join(directory, filename))
+    elif filename in ("registry.txt", "registry.json"):
+        try:
+            os.remove(cache.remotes_path)
+        except OSError:
+            pass
+        finally:
+            _filecopy(directory, filename, cache.cache_folder)
+            migrate_registry_file(cache, output)
+    elif filename == "remotes.json":
+        # Fix for Conan 2.0
+        raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
+    else:
+        # This is ugly, should be removed in Conan 2.0
+        if filename in ("README.md", "LICENSE.txt"):
+            output.info("Skip %s" % filename)
+        else:
+            relpath = os.path.relpath(directory, folder)
+            if config.target_folder:
+                target_folder = os.path.join(cache.cache_folder, config.target_folder,
+                                             relpath)
+            else:
+                target_folder = os.path.join(cache.cache_folder, relpath)
+            mkdir(target_folder)
+            output.info("Copying file %s to %s" % (filename, target_folder))
+            _filecopy(directory, filename, target_folder)
 
 
 def _process_folder(config, folder, cache, output):
+    if not os.path.isdir(folder):
+        raise ConanException("No such directory: '%s'" % str(folder))
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
     for root, dirs, files in walk(folder):
@@ -89,40 +133,7 @@ def _process_folder(config, folder, cache, output):
         if ".git" in root:
             continue
         for f in files:
-            if f == "settings.yml":
-                output.info("Installing settings.yml")
-                _filecopy(root, f, cache.cache_folder)
-            elif f == "conan.conf":
-                output.info("Processing conan.conf")
-                _handle_conan_conf(cache.config, os.path.join(root, f))
-            elif f == "remotes.txt":
-                output.info("Defining remotes from remotes.txt")
-                _handle_remotes(cache, os.path.join(root, f))
-            elif f in ("registry.txt", "registry.json"):
-                try:
-                    os.remove(cache.remotes_path)
-                except OSError:
-                    pass
-                finally:
-                    _filecopy(root, f, cache.cache_folder)
-                    migrate_registry_file(cache, output)
-            elif f == "remotes.json":
-                # Fix for Conan 2.0
-                raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")
-            else:
-                # This is ugly, should be removed in Conan 2.0
-                if root == folder and f in ("README.md", "LICENSE.txt"):
-                    output.info("Skip %s" % f)
-                    continue
-                relpath = os.path.relpath(root, folder)
-                if config.target_folder:
-                    target_folder = os.path.join(cache.cache_folder, config.target_folder,
-                                                 relpath)
-                else:
-                    target_folder = os.path.join(cache.cache_folder, relpath)
-                mkdir(target_folder)
-                output.info("Copying file %s to %s" % (f, target_folder))
-                _filecopy(root, f, target_folder)
+            _process_file(root, f, config, cache, output, folder)
 
 
 def _process_download(config, cache, output, requester):
@@ -132,7 +143,7 @@ def _process_download(config, cache, output, requester):
         try:
             tools.download(config.uri, zippath, out=output, verify=config.verify_ssl,
                            requester=requester)
-            _process_zip_file(config, zippath, cache, output, tmp_folder, remove=True)
+            _process_zip_file(config, zippath, cache, output, tmp_folder, first_remove=True)
         except Exception as e:
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
@@ -188,23 +199,52 @@ class _ConfigOrigin(object):
         return config
 
 
+def _is_compressed_file(filename):
+    open(filename, "r")  # Check if the file exist and can be opened
+    import zipfile
+    if zipfile.is_zipfile(filename):
+        return True
+    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tar") or filename.endswith(".gz") or
+            filename.endswith(".tar.xz") or filename.endswith(".txz")):
+        return True
+    return False
+
+
 def _process_config(config, cache, output, requester):
-    if config.type == "git":
-        _process_git_repo(config, cache, output)
-    elif config.type == "dir":
-        _process_folder(config, config.uri, cache, output)
-    elif config.type == "file":
-        with tmp_config_install_folder(cache) as tmp_folder:
-            _process_zip_file(config, config.uri, cache, output, tmp_folder)
-    elif config.type == "url":
-        _process_download(config, cache, output, requester=requester)
-    else:
-        raise ConanException("Unable to process config install: %s" % config.uri)
+    try:
+        if config.type == "git":
+            _process_git_repo(config, cache, output)
+        elif config.type == "dir":
+            _process_folder(config, config.uri, cache, output)
+        elif config.type == "file":
+            if _is_compressed_file(config.uri):
+                with tmp_config_install_folder(cache) as tmp_folder:
+                    _process_zip_file(config, config.uri, cache, output, tmp_folder)
+            else:
+                dirname, filename = os.path.split(config.uri)
+                _process_file(dirname, filename, config, cache, output, dirname)
+        elif config.type == "url":
+            _process_download(config, cache, output, requester=requester)
+        else:
+            raise ConanException("Unable to process config install: %s" % config.uri)
+    except Exception as e:
+        raise ConanException("Failed conan config install: %s" % str(e))
 
 
 def _save_configs(configs_file, configs):
     save(configs_file, json.dumps([config.json() for config in configs],
                                   indent=True))
+
+
+def _load_configs(configs_file):
+    try:
+        configs = json.loads(load(configs_file))
+    except Exception as e:
+        raise ConanException("Error loading configs-install file: %s\n%s"
+                             % (configs_file, str(e)))
+    return [_ConfigOrigin(config) for config in configs]
 
 
 def configuration_install(app, uri, verify_ssl, config_type=None,
@@ -213,12 +253,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
     configs = []
     configs_file = cache.config_install_file
     if os.path.isfile(configs_file):
-        try:
-            configs = json.loads(load(configs_file))
-        except Exception as e:
-            raise ConanException("Error loading configs-install file: %s\n%s"
-                                 % (configs_file, str(e)))
-        configs = [_ConfigOrigin(config) for config in configs]
+        configs = _load_configs(configs_file)
     if uri is None:
         if config_type or args or not verify_ssl:  # Not the defaults
             if not configs:
@@ -237,6 +272,7 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
             for config in configs:
                 output.info("Config install:  %s" % _hide_password(config.uri))
                 _process_config(config, cache, output, requester)
+            touch(cache.config_install_file)
     else:
         # Execute and store the new one
         config = _ConfigOrigin.from_item(uri, config_type, verify_ssl, args,
@@ -247,3 +283,43 @@ def configuration_install(app, uri, verify_ssl, config_type=None,
         else:
             configs = [(c if c != config else config) for c in configs]
         _save_configs(configs_file, configs)
+
+
+def _is_scheduled_intervals(file, interval):
+    """ Check if time interval is bigger than last file change
+
+    :param file: file path to stat last change
+    :param interval: required time interval
+    :return: True if last change - current time is bigger than interval. Otherwise, False.
+    """
+    timestamp = os.path.getmtime(file)
+    sched = datetime.fromtimestamp(timestamp, tz=gettz())
+    sched += interval
+    now = datetime.now(gettz())
+    return now > sched
+
+
+def is_config_install_scheduled(api):
+    """ Validate if the next config install is scheduled to occur now
+
+        When config_install_interval is not configured, config install should not run
+        When configs file is empty, scheduled config install should not run
+        When config_install_interval is configured, config install will respect the delta from:
+            last conan install execution (sched file) + config_install_interval value < now
+
+    :param api: Conan API instance
+    :return: True, if it should occur now. Otherwise, False.
+    """
+    cache = ClientCache(api.cache_folder, api.out)
+    interval = cache.config.config_install_interval
+    config_install_file = cache.config_install_file
+    if interval is not None:
+        if not os.path.exists(config_install_file):
+            raise ConanException("config_install_interval defined, but no config_install file")
+        scheduled = _is_scheduled_intervals(config_install_file, interval)
+        if scheduled and not _load_configs(config_install_file):
+            api.out.warn("Skipping scheduled config install, "
+                         "no config listed in config_install file")
+            os.utime(config_install_file, None)
+        else:
+            return scheduled

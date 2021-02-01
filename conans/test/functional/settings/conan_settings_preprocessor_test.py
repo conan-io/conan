@@ -1,10 +1,13 @@
 import platform
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
+@pytest.mark.tool_compiler
 class ConanSettingsPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
@@ -28,7 +31,6 @@ class HelloConan(ConanFile):
 
     def test_runtime_auto(self):
         # Ensure that compiler.runtime is not declared
-        self.client.run("profile new --detect default")
         default_profile = load(self.client.cache.default_profile_path)
         self.assertNotIn(default_profile, "compiler.runtime")
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
@@ -39,7 +41,7 @@ class HelloConan(ConanFile):
 
     def test_runtime_not_present_ok(self):
         # Generate the settings.yml
-        self.client.run("install Hello0/0.1@lasote/channel --build missing")
+        self.client.run("config init")
         default_settings = load(self.client.cache.settings_path)
         default_settings = default_settings.replace("runtime:", "# runtime:")
         save(self.client.cache.settings_path, default_settings)

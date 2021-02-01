@@ -22,7 +22,7 @@ def _run_bin(pyinstaller_path):
     # run the binary to test if working
     conan_bin = os.path.join(pyinstaller_path, 'dist', 'conan', 'conan')
     if platform.system() == 'Windows':
-        conan_bin += '.exe'
+        conan_bin = '"' + conan_bin + '.exe' + '"'
     retcode = os.system(conan_bin)
     if retcode != 0:
         raise Exception("Binary not working")
@@ -64,7 +64,7 @@ VSVersionInfo(
         StringStruct(u'CompanyName', u'JFrog'),
         StringStruct(u'FileDescription', u'Conan C, C++ Open Source Package Manager'),
         StringStruct(u'FileVersion', u'{version}'),
-        StringStruct(u'LegalCopyright', u'Copyright 2018 JFrog'),
+        StringStruct(u'LegalCopyright', u'Copyright 2020 JFrog'),
         StringStruct(u'ProductName', u'Conan'),
         StringStruct(u'ProductVersion', u'{version}')])
       ]),
@@ -90,7 +90,9 @@ def pyinstall(source_folder):
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
-    hidden = "--hidden-import=glob"
+    hidden = ("--hidden-import=glob --hidden-import=conan.tools.microsoft "
+              "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
+              "--hidden-import=conan.tools.meson")
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
         win_ver = ""
@@ -98,21 +100,21 @@ def pyinstall(source_folder):
         win_ver_file = os.path.join(pyinstaller_path, 'windows-version-file')
         content = _windows_version_file(__version__)
         save(win_ver_file, content)
-        win_ver = "--version-file %s" % win_ver_file
+        win_ver = "--version-file \"%s\"" % win_ver_file
 
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
-    subprocess.call('%s -y -p %s --console %s %s %s'
+    subprocess.call('%s -y -p "%s" --console "%s" %s %s'
                     % (command, source_folder, conan_path, hidden, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
     _run_bin(pyinstaller_path)
 
-    subprocess.call('%s -y -p %s --console %s %s'
+    subprocess.call('%s -y -p "%s" --console "%s" %s'
                     % (command, source_folder, conan_server_path, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
-    subprocess.call('%s -y -p %s --console %s -n conan_build_info %s'
+    subprocess.call('%s -y -p "%s" --console "%s" -n conan_build_info %s'
                     % (command, source_folder, conan_build_info_path, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
@@ -132,8 +134,8 @@ if __name__ == "__main__":
         print("pyinstaller does not yet support python 3.8, "
               "see: https://github.com/pyinstaller/pyinstaller/issues/4311", file=sys.stderr)
         exit(1)
-    source_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    output_folder = pyinstall(source_folder)
+    src_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    output_folder = pyinstall(src_folder)
     print("\n**************Conan binaries created!******************\n"
           "\nAppend this folder to your system PATH: '%s'\n"
           "Feel free to move the whole folder to another location." % output_folder)

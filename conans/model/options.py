@@ -22,8 +22,8 @@ def option_not_exist_msg(option_name, existing_options):
     """ Someone is referencing an option that is not available in the current package
     options
     """
-    result = ["'options.%s' doesn't exist" % option_name]
-    result.append("Possible options are %s" % existing_options or "none")
+    result = ["option '%s' doesn't exist" % option_name,
+              "Possible options are %s" % existing_options or "none"]
     return "\n".join(result)
 
 
@@ -59,6 +59,7 @@ class PackageOptionValues(object):
     def __init__(self):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
+        self._freeze = False
 
     def __bool__(self):
         return bool(self._dict)
@@ -71,7 +72,7 @@ class PackageOptionValues(object):
 
     def __getattr__(self, attr):
         if attr not in self._dict:
-            return None
+            raise ConanException(option_not_exist_msg(attr, list(self._dict.keys())))
         return self._dict[attr]
 
     def __delattr__(self, attr):
@@ -81,6 +82,12 @@ class PackageOptionValues(object):
 
     def clear(self):
         self._dict.clear()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        return self._dict == other._dict
 
     def __setattr__(self, attr, value):
         if attr[0] == "_":
@@ -212,6 +219,9 @@ class OptionsValues(object):
     def clear_unscoped_options(self):
         self._package_values.clear()
 
+    def __contains__(self, item):
+        return item in self._package_values
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -226,6 +236,19 @@ class OptionsValues(object):
             self._reqs_options[package].remove(name)
         else:
             self._package_values.remove(name)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __eq__(self, other):
+        if not self._package_values == other._package_values:
+            return False
+        # It is possible that the entry in the dict is not defined
+        for key, pkg_values in self._reqs_options.items():
+            other_values = other[key]
+            if not pkg_values == other_values:
+                return False
+        return True
 
     def __repr__(self):
         return self.dumps()
@@ -283,16 +306,14 @@ class OptionsValues(object):
 
     @property
     def sha(self):
-        result = []
-        result.append(self._package_values.sha)
+        result = [self._package_values.sha]
         for key in sorted(list(self._reqs_options.keys())):
             result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):
-        ret = {}
-        ret["options"] = self._package_values.serialize()
-        ret["req_options"] = {}
+        ret = {"options": self._package_values.serialize(),
+               "req_options": {}}
         for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
         return ret

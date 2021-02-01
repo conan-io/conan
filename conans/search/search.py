@@ -8,7 +8,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
-from conans.util.files import list_folder_subdirs, load
+from conans.util.files import load
 from conans.util.log import logger
 
 
@@ -142,9 +142,8 @@ def search_packages(package_layout, query):
 def _get_local_infos_min(package_layout):
     result = OrderedDict()
 
-    packages_path = package_layout.packages()
-    subdirs = list_folder_subdirs(packages_path, level=1)
-    for package_id in subdirs:
+    package_ids = package_layout.package_ids()
+    for package_id in package_ids:
         # Read conaninfo
         pref = PackageReference(package_layout.ref, package_id)
         info_path = os.path.join(package_layout.package(pref), CONANINFO)

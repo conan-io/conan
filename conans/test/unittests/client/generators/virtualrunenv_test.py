@@ -4,7 +4,7 @@ import platform
 import unittest
 
 from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock
 
 
 class VirtualRunEnvGeneratorTest(unittest.TestCase):
@@ -27,10 +27,10 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
         cls.result = cls.generator.content
 
     def test_output(self):
-        keys = ["deactivate_run.sh", "activate_run.sh", self.environment_sh_env]
+        keys = ["deactivate_run.sh", "activate_run.sh", self.environment_sh_env,
+                "activate_run.ps1", "deactivate_run.ps1", self.environment_ps1_env]
         if platform.system() == "Windows":
-            keys += ["activate_run.bat", "deactivate_run.bat", self.environment_bat_env,
-                     "activate_run.ps1", "deactivate_run.ps1", self.environment_ps1_env]
+            keys += ["activate_run.bat", "deactivate_run.bat", self.environment_bat_env]
 
         self.assertListEqual(sorted(keys), sorted(self.result.keys()))
 
@@ -56,3 +56,8 @@ class VirtualRunEnvGeneratorTest(unittest.TestCase):
             self.assertIn('DYLD_LIBRARY_PATH=lib1;lib2;$env:DYLD_LIBRARY_PATH', content)
             self.assertIn('LD_LIBRARY_PATH=lib1;lib2;$env:LD_LIBRARY_PATH', content)
             self.assertIn('PATH=bin1;bin2;$env:PATH', content)
+        else:
+            content = self.result[self.environment_ps1_env]
+            self.assertIn('DYLD_LIBRARY_PATH=lib1:lib2:$env:DYLD_LIBRARY_PATH', content)
+            self.assertIn('LD_LIBRARY_PATH=lib1:lib2:$env:LD_LIBRARY_PATH', content)
+            self.assertIn('PATH=bin1:bin2:$env:PATH', content)

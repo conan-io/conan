@@ -4,11 +4,13 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
+import pytest
+
 from conans.client.tools.oss import detected_os
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANFILE_TXT, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 from conans.util.files import mkdir, rmdir
@@ -21,13 +23,12 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
-    def not_found_package_dirty_cache_test(self):
+    def test_not_found_package_dirty_cache(self):
         # Conan does a lock on the cache, and even if the package doesn't exist
         # left a trailing folder with the filelocks. This test checks
         # it will be cleared
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("create . lasote/testing")
         client.run("upload * --all --confirm")
         client.run('remove "*" -f')
@@ -37,20 +38,20 @@ class InstallTest(unittest.TestCase):
         client.run("remove * -f")
         client.run("install Hello/0.1@lasote/testing")
 
-    def install_reference_txt_test(self):
+    def test_install_reference_txt(self):
         # Test to check the "conan install <path> <reference>" command argument
         client = TestClient()
         client.save({"conanfile.txt": ""})
         client.run("info .")
         self.assertIn("conanfile.txt", str(client.out).splitlines())
 
-    def install_reference_error_test(self):
+    def test_install_reference_error(self):
         # Test to check the "conan install <path> <reference>" command argument
         client = TestClient()
         client.run("install Pkg/0.1@myuser/testing user/testing", assert_error=True)
         self.assertIn("ERROR: A full reference was provided as first argument", client.out)
 
-    def install_reference_test(self):
+    def test_install_reference(self):
         # Test to check the "conan install <path> <reference>" command argument
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -102,7 +103,7 @@ class Pkg(ConanFile):
         # If this doesn't, fail, all good
         self.client.run("install path/to/sub/folder")
 
-    def install_system_requirements_test(self):
+    def test_install_system_requirements(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
         client.save({"conanfile.py": """from conans import ConanFile
@@ -120,7 +121,7 @@ class MyPkg(ConanFile):
         client.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Running system requirements!!", client.out)
 
-    def install_transitive_pattern_test(self):
+    def test_install_transitive_pattern(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -192,17 +193,18 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
 
-    def install_package_folder_test(self):
+    def test_install_package_folder(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-import os
-class Pkg(ConanFile):
-    def package_info(self):
-        self.dummy_doesnt_exist_not_break
-        self.output.info("Hello")
-        self.env_info.PATH = os.path.join(self.package_folder, "bin")
-"""})
+        client.save({"conanfile.py": textwrap.dedent("""\
+            from conans import ConanFile
+            import os
+            class Pkg(ConanFile):
+                def package_info(self):
+                    self.dummy_doesnt_exist_not_break
+                    self.output.info("Hello")
+                    self.env_info.PATH = os.path.join(self.package_folder, "bin")
+            """)})
         client.run("install .")
         self.assertNotIn("Hello", client.out)
         self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
@@ -215,43 +217,35 @@ class Pkg(ConanFile):
         if export:
             self.client.run("export . lasote/stable")
 
-    def install_error_never_test(self):
+    def test_install_error_never(self):
         self._create("Hello0", "0.1", export=False)
         self.client.run("install . --build never --build missing", assert_error=True)
-        self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.out)
+        self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
         self.client.run("install conanfile.py --build never --build Hello", assert_error=True)
-        self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.out)
+        self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
         self.client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
-        self.assertIn("ERROR: --build=never not compatible with other options",
-                      self.client.out)
+        self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
 
-    def install_combined_test(self):
+    def test_install_combined(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-        self.client.run("install . %s --build=missing" % (self.settings))
+        self.client.run("install . %s --build=missing" % self.settings)
 
-        self.client.run("install . %s --build=missing --build Hello1" % (self.settings))
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
-                      self.client.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Forced build from source",
-                      self.client.out)
+        self.client.run("install . %s --build=missing --build Hello1" % self.settings)
+        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Forced build from source", self.client.out)
 
-    def install_transitive_cache_test(self):
+    def test_install_transitive_cache(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"])
-        self.client.run("install Hello2/0.1@lasote/stable %s --build=missing" % (self.settings))
-        self.assertIn("Hello0/0.1@lasote/stable: Generating the package",
-                      self.client.out)
-        self.assertIn("Hello1/0.1@lasote/stable: Generating the package",
-                      self.client.out)
-        self.assertIn("Hello2/0.1@lasote/stable: Generating the package",
-                      self.client.out)
+        self.client.run("install Hello2/0.1@lasote/stable %s --build=missing" % self.settings)
+        self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.out)
 
-    def partials_test(self):
+    def test_partials(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
@@ -265,7 +259,7 @@ class Pkg(ConanFile):
             self.client.run("install . %s --build=%s" % (self.settings, package))
             self.assertNotIn("No package matching", self.client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
@@ -299,7 +293,7 @@ class Pkg(ConanFile):
             hello1_conan_info = ConanInfo.load_file(hello1_info)
             self.assertEqual(lang, hello1_conan_info.options.language)
 
-    def upper_option_test(self):
+    def test_upper_option(self):
         self._create("Hello0", "0.1", no_config=True)
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
@@ -325,7 +319,7 @@ class Pkg(ConanFile):
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
 
-    def inverse_upper_option_test(self):
+    def test_inverse_upper_option(self):
         self._create("Hello0", "0.1", no_config=True)
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
@@ -352,7 +346,7 @@ class Pkg(ConanFile):
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual("language=1\nstatic=True", hello1_conan_info.options.dumps())
 
-    def upper_option_txt_test(self):
+    def test_upper_option_txt(self):
         self._create("Hello0", "0.1", no_config=True)
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
 
@@ -385,7 +379,7 @@ class Pkg(ConanFile):
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
 
-    def change_option_txt_test(self):
+    def test_change_option_txt(self):
         self._create("Hello0", "0.1")
 
         # Do not adjust cpu_count, it is reusing a cache
@@ -430,7 +424,8 @@ class Pkg(ConanFile):
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
 
-    def cross_platform_msg_test(self):
+    @pytest.mark.tool_compiler
+    def test_cross_platform_msg(self):
         # Explicit with os_build and os_arch settings
         message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
@@ -445,22 +440,15 @@ class Pkg(ConanFile):
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, assert_error=True)
         self.assertIn(message, self.client.out)
 
-    def install_cwd_test(self):
-        conanfile = """from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    settings = "os"
-"""
+    def test_install_cwd(self):
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1").with_setting("os")})
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows "
                    "--install-folder=win_dir")
-        self.assertIn("Hello/0.1@lasote/stable from local cache",
-                      client.out)  # Test "from local cache" output message
+        self.assertIn("Hello/0.1@lasote/stable from local cache", client.out)
         client.run("install . --build=missing -s os=Macos -s os_build=Macos "
                    "--install-folder=os_dir")
         conaninfo = client.load("win_dir/conaninfo.txt")
@@ -470,28 +458,23 @@ class TestConan(ConanFile):
         self.assertNotIn("os=Windows", conaninfo)
         self.assertIn("os=Macos", conaninfo)
 
-    def install_reference_not_conanbuildinfo_test(self):
-        conanfile = """from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    settings = "os"
-"""
+    def test_install_reference_not_conanbuildinfo(self):
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1").with_setting("os")})
         client.run("create . conan/stable")
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
 
-    def install_with_profile_test(self):
+    def test_install_with_profile(self):
         # Test for https://github.com/conan-io/conan/pull/2043
-        conanfile = """from conans import ConanFile
-class TestConan(ConanFile):
-    settings = "os"
-    def requirements(self):
-        self.output.info("PKGOS=%s" % self.settings.os)
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                settings = "os"
+                def requirements(self):
+                    self.output.info("PKGOS=%s" % self.settings.os)
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("profile new myprofile")
@@ -508,9 +491,9 @@ class TestConan(ConanFile):
         client.run("install . -pr=myotherprofile")
         self.assertIn("PKGOS=FreeBSD", client.out)
         client.run("install . -pr=./myotherprofile", assert_error=True)
-        self.assertIn("Error parsing the profile", client.out)
+        self.assertIn("Error while parsing line 0", client.out)
 
-    def install_with_path_errors_test(self):
+    def test_install_with_path_errors(self):
         client = TestClient()
 
         # Install without path param not allowed
@@ -525,14 +508,9 @@ class TestConan(ConanFile):
         client.run("install not_real_dir/conanfile.py --install-folder build", assert_error=True)
         self.assertIn("Conanfile not found", client.out)
 
-    def install_broken_reference_test(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
+    def test_install_broken_reference(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile()})
         client.run("export . Hello/0.1@lasote/stable")
         client.run("remote add_ref Hello/0.1@lasote/stable default")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
@@ -540,31 +518,25 @@ class Pkg(ConanFile):
         # origin remote is lost
         rmdir(os.path.join(client.cache.package_layout(ref).base_folder()))
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
-                      client.out)
+        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes", client.out)
 
         # If it was associated, it has to be desasociated
         client.run("remote remove_ref Hello/0.1@lasote/stable")
         client.run("install Hello/0.1@lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
-                      client.out)
+        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes", client.out)
 
-    def install_argument_order_test(self):
+    def test_install_argument_order(self):
         # https://github.com/conan-io/conan/issues/2520
 
-        conanfile_boost = """from conans import ConanFile
-class BoostConan(ConanFile):
-    name = "boost"
-    version = "0.1"
-    options = {"shared": [True, False]}
-    default_options = "shared=True"
-"""
-        conanfile = """from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    requires = "boost/0.1@conan/stable"
-"""
+        conanfile_boost = textwrap.dedent("""
+            from conans import ConanFile
+            class BoostConan(ConanFile):
+                name = "boost"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = "shared=True"
+            """)
+        conanfile = GenConanfile().with_require("boost/0.1@conan/stable")
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile_boost.py": conanfile_boost})
@@ -588,35 +560,23 @@ class TestConan(ConanFile):
         output_5 = "%s" % client.out
         self.assertEqual(output_4, output_5)
 
-    def install_anonymous_test(self):
+    def test_install_anonymous(self):
         # https://github.com/conan-io/conan/issues/4871
-        servers = {"default": TestServer()}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("Pkg", "0.1")})
         client.run("create . lasote/testing")
         client.run("upload * --confirm --all")
 
-        client2 = TestClient(servers=servers, users={})
+        client2 = TestClient(servers=client.servers, users={})
         client2.run("install Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Package installed", client2.out)
 
-    def install_without_ref_test(self):
-        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
-        servers = {"default": server}
-        client = TestClient(servers=servers, users={"default": [("user", "password")]})
+    def test_install_without_ref(self):
+        client = TestClient(default_server_user=True)
 
-        conanfile = textwrap.dedent("""
-                from conans import ConanFile
-
-                class MyPkg(ConanFile):
-                    name = "lib"
-                    version = "1.0"
-                """)
-        client.save({"conanfile.py": conanfile})
-
+        client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run('create .')
-        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID),
-                      client.out)
+        self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
         client.run('upload lib/1.0 -c --all')
         self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
@@ -632,9 +592,8 @@ class TestConan(ConanFile):
         client.run('install lib/1.0@')
         client.run('upload lib/1.0@ -c --all')
 
-    def install_disabled_remote_test(self):
-        client = TestClient(servers={"default": TestServer()},
-                            users={"default": [("lasote", "mypass")]})
+    def test_install_disabled_remote(self):
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . Pkg/0.1@lasote/testing")
         client.run("upload * --confirm --all -r default")
@@ -647,7 +606,7 @@ class TestConan(ConanFile):
         client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
         self.assertIn("ERROR: Remote 'default' is disabled", client.out)
 
-    def install_skip_disabled_remote_test(self):
+    def test_install_skip_disabled_remote(self):
         client = TestClient(servers=OrderedDict({"default": TestServer(),
                                                  "server2": TestServer(),
                                                  "server3": TestServer()}),
@@ -662,7 +621,7 @@ class TestConan(ConanFile):
         client.run("install Pkg/0.1@lasote/testing", assert_error=False)
         self.assertNotIn("Trying with 'default'...", client.out)
 
-    def install_version_range_reference_test(self):
+    def test_install_version_range_reference(self):
         # https://github.com/conan-io/conan/issues/5905
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})

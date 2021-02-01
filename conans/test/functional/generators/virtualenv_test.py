@@ -3,16 +3,18 @@ import platform
 import subprocess
 import textwrap
 import unittest
+from collections import OrderedDict
 
+import pytest
 import six
 from parameterized.parameterized import parameterized_class
 
 from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.tools import OSInfo
+from conans.client.tools import OSInfo, files as tools_files
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
-from conans.test.functional.graph.graph_manager_base import GraphManagerTest
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.integration.graph.graph_manager_base import GraphManagerTest
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
 from conans.util.files import decode_text, load, save_files, to_file_bytes
@@ -110,9 +112,7 @@ class PowerShellCommands(object):
 
     @property
     def skip(self):
-        # Change to this once support for PowreShell Core is in place.
-        # skip = not (os_info.is_windows or which("pwsh"))
-        return (not os_info.is_windows) or os_info.is_posix
+        return not (os_info.is_windows or tools_files.which("pwsh"))
 
 
 class WindowsCmdCommands(object):
@@ -184,13 +184,17 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         env_before = _load_env_file(os.path.join(self.test_folder, self.env_before))
         env_after = _load_env_file(os.path.join(self.test_folder, self.env_after))
-        if platform.system() == "Darwin":
+        there_was_ps1 = os.getenv("PS1")
+        # FIXME: Not the best behavior
+        # The deactivate sets PS1 always, but sometimes it didn't exist previously
+        if platform.system() == "Darwin" or not there_was_ps1:
             env_after.pop(six.u("PS1"), None)  # TODO: FIXME: Needed for the test to pass
             env_after.pop("PS1", None)  # TODO: FIXME: Needed for the test to pass
-        self.assertDictEqual(env_before, env_after)  # Environment restored correctly
 
+        self.assertDictEqual(env_before, env_after)  # Environment restored correctly
         return stdout, _load_env_file(os.path.join(self.test_folder, self.env_activated))
 
+    @pytest.mark.tool_conan
     def test_basic_variable(self):
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"USER_VAR": r"some value with space and \ (backslash)",
@@ -207,6 +211,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             self.assertEqual(environment["USER_VAR"], r"some value with space and \ (backslash)")
             self.assertEqual(environment["ANOTHER"], "data")
 
+    @pytest.mark.tool_conan
     def test_list_with_spaces(self):
         generator = VirtualEnvGenerator(ConanFileMock())
         self.assertIn("CFLAGS", VirtualEnvGenerator.append_with_spaces)
@@ -225,10 +230,13 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             self.assertEqual(environment["CFLAGS"], "-O2 {}cflags".format(extra_blank))
             self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 {}cl".format(extra_blank))
 
+    @pytest.mark.tool_conan
     def test_list_variable(self):
         self.assertNotIn("WHATEVER", os.environ)
         self.assertIn("PATH", os.environ)
         existing_path = os.environ.get("PATH")
+        # Avoid duplicates in the path
+        existing_path = os.pathsep.join(OrderedDict.fromkeys(existing_path.split(os.pathsep)))
 
         generator = VirtualEnvGenerator(ConanFileMock())
         generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
@@ -247,6 +255,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         self.assertEqual(environment["WHATEVER"],
                          "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
 
+    @pytest.mark.tool_conan
     def test_find_program(self):
         # If we add the path, we should found the env/executable instead of ori/executable
         # Watch out! 'cmd' returns all the paths where the executable is found, so we need to
@@ -255,7 +264,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
         generator.env = {"PATH": [self.env_path], }
 
         stdout, environment = self._run_virtualenv(generator)
-        
+
         cpaths = dict(l.split("=", 1) for l in reversed(stdout.splitlines()) if l.startswith("__conan_"))
         self.assertEqual(cpaths["__conan_pre_path__"], cpaths["__conan_post_path__"])
         self.assertEqual(cpaths["__conan_env_path__"], cpaths["__conan_post_path__"])

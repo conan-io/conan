@@ -100,3 +100,7 @@ class PkgConfig(object):
             for name in variable_names:
                 self._variables[name] = self._parse_output('variable=%s' % name)
         return self._variables
+
+    @property
+    def version(self):
+        return self._get_option('modversion')

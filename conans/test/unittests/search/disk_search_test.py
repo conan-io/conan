@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import (BUILD_FOLDER, CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER)
 from conans.search.search import search_packages, search_recipes
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save, mkdir
 
 
@@ -19,7 +19,7 @@ class SearchTest(unittest.TestCase):
         self.cache = ClientCache(folder, output=TestBufferConanOutput())
         mkdir(self.cache.store)
 
-    def basic_test2(self):
+    def test_basic_2(self):
         with chdir(self.cache.store):
             ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
             root_folder = str(ref1).replace("@", "/")
@@ -37,7 +37,7 @@ class SearchTest(unittest.TestCase):
             all_artif = [_artif for _artif in sorted(packages)]
             self.assertEqual(all_artif, artifacts)
 
-    def pattern_test(self):
+    def test_pattern(self):
         with chdir(self.cache.store):
             references = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
             refs = [ConanFileReference.loads(reference) for reference in references]
@@ -49,7 +49,7 @@ class SearchTest(unittest.TestCase):
             recipes = search_recipes(self.cache, "opencv/*@lasote/testing")
             self.assertEqual(recipes, refs)
 
-    def case_insensitive_test(self):
+    def test_case_insensitive(self):
         with chdir(self.cache.store):
             root_folder2 = "sdl/1.5/lasote/stable"
             ref2 = ConanFileReference.loads("sdl/1.5@lasote/stable")

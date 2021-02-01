@@ -1,10 +1,11 @@
 import os
+import platform
 from collections import OrderedDict
 
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
-from conans.client.build.cppstd_flags import cppstd_flag, cppstd_from_settings
-from conans.client.tools import cross_building
+from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
+from conans.client.tools import cross_building, Version
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -18,23 +19,33 @@ runtime_definition_var_name = "CONAN_LINK_RUNTIME"
 cmake_in_local_cache_var_name = "CONAN_IN_LOCAL_CACHE"
 
 
-def get_toolset(settings):
-    if settings.get_safe("compiler") == "Visual Studio":
+def get_toolset(settings, generator):
+    compiler = settings.get_safe("compiler")
+    compiler_base = settings.get_safe("compiler.base")
+    if compiler == "Visual Studio":
         subs_toolset = settings.get_safe("compiler.toolset")
         if subs_toolset:
             return subs_toolset
+    elif compiler == "intel" and compiler_base == "Visual Studio" and "Visual" in generator:
+        compiler_version = settings.get_safe("compiler.version")
+        if compiler_version:
+            compiler_version = compiler_version if "." in compiler_version else \
+                "%s.0" % compiler_version
+            return "Intel C++ Compiler " + compiler_version
     return None
 
 
-def get_generator(settings):
+def get_generator(conanfile):
     # Returns the name of the generator to be used by CMake
     if "CONAN_CMAKE_GENERATOR" in os.environ:
         return os.environ["CONAN_CMAKE_GENERATOR"]
 
-    compiler = settings.get_safe("compiler")
-    arch = settings.get_safe("arch")
-    compiler_version = settings.get_safe("compiler.version")
-    os_build, _, _, _ = get_cross_building_settings(settings)
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_base = conanfile.settings.get_safe("compiler.base")
+    arch = conanfile.settings.get_safe("arch")
+    compiler_version = conanfile.settings.get_safe("compiler.version")
+    compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
+    os_build, _, _, _ = get_cross_building_settings(conanfile)
 
     if not compiler or not compiler_version or not arch:
         if os_build == "Windows":
@@ -42,7 +53,9 @@ def get_generator(settings):
             return None
         return "Unix Makefiles"
 
-    if compiler == "Visual Studio":
+    if compiler == "Visual Studio" or compiler_base == "Visual Studio":
+        version = compiler_base_version or compiler_version
+        major_version = version.split('.', 1)[0]
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -50,8 +63,8 @@ def get_generator(settings):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}
-        base = "Visual Studio %s" % _visuals.get(compiler_version, "UnknownVersion %s" % compiler_version)
+                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
+        base = "Visual Studio %s" % _visuals
         return base
 
     # The generator depends on the build machine, not the target
@@ -67,12 +80,14 @@ def get_generator_platform(settings, generator):
         return os.environ["CONAN_CMAKE_GENERATOR_PLATFORM"]
 
     compiler = settings.get_safe("compiler")
+    compiler_base = settings.get_safe("compiler.base")
     arch = settings.get_safe("arch")
 
     if settings.get_safe("os") == "WindowsCE":
         return settings.get_safe("os.platform")
 
-    if compiler == "Visual Studio" and generator and "Visual" in generator:
+    if (compiler == "Visual Studio" or compiler_base == "Visual Studio") and \
+            generator and "Visual" in generator:
         return {"x86": "Win32",
                 "x86_64": "x64",
                 "armv7": "ARM",
@@ -114,8 +129,8 @@ def runtime_definition(runtime):
 
 def build_type_definition(new_build_type, old_build_type, generator, output):
     if new_build_type and new_build_type != old_build_type:
-        output.warn("Forced CMake build type ('%s') different from the settings build "
-                          "type ('%s')" % (new_build_type, old_build_type))
+        output.warn("Forced CMake build type ('%s') different from the settings build type ('%s')"
+                    % (new_build_type, old_build_type))
 
     build_type = new_build_type or old_build_type
     if build_type and not is_multi_configuration(generator):
@@ -143,8 +158,6 @@ class CMakeDefinitionsBuilder(object):
 
     def _get_cpp_standard_vars(self):
         cppstd = cppstd_from_settings(self._conanfile.settings)
-        compiler = self._ss("compiler")
-        compiler_version = self._ss("compiler.version")
 
         if not cppstd:
             return {}
@@ -157,11 +170,10 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_CMAKE_CXX_STANDARD"] = cppstd
             definitions["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
 
-        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(compiler, compiler_version, cppstd)
+        definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
-    def _cmake_cross_build_defines(self):
-
+    def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
@@ -171,7 +183,7 @@ class CMakeDefinitionsBuilder(object):
         env_sn = {"False": False, "True": True, "": None}.get(env_sn, env_sn)
         cmake_system_name = env_sn or self._forced_cmake_system_name
 
-        os_build, _, _, _ = get_cross_building_settings(self._conanfile.settings)
+        os_build, _, _, _ = get_cross_building_settings(self._conanfile)
         compiler = self._ss("compiler")
         libcxx = self._ss("compiler.libcxx")
 
@@ -191,15 +203,19 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            if cross_building(self._conanfile.settings):  # We are cross building
-                if os_ != os_build:
-                    if os_:  # the_os is the host (regular setting)
-                        definitions["CMAKE_SYSTEM_NAME"] = {"iOS": "Darwin",
-                                                            "tvOS": "Darwin",
-                                                            "watchOS": "Darwin",
-                                                            "Neutrino": "QNX"}.get(os_, os_)
-                    else:
-                        definitions["CMAKE_SYSTEM_NAME"] = "Generic"
+            skip_x64_x86 = os_ in ['Windows', 'Linux', 'SunOS', 'AIX']
+            if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
+                apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
+                    "3.14") or not cmake_version else None
+                cmake_system_name_map = {"Macos": "Darwin",
+                                         "iOS": apple_system_name or "iOS",
+                                         "tvOS": apple_system_name or "tvOS",
+                                         "watchOS": apple_system_name or "watchOS",
+                                         "Neutrino": "QNX",
+                                         "": "Generic",
+                                         None: "Generic"}
+                definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name_map.get(os_, os_)
+
         if os_ver:
             definitions["CMAKE_SYSTEM_VERSION"] = os_ver
             if is_apple_os(os_):
@@ -222,13 +238,15 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":
@@ -267,9 +285,10 @@ class CMakeDefinitionsBuilder(object):
 
         return {}
 
-    def get_definitions(self):
+    def get_definitions(self, cmake_version):
 
         compiler = self._ss("compiler")
+        compiler_base = self._ss("compiler.base")
         compiler_version = self._ss("compiler.version")
         arch = self._ss("arch")
         os_ = self._ss("os")
@@ -282,11 +301,21 @@ class CMakeDefinitionsBuilder(object):
         definitions.update(build_type_definition(self._forced_build_type, build_type,
                                                  self._generator, self._output))
 
-        if str(os_) == "Macos":
-            if arch == "x86":
-                definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
+        # don't attempt to override variables set within toolchain
+        if (tools.is_apple_os(os_) and "CONAN_CMAKE_TOOLCHAIN_FILE" not in os.environ
+                and "CMAKE_TOOLCHAIN_FILE" not in definitions):
+            apple_arch = tools.to_apple_arch(arch)
+            if apple_arch:
+                definitions["CMAKE_OSX_ARCHITECTURES"] = apple_arch
+            # xcrun is only available on macOS, otherwise it's cross-compiling and it needs to be
+            # set within CMake toolchain. also, if SDKROOT is set, CMake will use it, and it's not
+            # needed to run xcrun.
+            if platform.system() == "Darwin" and "SDKROOT" not in os.environ:
+                sdk_path = tools.XCRun(self._conanfile.settings).sdk_path
+                if sdk_path:
+                    definitions["CMAKE_OSX_SYSROOT"] = sdk_path
 
-        definitions.update(self._cmake_cross_build_defines())
+        definitions.update(self._cmake_cross_build_defines(cmake_version))
         definitions.update(self._get_cpp_standard_vars())
 
         definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
@@ -297,13 +326,13 @@ class CMakeDefinitionsBuilder(object):
             definitions["CONAN_COMPILER_VERSION"] = str(compiler_version)
 
         # C, CXX, LINK FLAGS
-        if compiler == "Visual Studio":
+        if compiler == "Visual Studio" or compiler_base == "Visual Studio":
             if self._parallel:
                 flag = parallel_compiler_cl_flag(output=self._output)
                 definitions['CONAN_CXX_FLAGS'] = flag
                 definitions['CONAN_C_FLAGS'] = flag
         else:  # arch_flag is only set for non Visual Studio
-            arch_flag = architecture_flag(compiler=compiler, os=os_, arch=arch)
+            arch_flag = architecture_flag(self._conanfile.settings)
             if arch_flag:
                 definitions['CONAN_CXX_FLAGS'] = arch_flag
                 definitions['CONAN_SHARED_LINKER_FLAGS'] = arch_flag
@@ -341,7 +370,8 @@ class CMakeDefinitionsBuilder(object):
             fpic = self._conanfile.options.get_safe("fPIC")
             if fpic is not None:
                 shared = self._conanfile.options.get_safe("shared")
-                definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = "ON" if (fpic or shared) else "OFF"
+                fpic_value = "ON" if (fpic or shared) else "OFF"
+                definitions["CONAN_CMAKE_POSITION_INDEPENDENT_CODE"] = fpic_value
 
         # Adjust automatically the module path in case the conanfile is using the
         # cmake_find_package or cmake_find_package_multi

@@ -3,13 +3,16 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 from conans.util.runners import check_output_runner
 
 
 class VirtualBuildEnvTest(unittest.TestCase):
 
-    @unittest.skipUnless(platform.system() == "Windows", "needs Windows")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="needs Windows")
+    @pytest.mark.tool_visual_studio  # 15
     def test_delimiter_error(self):
         # https://github.com/conan-io/conan/issues/3080
         conanfile = """from conans import ConanFile
@@ -24,7 +27,8 @@ class TestConan(ConanFile):
         self.assertIn("UseEnv=True", bat)
         self.assertIn('CL=-MD -DNDEBUG -O2 -Ob2 %CL%', bat)
 
-    def environment_deactivate_test(self):
+    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
+    def test_environment_deactivate(self):
         if platform.system() == "Windows":
             """ This test fails. The deactivation script takes the value of some envvars set by
                 the activation script to recover the previous values (set PATH=OLD_PATH). As this

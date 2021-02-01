@@ -1,16 +1,19 @@
 import os
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 
 
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFoldersTest(unittest.TestCase):
 
     @parameterized.expand([(True, True), (False, True), (True, False), (False, False)])
-    def basic_test(self, no_copy_source, cmake_install):
+    def test_basic(self, no_copy_source, cmake_install):
         client = TestClient()
         if not cmake_install:
             package_code = """
