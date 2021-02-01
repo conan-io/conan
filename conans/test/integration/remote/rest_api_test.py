@@ -140,11 +140,11 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_package_info(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#fakerrev")
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA")
+        pref = PackageReference(ref, "1F23223EFDA", "fakeprev")
         conan_info = """[settings]
     arch=x86_64
     compiler=gcc
