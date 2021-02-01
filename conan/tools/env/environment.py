@@ -80,9 +80,8 @@ class Environment:
             result.append('{} {} "{}" {}'.format(k, v.action, v.separator, v.value))
         return "\n".join(result)
 
-    def save_bat(self, filename):
-        capture = textwrap.dedent("""\
-            @echo off
+    def save_bat(self, filename, generate_deactivate=True):
+        deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
             echo @echo off > "deactivate_{filename}"
@@ -91,8 +90,8 @@ class Environment:
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if "%%a" == "%%v" (
-                         echo set %%a=%%b>> "deactivate_{filename}"
-                         set foundenvvar=1
+                        echo set %%a=%%b>> "deactivate_{filename}"
+                        set foundenvvar=1
                     )
                 )
                 if not defined foundenvvar (
@@ -100,8 +99,13 @@ class Environment:
                 )
             )
             endlocal
+
+            """).format(filename=filename, vars=" ".join(self._values.keys()))
+        capture = textwrap.dedent("""\
+            @echo off
+            {deactivate}
             echo Configuring environment variables
-            """.format(filename=filename, vars=" ".join(self._values.keys())))
+            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for k, v in self._values.items():
             if v.action == EnvironmentItem.CLEAN:
