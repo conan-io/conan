@@ -20,7 +20,7 @@ from requests.exceptions import HTTPError
 from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import load, REVISIONS
+from conans import load
 from conans.cli.cli import Cli
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
