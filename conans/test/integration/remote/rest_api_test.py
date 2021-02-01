@@ -116,7 +116,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_recipe_manifest(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#fakerrev")
         self._upload_recipe(ref)
 
         # Get the conans digest
