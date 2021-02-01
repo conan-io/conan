@@ -2,6 +2,7 @@ import os
 import platform
 import re
 
+from conan.tools.env import Environment
 from conans.client.envvars.environment import env_files, BAT_FLAVOR, SH_FLAVOR
 from conans.util.files import save
 
@@ -144,26 +145,9 @@ class AutotoolsDeps(object):
             self.link_flags.append(srf)
 
     def generate(self):
-        result = {}
-
-        v = self._vars
-        append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS"]
-        suffix = ""
-        venv_name = "autotoolsdepsenv"
-        if platform.system() == "Windows":  # FIXME: REplace with settings_build.os
-            result.update(env_files(v, append_with_spaces, BAT_FLAVOR, os.getcwd(),
-                                    suffix, venv_name))
-
-        result.update(env_files(v, append_with_spaces, SH_FLAVOR, os.getcwd(),
-                                suffix, venv_name))
-        for f, c in result.items():
-            save(f, c)
-
-    @property
-    def _vars(self):
-        # Preprocessor
         cpp_flags = []
-        include_paths = format_include_paths(self.include_paths, self._conanfile.settings)
+        #include_paths = format_include_paths(self.include_paths, self._conanfile.settings)
+        include_paths = ['-I"%s"' % p for p in self.include_paths]
         cpp_flags.extend(include_paths)
         cpp_flags.extend(format_defines(self.defines))
 
@@ -175,9 +159,18 @@ class AutotoolsDeps(object):
         ldflags.extend(self.exelinkflags)
         ldflags.extend(self.frameworks)
         ldflags.extend(self.frameworks_paths)
-        lib_paths = format_library_paths(self.library_paths, self._conanfile.settings)
+        # lib_paths = format_library_paths(self.library_paths, self._conanfile.settings)
+        lib_paths = ['-L"%s"' % p for p in self.library_paths]
         ldflags.extend(lib_paths)
 
+        env = Environment()
+        env["CPPFLAGS"].define(cpp_flags)
+        env["LIBS"].define(libs)
+        env["LDFLAGS"].define(ldflags)
+        env.save_sh("conandeps.sh")
+
+    @property
+    def _vars(self):
         cpp_flags = " ".join(cpp_flags)
         cxx_flags = " ".join(self.cxx_flags)
         cflags = " ".join(self.cflags)
@@ -190,5 +183,4 @@ class AutotoolsDeps(object):
                "LDFLAGS": ldflags.strip(),
                "LIBS": libs.strip()
                }
-
         return ret

@@ -105,7 +105,7 @@ class Autotools(object):
             configure_dir = configure_dir.rstrip("/")
         else:
             configure_dir = "."
-
+        """
         triplet_args = []
 
         if build is not False:  # Skipped by user
@@ -129,10 +129,10 @@ class Autotools(object):
             # read wrong files
             pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else None
-
+        """
         configure_dir = self._adjust_path(configure_dir)
 
-        if self._conanfile.package_folder is not None:
+        """if self._conanfile.package_folder is not None:
             if not args:
                 args = ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/")]
             elif not self._is_flag_in_args("prefix", args):
@@ -160,7 +160,11 @@ class Autotools(object):
                 command = '%s/configure %s %s' % (configure_dir, args_to_string(args),
                                                   " ".join(triplet_args))
                 self._conanfile.output.info("Calling:\n > %s" % command)
-                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+                self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)"""
+
+        command = "bash -c 'source conandeps.sh && %s/configure'" % configure_dir
+        self._conanfile.output.info("Calling:\n > %s" % command)
+        self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 
     def _configure_help_output(self, configure_path):
         from six import StringIO  # Python 2 and 3 compatible
@@ -191,7 +195,7 @@ class Autotools(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
-        if not self._build_type:
+        """if not self._build_type:
             raise ConanException("build_type setting should be defined.")
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
@@ -201,7 +205,9 @@ class Autotools(object):
                                 else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
-                                win_bash=self._win_bash, subsystem=self.subsystem)
+                                win_bash=self._win_bash, subsystem=self.subsystem)"""
+        self._conanfile.run("make",
+                            win_bash=self._win_bash, subsystem=self.subsystem)
 
     def install(self, args="", make_program=None, vars=None):
         if not self._conanfile.should_install:

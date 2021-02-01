@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -11,7 +12,7 @@ from conans.test.utils.tools import TestClient
 #@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
 #@pytest.mark.tool_autotools()
 def test_autotools():
-    client = TestClient()
+    client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=v2_cmake")
     client.run("create .")
 
@@ -30,11 +31,10 @@ def test_autotools():
             exports_sources = "*"
 
             def generate(self):
-                with environment_append({"CPPFLAGS": "Hello!!!!!!!"}):
-                    deps = AutotoolsDeps(self)
-                    deps.generate()
-                    #tc = AutotoolsToolchain(self)
-                    #tc.generate()
+                deps = AutotoolsDeps(self)
+                deps.generate()
+                #tc = AutotoolsToolchain(self)
+                #tc.generate()
 
             def build(self):
                 self.run("aclocal")
@@ -52,4 +52,8 @@ def test_autotools():
                  "main.cpp": main}, clean_first=True)
     print(client.current_folder)
     client.run("install .")
+    print(client.load("conandeps.sh"))
     client.run("build .")
+    print(os.listdir(client.current_folder))
+    client.run_command("./main")
+    assert "hello/0.1: Hello World Release!" in client.out
