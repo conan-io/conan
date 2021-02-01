@@ -121,18 +121,18 @@ class Environment:
         save(filename, content)
 
     def save_sh(self, filename):
-        capture = textwrap.dedent(r"""\
+        capture = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
             for v in {vars}
             do
-            value=${{!v}}
-            if [ -n "$value" ]
-            then
-            echo export "$v=$value" >> deactivate_{filename}
-            else
-            echo unset $v >> deactivate_{filename}
-            fi
+                value=${{!v}}
+                if [ -n "$value" ]
+                then
+                    echo export "$v=$value" >> deactivate_{filename}
+                else
+                    echo unset $v >> deactivate_{filename}
+                fi
             done
             echo Configuring environment variables
             """.format(filename=filename, vars=" ".join(self._values.keys())))
