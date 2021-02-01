@@ -86,17 +86,22 @@ class Environment:
             echo Capturing current environment in deactivate_{filename}
             setlocal
             echo @echo off > "deactivate_{filename}"
-            echo echo Removing all existing variables >> "deactivate_{filename}"
-            echo for /f "tokens=1* delims==" %%%%a in ('set') do (  >> "deactivate_{filename}"
-            echo     set %%%%a=>> "deactivate_{filename}"
-            echo )  >> "deactivate_{filename}"
             echo echo Restoring environment >> "deactivate_{filename}"
-            for /f "delims== tokens=1,2" %%a in ('set') do (
-            echo set %%a=%%b>> "deactivate_{filename}"
+            for %%v in ({vars}) do (
+                set foundenvvar=
+                for /f "delims== tokens=1,2" %%a in ('set') do (
+                    if "%%a" == "%%v" (
+                         echo set %%a=%%b>> "deactivate_{filename}"
+                         set foundenvvar=1
+                    )
+                )
+                if not defined foundenvvar (
+                    echo set %%v=>> "deactivate_{filename}"
+                )
             )
             endlocal
             echo Configuring environment variables
-            """.format(filename=filename))
+            """.format(filename=filename, vars=" ".join(self._values.keys())))
         result = [capture]
         for k, v in self._values.items():
             if v.action == EnvironmentItem.CLEAN:
@@ -111,6 +116,40 @@ class Environment:
                 assert v.action == EnvironmentItem.PREPEND
                 value = v.separator.join(v.value+["%{}%".format(k)])
                 result.append('set {}={}'.format(k, value))
+
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_sh(self, filename):
+        capture = textwrap.dedent(r"""\
+            echo Capturing current environment in deactivate_{filename}
+            echo echo Restoring variables >> deactivate_{filename}
+            for v in {vars}
+            do
+            value=${{!v}}
+            if [ -n "$value" ]
+            then
+            echo export "$v=$value" >> deactivate_{filename}
+            else
+            echo unset $v >> deactivate_{filename}
+            fi
+            done
+            echo Configuring environment variables
+            """.format(filename=filename, vars=" ".join(self._values.keys())))
+        result = [capture]
+        for k, v in self._values.items():
+            if v.action == EnvironmentItem.CLEAN:
+                result.append('unset {}'.format(k))
+            elif v.action == EnvironmentItem.DEFINE:
+                value = v.separator.join(v.value)
+                result.append('export {}="{}"'.format(k, value))
+            elif v.action == EnvironmentItem.APPEND:
+                value = v.separator.join(["${k}".format(k=k)]+v.value)
+                result.append('export {}="{}"'.format(k, value))
+            else:
+                assert v.action == EnvironmentItem.PREPEND
+                value = v.separator.join(v.value+["${k}".format(k=k)])
+                result.append('export {}="{}"'.format(k, value))
 
         content = "\n".join(result)
         save(filename, content)
