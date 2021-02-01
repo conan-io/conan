@@ -59,7 +59,6 @@ class RestApiClient(object):
         return capability in capabilities
 
     def _get_api(self):
-        revisions = self._capable(REVISIONS)
         # TODO: port conan_v2_error to 1.X if not revisions
         matrix_params = self._capable(MATRIX_PARAMS)
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
