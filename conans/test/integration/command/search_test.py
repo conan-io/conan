@@ -135,8 +135,8 @@ class SearchTest(unittest.TestCase):
 
     def setUp(self):
         self.servers = OrderedDict()
-        self.servers["local"] = TestServer()
-        self.servers["search_able"] = TestServer()
+        self.servers["local"] = TestServer(server_capabilities=[])
+        self.servers["search_able"] = TestServer(server_capabilities=[])
 
         self.client = TestClient(servers=self.servers)
 
