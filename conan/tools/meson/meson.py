@@ -2,7 +2,7 @@ import os
 
 from conan.tools.meson import MesonToolchain
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
-from conans.client.tools.oss import cross_building
+from conans.client.tools.oss import cross_building, cpu_count
 
 
 class Meson(object):
@@ -39,8 +39,10 @@ class Meson(object):
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
         self._run(cmd)
 
-    def build(self):
-        cmd = 'meson compile -C "{}"'.format(self._build_dir)
+    def build(self, target=None):
+        cmd = 'meson compile -C "{}" -j {}'.format(self._build_dir, cpu_count())
+        if target:
+            cmd += " {}".format(target)
         self._run(cmd)
 
     def install(self):
