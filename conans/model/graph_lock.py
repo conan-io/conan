@@ -37,14 +37,14 @@ class GraphLockFile(object):
         return self._profile_build
 
     @staticmethod
-    def load(path, revisions_enabled):
+    def load(path):
         if not path:
             raise IOError("Invalid path")
         if not os.path.isfile(path):
             raise ConanException("Missing lockfile in: %s" % path)
         content = load(path)
         try:
-            return GraphLockFile._loads(content, revisions_enabled)
+            return GraphLockFile._loads(content)
         except Exception as e:
             raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
@@ -53,7 +53,7 @@ class GraphLockFile(object):
         save(path, serialized_graph_str)
 
     @staticmethod
-    def _loads(text, revisions_enabled):
+    def _loads(text):
         graph_json = json.loads(text)
         version = graph_json.get("version")
         if version:
@@ -68,7 +68,7 @@ class GraphLockFile(object):
             profile_host, _ = _load_profile(profile_host, None, None)
         if profile_build:
             profile_build, _ = _load_profile(profile_build, None, None)
-        graph_lock = GraphLock.deserialize(graph_json["graph_lock"], revisions_enabled)
+        graph_lock = GraphLock.deserialize(graph_json["graph_lock"])
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
 
@@ -101,27 +101,18 @@ class GraphLockFile(object):
 class GraphLockNode(object):
 
     def __init__(self, ref, package_id, prev, python_requires, options, requires, build_requires,
-                 path, revisions_enabled, context, modified=None):
+                 path, context, modified=None):
         self._ref = ref if ref and ref.name else None  # includes rrev
         self._package_id = package_id
         self._context = context
         self._prev = prev
         self._requires = requires
         self._build_requires = build_requires
-        if revisions_enabled:
-            self._python_requires = python_requires
-        else:
-            self._python_requires = [r.copy_clear_rev() for r in python_requires or []]
+        self._python_requires = python_requires
         self._options = options
-        self._revisions_enabled = revisions_enabled
         self._relaxed = False
         self._modified = modified  # Exclusively now for "conan_build_info" command
         self._path = path
-        if not revisions_enabled:
-            if ref:
-                self._ref = ref.copy_clear_rev()
-            if prev:
-                self._prev = DEFAULT_REVISION_V1
 
     @property
     def context(self):
@@ -160,8 +151,6 @@ class GraphLockNode(object):
     @ref.setter
     def ref(self, value):
         # only used at export time, to assign rrev
-        if not self._revisions_enabled:
-            value = value.copy_clear_rev()
         if self._ref:
             if (self._ref.copy_clear_rev() != value.copy_clear_rev() or
                     (self._ref.revision and self._ref.revision != value.revision) or
@@ -192,8 +181,6 @@ class GraphLockNode(object):
 
     @prev.setter
     def prev(self, value):
-        if not self._revisions_enabled and value is not None:
-            value = DEFAULT_REVISION_V1
         if self._prev is not None:
             raise ConanException("Trying to modify locked package {}".format(repr(self._ref)))
         if value is not None:
@@ -227,7 +214,7 @@ class GraphLockNode(object):
         self._modified = None
 
     @staticmethod
-    def deserialize(data, revisions_enabled):
+    def deserialize(data):
         """ constructs a GraphLockNode from a json like dict
         """
         json_ref = data.get("ref")
@@ -246,7 +233,7 @@ class GraphLockNode(object):
         build_requires = data.get("build_requires", [])
         path = data.get("path")
         return GraphLockNode(ref, package_id, prev, python_requires, options, requires,
-                             build_requires, path, revisions_enabled, context, modified)
+                             build_requires, path, context, modified)
 
     def serialize(self):
         """ returns the object serialized as a dict of plain python types
@@ -278,9 +265,8 @@ class GraphLockNode(object):
 
 class GraphLock(object):
 
-    def __init__(self, deps_graph, revisions_enabled):
+    def __init__(self, deps_graph):
         self._nodes = {}  # {id: GraphLockNode}
-        self._revisions_enabled = revisions_enabled
         self._relaxed = False  # If True, the lock can be expanded with new Nodes
 
         if deps_graph is None:
@@ -321,7 +307,7 @@ class GraphLock(object):
             modified = graph_node.graph_lock_node.modified if graph_node.graph_lock_node else None
             lock_node = GraphLockNode(ref, package_id, prev, python_reqs,
                                       graph_node.conanfile.options.values, requires, build_requires,
-                                      graph_node.path, self._revisions_enabled, graph_node.context,
+                                      graph_node.path, graph_node.context,
                                       modified=modified)
 
             graph_node.graph_lock_node = lock_node
@@ -387,12 +373,8 @@ class GraphLock(object):
                 if locked_node.prev is None and locked_node.package_id is not None:
                     # Manipulate the ref so it can be used directly in install command
                     ref = repr(locked_node.ref)
-                    if not self._revisions_enabled:
-                        if "@" not in ref:
-                            ref += "@"
-                    else:
-                        if "@" not in ref:
-                            ref = ref.replace("#", "@#")
+                    if "@" not in ref:
+                        ref = ref.replace("#", "@#")
                     if (ref, locked_node.package_id, locked_node.context) not in total_prefs:
                         new_level.append((ref, locked_node.package_id, locked_node.context, id_))
                         total_prefs.add((ref, locked_node.package_id, locked_node.context))
@@ -450,16 +432,12 @@ class GraphLock(object):
         return root_id
 
     @staticmethod
-    def deserialize(data, revisions_enabled):
+    def deserialize(data):
         """ constructs a GraphLock from a json like dict
         """
-        revs_enabled = data.get("revisions_enabled", False)
-        if revs_enabled != revisions_enabled:
-            raise ConanException("Lockfile revisions: '%s' != Current revisions '%s'"
-                                 % (revs_enabled, revisions_enabled))
-        graph_lock = GraphLock(deps_graph=None, revisions_enabled=revisions_enabled)
+        graph_lock = GraphLock(deps_graph=None)
         for id_, node in data["nodes"].items():
-            graph_lock._nodes[id_] = GraphLockNode.deserialize(node, revisions_enabled)
+            graph_lock._nodes[id_] = GraphLockNode.deserialize(node)
 
         return graph_lock
 
@@ -471,8 +449,7 @@ class GraphLock(object):
         # Sorted using the IDs as integers
         for id_, node in sorted(self._nodes.items(), key=lambda x: int(x[0])):
             nodes[id_] = node.serialize()
-        return {"nodes": nodes,
-                "revisions_enabled": self._revisions_enabled}
+        return {"nodes": nodes}
 
     def update_lock(self, new_lock):
         """ update the lockfile with the contents of other one that was branched from this
