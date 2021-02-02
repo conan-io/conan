@@ -2,7 +2,6 @@ import json
 import os
 from collections import OrderedDict
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
 from conans.client.graph.range_resolver import satisfying
