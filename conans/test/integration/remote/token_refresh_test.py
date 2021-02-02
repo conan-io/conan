@@ -27,7 +27,7 @@ class ResponseDownloadURLs(object):
         self.ok = True
         self.headers = common_headers
         self.status_code = 200
-        self.content = b'{}'
+        self.content = b'{"files": {}}'
 
 
 class ResponseWithTokenMock(object):
@@ -55,7 +55,7 @@ class RequesterWithTokenMock(object):
     def get(self, url, **kwargs):
         if not kwargs["auth"].token or kwargs["auth"].token == "expired":
             return ResponseAuthenticationRequired()
-        if url.endswith("download_urls"):
+        if url.endswith("files"):
             return ResponseDownloadURLs()
         elif url.endswith("users/authenticate"):
             raise Exception("This endpoint should't be called when oauth supported")
@@ -88,7 +88,7 @@ class TestTokenRefresh(unittest.TestCase):
         self.auth_manager = ConanApiAuthManager(self.rest_client_factory, mocked_user_io,
                                                 self.localdb)
         self.remote = Remote("myremote", "myurl", True, True)
-        self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
+        self.ref = ConanFileReference.loads("lib/1.0@conan/stable#myreciperev")
 
     def test_auth_with_token(self):
         """Test that if the capability is there, then we use the new endpoint"""

@@ -105,7 +105,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_conan(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan1/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan1/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Get the conans
@@ -116,7 +116,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_recipe_manifest(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan2/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Get the conans digest
@@ -126,11 +126,11 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_package(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA2")
+        pref = PackageReference(ref, "1F23223EFDA2", "mypackagerev")
         self._upload_package(pref)
 
         # Get the package
@@ -140,11 +140,11 @@ class RestApiTest(unittest.TestCase):
 
     def test_get_package_info(self):
         # Upload a conans
-        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("conan3/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         # Upload an package
-        pref = PackageReference(ref, "1F23223EFDA")
+        pref = PackageReference(ref, "1F23223EFDA", "mypackagerev")
         conan_info = """[settings]
     arch=x86_64
     compiler=gcc
@@ -167,7 +167,7 @@ class RestApiTest(unittest.TestCase):
     def test_upload_huge_conan(self):
         if platform.system() != "Windows":
             # Upload a conans
-            ref = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing")
+            ref = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing#myreciperev")
             files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
             self._upload_recipe(ref, files)
 
@@ -179,7 +179,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_search(self):
         # Upload a conan1
-        conan_name1 = "HelloOnly/0.10@private_user/testing"
+        conan_name1 = "HelloOnly/0.10@private_user/testing#myreciperev"
         ref1 = ConanFileReference.loads(conan_name1)
         self._upload_recipe(ref1)
 
@@ -196,11 +196,11 @@ class RestApiTest(unittest.TestCase):
     Say/2.1@user/testing
     Chat/2.1@user/testing:SHA_ABC
 """
-        pref = PackageReference(ref1, "1F23223EFDA")
+        pref = PackageReference(ref1, "1F23223EFDA", "mypackagerev")
         self._upload_package(pref, {CONANINFO: conan_info})
 
         # Upload a conan2
-        conan_name2 = "helloonlyToo/2.1@private_user/stable"
+        conan_name2 = "helloonlyToo/2.1@private_user/stable#myreciperev"
         ref2 = ConanFileReference.loads(conan_name2)
         self._upload_recipe(ref2)
 
@@ -211,30 +211,27 @@ class RestApiTest(unittest.TestCase):
         # Search packages
         results = self.api.search("HelloOnly*", ignorecase=False)
         results = [r.copy_clear_rev() for r in results]
-        self.assertEqual(results, [ref1])
+        self.assertEqual(results, [ref1.copy_clear_rev()])
 
-    # FIXME: Check this test and the rest when we remove the v1 API
     def test_remove(self):
         # Upload a conans
-        ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing")
+        ref = ConanFileReference.loads("MyFirstConan/1.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev("myreciperev")
         path1 = self.server.server_store.base_folder(ref)
         self.assertTrue(os.path.exists(path1))
         # Remove conans and packages
         self.api.remove_recipe(ref)
         self.assertFalse(os.path.exists(path1))
 
-    # FIXME: Check this test and the rest when we remove the v1 API
     def test_remove_packages(self):
-        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#%s"
-                                       % DEFAULT_REVISION_V1)
+        ref = ConanFileReference.loads("MySecondConan/2.0.0@private_user/testing#myreciperev")
         self._upload_recipe(ref)
 
         folders = {}
         for sha in ["1", "2", "3", "4", "5"]:
             # Upload an package
-            pref = PackageReference(ref, sha, DEFAULT_REVISION_V1)
+            pref = PackageReference(ref, sha, "mypackagerev")
             self._upload_package(pref, {CONANINFO: ""})
             folder = self.server.server_store.package(pref)
             self.assertTrue(os.path.exists(folder))

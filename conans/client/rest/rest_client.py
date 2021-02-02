@@ -1,7 +1,7 @@
 from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
-from conans.errors import OnlyV2Available, AuthenticationException
+from conans.errors import AuthenticationException, ConanException
 from conans.search.search import filter_packages
 from conans.util.log import logger
 
@@ -56,22 +56,15 @@ class RestApiClient(object):
             capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
-            if not self._revisions_enabled and ONLY_V2 in capabilities:
-                raise OnlyV2Available(self._remote_url)
         return capability in capabilities
 
     def _get_api(self):
-        revisions = self._capable(REVISIONS)
+        # TODO: port conan_v2_error to 1.X if not revisions
         matrix_params = self._capable(MATRIX_PARAMS)
-        if self._revisions_enabled and revisions:
-            checksum_deploy = self._capable(CHECKSUM_DEPLOY)
-            return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._config, self._verify_ssl,
-                                 self._artifacts_properties, checksum_deploy, matrix_params)
-        else:
-            return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._config, self._verify_ssl,
-                                 self._artifacts_properties, matrix_params)
+        checksum_deploy = self._capable(CHECKSUM_DEPLOY)
+        return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
+                             self._requester, self._config, self._verify_ssl,
+                             self._artifacts_properties, checksum_deploy, matrix_params)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -110,11 +103,11 @@ class RestApiClient(object):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
 
     def authenticate(self, user, password):
-        api_v1 = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
+        api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
                                self._requester, self._verify_ssl, self._artifacts_properties)
 
         if self._refresh_token and self._token:
-            token, refresh_token = api_v1.refresh_token(self._token, self._refresh_token)
+            token, refresh_token = api_v2.refresh_token(self._token, self._refresh_token)
         else:
             try:
                 # Check capabilities can raise also 401 until the new Artifactory is released
@@ -124,9 +117,9 @@ class RestApiClient(object):
 
             if oauth_capable:
                 # Artifactory >= 6.13.X
-                token, refresh_token = api_v1.authenticate_oauth(user, password)
+                token, refresh_token = api_v2.authenticate_oauth(user, password)
             else:
-                token = api_v1.authenticate(user, password)
+                token = api_v2.authenticate(user, password)
                 refresh_token = None
 
         return token, refresh_token

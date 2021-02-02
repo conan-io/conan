@@ -1007,20 +1007,6 @@ class SCMRevisions(unittest.TestCase):
 
 
 class CapabilitiesRevisionsTest(unittest.TestCase):
-
-    # FIXME: This test should fail when we completely remove revisions support
-    def test_server_without_revisions_capability(self):
-        """If a server doesn't have the revisions capability, a modern client will still
-        talk v1"""
-        server = TestServer(server_capabilities=[])
-        c_v2 = TurboTestClient(servers={"default": server})
-        ref = ConanFileReference.loads("lib/1.0@conan/testing")
-        c_v2.create(ref)
-        c_v2.upload_all(ref)
-        c_v2.remove_all()
-        c_v2.run("install {}".format(ref))
-        self.assertEqual(c_v2.recipe_revision(ref), DEFAULT_REVISION_V1)
-
     def test_server_with_only_v2_capability(self):
         server = TestServer(server_capabilities=[])
         c_v2 = TurboTestClient(servers={"default": server})
