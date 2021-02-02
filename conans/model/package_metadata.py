@@ -1,8 +1,6 @@
 import json
 from collections import defaultdict
 
-from conans import DEFAULT_REVISION_V1
-
 
 class _RecipeMetadata(object):
 

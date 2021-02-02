@@ -2,9 +2,7 @@ import os
 import unittest
 
 from mock import Mock
-import pytest
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata

@@ -7,7 +7,6 @@ import unittest
 import pytest
 from requests import ConnectionError
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -65,8 +64,8 @@ class UploadTest(unittest.TestCase):
 
     def setUp(self):
         self.client = self._get_client()
-        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#%s" % DEFAULT_REVISION_V1)
-        self.pref = PackageReference(self.ref, "myfakeid", DEFAULT_REVISION_V1)
+        self.ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable#myreciperev")
+        self.pref = PackageReference(self.ref, "myfakeid", "mypackagerev")
         reg_folder = self.client.cache.package_layout(self.ref).export()
 
         self.client.run('upload %s' % str(self.ref), assert_error=True)
@@ -75,8 +74,9 @@ class UploadTest(unittest.TestCase):
         files = cpp_hello_source_files(0)
 
         fake_metadata = PackageMetadata()
-        fake_metadata.recipe.revision = DEFAULT_REVISION_V1
-        fake_metadata.packages[self.pref.id].revision = DEFAULT_REVISION_V1
+        fake_metadata.recipe.revision = "myreciperev"
+        fake_metadata.packages[self.pref.id].revision = "mypackagerev"
+        fake_metadata.packages[self.pref.id].recipe_revision = "myreciperev"
         self.client.save({"metadata.json": fake_metadata.dumps()},
                          path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
