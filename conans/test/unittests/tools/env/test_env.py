@@ -2,8 +2,9 @@ import platform
 import subprocess
 import textwrap
 
+import pytest
+
 from conan.tools.env import Environment
-from conan.tools.env.environment import EnvironmentItem
 from conans.client.tools import chdir
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
@@ -23,13 +24,9 @@ def test_compose():
     env2["MyVar4"].clean()
 
     env3 = env.compose(env2)
-    assert env3["MyVar"].value == ["MyNewValue"]
-    assert env3["MyVar"].action == EnvironmentItem.DEFINE
-    assert env3["MyVar2"].value == ['MyValue2', 'MyNewValue2']
-    assert env3["MyVar2"].action == EnvironmentItem.DEFINE
-    assert env3["MyVar3"].value == ['MyNewValue3', 'MyValue3']
-    assert env3["MyVar3"].action == EnvironmentItem.DEFINE
-    assert env3["MyVar4"].action == EnvironmentItem.CLEAN
+    assert env3["MyVar"].value("MyVar") == "MyNewValue"
+    assert env3["MyVar2"].value("MyVar2") == 'MyValue2 MyNewValue2'
+    assert env3["MyVar3"].value("MyVar3") == 'MyNewValue3 MyValue3'
 
 
 def test_env_files():
@@ -71,6 +68,7 @@ def test_env_files():
             env.save_bat("test.bat")
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+
             exe = None
         else:
             env.save_sh("test.sh")
@@ -95,3 +93,33 @@ def test_env_files():
     assert "MyVar3=OldVar3!!" in out
     assert "MyVar4=OldVar4!!" in out
     assert "MyVar5=!!" in out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_windows_case_insensitive():
+    # Append and define operation over the same variable in Windows preserve order
+    env = Environment()
+    env["MyVar"].define("MyValueA")
+    env["MYVAR"].define("MyValueB")
+    env["MyVar1"].define("MyValue1A")
+    env["MYVAR1"].append("MyValue1B")
+    folder = temp_folder()
+
+    display_bat = textwrap.dedent("""\
+        @echo off
+        echo MyVar=%MyVar%!!
+        echo MyVar1=%MyVar1%!!
+        """)
+
+    with chdir(folder):
+        env.save_bat("test.bat")
+        save("display.bat", display_bat)
+        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  shell=True).communicate()
+
+    out = out.decode()
+    assert "MyVar=MyValueB!!" in out
+    assert "MyVar=!!" in out
+    assert "MyVar1=MyValue1A MyValue1B!!" in out
+    assert "MyVar1=!!" in out
