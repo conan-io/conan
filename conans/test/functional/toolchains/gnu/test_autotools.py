@@ -57,3 +57,52 @@ def test_autotools():
     print(os.listdir(client.current_folder))
     client.run_command("./main")
     assert "hello/0.1: Hello World Release!" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Mingw")
+def test_autotoolsdeps_mingw():
+    """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
+    the Autotools conventions
+    """
+    client = TestClient(path_with_spaces=False)
+    client.run("new hello/0.1 --template=v2_cmake")
+    gcc = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        arch=x86_64
+        build_type=Release
+        """)
+    client.save({"profile_gcc": gcc})
+    client.run("create . --profile=profile_gcc")
+    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    makefile = textwrap.dedent("""\
+        app: main.o
+        	$(CXX) $(CFLAGS) $(LDFLAGS) -o app main.o $(LIBS)
+
+        main.o: main.cpp
+        	$(CXX) $(CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o main.o main.cpp
+        """)
+
+    conanfile_txt = textwrap.dedent("""
+        [requires]
+        hello/0.1
+
+        [generators]
+        AutotoolsDeps
+        AutotoolsToolchain
+        """)
+    client.save({"main.cpp": main,
+                 "Makefile": makefile,
+                 "conanfile.txt": conanfile_txt,
+                 "profile_gcc": gcc}, clean_first=True)
+
+    client.run("install . --profile=profile_gcc")
+    client.run_command("conantoolchain.bat && autotoolsdeps.bat && mingw32-make")
+    client.run_command("app")
+    assert "main: Release!" in client.out
+    assert "main _M_X64 defined" in client.out
+    assert "main __x86_64__ defined" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out

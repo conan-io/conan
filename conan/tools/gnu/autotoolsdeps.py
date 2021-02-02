@@ -164,10 +164,11 @@ class AutotoolsDeps(object):
         ldflags.extend(lib_paths)
 
         env = Environment()
-        env["CPPFLAGS"].define(cpp_flags)
-        env["LIBS"].define(libs)
-        env["LDFLAGS"].define(ldflags)
-        env.save_sh("conandeps.sh")
+        env["CPPFLAGS"].append(cpp_flags)
+        env["LIBS"].append(libs)
+        env["LDFLAGS"].append(ldflags)
+        env.save_sh("autotoolsdeps.sh")
+        env.save_bat("autotoolsdeps.bat")
 
     @property
     def _vars(self):

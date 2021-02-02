@@ -1,18 +1,30 @@
-
+from conan.tools.env import Environment
 
 
 class AutotoolsToolchain(object):
-    def __init__(self):
-        self.defines = self._configure_defines()
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+        """self.defines = self._configure_defines()
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
         self.cxx_flags = self._configure_cxx_flags()
         self.cflags = self._configure_flags()
         # cpp standard
-        self.cppstd_flag = cppstd_flag(conanfile.settings)
+        # self.cppstd_flag = cppstd_flag(conanfile.settings)
         # Not -L flags, ["-m64" "-m32"]
         self.link_flags = self._configure_link_flags()  # TEST!
         # Precalculate -fPIC
-        self.fpic = self._configure_fpic()
+        self.fpic = self._configure_fpic()"""
+        build_type = self._conanfile.settings.get_safe("build_type")
+        self.defines = []
+        if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
+            self.defines.append("NDEBUG")
+
+    def generate(self):
+        env = Environment()
+        env["CPPFLAGS"].append(["-D{}".format(d) for d in self.defines])
+        # env["LDFLAGS"].define(self.ldflags)
+        env.save_sh("conantoolchain.sh")
+        env.save_bat("conantoolchain.bat")
 
     def _configure_fpic(self):
         if not str(self._os).startswith("Windows"):
@@ -23,20 +35,9 @@ class AutotoolsToolchain(object):
 
     def _configure_link_flags(self):
         """Not the -L"""
-        ret = list(self._deps_cpp_info.sharedlinkflags)
-        ret.extend(list(self._deps_cpp_info.exelinkflags))
-        ret.extend(format_frameworks(self._deps_cpp_info.frameworks, self._conanfile.settings))
-        ret.extend(format_framework_paths(self._deps_cpp_info.framework_paths,
-                                          self._conanfile.settings))
         arch_flag = architecture_flag(self._conanfile.settings)
         if arch_flag:
             ret.append(arch_flag)
-
-        sysf = sysroot_flag(self._deps_cpp_info.sysroot, self._conanfile.settings,
-                            win_bash=self._win_bash,
-                            subsystem=self.subsystem)
-        if sysf:
-            ret.append(sysf)
 
         if self._include_rpath_flags:
             os_build, _ = get_build_os_arch(self._conanfile)
@@ -46,12 +47,8 @@ class AutotoolsToolchain(object):
                                    self._deps_cpp_info.lib_paths))
 
         return ret
-    def _configure_defines(self):
-        # Debug definition for GCC
-        btf = build_type_define(build_type=self._build_type)
-        if btf:
-            ret.append(btf)
 
+    def _configure_defines(self):
         # CXX11 ABI
         abif = libcxx_define(self._conanfile.settings)
         if abif:
@@ -65,12 +62,6 @@ class AutotoolsToolchain(object):
         btfs = build_type_flags(self._conanfile.settings)
         if btfs:
             ret.extend(btfs)
-        srf = sysroot_flag(self._deps_cpp_info.sysroot,
-                           self._conanfile.settings,
-                           win_bash=self._win_bash,
-                           subsystem=self.subsystem)
-        if srf:
-            ret.append(srf)
         if self._compiler_runtime:
             ret.append("-%s" % self._compiler_runtime)
 
