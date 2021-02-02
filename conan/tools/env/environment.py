@@ -1,88 +1,68 @@
 import textwrap
+from collections import OrderedDict
 
-from conans.errors import ConanException
 from conans.util.files import save
+
+PLACEHOLDER = "$CONANVARPLACEHOLDER%"
 
 
 class EnvironmentItem:
-    APPEND = "append"
-    DEFINE = "define"
-    PREPEND = "prepend"
-    CLEAN = "clean"
 
-    def __init__(self, action=None, value=None, separator=None):
-        self.action = action
-        self.value = value
-        self.separator = separator
+    def __init__(self, value=None, separator=None):
+        self._value = value
+        self._separator = separator
 
-    def define(self, value, separator=" "):
-        self.value = value if isinstance(value, list) else [value]
-        self.separator = separator
-        self.action = EnvironmentItem.DEFINE
-
-    def append(self, value, separator=" "):
-        self.define(value, separator)
-        self.action = EnvironmentItem.APPEND
-
-    def prepend(self, value, separator=" "):
-        self.define(value, separator)
-        self.action = EnvironmentItem.PREPEND
-
-    def clean(self):
-        self.define(None)
-        self.action = EnvironmentItem.CLEAN
+    def value(self, placeholder):
+        value = [v if v != PLACEHOLDER else placeholder for v in self._value]
+        value = self._separator.join(value) if value else ""
+        return value
 
     def copy(self):
-        result = EnvironmentItem(self.action, self.value[:], self.separator)
-        return result
+        return EnvironmentItem(self._value[:], self._separator)
+
+    def define(self, value, separator=" "):
+        self._value = value if isinstance(value, list) else [value]
+        self._separator = separator
+
+    def append(self, value, separator=" "):
+        value = value if isinstance(value, list) else [value]
+        self._value = [PLACEHOLDER] + value
+        self._separator = separator
+
+    def prepend(self, value, separator=" "):
+        value = value if isinstance(value, list) else [value]
+        self._value = value + [PLACEHOLDER]
+        self._separator = separator
+
+    def clean(self):
+        self._value = []
+        self._separator = None
 
     def update(self, other):
-        if other.action in (EnvironmentItem.CLEAN, EnvironmentItem.DEFINE):
-            self.action = other.action
-            self.value = other.value
-            self.separator = other.separator
-            return
-        elif other.action == EnvironmentItem.APPEND:
-            if self.action == EnvironmentItem.CLEAN:
-                self.action = EnvironmentItem.DEFINE
-                self.value = other.value
-                self.separator = other.separator
-            elif self.action in (EnvironmentItem.DEFINE, EnvironmentItem.APPEND):
-                self.value.extend(other.value)
-                assert self.separator == other.separator
-            else:
-                raise ConanException("Variable  was 'prepend' cannot 'append' now")
-        elif other.action == EnvironmentItem.PREPEND:
-            if self.action == EnvironmentItem.CLEAN:
-                self.action = EnvironmentItem.DEFINE
-                self.value = other.value
-                self.separator = other.separator
-            elif self.action in (EnvironmentItem.DEFINE, EnvironmentItem.PREPEND):
-                self.value = other.value + self.value
-                assert self.separator == other.separator
-            else:
-                raise ConanException("Variable  was 'append' cannot 'prepend' now")
+        """
+       :type other: EnvironmentItem
+       """
+        result = other._value
+        try:
+            index = result.index(PLACEHOLDER)
+            result[index:index+1] = self._value
+            assert self._separator == other._separator
+        except ValueError:
+            pass
+        self._value = result
+        self._separator = other._separator
 
 
 class Environment:
     def __init__(self):
-        self._values = {}
+        # It being ordered allows for Windows case-insensitive composition
+        self._values = OrderedDict()
 
     def __getitem__(self, name):
         return self._values.setdefault(name, EnvironmentItem())
 
-    def vars(self):
-        return list(self._values.keys())
-
-    def dumps(self):
-        result = []
-        for k, v in self._values.items():
-            result.append('{} {} "{}" {}'.format(k, v.action, v.separator, v.value))
-        return "\n".join(result)
-
-    def save_bat(self, filename):
-        capture = textwrap.dedent("""\
-            @echo off
+    def save_bat(self, filename, generate_deactivate=True):
+        deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
             echo @echo off > "deactivate_{filename}"
@@ -91,8 +71,8 @@ class Environment:
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if "%%a" == "%%v" (
-                         echo set %%a=%%b>> "deactivate_{filename}"
-                         set foundenvvar=1
+                        echo set %%a=%%b>> "deactivate_{filename}"
+                        set foundenvvar=1
                     )
                 )
                 if not defined foundenvvar (
@@ -100,22 +80,17 @@ class Environment:
                 )
             )
             endlocal
+
+            """).format(filename=filename, vars=" ".join(self._values.keys()))
+        capture = textwrap.dedent("""\
+            @echo off
+            {deactivate}
             echo Configuring environment variables
-            """.format(filename=filename, vars=" ".join(self._values.keys())))
+            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for k, v in self._values.items():
-            if v.action == EnvironmentItem.CLEAN:
-                result.append('set {}='.format(k))
-            elif v.action == EnvironmentItem.DEFINE:
-                value = v.separator.join(v.value)
-                result.append('set {}={}'.format(k, value))
-            elif v.action == EnvironmentItem.APPEND:
-                value = v.separator.join(["%{}%".format(k)]+v.value)
-                result.append('set {}={}'.format(k, value))
-            else:
-                assert v.action == EnvironmentItem.PREPEND
-                value = v.separator.join(v.value+["%{}%".format(k)])
-                result.append('set {}={}'.format(k, value))
+            value = v.value("%{}%".format(k))
+            result.append('set {}={}'.format(k, value))
 
         content = "\n".join(result)
         save(filename, content)
@@ -138,37 +113,26 @@ class Environment:
             """.format(filename=filename, vars=" ".join(self._values.keys())))
         result = [capture]
         for k, v in self._values.items():
-            if v.action == EnvironmentItem.CLEAN:
-                result.append('unset {}'.format(k))
-            elif v.action == EnvironmentItem.DEFINE:
-                value = v.separator.join(v.value)
-                result.append('export {}="{}"'.format(k, value))
-            elif v.action == EnvironmentItem.APPEND:
-                value = v.separator.join(["${k}".format(k=k)]+v.value)
+            value = v.value("${}".format(k))
+            if value:
                 result.append('export {}="{}"'.format(k, value))
             else:
-                assert v.action == EnvironmentItem.PREPEND
-                value = v.separator.join(v.value+["${k}".format(k=k)])
-                result.append('export {}="{}"'.format(k, value))
+                result.append('unset {}'.format(k))
 
         content = "\n".join(result)
         save(filename, content)
-
-    def copy(self):
-        result = Environment()
-        for k, v in self._values.items():
-            result._values[k] = v.copy()
-        return result
 
     def compose(self, other):
         """
         :type other: Environment
         """
-        result = self.copy()
+        result = Environment()
+        result._values = OrderedDict([(k, v.copy()) for k, v in self._values.items()])
         for k, v in other._values.items():
+            v = v.copy()
             existing = result._values.get(k)
             if existing is None:
-                result._values[k] = v.copy()
+                result._values[k] = v
             else:
-                existing.update(v.copy())
+                existing.update(v)
         return result
