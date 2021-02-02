@@ -154,6 +154,22 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(qbs_toolchain._cxx_language_version,
                              cxx_language_version)
 
+    def test_convert_target_platform(self):
+        conanfile = MockConanfileWithFolders(MockSettings({
+            'compiler': 'gcc'}))
+
+        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        self.assertEqual(qbs_toolchain._target_platform, None)
+
+        for os, target_platform in qbs._target_platform.items():
+            conanfile = MockConanfileWithFolders(MockSettings({
+                'os': os,
+                'compiler': 'gcc'}))
+
+            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            self.assertEqual(qbs_toolchain._target_platform,
+                             target_platform)
+
     def test_split_env_var_into_list(self):
         env_var_list = ['-p1', '-p2', '-p3_with_value=13',
                         '-p_with_space1="hello world"',
@@ -301,7 +317,6 @@ class QbsGenericTest(unittest.TestCase):
             profiles.conan.cpp.platformLinkerFlags: undefined
             profiles.conan.cpp.toolchainInstallPath: "/usr/bin"
             profiles.conan.cpp.toolchainPrefix: "arm-none-eabi-"
-            profiles.conan.qbs.targetPlatform: ""
             profiles.conan.qbs.someBoolProp: "true"
             profiles.conan.qbs.someIntProp: "13"
             profiles.conan.qbs.toolchain: ["gcc"]
@@ -317,7 +332,6 @@ class QbsGenericTest(unittest.TestCase):
             'cpp.platformLinkerFlags': 'undefined',
             'cpp.toolchainInstallPath': '"/usr/bin"',
             'cpp.toolchainPrefix': '"arm-none-eabi-"',
-            'qbs.targetPlatform': '""',
             'qbs.someBoolProp': 'true',
             'qbs.someIntProp': '13',
             'qbs.toolchain': '["gcc"]'
@@ -351,7 +365,6 @@ class QbsGenericTest(unittest.TestCase):
                     cpp.platformLinkerFlags: undefined
                     cpp.toolchainInstallPath: "/usr/bin"
                     cpp.toolchainPrefix: "arm-none-eabi-"
-                    qbs.targetPlatform: ""
                     qbs.someBoolProp: true
                     qbs.someIntProp: 13
                     qbs.toolchain: ["gcc"]
@@ -362,6 +375,7 @@ class QbsGenericTest(unittest.TestCase):
                     /* conan settings */
                     qbs.buildVariant: "release"
                     qbs.architecture: "x86_64"
+                    qbs.targetPlatform: "linux"
                     qbs.optimization: "small"
                     cpp.cxxLanguageVersion: "c++17"
 
