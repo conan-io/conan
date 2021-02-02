@@ -7,7 +7,7 @@ import pytest
 import requests
 from mock import Mock
 
-from conans import DEFAULT_REVISION_V1, REVISIONS
+from conans import REVISIONS
 from conans.client.conf import ConanClientConfigParser
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
