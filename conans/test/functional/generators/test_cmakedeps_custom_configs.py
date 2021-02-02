@@ -111,7 +111,7 @@ class CustomSettingsTest(unittest.TestCase):
 
             def generate(self):
                 cmake = CMakeDeps(self)
-                #cmake.configurations.append("MyRelease")
+                #cmake.configurations.append("MyRelease") # NOT NECESSARY!!!
                 cmake.generate()
         """)
 
