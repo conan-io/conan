@@ -58,7 +58,12 @@ class RestApiClient(object):
         return capability in capabilities
 
     def _get_api(self):
-        # TODO: port conan_v2_error to 1.X if not revisions
+        revisions = self._capable(REVISIONS)
+        if not revisions:
+            # TODO: port conan_v2_error to 1.X if not revisions
+            raise ConanException("The remote doesn't support revisions. "
+                                 "Conan 2.0 is no longer compatible with "
+                                 "remotes that don't accept revisions.")
         matrix_params = self._capable(MATRIX_PARAMS)
         checksum_deploy = self._capable(CHECKSUM_DEPLOY)
         return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
