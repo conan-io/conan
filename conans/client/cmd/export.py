@@ -22,7 +22,7 @@ from conans.util.log import logger
 isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
 
-def export_alias(package_layout, target_ref, output, revisions_enabled):
+def export_alias(package_layout, target_ref, output):
     revision_mode = "hash"
     conanfile = """
 from conans import ConanFile
@@ -37,7 +37,7 @@ class AliasConanfile(ConanFile):
     manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
+    _update_revision_in_metadata(package_layout=package_layout,
                                  output=output, path=None, manifest=manifest,
                                  revision_mode=revision_mode)
 
@@ -62,7 +62,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                        conanfile.py
     """
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
-    revisions_enabled = app.config.revisions_enabled
     scm_to_conandata = app.config.scm_to_conandata
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
@@ -164,7 +163,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
-                                            revisions_enabled=revisions_enabled,
                                             output=output,
                                             path=os.path.dirname(conanfile_path),
                                             manifest=manifest,
@@ -187,18 +185,16 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             output.warn(str(e))
             set_dirty(source_folder)
 
-    # When revisions enabled, remove the packages not matching the revision
-    if revisions_enabled:
-        packages = search_packages(package_layout, query=None)
-        metadata = package_layout.load_metadata()
-        recipe_revision = metadata.recipe.revision
-        to_remove = [pid for pid in packages if
-                     metadata.packages.get(pid) and
-                     metadata.packages.get(pid).recipe_revision != recipe_revision]
-        if to_remove:
-            output.info("Removing the local binary packages from different recipe revisions")
-            remover = DiskRemover()
-            remover.remove_packages(package_layout, ids_filter=to_remove)
+    packages = search_packages(package_layout, query=None)
+    metadata = package_layout.load_metadata()
+    recipe_revision = metadata.recipe.revision
+    to_remove = [pid for pid in packages if
+                 metadata.packages.get(pid) and
+                 metadata.packages.get(pid).recipe_revision != recipe_revision]
+    if to_remove:
+        output.info("Removing the local binary packages from different recipe revisions")
+        remover = DiskRemover()
+        remover.remove_packages(package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
@@ -383,7 +379,7 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, manifest,
+def _update_revision_in_metadata(package_layout, output, path, manifest,
                                  revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
@@ -391,9 +387,8 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
         revision = manifest.summary_hash
-        if revisions_enabled:
-            output.info("Using the exported files summary hash as the recipe"
-                        " revision: {} ".format(revision))
+        output.info("Using the exported files summary hash as the recipe"
+                    " revision: {} ".format(revision))
     else:
         try:
             rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
@@ -404,10 +399,9 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
 
         revision = rev_detected
 
-        if revisions_enabled:
-            output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
-            if not is_pristine:
-                output.warn("Repo status is not pristine: there might be modified files")
+        output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
+        if not is_pristine:
+            output.warn("Repo status is not pristine: there might be modified files")
 
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision

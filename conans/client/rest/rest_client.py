@@ -41,7 +41,6 @@ class RestApiClient(object):
 
         self._verify_ssl = remote.verify_ssl
         self._artifacts_properties = artifacts_properties
-        self._revisions_enabled = config.revisions_enabled
         self._config = config
 
         # This dict is shared for all the instances of RestApiClient

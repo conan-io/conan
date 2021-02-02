@@ -391,11 +391,11 @@ class ConanAPIV1(object):
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                                 graph_info.graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info(self.app.config.revisions_enabled)
+            return recorder.get_info()
 
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info(self.app.config.revisions_enabled)
+            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -454,10 +454,10 @@ class ConanAPIV1(object):
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                                 graph_info.graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info(self.app.config.revisions_enabled)
+            return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info(self.app.config.revisions_enabled)
+            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -467,9 +467,6 @@ class ConanAPIV1(object):
         # Install packages without settings (fixed ids or all)
         if check_valid_ref(reference):
             ref = ConanFileReference.loads(reference)
-            if ref.revision and not self.app.config.revisions_enabled:
-                raise ConanException("Revisions not enabled in the client, specify a "
-                                     "reference without revision")
             if packages and ref.revision is None:
                 for package_id in packages:
                     if "#" in package_id:
@@ -563,10 +560,10 @@ class ConanAPIV1(object):
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                                 graph_info.graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info(self.app.config.revisions_enabled)
+            return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info(self.app.config.revisions_enabled)
+            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -613,10 +610,10 @@ class ConanAPIV1(object):
                 graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
                                                 graph_info.graph_lock)
                 graph_lock_file.save(lockfile_out)
-            return recorder.get_info(self.app.config.revisions_enabled)
+            return recorder.get_info()
         except ConanException as exc:
             recorder.error = True
-            exc.info = recorder.get_info(self.app.config.revisions_enabled)
+            exc.info = recorder.get_info()
             raise
 
     @api_method
@@ -837,7 +834,7 @@ class ConanAPIV1(object):
         graph_lock, graph_lock_file = None, None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile, self.app.config.revisions_enabled)
+            graph_lock_file = GraphLockFile.load(lockfile)
             graph_lock = graph_lock_file.graph_lock
             self.app.out.info("Using lockfile: '{}'".format(lockfile))
 
@@ -1146,11 +1143,11 @@ class ConanAPIV1(object):
             return package_layout.get_path(path=path, package_id=package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
-            if self.app.config.revisions_enabled and not ref.revision:
+            if not ref.revision:
                 ref = self.app.remote_manager.get_latest_recipe_revision(ref, remote)
             if package_id:
                 pref = PackageReference(ref, package_id)
-                if self.app.config.revisions_enabled and not pref.revision:
+                if not pref.revision:
                     pref = self.app.remote_manager.get_latest_package_revision(pref, remote)
                 return self.app.remote_manager.get_package_path(pref, path, remote), path
             else:
@@ -1174,7 +1171,6 @@ class ConanAPIV1(object):
 
         package_layout = self.app.cache.package_layout(ref)
         return export_alias(package_layout, target_ref,
-                            revisions_enabled=self.app.config.revisions_enabled,
                             output=self.app.out)
 
     @api_method
@@ -1187,11 +1183,6 @@ class ConanAPIV1(object):
 
     @api_method
     def get_recipe_revisions(self, reference, remote_name=None):
-        if not self.app.config.revisions_enabled:
-            raise ConanException("The client doesn't have the revisions feature enabled."
-                                 " Enable this feature setting to '1' the environment variable"
-                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
-                                 " 'general.revisions_enabled' in your conan.conf file")
         ref = ConanFileReference.loads(reference)
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
@@ -1226,11 +1217,6 @@ class ConanAPIV1(object):
 
     @api_method
     def get_package_revisions(self, reference, remote_name=None):
-        if not self.app.config.revisions_enabled:
-            raise ConanException("The client doesn't have the revisions feature enabled."
-                                 " Enable this feature setting to '1' the environment variable"
-                                 " 'CONAN_REVISIONS_ENABLED' or the config value"
-                                 " 'general.revisions_enabled' in your conan.conf file")
         pref = PackageReference.loads(reference, validate=True)
         if not pref.ref.revision:
             raise ConanException("Specify a recipe reference with revision")
@@ -1299,10 +1285,9 @@ class ConanAPIV1(object):
     def lock_update(self, old_lockfile, new_lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         old_lockfile = _make_abs_path(old_lockfile, cwd)
-        revisions_enabled = self.app.config.revisions_enabled
-        old_lock = GraphLockFile.load(old_lockfile, revisions_enabled)
+        old_lock = GraphLockFile.load(old_lockfile)
         new_lockfile = _make_abs_path(new_lockfile, cwd)
-        new_lock = GraphLockFile.load(new_lockfile, revisions_enabled)
+        new_lock = GraphLockFile.load(new_lockfile)
         if old_lock.profile_host.dumps() != new_lock.profile_host.dumps():
             raise ConanException("Profiles of lockfiles are different\n%s:\n%s\n%s:\n%s"
                                  % (old_lockfile, old_lock.profile_host.dumps(),
@@ -1315,7 +1300,7 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
 
-        graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        graph_lock_file = GraphLockFile.load(lockfile)
         if graph_lock_file.profile_host is None:
             raise ConanException("Lockfiles with --base do not contain profile information, "
                                  "cannot be used. Create a full lockfile")
@@ -1329,7 +1314,7 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
 
-        graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+        graph_lock_file = GraphLockFile.load(lockfile)
         graph_lock = graph_lock_file.graph_lock
         graph_lock.clean_modified()
         graph_lock_file.save(lockfile)
@@ -1357,7 +1342,7 @@ class ConanAPIV1(object):
         phost = pbuild = graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
-            graph_lock_file = GraphLockFile.load(lockfile, self.app.cache.config.revisions_enabled)
+            graph_lock_file = GraphLockFile.load(lockfile)
             phost = graph_lock_file.profile_host
             pbuild = graph_lock_file.profile_build
             graph_lock = graph_lock_file.graph_lock
@@ -1391,7 +1376,7 @@ class ConanAPIV1(object):
         # Pure graph_lock, no more graph_info mess
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
-            new_graph_lock = GraphLock(deps_graph, self.app.config.revisions_enabled)
+            new_graph_lock = GraphLock(deps_graph)
             graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()
@@ -1418,7 +1403,7 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
             root_ref = ConanFileReference(name, version, user, channel, validate=False)
             graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
-        graph_lock_file = GraphLockFile.load(lockfile, cache.config.revisions_enabled)
+        graph_lock_file = GraphLockFile.load(lockfile)
         graph_info.profile_host = graph_lock_file.profile_host
         graph_info.profile_build = graph_lock_file.profile_build
         if graph_info.profile_host is None:
@@ -1440,7 +1425,7 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         graph_info = None
     else:
         lockfilename = os.path.join(install_folder, LOCKFILE)
-        graph_lock_file = GraphLockFile.load(lockfilename, cache.config.revisions_enabled)
+        graph_lock_file = GraphLockFile.load(lockfilename)
         graph_info.profile_host = graph_lock_file.profile_host
         graph_info.profile_host.process_settings(cache, preprocess=False)
 

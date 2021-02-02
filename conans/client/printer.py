@@ -45,7 +45,7 @@ class Printer(object):
                 else:
                     self._out.writeln("%s: %s" % (k, str(v)))
 
-    def print_info(self, data, _info, package_filter=None, show_paths=False, show_revisions=False):
+    def print_info(self, data, _info, package_filter=None, show_paths=False):
         """ Print in console the dependency information for a conan file
         """
         if _info is None:  # No filter
@@ -108,9 +108,8 @@ class Printer(object):
             _print("deprecated", name="Deprecated")
 
             _print("recipe", name="Recipe", color=None)
-            if show_revisions:
-                _print("revision", name="Revision", color=None)
-                _print("package_revision", name="Package revision", color=None)
+            _print("revision", name="Revision", color=None)
+            _print("package_revision", name="Package revision", color=None)
             _print("binary", name="Binary", color=None)
 
             if show("binary_remote") and is_ref:
