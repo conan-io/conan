@@ -3,7 +3,6 @@ from collections import namedtuple, Counter, defaultdict
 
 from mock import Mock
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
 from conans.client.conf import get_default_settings_yml
@@ -1003,7 +1002,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conanfile.settings.fields, [])
         self.assertEqual(conanfile.settings.values.dumps(), "")
         self.assertEqual(conanfile.requires, Requirements(str("%s#%s" % (zlib_ref,
-                                                                         DEFAULT_REVISION_V1))))
+                                                                         "mypackagerev"))))
 
         conaninfo = conanfile.info
         self.assertEqual(conaninfo.settings.dumps(), "")
