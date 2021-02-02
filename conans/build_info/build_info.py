@@ -9,6 +9,7 @@ from six.moves.urllib.parse import urlparse, urljoin
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
+from conans.model.graph_lock import LOCKFILE_VERSION
 from conans.model.ref import ConanFileReference
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
@@ -38,43 +39,37 @@ def _parse_profile(contents):
 
 
 class BuildInfoCreator(object):
-    def __init__(self, output, build_info_file, lockfile, multi_module=True, skip_env=True,
-                 user=None, password=None, apikey=None):
+    def __init__(self, output, build_info_file, lockfile, user=None, password=None, apikey=None):
         self._build_info_file = build_info_file
         self._lockfile = lockfile
-        self._multi_module = multi_module
-        self._skip_env = skip_env
         self._user = user
         self._password = password
         self._apikey = apikey
         self._output = output
         self._conan_cache = ClientCache(os.path.join(get_conan_user_home(), ".conan"), output)
 
-    def parse_pref(self, pref):
-        ref = ConanFileReference.loads(pref, validate=False)
-        rrev = ref.revision.split("#")[0].split(":")[0]
-        pid = ref.revision.split("#")[0].split(":")[1]
-        prev = "" if len(ref.revision.split("#")) == 1 else ref.revision.split("#")[1]
+    def parse_ref(self, ref):
+        ref = ConanFileReference.loads(ref, validate=False)
+        rrev = ref.revision
         return {
             "name": ref.name,
             "version": ref.version,
             "user": ref.user,
             "channel": ref.channel,
             "rrev": rrev,
-            "pid": pid,
-            "prev": prev
         }
 
-    def _get_reference(self, pref):
-        r = self.parse_pref(pref)
-        if r.get("user") and r.get("channel"):
-            return "{name}/{version}@{user}/{channel}".format(**r)
-        else:
-            return "{name}/{version}".format(**r)
+    def _get_reference(self, ref):
+        r = self.parse_ref(ref)
+        recipe_rev = self._get_recipe_rev(r)
+        user_channel = self._get_user_channel(r)
+        return "{name}/{version}{user_channel}{recipe_rev}".format(recipe_rev=recipe_rev,
+                                                                   user_channel=user_channel, **r)
 
-    def _get_package_reference(self, pref):
-        r = self.parse_pref(pref)
-        return "{reference}:{pid}".format(reference=self._get_reference(pref), **r)
+    def _get_package_reference(self, ref, pid, prev):
+        package_rev = "#{}".format(prev) if prev and prev != "0" else ""
+        return "{reference}:{pid}{package_rev}".format(reference=self._get_reference(ref), pid=pid,
+                                                       package_rev=package_rev)
 
     def _get_metadata_artifacts(self, metadata, request_path, use_id=False, name_format="{}",
                                 package_id=None):
@@ -113,81 +108,107 @@ class BuildInfoCreator(object):
                                                   "id": "conan_sources.tgz" if use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
 
-    def _get_recipe_artifacts(self, pref, add_prefix, use_id):
-        r = self.parse_pref(pref)
-        if r.get("user") and r.get("channel"):
-            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
-        else:
-            ref = "{name}/{version}#{rrev}".format(**r)
+    def _get_recipe_rev(self, ref):
+        return "#{}".format(ref.get("rrev")) if ref.get("rrev") and ref.get("rrev") != "0" else ""
+
+    def _get_user_channel(self, ref):
+        return "@{}/{}".format(ref.get("user"), ref.get("channel")) if ref.get("user") and \
+                                                                       ref.get("channel") else ""
+
+    def _get_recipe_artifacts(self, ref, is_dependency):
+        r = self.parse_ref(ref)
+        user_channel = self._get_user_channel(r)
+        recipe_rev = self._get_recipe_rev(r)
+        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
+                                                                  recipe_rev=recipe_rev, **r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_reference(pref)) if add_prefix else "{}"
-        if r.get("user") and r.get("channel"):
-            url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(**r)
-        else:
-            url = "_/{name}/{version}/_/{rrev}/export".format(**r)
+        name_format = "{} :: {{}}".format(self._get_reference(ref)) if is_dependency else "{}"
+        url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(
+            **r) if user_channel else "_/{name}/{version}/_/{rrev}/export".format(**r)
 
-        return self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id)
+        return self._get_metadata_artifacts(metadata, url, name_format=name_format,
+                                            use_id=is_dependency)
 
-    def _get_package_artifacts(self, pref, add_prefix, use_id):
-        r = self.parse_pref(pref)
-        if r.get("user") and r.get("channel"):
-            ref = "{name}/{version}@{user}/{channel}#{rrev}".format(**r)
-        else:
-            ref = "{name}/{version}#{rrev}".format(**r)
+    def _get_package_artifacts(self, ref, pid, prev, is_dependency):
+        r = self.parse_ref(ref)
+        user_channel = self._get_user_channel(r)
+        recipe_rev = self._get_recipe_rev(r)
+        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
+                                                                  recipe_rev=recipe_rev, **r)
         reference = ConanFileReference.loads(ref)
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_package_reference(pref)) if add_prefix else "{}"
-        if r.get("user") and r.get("channel"):
-            url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}".format(**r)
+        if is_dependency:
+            name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid, prev))
         else:
-            url = "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}".format(**r)
-        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format, use_id=use_id,
-                                            package_id=r["pid"])
+            name_format = "{}"
+        url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}" if user_channel else \
+              "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
+        url = url.format(pid=pid, prev=prev, **r)
+        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format,
+                                            use_id=is_dependency, package_id=pid)
         return arts
 
     def process_lockfile(self):
         modules = defaultdict(lambda: {"id": None, "artifacts": set(), "dependencies": set()})
 
-        def _gather_deps(node_uid, contents, func):
-            node_content = contents["graph_lock"]["nodes"].get(node_uid)
-            artifacts = func(node_content["pref"], add_prefix=True, use_id=True)
-            for _, id_node in node_content.get("requires", {}).items():
-                artifacts.update(_gather_deps(id_node, contents, func))
+        def _gather_transitive_recipes(nid, contents):
+            n = contents["graph_lock"]["nodes"][nid]
+            artifacts = self._get_recipe_artifacts(n["ref"], is_dependency=True)
+            for id_node in n.get("requires", []):
+                artifacts.update(_gather_transitive_recipes(id_node, contents))
+            for id_node in n.get("build_requires", []):
+                artifacts.update(_gather_transitive_recipes(id_node, contents))
+            return artifacts
+
+        def _gather_transitive_packages(nid, contents):
+            n = contents["graph_lock"]["nodes"][nid]
+            artifacts = self._get_package_artifacts(n["ref"], n["package_id"], n["prev"],
+                                                    is_dependency=True)
+            for id_node in n.get("requires", []):
+                artifacts.update(_gather_transitive_packages(id_node, contents))
+            for id_node in n.get("build_requires", []):
+                artifacts.update(_gather_transitive_packages(id_node, contents))
             return artifacts
 
         with open(self._lockfile) as json_data:
             data = json.load(json_data)
 
+        version = data["version"]
+        if version != LOCKFILE_VERSION:
+            raise ConanException("This lockfile was created with an incompatible version "
+                                 "of Conan. Please update all your Conan clients")
+
         # Gather modules, their artifacts and recursively all required artifacts
         for _, node in data["graph_lock"]["nodes"].items():
-            pref = node["pref"]
+            ref = node["ref"]
+            pid = node.get("package_id")
+            prev = node.get("prev")
             if node.get("modified"):  # Work only on generated nodes
                 # Create module for the recipe reference
-                recipe_key = self._get_reference(pref)
+                recipe_key = self._get_reference(ref)
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
-                    self._get_recipe_artifacts(pref, add_prefix=not self._multi_module,
-                                               use_id=False))
+                    self._get_recipe_artifacts(ref, is_dependency=False))
                 # TODO: what about `python_requires`?
-                # TODO: can we associate any properties to the recipe? Profile/options may be different per lockfile
+                # TODO: can we associate any properties to the recipe? Profile/options may
+                # TODO: be different per lockfile
 
                 # Create module for the package_id
-                package_key = self._get_package_reference(pref) if self._multi_module else recipe_key
+                package_key = self._get_package_reference(ref, pid, prev)
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
-                    self._get_package_artifacts(pref, add_prefix=not self._multi_module,
-                                                use_id=False))
+                    self._get_package_artifacts(ref, pid, prev, is_dependency=False))
 
                 # Recurse requires
-                if node.get("requires"):
-                    for _, node_id in node["requires"].items():
-                        modules[recipe_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_recipe_artifacts))
-                        modules[package_key]["dependencies"].update(
-                            _gather_deps(node_id, data, self._get_package_artifacts))
+                node_ids = node.get("requires", []) + node.get("build_requires", [])
+                for node_id in node_ids:
+                    modules[recipe_key]["dependencies"].update(_gather_transitive_recipes(node_id,
+                                                                                          data))
+                    modules[package_key]["dependencies"].update(_gather_transitive_packages(node_id,
+                                                                                            data))
 
                 # TODO: Is the recipe a 'dependency' of the package
 
@@ -205,26 +226,17 @@ class BuildInfoCreator(object):
                "buildAgent": {"name": "Conan Client", "version": "1.X"},
                "modules": list(modules.values())}
 
-        if not self._skip_env:
-            excluded = ["secret", "key", "password"]
-            environment = {"buildInfo.env.{}".format(k): v for k, v in os.environ.items() if
-                           k not in excluded}
-            ret["properties"] = environment
-
         def dump_custom_types(obj):
             if isinstance(obj, set):
                 artifacts = [{k: v for k, v in o._asdict().items() if v is not None} for o in obj]
                 return sorted(artifacts, key=lambda u: u.get("name") or u.get("id"))
             raise TypeError
 
-        with open(self._build_info_file, "w") as f:
-            f.write(json.dumps(ret, indent=4, default=dump_custom_types))
+        save(self._build_info_file, json.dumps(ret, indent=4, default=dump_custom_types))
 
 
-def create_build_info(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                      apikey):
-    bi = BuildInfoCreator(output, build_info_file, lockfile, multi_module, skip_env, user, password,
-                          apikey)
+def create_build_info(output, build_info_file, lockfile, user, password, apikey):
+    bi = BuildInfoCreator(output, build_info_file, lockfile, user, password, apikey)
     bi.create()
 
 
@@ -314,8 +326,6 @@ def update_build_info(buildinfo, output_file):
     for it in buildinfo:
         with open(it) as json_data:
             data = json.load(json_data)
-
         build_info = merge_buildinfo(build_info, data)
 
-    with open(output_file, "w") as f:
-        f.write(json.dumps(build_info, indent=4))
+    save(output_file, json.dumps(build_info, indent=4))

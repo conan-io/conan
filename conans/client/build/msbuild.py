@@ -1,11 +1,14 @@
 import copy
 import os
 import re
-import subprocess
+import warnings
 
 from conans.client import tools
 from conans.client.build.visual_environment import (VisualStudioBuildEnvironment,
                                                     vs_build_type_flags, vs_std_cpp)
+from conans.client.output import Color, ConanOutput
+from conans.client.tools.env import environment_append, no_op
+from conans.client.tools.intel import intel_compilervars
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -14,9 +17,43 @@ from conans.model.version import Version
 from conans.tools import vcvars_command as tools_vcvars_command
 from conans.util.env_reader import get_env
 from conans.util.files import decode_text, save
+from conans.util.runners import version_runner
 
 
 class MSBuild(object):
+    def __new__(cls, conanfile, *args, **kwargs):
+        """ Inject the proper MSBuild base class in the hierarchy """
+
+        # If already injected, create and return
+        from conan.tools.microsoft import MSBuild as _MSBuild
+        if MSBuildHelper in cls.__bases__ or _MSBuild in cls.__bases__:
+            return super(MSBuild, cls).__new__(cls)
+
+        # If not, add the proper CMake implementation
+        if hasattr(conanfile, "toolchain") or hasattr(conanfile, "generate"):
+            # Warning
+            msg = ("\n*****************************************************************\n"
+                   "******************************************************************\n"
+                   "This 'MSBuild' build helper has been deprecated and moved.\n"
+                   "It will be removed in next Conan release.\n"
+                   "Use 'from conan.tools.microsoft import MSBuild' instead.\n"
+                   "********************************************************************\n"
+                   "********************************************************************\n")
+            ConanOutput(conanfile.output._stream,
+                        color=conanfile.output._color).writeln(msg, front=Color.BRIGHT_RED)
+            warnings.warn(msg)
+            msbuild_class = type("CustomMSBuildClass", (cls, _MSBuild), {})
+        else:
+            msbuild_class = type("CustomMSBuildClass", (cls, MSBuildHelper), {})
+
+        return msbuild_class.__new__(msbuild_class, conanfile, *args, **kwargs)
+
+    @staticmethod
+    def get_version(settings):
+        return MSBuildHelper.get_version(settings)
+
+
+class MSBuildHelper(object):
 
     def __init__(self, conanfile):
         if isinstance(conanfile, ConanFile):
@@ -32,7 +69,8 @@ class MSBuild(object):
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None, use_env=True,
               vcvars_ver=None, winsdk_version=None, properties=None, output_binary_log=None,
-              property_file_name=None, verbosity=None, definitions=None):
+              property_file_name=None, verbosity=None, definitions=None,
+              user_property_file_name=None):
         """
         :param project_file: Path to the .sln file.
         :param targets: List of targets to build.
@@ -70,18 +108,18 @@ class MSBuild(object):
         :param verbosity: Specifies verbosity level (/verbosity: parameter)
         :param definitions: Dictionary with additional compiler definitions to be applied during
         the build. Use value of None to set compiler definition with no value.
+        :param user_property_file_name: Specify a user provided .props file with custom definitions
         :return: status code of the MSBuild command invocation
         """
-
         property_file_name = property_file_name or "conan_build.props"
         self.build_env.parallel = parallel
 
-        with tools.environment_append(self.build_env.vars):
+        with environment_append(self.build_env.vars):
             # Path for custom properties file
             props_file_contents = self._get_props_file_contents(definitions)
             property_file_name = os.path.abspath(property_file_name)
             save(property_file_name, props_file_contents)
-            vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars,
+            vcvars = vcvars_command(self._conanfile.settings, arch=arch, force=force_vcvars,
                                     vcvars_ver=vcvars_ver, winsdk_version=winsdk_version,
                                     output=self._output)
             command = self.get_command(project_file, property_file_name,
@@ -90,15 +128,24 @@ class MSBuild(object):
                                        toolset=toolset, platforms=platforms,
                                        use_env=use_env, properties=properties,
                                        output_binary_log=output_binary_log,
-                                       verbosity=verbosity)
+                                       verbosity=verbosity,
+                                       user_property_file_name=user_property_file_name)
             command = "%s && %s" % (vcvars, command)
-            return self._conanfile.run(command)
+            context = no_op()
+            if self._conanfile.settings.get_safe("compiler") == "Intel" and \
+                self._conanfile.settings.get_safe("compiler.base") == "Visual Studio":
+                context = intel_compilervars(self._conanfile.settings, arch)
+            with context:
+                return self._conanfile.run(command)
 
     def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
                     build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
-                    use_env=False, properties=None, output_binary_log=None, verbosity=None):
+                    use_env=False, properties=None, output_binary_log=None, verbosity=None,
+                    user_property_file_name=None):
 
         targets = targets or []
+        if not isinstance(targets, (list, tuple)):
+            raise TypeError("targets argument should be a list")
         properties = properties or {}
         command = []
 
@@ -144,7 +191,7 @@ class MSBuild(object):
                 self._output.warn("Use 'platforms' argument to define your architectures")
 
         if output_binary_log:
-            msbuild_version = MSBuild.get_version(self._settings)
+            msbuild_version = MSBuildHelper.get_version(self._settings)
             if msbuild_version >= "15.3":  # http://msbuildlog.com/
                 command.append('/bl' if isinstance(output_binary_log, bool)
                                else '/bl:"%s"' % output_binary_log)
@@ -172,9 +219,14 @@ class MSBuild(object):
         if verbosity:
             command.append('/verbosity:%s' % verbosity)
 
-        if props_file_path:
-            command.append('/p:ForceImportBeforeCppTargets="%s"'
-                           % os.path.abspath(props_file_path))
+        if props_file_path or user_property_file_name:
+            paths = [os.path.abspath(props_file_path)] if props_file_path else []
+            if isinstance(user_property_file_name, list):
+                paths.extend([os.path.abspath(p) for p in user_property_file_name])
+            elif user_property_file_name:
+                paths.append(os.path.abspath(user_property_file_name))
+            paths = ";".join(paths)
+            command.append('/p:ForceImportBeforeCppTargets="%s"' % paths)
 
         for name, value in properties.items():
             command.append('/p:%s="%s"' % (name, value))
@@ -182,10 +234,8 @@ class MSBuild(object):
         return " ".join(command)
 
     def _get_props_file_contents(self, definitions=None):
-
         def format_macro(name, value):
-            return "%s=%s" % (name, value) if value else name
-
+            return "%s=%s" % (name, value) if value is not None else name
         # how to specify runtime in command line:
         # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
         runtime_library = {"MT": "MultiThreaded",
@@ -235,7 +285,7 @@ class MSBuild(object):
         vcvars = tools_vcvars_command(settings)
         command = "%s && %s" % (vcvars, msbuild_cmd)
         try:
-            out, _ = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).communicate()
+            out = version_runner(command, shell=True)
             version_line = decode_text(out).split("\n")[-1]
             prog = re.compile("(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()

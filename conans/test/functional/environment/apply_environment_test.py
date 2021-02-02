@@ -2,22 +2,23 @@ import os
 import platform
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from conans.client import tools
 from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_INFO, CONANFILE, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
 class ConanEnvTest(unittest.TestCase):
 
-    @attr('slow')
-    def shared_in_current_directory_test(self):
+    @pytest.mark.slow
+    @pytest.mark.tool_cmake
+    def test_shared_in_current_directory(self):
         """
         - There is a package building a shared library
         - There is a consumer project importing the shared library (and the executable)
@@ -157,7 +158,7 @@ class MyTest(ConanFile):
         client.run("create . lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.out)
 
-    def deactivate_env_inheritance_test(self):
+    def test_deactivate_env_inheritance(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -200,7 +201,7 @@ class MyLib(ConanFile):
                      "myprofile": "[build_requires]\nPkg/0.1@lasote/testing"})
         client.run("create . MyLib/0.1@lasote/testing --profile ./myprofile")
 
-    def env_path_order_test(self):
+    def test_env_path_order(self):
         client = TestClient()
         with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
             conanfile = """from conans import ConanFile
@@ -283,13 +284,13 @@ virtualrunenv
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
-        activate_contents = client.load("activate_run.%s" % ext)
+        environment_contents = client.load("environment_run.%s.env" % ext)
 
-        self.assertIn("PATH", activate_contents)
-        self.assertIn("LD_LIBRARY_PATH", activate_contents)
-        self.assertIn("DYLD_LIBRARY_PATH", activate_contents)
+        self.assertIn("PATH", environment_contents)
+        self.assertIn("LD_LIBRARY_PATH", environment_contents)
+        self.assertIn("DYLD_LIBRARY_PATH", environment_contents)
 
-        for line in activate_contents.splitlines():
+        for line in environment_contents.splitlines():
             if " PATH=" in line:
                 self.assertIn("bin2", line)
                 self.assertNotIn("lib2", line)
@@ -300,7 +301,7 @@ virtualrunenv
                 self.assertNotIn("bin2", line)
                 self.assertIn("lib2", line)
 
-    def dual_compiler_settings_and_env_test(self):
+    def test_dual_compiler_settings_and_env(self):
 
         def patch_conanfile(conanfile):
             return conanfile + '''
@@ -352,7 +353,7 @@ virtualrunenv
         self.assertIn("CXX: Hello1=>/mycompilercxx", client.out)
         self.assertIn("CC: Hello1=>/mycompilercc", client.out)
 
-    def conan_profile_unscaped_env_var_test(self):
+    def test_conan_profile_unscaped_env_var(self):
 
         client = TestClient()
         conanfile = '''
@@ -388,7 +389,7 @@ CXXFLAGS=-fPIC -DPIC
                 ret = os.system("activate.bat")
         self.assertEqual(ret, 0)
 
-    def conan_env_deps_test(self):
+    def test_conan_env_deps(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -427,25 +428,25 @@ class HelloConan(ConanFile):
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
-        activate_contents = client.load("activate.%s" % ext)
+        environment_contents = client.load("environment.%s.env" % ext)
         deactivate_contents = client.load("deactivate.%s" % ext)
-        self.assertNotIn("bad value", activate_contents)
+        self.assertNotIn("bad value", environment_contents)
         if platform.system() == "Windows":
-            self.assertIn("var1=good value", activate_contents)
+            self.assertIn("var1=good value", environment_contents)
         else:
-            self.assertIn('var1="good value"', activate_contents)
+            self.assertIn('var1="good value"', environment_contents)
 
         if platform.system() == "Windows":
-            self.assertIn('var2=value3;value2;%var2%', activate_contents)
+            self.assertIn('var2=value3;value2;%var2%', environment_contents)
         else:
-            self.assertIn('var2="value3":"value2"${var2+:$var2}', activate_contents)
+            self.assertIn('var2="value3":"value2"${var2+:$var2}', environment_contents)
             self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 ${CPPFLAGS+ $CPPFLAGS}"',
-                          activate_contents)
-        self.assertIn("Another value", activate_contents)
+                          environment_contents)
+        self.assertIn("Another value", environment_contents)
         if platform.system() == "Windows":
-            self.assertIn("PATH=/dir", activate_contents)
+            self.assertIn("PATH=/dir", environment_contents)
         else:
-            self.assertIn("PATH=\"/dir\"", activate_contents)
+            self.assertIn("PATH=\"/dir\"", environment_contents)
         if platform.system() == "Windows":
             self.assertIn('var1=', deactivate_contents)
             self.assertIn('var2=', deactivate_contents)
@@ -630,7 +631,7 @@ class Hello2Conan(ConanFile):
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertInSep("VAR3=>bestvalue*", client.out)
 
-    def mix_path_case_test(self):
+    def test_mix_path_case(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -673,13 +674,13 @@ PATH=["path_from_A"]
 [ENV_libB]
 PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
-            activate = client.load("activate.sh")
+            activate = client.load("environment.sh.env")
             self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
         else:
-            activate = client.load("activate.bat")
+            activate = client.load("environment.bat.env")
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
 
-    def check_conaninfo_completion_test(self):
+    def test_check_conaninfo_completion(self):
         """
         consumer -> B -> C
                       -> D (conditional)
@@ -814,11 +815,11 @@ class LibConan(ConanFile):
                                                                {'VAR3': ['newappend']}))
 
         # Now check the info for the project
-        info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
+        info = ConanInfo.loads(client.load(CONANINFO))
         self.assertEqual(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
                                                                  {'VAR3': ['newappend']}))
 
-        _, _, buildinfo = TXTGenerator.loads(load(os.path.join(client.current_folder, BUILD_INFO)))
+        _, _, buildinfo, _ = TXTGenerator.loads(client.load(BUILD_INFO))
         self.assertEqual(buildinfo["LIB_A"].VAR1, ["900"])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):

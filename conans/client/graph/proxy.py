@@ -66,8 +66,10 @@ class ConanProxy(object):
                 status = RECIPE_DOWNLOADED
                 return conanfile_path, status, remote, new_ref
             else:
-                raise NotFoundException("The recipe in the local cache doesn't match the specified "
-                                        "revision. Use '--update' to check in the remote.")
+                raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
+                                        "match the requested '%s'."
+                                        " Use '--update' to check in the remote."
+                                        % (cur_revision, repr(ref)))
 
         if not check_updates:
             status = RECIPE_INCACHE
@@ -94,8 +96,6 @@ class ConanProxy(object):
                     DiskRemover().remove_recipe(layout, output=output)
                     output.info("Retrieving from remote '%s'..." % selected_remote.name)
                     self._download_recipe(layout, ref, output, remotes, selected_remote, recorder)
-                    with layout.update_metadata() as metadata:
-                        metadata.recipe.remote = selected_remote.name
                     status = RECIPE_UPDATED
                     return conanfile_path, status, selected_remote, ref
                 else:
@@ -115,8 +115,6 @@ class ConanProxy(object):
             # If incomplete, resolve the latest in server
             _ref = self._remote_manager.get_recipe(ref, the_remote)
             output.info("Downloaded recipe revision %s" % _ref.revision)
-            with layout.update_metadata() as metadata:
-                metadata.recipe.remote = the_remote.name
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
 

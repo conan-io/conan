@@ -1,7 +1,8 @@
 import os
 from collections import OrderedDict, defaultdict
 
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanV2Exception
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
@@ -14,6 +15,11 @@ from conans.util.log import logger
 class ProfileParser(object):
 
     def __init__(self, text):
+        """ divides the text in 3 items:
+        - self.vars: Dictionary with variable=value declarations
+        - self.includes: List of other profiles to include
+        - self.profile_text: the remaining, containing settings, options, env, etc
+        """
         self.vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12,
         # and in profile MYVAR=$FOO, it will
         self.includes = []
@@ -32,47 +38,53 @@ class ProfileParser(object):
                 include = include[:-1]
                 self.includes.append(include)
             else:
-                name, value = line.split("=", 1)
+                try:
+                    name, value = line.split("=", 1)
+                except ValueError:
+                    raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
                 name = name.strip()
                 if " " in name:
                     raise ConanException("The names of the variables cannot contain spaces")
                 value = unquote(value)
                 self.vars[name] = value
 
-    def apply_vars(self, repl_vars):
-        self.vars = self._apply_in_vars(repl_vars)
-        self.includes = self._apply_in_includes(repl_vars)
-        self.profile_text = self._apply_in_profile_text(repl_vars)
+    def apply_vars(self):
+        self._apply_in_vars()
+        self._apply_in_profile_text()
 
-    def _apply_in_vars(self, repl_vars):
+    def get_includes(self):
+        # Replace over includes seems insane and it is not documented. I am leaving it now
+        # afraid of breaking, but should be removed Conan 2.0
+        for include in self.includes:
+            for repl_key, repl_value in self.vars.items():
+                include = include.replace("$%s" % repl_key, repl_value)
+            yield include
+
+    def update_vars(self, included_vars):
+        """ update the variables dict with new ones from included profiles,
+        but keeping (higher priority) existing values"""
+        included_vars.update(self.vars)
+        self.vars = included_vars
+
+    def _apply_in_vars(self):
         tmp_vars = OrderedDict()
         for key, value in self.vars.items():
-            for repl_key, repl_value in repl_vars.items():
+            for repl_key, repl_value in self.vars.items():
                 key = key.replace("$%s" % repl_key, repl_value)
                 value = value.replace("$%s" % repl_key, repl_value)
             tmp_vars[key] = value
-        return tmp_vars
+        self.vars = tmp_vars
 
-    def _apply_in_includes(self, repl_vars):
-        tmp_includes = []
-        for include in self.includes:
-            for repl_key, repl_value in repl_vars.items():
-                include = include.replace("$%s" % repl_key, repl_value)
-            tmp_includes.append(include)
-        return tmp_includes
-
-    def _apply_in_profile_text(self, repl_vars):
-        tmp_text = self.profile_text
-        for repl_key, repl_value in repl_vars.items():
-            tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
-        return tmp_text
+    def _apply_in_profile_text(self):
+        for k, v in self.vars.items():
+            self.profile_text = self.profile_text.replace("$%s" % k, v)
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
-    def valid_path(profile_path):
-        if exists and not os.path.isfile(profile_path):
-            raise ConanException("Profile not found: %s" % profile_path)
-        return profile_path
+    def valid_path(_profile_path):
+        if exists and not os.path.isfile(_profile_path):
+            raise ConanException("Profile not found: %s" % _profile_path)
+        return _profile_path
 
     if os.path.isabs(profile_name):
         return valid_path(profile_name)
@@ -106,6 +118,8 @@ def read_profile(profile_name, cwd, default_folder):
 
     try:
         return _load_profile(text, profile_path, default_folder)
+    except ConanV2Exception:
+        raise
     except ConanException as exc:
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
@@ -114,40 +128,33 @@ def _load_profile(text, profile_path, default_folder):
     """ Parse and return a Profile object from a text config like representation.
         cwd is needed to be able to load the includes
     """
-
     try:
         inherited_profile = Profile()
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
-        inherited_vars = profile_parser.vars
         # Iterate the includes and call recursive to get the profile and variables
         # from parent profiles
-        for include in profile_parser.includes:
+        for include in profile_parser.get_includes():
             # Recursion !!
-            profile, declared_vars = read_profile(include, cwd, default_folder)
+            profile, included_vars = read_profile(include, cwd, default_folder)
             inherited_profile.update(profile)
-            inherited_vars.update(declared_vars)
+            profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
-            # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+            profile_parser.vars["PROFILE_DIR"] = os.path.abspath(cwd).replace('\\', '/')
 
         # Replace the variables from parents in the current profile
-        profile_parser.apply_vars(inherited_vars)
+        profile_parser.apply_vars()
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env",
-                                           "scopes", "options"])
+                           allowed_fields=["build_requires", "settings", "env", "options", "conf"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
 
-        # Return the inherited vars to apply them in the parent profile if exists
-        inherited_vars.update(profile_parser.vars)
-        return inherited_profile, inherited_vars
-
+        return inherited_profile, profile_parser.vars
     except ConanException:
         raise
     except Exception as exc:
@@ -176,15 +183,15 @@ def _apply_inner_profile(doc, base_profile):
 
     def get_package_name_value(item):
         """Parse items like package:name=value or name=value"""
-        package_name = None
+        packagename = None
         if ":" in item:
             tmp = item.split(":", 1)
-            package_name, item = tmp
+            packagename, item = tmp
 
-        name, value = item.split("=", 1)
-        name = name.strip()
-        value = unquote(value)
-        return package_name, name, value
+        result_name, result_value = item.split("=", 1)
+        result_name = result_name.strip()
+        result_value = unquote(result_value)
+        return packagename, result_name, result_value
 
     for setting in doc.settings.splitlines():
         setting = setting.strip()
@@ -211,6 +218,11 @@ def _apply_inner_profile(doc, base_profile):
     current_env_values = EnvValues.loads(doc.env)
     current_env_values.update(base_profile.env_values)
     base_profile.env_values = current_env_values
+
+    if doc.conf:
+        new_prof = ConfDefinition()
+        new_prof.loads(doc.conf, profile=True)
+        base_profile.conf.update_conf_definition(new_prof)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):
@@ -267,14 +279,14 @@ def _profile_parse_args(settings, options, envs):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(env, package_env):
-        env_values = EnvValues()
-        for name, value in env:
-            env_values.add(name, EnvValues.load_value(value))
-        for package, data in package_env.items():
+    def _get_env_values(_env, _package_env):
+        _env_values = EnvValues()
+        for name, value in _env:
+            _env_values.add(name, EnvValues.load_value(value))
+        for package, data in _package_env.items():
             for name, value in data:
-                env_values.add(name, EnvValues.load_value(value), package)
-        return env_values
+                _env_values.add(name, EnvValues.load_value(value), package)
+        return _env_values
 
     result = Profile()
     options = _get_tuples_list_from_extender_arg(options)

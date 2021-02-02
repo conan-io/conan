@@ -22,24 +22,50 @@ def cppstd_from_settings(settings):
     return compiler_cppstd or cppstd
 
 
-def cppstd_flag(compiler, compiler_version, cppstd):
+def cppstd_flag(compiler, compiler_version, cppstd, compiler_base=None):
     if not compiler or not compiler_version or not cppstd:
         return ""
+
+    cppstd_intel = _cppstd_intel_visualstudio if compiler_base == "Visual Studio" else \
+        _cppstd_intel_gcc
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
-            "Visual Studio": _cppstd_visualstudio}.get(str(compiler), None)
+            "Visual Studio": _cppstd_visualstudio,
+            "msvc": _cppstd_msvc,
+            "intel": cppstd_intel,
+            "mcst-lcc": _cppstd_mcst_lcc}.get(str(compiler), None)
     flag = None
     if func:
         flag = func(str(compiler_version), str(cppstd))
     return flag
 
 
-def cppstd_default(compiler, compiler_version):
+def cppstd_flag_new(settings):
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    compiler_base = settings.get_safe("compiler.base")
+    cppstd = cppstd_from_settings(settings)
+    return cppstd_flag(compiler, compiler_version, cppstd, compiler_base)
+
+
+def cppstd_default(settings):
+    if getattr(settings, "get_safe", None):
+        compiler = settings.get_safe("compiler")
+        compiler_version = settings.get_safe("compiler.version")
+        compiler_base = settings.get_safe("compiler.base")
+    else:
+        compiler = str(settings.compiler)
+        compiler_version = str(settings.compiler.version)
+        compiler_base = str(settings.compiler.base)
+    intel_cppstd_default = _intel_visual_cppstd_default if compiler_base == "Visual Studio" \
+        else _intel_gcc_cppstd_default
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
                "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
-               "Visual Studio": _visual_cppstd_default(compiler_version)}.get(str(compiler), None)
+               "Visual Studio": _visual_cppstd_default(compiler_version),
+               "intel": intel_cppstd_default(compiler_version),
+               "mcst-lcc": _mcst_lcc_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
 
@@ -58,6 +84,18 @@ def _visual_cppstd_default(compiler_version):
     return None
 
 
+def _intel_visual_cppstd_default(_):
+    return None
+
+
+def _intel_gcc_cppstd_default(_):
+    return "gnu98"
+
+
+def _mcst_lcc_cppstd_default(compiler_version):
+    return "gnu14" if Version(compiler_version) >= "1.24" else "gnu98"
+
+
 def _cppstd_visualstudio(visual_version, cppstd):
     # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
     v14 = None
@@ -68,6 +106,23 @@ def _cppstd_visualstudio(visual_version, cppstd):
         v14 = "c++14"
         v17 = "c++latest"
     if Version(visual_version) >= "15":
+        v17 = "c++17"
+        v20 = "c++latest"
+
+    flag = {"14": v14, "17": v17, "20": v20}.get(str(cppstd), None)
+    return "/std:%s" % flag if flag else None
+
+
+def _cppstd_msvc(visual_version, cppstd):
+    # https://docs.microsoft.com/en-us/cpp/build/reference/std-specify-language-standard-version
+    v14 = None
+    v17 = None
+    v20 = None
+
+    if Version(visual_version) >= "19.0":
+        v14 = "c++14"
+        v17 = "c++latest"
+    if Version(visual_version) >= "19.1":
         v17 = "c++17"
         v20 = "c++latest"
 
@@ -104,6 +159,10 @@ def _cppstd_apple_clang(clang_version, cppstd):
         # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
         v17 = "c++17"
         vgnu17 = "gnu++17"
+
+    if Version(clang_version) >= "10.0":
+        v20 = "c++2a"
+        vgnu20 = "gnu++2a"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
@@ -197,6 +256,69 @@ def _cppstd_gcc(gcc_version, cppstd):
         vgnu20 = "gnu++2a"
 
     flag = {"98": v98, "gnu98": vgnu98,
+            "11": v11, "gnu11": vgnu11,
+            "14": v14, "gnu14": vgnu14,
+            "17": v17, "gnu17": vgnu17,
+            "20": v20, "gnu20": vgnu20}.get(cppstd)
+    return "-std=%s" % flag if flag else None
+
+
+def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
+    # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-std-qstd
+    # https://software.intel.com/en-us/articles/intel-cpp-compiler-release-notes
+    # NOTE: there are only gnu++98 and gnu++0x, and only for Linux/macOS
+    v98 = v11 = v14 = v17 = v20 = None
+    vgnu11 = vgnu14 = vgnu17 = vgnu20 = None
+
+    if Version(intel_version) >= "12":
+        v11 = "c++0x"
+        vgnu11 = vgnu0x
+    if Version(intel_version) >= "14":
+        v11 = "c++11"
+        vgnu11 = vgnu0x
+    if Version(intel_version) >= "16":
+        v14 = "c++14"
+    if Version(intel_version) >= "18":
+        v17 = "c++17"
+    if Version(intel_version) >= "19.1":
+        v20 = "c++20"
+
+    return {"98": v98, "gnu98": vgnu98,
+            "11": v11, "gnu11": vgnu11,
+            "14": v14, "gnu14": vgnu14,
+            "17": v17, "gnu17": vgnu17,
+            "20": v20, "gnu20": vgnu20}.get(cppstd)
+
+
+def _cppstd_intel_gcc(intel_version, cppstd):
+    flag = _cppstd_intel_common(intel_version, cppstd, "gnu++98", "gnu++0x")
+    return "-std=%s" % flag if flag else None
+
+
+def _cppstd_intel_visualstudio(intel_version, cppstd):
+    flag = _cppstd_intel_common(intel_version, cppstd, None, None)
+    return "/Qstd=%s" % flag if flag else None
+
+
+def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
+    v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
+
+    if Version(mcst_lcc_version) >= "1.21":
+        v11 = "c++11"
+        vgnu11 = "gnu++11"
+        v14 = "c++14"
+        vgnu14 = "gnu++14"
+
+    if Version(mcst_lcc_version) >= "1.24":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+
+    if Version(mcst_lcc_version) >= "1.25":
+        v20 = "c++2a"
+        vgnu20 = "gnu++2a"
+
+    flag = {"98": "c++98", "gnu98": "gnu++98",
+            "03": "c++03", "gnu03": "gnu++03",
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,

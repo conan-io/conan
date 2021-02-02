@@ -4,47 +4,53 @@ import platform
 import subprocess
 import sys
 import unittest
-import warnings
 from collections import namedtuple
 
-import mock
+import pytest
 import requests
 import six
-from bottle import request, static_file
+from bottle import request, static_file, HTTPError
 from mock.mock import mock_open, patch
-from nose.plugins.attrib import attr
 from parameterized import parameterized
-from six import StringIO
+from requests.models import Response
 
 from conans.client import tools
 from conans.client.cache.cache import CONAN_CONF
 from conans.client.conan_api import ConanAPIV1
-from conans.client.conf import default_client_conf, default_settings_yml
+from conans.client.conf import get_default_client_conf
 from conans.client.output import ConanOutput
-from conans.client.runner import ConanRunner
-from conans.client.tools.files import replace_in_file, which
-from conans.client.tools.oss import check_output, OSInfo
-from conans.client.tools.win import vcvars_dict, vswhere
-from conans.errors import ConanException, NotFoundException
+from conans.client.tools import chdir
+from conans.client.tools.files import replace_in_file
+from conans.client.tools.oss import OSInfo
+from conans.client.tools.win import vswhere
+from conans.errors import ConanException, AuthenticationException
 from conans.model.build_info import CppInfo
-from conans.model.settings import Settings
-from conans.test.utils.conanfile import ConanFileMock
+from conans.test.utils.mocks import ConanFileMock, TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import StoppableThreadBottle, TestBufferConanOutput, TestClient
+from conans.test.utils.tools import StoppableThreadBottle, TestClient, zipdir
 from conans.tools import get_global_instances
-from conans.util.env_reader import get_env
 from conans.util.files import load, md5, mkdir, save
+from conans.util.runners import check_output_runner
+
+
+class ConfigMock:
+    def __init__(self):
+        self.retry = 0
+        self.retry_wait = 0
 
 
 class RunnerMock(object):
-    def __init__(self, return_ok=True):
+    def __init__(self, return_ok=True, output=None):
         self.command_called = None
         self.return_ok = return_ok
+        self.output = output
 
     def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
+        if self.output and output and hasattr(output, "write"):
+            output.write(self.output)
         return 0 if self.return_ok else 1
 
 
@@ -79,7 +85,7 @@ class ReplaceInFileTest(unittest.TestCase):
 class ToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
-    def replace_paths_test(self):
+    def test_replace_paths(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
         replace_with = "MYPATH"
@@ -122,18 +128,18 @@ class ToolsTest(unittest.TestCase):
         else:
             self.assertFalse(ret)
 
-    def load_save_test(self):
+    def test_load_save(self):
         folder = temp_folder()
         path = os.path.join(folder, "file")
         save(path, u"äüïöñç")
         content = load(path)
         self.assertEqual(content, u"äüïöñç")
 
-    def md5_test(self):
+    def test_md5(self):
         result = md5(u"äüïöñç")
         self.assertEqual("dfcc3d74aa447280a7ecfdb98da55174", result)
 
-    def cpu_count_test(self):
+    def test_cpu_count(self):
         output = ConanOutput(sys.stdout)
         cpus = tools.cpu_count(output=output)
         self.assertIsInstance(cpus, int)
@@ -154,7 +160,7 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count(output=output)
         self.assertEqual(12, cpus)
 
-    def get_env_unit_test(self):
+    def test_get_env_unit(self):
         """
         Unit tests tools.get_env
         """
@@ -255,7 +261,7 @@ class HelloConan(ConanFile):
 
         # Not test the real commmand get_command if it's setting the module global vars
         tmp = temp_folder()
-        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
+        conf = get_default_client_conf().replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
@@ -281,52 +287,8 @@ class HelloConan(ConanFile):
         self.assertEqual(os.getenv("B", None), None)
         self.assertEqual(os.getenv("Z", None), None)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def msvc_build_command_test(self):
-        settings = Settings.loads(default_settings_yml)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "14"
-
-        # test build_type and arch override, for multi-config packages
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
-                                           arch="x86", output=self.output)
-            self.assertEqual(len(w), 2)
-            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
-                      '/p:UseEnv=false /p:Platform="x86"', cmd)
-        self.assertIn('vcvarsall.bat', cmd)
-
-        # tests errors if args not defined
-        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 2)
-                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        settings.arch = "x86"
-        with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 2)
-                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-
-        # successful definition via settings
-        settings.build_type = "Debug"
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-            self.assertEqual(len(w), 2)
-            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
-                      '/p:UseEnv=false /p:Platform="x86"', cmd)
-        self.assertIn('vcvarsall.bat', cmd)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def vswhere_description_strip_test(self):
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires vswhere")
+    def test_vswhere_description_strip(self):
         myoutput = """
 [
   {
@@ -390,263 +352,8 @@ class HelloConan(ConanFile):
             json = vswhere()
             self.assertNotIn("descripton", json)
 
-    @unittest.skipUnless(platform.system() == "Windows", "Requires vswhere")
-    def vswhere_path_test(self):
-        """
-        Locate vswhere in PATH or in ProgramFiles
-        """
-        # vswhere not found
-        with tools.environment_append({"ProgramFiles": None, "ProgramFiles(x86)": None, "PATH": ""}):
-            with six.assertRaisesRegex(self, ConanException, "Cannot locate vswhere"):
-                vswhere()
-        # vswhere in ProgramFiles but not in PATH
-        program_files = get_env("ProgramFiles(x86)") or get_env("ProgramFiles")
-        vswhere_path = None
-        if program_files:
-            expected_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                         "vswhere.exe")
-            if os.path.isfile(expected_path):
-                vswhere_path = expected_path
-                with tools.environment_append({"PATH": ""}):
-                    self.assertTrue(vswhere())
-        # vswhere in PATH but not in ProgramFiles
-        env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
-        if not which("vswhere") and vswhere_path:
-                vswhere_folder = os.path.join(program_files, "Microsoft Visual Studio", "Installer")
-                env.update({"PATH": [vswhere_folder]})
-        with tools.environment_append(env):
-            self.assertTrue(vswhere())
-
-    def vcvars_echo_test(self):
-        if platform.system() != "Windows":
-            return
-        settings = Settings.loads(default_settings_yml)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings, output=self.output)
-        output = TestBufferConanOutput()
-        runner = ConanRunner(print_commands_to_output=True, output=output)
-        runner(cmd + " && set vs140comntools")
-        self.assertIn("vcvarsall.bat", str(output))
-        self.assertIn("VS140COMNTOOLS=", str(output))
-        with tools.environment_append({"VisualStudioVersion": "14"}):
-            output = TestBufferConanOutput()
-            runner = ConanRunner(print_commands_to_output=True, output=output)
-            cmd = tools.vcvars_command(settings, output=self.output)
-            runner(cmd + " && set vs140comntools")
-            self.assertNotIn("vcvarsall.bat", str(output))
-            self.assertIn("Conan:vcvars already set", str(output))
-            self.assertIn("VS140COMNTOOLS=", str(output))
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_env_not_duplicated_path_test(self):
-        """vcvars is not looking at the current values of the env vars, with PATH it is a problem because you
-        can already have set some of the vars and accumulate unnecessary entries."""
-        settings = Settings.loads(default_settings_yml)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "15"
-        settings.arch = "x86"
-        settings.arch_build = "x86_64"
-
-        # Set the env with a PATH containing the vcvars paths
-        tmp = tools.vcvars_dict(settings, only_diff=False, output=self.output)
-        tmp = {key.lower(): value for key, value in tmp.items()}
-        with tools.environment_append({"path": tmp["path"]}):
-            previous_path = os.environ["PATH"].split(";")
-            # Duplicate the path, inside the tools.vcvars shouldn't have repeated entries in PATH
-            with tools.vcvars(settings, output=self.output):
-                path = os.environ["PATH"].split(";")
-                values_count = {value: path.count(value) for value in path}
-                for value, counter in values_count.items():
-                    if value and counter > 1 and previous_path.count(value) != counter:
-                        # If the entry was already repeated before calling "tools.vcvars" we keep it
-                        self.fail("The key '%s' has been repeated" % value)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_filter_known_paths_test(self):
-        settings = Settings.loads(default_settings_yml)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "15"
-        settings.arch = "x86"
-        settings.arch_build = "x86_64"
-        with tools.environment_append({"PATH": ["custom_path", "WindowsFake"]}):
-            tmp = tools.vcvars_dict(settings, only_diff=False,
-                                    filter_known_paths=True, output=self.output)
-            with tools.environment_append(tmp):
-                self.assertNotIn("custom_path", os.environ["PATH"])
-                self.assertIn("WindowsFake",  os.environ["PATH"])
-            tmp = tools.vcvars_dict(settings, only_diff=False,
-                                    filter_known_paths=False, output=self.output)
-            with tools.environment_append(tmp):
-                self.assertIn("custom_path", os.environ["PATH"])
-                self.assertIn("WindowsFake", os.environ["PATH"])
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_amd64_32_cross_building_support_test(self):
-        # amd64_x86 crossbuilder
-        settings = Settings.loads(default_settings_yml)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "15"
-        settings.arch = "x86"
-        settings.arch_build = "x86_64"
-        cmd = tools.vcvars_command(settings, output=self.output)
-        self.assertIn('vcvarsall.bat" amd64_x86', cmd)
-
-        # It follows arch_build first
-        settings.arch_build = "x86"
-        cmd = tools.vcvars_command(settings, output=self.output)
-        self.assertIn('vcvarsall.bat" x86', cmd)
-
-    def vcvars_raises_when_not_found_test(self):
-        text = """
-os: [Windows]
-compiler:
-    Visual Studio:
-        version: ["5"]
-        """
-        settings = Settings.loads(text)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "5"
-        with six.assertRaisesRegex(self, ConanException,
-                                   "VS non-existing installation: Visual Studio 5"):
-            output = ConanOutput(StringIO())
-            tools.vcvars_command(settings, output=output)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_constrained_test(self):
-        new_out = StringIO()
-        output = ConanOutput(new_out)
-
-        text = """os: [Windows]
-compiler:
-    Visual Studio:
-        version: ["14"]
-        """
-        settings = Settings.loads(text)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        with six.assertRaisesRegex(self, ConanException,
-                                   "compiler.version setting required for vcvars not defined"):
-            tools.vcvars_command(settings, output=output)
-
-        new_out = StringIO()
-        output = ConanOutput(new_out)
-        settings.compiler.version = "14"
-        with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            tools.vcvars_command(settings, output=output)
-            with tools.environment_append({"VisualStudioVersion": "12"}):
-                with six.assertRaisesRegex(self, ConanException,
-                                           "Error, Visual environment already set to 12"):
-                    tools.vcvars_command(settings, output=output)
-
-            with tools.environment_append({"VisualStudioVersion": "12"}):
-                # Not raising
-                tools.vcvars_command(settings, force=True, output=output)
-
-    def vcvars_context_manager_test(self):
-        conanfile = """
-from conans import ConanFile, tools
-
-class MyConan(ConanFile):
-    name = "MyConan"
-    version = "0.1"
-    settings = "os", "compiler"
-
-    def build(self):
-        with tools.vcvars(self.settings, only_diff=True):
-            self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
-"""
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-
-        if platform.system() == "Windows":
-            client.run("create . conan/testing")
-            self.assertNotIn("VCINSTALLDIR set to: None", client.out)
-        else:
-            client.run("create . conan/testing")
-            self.assertIn("VCINSTALLDIR set to: None", client.out)
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def vcvars_dict_diff_test(self):
-        text = """
-os: [Windows]
-compiler:
-    Visual Studio:
-        version: ["14"]
-        """
-        settings = Settings.loads(text)
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "14"
-        with tools.environment_append({"MYVAR": "1"}):
-            ret = vcvars_dict(settings, only_diff=False, output=self.output)
-            self.assertIn("MYVAR", ret)
-            self.assertIn("VCINSTALLDIR", ret)
-
-            ret = vcvars_dict(settings, output=self.output)
-            self.assertNotIn("MYVAR", ret)
-            self.assertIn("VCINSTALLDIR", ret)
-
-        my_lib_paths = "C:\\PATH\TO\MYLIBS;C:\\OTHER_LIBPATH"
-        with tools.environment_append({"LIBPATH": my_lib_paths}):
-            ret = vcvars_dict(settings, only_diff=False, output=self.output)
-            str_var_value = os.pathsep.join(ret["LIBPATH"])
-            self.assertTrue(str_var_value.endswith(my_lib_paths))
-
-            # Now only a diff, it should return the values as a list, but without the old values
-            ret = vcvars_dict(settings, only_diff=True, output=self.output)
-            self.assertEqual(ret["LIBPATH"], str_var_value.split(os.pathsep)[0:-2])
-
-            # But if we apply both environments, they are composed correctly
-            with tools.environment_append(ret):
-                self.assertEqual(os.environ["LIBPATH"], str_var_value)
-
-    def vcvars_dict_test(self):
-        # https://github.com/conan-io/conan/issues/2904
-        output_with_newline_and_spaces = """
-     PROCESSOR_ARCHITECTURE=AMD64
-
-PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 158 Stepping 9, GenuineIntel
-
-
- PROCESSOR_LEVEL=6
-
-PROCESSOR_REVISION=9e09
-
-
-set nl=^
-env_var=
-without_equals_sign
-
-ProgramFiles(x86)=C:\Program Files (x86)
-
-"""
-
-        def vcvars_command_mock(settings, arch, compiler_version, force, vcvars_ver, winsdk_version,
-                                output):  # @UnusedVariable
-            return "unused command"
-
-        def subprocess_check_output_mock(cmd):
-            self.assertIn("unused command", cmd)
-            return output_with_newline_and_spaces
-
-        with mock.patch('conans.client.tools.win.vcvars_command', new=vcvars_command_mock):
-            with patch('conans.client.tools.win.check_output', new=subprocess_check_output_mock):
-                vcvars = tools.vcvars_dict(None, only_diff=False, output=self.output)
-                self.assertEqual(vcvars["PROCESSOR_ARCHITECTURE"], "AMD64")
-                self.assertEqual(vcvars["PROCESSOR_IDENTIFIER"],
-                                 "Intel64 Family 6 Model 158 Stepping 9, GenuineIntel")
-                self.assertEqual(vcvars["PROCESSOR_LEVEL"], "6")
-                self.assertEqual(vcvars["PROCESSOR_REVISION"], "9e09")
-                self.assertEqual(vcvars["ProgramFiles(x86)"], "C:\Program Files (x86)")
-
-    @unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
-    def run_in_bash_test(self):
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+    def test_run_in_bash(self):
 
         class MockConanfile(object):
             def __init__(self):
@@ -684,8 +391,27 @@ ProgramFiles(x86)=C:\Program Files (x86)
             self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
-    @attr("slow")
-    def download_retries_test(self):
+    def test_download_retries_errors(self):
+        out = TestBufferConanOutput()
+
+        # Retry arguments override defaults
+        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=1)
+        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
+
+        # Not found error
+        with six.assertRaisesRegex(self, ConanException,
+                                   "Not found: http://google.es/FILE_NOT_FOUND"):
+            tools.download("http://google.es/FILE_NOT_FOUND",
+                           os.path.join(temp_folder(), "README.txt"), out=out,
+                           requester=requests,
+                           retry=2, retry_wait=0)
+
+    @pytest.mark.slow
+    def test_download_retries(self):
         http_server = StoppableThreadBottle()
 
         with tools.chdir(tools.mkdir_tmp()):
@@ -714,44 +440,6 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
 
-        # Connection error
-        # Default behaviour
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests)
-        self.assertEqual(str(out).count("Waiting 5 seconds to retry..."), 1)
-
-        # Retry arguments override defaults
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=1)
-        self.assertEqual(str(out).count("Waiting 1 seconds to retry..."), 2)
-
-        # Retry default values from the config
-        class MockRequester(object):
-            retry = 2
-            retry_wait = 0
-
-            def get(self, *args, **kwargs):
-                return requests.get(*args, **kwargs)
-
-        with six.assertRaisesRegex(self, ConanException, "Error downloading"):
-            tools.download("http://fakeurl3.es/nonexists",
-                           os.path.join(temp_folder(), "file.txt"), out=out,
-                           requester=MockRequester())
-        self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
-
-        # Not found error
-        with six.assertRaisesRegex(self, NotFoundException, "Not found: "):
-            tools.download("http://google.es/FILE_NOT_FOUND",
-                           os.path.join(temp_folder(), "README.txt"), out=out,
-                           requester=requests,
-                           retry=2, retry_wait=0)
-
-        # And OK
         dest = os.path.join(temp_folder(), "manual.html")
         tools.download("http://localhost:%s/manual.html" % http_server.port, dest, out=out, retry=3,
                        retry_wait=0, requester=requests)
@@ -773,16 +461,38 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not authorized
         with self.assertRaises(ConanException):
             tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                           overwrite=True, requester=requests, out=out)
+                           overwrite=True, requester=requests, out=out, retry=0, retry_wait=0)
 
         # Authorized
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
-                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out)
+                       auth=("user", "passwd"), overwrite=True, requester=requests, out=out,
+                       retry=0, retry_wait=0)
 
         # Authorized using headers
         tools.download("http://localhost:%s/basic-auth/user/passwd" % http_server.port, dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True,
-                       requester=requests, out=out)
+                       requester=requests, out=out, retry=0, retry_wait=0)
+        http_server.stop()
+
+    @pytest.mark.slow
+    @patch("conans.tools._global_config")
+    def test_download_unathorized(self, mock_config):
+        http_server = StoppableThreadBottle()
+        mock_config.return_value = ConfigMock()
+
+        @http_server.server.get('/forbidden')
+        def get_forbidden():
+            return HTTPError(403, "Access denied.")
+
+        http_server.run_server()
+
+        out = TestBufferConanOutput()
+        dest = os.path.join(temp_folder(), "manual.html")
+        # Not authorized
+        with six.assertRaisesRegex(self, AuthenticationException, "403"):
+            tools.download("http://localhost:%s/forbidden" % http_server.port, dest,
+                           requester=requests, out=out)
+
         http_server.stop()
 
     @parameterized.expand([
@@ -817,11 +527,17 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["Windows", "x86_64", "gcc", "x86_64-w64-mingw32"],
         ["Darwin", "x86_64", None, "x86_64-apple-darwin"],
         ["Macos", "x86", None, "i686-apple-darwin"],
-        ["iOS", "armv7", None, "arm-apple-darwin"],
-        ["watchOS", "armv7k", None, "arm-apple-darwin"],
-        ["watchOS", "armv8_32", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8", None, "aarch64-apple-darwin"],
-        ["tvOS", "armv8.3", None, "aarch64-apple-darwin"],
+        ["iOS", "armv7", None, "arm-apple-ios"],
+        ["iOS", "x86", None, "i686-apple-ios"],
+        ["iOS", "x86_64", None, "x86_64-apple-ios"],
+        ["watchOS", "armv7k", None, "arm-apple-watchos"],
+        ["watchOS", "armv8_32", None, "aarch64-apple-watchos"],
+        ["watchOS", "x86", None, "i686-apple-watchos"],
+        ["watchOS", "x86_64", None, "x86_64-apple-watchos"],
+        ["tvOS", "armv8", None, "aarch64-apple-tvos"],
+        ["tvOS", "armv8.3", None, "aarch64-apple-tvos"],
+        ["tvOS", "x86", None, "i686-apple-tvos"],
+        ["tvOS", "x86_64", None, "x86_64-apple-tvos"],
         ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
         ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
         ["AIX", "ppc32", None, "rs6000-ibm-aix"],
@@ -829,28 +545,34 @@ ProgramFiles(x86)=C:\Program Files (x86)
         ["Neutrino", "armv7", None, "arm-nto-qnx"],
         ["Neutrino", "armv8", None, "aarch64-nto-qnx"],
         ["Neutrino", "sh4le", None, "sh4-nto-qnx"],
-        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"]
+        ["Neutrino", "ppc32be", None, "powerpcbe-nto-qnx"],
+        ["Linux", "e2k-v2", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v3", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v4", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v5", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v6", None, "e2k-unknown-linux-gnu"],
+        ["Linux", "e2k-v7", None, "e2k-unknown-linux-gnu"],
     ])
-    def get_gnu_triplet_test(self, os, arch, compiler, expected_triplet):
+    def test_get_gnu_triplet(self, os, arch, compiler, expected_triplet):
         triplet = tools.get_gnu_triplet(os, arch, compiler)
         self.assertEqual(triplet, expected_triplet,
                          "triplet did not match for ('%s', '%s', '%s')" % (os, arch, compiler))
 
-    def get_gnu_triplet_on_windows_without_compiler_test(self):
+    def test_get_gnu_triplet_on_windows_without_compiler(self):
         with self.assertRaises(ConanException):
             tools.get_gnu_triplet("Windows", "x86")
 
-    def detect_windows_subsystem_test(self):
-        # Dont raise test
+    def test_detect_windows_subsystem(self):
+        # Don't raise test
         result = OSInfo.detect_windows_subsystem()
         if not OSInfo.bash_path() or platform.system() != "Windows":
             self.assertEqual(None, result)
         else:
             self.assertEqual(str, type(result))
 
-    @attr('slow')
-    @attr('local_bottle')
-    def get_filename_download_test(self):
+    @pytest.mark.slow
+    @pytest.mark.local_bottle
+    def test_get_filename_download(self):
         # Create a tar file to be downloaded from server
         with tools.chdir(tools.mkdir_tmp()):
             import tarfile
@@ -883,14 +605,15 @@ ProgramFiles(x86)=C:\Program Files (x86)
 
         out = TestBufferConanOutput()
         # Test: File name cannot be deduced from '?file=1'
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Cannot deduce file name form url. Use 'filename' parameter."):
+        with self.assertRaises(ConanException) as error:
             tools.get("http://localhost:%s/?file=1" % thread.port, output=out)
+        self.assertIn("Cannot deduce file name from the url: 'http://localhost:{}/?file=1'."
+                      " Use 'filename' parameter.".format(thread.port), str(error.exception))
 
         # Test: Works with filename parameter instead of '?file=1'
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/?file=1" % thread.port, filename="sample.tar.gz",
-                      requester=requests, output=out)
+                      requester=requests, output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
 
         # Test: Use a different endpoint but still not the filename one
@@ -898,9 +621,10 @@ ProgramFiles(x86)=C:\Program Files (x86)
             from zipfile import BadZipfile
             with self.assertRaises(BadZipfile):
                 tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                          requester=requests, output=out)
+                          requester=requests, output=out, retry=0, retry_wait=0)
             tools.get("http://localhost:%s/this_is_not_the_file_name" % thread.port,
-                      filename="sample.tar.gz", requester=requests, output=out)
+                      filename="sample.tar.gz", requester=requests, output=out,
+                      retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test_folder"))
         thread.stop()
 
@@ -912,9 +636,36 @@ ProgramFiles(x86)=C:\Program Files (x86)
         # Not found error
         self.assertEqual(str(out).count("Waiting 0 seconds to retry..."), 2)
 
-    @attr('slow')
-    @attr('local_bottle')
-    def get_gunzip_test(self):
+    def test_get_unzip_strip_root(self):
+        """Test that the strip_root mechanism from the underlying unzip
+          is called if I call the tools.get by checking that the exception of an invalid zip to
+          flat is raised"""
+
+        zip_folder = temp_folder()
+
+        def mock_download(*args, **kwargs):
+            tmp_folder = temp_folder()
+            with chdir(tmp_folder):
+                ori_files_dir = os.path.join(tmp_folder, "subfolder-1.2.3")
+                file1 = os.path.join(ori_files_dir, "file1")
+                file2 = os.path.join(ori_files_dir, "folder", "file2")
+                # !!! This file is not under the root "subfolder-1.2.3"
+                file3 = os.path.join("file3")
+                save(file1, "")
+                save(file2, "")
+                save(file3, "")
+                zip_file = os.path.join(zip_folder, "file.zip")
+                zipdir(tmp_folder, zip_file)
+
+        with six.assertRaisesRegex(self, ConanException, "The zip file contains more than 1 "
+                                                         "folder in the root"):
+            with patch('conans.client.tools.net.download', new=mock_download):
+                with chdir(zip_folder):
+                    tools.get("file.zip", strip_root=True)
+
+    @pytest.mark.slow
+    @pytest.mark.local_bottle
+    def test_get_gunzip(self):
         # Create a tar file to be downloaded from server
         tmp = temp_folder()
         filepath = os.path.join(tmp, "test.txt.gz")
@@ -934,69 +685,83 @@ ProgramFiles(x86)=C:\Program Files (x86)
         out = TestBufferConanOutput()
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out)
+                      output=out, retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("test.txt"))
             self.assertEqual(load("test.txt"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="myfile.doc")
+                      output=out, destination="myfile.doc", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("myfile.doc"))
             self.assertEqual(load("myfile.doc"), "hello world zipped!")
         with tools.chdir(tools.mkdir_tmp()):
             tools.get("http://localhost:%s/test.txt.gz" % thread.port, requester=requests,
-                      output=out, destination="mytemp/myfile.txt")
+                      output=out, destination="mytemp/myfile.txt", retry=0, retry_wait=0)
             self.assertTrue(os.path.exists("mytemp/myfile.txt"))
             self.assertEqual(load("mytemp/myfile.txt"), "hello world zipped!")
 
         thread.stop()
 
-    def unix_to_dos_unit_test(self):
+    @patch("conans.client.tools.net.unzip")
+    def test_get_mirror(self, _):
+        """ tools.get must supports a list of URLs. However, only one must be downloaded.
+        """
 
-        def save_file(contents):
-            tmp = temp_folder()
-            filepath = os.path.join(tmp, "a_file.txt")
-            save(filepath, contents)
-            return filepath
+        class MockRequester(object):
+            def __init__(self):
+                self.count = 0
+                self.fail_first = False
+                self.fail_all = False
 
-        fp = save_file(b"a line\notherline\n")
-        if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
+            def get(self, *args, **kwargs):
+                self.count += 1
+                resp = Response()
+                resp._content = b'{"results": []}'
+                resp.headers = {"Content-Type": "application/json"}
+                resp.status_code = 200
+                if (self.fail_first and self.count == 1) or self.fail_all:
+                    resp.status_code = 408
+                return resp
 
-            tools.unix2dos(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
-        else:
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
-            tools.unix2dos(fp)
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
+        file = "test.txt.gz"
+        out = TestBufferConanOutput()
+        urls = ["http://localhost:{}/{}".format(8000 + i, file) for i in range(3)]
 
-        self.assertEqual("a line\r\notherline\r\n", str(tools.load(fp)))
+        # Only the first file must be downloaded
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(1, requester.count)
 
-        fp = save_file(b"a line\r\notherline\r\n")
-        if platform.system() != "Windows":
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertIn("CRLF", str(output))
+        # Fail the first, download only the second
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            requester.fail_first = True
+            tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(2, requester.count)
+            self.assertIn("WARN: Could not download from the URL {}: Error 408 downloading file {}."
+                          " Trying another mirror."
+                          .format(urls[0], urls[0]), out)
 
-            tools.dos2unix(fp)
-            output = check_output(["file", fp], stderr=subprocess.STDOUT)
-            self.assertIn("ASCII text", str(output))
-            self.assertNotIn("CRLF", str(output))
-        else:
-            fc = tools.load(fp)
-            self.assertIn("\r\n", fc)
-            tools.dos2unix(fp)
-            fc = tools.load(fp)
-            self.assertNotIn("\r\n", fc)
+        # Fail all downloads
+        with tools.chdir(tools.mkdir_tmp()):
+            requester = MockRequester()
+            requester.fail_all = True
+            with self.assertRaises(ConanException) as error:
+                tools.get(urls, requester=requester, output=out, retry=0, retry_wait=0)
+            self.assertEqual(3, requester.count)
+            self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
 
-        self.assertEqual("a line\notherline\n", str(tools.load(fp)))
+    def test_check_output_runner(self):
+        import tempfile
+        original_temp = tempfile.gettempdir()
+        patched_temp = os.path.join(original_temp, "dir with spaces")
+        payload = "hello world"
+        with patch("tempfile.mktemp") as mktemp:
+            mktemp.return_value = patched_temp
+            output = check_output_runner(["echo", payload], stderr=subprocess.STDOUT)
+            self.assertIn(payload, str(output))
 
-    def unix_to_dos_conanfile_test(self):
+    def test_unix_to_dos_conanfile(self):
         client = TestClient()
         conanfile = """
 import os
@@ -1020,7 +785,7 @@ class HelloConan(ConanFile):
 
 class CollectLibTestCase(unittest.TestCase):
 
-    def collect_libs_test(self):
+    def test_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
         conanfile.package_folder = None
@@ -1031,7 +796,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
@@ -1059,7 +824,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -1074,7 +839,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo(conanfile.name, "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
@@ -1084,20 +849,18 @@ class CollectLibTestCase(unittest.TestCase):
         self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                       % no_folder_path, conanfile.output)
 
-    def self_collect_libs_test(self):
+    def test_self_collect_libs(self):
         conanfile = ConanFileMock()
         # Without package_folder
         conanfile.package_folder = None
         result = conanfile.collect_libs()
         self.assertEqual([], result)
-        self.assertIn("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                      conanfile.output)
 
         # Default behavior
         conanfile.package_folder = temp_folder()
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         result = conanfile.collect_libs()
         self.assertEqual(["mylib"], result)
 
@@ -1125,7 +888,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn same lib different folders
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         custom_mylib_path = os.path.join(conanfile.package_folder, "custom_folder", "mylib.lib")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(custom_mylib_path, "")
@@ -1140,7 +903,7 @@ class CollectLibTestCase(unittest.TestCase):
         # Warn lib folder does not exist with correct result
         conanfile = ConanFileMock()
         conanfile.package_folder = temp_folder()
-        conanfile.cpp_info = CppInfo("")
+        conanfile.cpp_info = CppInfo("", "")
         lib_mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")

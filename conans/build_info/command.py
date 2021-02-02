@@ -34,10 +34,10 @@ def runv1():
 
         if not os.path.exists(args.trace_path):
             output.error("Conan trace log not found! '%s'" % args.trace_path)
-            exit(1)
+            sys.exit(1)
         if args.output and not os.path.exists(os.path.dirname(args.output)):
             output.error("Output file directory not found! '%s'" % args.trace_path)
-            exit(1)
+            sys.exit(1)
 
         info = get_build_info(args.trace_path)
         the_json = json.dumps(info.serialize())
@@ -47,7 +47,7 @@ def runv1():
             output.write(the_json)
     except Exception as exc:
         output.error(exc)
-        exit(1)
+        sys.exit(1)
     except SystemExit:
         output.writeln("")
         output.warn("Use 'conan_build_info --v2' to see the usage of the new recommended way to "
@@ -77,11 +77,6 @@ def runv2():
     parser_create.add_argument("build_info_file", type=str,
                                help="build info json for output")
     parser_create.add_argument("--lockfile", type=str, required=True, help="input lockfile")
-    parser_create.add_argument("--multi-module", nargs="?", default=True,
-                               help="if enabled, the module_id will be identified by the "
-                                    "recipe reference plus the package ID")
-    parser_create.add_argument("--skip-env", nargs="?", default=True,
-                               help="capture or not the environment")
     parser_create.add_argument("--user", type=str, nargs="?", default=None, help="user")
     parser_create.add_argument("--password", type=str, nargs="?", default=None, help="password")
     parser_create.add_argument("--apikey", type=str, nargs="?", default=None, help="apikey")
@@ -118,18 +113,17 @@ def runv2():
             stop_build_info(output)
         if args.subcommand == "create":
             check_credential_arguments()
-            create_build_info(output, args.build_info_file, args.lockfile, args.multi_module,
-                              args.skip_env, args.user, args.password, args.apikey)
+            create_build_info(output, args.build_info_file, args.lockfile,
+                              args.user, args.password, args.apikey)
         if args.subcommand == "update":
             update_build_info(args.buildinfo, args.output_file)
         if args.subcommand == "publish":
             check_credential_arguments()
             publish_build_info(args.buildinfo, args.url, args.user, args.password,
                                args.apikey)
-    except ConanException as exc:
-        output.error(exc)
     except Exception as exc:
         output.error(exc)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

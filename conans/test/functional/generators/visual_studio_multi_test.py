@@ -4,14 +4,14 @@ import os
 import platform
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 from parameterized import parameterized
 
 from conans import MSBuild, tools
 from conans.client.runner import ConanRunner
-from conans.test.utils.conanfile import MockConanfile, MockSettings
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
+from conans.test.assets.visual_project_files import get_vs_project_files
 
 main_cpp = r"""#include <hello.h>
 
@@ -57,25 +57,24 @@ void hello(){
 """
 
 
-@attr('slow')
-@unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
+@pytest.mark.slow
+@pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 class VisualStudioMultiTest(unittest.TestCase):
 
     @parameterized.expand([("visual_studio", "conanbuildinfo.props"),
                            ("visual_studio_multi", "conanbuildinfo_multi.props")])
-    def build_vs_project_test(self, generator, props):
+    def test_build_vs_project(self, generator, props):
         client = TestClient()
-        files = {}
-        files["conanfile.py"] = hello_conanfile_py
-        files["hello.h"] = hello_h
-        client.save(files)
+        client.save({"conanfile.py": hello_conanfile_py,
+                     "hello.h": hello_h})
         client.run("create . lasote/testing")
 
         files = get_vs_project_files()
         files["MyProject/main.cpp"] = main_cpp
         files["conanfile.txt"] = conanfile_txt.format(generator=generator)
         props = os.path.join(client.current_folder, props)
-        old = '<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+        old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
         new = old + '<Import Project="{props}" />'.format(props=props)
         files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
         client.save(files, clean_first=True)
@@ -104,5 +103,5 @@ class VisualStudioMultiTest(unittest.TestCase):
                 msbuild = MSBuild(conanfile)
                 msbuild.build(project_file="MyProject.sln", build_type=build_type, arch=arch)
                 output = TestBufferConanOutput()
-                runner("%s\MyProject.exe" % build_type, output)
-                self.assertIn("Hello %s!!!" % build_type, output)
+                client.run_command(r"%s\MyProject.exe" % build_type)
+                self.assertIn("Hello %s!!!" % build_type, client.out)

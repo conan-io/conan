@@ -3,24 +3,27 @@
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo
 from conans.util.files import load
 
 
+@pytest.mark.tool_git
 @parameterized_class([{"shallow": True}, {"shallow": False}, {"shallow": None}, {"shallow": "None"}])
 class GitShallowTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conans.errors import ConanException
         from six import StringIO
-        
+
         class Lib(ConanFile):
             scm = {{"type": "git", "url": "{url}", "revision": "{rev}", {shallow_attrib} }}
-            
+
             def build(self):
                 try:
                     mybuf = StringIO()

@@ -1,22 +1,26 @@
 import ast
 import os
 import shutil
+import sys
 
 import six
+import yaml
 
-from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException
+from conans.client.tools import chdir
+from conans.errors import ConanException, ConanV2Exception, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
-    merge_directories
+    merge_directories, clean_dirty
 from conans.util.log import logger
+
+isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
 
 def export_alias(package_layout, target_ref, output, revisions_enabled):
@@ -60,17 +64,22 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     """
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
     revisions_enabled = app.config.revisions_enabled
+    scm_to_conandata = app.config.scm_to_conandata
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
     # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
     # Take the default from the env vars if they exist to not break behavior
     try:
         user = conanfile.user
+    except ConanV2Exception:
+        raise
     except ConanException:
         user = None
 
     try:
         channel = conanfile.channel
+    except ConanV2Exception:
+        raise
     except ConanException:
         channel = None
 
@@ -78,10 +87,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:
-        node_id = graph_lock.get_node(ref)
+        node_id = graph_lock.get_consumer(ref)
         python_requires = graph_lock.python_requires(node_id)
         # TODO: check that the locked python_requires are different from the loaded ones
-        app.range_resolver.output  # invalidate previous version range output
+        app.range_resolver.clear_output()  # invalidate previous version range output
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        ref.user, ref.channel, python_requires)
 
@@ -102,35 +111,34 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
-    conan_linter(conanfile_path, output)
     output = conanfile.output
-
-    # Get previous digest
-    try:
-        previous_manifest = package_layout.recipe_manifest()
-    except IOError:
-        previous_manifest = None
-    finally:
-        _recreate_folders(package_layout.export())
-        _recreate_folders(package_layout.export_sources())
 
     # Copy sources to target folders
     with package_layout.conanfile_write_lock(output=output):
+        # Get previous manifest
+        try:
+            previous_manifest = package_layout.recipe_manifest()
+        except IOError:
+            previous_manifest = None
 
+        package_layout.export_remove()
+        export_folder = package_layout.export()
+        export_src_folder = package_layout.export_sources()
+        mkdir(export_folder)
+        mkdir(export_src_folder)
         origin_folder = os.path.dirname(conanfile_path)
-        export_recipe(conanfile, origin_folder, package_layout.export())
-        export_source(conanfile, origin_folder, package_layout.export_sources())
+        export_recipe(conanfile, origin_folder, export_folder)
+        export_source(conanfile, origin_folder, export_src_folder)
         shutil.copy2(conanfile_path, package_layout.conanfile())
 
         # Calculate the "auto" values and replace in conanfile.py
         scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
                                                               os.path.dirname(conanfile_path),
-                                                              package_layout.export(), output,
-                                                              ignore_dirty)
+                                                              package_layout, output,
+                                                              ignore_dirty, scm_to_conandata)
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
-        rmdir(scm_sources_folder)
         if local_src_folder and not keep_source:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
@@ -145,15 +153,15 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                              conanfile_path=package_layout.conanfile())
 
         # Compute the new digest
-        manifest = FileTreeManifest.create(package_layout.export(), package_layout.export_sources())
+        manifest = FileTreeManifest.create(export_folder, export_src_folder)
         modified_recipe |= not previous_manifest or previous_manifest != manifest
         if modified_recipe:
             output.success('A new %s version was exported' % CONANFILE)
-            output.info('Folder: %s' % package_layout.export())
+            output.info('Folder: %s' % export_folder)
         else:
             output.info("The stored package has not changed")
             manifest = previous_manifest  # Use the old one, keep old timestamp
-        manifest.save(package_layout.export())
+        manifest.save(export_folder)
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
@@ -170,6 +178,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             if is_dirty(source_folder):
                 output.info("Source folder is corrupted, forcing removal")
                 rmdir(source_folder)
+                clean_dirty(source_folder)
             elif modified_recipe and not keep_source:
                 output.info("Package recipe modified in export, forcing source folder removal")
                 output.info("Use the --keep-source, -k option to skip it")
@@ -203,24 +212,25 @@ def _check_settings_for_warnings(conanfile, output):
     if not conanfile.settings:
         return
     try:
-        if not 'os_build' in conanfile.settings:
+        if 'os_build' not in conanfile.settings:
             return
-        if not 'os' in conanfile.settings:
+        if 'os' not in conanfile.settings:
             return
 
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
+        output.writeln("*" * 60, front=Color.BRIGHT_RED)
         output.writeln("  This package defines both 'os' and 'os_build' ",
                        front=Color.BRIGHT_RED)
         output.writeln("  Please use 'os' for libraries and 'os_build'",
                        front=Color.BRIGHT_RED)
         output.writeln("  only for build-requires used for cross-building",
                        front=Color.BRIGHT_RED)
-        output.writeln("*"*60, front=Color.BRIGHT_RED)
+        output.writeln("*" * 60, front=Color.BRIGHT_RED)
     except ConanException:
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, output, ignore_dirty):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty,
+                             scm_to_conandata):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -234,7 +244,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
 
     if not captured:
         # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+        _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -249,7 +259,11 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
     if scm_data.url == "auto":
         origin = scm.get_qualified_remote_url(remove_credentials=True)
         if not origin:
-            raise ConanException("Repo origin cannot be deduced")
+            output.warn("Repo origin cannot be deduced, 'auto' fields won't be replaced."
+                        " 'conan upload' command will prevent uploading recipes with 'auto'"
+                        " values in these fields.")
+            local_src_path = scm.get_local_path_to_url(origin)
+            return scm_data, local_src_path
         if scm.is_local_repository():
             output.warn("Repo origin looks like a local path: %s" % origin)
         output.success("Repo origin deduced by 'auto': %s" % origin)
@@ -262,12 +276,33 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, destination_folder, outpu
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_conanfile(os.path.join(destination_folder, "conanfile.py"), scm_data)
+    _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
 
     return scm_data, local_src_path
 
 
+def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
+    if scm_to_conandata:
+        conandata_path = os.path.join(package_layout.export(), DATA_YML)
+        conandata_yml = {}
+        if os.path.exists(conandata_path):
+            conandata_yml = yaml.safe_load(load(conandata_path))
+            conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
+            if '.conan' in conandata_yml:
+                raise ConanException("Field '.conan' inside '{}' file is reserved to "
+                                     "Conan usage.".format(DATA_YML))
+        scm_data_copied = scm_data.as_dict()
+        scm_data_copied.pop('username', None)
+        scm_data_copied.pop('password', None)
+        conandata_yml['.conan'] = {'scm': scm_data_copied}
+
+        save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
+    else:
+        _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
+
+
 def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
+    # FIXME: Remove in Conan 2.0, it will use conandata.yml as the only way
     # Parsing and replacing the SCM field
     content = load(conanfile_path)
     headers = []
@@ -303,16 +338,24 @@ def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
                                 if i_body + 1 == len(tree.body):  # Last statement over all
                                     next_line = len(lines)
                                 else:
-                                    next_line = tree.body[i_body+1].lineno - 1
+                                    next_line = tree.body[i_body + 1].lineno - 1
                             else:
-                                next_line = statements[i+1].lineno - 1
+                                # Next statement can be a comment or anything else
+                                next_statement = statements[i + 1]
+                                if isPY38 and isinstance(next_statement, ast.Expr):
+                                    # Python 3.8 properly parses multiline comments with start
+                                    # and end lines, here we preserve the same (wrong)
+                                    # implementation of previous releases
+                                    next_line = next_statement.end_lineno - 1
+                                else:
+                                    next_line = next_statement.lineno - 1
                                 next_line_content = lines[next_line].strip()
                                 if (next_line_content.endswith('"""') or
-                                        next_line_content.endswith("'''")):
+                                    next_line_content.endswith("'''")):
                                     next_line += 1
                         except IndexError:
                             next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno-1):next_line]]
+                        replace = [line for line in lines[(stmt.lineno - 1):next_line]]
                         to_replace.append("".join(replace).lstrip())
                         comments = [line.strip('\n') for line in replace
                                     if line.strip().startswith("#") or not line.strip()]
@@ -384,15 +427,6 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     return revision
 
 
-def _recreate_folders(destination_folder):
-    try:
-        if os.path.exists(destination_folder):
-            rmdir(destination_folder)
-        os.makedirs(destination_folder)
-    except Exception as e:
-        raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
-
-
 def _classify_patterns(patterns):
     patterns = patterns or []
     included, excluded = [], []
@@ -415,8 +449,12 @@ def _export_scm(scm_data, origin_folder, scm_sources_folder, output):
 
 
 def export_source(conanfile, origin_folder, destination_source_folder):
+    if callable(conanfile.exports_sources):
+        raise ConanException("conanfile 'exports_sources' shouldn't be a method, "
+                             "use 'export_sources()' instead")
+
     if isinstance(conanfile.exports_sources, str):
-        conanfile.exports_sources = (conanfile.exports_sources, )
+        conanfile.exports_sources = (conanfile.exports_sources,)
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
     copier = FileCopier([origin_folder], destination_source_folder)
@@ -426,10 +464,14 @@ def export_source(conanfile, origin_folder, destination_source_folder):
     package_output = ScopedOutput("%s exports_sources" % output.scope, output)
     copier.report(package_output)
 
+    _run_method(conanfile, "export_sources", origin_folder, destination_source_folder, output)
+
 
 def export_recipe(conanfile, origin_folder, destination_folder):
+    if callable(conanfile.exports):
+        raise ConanException("conanfile 'exports' shouldn't be a method, use 'export()' instead")
     if isinstance(conanfile.exports, str):
-        conanfile.exports = (conanfile.exports, )
+        conanfile.exports = (conanfile.exports,)
 
     output = conanfile.output
     package_output = ScopedOutput("%s exports" % output.scope, output)
@@ -451,5 +493,30 @@ def export_recipe(conanfile, origin_folder, destination_folder):
     copier = FileCopier([origin_folder], destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-
     copier.report(package_output)
+
+    _run_method(conanfile, "export", origin_folder, destination_folder, output)
+
+
+def _run_method(conanfile, method, origin_folder, destination_folder, output):
+    export_method = getattr(conanfile, method, None)
+    if export_method:
+        if not callable(export_method):
+            raise ConanException("conanfile '%s' must be a method" % method)
+        output.highlight("Calling %s()" % method)
+        copier = FileCopier([origin_folder], destination_folder)
+        conanfile.copy = copier
+        folder_name = "%s_folder" % method
+        setattr(conanfile, folder_name, destination_folder)
+        default_options = conanfile.default_options
+        try:
+            # TODO: Poor man attribute control access. Convert to nice decorator
+            conanfile.default_options = None
+            with chdir(origin_folder):
+                with conanfile_exception_formatter(str(conanfile), method):
+                    export_method()
+        finally:
+            conanfile.default_options = default_options
+            delattr(conanfile, folder_name)
+        export_method_output = ScopedOutput("%s %s() method" % (output.scope, method), output)
+        copier.report(export_method_output)

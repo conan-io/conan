@@ -34,8 +34,6 @@ class ConanRequester(object):
         self._cacert_path = config.cacert_path
         self._client_cert_path = config.client_cert_path
         self._client_cert_key_path = config.client_cert_key_path
-        self._retry = config.retry
-        self._retry_wait = config.retry_wait
 
         self._no_proxy_match = [el.strip() for el in
                                 self.proxies.pop("no_proxy_match", "").split(",") if el]
@@ -63,16 +61,7 @@ class ConanRequester(object):
             else:
                 self._client_certificates = self._client_cert_path
 
-    @property
-    def retry(self):
-        return self._retry
-
-    @property
-    def retry_wait(self):
-        return self._retry_wait
-
     def _should_skip_proxy(self, url):
-
         for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
                 return True
@@ -93,9 +82,12 @@ class ConanRequester(object):
         if not kwargs.get("headers"):
             kwargs["headers"] = {}
 
-        user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
-                                                  requests.utils.default_user_agent())
-        kwargs["headers"]["User-Agent"] = user_agent
+        # Only set User-Agent if none was provided
+        if not kwargs["headers"].get("User-Agent"):
+            user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
+                                                      requests.utils.default_user_agent())
+            kwargs["headers"]["User-Agent"] = user_agent
+
         return kwargs
 
     def get(self, url, **kwargs):

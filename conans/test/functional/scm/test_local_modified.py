@@ -3,10 +3,14 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.tools import TestClient
+from conans.test.utils.scm import create_local_git_repo
 
 
+@pytest.mark.tool_git
 class SCMFolderObsoleteTest(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile, tools

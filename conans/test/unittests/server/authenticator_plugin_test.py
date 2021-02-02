@@ -8,7 +8,7 @@ from conans.util.files import save
 
 class AuthenticatorPluginTest(unittest.TestCase):
 
-    def instance_authenticator_test(self):
+    def test_instance_authenticator(self):
         folder = temp_folder()
         plugin_path = os.path.join(folder, "plugins", "authenticator", "my_auth.py")
         my_plugin = '''

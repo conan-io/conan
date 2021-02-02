@@ -13,12 +13,19 @@ def serialize_cpp_info(cpp_info):
         "libs",
         "system_libs",
         "defines", "cflags", "cxxflags", "sharedlinkflags", "exelinkflags",
-        "frameworks", "framework_paths"
+        "frameworks", "framework_paths", "names", "filenames"
     ]
     res = {}
     for key in keys:
         res[key] = getattr(cpp_info, key)
     res["cppflags"] = cpp_info.cxxflags  # Backwards compatibility
+    return res
+
+
+def serialize_user_info(user_info):
+    res = {}
+    for key, value in user_info.items():
+        res[key] = value.vars
     return res
 
 
@@ -31,17 +38,14 @@ class JsonGenerator(Generator):
     def content(self):
         info = {}
         info["deps_env_info"] = self.deps_env_info.vars
-        info["deps_user_info"] = self.get_deps_user_info()
+        info["deps_user_info"] = serialize_user_info(self.deps_user_info)
         info["dependencies"] = self.get_dependencies_info()
         info["settings"] = self.get_settings()
         info["options"] = self.get_options()
-        return json.dumps(info, indent=2)
+        if self._user_info_build:
+            info["user_info_build"] = serialize_user_info(self._user_info_build)
 
-    def get_deps_user_info(self):
-        res = {}
-        for key, value in self.deps_user_info.items():
-            res[key] = value.vars
-        return res
+        return json.dumps(info, indent=2)
 
     def get_dependencies_info(self):
         res = []

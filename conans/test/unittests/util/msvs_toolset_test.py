@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import platform
 import unittest
 
-from nose.plugins.attrib import attr
 from parameterized import parameterized
 
 from conans.client import tools
-from conans.test.utils.conanfile import MockSettings
+from conans.test.utils.mocks import MockSettings
 
 
-@attr('visual_studio')
-@unittest.skipUnless(platform.system() == "Windows", "Requires Windows")
 class MSVCToolsetTest(unittest.TestCase):
 
     @parameterized.expand([("16", "v142"),

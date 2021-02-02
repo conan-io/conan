@@ -1,12 +1,12 @@
 import os
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO_CMAKE, CONANINFO
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.files import load
 
@@ -40,7 +40,8 @@ class Pkg(ConanFile):
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
         html = client.load("file.html")
-        self.assertEqual(1, html.count("label: 'PkgC/0.1', shape: 'box'"))
+        self.assertEqual(1, html.count("label: 'PkgC/0.1',\n                        "
+                                       "shape: 'box'"))
 
     def test_private_regression_skip(self):
         # https://github.com/conan-io/conan/issues/3166
@@ -120,8 +121,7 @@ class V3D(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install . -g=cmake", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'zlib/1.2.11@conan/stable'",
-                      client.out)
+        self.assertIn("ERROR: Missing prebuilt package for 'zlib/1.2.11@conan/stable'", client.out)
         client.run("install zlib/1.2.11@conan/stable --build=missing")
         client.run("install . -g=cmake")
         self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
@@ -197,7 +197,8 @@ class V3D(ConanFile):
             self.assertIn("set(CONAN_LIBS mylibLibA0.1lib ${CONAN_LIBS})", conanbuildinfo)
 
 
-@attr("slow")
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class PrivateDepsTest(unittest.TestCase):
 
     def setUp(self):
@@ -207,9 +208,8 @@ class PrivateDepsTest(unittest.TestCase):
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
                        upload=True):
-        dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                      private_includes=True, dll_export=dll_export, build=build,
+                                      private_includes=True, build=build,
                                       cmake_targets=False)
         ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
@@ -224,7 +224,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         self.client.run("export . lasote/stable")
 
-    def modern_cmake_test(self):
+    def test_modern_cmake(self):
         self._export("glew", "0.1")
         self._export("glm", "0.1")
         self._export("gf", "0.1", deps=[("glm/0.1@lasote/stable", "private"),
@@ -246,7 +246,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
                       "${CONAN_PACKAGE_TARGETS_IMGUITEST}", conanbuildinfo_cmake)
 
-    def consumer_force_build_test(self):
+    def test_consumer_force_build(self):
         """If a conanfile requires another private conanfile, but in the install is forced
         the build, the private node has to be downloaded and built"""
         self._export_upload("Hello0", "0.1", build=False, upload=False)
@@ -284,7 +284,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.out)
 
-    def consumer_private_test(self):
+    def test_consumer_private(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
         self._export_upload("Hello1", "0.1", deps=["Hello0/0.1@lasote/stable"],
                             build=False, upload=False)
@@ -314,7 +314,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
                          self.client.out)
 
-    def reuse_test(self):
+    def test_reuse(self):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
                             static=False)
@@ -327,7 +327,7 @@ class PrivateDepsTest(unittest.TestCase):
         client.run('build .')
 
         # assert Hello3 only depends on Hello2, and Hello1
-        build_info_cmake = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
+        build_info_cmake = client.load(BUILD_INFO_CMAKE)
         # Ensure it does not depend on Hello0 to build, as private in dlls
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
@@ -336,7 +336,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
 
-        conan_info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
+        conan_info = ConanInfo.loads(client.load(CONANINFO))
         self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
 
         # Try to upload and reuse the binaries

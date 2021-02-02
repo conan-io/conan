@@ -1,9 +1,10 @@
 import unittest
 
+from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph_builder import DepsGraph, Node
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class DepsGraphTest(unittest.TestCase):
@@ -18,20 +19,20 @@ class DepsGraphTest(unittest.TestCase):
 
         conanfile1 = ConanFile(TestBufferConanOutput(), None)
         conanfile2 = ConanFile(TestBufferConanOutput(), None)
-        n1 = Node(ref1, conanfile1)
-        n2 = Node(ref2, conanfile2)
+        n1 = Node(ref1, conanfile1, context=CONTEXT_HOST)
+        n2 = Node(ref2, conanfile2, context=CONTEXT_HOST)
 
         self.assertNotEqual(n1, n2)
 
-    def basic_levels_test(self):
+    def test_basic_levels(self):
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
         ref3 = ConanFileReference.loads("Hello/3.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1)
-        n2 = Node(ref2, 2)
-        n3 = Node(ref3, 3)
+        n1 = Node(ref1, 1, context=CONTEXT_HOST)
+        n2 = Node(ref2, 2, context=CONTEXT_HOST)
+        n3 = Node(ref3, 3, context=CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n2)
         deps.add_node(n3)
@@ -39,17 +40,17 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n3, None)
         self.assertEqual([[n3], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test(self):
+    def test_multi_levels(self):
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
         ref31 = ConanFileReference.loads("Hello/31.0@user/stable")
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1)
-        n2 = Node(ref2, 2)
-        n31 = Node(ref31, 31)
-        n32 = Node(ref32, 32)
+        n1 = Node(ref1, 1, context=CONTEXT_HOST)
+        n2 = Node(ref2, 2, context=CONTEXT_HOST)
+        n31 = Node(ref31, 31, context=CONTEXT_HOST)
+        n32 = Node(ref32, 32, context=CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n2)
         deps.add_node(n32)
@@ -59,7 +60,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test2(self):
+    def test_multi_levels_2(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
@@ -68,11 +69,11 @@ class DepsGraphTest(unittest.TestCase):
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1)
-        n2 = Node(ref2, 2)
-        n5 = Node(ref5, 5)
-        n31 = Node(ref31, 31)
-        n32 = Node(ref32, 32)
+        n1 = Node(ref1, 1, context=CONTEXT_HOST)
+        n2 = Node(ref2, 2, context=CONTEXT_HOST)
+        n5 = Node(ref5, 5, context=CONTEXT_HOST)
+        n31 = Node(ref31, 31, context=CONTEXT_HOST)
+        n32 = Node(ref32, 32, context=CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n5)
         deps.add_node(n2)
@@ -84,7 +85,7 @@ class DepsGraphTest(unittest.TestCase):
         deps.add_edge(n2, n32, None)
         self.assertEqual([[n5, n31, n32], [n2], [n1]], deps.by_levels())
 
-    def multi_levels_test3(self):
+    def test_multi_levels_3(self):
 
         ref1 = ConanFileReference.loads("Hello/1.0@user/stable")
         ref2 = ConanFileReference.loads("Hello/2.0@user/stable")
@@ -93,11 +94,11 @@ class DepsGraphTest(unittest.TestCase):
         ref32 = ConanFileReference.loads("Hello/32.0@user/stable")
 
         deps = DepsGraph()
-        n1 = Node(ref1, 1)
-        n2 = Node(ref2, 2)
-        n5 = Node(ref5, 5)
-        n31 = Node(ref31, 31)
-        n32 = Node(ref32, 32)
+        n1 = Node(ref1, 1, context=CONTEXT_HOST)
+        n2 = Node(ref2, 2, context=CONTEXT_HOST)
+        n5 = Node(ref5, 5, context=CONTEXT_HOST)
+        n31 = Node(ref31, 31, context=CONTEXT_HOST)
+        n32 = Node(ref32, 32, context=CONTEXT_HOST)
         deps.add_node(n1)
         deps.add_node(n5)
         deps.add_node(n2)

@@ -1,14 +1,17 @@
 from conans.client.generators.cmake_common import cmake_dependencies, cmake_dependency_vars, \
     cmake_global_vars, cmake_macros, cmake_package_info, cmake_settings_info, cmake_user_info_vars, \
-    generate_targets_section, apple_frameworks_macro
+    generate_targets_section, CMakeCommonMacros
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 
 
 class DepsCppCmake(object):
-    def __init__(self, cpp_info):
+    def __init__(self, cpp_info, generator_name):
         def join_paths(paths):
-            # Paths are doubled quoted, and escaped (but spaces)
+            """
+            Paths are doubled quoted, and escaped (but spaces)
+            e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
+            """
             return "\n\t\t\t".join('"%s"'
                                    % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
@@ -24,7 +27,15 @@ class DepsCppCmake(object):
                                    replace('"', '\\"'))
                                    for v in values)
 
+        def join_paths_single_var(values):
+            """
+            semicolon-separated list of dirs:
+            e.g: set(LIBFOO_INCLUDE_DIR "/path/to/included/dir;/path/to/included/dir2")
+            """
+            return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
+
         self.include_paths = join_paths(cpp_info.include_paths)
+        self.include_path = join_paths_single_var(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
         self.res_paths = join_paths(cpp_info.res_paths)
         self.bin_paths = join_paths(cpp_info.bin_paths)
@@ -51,11 +62,12 @@ class DepsCppCmake(object):
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
-        self.build_modules_paths = join_paths([path for path in cpp_info.build_modules_paths if
-                                               path.endswith(".cmake")])
+        self.build_modules_paths = join_paths(cpp_info.build_modules_paths.get(generator_name, []))
 
 
 class CMakeGenerator(Generator):
+    name = "cmake"
+
     @property
     def filename(self):
         return BUILD_INFO_CMAKE
@@ -63,17 +75,17 @@ class CMakeGenerator(Generator):
     @property
     def content(self):
         sections = ["include(CMakeParseArguments)"]
-        sections.append(apple_frameworks_macro)
+        sections.append(CMakeCommonMacros.apple_frameworks_macro)
 
         # Per requirement variables
         for _, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.name
-            deps = DepsCppCmake(dep_cpp_info)
+            dep_name = dep_cpp_info.get_name(self.name)
+            deps = DepsCppCmake(dep_cpp_info, self.name)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
             for config, cpp_info in dep_cpp_info.configs.items():
-                deps = DepsCppCmake(cpp_info)
+                deps = DepsCppCmake(cpp_info, self.name)
                 dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
                 sections.append(dep_flags)
 
@@ -84,17 +96,17 @@ class CMakeGenerator(Generator):
         sections.append(cmake_settings_info(self.conanfile.settings))
         all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
-        deps = DepsCppCmake(self.deps_build_info)
+        deps = DepsCppCmake(self.deps_build_info, self.name)
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
 
         for config, cpp_info in self.deps_build_info.configs.items():
-            deps = DepsCppCmake(cpp_info)
+            deps = DepsCppCmake(cpp_info, self.name)
             dep_flags = cmake_global_vars(deps=deps, build_type=config)
             sections.append(dep_flags)
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, self.name))
 
         # MACROS
         sections.append(cmake_macros)

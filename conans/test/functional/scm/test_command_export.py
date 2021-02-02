@@ -4,13 +4,14 @@ import itertools
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
-from nose.plugins.attrib import attr
 
-from conans.test.utils.tools import TestClient, create_local_git_repo
+from conans.test.utils.scm import create_local_git_repo
+from conans.test.utils.tools import TestClient
 
 
-@attr("svn")
+@pytest.mark.tool_svn
 class ExportErrorCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile
@@ -36,7 +37,7 @@ class ExportErrorCommandTestCase(unittest.TestCase):
         self.assertIn("ERROR: Not a valid '{}' repository".format(repo_type.lower()),
                       self.client.out)
 
-
+@pytest.mark.tool_git
 class ExportCommandTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""\
         from conans import ConanFile
@@ -58,6 +59,7 @@ class ExportCommandTestCase(unittest.TestCase):
                                                                     rev_value=rev_value)})
         self.client = TestClient()
         self.client.current_folder = self.path
-        self.client.run("export . lib/version@user/channel", assert_error=bool(auto_url))
+        self.client.run("export . lib/version@user/channel")
         if auto_url:
-            self.assertIn("ERROR: Repo origin cannot be deduced", self.client.out)
+            self.assertIn("WARN: Repo origin cannot be deduced, 'auto' fields won't be replaced.",
+                          self.client.out)

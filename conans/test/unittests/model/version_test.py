@@ -5,7 +5,7 @@ from conans.model.version import Version
 
 class VersionTest(unittest.TestCase):
 
-    def simple_test(self):
+    def test_simple(self):
         v1 = Version("1.2.3")
         self.assertTrue(v1 == "1.2.3")
         self.assertTrue(v1 > "1.1")
@@ -63,7 +63,7 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("4.0.0+abc") > Version("4.0.0+xyz"))
         self.assertTrue(Version("4.0.0+xyz") < Version("4.0.0+abc"))
 
-    def text_test(self):
+    def test_text(self):
         v1 = Version("master+build2")
         self.assertEqual(v1.major(), "master")
         self.assertEqual(v1.minor(), "master")
@@ -72,7 +72,7 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(v1.build, "build2")
         self.assertEqual(v1.stable(), "master")
 
-    def patch_test(self):
+    def test_patch(self):
         v1 = Version("1.2.3-alpha1+build2")
         self.assertEqual(v1.major(), "1.Y.Z")
         self.assertEqual(v1.minor(), "1.2.Z")
@@ -97,7 +97,7 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(v1.build, "build2")
         self.assertEqual(v1.stable(), "0.2.3-alpha1+build2")
 
-    def build_test(self):
+    def test_build(self):
         v1 = Version("0.2.3-alpha1+build2")
         self.assertEqual(v1.build, "build2")
         v2 = Version("0.2.3+b178")

@@ -1,16 +1,24 @@
 import os
 import unittest
+import platform
+import subprocess
+import json
 
+import pytest
+
+from conans.client import tools
 from conans.test.utils.profiles import create_profile
+from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import platform
-import json
+from conans.util.runners import check_output_runner
+from conans.paths import DEFAULT_PROFILE_NAME
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ProfileTest(unittest.TestCase):
 
-    def reuse_output_test(self):
+    def test_reuse_output(self):
         client = TestClient()
         client.run("profile new myprofile --detect")
         client.run("profile update options.Pkg:myoption=123 myprofile")
@@ -24,14 +32,14 @@ class ProfileTest(unittest.TestCase):
         client.run("install . -pr=mylocalprofile")
         self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 
-    def empty_test(self):
-        client = TestClient()
+    def test_empty(self):
+        client = TestClient(cache_autopopulate=False)
         client.run("profile list")
         self.assertIn("No profiles defined", client.out)
 
-    def list_test(self):
+    def test_list(self):
         client = TestClient()
-        profiles = ["profile1", "profile2", "profile3",
+        profiles = ["default", "profile1", "profile2", "profile3",
                     "nested" + os.path.sep + "profile4",
                     "nested" + os.path.sep + "two" + os.path.sep + "profile5",
                     "nested" + os.path.sep + "profile6"]
@@ -61,7 +69,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(list, type(json_obj))
         self.assertEqual(profiles, json_obj)
 
-    def show_test(self):
+    def test_show(self):
         client = TestClient()
         create_profile(client.cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
@@ -76,7 +84,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("CXX=/path/tomy/g++_build", client.out)
         self.assertIn("package:VAR=value", client.out)
 
-    def profile_update_and_get_test(self):
+    def test_profile_update_and_get(self):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
         if "WARNING: GCC OLD ABI COMPATIBILITY" in client.out:
@@ -152,7 +160,7 @@ class ProfileTest(unittest.TestCase):
         client.run("profile remove env.foo ./MyProfile", assert_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.out)
 
-    def profile_update_env_test(self):
+    def test_profile_update_env(self):
         client = TestClient()
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
@@ -167,7 +175,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(["[env]", "foo=BAZ", "MyPkg:foo=FOO,BAZ,BAR"],
                          load(pr_path).splitlines()[-3:])
 
-    def profile_new_test(self):
+    def test_profile_new(self):
         client = TestClient()
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
@@ -191,7 +199,7 @@ class ProfileTest(unittest.TestCase):
         self.assertTrue(os.path.exists(pr_path))
         self.assertNotIn("os=", load(pr_path))
 
-    def profile_force_new_test(self):
+    def test_profile_force_new(self):
         client = TestClient()
 
         empty_profile = """[settings]
@@ -223,7 +231,48 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("[env]\nMyEnv=MYVALUe", load(pr_path))
         self.assertEqual(load(pr_path), detected_profile)
 
-    def missing_subarguments_test(self):
+    def test_missing_subarguments(self):
         client = TestClient()
         client.run("profile", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+
+class DetectCompilersTest(unittest.TestCase):
+    @pytest.mark.tool_compiler
+    def test_detect_default_compilers(self):
+        platform_default_compilers = {
+            "Linux": "gcc",
+            "Darwin": "apple-clang",
+            "Windows": "Visual Studio"
+        }
+        output = TestBufferConanOutput()
+        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)
+        platform_compiler = platform_default_compilers.get(platform.system(), None)
+        if platform_compiler is not None:
+            self.assertEqual(result.get("compiler", None), platform_compiler)
+
+    @pytest.mark.tool_gcc
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
+    def test_detect_default_in_mac_os_using_gcc_as_default(self):
+        """
+        Test if gcc in Mac OS X is using apple-clang as frontend
+        """
+        # See: https://github.com/conan-io/conan/issues/2231
+        output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
+
+        if "clang" not in output:
+            # Not test scenario gcc should display clang in output
+            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
+            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
+
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)
+        # No compiler should be detected
+        self.assertIsNone(result.get("compiler", None))
+        self.assertIn("gcc detected as a frontend using apple-clang", output)
+        self.assertIsNotNone(output.error)

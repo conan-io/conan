@@ -2,23 +2,22 @@ import json
 import os
 
 from conans.errors import ConanException
+from conans.model.graph_lock import GraphLockFile, LOCKFILE
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.tools import save
-from conans.util.files import load
-from conans.model.graph_lock import GraphLockFile, LOCKFILE
-
+from conans.util.files import load, save
 
 GRAPH_INFO_FILE = "graph_info.json"
 
 
 class GraphInfo(object):
 
-    def __init__(self, profile_host=None, options=None, root_ref=None):
+    def __init__(self, profile_host=None, profile_build=None, options=None, root_ref=None):
         # This field is a temporary hack, to store dependencies options for the local flow
         self.options = options
         self.root = root_ref
         self.profile_host = profile_host
+        self.profile_build = profile_build
         self.graph_lock = None
 
     @staticmethod
@@ -53,14 +52,6 @@ class GraphInfo(object):
         p = os.path.join(folder, filename)
         serialized_graph_str = self._dumps()
         save(p, serialized_graph_str)
-
-        # A bit hacky, but to avoid repetition by now
-        graph_lock_file = GraphLockFile(self.profile_host, self.graph_lock)
-        graph_lock_file.save(os.path.join(folder, LOCKFILE))
-
-    def save_lock(self, lockfile):
-        graph_lock_file = GraphLockFile(self.profile_host, self.graph_lock)
-        graph_lock_file.save(lockfile)
 
     def _dumps(self):
         result = {}

@@ -11,8 +11,17 @@ from conans.client.tools.oss import OSInfo
 from conans.client.tools.system_pm import ChocolateyTool, SystemPackageTool, AptTool
 from conans.errors import ConanException
 from conans.test.unittests.util.tools_test import RunnerMock
-from conans.test.utils.conanfile import MockSettings, MockConanfile
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import MockSettings, MockConanfile, TestBufferConanOutput
+
+
+class RunnerMultipleMock(object):
+    def __init__(self, expected=None):
+        self.calls = 0
+        self.expected = expected
+
+    def __call__(self, command, *args, **kwargs):  # @UnusedVariable
+        self.calls += 1
+        return 0 if command in self.expected else 1
 
 
 class SystemPackageToolTest(unittest.TestCase):
@@ -39,7 +48,7 @@ class SystemPackageToolTest(unittest.TestCase):
             with mock.patch("sys.stdout.isatty", return_value=True):
                 self.assertEqual(SystemPackageTool._get_sudo_str(), "")
 
-    def verify_update_test(self):
+    def test_verify_update(self):
         # https://github.com/conan-io/conan/issues/3142
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False",
                                        "CONAN_SYSREQUIRES_MODE": "Verify"}):
@@ -56,12 +65,16 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertIn('Not updating system_requirements. CONAN_SYSREQUIRES_MODE=verify',
                           self.out)
 
-    def add_repositories_exception_cases_test(self):
+    # We gotta mock the with_apt property, since it checks for the existence of apt.
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def test_add_repositories_exception_cases(self, patched_with_apt):
         os_info = OSInfo()
         os_info.is_macos = False
         os_info.is_linux = True
         os_info.is_windows = False
         os_info.linux_distro = "fedora"  # Will instantiate DnfTool
+
+        patched_with_apt.return_value = False
 
         with six.assertRaisesRegex(self, ConanException, "add_repository not implemented"):
             new_out = StringIO()
@@ -69,7 +82,8 @@ class SystemPackageToolTest(unittest.TestCase):
             spt.add_repository(repository="deb http://repo/url/ saucy universe multiverse",
                                repo_key=None)
 
-    def add_repository_test(self):
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def test_add_repository(self, patched_with_apt):
         class RunnerOrderedMock:
             commands = []  # Command + return value
 
@@ -99,6 +113,8 @@ class SystemPackageToolTest(unittest.TestCase):
                 os_info.is_linux = True
                 os_info.is_windows = False
                 os_info.linux_distro = "debian"
+                patched_with_apt.return_value = True
+
                 new_out = StringIO()
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=ConanOutput(new_out))
 
@@ -118,7 +134,9 @@ class SystemPackageToolTest(unittest.TestCase):
         with mock.patch("sys.stdout.isatty", return_value=True):
             _run_add_repository_test(repository, gpg_key, sudo=True, isatty=True, update=True)
 
-    def system_package_tool_test(self):
+    # We gotta mock the with_apt property, since it checks for the existence of apt.
+    @mock.patch('conans.client.tools.oss.OSInfo.with_apt', new_callable=mock.PropertyMock)
+    def test_system_package_tool(self, patched_with_apt):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMock()
@@ -127,6 +145,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = False
             os_info.is_linux = True
             os_info.is_windows = False
+            patched_with_apt.return_value = True
+
             os_info.linux_distro = "debian"
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
@@ -147,6 +167,9 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
             self.assertEqual(runner.command_called, "sudo -A apt-get update")
+
+            # We'll be testing non-Ubuntu and non-Debian-based distros.
+            patched_with_apt.return_value = False
 
             with mock.patch("conans.client.tools.oss.which", return_value=True):
                 os_info.linux_distro = "fedora"
@@ -183,6 +206,7 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEqual(runner.command_called, "sudo -A yum install -y a_package.i?86")
 
             os_info.linux_distro = "debian"
+            patched_with_apt.return_value = True
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
@@ -198,6 +222,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -207,6 +232,7 @@ class SystemPackageToolTest(unittest.TestCase):
 
             os_info.is_freebsd = True
             os_info.is_macos = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -220,6 +246,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_freebsd = False
                 os_info.is_windows = True
+                patched_with_apt.return_value = False
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
                 spt.update()
@@ -236,6 +263,8 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info = OSInfo()
             os_info.is_linux = True
             os_info.linux_distro = "redhat"
+            patched_with_apt.return_value = False
+
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called, "yum install -y a_package")
@@ -243,6 +272,7 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertEqual(runner.command_called, "yum check-update -y")
 
             os_info.linux_distro = "ubuntu"
+            patched_with_apt.return_value = True
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.install("a_package", force=True)
             self.assertEqual(runner.command_called,
@@ -280,6 +310,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
 
             spt.update()
@@ -290,6 +321,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_freebsd = True
             os_info.is_macos = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -302,6 +334,7 @@ class SystemPackageToolTest(unittest.TestCase):
             os_info.is_solaris = True
             os_info.is_freebsd = False
             os_info.is_windows = False
+            patched_with_apt.return_value = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
             spt.update()
@@ -315,6 +348,7 @@ class SystemPackageToolTest(unittest.TestCase):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_solaris = False
                 os_info.is_windows = True
+                patched_with_apt.return_value = False
 
                 spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out,
                                         tool=ChocolateyTool(output=self.out))
@@ -327,16 +361,7 @@ class SystemPackageToolTest(unittest.TestCase):
                                  'choco search --local-only --exact a_package | '
                                  'findstr /c:"1 packages installed."')
 
-    def system_package_tool_try_multiple_test(self):
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, output):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
+    def test_system_package_tool_try_multiple(self):
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
             runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' another_package | '
@@ -357,22 +382,12 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.install(packages)
             self.assertEqual(7, runner.calls)
 
-    def system_package_tool_mode_test(self):
+    def test_system_package_tool_mode(self):
         """
         System Package Tool mode is defined by CONAN_SYSREQUIRES_MODE env variable.
         Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper
         case or any combination.
         """
-
-        class RunnerMultipleMock(object):
-            def __init__(self, expected=None):
-                self.calls = 0
-                self.expected = expected
-
-            def __call__(self, command, *args, **kwargs):  # @UnusedVariable
-                self.calls += 1
-                return 0 if command in self.expected else 1
-
         packages = ["a_package", "another_package", "yet_another_package"]
 
         # Check invalid mode raises ConanException
@@ -429,7 +444,23 @@ class SystemPackageToolTest(unittest.TestCase):
             self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
             self.assertEqual(7, runner.calls)
 
-    def system_package_tool_installed_test(self):
+        # Check default_mode. The environment variable is not set and should behave like
+        # the default_mode
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": None,
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo -A apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out,
+                                    default_mode="verify")
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), self.out)
+            self.assertEqual(3, runner.calls)
+
+    def test_system_package_tool_installed(self):
         if (platform.system() != "Linux" and platform.system() != "Macos" and
                 platform.system() != "Windows"):
             return
@@ -441,12 +472,17 @@ class SystemPackageToolTest(unittest.TestCase):
             spt = SystemPackageTool(tool=ChocolateyTool(output=self.out), output=self.out)
             # Git is not installed by default on Chocolatey
             expected_package = "chocolatey"
+        else:
+            if platform.system() != "Windows" and not which("git"):
+                return
         # The expected should be installed on development/testing machines
         self.assertTrue(spt._tool.installed(expected_package))
+        self.assertTrue(spt.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+        self.assertFalse(spt.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
-    def system_package_tool_fail_when_not_0_returned_test(self):
+    def test_system_package_tool_fail_when_not_0_returned(self):
         def get_linux_error_message():
             """
             Get error message for Linux platform if distro is supported, None otherwise
@@ -484,3 +520,143 @@ class SystemPackageToolTest(unittest.TestCase):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
+
+    def test_install_all_packages(self):
+        """ SystemPackageTool must install all packages
+        """
+        # No packages installed
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_install_few_packages(self):
+        """ SystemPackageTool must install 2 packages only
+        """
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " another_package yet_another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_packages_installed(self):
+        """ SystemPackageTool must not install. All packages are installed.
+        """
+        packages = ["a_package", "another_package", "yet_another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' yet_another_package | '
+                                         'grep -q "ok installed"',
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(3, runner.calls)
+
+    def test_empty_package_list(self):
+        """ Install nothing
+        """
+        packages = []
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock()
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
+                                    output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(0, runner.calls)
+
+    def test_install_variants_and_packages(self):
+        """ SystemPackageTool must install one of variants and all packages at same list
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " varianta",
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(8, runner.calls)
+
+    def test_installed_variant_and_install_packages(self):
+        """ Only packages must be installed. Variants are already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' varianta | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " a_package another_package",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(5, runner.calls)
+
+    def test_installed_packages_and_install_variant(self):
+        """ Only variant must be installed. Packages are already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         "sudo -A apt-get update",
+                                         "sudo -A apt-get install -y --no-install-recommends"
+                                         " varianta",
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(7, runner.calls)
+
+    def test_variants_and_packages_installed(self):
+        """ Install nothing, all is already installed
+        """
+        packages = [("varianta", "variantb", "variantc"), "a_package", "another_package"]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(['dpkg-query -W -f=\'${Status}\' varianta | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' a_package | '
+                                         'grep -q "ok installed"',
+                                         'dpkg-query -W -f=\'${Status}\' another_package | '
+                                         'grep -q "ok installed"',
+                                         ])
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(3, runner.calls)
+
+    def test_empty_variants_and_packages(self):
+        packages = [(),]
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock()
+            spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out),
+                                    output=self.out)
+            spt.install_packages(packages)
+            self.assertEqual(0, runner.calls)
+
+    def test_install_all_multiple_package_list(self):
+        """ Separated string list must be treated as full package list to be installed
+        """
+        packages = "varianta variantb", "variantc variantd"
+        runner = RunnerMultipleMock([])
+        spt = SystemPackageTool(runner=runner, tool=AptTool(output=self.out), output=self.out)
+        with self.assertRaises(ConanException) as error:
+            spt.install_packages(packages)
+            self.assertEqual("Each string must contain only one package to be installed."
+                             " Use a list instead e.g. ['foo', 'bar'].", str(error.exception))

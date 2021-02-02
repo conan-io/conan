@@ -5,8 +5,7 @@ import six
 from conans.client.graph.build_mode import BuildMode
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.conanfile import MockConanfile
-from conans.test.utils.tools import TestBufferConanOutput
+from conans.test.utils.mocks import MockConanfile, TestBufferConanOutput
 
 
 class BuildModeTest(unittest.TestCase):
@@ -37,12 +36,33 @@ class BuildModeTest(unittest.TestCase):
     def test_invalid_configuration(self):
         for mode in ["outdated", "missing", "cascade"]:
             with six.assertRaisesRegex(self, ConanException,
-                                         "--build=never not compatible with other options"):
+                                       "--build=never not compatible with other options"):
                 BuildMode([mode, "never"], self.output)
 
     def test_common_build_force(self):
         reference = ConanFileReference.loads("Hello/0.1@user/testing")
         build_mode = BuildMode(["Hello"], self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
+    def test_no_user_channel(self):
+        reference = ConanFileReference.loads("Hello/0.1@")
+        build_mode = BuildMode(["Hello/0.1@"], self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
+    def test_revision_included(self):
+        reference = ConanFileReference.loads("Hello/0.1@user/channel#rrev1")
+        build_mode = BuildMode(["Hello/0.1@user/channel#rrev1"], self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        build_mode.report_matches()
+        self.assertEqual("", self.output)
+
+    def test_no_user_channel_revision_included(self):
+        reference = ConanFileReference.loads("Hello/0.1@#rrev1")
+        build_mode = BuildMode(["Hello/0.1@#rrev1"], self.output)
         self.assertTrue(build_mode.forced(self.conanfile, reference))
         build_mode.report_matches()
         self.assertEqual("", self.output)
@@ -97,7 +117,7 @@ class BuildModeTest(unittest.TestCase):
         build_mode = BuildMode(["bo*"], self.output)
         self.assertFalse(build_mode.forced(self.conanfile, reference))
         build_mode.report_matches()
-        self.assertIn("ERROR: No package matching", self.output)        
+        self.assertIn("ERROR: No package matching", self.output)
 
     def test_pattern_matching(self):
         build_mode = BuildMode(["Boost*"], self.output)

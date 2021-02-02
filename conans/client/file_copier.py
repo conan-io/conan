@@ -3,6 +3,7 @@ import os
 import shutil
 from collections import defaultdict
 
+from conans.errors import ConanException
 from conans.util.files import mkdir, walk
 
 
@@ -50,7 +51,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None, ignore_case=False):
+                 excludes=None, ignore_case=True):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -61,6 +62,9 @@ class FileCopier(object):
                          src to dst folders, or just drop. False is useful if you want
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
+        param links: True to activate symlink copying
+        param excludes: Single pattern or a tuple of patterns to be excluded from the copy
+        param ignore_case: will do a case-insensitive pattern matching when True
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
@@ -139,8 +143,9 @@ class FileCopier(object):
                     pass
 
             relative_path = os.path.relpath(root, src)
+            compare_relative_path = relative_path.lower() if ignore_case else relative_path
             for exclude in excludes:
-                if fnmatch.fnmatch(relative_path, exclude):
+                if fnmatch.fnmatch(compare_relative_path, exclude):
                     subfolders[:] = []
                     files = []
                     break
@@ -151,10 +156,15 @@ class FileCopier(object):
         if ignore_case:
             filenames = {f.lower(): f for f in filenames}
             pattern = pattern.lower()
-
-        files_to_copy = fnmatch.filter(filenames, pattern)
+            files_to_copy = fnmatch.filter(filenames, pattern)
+        else:
+            files_to_copy = [n for n in filenames if fnmatch.fnmatchcase(os.path.normpath(n),
+                                                                         pattern)]
         for exclude in excludes:
-            files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+            if ignore_case:
+                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+            else:
+                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatchcase(f, exclude)]
 
         if ignore_case:
             files_to_copy = [filenames[f] for f in files_to_copy]
@@ -175,7 +185,12 @@ class FileCopier(object):
             link = os.readlink(src_link)
             # Absoluted path symlinks are a problem, convert it to relative
             if os.path.isabs(link):
-                link = os.path.relpath(link, os.path.dirname(src_link))
+                try:
+                    link = os.path.relpath(link, os.path.dirname(src_link))
+                except ValueError as e:
+                    # https://github.com/conan-io/conan/issues/6197 fails if Windows and other Drive
+                    raise ConanException("Symlink '%s' pointing to '%s' couldn't be made relative:"
+                                         " %s" % (src_link, link, str(e)))
 
             dst_link = os.path.join(dst, linked_folder)
             try:

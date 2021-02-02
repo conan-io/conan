@@ -1,4 +1,4 @@
-from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN
+from conans import CHECKSUM_DEPLOY, REVISIONS, ONLY_V2, OAUTH_TOKEN, MATRIX_PARAMS
 from conans.client.rest.rest_client_v1 import RestV1Methods
 from conans.client.rest.rest_client_v2 import RestV2Methods
 from conans.errors import OnlyV2Available, AuthenticationException
@@ -8,17 +8,17 @@ from conans.util.log import logger
 
 class RestApiClientFactory(object):
 
-    def __init__(self, output, requester, revisions_enabled, artifacts_properties=None):
+    def __init__(self, output, requester, config, artifacts_properties=None):
         self._output = output
         self._requester = requester
-        self._revisions_enabled = revisions_enabled
+        self._config = config
         self._artifacts_properties = artifacts_properties
         self._cached_capabilities = {}
 
     def new(self, remote, token, refresh_token, custom_headers):
         tmp = RestApiClient(remote, token, refresh_token, custom_headers,
-                            self._output, self._requester,
-                            self._revisions_enabled, self._cached_capabilities,
+                            self._output, self._requester, self._config,
+                            self._cached_capabilities,
                             self._artifacts_properties)
         return tmp
 
@@ -29,7 +29,7 @@ class RestApiClient(object):
     """
 
     def __init__(self, remote, token, refresh_token, custom_headers, output, requester,
-                 revisions_enabled, cached_capabilities, artifacts_properties=None):
+                 config, cached_capabilities, artifacts_properties=None):
 
         # Set to instance
         self._token = token
@@ -41,17 +41,19 @@ class RestApiClient(object):
 
         self._verify_ssl = remote.verify_ssl
         self._artifacts_properties = artifacts_properties
-        self._revisions_enabled = revisions_enabled
+        self._revisions_enabled = config.revisions_enabled
+        self._config = config
 
         # This dict is shared for all the instances of RestApiClient
         self._cached_capabilities = cached_capabilities
 
-    def _capable(self, capability):
+    def _capable(self, capability, user=None, password=None):
         capabilities = self._cached_capabilities.get(self._remote_url)
         if capabilities is None:
             tmp = RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                self._requester, self._verify_ssl, self._artifacts_properties)
-            capabilities = tmp.server_capabilities()
+                                self._requester, self._config, self._verify_ssl,
+                                self._artifacts_properties)
+            capabilities = tmp.server_capabilities(user, password)
             self._cached_capabilities[self._remote_url] = capabilities
             logger.debug("REST: Cached capabilities for the remote: %s" % capabilities)
             if not self._revisions_enabled and ONLY_V2 in capabilities:
@@ -60,14 +62,16 @@ class RestApiClient(object):
 
     def _get_api(self):
         revisions = self._capable(REVISIONS)
+        matrix_params = self._capable(MATRIX_PARAMS)
         if self._revisions_enabled and revisions:
             checksum_deploy = self._capable(CHECKSUM_DEPLOY)
             return RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._verify_ssl, self._artifacts_properties,
-                                 checksum_deploy)
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, checksum_deploy, matrix_params)
         else:
             return RestV1Methods(self._remote_url, self._token, self._custom_headers, self._output,
-                                 self._requester, self._verify_ssl, self._artifacts_properties)
+                                 self._requester, self._config, self._verify_ssl,
+                                 self._artifacts_properties, matrix_params)
 
     def get_recipe_manifest(self, ref):
         return self._get_api().get_recipe_manifest(ref)
@@ -75,8 +79,8 @@ class RestApiClient(object):
     def get_package_manifest(self, pref):
         return self._get_api().get_package_manifest(pref)
 
-    def get_package_info(self, pref):
-        return self._get_api().get_package_info(pref)
+    def get_package_info(self, pref, headers):
+        return self._get_api().get_package_info(pref, headers=headers)
 
     def get_recipe(self, ref, dest_folder):
         return self._get_api().get_recipe(ref, dest_folder)
@@ -100,8 +104,7 @@ class RestApiClient(object):
         return self._get_api().get_package_path(pref, path)
 
     def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
-        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry,
-                                             retry_wait)
+        return self._get_api().upload_recipe(ref, files_to_upload, deleted, retry, retry_wait)
 
     def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
         return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
@@ -115,7 +118,7 @@ class RestApiClient(object):
         else:
             try:
                 # Check capabilities can raise also 401 until the new Artifactory is released
-                oauth_capable = self._capable(OAUTH_TOKEN)
+                oauth_capable = self._capable(OAUTH_TOKEN, user, password)
             except AuthenticationException:
                 oauth_capable = False
 
@@ -158,5 +161,5 @@ class RestApiClient(object):
     def get_latest_recipe_revision(self, ref):
         return self._get_api().get_latest_recipe_revision(ref)
 
-    def get_latest_package_revision(self, pref):
-        return self._get_api().get_latest_package_revision(pref)
+    def get_latest_package_revision(self, pref, headers):
+        return self._get_api().get_latest_package_revision(pref, headers=headers)

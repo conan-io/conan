@@ -8,7 +8,6 @@ import six
 
 from conans.client import tools
 from conans.client.output import ConanOutput
-from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
@@ -16,7 +15,7 @@ from conans.util.files import load, save
 
 class OutputTest(unittest.TestCase):
 
-    def simple_output_test(self):
+    def test_simple_output(self):
         stream = six.StringIO()
         output = ConanOutput(stream)
         output.rewrite_line("This is a very long line that has to be truncated somewhere, "
@@ -24,7 +23,7 @@ class OutputTest(unittest.TestCase):
         self.assertIn("This is a very long line that ha ... esn't fit in the output terminal",
                       stream.getvalue())
 
-    def error_test(self):
+    def test_error(self):
         client = TestClient()
         conanfile = """
 # -*- coding: utf-8 -*-
@@ -42,17 +41,7 @@ class PkgConan(ConanFile):
         self.assertIn("TEXT", client.out)
         self.assertIn("ENDTEXT", client.out)
 
-    def print_progress_test(self):
-        stream = six.StringIO()
-        output = ConanOutput(stream)
-        for units in range(50):
-            print_progress(output, units)
-        output_str = stream.getvalue()
-        self.assertNotIn("=", output_str)
-        self.assertNotIn("[", output_str)
-        self.assertNotIn("]", output_str)
-
-    def unzip_output_test(self):
+    def test_unzip_output(self):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "example.txt")
         save(file_path, "Hello world!")
@@ -73,7 +62,7 @@ class PkgConan(ConanFile):
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 
-    def short_paths_unzip_output_test(self):
+    def test_short_paths_unzip_output(self):
         if platform.system() != "Windows":
             return
         tmp_dir = temp_folder()

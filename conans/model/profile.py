@@ -3,6 +3,7 @@ from collections import OrderedDict, defaultdict
 
 from conans.client import settings_preprocessor
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.values import Values
@@ -19,6 +20,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
+        self.conf = ConfDefinition()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -41,6 +43,7 @@ class Profile(object):
         return self._package_settings_values
 
     def process_settings(self, cache, preprocess=True):
+        assert self.processed_settings is None, "processed settings must be None"
         self.processed_settings = cache.settings.copy()
         self.processed_settings.values = Values.from_list(list(self.settings.items()))
         if preprocess:
@@ -80,6 +83,10 @@ class Profile(object):
         result.append("[env]")
         result.append(self.env_values.dumps())
 
+        if self.conf:
+            result.append("[conf]")
+            result.append(self.conf.dumps())
+
         return "\n".join(result).replace("\n\n", "\n")
 
     def update(self, other):
@@ -91,6 +98,7 @@ class Profile(object):
         self.options.update(other.options)
         for pattern, req_list in other.build_requires.items():
             self.build_requires.setdefault(pattern, []).extend(req_list)
+        self.conf.update_conf_definition(other.conf)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.
