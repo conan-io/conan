@@ -133,7 +133,7 @@ class RemoveTest(unittest.TestCase):
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
             fake_metadata = PackageMetadata()
-            fake_metadata.recipe.revision = DEFAULT_REVISION_V1
+            fake_metadata.recipe.revision = "myreciperev"
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (
                 folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
@@ -141,7 +141,8 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                fake_metadata.packages[pack_id].revision = DEFAULT_REVISION_V1
+                fake_metadata.packages[pack_id].revision = "mypackagerev"
+                fake_metadata.packages[pack_id].recipe_revision = "myreciperev"
                 prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
