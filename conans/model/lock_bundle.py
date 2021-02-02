@@ -5,7 +5,7 @@ from conans.model.graph_lock import GraphLockFile
 from conans.util.files import load, save
 
 
-class LockMulti(object):
+class LockBundle(object):
 
     def __init__(self):
         self.nodes = {}
@@ -21,7 +21,7 @@ class LockMulti(object):
                     r += "@"
             return r
 
-        result = LockMulti()
+        result = LockBundle()
         for lockfile_name in lockfiles:
             lockfile_abs = os.path.normpath(os.path.join(cwd, lockfile_name))
             lockfile = GraphLockFile.load(lockfile_abs, revisions_enabled)
@@ -76,8 +76,8 @@ class LockMulti(object):
         return levels
 
     @staticmethod
-    def update_multi(multi_lock_path, revisions_enabled):
-        lock_multi = LockMulti()
+    def update_bundle(multi_lock_path, revisions_enabled):
+        lock_multi = LockBundle()
         lock_multi.loads(load(multi_lock_path))
         for ref, packages in lock_multi.nodes.items():
             for package_id, lock_info in packages["package_id"].items():

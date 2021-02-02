@@ -30,10 +30,10 @@ def test_basic():
     client.run("lock create --ref=app2/0.1 -s os=Linux  --lockfile=app2_base.lock "
                "--lockfile-out=app2_linux.lock")
 
-    client.run("lock create-multi --lockfile=app1_windows.lock --lockfile=app1_linux.lock "
-               "--lockfile=app2_windows.lock --lockfile=app2_linux.lock --lockfile-out=multi.lock")
+    client.run("lock bundle create app1_windows.lock app1_linux.lock "
+               "app2_windows.lock app2_linux.lock --bundle-out=lock1.bundle")
 
-    client.run("lock build-order-multi multi.lock --json=bo.json")
+    client.run("lock bundle build-order lock1.bundle --json=bo.json")
     order = client.load("bo.json")
     order = json.loads(order)
     assert order == [
@@ -41,18 +41,18 @@ def test_basic():
         ["pkgb/0.1@#cd8f22d6f264f65398d8c534046e8e20", "pkgb/0.2@#cd8f22d6f264f65398d8c534046e8e20"],
         ["app1/0.1@#584778f98ba1d0eb7c80a5ae1fe12fe2", "app2/0.1@#3850895c1eac8223c43c71d525348019"]
     ]
-    multi = client.load("multi.lock")
-    multi = json.loads(multi)
+    bundle = client.load("lock1.bundle")
+    bundle = json.loads(bundle)
     for level in order:
         for ref in level:
             # Now get the package_id, lockfile
-            pkg_ids = multi[ref]["package_id"]
+            pkg_ids = bundle[ref]["package_id"]
             for pkg_id, lockfile_info in pkg_ids.items():
                 lockfiles = lockfile_info["lockfiles"]
                 lockfile = next(iter(lockfiles))
                 client.run("install {ref} --build={ref} --lockfile={lockfile} "
                            "--lockfile-out={lockfile}".format(ref=ref, lockfile=lockfile))
-                client.run("lock update-multi multi.lock")
+                client.run("lock bundle update lock1.bundle")
 
     app1_win = GraphLockFile.load(os.path.join(client.current_folder, "app1_windows.lock"),
                                   client.cache.config.revisions_enabled)
@@ -83,5 +83,3 @@ def test_basic():
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].prev == "9e99cfd92d0d7df79d687b01512ce844"
-
-

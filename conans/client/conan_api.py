@@ -55,7 +55,7 @@ from conans.errors import (ConanException, RecipeNotFoundException,
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
-from conans.model.lock_multi import LockMulti
+from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
@@ -1336,27 +1336,27 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
-    def lock_create_multi(self, lockfiles, lockfile_out, cwd=None):
+    def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
         cwd = cwd or os.getcwd()
-        result = LockMulti.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
+        result = LockBundle.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
         lockfile_out = _make_abs_path(lockfile_out, cwd)
         save(lockfile_out, result.dumps())
 
     @api_method
-    def lock_build_order_multi(self, lockfile, cwd=None):
+    def lock_bundle_build_order(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
-        multi_lockfile = LockMulti()
+        multi_lockfile = LockBundle()
         multi_lockfile.loads(load(lockfile))
         build_order = multi_lockfile.build_order()
         return build_order
 
     @api_method
-    def lock_update_multi(self, multi_lock_path, cwd=None):
+    def lock_bundle_update(self, multi_lock_path, cwd=None):
         cwd = cwd or os.getcwd()
         multi_lock_path = _make_abs_path(multi_lock_path, cwd)
         revisions_enabled = self.app.cache.config.revisions_enabled
-        LockMulti.update_multi(multi_lock_path, revisions_enabled)
+        LockBundle.update_bundle(multi_lock_path, revisions_enabled)
 
     @api_method
     def lock_create(self, path, lockfile_out,

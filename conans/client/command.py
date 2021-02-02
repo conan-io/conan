@@ -1907,35 +1907,39 @@ class Command(object):
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
-        multi_cmd = subparsers.add_parser('create-multi', help='Create a multi')
-        multi_cmd.add_argument("-l", "--lockfile", action=Extender, help="Path to lockfile")
-        multi_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
-                               help="Filename of the created lockfile")
+        bundle = subparsers.add_parser('bundle', help='Manages lockfile bundles')
+        bundle_subparsers = bundle.add_subparsers(dest='bundlecommand', help='sub-command help')
+        bundle_create_cmd = bundle_subparsers.add_parser('create', help='Create lockfile bundle')
+        bundle_create_cmd.add_argument("lockfiles", nargs="+",
+                                       help="Path to lockfiles")
+        bundle_create_cmd.add_argument("--bundle-out", action=OnceArgument, default="lock.bundle",
+                                       help="Filename of the created bundle")
 
-        build_order_multi_cmd = subparsers.add_parser('build-order-multi',
-                                                      help='Returns build-order')
-        build_order_multi_cmd.add_argument('lockfile', help='lockfile file')
-        build_order_multi_cmd.add_argument("--json", action=OnceArgument,
-                                           help="generate output file in json format")
+        build_order_bundle_cmd = bundle_subparsers.add_parser('build-order',
+                                                              help='Returns build-order')
+        build_order_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+        build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
+                                            help="generate output file in json format")
 
-        update_multi_cmd = subparsers.add_parser('update-multi', help=update_help)
-        update_multi_cmd.add_argument('lockfile', help='Path to lockfile multi')
+        update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
+        update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
         if args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
-        elif args.subcommand == "create-multi":
-            self._conan.lock_create_multi(args.lockfile, args.lockfile_out)
-        elif args.subcommand == "update-multi":
-            self._conan.lock_update_multi(args.lockfile)
-        elif args.subcommand == "build-order-multi":
-            build_order = self._conan.lock_build_order_multi(args.lockfile)
-            self._out.writeln(build_order)
-            if args.json:
-                json_file = _make_abs_path(args.json)
-                save(json_file, json.dumps(build_order, indent=True))
+        elif args.subcommand == "bundle":
+            if args.bundlecommand == "create":
+                self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
+            elif args.bundlecommand == "update":
+                self._conan.lock_bundle_update(args.bundle)
+            elif args.bundlecommand == "build-order":
+                build_order = self._conan.lock_bundle_build_order(args.bundle)
+                self._out.writeln(build_order)
+                if args.json:
+                    json_file = _make_abs_path(args.json)
+                    save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "build-order":
             build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)
