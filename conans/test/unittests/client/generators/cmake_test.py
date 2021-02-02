@@ -342,7 +342,7 @@ endmacro()""", macro)
         def raise_get_version():
             raise ConanException('Error retrieving CMake version')
 
-        with patch.object(conans.client.build.cmake.CMakeBuildHelper, "get_version",
+        with patch.object(conans.client.build.cmake.CMake, "get_version",
                           side_effect=raise_get_version):
             settings_mock = _MockSettings(build_type="Release")
             conanfile = ConanFile(TestBufferConanOutput(), None)
