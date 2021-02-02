@@ -50,11 +50,11 @@ class LockBundle(object):
         return result
 
     def dumps(self):
-        return json.dumps(self.nodes, indent=4)
+        return json.dumps({"lock_bundle": self.nodes}, indent=4)
 
     def loads(self, text):
         nodes_json = json.loads(text)
-        self.nodes = nodes_json
+        self.nodes = nodes_json["lock_bundle"]
 
     def build_order(self):
         # First do a topological order by levels, the ids of the nodes are stored

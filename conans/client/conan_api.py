@@ -1346,17 +1346,17 @@ class ConanAPIV1(object):
     def lock_bundle_build_order(self, lockfile, cwd=None):
         cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd)
-        multi_lockfile = LockBundle()
-        multi_lockfile.loads(load(lockfile))
-        build_order = multi_lockfile.build_order()
+        lock_bundle = LockBundle()
+        lock_bundle.loads(load(lockfile))
+        build_order = lock_bundle.build_order()
         return build_order
 
     @api_method
-    def lock_bundle_update(self, multi_lock_path, cwd=None):
+    def lock_bundle_update(self, lock_bundle_path, cwd=None):
         cwd = cwd or os.getcwd()
-        multi_lock_path = _make_abs_path(multi_lock_path, cwd)
+        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
         revisions_enabled = self.app.cache.config.revisions_enabled
-        LockBundle.update_bundle(multi_lock_path, revisions_enabled)
+        LockBundle.update_bundle(lock_bundle_path, revisions_enabled)
 
     @api_method
     def lock_create(self, path, lockfile_out,
