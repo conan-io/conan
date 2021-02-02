@@ -39,7 +39,7 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         path = None
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("1234", "git", True)):
-            rev = _update_revision_in_metadata(self.package_layouts, self.output,
+            rev = _update_revision_in_metadata(self.package_layout, self.output,
                                                path, digest, revision_mode)
         self.assertEqual(rev, "1234")
         self.assertIn("Using git commit as the recipe revision", self.output)
