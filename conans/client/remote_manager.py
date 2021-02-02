@@ -5,10 +5,8 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.cache.remote_registry import Remote
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
-    NoRestV2Available, PackageNotFoundException
+from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -261,18 +259,12 @@ class RemoteManager(object):
 
     def _resolve_latest_ref(self, ref, remote):
         if ref.revision is None:
-            try:
-                ref = self.get_latest_recipe_revision(ref, remote)
-            except NoRestV2Available:
-                ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+            ref = self.get_latest_recipe_revision(ref, remote)
         return ref
 
     def _resolve_latest_pref(self, pref, remote, headers):
         if pref.revision is None:
-            try:
-                pref = self.get_latest_package_revision(pref, remote, headers=headers)
-            except NoRestV2Available:
-                pref = pref.copy_with_revs(pref.ref.revision, DEFAULT_REVISION_V1)
+            pref = self.get_latest_package_revision(pref, remote, headers=headers)
         return pref
 
     def _call_remote(self, remote, method, *args, **kwargs):

@@ -8,9 +8,7 @@ import unittest
 from collections import OrderedDict
 
 from mock import patch
-import pytest
 
-from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -18,7 +16,6 @@ from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
-from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 from conans.util.files import save
 from conans import __version__ as client_version
@@ -204,9 +201,10 @@ class SearchTest(unittest.TestCase):
 
         def create_metadata(folder, pids):
             metadata = PackageMetadata()
-            metadata.recipe.revision = DEFAULT_REVISION_V1
+            metadata.recipe.revision = "myreciperev"
             for pid in pids:
-                metadata.packages[pid].revision = DEFAULT_REVISION_V1
+                metadata.packages[pid].revision = "mypackagerev"
+                metadata.packages[pid].recipe_revision = "myreciperev"
             save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
 
         create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
@@ -613,7 +611,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def _copy_to_server(self, cache, server_store):
         subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-        refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1)
+        refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
             origin_path = cache.package_layout(ref).export()
@@ -624,7 +622,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
+                pref = PackageReference(ref, package, "mypackagerev")
                 origin_path = cache.package_layout(ref).package(pref)
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)

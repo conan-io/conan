@@ -51,7 +51,7 @@ from conans.client.source import config_source_local
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
-                           PackageNotFoundException, NoRestV2Available, NotFoundException)
+                           PackageNotFoundException, NotFoundException)
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
@@ -1203,7 +1203,7 @@ class ConanAPIV1(object):
                     revisions = self.app.remote_manager.get_recipe_revisions(ref, remote)
                 except RecipeNotFoundException:
                     pass
-                except (NoRestV2Available, NotFoundException):
+                except NotFoundException:
                     rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}
@@ -1238,7 +1238,7 @@ class ConanAPIV1(object):
                     revisions = self.app.remote_manager.get_package_revisions(pref, remote)
                 except RecipeNotFoundException:
                     pass
-                except (NoRestV2Available, NotFoundException):
+                except NotFoundException:
                     rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}

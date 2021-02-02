@@ -58,8 +58,7 @@ class RestV2Methods(RestCommonMethods):
         if not ref.revision:
             ref = self.get_latest_recipe_revision(ref)
         url = self.router.recipe_manifest(ref)
-        cache = (ref.revision != DEFAULT_REVISION_V1)
-        content = self._get_remote_file_contents(url, use_cache=cache)
+        content = self._get_remote_file_contents(url, use_cache=True)
         return FileTreeManifest.loads(decode_text(content))
 
     def get_package_manifest(self, pref):

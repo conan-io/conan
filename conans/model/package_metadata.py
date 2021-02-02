@@ -45,7 +45,7 @@ class _BinaryPackageMetadata(object):
 
     @revision.setter
     def revision(self, r):
-        self._revision = DEFAULT_REVISION_V1 if r is None else r
+        self._revision = r
 
     @property
     def recipe_revision(self):
@@ -53,7 +53,7 @@ class _BinaryPackageMetadata(object):
 
     @recipe_revision.setter
     def recipe_revision(self, r):
-        self._recipe_revision = DEFAULT_REVISION_V1 if r is None else r
+        self._recipe_revision = r
 
     def to_dict(self):
         ret = {"revision": self.revision,
