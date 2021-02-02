@@ -7,7 +7,7 @@ import pytest
 import requests
 from mock import Mock
 
-from conans import DEFAULT_REVISION_V1
+from conans import DEFAULT_REVISION_V1, REVISIONS
 from conans.client.conf import ConanClientConfigParser
 from conans.client.remote_manager import Remote
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -101,7 +101,7 @@ class RestApiTest(unittest.TestCase):
 
     def test_server_capabilities(self):
         capabilities = self.api.server_capabilities()
-        self.assertEqual(capabilities, ["ImCool", "TooCool"])
+        self.assertEqual(capabilities, ["ImCool", "TooCool", REVISIONS])
 
     def test_get_conan(self):
         # Upload a conans

@@ -144,6 +144,8 @@ class AuthenticationTest(unittest.TestCase):
                     resp_basic_auth._content = b"TOKEN"
                     resp_basic_auth.headers = {"Content-Type": "text/plain"}
                 elif "ping" in url:
+                    resp_basic_auth.headers = {"Content-Type": "application/json",
+                                               "X-Conan-Server-Capabilities": "revisions"}
                     token = getattr(kwargs["auth"], "token", None)
                     password = getattr(kwargs["auth"], "password", None)
                     if token and token != "TOKEN":

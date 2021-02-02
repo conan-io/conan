@@ -11,7 +11,8 @@ from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.client.userio import UserIO
 
 
-common_headers = {"X-Conan-Server-Capabilities": "oauth_token", "Content-Type": "application/json"}
+common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
+                  "Content-Type": "application/json"}
 
 
 class ResponseOK(object):

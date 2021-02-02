@@ -16,7 +16,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("upload * --all --confirm")
         client.run("remove * -f")
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
-        self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel'", client.out)
+        self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel#fakerevision'", client.out)
 
     def test_download_revs_enabled_with_rrev(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
