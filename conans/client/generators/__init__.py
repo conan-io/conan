@@ -104,6 +104,9 @@ class GeneratorManager(object):
         elif generator_name in ("MSBuildDeps", "msbuild"):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
+        elif generator_name == "CMakeDeps":
+            from conan.tools.cmake import CMakeDeps
+            return CMakeDeps
         elif generator_name == "QbsToolchain":
             from conan.tools.qbs.qbstoolchain import QbsToolchain
             return QbsToolchain
