@@ -12,7 +12,6 @@ from conans.client import tools
 from conans.client.tools.files import replace_in_file
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.util.files import load
@@ -54,12 +53,11 @@ class HelloConan(ConanFile):
         files[CONANFILE] = conan_build_vs
 
         client.save(files)
-        with catch_deprecation_warning(self):
-            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
-                       'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
-        with catch_deprecation_warning(self, n=2):
-            client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
-                       '-s compiler="Visual Studio" -s compiler.version=14')
+        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=11 -s '
+                   'compiler="Visual Studio" -s compiler.version=14', assert_error=True)
+
+        client.run('create . Hello/1.2.1@lasote/stable -s cppstd=17 '
+                   '-s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("Packaged 1 '.exe' file: MyProject.exe", client.out)
 
         files = get_vs_project_files()
@@ -387,7 +385,8 @@ class HelloConan(ConanFile):
             self.assertIn('/p:PlatformToolset="mytoolset"', runner.commands[0])
 
     @pytest.mark.tool_visual_studio
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Visual Studio installation path")
+    @pytest.mark.skipif(platform.system() != "Windows",
+                        reason="Requires Visual Studio installation path")
     def test_arch_override(self):
         settings = MockSettings({"build_type": "Release",
                                  "compiler": "Visual Studio",

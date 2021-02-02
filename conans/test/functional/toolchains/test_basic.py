@@ -1,11 +1,8 @@
-# coding=utf-8
 import os
-import platform
 import textwrap
 import unittest
 
 import pytest
-import six
 
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -37,7 +34,8 @@ class BasicTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
-                generators = "CMakeToolchain", "MesonToolchain", "MakeToolchain", "MSBuildToolchain"
+                generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain", "MakeToolchain",
+                              "MSBuildToolchain")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -47,6 +45,7 @@ class BasicTest(unittest.TestCase):
         self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
+        self.assertIn("conanfile.py: Generator 'CMakeDeps' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
         toolchain = client.load("conantoolchain.props")
@@ -99,92 +98,6 @@ class BasicTest(unittest.TestCase):
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
-    @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
-    def test_old_cmake_tools_imports(self):
-        conanfile = textwrap.dedent("""
-           from conans import ConanFile, CMakeToolchain, CMake
-           class Pkg(ConanFile):
-               def generate(self):
-                   tc = CMakeToolchain(self)
-                   tc.generate()
-               def build(self):
-                   cmake = CMake(self)
-                   cmake.configure()
-           """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        self.assertIn("'from conans import CMakeToolchain' has been deprecated and moved",
-                      client.out)
-        client.run("build .", assert_error=True)  # No CMakeLists.txt
-        self.assertIn("This 'CMake' build helper has been deprecated and moved.", client.out)
-        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', client.out)
-        self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
-
-    @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
-    @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
-    def test_old_msbuild_tools_imports(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuildToolchain, MSBuild
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                def generate(self):
-                   tc = MSBuildToolchain(self)
-                   tc.generate()
-                def build(self):
-                   msbuild = MSBuild(self)
-                   msbuild.build("Project.sln")
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        self.assertIn("'from conans import MSBuildToolchain' has been deprecated and moved",
-                      client.out)
-        client.run("build .", assert_error=True)  # No CMakeLists.txt
-        self.assertIn("This 'MSBuild' build helper has been deprecated and moved.", client.out)
-        self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
-
-    @pytest.mark.tool_compiler
-    @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
-    def test_old_gnu_tools_imports(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, MakeToolchain
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                def generate(self):
-                   tc = MakeToolchain(self)
-                   tc.generate()
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        self.assertIn("'from conans import MakeToolchain' has been deprecated and moved",
-                      client.out)
-
-    @pytest.mark.tool_compiler
-    @pytest.mark.skipif(six.PY2, reason="The import to sibling fails in Python2")
-    def test_old_write_toolchain_files(self):
-        conanfile = textwrap.dedent("""
-               from conans import ConanFile
-               from conan.tools.gnu import MakeToolchain
-               from conan.tools.cmake import CMakeToolchain
-               from conan.tools.microsoft import MSBuildToolchain
-               class Pkg(ConanFile):
-                   settings = "os", "compiler", "arch", "build_type"
-                   def generate(self):
-                      tc = MakeToolchain(self)
-                      tc.write_toolchain_files()
-                      tc = CMakeToolchain(self)
-                      tc.write_toolchain_files()
-                      tc = MSBuildToolchain(self)
-                      tc.write_toolchain_files()
-               """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        self.assertEqual(3, str(client.out).count("'write_toolchain_files()' "
-                                                  "has been deprecated and moved"))
-
     def test_old_toolchain(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -193,7 +106,7 @@ class BasicTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
+        client.run("install .", assert_error=True)
         self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
 
     def test_old_toolchain_method(self):
@@ -205,7 +118,7 @@ class BasicTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
+        client.run("install .", assert_error=True)
         self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
 
     def test_toolchain_windows(self):

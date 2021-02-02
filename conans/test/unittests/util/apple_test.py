@@ -115,10 +115,10 @@ class AppleTest(unittest.TestCase):
         self.assertEqual(tools.apple_deployment_target_flag('tvOS', "10.1", 'appletvsimulator'),
                          '-mtvos-simulator-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", None, "Catalyst"),
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", None, "catalyst"),
                          '-mios-version-min=10.1')
 
-        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", "macosx", "Catalyst"),
+        self.assertEqual(tools.apple_deployment_target_flag("Macos", "10.1", "macosx", "catalyst"),
                          '-mios-version-min=10.1')
 
         self.assertEqual('', tools.apple_deployment_target_flag('Solaris', "10.1"))

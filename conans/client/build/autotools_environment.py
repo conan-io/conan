@@ -18,7 +18,7 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import get_abs_path
 
 
@@ -49,9 +49,7 @@ class AutoToolsBuildEnvironment(object):
         self._build_type = conanfile.settings.get_safe("build_type")
 
         self._compiler = conanfile.settings.get_safe("compiler")
-        if not self._compiler:
-            conan_v2_behavior("compiler setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("compiler setting should be defined.", not self._compiler)
 
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
@@ -235,9 +233,7 @@ class AutoToolsBuildEnvironment(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("build_type setting should be defined.", not self._build_type)
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
@@ -353,7 +349,8 @@ class AutoToolsBuildEnvironment(object):
                 concat += " " + os.environ.get("CFLAGS", None)
             if os.environ.get("CXXFLAGS", None):
                 concat += " " + os.environ.get("CXXFLAGS", None)
-            if self._os_version and "-version-min" not in concat and "-target" not in concat:
+            if (self._os_version and "-version-min" not in concat and "-target" not in concat) or \
+                    self._os_subsystem:
                 tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
                                                                                 self._os_version,
                                                                                 self._os_sdk,

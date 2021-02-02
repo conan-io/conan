@@ -4,6 +4,7 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import save
 
 
 class CompatibleIDsTest(unittest.TestCase):
@@ -497,15 +498,23 @@ class CompatibleIDsTest(unittest.TestCase):
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
     client = TestClient()
-    client.save({"conanfile.py": conanfile})
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=19.1
+        compiler.runtime=dynamic
+        compiler.cppstd=14
+        build_type=Release
+        arch=x86_64
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
     client.run('create . pkg/0.1@ -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                '-s compiler.runtime=MD -s build_type=Release -s arch=x86_64')
-    client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
-               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
-               "-s compiler.cppstd=14")
+    client.run("install pkg/0.1@ -pr=profile")
     assert "Using compatible package" in client.out
-    client.run("config set general.msvc_visual_incompatible=1")
-    client.run("install pkg/0.1@  -s os=Windows -s compiler=msvc -s compiler.version=19.1 "
-               "-s compiler.runtime=dynamic -s build_type=Release -s arch=x86_64 "
-               "-s compiler.cppstd=14", assert_error=True)
+    new_config = "core.package_id:msvc_visual_incompatible=1"
+    save(client.cache.new_config_path, new_config)
+    client.run("install pkg/0.1@ -pr=profile", assert_error=True)
     assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out

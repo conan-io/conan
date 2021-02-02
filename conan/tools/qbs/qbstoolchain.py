@@ -62,12 +62,26 @@ _cxx_language_version = {
     '20': 'c++20',
     'gnu20': 'c++20'
 }
-
+_target_platform = {
+    'Windows': 'windows',
+    'WindowsStore': 'windows',
+    'WindowsCE': 'windows',
+    'Linux': 'linux',
+    'Macos': 'macos',
+    'Android': 'android',
+    'iOS': 'ios',
+    'watchOS': 'watchos',
+    'tvOS': 'tvos',
+    'FreeBSD': 'freebsd',
+    'SunOS': 'solaris',
+    'AIX': 'aix',
+    'Emscripten': None,
+    'Arduino': 'none',
+    'Neutrino': 'qnx',
+}
 
 def _bool(b):
-    if b is None:
-        return None
-    return str(b).lower()
+    return None if b is None else str(b).lower()
 
 
 def _env_var_to_list(var):
@@ -208,6 +222,11 @@ class QbsToolchain(object):
                 {%- if architecture %}
                 qbs.architecture: "{{ architecture }}"
                 {%- endif %}
+                {%- if target_platform %}
+                qbs.targetPlatform: "{{ target_platform }}"
+                {%- else %}
+                qbs.targetPlatform: undefined
+                {%- endif %}
                 {%- if optimization %}
                 qbs.optimization: "{{ optimization }}"
                 {%- endif %}
@@ -240,6 +259,8 @@ class QbsToolchain(object):
             conanfile.settings.get_safe('build_type'))
         self._cxx_language_version = _cxx_language_version.get(
             str(conanfile.settings.get_safe('compiler.cppstd')))
+        self._target_platform = _target_platform.get(
+            conanfile.settings.get_safe('os'))
         self._sysroot = tools.get_env('SYSROOT')
         self._position_independent_code = _bool(
             conanfile.options.get_safe('fPIC'))
@@ -257,7 +278,8 @@ class QbsToolchain(object):
             'optimization': self._optimization,
             'sysroot': self._sysroot,
             'position_independent_code': self._position_independent_code,
-            'cxx_language_version': self._cxx_language_version
+            'cxx_language_version': self._cxx_language_version,
+            'target_platform': self._target_platform
         }
         t = Template(self._template_toolchain)
         content = t.render(**context)

@@ -18,7 +18,6 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import DATA_YML
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.files import load
 
 
@@ -161,8 +160,7 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        if os.environ.get(CONAN_V2_MODE_ENVVAR, False):
-            conanfile.version = str(conanfile.version)
+        # FIXME Conan 2.0, conanfile.version should be a string, not a version object
 
         ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conanfile.display_name = str(ref)
@@ -236,8 +234,8 @@ class ConanFileLoader(object):
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
         conanfile.name = ref.name
-        conanfile.version = str(ref.version) \
-            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else ref.version
+        # FIXME Conan 2.0, version should be a string not a Version object
+        conanfile.version = ref.version
 
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True

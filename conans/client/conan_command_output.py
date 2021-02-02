@@ -176,6 +176,7 @@ class CommandOutputer(object):
             _add_if_exists("topics", as_list=True)
             _add_if_exists("deprecated")
             _add_if_exists("provides", as_list=True)
+            _add_if_exists("scm")
 
             if isinstance(ref, ConanFileReference):
                 item_data["recipe"] = node.recipe

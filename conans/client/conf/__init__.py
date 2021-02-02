@@ -8,7 +8,6 @@ from six.moves.configparser import ConfigParser, NoSectionError
 from conans.errors import ConanException
 from conans.model.env_info import unquote
 from conans.paths import DEFAULT_PROFILE_NAME, conan_expand_user, CACERT_FILE
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.dates import timedelta_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import load
@@ -36,9 +35,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
             version: ["5.0", "6.0", "7.0", "8.0"]
         Linux:
         Macos:
-            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0"]
+            version: [None, "10.6", "10.7", "10.8", "10.9", "10.10", "10.11", "10.12", "10.13", "10.14", "10.15", "11.0", "13.0"]
             sdk: [None, "macosx"]
-            subsystem: [None, "Catalyst"]
+            subsystem: [None, catalyst]
         Android:
             api_level: ANY
         iOS:
@@ -128,15 +127,13 @@ _t_default_settings_yml = Template(textwrap.dedent("""
 
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
-    {% if not conan_v2 %}
+
     cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
-    {% endif %}
     """))
 
 
-def get_default_settings_yml(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_settings_yml.render(conan_v2=conan_v2)
+def get_default_settings_yml():
+    return _t_default_settings_yml.render()
 
 
 _t_default_client_conf = Template(textwrap.dedent("""
@@ -193,9 +190,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
 
     # cacert_path                         # environment CONAN_CACERT_PATH
     # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
-    {% if conan_v2 %}
-    revisions_enabled = 1
-    {% endif %}
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
@@ -221,18 +215,14 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
 
-    {% if not conan_v2 %}{# no hooks by default in Conan v2 #}
     [hooks]    # environment CONAN_HOOKS
     attribute_checker
-    {% endif %}
 
-    # Default settings now declared in the default profile
     """))
 
 
 def get_default_client_conf(force_v1=False):
-    conan_v2 = not force_v1 and os.environ.get(CONAN_V2_MODE_ENVVAR, False)
-    return _t_default_client_conf.render(conan_v2=conan_v2, default_profile=DEFAULT_PROFILE_NAME)
+    return _t_default_client_conf.render(default_profile=DEFAULT_PROFILE_NAME)
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -444,7 +434,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 revisions_enabled = self.get_item("general.revisions_enabled")
             return revisions_enabled.lower() in ("1", "true")
         except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+            return False
 
     @property
     def parallel_download(self):
@@ -474,7 +464,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 scm_to_conandata = self.get_item("general.scm_to_conandata")
             return scm_to_conandata.lower() in ("1", "true")
         except ConanException:
-            return True if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else False
+            return False
 
     @property
     def default_package_id_mode(self):
@@ -503,14 +493,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return fix_id.lower() in ("1", "true")
         except ConanException:
             return None
-
-    @property
-    def msvc_visual_incompatible(self):
-        try:
-            visual_comp = self.get_item("general.msvc_visual_incompatible")
-            return visual_comp.lower() in ("1", "true")
-        except ConanException:
-            return False
 
     @property
     def short_paths_home(self):

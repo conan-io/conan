@@ -1,8 +1,6 @@
 import traceback
-import warnings
 from os.path import join
 
-from conan.tools.cmake import CMakeToolchain
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -67,7 +65,7 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeToolchain", "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild"]
 
     def add(self, name, generator_class, custom=False):
@@ -91,6 +89,9 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
+        if generator_name == "CMakeDeps":
+            from conan.tools.cmake import CMakeDeps
+            return CMakeDeps
         elif generator_name == "MakeToolchain":
             from conan.tools.gnu import MakeToolchain
             return MakeToolchain
@@ -180,29 +181,11 @@ def write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
         msg = ("\n*****************************************************************\n"
                "******************************************************************\n"
-               "The 'toolchain' attribute or method has been deprecated.\n"
-               "It will be removed in next Conan release.\n"
+               "The 'toolchain' attribute or method has been deprecated and removed\n"
                "Use 'generators = \"ClassName\"' or 'generate()' method instead.\n"
                "********************************************************************\n"
                "********************************************************************\n")
-        output.warn(msg)
-        warnings.warn(msg)
-        output.highlight("Generating toolchain files")
-        if callable(conanfile.toolchain):
-            # This is the toolchain
-            with chdir(path):
-                with conanfile_exception_formatter(str(conanfile), "toolchain"):
-                    conanfile.toolchain()
-        else:
-            try:
-                toolchain = {"cmake": CMakeToolchain}[conanfile.toolchain]
-            except KeyError:
-                raise ConanException("Unknown toolchain '%s'" % conanfile.toolchain)
-            tc = toolchain(conanfile)
-            with chdir(path):
-                tc.generate()
-
-        # TODO: Lets discuss what to do with the environment
+        raise ConanException(msg)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
