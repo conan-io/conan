@@ -306,7 +306,7 @@ class RestV2Methods(RestCommonMethods):
             for r in tmp:
                 if r["revision"] == ref.revision:
                     return [r]
-            raise RecipeNotFoundException(ref, print_rev=True)
+            raise RecipeNotFoundException(ref)
         return tmp
 
     def get_package_revisions(self, pref):
@@ -316,7 +316,7 @@ class RestV2Methods(RestCommonMethods):
             for r in tmp:
                 if r["revision"] == pref.revision:
                     return [r]
-            raise PackageNotFoundException(pref, print_rev=True)
+            raise PackageNotFoundException(pref)
         return tmp
 
     def get_latest_recipe_revision(self, ref):
