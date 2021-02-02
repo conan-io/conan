@@ -117,7 +117,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
-            installed_node = neighbours[0]
-            deploy_conanfile = installed_node.conanfile
+            deploy_conanfile = neighbours[0].conanfile
             if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                 run_deploy(deploy_conanfile, install_folder)

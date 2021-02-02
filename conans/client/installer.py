@@ -422,10 +422,6 @@ class BinaryInstaller(object):
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-<<<<<<< HEAD
-=======
-                self._propagate_info(node, using_build_profile)
->>>>>>> develop
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, graph_info)
                     # Need a temporary package revision for package_revision_mode
@@ -440,21 +436,12 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
+                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes,
+                                            using_build_profile)
 
-<<<<<<< HEAD
-    @staticmethod
-    def _node_concurrently_installed(node, package_folder):
-        if node.binary == BINARY_DOWNLOAD and os.path.exists(package_folder):
-            return True
-        elif node.binary == BINARY_UPDATE:
-            read_manifest = FileTreeManifest.load(package_folder)
-            if node.update_manifest == read_manifest:
-                return True
-=======
+
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
->>>>>>> develop
 
     def _handle_node_editable(self, node, graph_info):
         # Get source of information
@@ -497,7 +484,8 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
+    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes,
+                           using_build_profile):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
@@ -512,13 +500,9 @@ class BinaryInstaller(object):
             if processed_prev is None:  # This package-id has not been processed before
                 if node.binary == BINARY_BUILD:
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-<<<<<<< HEAD
-                    self.propagate_info(node)
-                    with set_dirty_context_manager(package_folder):
-=======
+                    self._propagate_info(node, using_build_profile)
                     layout.package_remove(pref)
                     with layout.set_dirty_context_manager(pref):
->>>>>>> develop
                         pref = self._build_package(node, output, keep_build, remotes)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -563,17 +547,13 @@ class BinaryInstaller(object):
             node.graph_lock_node.prev = pref.revision
         return pref
 
-<<<<<<< HEAD
-    @staticmethod
-    def propagate_info(node):
-=======
     def _propagate_info(self, node, using_build_profile):
         # it is necessary to recompute
         # the node transitive information necessary to compute the package_id
         # as it will be used by reevaluate_node() when package_revision_mode is used and
         # PACKAGE_ID_UNKNOWN happens due to unknown revisions
         self._binaries_analyzer.package_id_transitive_reqs(node)
->>>>>>> develop
+
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels

@@ -142,44 +142,9 @@ class ConanFile(object):
         self._conan_channel = channel
 
         self.compatible_packages = []
-<<<<<<< HEAD
-        self._deps_cpp_info = DepsCppInfo()
-        self._deps_env_info = DepsEnvInfo()
-        self._deps_user_info = DepsUserInfo()
-        self._propagated = False
-        self._node = None
-
-    @property
-    def deps_cpp_info(self):
-        if not self._propagated:
-            from conans.client.installer import BinaryInstaller
-            assert self._node
-            BinaryInstaller.propagate_info(self._node)
-            self._propagated = True
-        return self._deps_cpp_info
-
-    @property
-    def deps_env_info(self):
-        if not self._propagated:
-            from conans.client.installer import BinaryInstaller
-            assert self._node
-            BinaryInstaller.propagate_info(self._node)
-            self._propagated = True
-        return self._deps_env_info
-
-    @property
-    def deps_user_info(self):
-        if not self._propagated:
-            from conans.client.installer import BinaryInstaller
-            assert self._node
-            BinaryInstaller.propagate_info(self._node)
-            self._propagated = True
-        return self._deps_user_info
-=======
         self._conan_using_build_profile = False
 
         self.layout = Layout()
->>>>>>> develop
 
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
@@ -194,23 +159,17 @@ class ConanFile(object):
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
-<<<<<<< HEAD
-=======
         self._conan_dep_cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
->>>>>>> develop
 
         # environment variables declared in the package_info
         self.env_info = None  # Will be initialized at processing time
+        self.deps_env_info = DepsEnvInfo()
 
         # user declared variables
         self.user_info = None
-<<<<<<< HEAD
-        # Keys are the package names, and the values a dict with the vars
-=======
         # Keys are the package names (only 'host' if different contexts)
         self.deps_user_info = DepsUserInfo()
->>>>>>> develop
 
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
