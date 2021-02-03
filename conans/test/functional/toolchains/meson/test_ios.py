@@ -67,17 +67,16 @@ class IOSMesonTestCase(unittest.TestCase):
         cc = self.xcrun.cc
         cxx = self.xcrun.cxx
 
-        cflags = apple_deployment_target_flag(self.os, self.os_version)
-        cflags += " -isysroot " + self.xcrun.sdk_path
-        cflags += " -arch " + to_apple_arch(self.arch)
-        cxxflags = cflags
-        ldflags = cflags
+        deployment_flag = apple_deployment_target_flag(self.os, self.os_version)
+        sysroot_flag = " -isysroot " + self.xcrun.sdk_path
+        arch_flag = " -arch " + to_apple_arch(self.arch)
+        flags = deployment_flag + sysroot_flag + arch_flag
 
         return {'CC': cc,
                 'CXX': cxx,
-                'CFLAGS': cflags,
-                'CXXFLAGS': cxxflags,
-                'LDFLAGS': ldflags}
+                'CFLAGS': flags,
+                'CXXFLAGS': flags,
+                'LDFLAGS': flags}
 
     def profile(self):
         template = textwrap.dedent("""
