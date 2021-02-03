@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
+from conans import __version__
 
 
 class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id"])):
@@ -152,7 +153,10 @@ class BuildInfoCreator(object):
         return arts
 
     def process_lockfile(self):
-        modules = defaultdict(lambda: {"id": None, "artifacts": set(), "dependencies": set()})
+        modules = defaultdict(lambda: {"type": "conan",
+                                       "id": None,
+                                       "artifacts": set(),
+                                       "dependencies": set()})
 
         def _gather_transitive_recipes(nid, contents):
             n = contents["graph_lock"]["nodes"][nid]
@@ -223,7 +227,7 @@ class BuildInfoCreator(object):
                "number": properties[ARTIFACTS_PROPERTIES_PUT_PREFIX + "build.number"],
                "type": "GENERIC",
                "started": datetime.datetime.utcnow().isoformat().split(".")[0] + ".000Z",
-               "buildAgent": {"name": "Conan Client", "version": "1.X"},
+               "buildAgent": {"name": "conan", "version": "{}".format(__version__)},
                "modules": list(modules.values())}
 
         def dump_custom_types(obj):
