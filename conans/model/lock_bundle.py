@@ -39,7 +39,8 @@ class LockBundle(object):
                 pid_node["prev"] = node.prev
                 pid_node["modified"] = node.modified
                 ids.setdefault(lockfile_name, []).append(id_)
-                for require in node.requires:
+                total_requires = node.requires + node.build_requires
+                for require in total_requires:
                     require_node = lock.nodes[require]
                     ref = require_node.ref.full_str()
                     ref = ref_convert(ref)
