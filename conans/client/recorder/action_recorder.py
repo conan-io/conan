@@ -32,6 +32,10 @@ def _cpp_info_to_dict(cpp_info):
             doc["configs"] = configs_data
             continue
 
+        if it == "_rootpath":
+            doc["rootpath"] = value
+            continue
+
         if it.startswith("_") or not value:
             continue
 

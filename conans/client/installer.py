@@ -431,7 +431,7 @@ class BinaryInstaller(object):
 
                 self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
-                    self._handle_node_editable(node, graph_info)
+                    self._handle_node_editable(node.conanfile, node.ref, graph_info)
                     # Need a temporary package revision for package_revision_mode
                     # Cannot be PREV_UNKNOWN otherwise the consumers can't compute their packageID
                     node.prev = "editable"
@@ -449,41 +449,34 @@ class BinaryInstaller(object):
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
 
-    def _handle_node_editable(self, node, graph_info):
+    def _handle_node_editable(self, conanfile, ref, graph_info):
+
         # Get source of information
-        package_layout = self._cache.package_layout(node.ref)
+        package_layout = self._cache.package_layout(ref)
         base_path = package_layout.base_folder()
-        node.conanfile.layout.set_base_package_folder(base_path)
-        node.conanfile.layout.set_base_build_folder(base_path)
-        node.conanfile.layout.set_base_source_folder(base_path)
-        node.conanfile.cpp_info = node.conanfile.layout.get_editable_cppinfo(node.conanfile.name)
-        node.conanfile.cpp_info.version = node.conanfile.version
-        node.conanfile.cpp_info.description = node.conanfile.description
-
-        self._call_package_info(node.conanfile, package_folder=base_path, ref=node.ref)
-
-        node.conanfile.cpp_info.filter_empty = False
+        self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
+        conanfile.cpp_info.filter_empty = False
 
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
-        if editable_cpp_info:  # !!! FIXME: Por qué hay que generar el conaninfo y demas mandangas?
-            editable_cpp_info.apply_to(node.ref,
-                                       node.conanfile.cpp_info,
-                                       settings=node.conanfile.settings,
-                                       options=node.conanfile.options)
+        if editable_cpp_info:
+            editable_cpp_info.apply_to(ref,
+                                       conanfile.cpp_info,
+                                       settings=conanfile.settings,
+                                       options=conanfile.options)
 
-            build_folder = editable_cpp_info.folder(node.ref, EditableLayout.BUILD_FOLDER,
-                                                    settings=node.conanfile.settings,
-                                                    options=node.conanfile.options)
+            build_folder = editable_cpp_info.folder(ref, EditableLayout.BUILD_FOLDER,
+                                                    settings=conanfile.settings,
+                                                    options=conanfile.options)
             if build_folder is not None:
                 build_folder = os.path.join(base_path, build_folder)
-                output = node.conanfile.output
-                self._generator_manager.write_generators(node.conanfile, build_folder, output)
-                write_toolchain(node.conanfile, build_folder, output)
-                save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
+                output = conanfile.output
+                self._generator_manager.write_generators(conanfile, build_folder, output)
+                write_toolchain(conanfile, build_folder, output)
+                save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info_node = GraphInfo(graph_info.profile_host, root_ref=node.ref)
-                graph_info_node.options = node.conanfile.options.values
+                graph_info_node = GraphInfo(graph_info.profile_host, root_ref=ref)
+                graph_info_node.options = conanfile.options.values
                 graph_info_node.graph_lock = graph_info.graph_lock
                 graph_info_node.save(build_folder)
                 output.info("Generated graphinfo")
@@ -491,11 +484,11 @@ class BinaryInstaller(object):
                                                 graph_info.graph_lock)
                 graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
 
-                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
+                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conanfile).content)
                 output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
-                copied_files = run_imports(node.conanfile, build_folder)
+                copied_files = run_imports(conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
@@ -537,9 +530,7 @@ class BinaryInstaller(object):
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                    % (str(pref), package_folder))
             # Call the info method
-            conanfile.layout.set_base_package_folder(package_folder)
-            conanfile.cpp_info = conanfile.layout.get_package_cppinfo(conanfile.name)
-            self._call_package_info(conanfile, package_folder, ref=pref.ref)
+            self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, output, keep_build, remotes):
@@ -616,7 +607,16 @@ class BinaryInstaller(object):
         subtree_libnames = [node.ref.name for node in node_order]
         add_env_conaninfo(conan_file, subtree_libnames)
 
-    def _call_package_info(self, conanfile, package_folder, ref):
+    def _call_package_info(self, conanfile, package_folder, ref, is_editable):
+
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.set_base_source_folder(None)
+        conanfile.layout.set_base_build_folder(None)
+        conanfile.layout.set_base_install_folder(None)
+        conanfile.cpp_info = conanfile.layout.package.cpp_info
+        # FIXME: Smells like the constructor of cpp_info should not have the root nor the name
+        conanfile.cpp_info._name = conanfile.name
+        conanfile.cpp_info._ref_name = conanfile.name
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
         conanfile.env_info = EnvInfo()
@@ -633,17 +633,29 @@ class BinaryInstaller(object):
         with pythonpath(conanfile):
             with tools.chdir(package_folder):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
-                    conanfile.layout.set_base_package_folder(package_folder)
-                    conanfile.layout.set_base_source_folder(None)
-                    conanfile.layout.set_base_build_folder(None)
-                    conanfile.layout.set_base_install_folder(None)
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
                     conanfile.package_info()
+
+                    if is_editable and hasattr(conanfile, "shape"):
+                        # Adjust the folders of the layout to consolidate the rootfolder of the
+                        # cppinfos inside
+                        conanfile.layout.set_base_build_folder(package_folder)
+                        conanfile.layout.set_base_source_folder(package_folder)
+                        # Here package_folder is the editable base folder
+                        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
+                        conanfile.cpp_info.version = conanfile.version
+                        conanfile.cpp_info.description = conanfile.description
+                        conanfile.cpp_info.merge(conanfile.layout.build.cpp_info)
+                        conanfile.cpp_info.merge(conanfile.layout.source.cpp_info)
+
                     if conanfile._conan_dep_cpp_info is None:
                         try:
-                            conanfile.cpp_info._raise_incorrect_components_definition(
-                                conanfile.name, conanfile.requires)
+                            if not is_editable:
+                                # FIXME: The default for the cppinfo from build are not the same
+                                #        so this check fails when editable
+                                conanfile.cpp_info._raise_incorrect_components_definition(
+                                    conanfile.name, conanfile.requires)
                         except ConanException as e:
                             raise ConanException("%s package_info(): %s" % (str(conanfile), e))
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)

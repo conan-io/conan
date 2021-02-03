@@ -121,6 +121,10 @@ class DepsGraphBuilder(object):
         new_options, new_reqs = self._get_node_requirements(node, graph, down_ref, down_options,
                                                             down_reqs, graph_lock, update, remotes)
 
+        # Once the node is configured call the shape to init the layout
+        if hasattr(node.conanfile, "shape"):
+            node.conanfile.shape()
+
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():
             if require.override:
