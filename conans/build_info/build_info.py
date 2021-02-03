@@ -153,7 +153,10 @@ class BuildInfoCreator(object):
         return arts
 
     def process_lockfile(self):
-        modules = defaultdict(lambda: {"id": None, "artifacts": set(), "dependencies": set()})
+        modules = defaultdict(lambda: {"type": "conan",
+                                       "id": None,
+                                       "artifacts": set(),
+                                       "dependencies": set()})
 
         def _gather_transitive_recipes(nid, contents):
             n = contents["graph_lock"]["nodes"][nid]
