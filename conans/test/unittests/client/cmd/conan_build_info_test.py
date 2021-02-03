@@ -23,6 +23,7 @@ class BuildInfoTest(unittest.TestCase):
         }},
         "modules": [
             {{
+                "type": "conan",
                 "id": "PkgB/0.1@user/channel",
                 "artifacts": [
                     {{
@@ -60,6 +61,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
                 "artifacts": [
                     {{
@@ -97,6 +99,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel",
                 "artifacts": [
                     {{
@@ -118,6 +121,7 @@ class BuildInfoTest(unittest.TestCase):
                 "dependencies": []
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                 "artifacts": [
                     {{
@@ -154,6 +158,7 @@ class BuildInfoTest(unittest.TestCase):
         }},
         "modules": [
             {{
+                "type": "conan",
                 "id": "PkgC/0.1@user/channel",
                 "artifacts": [
                     {{
@@ -191,6 +196,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgC/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
                 "artifacts": [
                     {{
@@ -228,6 +234,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel",
                 "artifacts": [
                     {{
@@ -249,6 +256,7 @@ class BuildInfoTest(unittest.TestCase):
                 "dependencies": []
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                 "artifacts": [
                     {{
@@ -285,6 +293,7 @@ class BuildInfoTest(unittest.TestCase):
         }},
         "modules": [
             {{
+                "type": "conan",
                 "id": "PkgB/0.1@user/channel",
                 "artifacts": [
                     {{
@@ -322,6 +331,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgB/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
                 "artifacts": [
                     {{
@@ -359,6 +369,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel",
                 "artifacts": [
                     {{
@@ -380,6 +391,7 @@ class BuildInfoTest(unittest.TestCase):
                 "dependencies": []
             }},
             {{
+                "type": "conan",
                 "id": "PkgA/0.2@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
                 "artifacts": [
                     {{
@@ -401,6 +413,7 @@ class BuildInfoTest(unittest.TestCase):
                 "dependencies": []
             }},
             {{
+                "type": "conan",
                 "id": "PkgC/0.1@user/channel",
                 "artifacts": [
                     {{
@@ -438,6 +451,7 @@ class BuildInfoTest(unittest.TestCase):
                 ]
             }},
             {{
+                "type": "conan",
                 "id": "PkgC/0.1@user/channel:09f152eb7b3e0a6e15a2a3f464245864ae8f8644",
                 "artifacts": [
                     {{
@@ -498,3 +512,5 @@ class BuildInfoTest(unittest.TestCase):
         for index in range(2):
             self.assertEqual(mergedinfo["modules"][index]["id"],
                              res_json["modules"][index]["id"])
+            self.assertEqual(mergedinfo["modules"][index]["type"],
+                             res_json["modules"][index]["type"])
