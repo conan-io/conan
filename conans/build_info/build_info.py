@@ -17,7 +17,7 @@ from conans.util.files import save
 from conans import __version__
 
 
-class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id"])):
+class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id", "path"])):
     def __hash__(self):
         return hash(self.sha1)
 
@@ -72,7 +72,7 @@ class BuildInfoCreator(object):
         return "{reference}:{pid}{package_rev}".format(reference=self._get_reference(ref), pid=pid,
                                                        package_rev=package_rev)
 
-    def _get_metadata_artifacts(self, metadata, request_path, use_id=False, name_format="{}",
+    def _get_metadata_artifacts(self, metadata, ref_path, use_id=False, name_format="{}",
                                 package_id=None):
         ret = {}
         need_sources = False
@@ -86,7 +86,9 @@ class BuildInfoCreator(object):
             name_or_id = name_format.format(name)
             ret[value["sha1"]] = {"md5": value["md5"],
                                   "name": name_or_id if not use_id else None,
-                                  "id": name_or_id if use_id else None}
+                                  "id": name_or_id if use_id else None,
+                                  "path": ref_path if not use_id else None}
+
         if need_sources:
             remote_name = metadata.recipe.remote
             remotes = self._conan_cache.registry.load_remotes()
@@ -94,7 +96,7 @@ class BuildInfoCreator(object):
             parsed_uri = urlparse(remote_url)
             base_url = "{uri.scheme}://{uri.netloc}/artifactory/api/storage/conan/".format(
                 uri=parsed_uri)
-            request_url = urljoin(base_url, "{}/conan_sources.tgz".format(request_path))
+            request_url = urljoin(base_url, "{}/conan_sources.tgz".format(ref_path))
             if self._user and self._password:
                 response = requests.get(request_url, auth=(self._user, self._password))
             elif self._apikey:
@@ -106,8 +108,16 @@ class BuildInfoCreator(object):
                 data = response.json()
                 ret[data["checksums"]["sha1"]] = {"md5": data["checksums"]["md5"],
                                                   "name": "conan_sources.tgz" if not use_id else None,
-                                                  "id": "conan_sources.tgz" if use_id else None}
+                                                  "id": "conan_sources.tgz" if use_id else None,
+                                                  "path": ref_path if not use_id else None}
         return set([Artifact(k, **v) for k, v in ret.items()])
+
+    def _get_repo(self, ref):
+        metadata = self._get_metadata(ref)
+        remote_name = metadata.recipe.remote
+        remotes = self._conan_cache.registry.load_remotes()
+        remote_url = remotes[remote_name].url
+        return remote_url.split("/")[-1]
 
     def _get_recipe_rev(self, ref):
         return "#{}".format(ref.get("rrev")) if ref.get("rrev") and ref.get("rrev") != "0" else ""
@@ -116,44 +126,44 @@ class BuildInfoCreator(object):
         return "@{}/{}".format(ref.get("user"), ref.get("channel")) if ref.get("user") and \
                                                                        ref.get("channel") else ""
 
-    def _get_recipe_artifacts(self, ref, is_dependency):
+    def _get_recipe_path(self, ref):
         r = self.parse_ref(ref)
         user_channel = self._get_user_channel(r)
-        recipe_rev = self._get_recipe_rev(r)
-        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
-                                                                  recipe_rev=recipe_rev, **r)
-        reference = ConanFileReference.loads(ref)
+        path = "{user}/{name}/{version}/{channel}/{rrev}/export".format(
+            **r) if user_channel else "_/{name}/{version}/_/{rrev}/export".format(**r)
+        return path
+
+    def _get_package_path(self, ref, pid, prev):
+        r = self.parse_ref(ref)
+        user_channel = self._get_user_channel(r)
+        path = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}" if user_channel else \
+              "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
+        path = path.format(pid=pid, prev=prev, **r)
+        return path
+
+    def _get_metadata(self, ref):
+        reference = ConanFileReference.loads(self._get_reference(ref))
         package_layout = self._conan_cache.package_layout(reference)
         metadata = package_layout.load_metadata()
-        name_format = "{} :: {{}}".format(self._get_reference(ref)) if is_dependency else "{}"
-        url = "{user}/{name}/{version}/{channel}/{rrev}/export".format(
-            **r) if user_channel else "_/{name}/{version}/_/{rrev}/export".format(**r)
+        return metadata
 
-        return self._get_metadata_artifacts(metadata, url, name_format=name_format,
-                                            use_id=is_dependency)
+    def _get_recipe_artifacts(self, ref, is_dependency):
+        metadata = self._get_metadata(ref)
+        name_format = "{} :: {{}}".format(self._get_reference(ref)) if is_dependency else "{}"
+        ref_path = self._get_recipe_path(ref)
+        return self._get_metadata_artifacts(metadata, ref_path, name_format=name_format, use_id=is_dependency)
 
     def _get_package_artifacts(self, ref, pid, prev, is_dependency):
-        r = self.parse_ref(ref)
-        user_channel = self._get_user_channel(r)
-        recipe_rev = self._get_recipe_rev(r)
-        ref = "{name}/{version}{user_channel}{recipe_rev}".format(user_channel=user_channel,
-                                                                  recipe_rev=recipe_rev, **r)
-        reference = ConanFileReference.loads(ref)
-        package_layout = self._conan_cache.package_layout(reference)
-        metadata = package_layout.load_metadata()
-        if is_dependency:
-            name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid, prev))
-        else:
-            name_format = "{}"
-        url = "{user}/{name}/{version}/{channel}/{rrev}/package/{pid}/{prev}" if user_channel else \
-              "_/{name}/{version}/_/{rrev}/package/{pid}/{prev}"
-        url = url.format(pid=pid, prev=prev, **r)
-        arts = self._get_metadata_artifacts(metadata, url, name_format=name_format,
+        metadata = self._get_metadata(ref)
+        name_format = "{} :: {{}}".format(self._get_package_reference(ref, pid, prev)) if is_dependency else "{}"
+        ref_path = self._get_package_path(ref, pid, prev)
+        arts = self._get_metadata_artifacts(metadata, ref_path, name_format=name_format,
                                             use_id=is_dependency, package_id=pid)
         return arts
 
     def process_lockfile(self):
         modules = defaultdict(lambda: {"type": "conan",
+                                       "repository": None,
                                        "id": None,
                                        "artifacts": set(),
                                        "dependencies": set()})
@@ -196,6 +206,8 @@ class BuildInfoCreator(object):
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
                     self._get_recipe_artifacts(ref, is_dependency=False))
+                modules[recipe_key]["repository"] = self._get_repo(ref)
+
                 # TODO: what about `python_requires`?
                 # TODO: can we associate any properties to the recipe? Profile/options may
                 # TODO: be different per lockfile
@@ -205,6 +217,7 @@ class BuildInfoCreator(object):
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
                     self._get_package_artifacts(ref, pid, prev, is_dependency=False))
+                modules[package_key]["repository"] = self._get_repo(ref)
 
                 # Recurse requires
                 node_ids = node.get("requires", []) + node.get("build_requires", [])
