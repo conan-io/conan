@@ -43,6 +43,7 @@ class _BinaryPackageMetadata(object):
 
     @revision.setter
     def revision(self, r):
+        assert r is not None
         self._revision = r
 
     @property
