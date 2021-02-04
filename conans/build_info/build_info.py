@@ -203,10 +203,11 @@ class BuildInfoCreator(object):
             if node.get("modified"):  # Work only on generated nodes
                 # Create module for the recipe reference
                 recipe_key = self._get_reference(ref)
+                repository = self._get_repo(ref)
                 modules[recipe_key]["id"] = recipe_key
                 modules[recipe_key]["artifacts"].update(
                     self._get_recipe_artifacts(ref, is_dependency=False))
-                modules[recipe_key]["repository"] = self._get_repo(ref)
+                modules[recipe_key]["repository"] = repository
 
                 # TODO: what about `python_requires`?
                 # TODO: can we associate any properties to the recipe? Profile/options may
@@ -217,7 +218,7 @@ class BuildInfoCreator(object):
                 modules[package_key]["id"] = package_key
                 modules[package_key]["artifacts"].update(
                     self._get_package_artifacts(ref, pid, prev, is_dependency=False))
-                modules[package_key]["repository"] = self._get_repo(ref)
+                modules[package_key]["repository"] = repository
 
                 # Recurse requires
                 node_ids = node.get("requires", []) + node.get("build_requires", [])
