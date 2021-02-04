@@ -56,7 +56,7 @@ def test_version(hello_client, name, version, params, cmake_fails, package_found
                 cmake.configure()
         """)
 
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install .")
     exit_code = client.run("build .", assert_error=cmake_fails)
     if cmake_fails:
@@ -90,7 +90,7 @@ def test_no_version_file(hello_client):
                 cmake.configure()
         """)
 
-    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("install .")
     os.unlink(os.path.join(client.current_folder, "hello-config-version.cmake"))
     exit_code = client.run("build .", assert_error=True)
