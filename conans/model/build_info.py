@@ -290,7 +290,7 @@ class CppInfo(_CppInfo):
             self.builddirs.append(self._default_values.builddir)
         if self._default_values.frameworkdir is not None:
             self.frameworkdirs.append(self._default_values.frameworkdir)
-        self.components = DefaultOrderedDict(lambda: Component(self._rootpath,
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath,
                                                                self.version, self._default_values))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
