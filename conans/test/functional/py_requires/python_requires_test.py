@@ -33,12 +33,10 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": reuse})
         client.run("export . Pkg/0.1@user/testing")
-        client.run("get Pkg/0.1@user/testing")
-        self.assertNotIn("scm = base.scm", client.out)
-        self.assertNotIn('scm = {"revision":', client.out)
-        self.assertNotIn('"type": "git",', client.out)
-        self.assertNotIn('"url": "somerepo"', client.out)
-        self.assertIn(reuse, client.out)
+        scm_info = client.scm_info("Pkg/0.1@user/testing")
+        self.assertIsNotNone(scm_info.revision)
+        self.assertEqual(scm_info.type, 'git')
+        self.assertEqual(scm_info.url, 'somerepo')
 
     @pytest.mark.tool_git
     def test_reuse_customize_scm(self):
@@ -56,8 +54,8 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
         client.run("export . base/1.1@user/testing")
-        client.run("get base/1.1@user/testing")
-        self.assertNotIn('"url": "somerepo"', client.out)
+        scm_info = client.scm_info("base/1.1@user/testing")
+        self.assertEqual(scm_info.url, "somerepo")
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
@@ -70,12 +68,11 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": reuse})
         client.run("export . Pkg/0.1@user/testing")
-        client.run("get Pkg/0.1@user/testing")
-        self.assertNotIn("scm = base.scm", client.out)
-        self.assertNotIn('scm = {"revision":', client.out)
-        self.assertNotIn('"type": "git",', client.out)
-        self.assertNotIn('"url": "other_repo"', client.out)
-        self.assertIn(reuse, client.out)
+
+        scm_info = client.scm_info("Pkg/0.1@user/testing")
+        self.assertIsNotNone(scm_info.revision)
+        self.assertEqual(scm_info.type, 'git')
+        self.assertEqual(scm_info.url, 'other_repo')
 
     @pytest.mark.tool_git
     def test_reuse_scm_multiple_conandata(self):
@@ -110,15 +107,14 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export reuse1 reuse1/1.1@user/testing")
         client.run("export reuse2 reuse2/1.1@user/testing")
 
-        client.run("inspect base/1.1@user/testing -a=scm --json=base.json")
-        base_json = json.loads(client.load("base.json"))
-        client.run("inspect reuse1/1.1@user/testing -a=scm --json=reuse1.json")
-        reuse1_json = json.loads(client.load("reuse1.json"))
-        client.run("inspect reuse2/1.1@user/testing -a=scm --json=reuse2.json")
-        reuse2_json = json.loads(client.load("reuse2.json"))
-        self.assertEqual(base_json["scm"]["revision"], base_rev)
-        self.assertEqual(reuse1_json["scm"]["revision"], reuse1_rev)
-        self.assertEqual(reuse2_json["scm"]["revision"], reuse2_rev)
+        base = client.scm_info("base/1.1@user/testing")
+        reuse1 = client.scm_info("reuse1/1.1@user/testing")
+        reuse2 = client.scm_info("reuse2/1.1@user/testing")
+
+        self.assertEqual(base.revision, base_rev)
+        self.assertEqual(reuse1.revision, reuse1_rev)
+        self.assertEqual(reuse2.revision, reuse2_rev)
+
         self.assertNotEqual(base_rev, reuse1_rev)
         self.assertNotEqual(base_rev, reuse2_rev)
         self.assertNotEqual(reuse2_rev, reuse1_rev)

@@ -590,10 +590,8 @@ class ConanLib(ConanFile):
         commit = self.client.init_git_repo({"conanfile.py": conanfile})
 
         self.client.run("export . user/channel")
-        ref = ConanFileReference.loads("issue/3831@user/channel")
-        exported_conanfile = self.client.cache.package_layout(ref).conanfile()
-        content = load(exported_conanfile)
-        self.assertIn(commit, content)
+        scm_info = self.client.scm_info_cache("issue/3831@user/channel")
+        self.assertEqual(commit, scm_info.revision)
 
     def test_delegated_python_code(self):
         client = TestClient()
@@ -626,10 +624,8 @@ class ConanLib(ConanFile):
 
         commit = client.init_git_repo({"conanfile.py": conanfile, "file.txt": "hello!"})
         client.run("export . pkg/0.1@user/channel")
-        ref = ConanFileReference.loads("pkg/0.1@user/channel")
-        exported_conanfile = client.cache.package_layout(ref).conanfile()
-        content = load(exported_conanfile)
-        self.assertIn(commit, content)
+        scm_info = client.scm_info_cache("pkg/0.1@user/channel")
+        self.assertEqual(scm_info.revision, commit)
 
 
 @pytest.mark.tool_svn
@@ -954,11 +950,9 @@ class ConanLib(ConanFile):
                              "of 'scm.url' and 'scm.revision' auto fields. "
                              "Use --ignore-dirty to force it.", self.client.out)
             # We confirm that the replacement has been done
-            ref = ConanFileReference.loads("lib/0.1@")
-            folder = self.client.cache.package_layout(ref).export()
-            conanfile_contents = load(os.path.join(folder, "conanfile.py"))
-            self.assertNotIn('"revision": "auto"', conanfile_contents)
-            self.assertNotIn('"url": "auto"', conanfile_contents)
+            scm_info = self.client.scm_info_cache("lib/0.1@")
+            self.assertNotEqual(scm_info.revision, "auto")
+            self.assertNotEqual(scm_info.url, "auto")
 
     def test_double_create(self):
         # https://github.com/conan-io/conan/issues/5195#issuecomment-551848955
@@ -1135,11 +1129,9 @@ class ModuleConan(python_requires(baseline).get_conanfile()):
             client.run("export . module_name/1.0.0@conan/stable")
             self.assertIn("module_name/1.0.0@conan/stable: "
                           "A new conanfile.py version was exported", client.out)
-            ref = ConanFileReference.loads("module_name/1.0.0@conan/stable")
-            contents = load(os.path.join(client.cache.package_layout(ref).export(),
-                                         "conanfile.py"))
-            class_str = 'class ModuleConan(python_requires(baseline).get_conanfile()):\n'
-            self.assertIn('%s    scm = {"revision":' % class_str, contents)
+
+            scm_info = client.scm_info_cache("module_name/1.0.0@conan/stable")
+            self.assertIsNotNone(scm_info.revision)
 
 
 class SCMUpload(unittest.TestCase):

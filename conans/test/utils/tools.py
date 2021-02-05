@@ -753,6 +753,48 @@ class TestClient(object):
                                           origin_url=origin_url)
         return commit
 
+    @staticmethod
+    def _create_scm_info(data):
+        from collections import namedtuple
+
+        revision = None
+        scm_type = None
+        url = None
+        shallow = None
+        verify_ssl = None
+        if "scm" in data:
+            if "revision" in data["scm"]:
+                revision = data["scm"]["revision"]
+            if "type" in data["scm"]:
+                scm_type = data["scm"]["type"]
+            if "url" in data["scm"]:
+                url = data["scm"]["url"]
+            if "shallow" in data["scm"]:
+                shallow = data["scm"]["shallow"]
+            if "verify_ssl" in data["scm"]:
+                verify_ssl = data["scm"]["verify_ssl"]
+        SCMInfo = namedtuple('SCMInfo', ['revision', 'type', 'url', 'shallow', 'verify_ssl'])
+        return SCMInfo(revision, scm_type, url, shallow, verify_ssl)
+
+    def scm_info(self, reference):
+        self.run("inspect %s -a=scm --json=scm.json" % reference)
+        data = json.loads(self.load("scm.json"))
+        os.unlink(os.path.join(self.current_folder, "scm.json"))
+        return self._create_scm_info(data)
+
+    def scm_info_cache(self, reference):
+        import yaml
+
+        if not isinstance(reference, ConanFileReference):
+            reference = ConanFileReference.loads(reference)
+        layout = self.cache.package_layout(reference)
+        content = load(layout.conandata())
+        data = yaml.safe_load(content)
+        if ".conan" in data:
+            return self._create_scm_info(data[".conan"])
+        else:
+            return self._create_scm_info(dict())
+
 
 class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
