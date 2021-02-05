@@ -457,6 +457,23 @@ class BinaryInstaller(object):
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
         conanfile.cpp_info.filter_empty = False
 
+        # New editables mechanism based on Layout
+        if hasattr(conanfile, "shape"):
+            output = conanfile.output
+            output.info("Rewriting files of editable package "
+                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+            self._generator_manager.write_generators(conanfile, conanfile.generators_folder, output)
+            write_toolchain(conanfile, conanfile.generators_folder, output)
+            output.info("Generated toolchain")
+            graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                            graph_info.graph_lock)
+            graph_lock_file.save(os.path.join(base_path, "conan.lock"))
+            output.info("Generated conan.lock")
+            # FIXME: Imports probably should go to a new imports_folder
+            copied_files = run_imports(conanfile, conanfile.build_folder)
+            report_copied_files(copied_files, output)
+
+        # OLD EDITABLE LAYOUTS:
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
         if editable_cpp_info:
@@ -642,6 +659,7 @@ class BinaryInstaller(object):
                         # cppinfos inside
                         conanfile.layout.set_base_build_folder(package_folder)
                         conanfile.layout.set_base_source_folder(package_folder)
+                        conanfile.layout.set_base_generators_folder(package_folder)
                         # Here package_folder is the editable base folder
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
                         conanfile.cpp_info.version = conanfile.version
