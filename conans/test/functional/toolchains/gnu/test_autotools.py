@@ -62,7 +62,7 @@ def test_autotoolsdeps_mingw():
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
     """
-    client = TestClient(path_with_spaces=False)
+    client = TestClient()
     client.run("new hello/0.1 --template=v2_cmake")
     gcc = textwrap.dedent("""
         [settings]
