@@ -1,17 +1,16 @@
-import os
 import platform
 import textwrap
 
 import pytest
 
-from conan.tools.microsoft.visual import vcvars_command
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
 
 
-#@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
-#@pytest.mark.tool_autotools()
+@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
+@pytest.mark.tool_autotools()
 def test_autotools():
     client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=v2_cmake")
@@ -54,7 +53,7 @@ def test_autotools():
     client.run("install .")
     client.run("build .")
     client.run_command("./main")
-    print(client.out)
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
     assert "hello/0.1: Hello World Release!" in client.out
 
 
@@ -101,9 +100,6 @@ def test_autotoolsdeps_mingw():
     client.run("install . --profile=profile_gcc")
     client.run_command("conantoolchain.bat && autotoolsdeps.bat && mingw32-make")
     client.run_command("app")
-    # TODO: reuse exe checker
-    assert "main: Release!" in client.out
-    assert "main __GNUC__" in client.out  # TODO: Missing compiler version
-    assert "main _M_X64 defined" in client.out
-    assert "main __x86_64__ defined" in client.out
+    # TODO: fill compiler version when ready
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
     assert "hello/0.1: Hello World Release!" in client.out

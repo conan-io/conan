@@ -162,7 +162,7 @@ class Autotools(object):
                 self._conanfile.output.info("Calling:\n > %s" % command)
                 self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)"""
 
-        command = "bash -c 'source conandeps.sh && %s/configure'" % configure_dir
+        command = "bash -c 'source autotoolsdeps.sh && %s/configure'" % configure_dir
         self._conanfile.output.info("Calling:\n > %s" % command)
         self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 

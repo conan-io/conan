@@ -41,6 +41,8 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
 
         elif compiler == "gcc":
+            assert "{} __GNUC__".format(name) in output
+
             if arch == "x86":
                 assert "{} __i386__ defined".format(name) in output
             elif arch == "x86_64":
