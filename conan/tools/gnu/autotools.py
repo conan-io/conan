@@ -249,29 +249,3 @@ class Autotools(object):
         c_flags = tmp_compilation_flags
 
         return ld_flags, cpp_flags, libs, cxx_flags, c_flags
-
-    @property
-    def vars(self):
-        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
-
-        cpp_flags = " ".join(cpp_flags) + _environ_value_prefix("CPPFLAGS")
-        cxx_flags = " ".join(cxx_flags) + _environ_value_prefix("CXXFLAGS")
-        cflags = " ".join(c_flags) + _environ_value_prefix("CFLAGS")
-        ldflags = " ".join(ld_flags) + _environ_value_prefix("LDFLAGS")
-        libs = " ".join(libs) + _environ_value_prefix("LIBS")
-
-        ret = {"CPPFLAGS": cpp_flags.strip(),
-               "CXXFLAGS": cxx_flags.strip(),
-               "CFLAGS": cflags.strip(),
-               "LDFLAGS": ldflags.strip(),
-               "LIBS": libs.strip()
-               }
-
-        return ret
-
-
-def _environ_value_prefix(var_name, prefix=" "):
-    if os.environ.get(var_name, ""):
-        return "%s%s" % (prefix, os.environ.get(var_name, ""))
-    else:
-        return ""
