@@ -336,6 +336,11 @@ def merge_buildinfo(lhs, rhs):
                                                   cmp_key="name")
         lhs_module["dependencies"] = merge_artifacts(lhs_module, rhs_module, key="dependencies",
                                                      cmp_key="id")
+        if not lhs_module.get("type", None):
+            lhs_module["type"] = rhs_module["type"]
+        if not lhs_module.get("repository", None):
+            lhs_module["repository"] = rhs_module["repository"]
+
     return lhs
 
 
