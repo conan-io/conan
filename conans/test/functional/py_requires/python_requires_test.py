@@ -35,9 +35,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . Pkg/0.1@user/testing")
         client.run("get Pkg/0.1@user/testing")
         self.assertNotIn("scm = base.scm", client.out)
-        self.assertIn('scm = {"revision":', client.out)
-        self.assertIn('"type": "git",', client.out)
-        self.assertIn('"url": "somerepo"', client.out)
+        self.assertNotIn('scm = {"revision":', client.out)
+        self.assertNotIn('"type": "git",', client.out)
+        self.assertNotIn('"url": "somerepo"', client.out)
+        self.assertIn(reuse, client.out)
 
     @pytest.mark.tool_git
     def test_reuse_customize_scm(self):
@@ -56,7 +57,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.init_git_repo({"conanfile.py": conanfile}, branch="my_release")
         client.run("export . base/1.1@user/testing")
         client.run("get base/1.1@user/testing")
-        self.assertIn('"url": "somerepo"', client.out)
+        self.assertNotIn('"url": "somerepo"', client.out)
 
         reuse = textwrap.dedent("""
             from conans import ConanFile
@@ -71,9 +72,10 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("export . Pkg/0.1@user/testing")
         client.run("get Pkg/0.1@user/testing")
         self.assertNotIn("scm = base.scm", client.out)
-        self.assertIn('scm = {"revision":', client.out)
-        self.assertIn('"type": "git",', client.out)
-        self.assertIn('"url": "other_repo"', client.out)
+        self.assertNotIn('scm = {"revision":', client.out)
+        self.assertNotIn('"type": "git",', client.out)
+        self.assertNotIn('"url": "other_repo"', client.out)
+        self.assertIn(reuse, client.out)
 
     @pytest.mark.tool_git
     def test_reuse_scm_multiple_conandata(self):
@@ -92,7 +94,6 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         base_rev = client.init_git_repo({"conanfile.py": conanfile}, branch="my_release",
                                         folder="base")
-        client.run("config set general.scm_to_conandata=1")
         client.run("export base base/1.1@user/testing")
 
         reuse = textwrap.dedent("""
