@@ -559,6 +559,16 @@ class BuildInfoTest(unittest.TestCase):
             mergedinfo = json.load(json_data)
             res_json = json.loads(self.result)
 
-        mergedinfo["started"] = ""
-        res_json["started"] = ""
-        self.assertDictEqual(mergedinfo, res_json)
+        self.assertEqual(mergedinfo["version"], res_json["version"])
+        self.assertEqual(mergedinfo["name"], res_json["name"])
+        self.assertEqual(mergedinfo["number"], res_json["number"])
+        self.assertEqual(mergedinfo["type"], res_json["type"])
+        self.assertDictEqual(mergedinfo["buildAgent"], res_json["buildAgent"])
+
+        for index in range(len(mergedinfo["modules"])):
+            self.assertEqual(mergedinfo["modules"][index]["id"],
+                             res_json["modules"][index]["id"])
+            self.assertEqual(mergedinfo["modules"][index]["type"],
+                             res_json["modules"][index]["type"])
+            self.assertEqual(mergedinfo["modules"][index]["repository"],
+                             res_json["modules"][index]["repository"])
