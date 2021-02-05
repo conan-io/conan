@@ -27,7 +27,7 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
                         return_value=("revision", "git", False)):
             path = None
             digest = namedtuple("Digest", "summary_hash")
-            _update_revision_in_metadata(self.package_layout, True, self.output,
+            _update_revision_in_metadata(self.package_layout, self.output,
                                          path, digest, "scm")
             self.assertIn("WARN: Repo status is not pristine: there might be modified files",
                           self.output)
@@ -39,7 +39,7 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         path = None
         with mock.patch("conans.client.cmd.export._detect_scm_revision",
                         return_value=("1234", "git", True)):
-            rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+            rev = _update_revision_in_metadata(self.package_layout, self.output,
                                                path, digest, revision_mode)
         self.assertEqual(rev, "1234")
         self.assertIn("Using git commit as the recipe revision", self.output)
@@ -50,7 +50,7 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         digest = namedtuple("Digest", "summary_hash")
         digest.summary_hash = "1234"
         path = None
-        rev = _update_revision_in_metadata(self.package_layout, True, self.output,
+        rev = _update_revision_in_metadata(self.package_layout, self.output,
                                            path, digest, revision_mode)
         self.assertEqual(rev, "1234")
         self.assertIn("Using the exported files summary hash as the recipe revision", self.output)
@@ -60,5 +60,5 @@ class UpdateRevisionInMetadataTests(unittest.TestCase):
         digest = path = None
 
         with self.assertRaisesRegex(ConanException, "Revision mode should be"):
-            _update_revision_in_metadata(self.package_layout, True, self.output,
+            _update_revision_in_metadata(self.package_layout, self.output,
                                            path, digest, revision_mode)

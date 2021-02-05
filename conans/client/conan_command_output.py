@@ -216,8 +216,7 @@ class CommandOutputer(object):
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self._output).print_info(data, only,  package_filter=package_filter,
-                                         show_paths=show_paths,
-                                         show_revisions=self._cache.config.revisions_enabled)
+                                         show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd, template):
         graph = Grapher(deps_graph)

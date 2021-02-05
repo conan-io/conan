@@ -59,7 +59,7 @@ class GraphManager(object):
         try:
             graph_info = GraphInfo.load(info_folder)
             lock_path = os.path.join(info_folder, "conan.lock")
-            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
+            graph_lock_file = GraphLockFile.load(lock_path)
             graph_lock = graph_lock_file.graph_lock
             self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
             profile_host = graph_lock_file.profile_host
@@ -197,10 +197,6 @@ class GraphManager(object):
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
         """
-        if not self._cache.config.revisions_enabled and reference.revision is not None:
-            raise ConanException("Revisions not enabled in the client, specify a "
-                                 "reference without revision")
-
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
@@ -252,7 +248,7 @@ class GraphManager(object):
             graph_info.root = root_node.ref
 
         if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
+            graph_info.graph_lock = GraphLock(deps_graph)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

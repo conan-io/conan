@@ -59,14 +59,13 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove(pref)
                 return
 
-            if self._cache.config.revisions_enabled:
-                metadata = package_layout.load_metadata()
-                rec_rev = metadata.packages[pref.id].recipe_revision
-                if rec_rev and rec_rev != node.ref.revision:
-                    node.conanfile.output.warn("The package {} doesn't belong to the installed "
-                                               "recipe revision, removing folder".format(pref))
-                    package_layout.package_remove(pref)
-                return metadata
+            metadata = package_layout.load_metadata()
+            rec_rev = metadata.packages[pref.id].recipe_revision
+            if rec_rev and rec_rev != node.ref.revision:
+                node.conanfile.output.warn("The package {} doesn't belong to the installed "
+                                           "recipe revision, removing folder".format(pref))
+                package_layout.package_remove(pref)
+            return metadata
 
     def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update):
         if update:
@@ -110,7 +109,7 @@ class GraphBinariesAnalyzer(object):
 
         # If the "remote" came from the registry but the user didn't specified the -r, with
         # revisions iterate all remotes
-        if not remote or (not remote_info and self._cache.config.revisions_enabled):
+        if not remote or not remote_info:
             for r in remotes.values():  # FIXME: Here we hit the same remote we did before
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)

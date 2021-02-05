@@ -134,7 +134,7 @@ def search_packages(package_layout, query):
     if not os.path.exists(package_layout.base_folder()) or (
             package_layout.ref.revision and
             package_layout.recipe_revision() != package_layout.ref.revision):
-        raise RecipeNotFoundException(package_layout.ref, print_rev=True)
+        raise RecipeNotFoundException(package_layout.ref)
     infos = _get_local_infos_min(package_layout)
     return filter_packages(query, infos)
 

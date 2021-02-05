@@ -50,42 +50,6 @@ class TestMigrations(unittest.TestCase):
         self.assertTrue(any([i for i in dir(migrations_settings) if i == var_name]),
                         "Introduce the previous settings.yml file in the 'migrations_settings.yml")
 
-    def test_migrate_revision_metadata(self):
-        # https://github.com/conan-io/conan/issues/4898
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
-        client.run("create . user/testing")
-        ref = ConanFileReference.loads("Hello/0.1@user/testing")
-        layout1 = client.cache.package_layout(ref)
-        metadata = json.loads(load(layout1.package_metadata()))
-        metadata["recipe"]["revision"] = None
-        metadata["packages"]["WRONG"] = {"revision": ""}
-        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["revision"] = None
-        metadata["packages"]["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]["recipe_revision"] = None
-        save(layout1.package_metadata(), json.dumps(metadata))
-
-        client.run("create . user/stable")
-        ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
-        layout2 = client.cache.package_layout(ref2)
-        metadata = json.loads(load(layout2.package_metadata()))
-        metadata["recipe"]["revision"] = "Other"
-        save(layout2.package_metadata(), json.dumps(metadata))
-
-        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
-        save(version_file, "1.14.1")
-        client.run("search")  # This will fire a migration
-
-        metadata_ref1 = client.cache.package_layout(ref).load_metadata()
-        self.assertEqual(metadata_ref1.recipe.revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
-        pkg_metadata = metadata_ref1.packages["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"]
-        self.assertEqual(pkg_metadata.recipe_revision, "f9e0ab84b47b946f4c7c848d8f82d14e")
-        self.assertEqual(pkg_metadata.revision, "fa1923ec4342a0d9dc33eff7250432e8")
-        self.assertEqual(list(metadata_ref1.packages.keys()),
-                         ["5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"])
-
-        metadata_ref2 = client.cache.package_layout(ref2).load_metadata()
-        self.assertEqual(metadata_ref2.recipe.revision, "Other")
-
     def test_migrate_config_install(self):
         client = TestClient()
         client.run('config set general.config_install="url, http:/fake.url, None, None"')

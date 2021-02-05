@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 
-from conans import SERVER_CAPABILITIES
+from conans import SERVER_CAPABILITIES, REVISIONS
 from conans.server.conf import get_server_store
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
@@ -35,6 +35,8 @@ class TestServerLauncher(object):
         server_config = migrate_and_get_server_config(base_path)
         if server_capabilities is None:
             server_capabilities = set(SERVER_CAPABILITIES)
+        elif REVISIONS not in server_capabilities:
+            server_capabilities.append(REVISIONS)
 
         # Encode and Decode signature for Upload and Download service
         updown_auth_manager = JWTUpDownAuthManager(server_config.updown_secret,

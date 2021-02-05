@@ -11,7 +11,8 @@ from conans.test.utils.mocks import LocalDBMock, TestBufferConanOutput
 from conans.client.userio import UserIO
 
 
-common_headers = {"X-Conan-Server-Capabilities": "oauth_token", "Content-Type": "application/json"}
+common_headers = {"X-Conan-Server-Capabilities": "oauth_token,revisions",
+                  "Content-Type": "application/json"}
 
 
 class ResponseOK(object):
@@ -80,7 +81,7 @@ class TestTokenRefresh(unittest.TestCase):
         mocked_user_io.get_password = Mock(return_value="mypassword")
 
         requester = RequesterWithTokenMock()
-        config = namedtuple("ConfigMock", "revisions_enabled download_cache")(False, None)
+        config = namedtuple("ConfigMock", "download_cache")(None)
         self.rest_client_factory = RestApiClientFactory(mocked_user_io.out,
                                                         requester, config=config,
                                                         artifacts_properties=None)

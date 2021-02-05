@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans import DEFAULT_REVISION_V1, load, ONLY_V2
+from conans import load
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
