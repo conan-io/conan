@@ -4,7 +4,6 @@ from unittest import TestCase
 
 from io import StringIO
 
-from conans import DEFAULT_REVISION_V1
 from conans.client.output import ConanOutput
 from conans.client.tools.files import save, unzip
 from conans.model.ref import ConanFileReference, PackageReference
@@ -20,7 +19,7 @@ class XZTest(TestCase):
     def test_error_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev("myreciperev")
         export = server.server_store.export(ref)
         server.server_store.update_last_revision(ref)
         save_files(export, {"conanfile.py": "#",
@@ -35,7 +34,7 @@ class XZTest(TestCase):
     def test_error_sources_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev("myreciperev")
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         server.server_store.update_last_revision(ref)
@@ -54,7 +53,7 @@ class Pkg(ConanFile):
     def test_error_package_xz(self):
         server = TestServer()
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
-        ref = ref.copy_with_rev(DEFAULT_REVISION_V1)
+        ref = ref.copy_with_rev("myreciperev")
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         server.server_store.update_last_revision(ref)
@@ -65,9 +64,9 @@ class Pkg(ConanFile):
 """
         save_files(export, {"conanfile.py": conanfile,
                             "conanmanifest.txt": "1"})
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, DEFAULT_REVISION_V1)
-        server.server_store.update_last_package_revision(pref.copy_with_revs(DEFAULT_REVISION_V1,
-                                                                             DEFAULT_REVISION_V1))
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, "mypackagerev")
+        server.server_store.update_last_package_revision(pref.copy_with_revs("myreciperev",
+                                                                             "mypackagerev"))
 
         package = server.server_store.package(pref)
         save_files(package, {"conaninfo.txt": "#",

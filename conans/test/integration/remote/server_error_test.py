@@ -1,6 +1,6 @@
 import unittest
 
-
+from conans import REVISIONS
 from conans.test.utils.tools import TestClient, TestServer
 from collections import namedtuple
 
@@ -14,7 +14,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                return namedtuple("Response", "status_code headers content ok")(200, {}, b'<>',
+                headers = {"X-Conan-Server-Capabilities": REVISIONS}
+                return namedtuple("Response", "status_code headers content ok")(200, headers, b'<>',
                                                                                 True)
 
         # https://github.com/conan-io/conan/issues/3432
@@ -33,7 +34,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                headers = {"Content-Type": "application/json"}
+                headers = {"Content-Type": "application/json",
+                           "X-Conan-Server-Capabilities": REVISIONS}
                 return namedtuple("Response", "status_code headers content ok")(200, headers,
                                                                                 b'<>', True)
 
@@ -52,7 +54,8 @@ class Error200NoJson(unittest.TestCase):
 
             def get(self, *args, **kwargs):  # @UnusedVariable
                 # Response must be binary, it is decoded in RestClientCommon
-                headers = {"Content-Type": "application/json"}
+                headers = {"Content-Type": "application/json",
+                           "X-Conan-Server-Capabilities": REVISIONS}
                 return namedtuple("Response", "status_code headers content ok")(200, headers,
                                                                                 b'[1, 2, 3]', True)
 

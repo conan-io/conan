@@ -64,9 +64,6 @@ class _UploadCollecter(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
-            if ref.revision and not self._cache.config.revisions_enabled:
-                raise ConanException("Revisions not enabled in the client, specify a "
-                                     "reference without revision")
             refs = [ref, ]
             confirm = True
         else:
@@ -136,7 +133,7 @@ class _UploadCollecter(object):
                         raise ConanException("Binary package %s:%s#%s not found"
                                              % (str(ref), package_id, prev))
                     # Filter packages that don't match the recipe revision
-                    if self._cache.config.revisions_enabled and ref.revision:
+                    if ref.revision:
                         rec_rev = metadata.packages[package_id].recipe_revision
                         if ref.revision != rec_rev:
                             self._output.warn("Skipping package '%s', it doesn't belong to the"

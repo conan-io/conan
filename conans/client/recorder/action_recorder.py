@@ -141,10 +141,10 @@ class ActionRecorder(object):
     def in_development_recipe(self, ref):
         return ref in self._inst_recipes_develop
 
-    def get_info(self, revisions_enabled):
-        return self.get_install_info(revisions_enabled)
+    def get_info(self):
+        return self.get_install_info()
 
-    def get_install_info(self, revisions_enabled):
+    def get_install_info(self):
         ret = {"error": self.install_errored or self.error,
                "installed": []}
 
@@ -156,7 +156,7 @@ class ActionRecorder(object):
             remote = None if not remotes else remotes[0]
             action_types = [action.type for action in the_actions]
             time = the_actions[0].time
-            if revisions_enabled and isinstance(the_ref, ConanFileReference):
+            if isinstance(the_ref, ConanFileReference):
                 the_id = repr(the_actions[0].full_ref)
             else:
                 the_id = str(the_ref)

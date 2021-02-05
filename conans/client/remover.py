@@ -156,9 +156,6 @@ class ConanRemover(object):
         if remote_name:
             remote = self._remotes[remote_name]
             if input_ref:
-                if not self._cache.config.revisions_enabled and input_ref.revision:
-                    raise ConanException("Revisions not enabled in the client, cannot remove "
-                                         "revisions in the server")
                 refs = [input_ref]
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
@@ -168,8 +165,7 @@ class ConanRemover(object):
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))
                 if not self._cache.package_layout(input_ref).recipe_exists():
-                    raise RecipeNotFoundException(input_ref,
-                                                  print_rev=self._cache.config.revisions_enabled)
+                    raise RecipeNotFoundException(input_ref)
                 refs.append(input_ref)
             else:
                 refs = search_recipes(self._cache, pattern)

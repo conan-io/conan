@@ -426,10 +426,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
-    def revisions_enabled(self):
-        return True
-
-    @property
     def parallel_download(self):
         try:
             parallel = self.get_item("general.parallel_download")

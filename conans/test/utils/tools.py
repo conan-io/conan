@@ -20,7 +20,7 @@ from requests.exceptions import HTTPError
 from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import load
+from conans import load, REVISIONS
 from conans.cli.cli import Cli
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
@@ -392,6 +392,11 @@ class TestServer(object):
             write_permissions = []
         if users is None:
             users = {"lasote": "mypass", "conan": "password"}
+
+        if server_capabilities is None:
+            server_capabilities = [REVISIONS]
+        elif REVISIONS not in server_capabilities:
+            server_capabilities.append(REVISIONS)
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"

@@ -109,10 +109,6 @@ class ConanV2Exception(ConanException):
         return "Conan v2 incompatible: {}".format(msg)
 
 
-class NoRestV2Available(ConanException):
-    pass
-
-
 class NoRemoteAvailable(ConanException):
     """ No default remote configured or the specified remote do not exists
     """
@@ -184,32 +180,30 @@ class NotFoundException(ConanException):  # 404
 
 class RecipeNotFoundException(NotFoundException):
 
-    def __init__(self, ref, remote=None, print_rev=False):
+    def __init__(self, ref, remote=None):
         from conans.model.ref import ConanFileReference
         assert isinstance(ref, ConanFileReference), "RecipeNotFoundException requires a " \
                                                     "ConanFileReference"
         self.ref = ref
-        self.print_rev = print_rev
         super(RecipeNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.ref.full_str() if self.print_rev else str(self.ref)
+        tmp = self.ref.full_str()
         return "Recipe not found: '{}'".format(tmp, self.remote_message())
 
 
 class PackageNotFoundException(NotFoundException):
 
-    def __init__(self, pref, remote=None, print_rev=False):
+    def __init__(self, pref, remote=None):
         from conans.model.ref import PackageReference
         assert isinstance(pref, PackageReference), "PackageNotFoundException requires a " \
                                                    "PackageReference"
         self.pref = pref
-        self.print_rev = print_rev
 
         super(PackageNotFoundException, self).__init__(remote=remote)
 
     def __str__(self):
-        tmp = self.pref.full_str() if self.print_rev else str(self.pref)
+        tmp = self.pref.full_str()
         return "Binary package not found: '{}'{}".format(tmp, self.remote_message())
 
 
