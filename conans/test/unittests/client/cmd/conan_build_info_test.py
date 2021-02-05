@@ -559,4 +559,6 @@ class BuildInfoTest(unittest.TestCase):
             mergedinfo = json.load(json_data)
             res_json = json.loads(self.result)
 
+        mergedinfo["started"] = ""
+        res_json["started"] = ""
         self.assertDictEqual(mergedinfo, res_json)
