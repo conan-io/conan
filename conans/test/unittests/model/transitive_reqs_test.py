@@ -9,7 +9,6 @@ from conans.client.conf import get_default_settings_yml
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
@@ -75,7 +74,7 @@ class GraphTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.loader = ConanFileLoader(None, self.output)
         self.retriever = Retriever(self.loader)
         paths = ClientCache(self.retriever.folder, self.output)
         self.remote_manager = MockRemoteManager()
@@ -1464,7 +1463,7 @@ class ConsumerConan(ConanFile):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, self.output, ConanPythonRequire(None, None))
+        self.loader = ConanFileLoader(None, self.output)
         self.retriever = Retriever(self.loader)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         Mock(), None)

@@ -9,14 +9,12 @@ import unittest
 import uuid
 
 from conans.client.cmd.export import _replace_scm_data_in_conanfile
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import parse_conanfile
 from conans.test.utils.scm import try_remove_readonly
 from conans.util.files import load
 
 
 class ASTReplacementTest(unittest.TestCase):
-    python_requires = ConanPythonRequire(None, None)
     scm_data = {'type': 'git',
                 'url': 'this-is-the-url',
                 'revision': '42'}
@@ -56,8 +54,7 @@ class LibConan(ConanFile):
 
         try:
             # Check it is loadable by Conan machinery
-            _, conanfile = parse_conanfile(conanfile, python_requires=self.python_requires,
-                                           generator_manager=None)
+            _, conanfile = parse_conanfile(conanfile, generator_manager=None)
         except Exception as e:
             self.fail("Invalid conanfile: {}".format(e))
         else:
