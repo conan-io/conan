@@ -5,7 +5,7 @@ import unittest
 from mock import patch
 
 import conans
-from conans.client.build.cmake import CMakeBuildHelper
+from conans.client.build.cmake import CMake
 from conans.client.build.cmake_flags import CMakeDefinitionsBuilder
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators import CMakeFindPackageGenerator, CMakeFindPackageMultiGenerator
@@ -341,14 +341,14 @@ endmacro()""", macro)
         def raise_get_version():
             raise ConanException('Error retrieving CMake version')
 
-        with patch.object(conans.client.build.cmake.CMakeBuildHelper, "get_version",
+        with patch.object(conans.client.build.cmake.CMake, "get_version",
                           side_effect=raise_get_version):
             settings_mock = _MockSettings(build_type="Release")
             conanfile = ConanFile(TestBufferConanOutput(), None)
             install_folder = "/c/foo/testing"
             setattr(conanfile, "install_folder", install_folder)
             conanfile.initialize(settings_mock, EnvValues())
-            assert CMakeBuildHelper(conanfile)
+            assert CMake(conanfile)
 
     def test_apple_frameworks(self):
         settings = Settings.loads(get_default_settings_yml())
