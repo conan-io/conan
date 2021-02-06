@@ -256,6 +256,7 @@ class GraphBinariesAnalyzer(object):
                 local_recipe_hash = package_layout.recipe_manifest().summary_hash
                 if local_recipe_hash != recipe_hash:
                     conanfile.output.info("Outdated package!")
+                    raise Exception("This shouldn't happen with revisions!!!!")
                     node.binary = BINARY_BUILD
                     node.prev = None
                 else:
