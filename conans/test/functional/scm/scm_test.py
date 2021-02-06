@@ -14,7 +14,7 @@ from conans.test.utils.scm import create_local_git_repo, SVNLocalRepoTestCase
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.files import load, rmdir, save, to_file_bytes
-from conans.test.utils.tools import TestClient, TestServer, TurboTestClient
+from conans.test.utils.tools import TestClient, TestServer
 
 
 base = '''
@@ -595,42 +595,6 @@ class ConanLib(ConanFile):
         content = load(exported_conanfile)
         self.assertIn(commit, content)
 
-    def test_delegated_python_code(self):
-        client = TestClient()
-        code_file = textwrap.dedent("""
-            from conans.tools import Git
-            from conans import ConanFile
-
-            def get_commit(repo_path):
-                git = Git(repo_path)
-                return git.get_commit()
-
-            class MyLib(ConanFile):
-                pass
-            """)
-        client.save({"conanfile.py": code_file})
-        client.run("export . tool/0.1@user/testing")
-
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, python_requires
-            from conans.tools import load
-            tool = python_requires("tool/0.1@user/testing")
-
-            class MyLib(ConanFile):
-                scm = {'type': 'git', 'url': '%s',
-                       'revision': tool.get_commit(os.path.dirname(__file__))}
-                def build(self):
-                    self.output.info("File: {}".format(load("file.txt")))
-            """ % client.current_folder.replace("\\", "/"))
-
-        commit = client.init_git_repo({"conanfile.py": conanfile, "file.txt": "hello!"})
-        client.run("export . pkg/0.1@user/channel")
-        ref = ConanFileReference.loads("pkg/0.1@user/channel")
-        exported_conanfile = client.cache.package_layout(ref).conanfile()
-        content = load(exported_conanfile)
-        self.assertIn(commit, content)
-
 
 @pytest.mark.tool_svn
 class SVNSCMTest(SVNLocalRepoTestCase):
@@ -1086,60 +1050,6 @@ class SCMBlockUploadTest(unittest.TestCase):
                       " missing fields 'type', 'url' or 'revision'). Use '--force' to ignore",
                       client.out)
         client.run("upload pkg/0.1@user/channel -r default --force")
-
-    @pytest.mark.tool_git
-    def test_scm_from_superclass(self):
-        client = TurboTestClient()
-        conanfile = '''from conans import ConanFile
-
-def get_conanfile():
-
-    class BaseConanFile(ConanFile):
-        scm = {
-            "type": "git",
-            "url": "auto",
-            "revision": "auto"
-        }
-
-    return BaseConanFile
-
-class Baseline(ConanFile):
-    name = "Base"
-    version = "1.0.0"
-'''
-        client.init_git_repo({"conanfile.py": conanfile}, origin_url="http://whatever.com/c.git")
-        client.run("export . conan/stable")
-        conanfile1 = """from conans import ConanFile, python_requires, tools
-
-baseline = "Base/1.0.0@conan/stable"
-
-# recipe inherits properties from the conanfile defined in the baseline
-class ModuleConan(python_requires(baseline).get_conanfile()):
-    name = "module_name"
-    version = "1.0.0"
-"""
-        conanfile2 = """from conans import ConanFile, python_requires, tools
-
-baseline = "Base/1.0.0@conan/stable"
-
-# recipe inherits properties from the conanfile defined in the baseline
-class ModuleConan(python_requires(baseline).get_conanfile()):
-    pass
-"""
-
-        for conanfile in [conanfile1, conanfile2]:
-            client.save({"conanfile.py": conanfile})
-            # Add and commit so it do the scm replacements correctly
-            client.run_command("git add .")
-            client.run_command('git commit -m  "commiting"')
-            client.run("export . module_name/1.0.0@conan/stable")
-            self.assertIn("module_name/1.0.0@conan/stable: "
-                          "A new conanfile.py version was exported", client.out)
-            ref = ConanFileReference.loads("module_name/1.0.0@conan/stable")
-            contents = load(os.path.join(client.cache.package_layout(ref).export(),
-                                         "conanfile.py"))
-            class_str = 'class ModuleConan(python_requires(baseline).get_conanfile()):\n'
-            self.assertIn('%s    scm = {"revision":' % class_str, contents)
 
 
 class SCMUpload(unittest.TestCase):
