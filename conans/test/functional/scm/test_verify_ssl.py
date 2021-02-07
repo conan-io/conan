@@ -14,7 +14,7 @@ from conans.util.files import load
 
 @pytest.mark.tool_git
 @parameterized_class([{"verify_ssl": True}, {"verify_ssl": False},
-                      {"verify_ssl": None},{"verify_ssl": "None"}, ])
+                      {"verify_ssl": None}, {"verify_ssl": "None"}, ])
 class GitVerifySSLTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -40,10 +40,10 @@ class GitVerifySSLTestCase(unittest.TestCase):
     def test_export(self):
         # Check the shallow value is substituted with the proper value
         self.client.run("export . {}".format(self.ref))
-        content = load(self.client.cache.package_layout(self.ref).conanfile())
+        scm_info = self.client.scm_info_cache(self.ref)
         if self.verify_ssl in [None, True, "None"]:
-            self.assertNotIn("verify_ssl", content)
+            self.assertIsNone(scm_info.verify_ssl)
         else:
-            self.assertIn('"verify_ssl": False', content)
+            self.assertEqual(scm_info.verify_ssl, False)
 
         self.client.run("inspect {} -a scm".format(self.ref))  # Check we get a loadable conanfile.py

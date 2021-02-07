@@ -32,7 +32,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@")
 
         # Check exported files
@@ -65,7 +64,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
-        t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@")
 
         # Check exported files
@@ -98,7 +96,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': conanfile})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@")
 
         # Check exported files
@@ -129,11 +126,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.save({'conanfile.py': conanfile,
                 DATA_YML: yaml.safe_dump({'.conan': {'scm_data': {}}}, default_flow_style=False)})
 
-        # Without activating the behavior, it works
-        t.run("export . name/version@")
-
         # It fails with it activated
-        t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@", assert_error=True)
         self.assertIn("ERROR: Field '.conan' inside 'conandata.yml' file is"
                       " reserved to Conan usage.", t.out)
@@ -151,7 +144,6 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         commit = t.init_git_repo({'conanfile.py': conanfile,
                                   'conandata.yml': ""})
         t.run_command('git remote add origin https://myrepo.com.git')
-        t.run("config set general.scm_to_conandata=1")
         t.run("export . name/version@")
 
         # Check exported files
