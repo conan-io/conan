@@ -90,7 +90,7 @@ class Profile(object):
 
         return "\n".join(result).replace("\n\n", "\n")
 
-    def update(self, other):
+    def update_profile(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
         # this is the opposite
@@ -103,12 +103,14 @@ class Profile(object):
             existing = OrderedDict()
             if existing_build_requires is not None:
                 for br in existing_build_requires:
-                    r = ConanFileReference.loads(br)
-                    existing[r.name] = r
+                    r = (ConanFileReference.loads(br)
+                         if not isinstance(br, ConanFileReference) else br)
+                    existing[r.name] = br
             for req in req_list:
-                r = ConanFileReference.loads(req)
-                existing[r.name] = r
-            self.build_requires[pattern] = [repr(r) for r in existing.values()]
+                r = (ConanFileReference.loads(req)
+                     if not isinstance(req, ConanFileReference) else req)
+                existing[r.name] = req
+            self.build_requires[pattern] = list(existing.values())
 
         self.conf.update_conf_definition(other.conf)
 

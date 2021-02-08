@@ -237,12 +237,12 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
         result = Profile()
         for p in profiles:
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.update(tmp)
+            result.update_profile(tmp)
 
     args_profile = _profile_parse_args(settings, options, env)
 
     if result:
-        result.update(args_profile)
+        result.update_profile(args_profile)
     else:
         result = args_profile
     return result
