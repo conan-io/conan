@@ -103,6 +103,7 @@ class Profile(object):
             existing = OrderedDict()
             if existing_build_requires is not None:
                 for br in existing_build_requires:
+                    # TODO: Understand why sometimes they are str and other are ConanFileReference
                     r = ConanFileReference.loads(br) \
                          if not isinstance(br, ConanFileReference) else br
                     existing[r.name] = br
