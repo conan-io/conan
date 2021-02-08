@@ -137,7 +137,7 @@ def _load_profile(text, profile_path, default_folder):
         for include in profile_parser.get_includes():
             # Recursion !!
             profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.update(profile)
+            inherited_profile.update_profile(profile)
             profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
