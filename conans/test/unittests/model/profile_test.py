@@ -127,3 +127,9 @@ def test_update_build_requires():
 
     profile.update(profile3)
     assert profile.build_requires["*"] == ["zlib/1.2.11"]
+
+    profile4 = Profile()
+    profile4.build_requires["*"] = ["cmake/2.7"]
+
+    profile.update(profile4)
+    assert profile.build_requires["*"] == ["zlib/1.2.11", "cmake/2.7"]
