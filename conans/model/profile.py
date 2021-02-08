@@ -107,8 +107,8 @@ class Profile(object):
                          if not isinstance(br, ConanFileReference) else br
                     existing[r.name] = br
             for req in req_list:
-                r = (ConanFileReference.loads(req)
-                     if not isinstance(req, ConanFileReference) else req)
+                r = ConanFileReference.loads(req) \
+                     if not isinstance(req, ConanFileReference) else req
                 existing[r.name] = req
             self.build_requires[pattern] = list(existing.values())
 
