@@ -237,7 +237,6 @@ class _CppInfo(object):
         """Accumulate in a cppinfo object another one containing entries of a subdirectory,
         for example the editable root containing two cppinfos, the source one and the build one"""
         relpath = os.path.relpath(other._rootpath, self._rootpath)
-        print("Relpath: %s" % relpath)
         def _merge_dir_list(seq1, seq2):
             seq1.extend(["%s/%s" % (relpath, rs)
                          if relpath != "." else rs for rs in seq2 if rs not in seq1])

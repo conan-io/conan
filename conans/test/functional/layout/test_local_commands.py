@@ -13,11 +13,12 @@ def test_local_generators_folder():
     # FIXME: The configure is not valid to change the layout, we need the settings and options
     #        ready
     client = TestClient()
-    conan_file = str(GenConanfile())
+    conan_file = str(GenConanfile().with_settings("build_type"))
     conan_file += """
     generators = "cmake"
-    def configure(self):
-        self.layout.generators.folder = "my_generators"
+    def shape(self):
+        self.layout.build.folder = "build-{}".format(self.settings.build_type)
+        self.layout.generators.folder = "{}/generators".format(self.layout.build.folder)
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install -g cmake")
@@ -26,7 +27,8 @@ def test_local_generators_folder():
     assert os.path.exists(conaninfo)
     assert os.path.exists(conanbuildinfo)
 
-    generators_folder = os.path.join(client.current_folder, "my_generators")
+    build_folder = os.path.join(client.current_folder, "build-Release")
+    generators_folder = os.path.join(build_folder, "generators")
     conaninfo = os.path.join(generators_folder, "conaninfo.txt")
     conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
