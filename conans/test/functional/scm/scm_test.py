@@ -22,8 +22,15 @@ import os
 from conans import ConanFile, tools
 
 def get_svn_remote(path_from_conanfile):
-    svn = tools.SVN(os.path.join(os.path.dirname(__file__), path_from_conanfile))
-    return svn.get_remote_url()
+    from conans.errors import ConanException
+    try:
+        svn = tools.SVN(os.path.join(os.path.dirname(__file__), path_from_conanfile))
+        return svn.get_remote_url()
+    except ConanException as e:
+        # CONAN 2.0: we no longer modify recipe in cache, so exported conanfile still contains
+        # "get_svn_remote", which will raise during the load of the conanfile, long before we
+        # have a chance to load updated SCM data from the conandata.yml
+        return "sicario"
 
 class ConanLib(ConanFile):
     name = "lib"
@@ -590,10 +597,8 @@ class ConanLib(ConanFile):
         commit = self.client.init_git_repo({"conanfile.py": conanfile})
 
         self.client.run("export . user/channel")
-        ref = ConanFileReference.loads("issue/3831@user/channel")
-        exported_conanfile = self.client.cache.package_layout(ref).conanfile()
-        content = load(exported_conanfile)
-        self.assertIn(commit, content)
+        scm_info = self.client.scm_info_cache("issue/3831@user/channel")
+        self.assertEqual(commit, scm_info.revision)
 
 
 @pytest.mark.tool_svn
@@ -918,11 +923,9 @@ class ConanLib(ConanFile):
                              "of 'scm.url' and 'scm.revision' auto fields. "
                              "Use --ignore-dirty to force it.", self.client.out)
             # We confirm that the replacement has been done
-            ref = ConanFileReference.loads("lib/0.1@")
-            folder = self.client.cache.package_layout(ref).export()
-            conanfile_contents = load(os.path.join(folder, "conanfile.py"))
-            self.assertNotIn('"revision": "auto"', conanfile_contents)
-            self.assertNotIn('"url": "auto"', conanfile_contents)
+            scm_info = self.client.scm_info_cache("lib/0.1@")
+            self.assertNotEqual(scm_info.revision, "auto")
+            self.assertNotEqual(scm_info.url, "auto")
 
     def test_double_create(self):
         # https://github.com/conan-io/conan/issues/5195#issuecomment-551848955
