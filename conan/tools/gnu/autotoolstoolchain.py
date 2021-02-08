@@ -23,8 +23,8 @@ class AutotoolsToolchain(object):
         env = Environment()
         env["CPPFLAGS"].append(["-D{}".format(d) for d in self.defines])
         # env["LDFLAGS"].define(self.ldflags)
-        env.save_sh("conantoolchain.sh")
-        env.save_bat("conantoolchain.bat")
+        env.save_sh("autotools.sh")
+        env.save_bat("autotools.bat")
 
     def _configure_fpic(self):
         if not str(self._os).startswith("Windows"):

@@ -1,5 +1,7 @@
+import os
 import platform
 import textwrap
+import time
 
 import pytest
 
@@ -7,6 +9,7 @@ from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
+from conans.util.files import touch
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
@@ -23,7 +26,6 @@ def test_autotools():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
-        from conans.tools import environment_append
 
         class TestConan(ConanFile):
             requires = "hello/0.1"
@@ -33,8 +35,8 @@ def test_autotools():
             def generate(self):
                 deps = AutotoolsDeps(self)
                 deps.generate()
-                #tc = AutotoolsToolchain(self)
-                #tc.generate()
+                tc = AutotoolsToolchain(self)
+                tc.generate()
 
             def build(self):
                 self.run("aclocal")
@@ -84,22 +86,45 @@ def test_autotoolsdeps_mingw():
         	$(CXX) $(CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o main.o main.cpp
         """)
 
-    conanfile_txt = textwrap.dedent("""
-        [requires]
-        hello/0.1
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
 
-        [generators]
-        AutotoolsDeps
-        AutotoolsToolchain
+        class TestConan(ConanFile):
+            requires = "hello/0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "Makefile"
+
+            def generate(self):
+                deps = AutotoolsDeps(self)
+                deps.generate()
+                tc = AutotoolsToolchain(self)
+                tc.generate()
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.make()
         """)
     client.save({"main.cpp": main,
                  "Makefile": makefile,
-                 "conanfile.txt": conanfile_txt,
+                 "conanfile.py": conanfile,
                  "profile_gcc": gcc}, clean_first=True)
 
     client.run("install . --profile=profile_gcc")
-    client.run_command("conantoolchain.bat && autotoolsdeps.bat && mingw32-make")
+    client.run_command("autotoolsdeps.bat && autotools.bat && mingw32-make")
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
+    assert "hello/0.1: Hello World Release!" in client.out
+
+    client.save({"main.cpp": gen_function_cpp(name="main", msg="main2",
+                                              includes=["hello"], calls=["hello"])})
+    # Make sure it is newer
+    t = time.time() + 1
+    touch(os.path.join(client.current_folder, "main.cpp"), (t, t))
+
+    client.run("build .")
+    client.run_command("app")
+    # TODO: fill compiler version when ready
+    check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None)
     assert "hello/0.1: Hello World Release!" in client.out

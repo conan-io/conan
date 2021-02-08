@@ -2,10 +2,9 @@ import copy
 import os
 import platform
 
-from conans.client.build import join_arguments
+
 from conans.client import tools
-from conans.client.tools.env import environment_append
-from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_building, \
+from conans.client.tools.oss import OSInfo,  cross_building, \
     detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
@@ -14,12 +13,6 @@ from conans.util.files import get_abs_path
 
 
 class Autotools(object):
-    """
-    - CPPFLAGS (C-PreProcesor-Flags NOT related with c++) (-I -D)
-    - CFLAGS (not CPPFLAGS nor LDFLAGS, used for optimization or debugging)
-    - CXXFLAGS (the CFLAGS for c++)
-    - LDFLAGS (-L, others like -m64 -m32) linker
-    """
 
     def __init__(self, conanfile, win_bash=False, include_rpath_flags=False):
         """
@@ -84,16 +77,6 @@ class Autotools(object):
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
                   pkg_config_paths=None, vars=None, use_default_install_dirs=True):
         """
-        :param pkg_config_paths: Optional paths to locate the *.pc files
-        :param configure_dir: Absolute or relative path to the configure script
-        :param args: Optional arguments to pass to configure.
-        :param build: In which system the program will be built. "False" skips the --build flag
-        :param host: In which system the generated program will run.  "False" skips the --host flag
-        :param target: This option is only used to build a cross-compiling toolchain.
-                       "False" skips the --target flag
-                       When the tool chain generates executable program, in which target system
-                       the program will run.
-
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
         :param use_default_install_dirs: Use or not the defaulted installation dirs
@@ -162,9 +145,9 @@ class Autotools(object):
                 self._conanfile.output.info("Calling:\n > %s" % command)
                 self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)"""
 
-        command = "bash -c 'source autotoolsdeps.sh && %s/configure'" % configure_dir
-        self._conanfile.output.info("Calling:\n > %s" % command)
-        self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+        cmd = "bash -c 'source autotoolsdeps.sh && source autotools.sh && %s/configure'" % configure_dir
+        self._conanfile.output.info("Calling:\n > %s" % cmd)
+        self._conanfile.run(cmd, win_bash=self._win_bash, subsystem=self.subsystem)
 
     def _configure_help_output(self, configure_path):
         from six import StringIO  # Python 2 and 3 compatible
@@ -192,12 +175,9 @@ class Autotools(object):
         flag = "--%s=" % varname
         return any([flag in arg for arg in args])
 
-    def make(self, args="", make_program=None, target=None, vars=None):
-        if not self._conanfile.should_build:
-            return
+    def make(self, target=None):
         """if not self._build_type:
             raise ConanException("build_type setting should be defined.")
-        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
             cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
@@ -206,13 +186,21 @@ class Autotools(object):
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)"""
-        self._conanfile.run("make",
-                            win_bash=self._win_bash, subsystem=self.subsystem)
 
-    def install(self, args="", make_program=None, vars=None):
+        make_program = self._conanfile.conf["tools.gnu"].make_program
+        if make_program is None:
+            make_program = "mingw32-make" if platform.system() == "Windows" else "make"
+        if platform.system() == "Windows":
+            cmd = "autotoolsdeps.bat && autotools.bat && {}".format(make_program)
+        else:
+            cmd = "bash -c 'source autotoolsdeps.sh "\
+                  "&& source autotools.sh && {}'".format(make_program)
+        self._conanfile.run(cmd, win_bash=self._win_bash, subsystem=self.subsystem)
+
+    def install(self, args=""):
         if not self._conanfile.should_install:
             return
-        self.make(args=args, make_program=make_program, target="install", vars=vars)
+        self.make(target="install")
 
     def _get_vars(self):
         def append(*args):
