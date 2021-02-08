@@ -1,8 +1,5 @@
-from conan.locks.locks_manager import LocksManager
-
-
 class LockableResource:
-    def __init__(self, manager: LocksManager, resource: str, blocking: bool, wait: bool):
+    def __init__(self, manager: 'LocksManager', resource: str, blocking: bool, wait: bool):
         self._manager = manager
         self._resource = resource
         self._bloking = blocking
