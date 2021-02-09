@@ -1,11 +1,11 @@
 import os
 import shutil
+from typing import Optional
 
 from cache.cache_database import CacheDatabase
 from conan.cache.recipe_layout import RecipeLayout
 from conan.locks.locks_manager import LocksManager
-from conans.model.ref import ConanFileReference
-from typing import Optional
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 class Cache:
@@ -53,6 +53,20 @@ class Cache:
             if os.path.exists(old_path):
                 shutil.move(old_path, new_path)
             self._backend.update_path(new_ref, new_path)
+            return new_path
+        else:
+            return None
+
+    def _move_prev(self, old_pref: PackageReference, new_pref: PackageReference,
+                   move_package_contents: bool = False) -> Optional[str]:
+        self._backend.update_prev(old_pref, new_pref)
+        if move_package_contents:
+            old_path, created = self._backend.get_or_create_directory(new_pref.ref, new_pref)
+            assert not created, "It should exist"
+            new_path = new_pref.full_str().replace('@', '/').replace('#', '/').replace(':', '/')
+            if os.path.exists(old_path):
+                shutil.move(old_path, new_path)
+            self._backend.update_path(new_pref.ref, new_path, new_pref)
             return new_path
         else:
             return None

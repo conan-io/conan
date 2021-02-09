@@ -104,10 +104,18 @@ class CacheDatabase:
             r = self._conn.execute(query)
             assert r.rowcount > 0
 
-    def update_path(self, ref: ConanFileReference, new_path: str):
+    def update_path(self, ref: ConanFileReference, new_path: str, pref: PackageReference = None):
         query = f"UPDATE {self._table_name} " \
                 f"SET    {self._column_path} = '{new_path}' " \
-                f"WHERE {self._where_clause(ref)}"
+                f"WHERE {self._where_clause(ref, pref)}"
+        with self._conn:
+            r = self._conn.execute(query)
+            assert r.rowcount > 0
+
+    def update_prev(self, old_pref: PackageReference, new_pref: PackageReference):
+        query = f"UPDATE {self._table_name} " \
+                f"SET {self._column_prev} = '{new_pref.revision}' " \
+                f"WHERE {self._where_clause(ref=old_pref.ref, pref=old_pref)}"
         with self._conn:
             r = self._conn.execute(query)
             assert r.rowcount > 0

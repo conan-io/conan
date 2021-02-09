@@ -46,7 +46,8 @@ class RecipeLayout(LockableMixin):
 
             # Reassign folder in the database (only the recipe-folders)
             new_directory = self._cache._move_rrev(old_ref, self._ref, move_contents)
-            self._base_directory = new_directory
+            if new_directory:
+                self._base_directory = new_directory
 
     def get_package_layout(self, pref: PackageReference) -> PackageLayout:
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
@@ -56,10 +57,7 @@ class RecipeLayout(LockableMixin):
             pref = pref.copy_with_revs(self._ref.revision, p_revision=None)
         assert self._ref.revision == pref.ref.revision, "Ensure revision is the same (if already known)"
 
-        package_path, _ = self._cache._backend.get_or_create_directory(self._ref,
-                                                                       pref)  # TODO: Merge classes Cache and CacheDatabase? Probably the backend is just the database, not the logic.
-        layout = PackageLayout(self, pref, package_path, cache=self._cache, manager=self._manager)
-        # RecipeLayout(ref, base_reference_directory, cache=self, manager=self._locks_manager)
+        layout = PackageLayout(self, pref, cache=self._cache, manager=self._manager)
         self._package_layouts.append(layout)  # TODO: Not good, persists even if it is not used
         return layout
 
