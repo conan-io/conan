@@ -2,9 +2,7 @@ import os
 
 import pytest
 
-from conans.client import tools
 from conans.errors import ConanException
-
 from conans.client.tools import vswhere, which
 
 tool_locations = {
