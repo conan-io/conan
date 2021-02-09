@@ -307,7 +307,6 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile}
         self.client.save(files)
         self.client.run("export . lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.out)
         self.client.run("upload Hello/1.2@lasote/stable")
         self.assertIn("Uploading conanmanifest.txt", self.client.out)
 
