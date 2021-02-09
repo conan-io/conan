@@ -5,7 +5,8 @@ from conan.locks.lockable_mixin import LockableMixin
 
 
 class CacheFolder(LockableMixin):
-    # TODO: Remove everything from this class, only the lazy eval is needed/used \o/
+    # TODO: Remove the 'movible' from this class,
+    # TODO: Think about 'lock' here. Do we need to block at this level or is it enough to block the entire upper instance?
 
     def __init__(self, directory: Callable[[], str], movible=False, **kwargs):
         super().__init__(**kwargs)
