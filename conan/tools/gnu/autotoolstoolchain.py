@@ -1,3 +1,5 @@
+import traceback
+
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
 # FIXME: need to refactor this import and bring to conan.tools
@@ -92,8 +94,8 @@ class AutotoolsToolchain(object):
             self.ldflags.append(self.arch_flag)
 
         if self.build_type_flags:
-            self.cxxflags.extend(build_type_flags)
-            self.cflags.extend(build_type_flags)
+            self.cxxflags.extend(self.build_type_flags)
+            self.cflags.extend(self.build_type_flags)
 
         if self.fpic:
             self.cxxflags.append("-fPIC")
