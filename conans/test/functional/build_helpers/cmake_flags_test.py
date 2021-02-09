@@ -8,7 +8,7 @@ import pytest
 
 from parameterized.parameterized import parameterized
 
-from conans.client.build.cmake import CMakeBuildHelper
+from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 
@@ -408,7 +408,7 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = CMakeBuildHelper.get_version()
+            cmake_version = CMake.get_version()
             return cmake_version < Version("3.12")
 
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc "

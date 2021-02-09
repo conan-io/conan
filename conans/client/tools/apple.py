@@ -65,7 +65,7 @@ def apple_deployment_target_flag(os_, os_version, os_sdk=None, os_subsystem=None
             'watchsimulator': '-mwatchos-simulator-version-min',
             'appletvos': '-mtvos-version-min',
             'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
-    if os_subsystem == 'Catalyst':
+    if os_subsystem == 'catalyst':
         # especial case, despite Catalyst is macOS, it requires an iOS version argument
         flag = '-mios-version-min'
     if not flag:
