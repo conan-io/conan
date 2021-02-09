@@ -6,11 +6,15 @@ from conans.model.ref import PackageReference
 
 
 class PackageLayout(LockableMixin):
-    def __init__(self, recipe_layout: 'RecipeLayout', pref: PackageReference, **kwargs):
-        super().__init__(**kwargs)
+
+    def __init__(self, recipe_layout: 'RecipeLayout', pref: PackageReference, base_package_directory: str, cache: 'Cache', **kwargs):
         self._recipe_layout = recipe_layout
         self._pref = pref
-        self._base_directory = ''
+        self._base_directory = base_package_directory
+        self._cache = cache
+        resource_id = pref.full_str()
+        super().__init__(resource=resource_id, **kwargs)
+
         package_directory = os.path.join(self._base_directory, 'package')
         self._package_directory = CacheFolder(package_directory, True, manager=self._manager,
                                               resource=self._resource)

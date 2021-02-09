@@ -9,6 +9,9 @@ class LockableMixin:
         self._manager = manager
         self._resource = resource
 
+    def exchange(self, new_resource: str):
+        self._resource = new_resource
+
     @contextmanager
     def lock(self, blocking: bool, wait: bool = True):
         # TODO: Decide if this wait=True by default is what we want
