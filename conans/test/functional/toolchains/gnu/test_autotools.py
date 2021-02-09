@@ -55,7 +55,7 @@ def test_autotools():
     client.run("install .")
     client.run("build .")
     client.run_command("./main")
-    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
     assert "hello/0.1: Hello World Release!" in client.out
 
 
@@ -126,5 +126,5 @@ def test_autotoolsdeps_mingw():
     client.run("build .")
     client.run_command("app")
     # TODO: fill compiler version when ready
-    check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None)
+    check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
     assert "hello/0.1: Hello World Release!" in client.out

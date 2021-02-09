@@ -23,7 +23,8 @@ def check_vs_runtime(exe, client, vs_version, build_type, static, architecture="
             raise NotImplementedError()
 
 
-def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None):
+def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,
+                  cxx11_abi=None):
     output = str(output)
     names = names if isinstance(names, list) else [names]
 
@@ -60,6 +61,9 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                                 "14": "201402",
                                 "17": "201703"}[cppstd]
                 assert "{} __cplusplus{}".format(name, cppstd_value) in output
+
+            if cxx11_abi is not None:
+                assert "{} _GLIBCXX_USE_CXX11_ABI {}".format(name, cxx11_abi) in output
 
         if definitions:
             for k, v in definitions.items():
