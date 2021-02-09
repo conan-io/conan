@@ -5,7 +5,7 @@ import pytest
 from conans.test.utils.tools import TestClient
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def client():
     return TestClient()
 
