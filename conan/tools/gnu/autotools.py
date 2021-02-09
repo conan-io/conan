@@ -31,7 +31,6 @@ class Autotools(object):
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
-        self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
 
         # Precalculate build, host, target triplets
         self.build, self.host, self.target = self._get_host_build_target_flags()

@@ -1,20 +1,15 @@
+from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
+# FIXME: need to refactor this import and bring to conan.tools
+from conans.client.build.cppstd_flags import cppstd_flag_new
 
 
 class AutotoolsToolchain(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        """
-        self.cxx_flags = self._configure_cxx_flags()
-        self.cflags = self._configure_flags()
-        # cpp standard
-        # self.cppstd_flag = cppstd_flag(conanfile.settings)
-        # Not -L flags, ["-m64" "-m32"]
-        self.link_flags = self._configure_link_flags()  # TEST!
-        # Precalculate -fPIC
-        self.fpic = self._configure_fpic()"""
         build_type = self._conanfile.settings.get_safe("build_type")
 
+        # TODO: compiler.runtime for Visual studio?
         # defines
         self.ndebug = None
         if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
@@ -22,9 +17,26 @@ class AutotoolsToolchain(object):
         self.gcc_cxx11_abi = self._cxx11_abi_define()
         self.defines = []
 
-        # cxxflags
+        # cxxflags, cflags
         self.cxxflags = []
+        self.cflags = []
+        self.ldflags = []
         self.libcxx = self._libcxx()
+        self.fpic = self._conanfile.options.get_safe("fPIC")
+
+        # FIXME: This needs to be imported here into conan.tools
+        self.cppstd = cppstd_flag_new(self._conanfile.settings)
+        self.arch_flag = architecture_flag(self._conanfile.settings)
+        # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
+        self.build_type_flags = build_type_flags(self._conanfile.settings)
+
+    def _rpaths_link(self):
+        # TODO: Not used yet
+        lib_paths = self._conanfile.deps_cpp_info.lib_paths
+        compiler = _base_compiler(settings)
+        if compiler in GCC_LIKE:
+            return ['-Wl,-rpath,"%s"' % (x.replace("\\", "/"))
+                    for x in lib_paths if x]
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -60,46 +72,40 @@ class AutotoolsToolchain(object):
         elif compiler == "qcc":
             return "-Y _%s" % str(libcxx)
 
-    def generate(self):
+    def _environment(self):
         env = Environment()
         # defines
-        if self.ndebug and self.ndebug not in self.defines:
+        if self.ndebug:
             self.defines.append(self.ndebug)
-        if self.gcc_cxx11_abi and self.gcc_cxx11_abi not in self.defines:
+        if self.gcc_cxx11_abi:
             self.defines.append(self.gcc_cxx11_abi)
-        env["CPPFLAGS"].append(["-D{}".format(d) for d in self.defines])
 
-        # cxxflags
-        if self.libcxx and self.libcxx not in self.cxxflags:
+        if self.libcxx:
             self.cxxflags.append(self.libcxx)
-        env["CXXFLAGS"].append(self.cxxflags)
 
-        # env["LDFLAGS"].define(self.ldflags)
+        if self.cppstd:
+            self.cxxflags.append(self.cppstd)
+
+        if self.arch_flag:
+            self.cxxflags.append(self.arch_flag)
+            self.cflags.append(self.arch_flag)
+            self.ldflags.append(self.arch_flag)
+
+        if self.build_type_flags:
+            self.cxxflags.extend(build_type_flags)
+            self.cflags.extend(build_type_flags)
+
+        if self.fpic:
+            self.cxxflags.append("-fPIC")
+            self.cflags.append("-fPIC")
+
+        env["CPPFLAGS"].append(["-D{}".format(d) for d in self.defines])
+        env["CXXFLAGS"].append(self.cxxflags)
+        env["CFLAGS"].append(self.cflags)
+        env["LDFLAGS"].append(self.ldflags)
+        return env
+
+    def generate(self):
+        env = self._environment()
         env.save_sh("autotools.sh")
         env.save_bat("autotools.bat")
-
-    def _configure_fpic(self):
-        tmp_compilation_flags.append(pic_flag(self._conanfile.settings))
-
-        if not str(self._os).startswith("Windows"):
-            fpic = self._conanfile.options.get_safe("fPIC")
-            if fpic is not None:
-                shared = self._conanfile.options.get_safe("shared")
-                return True if (fpic or shared) else None
-
-    def _configure_link_flags(self):
-        """Not the -L"""
-        arch_flag = architecture_flag(self._conanfile.settings)
-
-        if self._include_rpath_flags:
-            os_build, _ = get_build_os_arch(self._conanfile)
-            if not hasattr(self._conanfile, 'settings_build'):
-                os_build = os_build or self._os
-            ret.extend(rpath_flags(self._conanfile.settings, os_build,
-                                   self._deps_cpp_info.lib_paths))
-
-    def _configure_flags(self):
-        arch_flag = architecture_flag(self._conanfile.settings)
-        btfs = build_type_flags(self._conanfile.settings)
-        if self._compiler_runtime:
-            ret.append("-%s" % self._compiler_runtime)
