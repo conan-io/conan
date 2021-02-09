@@ -28,3 +28,21 @@ class TestCache:
             package_layout = recipe_layout.get_package_layout(pref)
             print(package_layout.build())
             print(package_layout.package())
+
+            ####
+            # We can create another ref-layout and it will take a different random revision
+            rl2 = cache.get_reference_layout(ref)
+            print(rl2.source())
+            p2 = rl2.get_package_layout(pref)
+            print(p2.build())
+
+            cache.dump()
+
+            ### Decide rrev for the first one.
+            ref1 = ref.copy_with_rev('111111111')
+            recipe_layout.assign_rrev(ref1, move_contents=True)
+            print(recipe_layout.export())
+            print(recipe_layout.export_sources())
+            print(recipe_layout.source())
+
+            cache.dump()
