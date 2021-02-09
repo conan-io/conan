@@ -1,9 +1,7 @@
 import tempfile
 
-import pytest
-
-from conan.cache.cache_database import CacheDatabase
 from conan.cache.cache import Cache
+from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 

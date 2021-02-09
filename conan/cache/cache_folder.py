@@ -5,6 +5,7 @@ from conan.locks.lockable_mixin import LockableMixin
 
 
 class CacheFolder(LockableMixin):
+    # TODO: Remove everything from this class, only the lazy eval is needed/used \o/
 
     def __init__(self, directory: Callable[[], str], movible=False, **kwargs):
         super().__init__(**kwargs)
