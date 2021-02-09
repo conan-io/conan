@@ -23,4 +23,4 @@ class TestSubsystemsBuild:
     def test_tool_not_available(self):
         client = TestClient()
         client.run_command('uname', assert_error=True)
-        assert "command not found" in client.out
+        assert "'uname' is not recognized as an internal or external command" in client.out
