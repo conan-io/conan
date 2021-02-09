@@ -2,11 +2,12 @@ import os
 import re
 import textwrap
 
+from conan.tools._compilers import architecture_flag
 from conans.client.tools import cpu_count
 from conans.util.files import load
 from conans.errors import ConanException
 from conan.tools.cmake.base import CMakeToolchainBase
-from conan.tools.cmake.utils import get_generator, is_multi_configuration, architecture_flag
+from conan.tools.cmake.utils import get_generator, is_multi_configuration
 
 
 # https://stackoverflow.com/questions/30503631/cmake-in-which-order-are-files-parsed-cache-toolchain-etc
