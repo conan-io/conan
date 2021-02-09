@@ -27,7 +27,6 @@ class ExportSettingsTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", assert_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.out)
         self.assertIn("Possible values are ['Linux']", client.out)
@@ -80,7 +79,6 @@ class ExportSettingsTest(unittest.TestCase):
             save(os.path.join(export_path, "file1.txt"), "")
         with self.assertRaises(IOError):
             save(os.path.join(export_src_path, "file2.txt"), "")
-        self.assertIn("WARN: Conanfile doesn't have 'license'", client.out)
 
         os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 | stat.S_IWRITE)
         os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 | stat.S_IWRITE)

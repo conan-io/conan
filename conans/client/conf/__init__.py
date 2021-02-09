@@ -213,10 +213,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
-
-    [hooks]    # environment CONAN_HOOKS
-    attribute_checker
-
     """))
 
 
