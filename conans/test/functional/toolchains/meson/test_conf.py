@@ -42,25 +42,25 @@ class MesonConfTest(TestMesonBase):
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
         profile_host = textwrap.dedent("""
-    include(default)
-    [settings]
-    arch=armv8
-    os=FreeBSD
-    [conf]
-    tools.meson.mesontoolchain.host_machine:system=nes
-    tools.meson.mesontoolchain.host_machine:cpu_family=MOS
-    tools.meson.mesontoolchain.host_machine:cpu=6502
-    tools.meson.mesontoolchain.host_machine:endian=big
-    
-    tools.meson.mesontoolchain.build_machine:system=smd
-    tools.meson.mesontoolchain.build_machine:cpu_family=Motorola
-    tools.meson.mesontoolchain.build_machine:cpu=68K
-    tools.meson.mesontoolchain.build_machine:endian=big
-    
-    tools.meson.mesontoolchain.target_machine:system=spectrum
-    tools.meson.mesontoolchain.target_machine:cpu_family=Zilog
-    tools.meson.mesontoolchain.target_machine:cpu=Z80
-    tools.meson.mesontoolchain.target_machine:endian=big
+            include(default)
+            [settings]
+            arch=armv8
+            os=FreeBSD
+            [conf]
+            tools.meson.mesontoolchain.host_machine:system=nes
+            tools.meson.mesontoolchain.host_machine:cpu_family=MOS
+            tools.meson.mesontoolchain.host_machine:cpu=6502
+            tools.meson.mesontoolchain.host_machine:endian=big
+
+            tools.meson.mesontoolchain.build_machine:system=smd
+            tools.meson.mesontoolchain.build_machine:cpu_family=Motorola
+            tools.meson.mesontoolchain.build_machine:cpu=68K
+            tools.meson.mesontoolchain.build_machine:endian=big
+
+            tools.meson.mesontoolchain.target_machine:system=spectrum
+            tools.meson.mesontoolchain.target_machine:cpu_family=Zilog
+            tools.meson.mesontoolchain.target_machine:cpu=Z80
+            tools.meson.mesontoolchain.target_machine:endian=big
     """)
 
         self.t.save({"conanfile.py": self._conanfile_py,
