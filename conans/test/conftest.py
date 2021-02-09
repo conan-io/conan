@@ -1,11 +1,22 @@
+import os
+
 import pytest
+
+from conans.client import tools
 from conans.errors import ConanException
 
 from conans.client.tools import vswhere, which
 
+tool_locations = {
+    'msys2': os.getenv("CONAN_MSYS2_PATH", "C:/msys64/usr/bin"),
+    'cygwin': os.getenv("CONAN_CYGWIN_PATH", "C:/cygwin64/bin"),
+    'wsl': os.getenv("CONAN_WSL_PATH", "c:/windows/sysnative")
+}
+
 tools_available = [
     'cmake',
     'gcc', 'clang', 'visual_studio', 'mingw', 'xcode',
+    'msys2', 'cygwin', 'wsl',
     'autotools', 'pkg_config', 'premake', 'meson',
     'file',
     'git', 'svn',
@@ -53,6 +64,20 @@ if not which("premake"):
     tools_available.remove("premake")
 if not which("conan"):
     tools_available.remove("conan")
+
+
+@pytest.fixture(autouse=True)
+def add_tool(request):
+    for mark in request.node.iter_markers():
+        if mark.name.startswith("tool_"):
+            tool_name = mark.name[5:]
+            if tool_name in tool_locations:
+                temp_env = {'PATH': os.pathsep.join([tool_locations[tool_name], os.environ["PATH"]])}
+                old_environ = dict(os.environ)
+                os.environ.update(temp_env)
+                yield
+                os.environ.clear()
+                os.environ.update(old_environ)
 
 
 def tool_check(mark):
