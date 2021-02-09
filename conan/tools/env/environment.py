@@ -1,9 +1,11 @@
+import os
 import textwrap
 from collections import OrderedDict
 
 from conans.util.files import save
 
-PLACEHOLDER = "$CONANVARPLACEHOLDER%"
+PLACEHOLDER = "$PREVIOUS_ENV_VAR_VALUE%"
+PATHSEP = "$CONANPATHSEP%"
 
 
 class EnvironmentItem:
@@ -12,9 +14,10 @@ class EnvironmentItem:
         self._value = value
         self._separator = separator
 
-    def value(self, placeholder):
+    def str_value(self, placeholder=None, pathsep=os.pathsep):
         value = [v if v != PLACEHOLDER else placeholder for v in self._value]
-        value = self._separator.join(value) if value else ""
+        separator = pathsep if self._separator == PATHSEP else self._separator
+        value = separator.join(value) if value else ""
         return value
 
     def copy(self):
@@ -24,15 +27,24 @@ class EnvironmentItem:
         self._value = value if isinstance(value, list) else [value]
         self._separator = separator
 
+    def define_path(self, value):
+        self.define(value, separator=PATHSEP)
+
     def append(self, value, separator=" "):
         value = value if isinstance(value, list) else [value]
         self._value = [PLACEHOLDER] + value
         self._separator = separator
 
+    def append_path(self, value):
+        self.append(value, separator=PATHSEP)
+
     def prepend(self, value, separator=" "):
         value = value if isinstance(value, list) else [value]
         self._value = value + [PLACEHOLDER]
         self._separator = separator
+
+    def prepend_path(self, value):
+        self.prepend(value, separator=PATHSEP)
 
     def clean(self):
         self._value = []
@@ -61,7 +73,7 @@ class Environment:
     def __getitem__(self, name):
         return self._values.setdefault(name, EnvironmentItem())
 
-    def save_bat(self, filename, generate_deactivate=True):
+    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -89,13 +101,13 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for k, v in self._values.items():
-            value = v.value("%{}%".format(k))
+            value = v.str_value("%{}%".format(k), pathsep=pathsep)
             result.append('set {}={}'.format(k, value))
 
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename):
+    def save_sh(self, filename, pathsep=os.pathsep):
         capture = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -113,7 +125,7 @@ class Environment:
             """.format(filename=filename, vars=" ".join(self._values.keys())))
         result = [capture]
         for k, v in self._values.items():
-            value = v.value("${}".format(k))
+            value = v.str_value("${}".format(k), pathsep=pathsep)
             if value:
                 result.append('export {}="{}"'.format(k, value))
             else:
