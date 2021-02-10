@@ -23,6 +23,59 @@ def is_random_folder(cache_folder: str, folder):
     return bool(re.match(pattern, str(folder)))
 
 
+class TestFolders:
+    def test_random_reference(self, tmp_cache):
+        ref = ConanFileReference.loads('name/version@user/channel')
+        ref_layout = tmp_cache.get_reference_layout(ref)
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.export())
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.source())
+
+    def test_reference_with_rrev(self, tmp_cache):
+        # By default the cache will assign deterministics folders
+        ref = ConanFileReference.loads('name/version@user/channel#1111111111')
+        ref_layout = tmp_cache.get_reference_layout(ref)
+        assert not is_random_folder(tmp_cache.base_folder, ref_layout.export())
+        assert not is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
+        assert not is_random_folder(tmp_cache.base_folder, ref_layout.source())
+
+    def test_reference_existing(self, tmp_cache):
+        ref = ConanFileReference.loads('name/version@user/channel')
+        creation_layout = tmp_cache.get_reference_layout(ref)
+        ref = ref.copy_with_rev(revision='111111')
+
+        # If the folders are not moved when assigning the rrev, they will be retrieved as they are
+        creation_layout.assign_rrev(ref, move_contents=False)
+        ref_layout = tmp_cache.get_reference_layout(ref)
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.export())
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
+        assert is_random_folder(tmp_cache.base_folder, ref_layout.source())
+
+    def test_random_package(self, tmp_cache):
+        pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
+        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert is_random_folder(tmp_cache.base_folder, pkg_layout.build())
+        assert is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+
+    def test_package_with_prev(self, tmp_cache):
+        # By default the cache will assign deterministics folders
+        pref = PackageReference.loads('name/version@user/channel#1111111111:123456789#999999999')
+        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert not is_random_folder(tmp_cache.base_folder, pkg_layout.build())
+        assert not is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+
+    def test_package_existing(self, tmp_cache):
+        pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
+        creation_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        pref = pref.copy_with_revs(pref.ref.revision, '999999')
+
+        # If the folders are not moved when assigning the rrev, they will be retrieved as they are
+        creation_layout.assign_prev(pref, move_contents=False)
+        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert is_random_folder(tmp_cache.base_folder, pkg_layout.build())
+        assert is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+
+
 def test_create_workflow(tmp_cache):
     cache_folder = tmp_cache.base_folder
 
