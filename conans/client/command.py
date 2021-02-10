@@ -58,6 +58,8 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
+        elif namespace == argparse.Namespace(build=[]):
+            dest.append('')
 
 
 class OnceArgument(argparse.Action):
