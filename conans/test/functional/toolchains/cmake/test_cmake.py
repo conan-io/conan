@@ -9,7 +9,7 @@ from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
-from conans.test.functional.utils import check_vs_runtime, check_msc_ver
+from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
 
 
@@ -165,7 +165,7 @@ class WinTest(Base):
     @parameterized.expand([("Visual Studio", "Debug", "MTd", "15", "14", "x86", "v140", True),
                            ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
                            ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "19.11", "17", "x86_64", None, False)]
+                           ("msvc", "Release", "dynamic", "19.1", "17", "x86_64", None, False)]
                           )
     def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
                            shared):
@@ -190,7 +190,7 @@ class WinTest(Base):
             self.assertIn("Microsoft Visual Studio/2017", self.client.out)
 
         generator_platform = "x64" if arch == "x86_64" else "Win32"
-        arch = "x64" if arch == "x86_64" else "X86"
+        arch_flag = "x64" if arch == "x86_64" else "X86"
         shared_str = "ON" if shared else "OFF"
         vals = {"CMAKE_GENERATOR_PLATFORM": generator_platform,
                 "CMAKE_BUILD_TYPE": "",
@@ -200,8 +200,8 @@ class WinTest(Base):
                 "CMAKE_C_FLAGS": "/MP1 /DWIN32 /D_WINDOWS",
                 "CMAKE_C_FLAGS_DEBUG": "/Zi /Ob0 /Od /RTC1",
                 "CMAKE_C_FLAGS_RELEASE": "/O2 /Ob2 /DNDEBUG",
-                "CMAKE_SHARED_LINKER_FLAGS": "/machine:%s" % arch,
-                "CMAKE_EXE_LINKER_FLAGS": "/machine:%s" % arch,
+                "CMAKE_SHARED_LINKER_FLAGS": "/machine:%s" % arch_flag,
+                "CMAKE_EXE_LINKER_FLAGS": "/machine:%s" % arch_flag,
                 "CMAKE_CXX_STANDARD": cppstd,
                 "CMAKE_CXX_EXTENSIONS": "OFF",
                 "BUILD_SHARED_LIBS": shared_str}
@@ -227,11 +227,24 @@ class WinTest(Base):
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
-        check_msc_ver(toolset or "v141", self.client.out)
-        self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
+        if compiler == "msvc":
+            visual_version = version
+        else:
+            visual_version = "19.0" if toolset == "v140" else "19.1"
+        check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
+                      {"MYVAR": "MYVAR_VALUE",
+                       "MYVAR_CONFIG": "MYVAR_RELEASE",
+                       "MYDEFINE": "MYDEF_VALUE",
+                       "MYDEFINE_CONFIG": "MYDEF_RELEASE"
+                       })
         self._run_app("Debug", bin_folder=True)
-        check_msc_ver(toolset or "v141", self.client.out)
-        self.assertIn("main _MSVC_LANG20{}".format(cppstd), self.client.out)
+        check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
+                      {"MYVAR": "MYVAR_VALUE",
+                       "MYVAR_CONFIG": "MYVAR_DEBUG",
+                       "MYDEFINE": "MYDEF_VALUE",
+                       "MYDEFINE_CONFIG": "MYDEF_DEBUG"
+                       })
+
         static = (runtime == "static" or "MT" in runtime)
         check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
                          static=static)
@@ -249,6 +262,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
+        # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
                     "compiler.version": version,
                     "compiler.libcxx": libcxx,
@@ -288,6 +302,12 @@ class WinTest(Base):
 
         _verify_out()
         self._run_app(build_type)
+        check_exe_run(self.client.out, "main", "gcc", None, build_type, arch, None,
+                      {"MYVAR": "MYVAR_VALUE",
+                       "MYVAR_CONFIG": "MYVAR_{}".format(build_type.upper()),
+                       "MYDEFINE": "MYDEF_VALUE",
+                       "MYDEFINE_CONFIG": "MYDEF_{}".format(build_type.upper())
+                       })
 
         self._modify_code()
         time.sleep(2)
