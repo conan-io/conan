@@ -1,7 +1,5 @@
-import ast
 import os
 import shutil
-import sys
 
 import yaml
 
@@ -15,11 +13,9 @@ from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
-
-isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
 
 def export_alias(package_layout, target_ref, output):
@@ -287,7 +283,6 @@ def _replace_scm_data_in_recipe(package_layout, scm_data):
     scm_data_copied.pop('username', None)
     scm_data_copied.pop('password', None)
     conandata_yml['.conan'] = {'scm': scm_data_copied}
-
     save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
 
 
