@@ -58,7 +58,7 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
-        elif namespace == argparse.Namespace(build=[]):
+        elif hasattr(namespace, "build") and values is None:
             dest.append('')
 
 
