@@ -21,7 +21,9 @@ class RecipeLayout(LockableMixin):
         self._cache = cache
 
         #
-        reference_path, _ = self._cache._backend.get_or_create_directory(self._ref)
+        default_path = self._cache.get_default_path(ref)
+        reference_path, _ = self._cache._backend.get_or_create_directory(self._ref,
+                                                                         default_path=default_path)
         self._base_directory = reference_path
         self._package_layouts: List[PackageLayout] = []
         resource_id = self._ref.full_str()
@@ -58,11 +60,11 @@ class RecipeLayout(LockableMixin):
     def lock(self, blocking: bool, wait: bool = True):  # TODO: Decide if we want to wait by default
         # I need the same level of blocking for all the packages
         with ExitStack() as stack:
-            for package_layout in self._package_layouts:
-                stack.enter_context(package_layout.lock(blocking, wait))
-
-            with super().lock(blocking, wait):
-                yield
+            if blocking:
+                for package_layout in self._package_layouts:
+                    stack.enter_context(package_layout.lock(blocking, wait))
+            stack.enter_context(super().lock(blocking, wait))
+            yield
 
     # These folders always return a final location (random) inside the cache.
     @property

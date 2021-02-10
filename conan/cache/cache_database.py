@@ -112,6 +112,22 @@ class CacheDatabase:
             r = self._conn.execute(query)
             assert r.rowcount > 0
 
+    def update_prev(self, old_pref: PackageReference, new_pref: PackageReference):
+        query = f"UPDATE {self._table_name} " \
+                f"SET {self._column_prev} = '{new_pref.revision}' " \
+                f"WHERE {self._where_clause(ref=old_pref.ref, pref=old_pref)}"
+        with self._conn:
+            # Check if the new_pref already exists, if not, we can move the old_one
+            query_exists = f'SELECT EXISTS(SELECT 1 ' \
+                           f'FROM {self._table_name} ' \
+                           f'WHERE {self._where_clause(new_pref.ref, new_pref, filter_packages=True)})'
+            r = self._conn.execute(query_exists)
+            if r.fetchone()[0] == 1:
+                raise Exception('Pretended prev already exists')
+
+            r = self._conn.execute(query)
+            assert r.rowcount > 0
+
     def update_path(self, ref: ConanFileReference, new_path: str, pref: PackageReference = None):
         query = f"UPDATE {self._table_name} " \
                 f"SET    {self._column_path} = '{new_path}' " \
@@ -120,10 +136,4 @@ class CacheDatabase:
             r = self._conn.execute(query)
             assert r.rowcount > 0
 
-    def update_prev(self, old_pref: PackageReference, new_pref: PackageReference):
-        query = f"UPDATE {self._table_name} " \
-                f"SET {self._column_prev} = '{new_pref.revision}' " \
-                f"WHERE {self._where_clause(ref=old_pref.ref, pref=old_pref)}"
-        with self._conn:
-            r = self._conn.execute(query)
-            assert r.rowcount > 0
+

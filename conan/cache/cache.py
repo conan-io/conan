@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import Optional
+from typing import Optional, Union
 
 from cache.cache_database import CacheDatabase
 from conan.cache.recipe_layout import RecipeLayout
@@ -43,6 +43,13 @@ class Cache:
     def get_reference_layout(self, ref: ConanFileReference) -> RecipeLayout:
         return RecipeLayout(ref, cache=self, manager=self._locks_manager)
 
+    @staticmethod
+    def get_default_path(item: Union[ConanFileReference, PackageReference]):
+        if item.revision:
+            return item.full_str().replace('@', '/').replace('#', '/').replace(':', '/')  # TODO: TBD
+        else:
+            return None
+
     def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
                    move_reference_contents: bool = False) -> Optional[str]:
         # Once we know the revision for a given reference, we need to update information in the
@@ -54,10 +61,10 @@ class Cache:
         if move_reference_contents:
             old_path, created = self._backend.get_or_create_directory(new_ref)
             assert not created, "Old reference was an existing one"
-            new_path = new_ref.full_str().replace('@', '/').replace('#', '/')  # TODO: TBD
+            new_path = self.get_default_path(new_ref)
+            self._backend.update_path(new_ref, new_path)
             if os.path.exists(old_path):
                 shutil.move(old_path, new_path)
-            self._backend.update_path(new_ref, new_path)
             return new_path
         else:
             return None
@@ -68,10 +75,10 @@ class Cache:
         if move_package_contents:
             old_path, created = self._backend.get_or_create_directory(new_pref.ref, new_pref)
             assert not created, "It should exist"
-            new_path = new_pref.full_str().replace('@', '/').replace('#', '/').replace(':', '/')
+            new_path = self.get_default_path(new_pref)
+            self._backend.update_path(new_pref.ref, new_path, new_pref)
             if os.path.exists(old_path):
                 shutil.move(old_path, new_path)
-            self._backend.update_path(new_pref.ref, new_path, new_pref)
             return new_path
         else:
             return None

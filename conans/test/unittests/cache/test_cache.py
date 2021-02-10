@@ -4,7 +4,6 @@ import tempfile
 import pytest
 
 from conan.cache.cache import Cache
-from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -110,55 +109,67 @@ def test_concurrent_export(tmp_cache):
 
     # When R1 wants to claim that revision...
     with pytest.raises(Exception) as excinfo:
-        r1_layout.assign_rrev(ref, move_contents=True)
+        r1_layout.assign_rrev(ref)
     assert "Pretended reference already exists" == str(excinfo.value)
 
 
-class TestCache:
+def test_concurrent_package(tmp_cache):
+    # When two jobs are generating the same packageID and it happens that both compute the same prev
+    ref = ConanFileReference.loads('name/version#rrev')
+    recipe_layout = tmp_cache.get_reference_layout(ref)
+    pref = PackageReference.loads(f'{ref.full_str()}:123456789')
+    p1_layout = recipe_layout.get_package_layout(pref)
+    with p1_layout.lock(blocking=True, wait=True):
+        # P1 is building the package and P2 starts to do the same
+        p2_layout = recipe_layout.get_package_layout(pref)
+        with p2_layout.lock(blocking=True, wait=False):
+            pass
 
-    def test_recipe_reader(self):
-        pass
+        # P2 finishes before, both compute the same package revision
+        pref = pref.copy_with_revs(pref.ref.revision, '5555555555')
+        p2_layout.assign_prev(pref, move_contents=True)
 
-    def test_xxxx(self):
-        locks_manager = LocksManager.create('memory')
-        backend = CacheDatabase(':memory:')
+    # When P1 tries to claim the same revision...
+    with pytest.raises(Exception) as excinfo:
+        p1_layout.assign_prev(pref)
+    assert "Pretended prev already exists" == str(excinfo.value)
 
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            print(tmpdirname)
-            cache = Cache.create('memory', tmpdirname, locks_manager)
 
-            ref = ConanFileReference.loads('name/version@user/channel')
-            recipe_layout = cache.get_reference_layout(ref)
-            print(recipe_layout.export())
-            print(recipe_layout.export_sources())
-            print(recipe_layout.source())
-            recipe_layout2 = cache.get_reference_layout(ref)
+def test_concurrent_read_write_recipe(tmp_cache):
+    # For whatever the reason, two concurrent jobs want to read and write the recipe
+    ref = ConanFileReference.loads('name/version#1111111111')
+    r1_layout = tmp_cache.get_reference_layout(ref)
+    r2_layout = tmp_cache.get_reference_layout(ref)
+    r3_layout = tmp_cache.get_reference_layout(ref)
+    with r1_layout.lock(blocking=False, wait=False):
+        with r2_layout.lock(blocking=False, wait=False):
+            assert str(r1_layout.export()) == str(r2_layout.export())
+            # But r3 cannot take ownership
+            with pytest.raises(Exception) as excinfo:
+                with r3_layout.lock(blocking=True, wait=False):
+                    pass
+            assert "Resource 'name/version#1111111111' is already blocked" == str(excinfo.value)
 
-            pref = PackageReference.loads(f'{ref.full_str()}:0packageid0')
-            package_layout = recipe_layout.get_package_layout(pref)
-            print(package_layout.build())
-            print(package_layout.package())
 
-            ####
-            # We can create another ref-layout and it will take a different random revision
-            rl2 = cache.get_reference_layout(ref)
-            print(rl2.source())
-            p2 = rl2.get_package_layout(pref)
-            print(p2.build())
+def test_concurrent_write_recipe_package(tmp_cache):
+    # A job is creating a package while another ones tries to modify the recipe
+    pref = PackageReference.loads('name/version#11111111:123456789')
+    recipe_layout = tmp_cache.get_reference_layout(pref.ref)
+    package_layout = recipe_layout.get_package_layout(pref)
 
-            ### Decide rrev for the first one.
-            ref1 = ref.copy_with_rev('111111111')
-            recipe_layout.assign_rrev(ref1, move_contents=True)
-            print(recipe_layout.export())
-            print(recipe_layout.export_sources())
-            print(recipe_layout.source())
+    with package_layout.lock(blocking=True, wait=True):
+        # We can read the recipe
+        with recipe_layout.lock(blocking=False, wait=False):
+            pass
 
-            ### Decide prev
-            pref1 = pref.copy_with_revs(ref1.revision, 'pkg-revision')
-            package_layout.assign_prev(pref1, move_contents=True)
-            print(package_layout.package())
+        # But we cannot write
+        with pytest.raises(Exception) as excinfo:
+            with recipe_layout.lock(blocking=True, wait=False):
+                pass
+        pattern = rf"Resource '{pref.full_str()}#[0-9a-f\-]+' is already blocked"
+        assert re.match(pattern, str(excinfo.value))
 
-            ### If I query the database again
-            rl3 = cache.get_reference_layout(pref1.ref).get_package_layout(pref1)
-            print(rl3.package())
-            print(rl3.build())
+    # And the other way around, we can read the recipe and create a package meanwhile
+    with recipe_layout.lock(blocking=False, wait=True):
+        with package_layout.lock(blocking=True, wait=False):
+            pass
