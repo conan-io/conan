@@ -101,6 +101,14 @@ class CacheDatabase:
                 f"SET {self._column_rrev} = '{new_ref.revision}' " \
                 f"WHERE {self._where_clause(old_ref, filter_packages=False)}"
         with self._conn:
+            # Check if the new_ref already exists, if not, we can move the old_one
+            query_exists = f'SELECT EXISTS(SELECT 1 ' \
+                           f'FROM {self._table_name} ' \
+                           f'WHERE {self._where_clause(new_ref, filter_packages=False)})'
+            r = self._conn.execute(query_exists)
+            if r.fetchone()[0] == 1:
+                raise Exception('Pretended reference already exists')
+
             r = self._conn.execute(query)
             assert r.rowcount > 0
 

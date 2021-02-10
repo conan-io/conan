@@ -33,6 +33,7 @@ class LockBackendSqlite3(LockBackend):
 
     def try_acquire(self, resource: str, blocking: bool) -> LockId:
         # Returns a backend-id
+        # TODO: Detect dead-lock based on pid
         with self._conn:
             # Check if any is using the resource
             result = self._conn.execute(f'SELECT {self._column_pid}, {self._column_writer} '

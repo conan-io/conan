@@ -8,6 +8,11 @@ from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 
 
+# TODO: Random folders are no longer accessible, how to get rid of them asap?
+# TODO: Add timestamp for LRU
+# TODO: We need the workflow to remove existing references.
+
+
 class Cache:
     def __init__(self, base_folder: str, backend: CacheDatabase, locks_manager: LocksManager):
         self._base_folder = base_folder

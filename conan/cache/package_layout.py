@@ -21,15 +21,8 @@ class PackageLayout(LockableMixin):
         self._cache = cache
         reference_path, _ = self._cache._backend.get_or_create_directory(self._pref.ref, self._pref)
         self._base_directory = reference_path
-        resource_id = pref.full_str()
+        resource_id = self._pref.full_str()
         super().__init__(resource=resource_id, **kwargs)
-
-    def _assign_rrev(self, ref: ConanFileReference):
-        new_pref = self._pref.copy_with_revs(ref.revision, p_revision=self._pref.revision)
-        new_resource_id = new_pref.full_str()
-        with self.exchange(new_resource_id):
-            self._pref = new_pref
-            # Nothing to move. Without package_revision the final location is not known yet.
 
     def assign_prev(self, pref: PackageReference, move_contents: bool = False):
         assert pref.ref.full_str() == self._pref.ref.full_str(), "You cannot change the reference here"
@@ -37,7 +30,6 @@ class PackageLayout(LockableMixin):
         assert pref.revision, "It only makes sense to change if you are providing a revision"
         new_resource: str = pref.full_str()
 
-        # Block the package and all the packages too
         with self.exchange(new_resource):
             # Assign the new revision
             old_pref = self._pref

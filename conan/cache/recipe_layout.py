@@ -24,13 +24,14 @@ class RecipeLayout(LockableMixin):
         reference_path, _ = self._cache._backend.get_or_create_directory(self._ref)
         self._base_directory = reference_path
         self._package_layouts: List[PackageLayout] = []
-        resource_id = ref.full_str()
+        resource_id = self._ref.full_str()
         super().__init__(resource=resource_id, **kwargs)
 
     def assign_rrev(self, ref: ConanFileReference, move_contents: bool = False):
         assert str(ref) == str(self._ref), "You cannot change the reference here"
         assert self._random_rrev, "You can only change it if it was not assigned at the beginning"
         assert ref.revision, "It only makes sense to change if you are providing a revision"
+        assert not self._package_layouts, "No package_layout is created before the revision is known"
         new_resource: str = ref.full_str()
 
         # Block the recipe and all the packages too
@@ -40,10 +41,6 @@ class RecipeLayout(LockableMixin):
             self._ref = ref
             self._random_rrev = False
 
-            # Iterate on package_layouts
-            for package_layout in self._package_layouts:
-                package_layout._assign_rrev(self._ref)
-
             # Reassign folder in the database (only the recipe-folders)
             new_directory = self._cache._move_rrev(old_ref, self._ref, move_contents)
             if new_directory:
@@ -51,12 +48,8 @@ class RecipeLayout(LockableMixin):
 
     def get_package_layout(self, pref: PackageReference) -> PackageLayout:
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
-        if not pref.ref.revision:
-            assert self._random_rrev
-            assert not pref.revision, "If there is no rrev, it cannot be prev"
-            pref = pref.copy_with_revs(self._ref.revision, p_revision=None)
-        assert self._ref.revision == pref.ref.revision, "Ensure revision is the same (if already known)"
-
+        assert not self._random_rrev, "When requesting a package, the rrev is already known"
+        assert self._ref.revision == pref.ref.revision, "Ensure revision is the same"
         layout = PackageLayout(self, pref, cache=self._cache, manager=self._manager)
         self._package_layouts.append(layout)  # TODO: Not good, persists even if it is not used
         return layout
