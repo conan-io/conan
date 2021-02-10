@@ -1,4 +1,5 @@
 import unittest
+from parameterized import parameterized
 
 import six
 
@@ -32,6 +33,27 @@ class BuildModeTest(unittest.TestCase):
         self.assertFalse(build_mode.missing)
         self.assertFalse(build_mode.never)
         self.assertTrue(build_mode.cascade)
+
+        build_mode = BuildMode([""], self.output)
+        self.assertFalse(build_mode.outdated)
+        self.assertFalse(build_mode.missing)
+        self.assertFalse(build_mode.never)
+        self.assertFalse(build_mode.cascade)
+        self.assertTrue(build_mode.all)
+
+        build_mode = BuildMode(["*"], self.output)
+        self.assertFalse(build_mode.outdated)
+        self.assertFalse(build_mode.missing)
+        self.assertFalse(build_mode.never)
+        self.assertFalse(build_mode.cascade)
+        self.assertTrue(build_mode.all)
+
+        build_mode = BuildMode(["*", "missing"], self.output)
+        self.assertFalse(build_mode.outdated)
+        self.assertFalse(build_mode.missing)
+        self.assertFalse(build_mode.never)
+        self.assertFalse(build_mode.cascade)
+        self.assertTrue(build_mode.all)
 
     def test_invalid_configuration(self):
         for mode in ["outdated", "missing", "cascade"]:
@@ -102,6 +124,9 @@ class BuildModeTest(unittest.TestCase):
         build_mode = BuildMode([], self.output)
         self.assertFalse(build_mode.allowed(self.conanfile))
 
+        build_mode = BuildMode(["*"], self.output)
+        self.assertFalse(build_mode.allowed(self.conanfile))
+
     def test_casing(self):
         reference = ConanFileReference.loads("Boost/1.69.0@user/stable")
 
@@ -170,3 +195,19 @@ class BuildModeTest(unittest.TestCase):
 
         build_mode.report_matches()
         self.assertEqual("", self.output)
+
+    @parameterized.expand([((["foo", ""]),), ((["foo", "*"]),), (([""]),), ((["*"]),)])
+    def test_build_all_and_single(self, build_mode_param):
+        """ When --build= is present, all packages must be built. It doesn't matter if another
+            package is listed too.
+        :param build_mode_param:
+        :return:
+        """
+        reference = ConanFileReference.loads("foo/0.1@user/stable")
+        build_mode = BuildMode(build_mode_param, self.output)
+        self.assertTrue(build_mode.forced(self.conanfile, reference))
+        self.assertFalse(build_mode.outdated)
+        self.assertFalse(build_mode.missing)
+        self.assertFalse(build_mode.never)
+        self.assertFalse(build_mode.cascade)
+        self.assertTrue(build_mode.all)
