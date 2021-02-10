@@ -3,7 +3,7 @@ import uuid
 
 from cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
-from conans.model.ref import PackageReference, ConanFileReference
+from conans.model.ref import PackageReference
 
 
 class PackageLayout(LockableMixin):
@@ -16,10 +16,12 @@ class PackageLayout(LockableMixin):
         if not self._pref.revision:
             self._random_prev = True
             self._pref = pref.copy_with_revs(pref.ref.revision, uuid.uuid4())
+        self._cache = cache
 
         #
-        self._cache = cache
-        reference_path, _ = self._cache._backend.get_or_create_directory(self._pref.ref, self._pref)
+        default_path = self._cache.get_default_path(pref)
+        reference_path, _ = self._cache._backend.get_or_create_directory(self._pref.ref, self._pref,
+                                                                         default_path=default_path)
         self._base_directory = reference_path
         resource_id = self._pref.full_str()
         super().__init__(resource=resource_id, **kwargs)
