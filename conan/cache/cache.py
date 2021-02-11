@@ -2,7 +2,8 @@ import os
 import shutil
 from typing import Optional, Union
 
-from cache.cache_database import CacheDatabase
+from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
+    CacheDatabaseSqlite3Memory
 from conan.cache.recipe_layout import RecipeLayout
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
@@ -22,11 +23,11 @@ class Cache:
     @staticmethod
     def create(backend_id: str, base_folder: str, locks_manager: LocksManager, **backend_kwargs):
         if backend_id == 'sqlite3':
-            backend = CacheDatabase(**backend_kwargs)
+            backend = CacheDatabaseSqlite3Filesystem(**backend_kwargs)
             backend.create_table(if_not_exists=True)
             return Cache(base_folder, backend, locks_manager)
         elif backend_id == 'memory':
-            backend = CacheDatabase(':memory:')
+            backend = CacheDatabaseSqlite3Memory(**backend_kwargs)
             backend.create_table(if_not_exists=True)
             return Cache(base_folder, backend, locks_manager)
         else:

@@ -26,5 +26,5 @@ def cache_sqlite3():
 
 @pytest.fixture(params=['cache_memory', 'cache_sqlite3'])
 def cache(request):
-    # This fixtures will parameterize tests that use it with all database backends
+    # These fixtures will parameterize tests that use it with all database backends
     return request.getfixturevalue(request.param)

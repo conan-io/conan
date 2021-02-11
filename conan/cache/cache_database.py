@@ -1,7 +1,7 @@
-import sqlite3
 import uuid
 from typing import Tuple
 
+from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -13,11 +13,6 @@ class CacheDatabase:
     _column_pkgid = 'pkgid'
     _column_prev = 'prev'
     _column_path = 'relpath'
-
-    def __init__(self, filename: str):
-        # We won't run out of file descriptors, so implementation here is up to the threading
-        # model decided for Conan
-        self._conn = sqlite3.connect(filename)
 
     def create_table(self, if_not_exists: bool = True):
         guard = 'IF NOT EXISTS' if if_not_exists else ''
@@ -32,12 +27,12 @@ class CacheDatabase:
         );
         """
         # TODO: Need to add some timestamp for LRU removal
-        with self._conn:
-            self._conn.execute(query)
+        with self.connect() as conn:
+            conn.execute(query)
 
     def dump(self):
-        with self._conn:
-            r = self._conn.execute(f'SELECT * FROM {self._table_name}')
+        with self.connect() as conn:
+            r = conn.execute(f'SELECT * FROM {self._table_name}')
             for it in r.fetchall():
                 print(it)
 
@@ -76,8 +71,8 @@ class CacheDatabase:
                 f'FROM {self._table_name} ' \
                 f'WHERE {where_clause}'
 
-        with self._conn:
-            r = self._conn.execute(query)
+        with self.connect() as conn:
+            r = conn.execute(query)
             rows = r.fetchall()
             assert len(rows) <= 1, f"Unique entry expected... found {rows}," \
                                    f" for where clause {where_clause}"  # TODO: Ensure this uniqueness
@@ -90,8 +85,8 @@ class CacheDatabase:
                           f'"{pref.revision}"' if pref and pref.revision else 'NULL',
                           f'"{path}"'
                           ]
-                self._conn.execute(f'INSERT INTO {self._table_name} '
-                                   f'VALUES ({", ".join(values)})')
+                conn.execute(f'INSERT INTO {self._table_name} '
+                             f'VALUES ({", ".join(values)})')
                 return path, True
             else:
                 return rows[0][0], False
@@ -100,40 +95,46 @@ class CacheDatabase:
         query = f"UPDATE {self._table_name} " \
                 f"SET {self._column_rrev} = '{new_ref.revision}' " \
                 f"WHERE {self._where_clause(old_ref, filter_packages=False)}"
-        with self._conn:
+        with self.connect() as conn:
             # Check if the new_ref already exists, if not, we can move the old_one
             query_exists = f'SELECT EXISTS(SELECT 1 ' \
                            f'FROM {self._table_name} ' \
                            f'WHERE {self._where_clause(new_ref, filter_packages=False)})'
-            r = self._conn.execute(query_exists)
+            r = conn.execute(query_exists)
             if r.fetchone()[0] == 1:
                 raise Exception('Pretended reference already exists')
 
-            r = self._conn.execute(query)
+            r = conn.execute(query)
             assert r.rowcount > 0
 
     def update_prev(self, old_pref: PackageReference, new_pref: PackageReference):
         query = f"UPDATE {self._table_name} " \
                 f"SET {self._column_prev} = '{new_pref.revision}' " \
                 f"WHERE {self._where_clause(ref=old_pref.ref, pref=old_pref)}"
-        with self._conn:
+        with self.connect() as conn:
             # Check if the new_pref already exists, if not, we can move the old_one
             query_exists = f'SELECT EXISTS(SELECT 1 ' \
                            f'FROM {self._table_name} ' \
                            f'WHERE {self._where_clause(new_pref.ref, new_pref, filter_packages=True)})'
-            r = self._conn.execute(query_exists)
+            r = conn.execute(query_exists)
             if r.fetchone()[0] == 1:
                 raise Exception('Pretended prev already exists')
 
-            r = self._conn.execute(query)
+            r = conn.execute(query)
             assert r.rowcount > 0
 
     def update_path(self, ref: ConanFileReference, new_path: str, pref: PackageReference = None):
         query = f"UPDATE {self._table_name} " \
                 f"SET    {self._column_path} = '{new_path}' " \
                 f"WHERE {self._where_clause(ref, pref)}"
-        with self._conn:
-            r = self._conn.execute(query)
+        with self.connect() as conn:
+            r = conn.execute(query)
             assert r.rowcount > 0
 
 
+class CacheDatabaseSqlite3Memory(CacheDatabase, Sqlite3MemoryMixin):
+    pass
+
+
+class CacheDatabaseSqlite3Filesystem(CacheDatabase, Sqlite3FilesystemMixin):
+    pass
