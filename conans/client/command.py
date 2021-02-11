@@ -61,7 +61,7 @@ class Extender(argparse.Action):
         # --build --build=foo == ["*", "foo"]
         elif hasattr(namespace, "build"):
             if namespace.build == list() or \
-               any(str(it).startswith("!") for it in namespace.build):
+               any(str(it).startswith("!") for it in list(namespace.build)):
                 dest.append("*")
 
 
