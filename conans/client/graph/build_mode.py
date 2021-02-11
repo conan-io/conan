@@ -62,7 +62,7 @@ class BuildMode(object):
                     self._excluded_patterns.remove(pattern)
                 except ValueError:
                     pass
-                conan_file.output.info("Excluding package from building.")
+                conan_file.output.info("Excluded build from source")
                 return False
 
         if self.never:
