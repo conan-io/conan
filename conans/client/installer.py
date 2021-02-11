@@ -455,7 +455,6 @@ class BinaryInstaller(object):
         package_layout = self._cache.package_layout(ref)
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
-        conanfile.cpp_info.filter_empty = False
 
         # New editables mechanism based on Layout
         if hasattr(conanfile, "shape"):
@@ -631,6 +630,7 @@ class BinaryInstaller(object):
         conanfile.layout.set_base_build_folder(None)
         conanfile.layout.set_base_install_folder(None)
         conanfile.cpp_info = conanfile.layout.package.cpp_info
+        conanfile.cpp_info.filter_empty = True
         # FIXME: Smells like the constructor of cpp_info should not have the root nor the name
         conanfile.cpp_info._name = conanfile.name
         conanfile.cpp_info._ref_name = conanfile.name

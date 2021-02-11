@@ -1,26 +1,24 @@
 import os
 
-from conans.model.build_info import CppInfo
-
-class CppInfoDefaultValues(object):
-
-    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
-        self.includedir = includedir
-        self.libdir = libdir
-        self.bindir = bindir
-        self.resdir = resdir
-        self.builddir = builddir
-        self.frameworkdir = frameworkdir
+from conans.client.file_copier import FileCopier
+from conans.errors import ConanException
+from conans.model.build_info import CppInfo, CppInfoDefaultValues, DepCppInfo
+from conans.util.log import logger
 
 
 class _LayoutEntry(object):
 
-    def __init__(self, default_cpp_info_values):
+    def __init__(self, default_cpp_info_values=None):
         self.cpp_info = CppInfo(None, None, default_values=default_cpp_info_values)
+        # Do not filter empty folders in cpp_info, not even in the package one
+        # because until the package() is run, they will be empty
+        self.cpp_info.filter_empty = False
 
         self.include_patterns = []
         self.lib_patterns = []
         self.bin_patterns = []
+        self.src_patterns = []
+        self.framework_patterns = []
         self.folder = ""
 
 
@@ -33,22 +31,56 @@ class Layout(object):
         self._base_package_folder = None
         self._base_generators_folder = None
 
-        source_defaults = CppInfoDefaultValues("include", None, None, None, None, None)
+        source_defaults = CppInfoDefaultValues()
         self.source = _LayoutEntry(source_defaults)
+        self.source.cpp_info.includedirs = ["include"]
         self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
 
-        build_defaults = CppInfoDefaultValues(None, ".", None, None, None, None)
+        build_defaults = CppInfoDefaultValues()
         self.build = _LayoutEntry(build_defaults)
+        self.build.cpp_info.builddirs = ["."]
         self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.build.bin_patterns = ["*.exe", "*.dll"]
 
-        self.package = _LayoutEntry(None)
+        self.package = _LayoutEntry()
 
-        generators_defaults = CppInfoDefaultValues(None, None, None, None, None, None)
+        generators_defaults = CppInfoDefaultValues()
         self.generators = _LayoutEntry(generators_defaults)
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def package_files(self):
+        # Map of origin paths and the patterns
+        matching = [("include_paths", "include_patterns"),
+                    ("lib_paths", "lib_patterns"),
+                    ("bin_paths", "bin_patterns"),
+                    ("framework_paths", "framework_patterns"),
+                    ("src_paths", "src_patterns")]
+
+        package_dep_cpp_info = DepCppInfo(self.package.cpp_info)
+        for origin in (self.source, self.build):
+            # To aggregate components and configs of the cpp_info
+            dep_cpp_info = DepCppInfo(origin.cpp_info)
+            for var_name, origin_patterns_var in matching:
+                origin_paths = getattr(dep_cpp_info, var_name)
+                patterns = getattr(origin, origin_patterns_var)
+                destinations = getattr(package_dep_cpp_info, var_name)
+                if not destinations:  # For example: Not declared "includedirs" in package.cpp_info
+                    logger.debug("No '{}' in package, skipping copy".format(var_name))
+                    continue
+                if len(destinations) > 1:
+                    # Check if there is only one possible destination at package, otherwise the
+                    # copy would need to be done manually
+                    err_msg = "The package has more than 1 cpp_info.{}, cannot package automatically"
+                    raise ConanException(err_msg.format(var_name))
+
+                for src in origin_paths:
+                    logger.debug("Copying '{}': "
+                                 "From '{}' patterns '{}'".format(var_name, src, patterns))
+                    copier = FileCopier([src], self._base_package_folder)
+                    for pattern in patterns:
+                        copier(pattern, dst=destinations[0])
 
     @property
     def source_folder(self):

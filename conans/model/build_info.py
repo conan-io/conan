@@ -137,6 +137,7 @@ class _CppInfo(object):
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
         # When package is editable, filter_empty=False, so empty dirs are maintained
+        # FIXME: it smells like the default should be False and only True after a package_info()
         self.filter_empty = True
 
     @property
@@ -290,7 +291,8 @@ class Component(_CppInfo):
 
 class CppInfoDefaultValues(object):
 
-    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
+    def __init__(self, includedir=None, libdir=None, bindir=None, resdir=None, builddir=None,
+                 frameworkdir=None):
         self.includedir = includedir
         self.libdir = libdir
         self.bindir = bindir

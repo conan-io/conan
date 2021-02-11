@@ -294,7 +294,9 @@ class ConanFile(object):
         """ package the needed files from source and build folders.
         E.g. self.copy("*.h", src="src/includes", dst="includes")
         """
-        self.output.warn("This conanfile has no package step")
+        # self.output.warn("This conanfile has no package step")
+        if hasattr(self, "shape"):
+            self.layout.package_files()
 
     def package_info(self):
         """ define cpp_build_info, flags, etc
