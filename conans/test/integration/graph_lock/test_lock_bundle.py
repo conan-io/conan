@@ -161,6 +161,7 @@ def test_build_requires():
         ["app1/0.1@#584778f98ba1d0eb7c80a5ae1fe12fe2", "app2/0.1@#3850895c1eac8223c43c71d525348019"]
     ]
     bundle = client.load("lock1.bundle")
+    print(bundle)
     bundle = json.loads(bundle)["lock_bundle"]
     for level in order:
         for ref in level:

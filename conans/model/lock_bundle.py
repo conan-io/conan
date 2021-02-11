@@ -1,14 +1,47 @@
 import json
 import os
 
+from conans.errors import ConanException
 from conans.model.graph_lock import GraphLockFile
 from conans.util.files import load, save
 
 
 class LockBundle(object):
+    """ aggregated view of multiple lockfiles, coming from different configurations and also
+    different products, that is, completely independent graphs, that could have incompatible
+    versions. This bundle is not useful for restoring a state for a configuration, cannot be
+    used to lock a graph, but it it useful for computing the build order in CI for multiple
+    products. The format is a json with: For every reference, for each "package_id" for that
+    reference, list the lockfiles that contain such reference:package_id and the node indexes
+    inside that lockfile
+    
+    lock_bundle": {
+        "app1/0.1@#584778f98ba1d0eb7c80a5ae1fe12fe2": {
+            "package_id": {
+                "3bcd6800847f779e0883ee91b411aad9ddd8e83c": {
+                    "lockfiles": {
+                        "app1_windows.lock": [
+                            "1"
+                        ]
+                    },
+                    "prev": null,
+                    "modified": null
+                },
+                "60fbb0a22359b4888f7ecad69bcdfcd6e70e2784": {
+                }
+            },
+            "requires": [
+                "pkgb/0.1@#cd8f22d6f264f65398d8c534046e8e20",
+                "tool/0.1@#f096d7d54098b7ad7012f9435d9c33f3"
+            ]
+        },
+    """
 
     def __init__(self):
-        self.nodes = {}
+        """ The structure is
+        "
+        """
+        self._nodes = {}
 
     @staticmethod
     def create(lockfiles, revisions_enabled, cwd):
@@ -30,10 +63,9 @@ class LockBundle(object):
             for id_, node in lock.nodes.items():
                 ref_str = node.ref.full_str()
                 ref_str = ref_convert(ref_str)
-                ref_node = result.nodes.setdefault(ref_str, {})
+                ref_node = result._nodes.setdefault(ref_str, {})
                 pids_node = ref_node.setdefault("package_id", {})
                 pid_node = pids_node.setdefault(node.package_id, {})
-                # TODO: Handle multiple repeated refs in same lockfile
                 ids = pid_node.setdefault("lockfiles", {})
                 # TODO: Add check that this prev is always the same
                 pid_node["prev"] = node.prev
@@ -51,20 +83,20 @@ class LockBundle(object):
         return result
 
     def dumps(self):
-        return json.dumps({"lock_bundle": self.nodes}, indent=4)
+        return json.dumps({"lock_bundle": self._nodes}, indent=4)
 
     def loads(self, text):
         nodes_json = json.loads(text)
-        self.nodes = nodes_json["lock_bundle"]
+        self._nodes = nodes_json["lock_bundle"]
 
     def build_order(self):
         # First do a topological order by levels, the ids of the nodes are stored
         levels = []
-        opened = list(self.nodes.keys())
+        opened = list(self._nodes.keys())
         while opened:
             current_level = []
             for o in opened:
-                node = self.nodes[o]
+                node = self._nodes[o]
                 requires = node.get("requires", [])
                 if not any(n in opened for n in requires):
                     current_level.append(o)
@@ -77,27 +109,46 @@ class LockBundle(object):
         return levels
 
     @staticmethod
-    def update_bundle(multi_lock_path, revisions_enabled):
-        lock_multi = LockBundle()
-        lock_multi.loads(load(multi_lock_path))
-        for ref, packages in lock_multi.nodes.items():
-            for package_id, lock_info in packages["package_id"].items():
-                # First, update all prev, modified in the multi.lock
-                for lockfile, nodes_ids in lock_info["lockfiles"].items():
+    def update_bundle(bundle_path, revisions_enabled):
+        """ Update both the bundle information as well as every individual lockfile, from the
+        information that was modified in the individual lockfile. At the end, all lockfiles will
+        have the same PREV for the binary of same package_id
+        """
+        bundle = LockBundle()
+        bundle.loads(load(bundle_path))
+        for node in bundle._nodes.values():
+            # Each node in bundle belongs to a "ref", and contains lockinfo for every package_id
+            for bundle_package_ids in node["package_id"].values():
+                # Each package_id contains information of multiple lockfiles
+
+                # First, compute the modified PREV from all lockfiles
+                prev = modified = prev_lockfile = None
+                for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
                     graph_lock_conf = GraphLockFile.load(lockfile, revisions_enabled)
                     graph_lock = graph_lock_conf.graph_lock
+
                     for node_id in nodes_ids:
-                        lock_info["prev"] = lock_info["prev"] or graph_lock.nodes[node_id].prev
-                        lock_info["modified"] = lock_info["modified"] or graph_lock.nodes[
-                            node_id].modified
+                        # Make sure the PREV from lockfiles is consistent, it cannot be different
+                        lock_prev = graph_lock.nodes[node_id].prev
+                        if prev is None:
+                            prev = lock_prev
+                            prev_lockfile = lockfile
+                            modified = graph_lock.nodes[node_id].modified
+                        elif lock_prev is not None and prev != lock_prev:
+                            ref = graph_lock.nodes[node_id].ref
+                            msg = "Lock mismatch for {} prev: {}:{} != {}:{}".format(
+                                ref, prev_lockfile, prev, lockfile, lock_prev)
+                            raise ConanException(msg)
+                bundle_package_ids["prev"] = prev
+                bundle_package_ids["modified"] = modified
 
                 # Then, update all prev of all config lockfiles
-                for lockfile, nodes_ids in lock_info["lockfiles"].items():
+                for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
                     graph_lock_conf = GraphLockFile.load(lockfile, revisions_enabled)
                     graph_lock = graph_lock_conf.graph_lock
                     for node_id in nodes_ids:
                         if graph_lock.nodes[node_id].prev is None:
-                            graph_lock.nodes[node_id].prev = lock_info["prev"]
+                            graph_lock.nodes[node_id].prev = prev
                     graph_lock_conf.save(lockfile)
 
-        save(multi_lock_path, lock_multi.dumps())
+        save(bundle_path, bundle.dumps())
