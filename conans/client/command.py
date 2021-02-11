@@ -41,7 +41,7 @@ class Extender(argparse.Action):
           settings = ['cucumber:true']
     """
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        # Need None here in case `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
         if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
@@ -58,6 +58,11 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
+        # --build --build=foo == ["*", "foo"]
+        elif hasattr(namespace, "build"):
+            if namespace.build == list() or \
+               any(it.startswith("!") for it in namespace.build):
+                dest.append("*")
 
 
 class OnceArgument(argparse.Action):

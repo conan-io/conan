@@ -85,8 +85,30 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
     """ When --build is passed with a skipped package, not all packages must be built from sources.
         When --build= is passed with another package, only the package must be built from sources.
         When --build=* is passed with another package, not all packages must be built from sources.
+
+        The arguments order matter, that's why we need to run twice.
     """
-    build_all.run("install foobar/1.0@user/testing --build=!foo {}".format(build_arg))
+    for argument in ["--build=!foo {}".format(build_arg), "{} --build=!foo".format(build_arg)]:
+        build_all.run("install foobar/1.0@user/testing {}".format(argument))
+
+    assert "bar/1.0@user/testing:7839863d5a059fc6579f28026763e1021268c55e - {}".format(bar) in build_all.out
+    assert "foo/1.0@user/testing:4024617540c4f240a6a5e8911b0de9ef38a11a72 - {}".format(foo) in build_all.out
+    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - {}".format(foobar) in build_all.out
+
+
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Build"),
+                                                      ("--build=", "Cache", "Cache", "Cache"),
+                                                      ("--build=*", "Cache", "Cache", "Build")])
+def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_all):
+    """ When --build is passed with a skipped package, not all packages must be built from sources.
+        When --build= is passed with another package, only the package must be built from sources.
+        When --build=* is passed with another package, not all packages must be built from sources.
+
+        The arguments order matter, that's why we need to run twice.
+    """
+    for argument in ["--build=!foo --build=!bar {}".format(build_arg),
+                     "{} --build=!foo --build=!bar".format(build_arg)]:
+        build_all.run("install foobar/1.0@user/testing {}".format(argument))
 
     assert "bar/1.0@user/testing:7839863d5a059fc6579f28026763e1021268c55e - {}".format(bar) in build_all.out
     assert "foo/1.0@user/testing:4024617540c4f240a6a5e8911b0de9ef38a11a72 - {}".format(foo) in build_all.out

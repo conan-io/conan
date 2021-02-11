@@ -10,6 +10,7 @@ class BuildMode(object):
                    => False if user wrote "never"
                    => True if user wrote "missing"
                    => "outdated" if user wrote "--build outdated"
+                   => ["!foo"] means exclude when building all from sources
     """
     def __init__(self, params, output):
         self._out = output
@@ -19,6 +20,7 @@ class BuildMode(object):
         self.cascade = False
         self.patterns = []
         self._unused_patterns = []
+        self._excluded_patterns = []
         self.all = False
         if params is None:
             return
@@ -44,9 +46,25 @@ class BuildMode(object):
 
             if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
-        self._unused_patterns = list(self.patterns)
+        self._excluded_patterns = [it for it in list(self.patterns) if it.startswith("!")]
+        self._unused_patterns = [it for it in list(self.patterns)
+                                 if it not in self._excluded_patterns]
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
+        def pattern_match(pattern):
+            return (fnmatch.fnmatchcase(ref.name, pattern) or
+                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern) or
+                    fnmatch.fnmatchcase(repr(ref), pattern))
+
+        for pattern in self.patterns:
+            if pattern.startswith("!") and pattern_match(pattern[1:]):
+                try:
+                    self._excluded_patterns.remove(pattern)
+                except ValueError:
+                    pass
+                conan_file.output.info("Excluding package from building.")
+                return False
+
         if self.never:
             return False
         if self.all:
@@ -62,9 +80,7 @@ class BuildMode(object):
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self.patterns:
-            if (fnmatch.fnmatchcase(ref.name, pattern) or
-                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern) or
-                    fnmatch.fnmatchcase(repr(ref), pattern)):
+            if pattern_match(pattern):
                 try:
                     self._unused_patterns.remove(pattern)
                 except ValueError:
@@ -83,4 +99,6 @@ class BuildMode(object):
 
     def report_matches(self):
         for pattern in self._unused_patterns:
-            self._out.error("No package matching '%s' pattern" % pattern)
+            self._out.error("No package matching '%s' pattern found to be built." % pattern)
+        for pattern in self._excluded_patterns:
+            self._out.error("No package matching '%s' pattern found to be excluded." % pattern)
