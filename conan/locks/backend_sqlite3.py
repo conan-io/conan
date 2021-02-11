@@ -9,7 +9,7 @@ from conan.locks.backend import LockBackend
 class Sqlite3MemoryMixin:
     def __init__(self, unique_id: str = None):
         self._unique_id = unique_id or str(uuid.uuid4())
-        self._conn = sqlite3.connect(f'file:{self._unique_id}?mode=memory&cache=shared')
+        self._conn = sqlite3.connect(f'file:{self._unique_id}?mode=memory&cache=shared', uri=True)
 
     def __getstate__(self):
         raise Exception(
@@ -17,7 +17,12 @@ class Sqlite3MemoryMixin:
 
     @contextmanager
     def connect(self):
-        yield self._conn.cursor()
+        conn = sqlite3.connect(f'file:{self._unique_id}?mode=memory&cache=shared', uri=True)
+        try:
+            yield conn.cursor()
+        finally:
+            conn.commit()
+            conn.close()
 
 
 class Sqlite3FilesystemMixin:

@@ -28,23 +28,7 @@ def one_which_raises(c1, manager, resource_id, return_dict):
             c1.notify_all()
 
 
-"""
-def test_backend_memory():
-    manager = LocksManager.create('memory')
-
-    process_sync = Lock()
-    resource_id = 'whatever'
-    process_sync.acquire()
-
-    p = threading.Thread(target=one_which_locks, args=(process_sync, manager, resource_id))
-    with pytest.raises(Exception) as excinfo:
-        p.start()
-    assert "A memory Sqlite3 database is not pickable" == str(excinfo.value)
-"""
-
-
-def test_backend_filename(lock_manager_memory):
-    lock_manager = lock_manager_memory
+def test_backend_filename(lock_manager):
     return_dict = dict()
     c1 = threading.Condition()
     c2 = threading.Condition()
