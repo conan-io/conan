@@ -1,20 +1,9 @@
 import re
-import tempfile
 
 import pytest
 
 from conan.cache.cache import Cache
-from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
-
-
-@pytest.fixture
-def tmp_cache():
-    # TODO: Move to some shared location for fixtures
-    locks_manager = LocksManager.create('memory')
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        cache = Cache.create('memory', tmpdirname, locks_manager)
-        yield cache
 
 
 def is_random_folder(cache_folder: str, folder):
@@ -24,64 +13,64 @@ def is_random_folder(cache_folder: str, folder):
 
 
 class TestFolders:
-    def test_random_reference(self, tmp_cache):
+    def test_random_reference(self, cache: Cache):
         ref = ConanFileReference.loads('name/version@user/channel')
-        ref_layout = tmp_cache.get_reference_layout(ref)
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.export())
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.source())
+        ref_layout = cache.get_reference_layout(ref)
+        assert is_random_folder(cache.base_folder, ref_layout.export())
+        assert is_random_folder(cache.base_folder, ref_layout.export_sources())
+        assert is_random_folder(cache.base_folder, ref_layout.source())
 
-    def test_reference_with_rrev(self, tmp_cache):
+    def test_reference_with_rrev(self, cache: Cache):
         # By default the cache will assign deterministics folders
         ref = ConanFileReference.loads('name/version@user/channel#1111111111')
-        ref_layout = tmp_cache.get_reference_layout(ref)
-        assert not is_random_folder(tmp_cache.base_folder, ref_layout.export())
-        assert not is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
-        assert not is_random_folder(tmp_cache.base_folder, ref_layout.source())
+        ref_layout = cache.get_reference_layout(ref)
+        assert not is_random_folder(cache.base_folder, ref_layout.export())
+        assert not is_random_folder(cache.base_folder, ref_layout.export_sources())
+        assert not is_random_folder(cache.base_folder, ref_layout.source())
 
-    def test_reference_existing(self, tmp_cache):
+    def test_reference_existing(self, cache: Cache):
         ref = ConanFileReference.loads('name/version@user/channel')
-        creation_layout = tmp_cache.get_reference_layout(ref)
+        creation_layout = cache.get_reference_layout(ref)
         ref = ref.copy_with_rev(revision='111111')
 
         # If the folders are not moved when assigning the rrev, they will be retrieved as they are
         creation_layout.assign_rrev(ref, move_contents=False)
-        ref_layout = tmp_cache.get_reference_layout(ref)
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.export())
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.export_sources())
-        assert is_random_folder(tmp_cache.base_folder, ref_layout.source())
+        ref_layout = cache.get_reference_layout(ref)
+        assert is_random_folder(cache.base_folder, ref_layout.export())
+        assert is_random_folder(cache.base_folder, ref_layout.export_sources())
+        assert is_random_folder(cache.base_folder, ref_layout.source())
 
-    def test_random_package(self, tmp_cache):
+    def test_random_package(self, cache: Cache):
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
-        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert is_random_folder(tmp_cache.base_folder, pkg_layout.build())
-        assert is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+        pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert is_random_folder(cache.base_folder, pkg_layout.build())
+        assert is_random_folder(cache.base_folder, pkg_layout.package())
 
-    def test_package_with_prev(self, tmp_cache):
+    def test_package_with_prev(self, cache: Cache):
         # By default the cache will assign deterministics folders
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789#999999999')
-        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert not is_random_folder(tmp_cache.base_folder, pkg_layout.build())
-        assert not is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+        pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert not is_random_folder(cache.base_folder, pkg_layout.build())
+        assert not is_random_folder(cache.base_folder, pkg_layout.package())
 
-    def test_package_existing(self, tmp_cache):
+    def test_package_existing(self, cache: Cache):
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
-        creation_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        creation_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
         pref = pref.copy_with_revs(pref.ref.revision, '999999')
 
         # If the folders are not moved when assigning the prev, they will be retrieved as they are
         creation_layout.assign_prev(pref, move_contents=False)
-        pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert is_random_folder(tmp_cache.base_folder, pkg_layout.build())
-        assert is_random_folder(tmp_cache.base_folder, pkg_layout.package())
+        pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
+        assert is_random_folder(cache.base_folder, pkg_layout.build())
+        assert is_random_folder(cache.base_folder, pkg_layout.package())
 
 
-def test_create_workflow(tmp_cache):
-    cache_folder = tmp_cache.base_folder
+def test_create_workflow(cache: Cache):
+    cache_folder = cache.base_folder
 
     # 1. First we have a reference without revision
     ref = ConanFileReference.loads('name/version@user/channel')
-    ref_layout = tmp_cache.get_reference_layout(ref)
+    ref_layout = cache.get_reference_layout(ref)
     export_folder = ref_layout.export()
     assert is_random_folder(cache_folder, export_folder)
     export_sources_folder = ref_layout.export_sources()
@@ -109,7 +98,7 @@ def test_create_workflow(tmp_cache):
     assert not is_random_folder(cache_folder, ref_layout.export_sources())
 
     # If the reference is in the cache, we can retrieve it.
-    ref_layout2 = tmp_cache.get_reference_layout(ref)
+    ref_layout2 = cache.get_reference_layout(ref)
     assert str(ref_layout.export()) == str(ref_layout2.export())
     assert str(ref_layout.export_sources()) == str(ref_layout2.export_sources())
 
@@ -146,13 +135,13 @@ def test_create_workflow(tmp_cache):
     assert not is_random_folder(cache_folder, package1_layout.package())
 
 
-def test_concurrent_export(tmp_cache):
+def test_concurrent_export(cache: Cache):
     # It can happen that two jobs are creating the same recipe revision.
     ref = ConanFileReference.loads('name/version')
-    r1_layout = tmp_cache.get_reference_layout(ref)
+    r1_layout = cache.get_reference_layout(ref)
     with r1_layout.lock(blocking=True, wait=False):
         # R1 is exporting the information, and R2 starts to do the same
-        r2_layout = tmp_cache.get_reference_layout(ref)
+        r2_layout = cache.get_reference_layout(ref)
         with r2_layout.lock(blocking=True, wait=False):
             pass
 
@@ -166,10 +155,10 @@ def test_concurrent_export(tmp_cache):
     assert "Pretended reference already exists" == str(excinfo.value)
 
 
-def test_concurrent_package(tmp_cache):
+def test_concurrent_package(cache: Cache):
     # When two jobs are generating the same packageID and it happens that both compute the same prev
     ref = ConanFileReference.loads('name/version#rrev')
-    recipe_layout = tmp_cache.get_reference_layout(ref)
+    recipe_layout = cache.get_reference_layout(ref)
     pref = PackageReference.loads(f'{ref.full_str()}:123456789')
     p1_layout = recipe_layout.get_package_layout(pref)
     with p1_layout.lock(blocking=True, wait=True):
@@ -188,12 +177,12 @@ def test_concurrent_package(tmp_cache):
     assert "Pretended prev already exists" == str(excinfo.value)
 
 
-def test_concurrent_read_write_recipe(tmp_cache):
+def test_concurrent_read_write_recipe(cache: Cache):
     # For whatever the reason, two concurrent jobs want to read and write the recipe
     ref = ConanFileReference.loads('name/version#1111111111')
-    r1_layout = tmp_cache.get_reference_layout(ref)
-    r2_layout = tmp_cache.get_reference_layout(ref)
-    r3_layout = tmp_cache.get_reference_layout(ref)
+    r1_layout = cache.get_reference_layout(ref)
+    r2_layout = cache.get_reference_layout(ref)
+    r3_layout = cache.get_reference_layout(ref)
     with r1_layout.lock(blocking=False, wait=False):
         with r2_layout.lock(blocking=False, wait=False):
             assert str(r1_layout.export()) == str(r2_layout.export())
@@ -204,10 +193,10 @@ def test_concurrent_read_write_recipe(tmp_cache):
             assert "Resource 'name/version#1111111111' is already blocked" == str(excinfo.value)
 
 
-def test_concurrent_write_recipe_package(tmp_cache):
+def test_concurrent_write_recipe_package(cache: Cache):
     # A job is creating a package while another ones tries to modify the recipe
     pref = PackageReference.loads('name/version#11111111:123456789')
-    recipe_layout = tmp_cache.get_reference_layout(pref.ref)
+    recipe_layout = cache.get_reference_layout(pref.ref)
     package_layout = recipe_layout.get_package_layout(pref)
 
     with package_layout.lock(blocking=True, wait=True):

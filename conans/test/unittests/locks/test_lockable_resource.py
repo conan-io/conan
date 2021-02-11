@@ -1,16 +1,13 @@
 import pytest
 
-from locks.locks_manager import LocksManager
-
 
 class TestLockableResource:
 
-    def test_with_writers(self):
-        manager = LocksManager.create('memory')
+    def test_with_writers(self, lock_manager):
         resource = 'res'
 
-        l1 = manager.get_lockable_resource(resource, blocking=True, wait=False)
-        l2 = manager.get_lockable_resource(resource, blocking=True, wait=False)
+        l1 = lock_manager.get_lockable_resource(resource, blocking=True, wait=False)
+        l2 = lock_manager.get_lockable_resource(resource, blocking=True, wait=False)
 
         with l1:
             with pytest.raises(Exception) as excinfo:
@@ -24,12 +21,11 @@ class TestLockableResource:
                     pass
             assert "Resource 'res' is already blocked" == str(excinfo.value)
 
-    def test_readers(self):
-        manager = LocksManager.create('memory')
+    def test_readers(self, lock_manager):
         resource = 'res'
 
-        l1 = manager.get_lockable_resource(resource, blocking=False, wait=False)
-        l2 = manager.get_lockable_resource(resource, blocking=False, wait=False)
+        l1 = lock_manager.get_lockable_resource(resource, blocking=False, wait=False)
+        l2 = lock_manager.get_lockable_resource(resource, blocking=False, wait=False)
 
         with l1:
             with l2:

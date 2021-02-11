@@ -2,31 +2,24 @@ from conan.locks.locks_manager import LocksManager
 import pytest
 
 
-class TestLocksManagerMemoryBackend:
-    backend = 'memory'
-
-    def test_plain_inside_context(self):
-        manager = LocksManager.create(self.backend)
+class TestLocksManager:
+    def test_plain_inside_context(self, lock_manager):
         resource = 'res'
-        with manager.lock(resource, blocking=True, wait=True):
+        with lock_manager.lock(resource, blocking=True, wait=True):
             with pytest.raises(Exception) as excinfo:
-                manager.try_acquire(resource, blocking=False, wait=False)
+                lock_manager.try_acquire(resource, blocking=False, wait=False)
             assert "Resource 'res' is blocked by a writer" == str(excinfo.value)
 
-        lock_id = manager.try_acquire(resource, blocking=False, wait=False)
-        manager.release(lock_id)
+        lock_id = lock_manager.try_acquire(resource, blocking=False, wait=False)
+        lock_manager.release(lock_id)
 
-    def test_contextmanager_after_plain(self):
-        manager = LocksManager.create(self.backend)
+    def test_contextmanager_after_plain(self, lock_manager):
+        lock_manager = LocksManager.create('memory')
         resource = 'res'
 
-        lock_id = manager.try_acquire(resource, blocking=False, wait=True)
+        lock_id = lock_manager.try_acquire(resource, blocking=False, wait=True)
         with pytest.raises(Exception) as excinfo:
-            with manager.lock(resource, blocking=True, wait=False):
+            with lock_manager.lock(resource, blocking=True, wait=False):
                 pass
         assert "Resource 'res' is already blocked" == str(excinfo.value)
-        manager.release(lock_id)
-
-
-# TODO: Implement basic test with SQlite3 backend
-
+        lock_manager.release(lock_id)
