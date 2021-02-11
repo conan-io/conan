@@ -1,13 +1,15 @@
 import os
 import sqlite3
+import uuid
 from contextlib import contextmanager
 
 from conan.locks.backend import LockBackend
 
 
 class Sqlite3MemoryMixin:
-    def __init__(self):
-        self._conn = sqlite3.connect(':memory:')
+    def __init__(self, unique_id: str = None):
+        self._unique_id = unique_id or str(uuid.uuid4())
+        self._conn = sqlite3.connect(f'file:{self._unique_id}?mode=memory&cache=shared')
 
     def __getstate__(self):
         raise Exception(

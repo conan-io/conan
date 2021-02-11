@@ -17,7 +17,7 @@ class LocksManager:
             backend.create_table(if_not_exists=True)
             return LocksManager(backend)
         elif backend_id == 'memory':
-            backend = LockBackendSqlite3Memory()
+            backend = LockBackendSqlite3Memory(**backend_kwargs)
             backend.create_table(if_not_exists=True)
             return LocksManager(backend)
         else:
