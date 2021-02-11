@@ -77,7 +77,7 @@ If the test needs any of those tools to run it should be marked as using that to
 Please, if you need to run several combinations of the same testing code use parameterization. You can use the builtin `pytest.mark.parametrize` decorator to enable parametrization of arguments for a test function:
 
 ```python
-@pytest.mark.parametrize("use_components", [False, True])
+    @pytest.mark.parametrize("use_components", [False, True])
     def test_build_modules_alias_target(self, use_components):
         ...
 ```
