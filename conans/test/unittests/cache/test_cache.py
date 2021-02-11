@@ -69,7 +69,7 @@ class TestFolders:
         creation_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
         pref = pref.copy_with_revs(pref.ref.revision, '999999')
 
-        # If the folders are not moved when assigning the rrev, they will be retrieved as they are
+        # If the folders are not moved when assigning the prev, they will be retrieved as they are
         creation_layout.assign_prev(pref, move_contents=False)
         pkg_layout = tmp_cache.get_reference_layout(pref.ref).get_package_layout(pref)
         assert is_random_folder(tmp_cache.base_folder, pkg_layout.build())

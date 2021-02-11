@@ -1,7 +1,35 @@
 import os
 import sqlite3
+from contextlib import contextmanager
 
 from conan.locks.backend import LockBackend
+
+
+class Sqlite3MemoryMixin:
+    def __init__(self):
+        self._conn = sqlite3.connect(':memory:')
+
+    def __getstate__(self):
+        raise Exception(
+            'A memory Sqlite3 database is not pickable')  # TODO: Define if we want to share a memory database by running a server (probably not)
+
+    @contextmanager
+    def connect(self):
+        yield self._conn.cursor()
+
+
+class Sqlite3FilesystemMixin:
+    def __init__(self, filename: str):
+        self._filename = filename
+
+    @contextmanager
+    def connect(self):
+        conn = sqlite3.connect(self._filename)
+        try:
+            yield conn.cursor()
+        finally:
+            conn.commit()
+            conn.close()
 
 
 class LockBackendSqlite3(LockBackend):
@@ -14,10 +42,11 @@ class LockBackendSqlite3(LockBackend):
     _column_pid = 'pid'
     _column_writer = 'writer'
 
-    def __init__(self, filename: str):
-        # We won't run out of file descriptors, so implementation here is up to the threading
-        # model decided for Conan
-        self._conn = sqlite3.connect(filename)
+    def dump(self):
+        with self.connect() as conn:
+            r = conn.execute(f'SELECT * FROM {self._table_name}')
+            for it in r.fetchall():
+                print(it)
 
     def create_table(self, if_not_exists: bool = True):
         guard = 'IF NOT EXISTS' if if_not_exists else ''
@@ -28,17 +57,17 @@ class LockBackendSqlite3(LockBackend):
             {self._column_writer} BOOLEAN NOT NULL CHECK ({self._column_writer} IN (0,1))
         );
         """
-        with self._conn:
-            self._conn.execute(query)
+        with self.connect() as conn:
+            conn.execute(query)
 
     def try_acquire(self, resource: str, blocking: bool) -> LockId:
         # Returns a backend-id
         # TODO: Detect dead-lock based on pid
-        with self._conn:
+        with self.connect() as conn:
             # Check if any is using the resource
-            result = self._conn.execute(f'SELECT {self._column_pid}, {self._column_writer} '
-                                        f'FROM {self._table_name} '
-                                        f'WHERE {self._column_resource} = "{resource}";')
+            result = conn.execute(f'SELECT {self._column_pid}, {self._column_writer} '
+                                  f'FROM {self._table_name} '
+                                  f'WHERE {self._column_resource} = "{resource}";')
             if blocking and result.fetchone():
                 raise Exception(f"Resource '{resource}' is already blocked")
 
@@ -49,10 +78,18 @@ class LockBackendSqlite3(LockBackend):
 
             # Add me as a reader, one more reader
             blocking_value = 1 if blocking else 0
-            result = self._conn.execute(f'INSERT INTO {self._table_name} '
-                                        f'VALUES ("{resource}", {os.getpid()}, {blocking_value})')
+            result = conn.execute(f'INSERT INTO {self._table_name} '
+                                  f'VALUES ("{resource}", {os.getpid()}, {blocking_value})')
             return result.lastrowid
 
     def release(self, backend_id: LockId):
-        with self._conn:
-            self._conn.execute(f'DELETE FROM {self._table_name} WHERE rowid={backend_id}')
+        with self.connect() as conn:
+            conn.execute(f'DELETE FROM {self._table_name} WHERE rowid={backend_id}')
+
+
+class LockBackendSqlite3Memory(Sqlite3MemoryMixin, LockBackendSqlite3):
+    pass
+
+
+class LockBackendSqlite3Filesystem(Sqlite3FilesystemMixin, LockBackendSqlite3):
+    pass
