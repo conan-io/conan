@@ -24,7 +24,7 @@ class BuildMode(object):
             return
 
         assert isinstance(params, list)
-        if len(params) == 0 or "*" in params or "" in params:
+        if len(params) == 0:
             self.all = True
         else:
             for param in params:

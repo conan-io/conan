@@ -58,8 +58,6 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
-        elif hasattr(namespace, "build") and values is None:
-            dest.append('')
 
 
 class OnceArgument(argparse.Action):
