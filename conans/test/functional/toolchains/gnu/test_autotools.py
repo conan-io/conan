@@ -63,13 +63,16 @@ def build_windows_subsystem(profile):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
     """
-    client = TestClient()
+    # FIXME: cygwin in CI (my local machine works) seems broken for path with spaces
+    client = TestClient(path_with_spaces=False)
     client.run("new hello/0.1 --template=v2_cmake")
     # TODO: Test Windows subsystems in CMake, at least msys is broken
     os.rename(os.path.join(client.current_folder, "test_package"),
               os.path.join(client.current_folder, "test_package2"))
     client.save({"profile": profile})
     client.run("create . --profile=profile")
+    print(client.out)
+
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     makefile = textwrap.dedent("""\
         app: main.o
@@ -105,6 +108,7 @@ def build_windows_subsystem(profile):
 
     client.run("install . --profile=profile")
     client.run_command("autotoolsdeps.bat && autotools.bat && mingw32-make")
+    print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
@@ -117,6 +121,7 @@ def build_windows_subsystem(profile):
     touch(os.path.join(client.current_folder, "main.cpp"), (t, t))
 
     client.run("build .")
+    print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
