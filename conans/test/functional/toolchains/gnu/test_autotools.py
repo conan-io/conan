@@ -30,7 +30,7 @@ def test_autotools():
         class TestConan(ConanFile):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
-            exports_sources = "*"
+            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
 
             def generate(self):
                 deps = AutotoolsDeps(self)
@@ -59,24 +59,14 @@ def test_autotools():
     assert "hello/0.1: Hello World Release!" in client.out
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Mingw")
-def test_autotoolsdeps_mingw():
+def build_windows_subsystem(profile):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
     """
     client = TestClient()
     client.run("new hello/0.1 --template=v2_cmake")
-    gcc = textwrap.dedent("""
-        [settings]
-        os=Windows
-        compiler=gcc
-        compiler.version=4.9
-        compiler.libcxx=libstdc++
-        arch=x86_64
-        build_type=Release
-        """)
-    client.save({"profile_gcc": gcc})
-    client.run("create . --profile=profile_gcc")
+    client.save({"profile": profile})
+    client.run("create . --profile=profile")
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     makefile = textwrap.dedent("""\
         app: main.o
@@ -108,9 +98,9 @@ def test_autotoolsdeps_mingw():
     client.save({"main.cpp": main,
                  "Makefile": makefile,
                  "conanfile.py": conanfile,
-                 "profile_gcc": gcc}, clean_first=True)
+                 "profile": profile}, clean_first=True)
 
-    client.run("install . --profile=profile_gcc")
+    client.run("install . --profile=profile")
     client.run_command("autotoolsdeps.bat && autotools.bat && mingw32-make")
     client.run_command("app")
     # TODO: fill compiler version when ready
@@ -128,3 +118,55 @@ def test_autotoolsdeps_mingw():
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
     assert "hello/0.1: Hello World Release!" in client.out
+    return client.out
+
+
+@pytest.mark.tool_cygwin
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+def test_autotoolsdeps_cygwin():
+    gcc = textwrap.dedent("""
+        [settings]
+        os=Windows
+        os.subsystem=cygwin
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        arch=x86_64
+        build_type=Release
+        """)
+    out = build_windows_subsystem(gcc)
+    assert "main2 __CYGWIN__1" in out
+
+
+@pytest.mark.tool_mingw
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+def test_autotoolsdeps_mingw():
+    gcc = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        arch=x86_64
+        build_type=Release
+        """)
+    out = build_windows_subsystem(gcc)
+    assert "main2 __MINGW64__1" in out
+
+
+@pytest.mark.tool_msys2
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+def test_autotoolsdeps_msys():
+    gcc = textwrap.dedent("""
+        [settings]
+        os=Windows
+        os.subsystem=msys2
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        arch=x86_64
+        build_type=Release
+        """)
+    out = build_windows_subsystem(gcc)
+    print(out)
+    assert "main2 __CYGWIN__1" in out

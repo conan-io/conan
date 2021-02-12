@@ -1,7 +1,6 @@
 import os
 
 from conans.errors import ConanException
-from conans.util.log import logger
 
 
 def is_multi_configuration(generator):
@@ -33,22 +32,7 @@ def get_generator(conanfile):
         return base
 
     compiler_base = conanfile.settings.get_safe("compiler.base")
-    arch = conanfile.settings.get_safe("arch")
-
     compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
-    if hasattr(conanfile, 'settings_build'):
-        os_build = conanfile.settings_build.get_safe('os')
-    else:
-        os_build = conanfile.settings.get_safe('os_build')
-    if os_build is None:  # Assume is the same specified in host settings, not cross-building
-        os_build = conanfile.settings.get_safe("os")
-
-    if not compiler or not compiler_version or not arch:
-        if os_build == "Windows":
-            logger.warning("CMake generator could not be deduced from settings")
-            return None
-        return "Unix Makefiles"
-
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
         major_version = version.split('.', 1)[0]
@@ -59,12 +43,22 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
+                    '16': '16 2019'}.get(major_version)
         base = "Visual Studio %s" % _visuals
         return base
 
-    # The generator depends on the build machine, not the target
-    if os_build == "Windows" and compiler != "qcc":
-        return "MinGW Makefiles"  # it is valid only under Windows
+    if hasattr(conanfile, 'settings_build'):
+        os_build = conanfile.settings_build.get_safe('os')
+    else:
+        os_build = conanfile.settings.get_safe('os_build')
+    if os_build is None:  # Assume is the same specified in host settings, not cross-building
+        os_build = conanfile.settings.get_safe("os")
+
+    if os_build == "Windows":
+        sub = conanfile.settings.get_safe("os.subsystem")
+        if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
+            return "Unix Makefiles"
+        else:
+            return "MinGW Makefiles"
 
     return "Unix Makefiles"
