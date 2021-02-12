@@ -143,7 +143,10 @@ def _format_values(flavor, variables, append_with_spaces):
             placeholder = _variable_placeholder(flavor, name, append_space)
             if append_space:
                 # Variables joined with spaces look like: CPPFLAGS="one two three"
-                value = " ".join(value+[placeholder])
+                if flavor == SH_FLAVOR:
+                    value = " ".join(value) + placeholder
+                else:
+                    value = " ".join(value + [placeholder])
                 value = "\"%s\"" % value if quote_elements else value
             else:
                 # Quoted variables joined with pathset may look like:

@@ -221,14 +221,14 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
         _, environment = self._run_virtualenv(generator)
 
-        self.assertEqual(environment["CFLAGS"], "-O2 ")  # FIXME: Trailing blank
-        self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 ")  # FIXME: Trailing blank
+        extra_blank = " " if platform.system() == "Windows" else ""  # FIXME: Extra blank under Windows
+        self.assertEqual(environment["CFLAGS"], "-O2" + extra_blank)
+        self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2" + extra_blank)
 
         with environment_append({"CFLAGS": "cflags", "CL": "cl"}):
             _, environment = self._run_virtualenv(generator)
-            extra_blank = " " if platform.system() != "Windows" else ""  # FIXME: Extra blank
-            self.assertEqual(environment["CFLAGS"], "-O2 {}cflags".format(extra_blank))
-            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 {}cl".format(extra_blank))
+            self.assertEqual(environment["CFLAGS"], "-O2 cflags")
+            self.assertEqual(environment["CL"], "-MD -DNDEBUG -O2 -Ob2 cl")
 
     @pytest.mark.tool_conan
     def test_list_variable(self):

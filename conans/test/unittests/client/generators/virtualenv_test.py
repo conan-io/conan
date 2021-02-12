@@ -62,7 +62,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
 
     def test_list_with_spaces(self):
         self.assertIn("CL", VirtualEnvGenerator.append_with_spaces)
-        self.assertIn("CL=\"cl1 cl2 ${CL:+ $CL}\"", self.result['environment.sh.env'])
+        self.assertIn("CL=\"cl1 cl2${CL:+ $CL}\"", self.result['environment.sh.env'])
         self.assertIn('CL=cl1 cl2 $env:CL', self.result["environment.ps1.env"])
 
         if platform.system() == "Windows":
