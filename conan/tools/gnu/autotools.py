@@ -111,7 +111,7 @@ class Autotools(object):
             pkg_env = {"PKG_CONFIG_PATH": [self._conanfile.install_folder]} \
                 if "pkg_config" in self._conanfile.generators else None
         """
-        configure_dir = self._adjust_path(configure_dir)
+        configure_dir = configure_dir
 
         """if self._conanfile.package_folder is not None:
             if not args:
