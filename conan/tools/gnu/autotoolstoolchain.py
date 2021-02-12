@@ -1,5 +1,3 @@
-import traceback
-
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
 # FIXME: need to refactor this import and bring to conan.tools

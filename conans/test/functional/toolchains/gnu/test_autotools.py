@@ -59,7 +59,7 @@ def test_autotools():
     assert "hello/0.1: Hello World Release!" in client.out
 
 
-def build_windows_subsystem(profile):
+def build_windows_subsystem(profile, make_program):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions
     """
@@ -107,7 +107,7 @@ def build_windows_subsystem(profile):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    client.run_command("autotoolsdeps.bat && autotools.bat && mingw32-make")
+    client.run_command("autotoolsdeps.bat && autotools.bat && {}".format(make_program))
     print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
@@ -130,7 +130,7 @@ def build_windows_subsystem(profile):
 
 
 @pytest.mark.tool_cygwin
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_cygwin():
     gcc = textwrap.dedent("""
         [settings]
@@ -142,12 +142,15 @@ def test_autotoolsdeps_cygwin():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc)
+    out = build_windows_subsystem(gcc, make_program="make")
+    print(out)
+    assert "__MSYS__" not in out
+    assert "MINGW" not in out
     assert "main2 __CYGWIN__1" in out
 
 
-@pytest.mark.tool_mingw64
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+@pytest.mark.tool_mingw
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_mingw():
     gcc = textwrap.dedent("""
         [settings]
@@ -158,12 +161,32 @@ def test_autotoolsdeps_mingw():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc)
+    out = build_windows_subsystem(gcc, make_program="mingw32-make")
+    print(out)
+    assert "__MSYS__" not in out
+    assert "main2 __MINGW64__1" in out
+
+
+@pytest.mark.tool_mingw64
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_autotoolsdeps_mingw_msys():
+    gcc = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        arch=x86_64
+        build_type=Release
+        """)
+    out = build_windows_subsystem(gcc, make_program="mingw32-make")
+    print(out)
+    assert "__MSYS__" not in out
     assert "main2 __MINGW64__1" in out
 
 
 @pytest.mark.tool_msys2
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""
         [settings]
@@ -175,6 +198,9 @@ def test_autotoolsdeps_msys():
         arch=x86_64
         build_type=Release
         """)
-    out = build_windows_subsystem(gcc)
+    out = build_windows_subsystem(gcc, make_program="make")
     print(out)
+    # Msys2 is a rewrite of Msys, using Cygwin
+    assert "MINGW" not in out
+    assert "main2 __MSYS__1" in out
     assert "main2 __CYGWIN__1" in out

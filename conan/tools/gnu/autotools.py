@@ -6,7 +6,6 @@ import platform
 from conans.client import tools
 from conans.client.tools.oss import OSInfo,  cross_building, \
     detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
-from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
 from conans.util.files import get_abs_path
@@ -158,11 +157,6 @@ class Autotools(object):
             self._conanfile.output.warn("Error running `configure --help`: %s" % e)
             return ""
         return mybuf.getvalue()
-
-    def _adjust_path(self, path):
-        if self._win_bash:
-            path = unix_path(path, path_flavor=self.subsystem)
-        return '"%s"' % path if " " in path else path
 
     @staticmethod
     def _valid_configure_flag(varname, args, available_flags):
