@@ -19,21 +19,7 @@ class ServerMigrator(Migrator):
         super(ServerMigrator, self).__init__(conf_path, current_version, out)
 
     def _make_migrations(self, old_version):
-        # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
-
-        if old_version < Version("1.10.0"):
-            if not os.path.exists(self.store_path) or not os.listdir(self.store_path):
-                # Empty storage
-                return
-            try:
-                self.migrate_to_revisions_layout()
-            except Exception as e:
-                print("An error ocurred during the migration, please restore the backup directory "
-                      "and try again")
-                print(e)
-                exit(1)
-
-        # ########################################################################
+        pass
 
     def migrate_to_revisions_layout(self):
         # .conan/data/lib/1.0/user/channel/export/*

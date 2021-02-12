@@ -69,34 +69,6 @@ class ClientMigrator(Migrator):
         cache = ClientCache(self.cache_folder, self.out)
         self._update_settings_yml(cache, old_version)
 
-        if old_version < Version("1.0"):
-            _migrate_lock_files(cache, self.out)
-
-        if old_version < Version("1.12.0"):
-            migrate_plugins_to_hooks(cache)
-
-        if old_version < Version("1.13.0"):
-            # MIGRATE LOCAL CACHE TO GENERATE MISSING METADATA.json
-            _migrate_create_metadata(cache, self.out)
-
-        if old_version < Version("1.14.0"):
-            migrate_config_install(cache)
-
-        if old_version < Version("1.14.2"):
-            _migrate_full_metadata(cache, self.out)
-
-        if old_version < Version("1.15.0"):
-            migrate_registry_file(cache, self.out)
-
-        if old_version < Version("1.19.0"):
-            migrate_localdb_refresh_token(cache, self.out)
-
-        if old_version < Version("1.26.0"):
-            migrate_editables_use_conanfile_name(cache)
-
-        if old_version < Version("1.31.0"):
-            migrate_tgz_location(cache, self.out)
-
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)
