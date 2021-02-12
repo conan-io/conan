@@ -65,6 +65,9 @@ def build_windows_subsystem(profile):
     """
     client = TestClient()
     client.run("new hello/0.1 --template=v2_cmake")
+    # TODO: Test Windows subsystems in CMake, at least msys is broken
+    os.rename(os.path.join(client.current_folder, "test_package"),
+              os.path.join(client.current_folder, "test_package2"))
     client.save({"profile": profile})
     client.run("create . --profile=profile")
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
