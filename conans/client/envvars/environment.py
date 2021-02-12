@@ -117,7 +117,7 @@ def _variable_placeholder(flavor, name, append_with_spaces):
     if flavor == PS1_FLAVOR:
         return "$env:%s" % name
     # flavor == sh
-    return "${%s+ $%s}" % (name, name) if append_with_spaces else "${%s+:$%s}" % (name,  name)
+    return "${%s:+ $%s}" % (name, name) if append_with_spaces else "${%s:+:$%s}" % (name,  name)
 
 
 def _format_values(flavor, variables, append_with_spaces):
