@@ -146,7 +146,7 @@ def test_autotoolsdeps_cygwin():
     assert "main2 __CYGWIN__1" in out
 
 
-@pytest.mark.tool_mingw
+@pytest.mark.tool_mingw64
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for Cygwin")
 def test_autotoolsdeps_mingw():
     gcc = textwrap.dedent("""
