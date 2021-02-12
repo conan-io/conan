@@ -59,9 +59,9 @@ class Extender(argparse.Action):
             except ValueError:
                 dest.append(values)
         # --build --build=foo == ["*", "foo"]
-        elif hasattr(namespace, "build"):
-            if namespace.build == list() or \
-               any(str(it).startswith("!") for it in list(namespace.build)):
+        elif hasattr(namespace, "build") and isinstance(namespace.build, list):
+            if len(namespace.build) == 0 or \
+               any(str(it).startswith("!") for it in namespace.build):
                 dest.append("*")
 
 
