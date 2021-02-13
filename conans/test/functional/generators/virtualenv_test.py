@@ -232,15 +232,13 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     @pytest.mark.tool_conan
     def test_list_variable(self):
-        self.assertNotIn("WHATEVER", os.environ)
         self.assertIn("PATH", os.environ)
         existing_path = os.environ.get("PATH")
         # Avoid duplicates in the path
         existing_path = os.pathsep.join(OrderedDict.fromkeys(existing_path.split(os.pathsep)))
 
         generator = VirtualEnvGenerator(ConanFileMock())
-        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path'],
-                         "WHATEVER": ["list", "other"]}
+        generator.env = {"PATH": [os.path.join(self.test_folder, "bin"), r'other\path']}
 
         _, environment = self._run_virtualenv(generator)
 
@@ -250,10 +248,38 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
             self.ori_path,
             existing_path
         ]))
+
+    @pytest.mark.tool_conan
+    def test_empty_undefined_list_variable(self):
+        self.assertNotIn("WHATEVER", os.environ)
+
+        generator = VirtualEnvGenerator(ConanFileMock())
+        generator.env = {"WHATEVER": ["list", "other"]}
+
+        _, environment = self._run_virtualenv(generator)
+
         # FIXME: extra separator in Windows
         extra_separator = os.pathsep if platform.system() == "Windows" else ""
         self.assertEqual(environment["WHATEVER"],
                          "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
+
+    @pytest.mark.tool_conan
+    def test_empty_defined_list_variable(self):
+        self.assertNotIn("WHATEVER", os.environ)
+        try:
+            os.environ["WHATEVER"] = ""
+
+            generator = VirtualEnvGenerator(ConanFileMock())
+            generator.env = {"WHATEVER": ["list", "other"]}
+
+            _, environment = self._run_virtualenv(generator)
+
+            # FIXME: extra separator in Windows
+            extra_separator = os.pathsep if platform.system() == "Windows" else ""
+            self.assertEqual(environment["WHATEVER"],
+                             "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
+        finally:
+            del os.environ["WHATEVER"]
 
     @pytest.mark.tool_conan
     def test_find_program(self):
