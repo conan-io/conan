@@ -208,18 +208,9 @@ class RestCommonMethods(object):
             raise ConanException("Unexpected server response %s" % result)
         return result
 
-    def upload_recipe(self, ref, files_to_upload, deleted, retry, retry_wait):
-        if files_to_upload:
-            self._upload_recipe(ref, files_to_upload, retry, retry_wait)
-        if deleted:
-            self._remove_conanfile_files(ref, deleted)
-
-    def get_recipe_snapshot(self, ref):
-        # this method is used only for UPLOADING, then it requires the credentials
-        # Check of credentials is done in the uploader
-        url = self.router.recipe_snapshot(ref)
-        snap = self._get_snapshot(url)
-        return snap
+    def upload_recipe(self, ref, files_to_upload, retry, retry_wait):
+        assert files_to_upload
+        self._upload_recipe(ref, files_to_upload, retry, retry_wait)
 
     def get_package_snapshot(self, pref):
         # this method is also used to check the integrity of the package upstream
@@ -228,13 +219,9 @@ class RestCommonMethods(object):
         snap = self._get_snapshot(url)
         return snap
 
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        if files_to_upload:
-            self._upload_package(pref, files_to_upload, retry, retry_wait)
-        if deleted:
-            raise Exception("This shouldn't be happening, deleted files "
-                            "in local package present in remote: %s.\n Please, report it at "
-                            "https://github.com/conan-io/conan/issues " % str(deleted))
+    def upload_package(self, pref, files_to_upload, retry, retry_wait):
+        assert files_to_upload
+        self._upload_package(pref, files_to_upload, retry, retry_wait)
 
     def search(self, pattern=None, ignorecase=True):
         """

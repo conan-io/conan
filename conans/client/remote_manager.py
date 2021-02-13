@@ -52,25 +52,14 @@ class RemoteManager(object):
     def check_credentials(self, remote):
         self._call_remote(remote, "check_credentials")
 
-    def get_recipe_snapshot(self, ref, remote):
-        assert ref.revision, "get_recipe_snapshot requires revision"
-        return self._call_remote(remote, "get_recipe_snapshot", ref)
-
-    def get_package_snapshot(self, pref, remote):
-        assert pref.ref.revision, "get_package_snapshot requires RREV"
-        assert pref.revision, "get_package_snapshot requires PREV"
-        return self._call_remote(remote, "get_package_snapshot", pref)
-
-    def upload_recipe(self, ref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_recipe(self, ref, files_to_upload, remote, retry, retry_wait):
         assert ref.revision, "upload_recipe requires RREV"
-        self._call_remote(remote, "upload_recipe", ref, files_to_upload, deleted,
-                          retry, retry_wait)
+        self._call_remote(remote, "upload_recipe", ref, files_to_upload, retry, retry_wait)
 
-    def upload_package(self, pref, files_to_upload, deleted, remote, retry, retry_wait):
+    def upload_package(self, pref, files_to_upload, remote, retry, retry_wait):
         assert pref.ref.revision, "upload_package requires RREV"
         assert pref.revision, "upload_package requires PREV"
-        self._call_remote(remote, "upload_package", pref,
-                          files_to_upload, deleted, retry, retry_wait)
+        self._call_remote(remote, "upload_package", pref, files_to_upload, retry, retry_wait)
 
     def get_recipe_manifest(self, ref, remote):
         ref = self._resolve_latest_ref(ref, remote)
@@ -173,9 +162,12 @@ class RemoteManager(object):
         try:
             headers = _headers_for_info(info)
             pref = self._resolve_latest_pref(pref, remote, headers=headers)
-            snapshot = self._call_remote(remote, "get_package_snapshot", pref)
-            if not is_package_snapshot_complete(snapshot):
-                raise PackageNotFoundException(pref)
+            # FIXME: Conan 2.0. This was here to protect against server race conditions
+            # FIXME: And incomplete packages. This shouldn't happen, server should never report
+            # FIXME: as latest incomplete packages
+            # snapshot = self._call_remote(remote, "get_package_snapshot", pref)
+            # if not is_package_snapshot_complete(snapshot):
+            #    raise PackageNotFoundException(pref)
 
             download_pkg_folder = layout.download_package(pref)
             # Download files to the pkg_tgz folder, not to the final one
