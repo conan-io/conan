@@ -41,6 +41,7 @@ def test_env_files():
     env["MyVar3"].prepend("MyValue3")
     env["MyVar4"].clean()
     env["MyVar5"].define("MyValue5 With Space5=More Space5;:More")
+    env["MyVar6"].append("MyValue6") # Append, but previous not existing
     env["MyPath1"].define_path("/Some/Path1/")
     env["MyPath2"].append_path(["/Some/Path2/", "/Other/Path2/"])
     env["MyPath3"].prepend_path("/Some/Path3/")
@@ -65,6 +66,7 @@ def test_env_files():
         echo MyVar3=%MyVar3%!!
         echo MyVar4=%MyVar4%!!
         echo MyVar5=%MyVar5%!!
+        echo MyVar6=%MyVar6%!!
         echo MyPath1=%MyPath1%!!
         echo MyPath2=%MyPath2%!!
         echo MyPath3=%MyPath3%!!
@@ -78,6 +80,7 @@ def test_env_files():
         echo MyVar3=$MyVar3!!
         echo MyVar4=$MyVar4!!
         echo MyVar5=$MyVar5!!
+        echo MyVar6=$MyVar6!!
         echo MyPath1=$MyPath1!!
         echo MyPath2=$MyPath2!!
         echo MyPath3=$MyPath3!!
@@ -107,7 +110,7 @@ def test_env_files():
     assert "MyVar3=MyValue3 OldVar3!!" in out
     assert "MyVar4=!!" in out
     assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
-    assert "MyVar=MyValue!!" in out
+    assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
     assert "MyPath1=/Some/Path1/!!" in out
     assert "MyPath2=OldPath2:/Some/Path2/:/Other/Path2/!!" in out
     assert "MyPath3=/Some/Path3/:OldPath3!!" in out
@@ -119,6 +122,7 @@ def test_env_files():
     assert "MyVar3=OldVar3!!" in out
     assert "MyVar4=OldVar4!!" in out
     assert "MyVar5=!!" in out
+    assert "MyVar6=!!" in out
     assert "MyPath1=OldPath1!!" in out
     assert "MyPath2=OldPath2!!" in out
     assert "MyPath3=OldPath3!!" in out
