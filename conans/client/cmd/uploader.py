@@ -9,10 +9,10 @@ from multiprocessing.pool import ThreadPool
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
-from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
+from conans.client.remote_manager import calc_files_checksum
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException
-from conans.model.manifest import gather_files, FileTreeManifest
+from conans.model.manifest import gather_files
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
@@ -304,6 +304,7 @@ class CmdUpload(object):
                 # FIXME: This remove_recipe() destroy binary packages too!!!
                 # What is the way to make it the latest revision in server?
                 # Option1) should be a way to remove the export folder in the server only
+                #  apiv1 had the endpoint to remove recipe files, but not v2
                 # Option2) allow re-upload (handle delete too) that should fire reindex
                 # Option3) accept it destroy binaries, the other binaries must be re-uploaded
                 self._remote_manager.remove_recipe(ref, remote)
