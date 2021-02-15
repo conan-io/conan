@@ -414,14 +414,10 @@ class ConanLib(ConanFile):
         path, commit = create_local_git_repo({"myfile": "contents"}, branch="my_release",
                                              submodules=[submodule])
 
-        def _relative_paths(folder):
-            submodule_path = os.path.join(
-                folder,
-                os.path.basename(os.path.normpath(submodule)))
-            subsubmodule_path = os.path.join(
-                submodule_path,
-                os.path.basename(os.path.normpath(subsubmodule)))
-            return submodule_path, subsubmodule_path
+        def _relative_paths(folder_):
+            sub_path = os.path.join(folder_, os.path.basename(os.path.normpath(submodule)))
+            subsub_path = os.path.join(sub_path, os.path.basename(os.path.normpath(subsubmodule)))
+            return sub_path, subsub_path
 
         # Check old (default) behaviour
         tmp = '''
@@ -1009,6 +1005,7 @@ class SCMSVNWithLockedFilesTest(SVNLocalRepoTestCase):
 
         client.run("export . user/channel")
 
+
 @pytest.mark.tool_git
 class SCMBlockUploadTest(unittest.TestCase):
 
@@ -1032,7 +1029,7 @@ class SCMBlockUploadTest(unittest.TestCase):
                       " to ignore", client.out)
         # The upload with --force should work
         client.run("upload lib/0.1@user/channel -r default --force")
-        self.assertIn("Uploaded conan recipe", client.out)
+        self.assertIn("Uploading lib/0.1@user/channel to remote", client.out)
 
     def test_export_blocking_type_none(self):
         client = TestClient(default_server_user=True)

@@ -579,7 +579,7 @@ class Pkg(ConanFile):
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
         client.run('upload lib/1.0 -c --all')
-        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+        self.assertIn("Uploading lib/1.0 to remote 'default'", client.out)
 
         client.run('remove "*" -f')
 

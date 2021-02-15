@@ -112,7 +112,7 @@ class MultiRemotesTest(unittest.TestCase):
         # Update Hello0 with client_a and reupload
         self._create(client_a, "Hello0", "0.0", modifier="\n")
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
-        self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
+        self.assertIn("Uploading Hello0/0.0@lasote/stable to remote 'local'", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
         client_b.run("info Hello0/0.0@lasote/stable -u")
