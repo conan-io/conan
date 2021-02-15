@@ -35,9 +35,8 @@ class LocksManager:
                 if not wait:
                     raise
                 # TODO: Implement wait mechanism, timeout,...
-                print(e)
                 import time
-                time.sleep(1)
+                time.sleep(0.1)
             else:
                 return lock_id
 
