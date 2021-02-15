@@ -55,6 +55,7 @@ from conans.errors import (ConanException, RecipeNotFoundException,
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
+from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
@@ -1333,6 +1334,29 @@ class ConanAPIV1(object):
         graph_lock = graph_lock_file.graph_lock
         graph_lock.clean_modified()
         graph_lock_file.save(lockfile)
+
+    @api_method
+    def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
+        cwd = cwd or os.getcwd()
+        result = LockBundle.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
+        lockfile_out = _make_abs_path(lockfile_out, cwd)
+        save(lockfile_out, result.dumps())
+
+    @api_method
+    def lock_bundle_build_order(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock_bundle = LockBundle()
+        lock_bundle.loads(load(lockfile))
+        build_order = lock_bundle.build_order()
+        return build_order
+
+    @api_method
+    def lock_bundle_update(self, lock_bundle_path, cwd=None):
+        cwd = cwd or os.getcwd()
+        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
+        revisions_enabled = self.app.cache.config.revisions_enabled
+        LockBundle.update_bundle(lock_bundle_path, revisions_enabled)
 
     @api_method
     def lock_create(self, path, lockfile_out,
