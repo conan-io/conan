@@ -10,8 +10,6 @@ def test_local_generators_folder():
     go to the specified folder: "my_generators" but the conaninfo and conanbuildinfo.txt remains
     in the install folder
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type"))
     conan_file += """
@@ -41,13 +39,11 @@ def test_local_generators_folder_():
     """If we specify a generators directory and the txt generator, the conanbuildinfo.txt is written
     both in the generators folder and in the install folder
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile())
     conan_file += """
     generators = "cmake", "txt"
-    def configure(self):
+    def shape(self):
         self.layout.generators.folder = "my_generators"
     """
     client.save({"conanfile.py": conan_file})
@@ -69,13 +65,11 @@ def test_local_build():
     """If we configure a build folder in the layout, the installed files in a "conan build ."
     go to the specified folder: "my_build"
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
 
-    def configure(self):
+    def shape(self):
         self.layout.generators.folder = "my_generators"
         self.layout.build.folder = "my_build"
 
@@ -96,12 +90,10 @@ def test_local_build_change_base():
     """If we configure a build folder in the layout, the build files in a "conan build ."
     go to the specified folder: "my_build under the modified base one "common"
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
-    def configure(self):
+    def shape(self):
         self.layout.build.folder = "my_build"
     def build(self):
         tools.save("build_file.dll", "bar")
@@ -117,12 +109,10 @@ def test_local_source():
     """If we configure a source folder in the layout, the downloaded files in a "conan source ."
     go to the specified folder: "my_source"
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
-    def configure(self):
+    def shape(self):
         self.layout.source.folder = "my_source"
 
     def source(self):
@@ -140,12 +130,10 @@ def test_local_source_change_base():
     """If we configure a source folder in the layout, the souce files in a "conan source ."
     go to the specified folder: "my_source under the modified base one "all_source"
     """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
-    def configure(self):
+    def shape(self):
         self.layout.source.folder = "my_source"
 
     def source(self):
@@ -160,14 +148,12 @@ def test_local_source_change_base():
 
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
         no_copy_source = True
 
-        def configure(self):
+        def shape(self):
             self.layout.source.folder = "my_source"
             self.layout.build.folder = "my_build"
 
@@ -208,14 +194,12 @@ def test_export_pkg():
 
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
         no_copy_source = True
 
-        def configure(self):
+        def shape(self):
             self.layout.source.folder = "my_source"
             self.layout.build.folder = "my_build"
 

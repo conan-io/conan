@@ -12,12 +12,10 @@ def conanfile():
     conan_file = str(GenConanfile().with_import("from conans import tools").with_import("import os").
                      with_require("base/1.0"))
 
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     conan_file += """
     no_copy_sources = True
 
-    def configure(self):
+    def shape(self):
         self.layout.source.folder = "my_sources"
         self.layout.build.folder = "my_build"
 

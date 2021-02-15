@@ -136,9 +136,10 @@ class _CppInfo(object):
         self._framework_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
-        # When package is editable, filter_empty=False, so empty dirs are maintained
-        # FIXME: it smells like the default should be False and only True after a package_info()
-        self.filter_empty = True
+        # By default we don't filter empty, because we want to filter ONLY when the final cppinfo
+        # from package is full of files but before that we will play with the build and source layout
+        # and cppinfo and it mess a lot
+        self.filter_empty = False
 
     @property
     def rootpath(self):
@@ -234,13 +235,14 @@ class _CppInfo(object):
 
     cppflags = property(get_cppflags, set_cppflags)
 
-    def merge(self, other):
+    def merge(self, other, rootpath):
         """Accumulate in a cppinfo object another one containing entries of a subdirectory,
         for example the editable root containing two cppinfos, the source one and the build one"""
-        relpath = os.path.relpath(other._rootpath, self._rootpath)
+        relpath = os.path.relpath(other._rootpath, rootpath)
+
         def _merge_dir_list(seq1, seq2):
-            seq1.extend(["%s/%s" % (relpath, rs)
-                         if relpath != "." else rs for rs in seq2 if rs not in seq1])
+            news = ["%s/%s" % (relpath, rs) if relpath != "." else rs for rs in seq2]
+            seq1.extend([n for n in news if n not in seq1])
 
         def _merge_list(seq1, seq2):
             seq1.extend([rs for rs in seq2 if rs not in seq1])
@@ -347,16 +349,14 @@ class CppInfo(_CppInfo):
         for c in self._configs.values():
             c._rootpath = path
 
-    def merge(self, other):
-        """ Used to aggregate build info objects, for example when we have build and source declared
-        in the recipe layout and this is an editable package"""
-        super().merge(other)
+    def merge(self, other, rootpath=None):
+        """ Used to aggregate build info objects when we have build and source declared
+        in the recipe layout and it is consumed as an editable package"""
+        super().merge(other, rootpath or self.rootpath)
 
         for k, v in other.components.items():
-            if k not in self.components:
-                self.components[k] = v
-            else:
-                self.components[k].merge(v)
+            # Use the rootpath from this general build info, not from the component
+            self.components[k].merge(v, self.rootpath)
 
     def __str__(self):
         return self._ref_name
