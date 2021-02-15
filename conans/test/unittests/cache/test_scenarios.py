@@ -33,8 +33,6 @@ class ConanOps:
                     self.log('READER lock: Check files are there and use them')
 
             self.log('Done with the job')
-            # with inside_done:
-            #    inside_done.notify_all()
         except Exception as e:
             self.log(f'ERROR: {e}')
         except sqlite3.OperationalError as e:
