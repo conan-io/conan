@@ -44,6 +44,8 @@ class Layout(object):
         self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.build.bin_patterns = ["*.exe", "*.dll"]
 
+        # FIXME: Conan 2.0 I think the defaults (propagated to the components) should be empty too
+        #        in package. It is confusing a component being created with the "include" and so on.
         self.package = _LayoutEntry()
 
         generators_defaults = CppInfoDefaultValues()

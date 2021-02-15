@@ -268,6 +268,7 @@ class HelloConan(ConanFile):
                     self.cpp_info.components["Planet"].libs = ["libplanet"]
                     self.cpp_info.components["Planet"].requires = ["Starlight"]
                     self.cpp_info.components["Launcher"].system_libs = ["ground"]
+                    self.cpp_info.components["Launcher"].includedirs = []
                     self.cpp_info.components["ISS"].includedirs = [os.path.join("galaxy", "iss")]
                     self.cpp_info.components["ISS"].libs = ["libiss"]
                     self.cpp_info.components["ISS"].libdirs = ["iss_libs"]

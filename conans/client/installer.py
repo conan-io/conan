@@ -480,7 +480,6 @@ class BinaryInstaller(object):
                                        conanfile.cpp_info,
                                        settings=conanfile.settings,
                                        options=conanfile.options)
-
             build_folder = editable_cpp_info.folder(ref, EditableLayout.BUILD_FOLDER,
                                                     settings=conanfile.settings,
                                                     options=conanfile.options)
@@ -630,7 +629,6 @@ class BinaryInstaller(object):
         conanfile.layout.set_base_build_folder(None)
         conanfile.layout.set_base_install_folder(None)
         conanfile.cpp_info = conanfile.layout.package.cpp_info
-        conanfile.cpp_info.filter_empty = True
         # FIXME: Smells like the constructor of cpp_info should not have the root nor the name
         conanfile.cpp_info._name = conanfile.name
         conanfile.cpp_info._ref_name = conanfile.name
@@ -652,6 +650,7 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
+                    conanfile.cpp_info.filter_empty = not is_editable
                     conanfile.package_info()
 
                     if is_editable and hasattr(conanfile, "shape"):
