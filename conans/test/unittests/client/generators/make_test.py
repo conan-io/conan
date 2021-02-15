@@ -26,6 +26,7 @@ def test_make_generator():
     conanfile.initialize(Settings({}), EnvValues())
     ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
     cpp_info = CppInfo(ref.name, tmp_folder1)
+    cpp_info.filter_empty = True
     cpp_info.defines = ["MYDEFINE1"]
     cpp_info.includedirs = ['include1']
     cpp_info.libdirs = ['lib1']
@@ -42,6 +43,7 @@ def test_make_generator():
     conanfile.deps_cpp_info.add(ref.name, cpp_info)
     ref = ConanFileReference.loads("MyPkg2/3.2.3@lasote/stables")
     cpp_info = CppInfo(ref.name, tmp_folder2)
+    cpp_info.filter_empty = True
     cpp_info.defines = ["MYDEFINE2"]
     cpp_info.includedirs = ['include2']
     cpp_info.libdirs = ['lib2']

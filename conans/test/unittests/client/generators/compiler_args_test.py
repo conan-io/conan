@@ -26,6 +26,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.deps_user_info = DepsUserInfo()
         conan_file.deps_cpp_info = DepsCppInfo()
         cpp_info = CppInfo("zlib", "/root")
+        cpp_info.filter_empty = True
         cpp_info.libs.append("mylib")
         cpp_info.libs.append("other.lib")
         conan_file.deps_cpp_info.add("zlib", cpp_info)
