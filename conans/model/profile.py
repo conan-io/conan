@@ -90,7 +90,7 @@ class Profile(object):
 
         return "\n".join(result).replace("\n\n", "\n")
 
-    def update_profile(self, other):
+    def compose(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
         # this is the opposite
