@@ -333,6 +333,8 @@ class CmdUpload(object):
         if files_to_upload or deleted:
             self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
+            msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
+            self._output.info(left_justify_message(msg))
         else:
             self._output.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
