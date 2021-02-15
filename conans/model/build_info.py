@@ -274,7 +274,9 @@ class Component(_CppInfo):
 
     def __init__(self, rootpath, version, default_values):
         super(Component, self).__init__()
+
         self._rootpath = rootpath
+
         if default_values.includedir is not None:
             self.includedirs.append(default_values.includedir)
         if default_values.libdir is not None:
@@ -295,6 +297,7 @@ class CppInfoDefaultValues(object):
 
     def __init__(self, includedir=None, libdir=None, bindir=None, resdir=None, builddir=None,
                  frameworkdir=None):
+
         self.includedir = includedir
         self.libdir = libdir
         self.bindir = bindir
@@ -331,6 +334,7 @@ class CppInfo(_CppInfo):
             self.builddirs.append(self._default_values.builddir)
         if self._default_values.frameworkdir is not None:
             self.frameworkdirs.append(self._default_values.frameworkdir)
+
         self.components = DefaultOrderedDict(lambda: Component(self._rootpath,
                                                                self.version, self._default_values))
         # public_deps is needed to accumulate list of deps for cmake targets
