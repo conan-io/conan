@@ -111,6 +111,8 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
+    elif "sun4v" in machine:
+        return "sparc"
     elif "e2k" in machine:
         return OSInfo.get_e2k_architecture()
 
