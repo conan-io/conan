@@ -19,6 +19,7 @@ def filter_outdated(packages_infos, recipe_hash):
     for package_id, info in packages_infos.items():
         try:  # Existing package_info of old package might not have recipe_hash
             if info["recipe_hash"] != recipe_hash:
+                raise Exception("This shouldn't happen with revisions!!!!")
                 result[package_id] = info
         except KeyError:
             pass
