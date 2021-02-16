@@ -310,9 +310,9 @@ one/1.5@lasote/stable
         self.assertEqual("1", profile.env_values.data["package1"]["ENVY"])
         self.assertEqual(profile.settings, {"os": "1"})
         self.assertEqual(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
-        self.assertEqual(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
-                                                         ConanFileReference.loads("two/1.2@lasote/stable"),
-                                                         ConanFileReference.loads("one/1.5@lasote/stable")]})
+        self.assertEqual(profile.build_requires, {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
+                                                        ConanFileReference.loads("two/1.2@lasote/stable"),
+                                                        ]})
 
     def test_profile_dir(self):
         tmp = temp_folder()
