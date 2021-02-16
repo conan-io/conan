@@ -40,6 +40,7 @@ class GenConanfile(object):
         self._test_lines = []
         self._short_path = None
         self._exports_sources = []
+        self._exports = []
 
     def with_short_paths(self, value):
         self._short_path = value
@@ -76,6 +77,11 @@ class GenConanfile(object):
     def with_exports_sources(self, *exports):
         for export in exports:
             self._exports_sources.append(export)
+        return self
+
+    def with_exports(self, *exports):
+        for export in exports:
+            self._exports.append(export)
         return self
 
     def with_require(self, ref, private=False, override=False):
@@ -371,6 +377,9 @@ class GenConanfile(object):
         if self._exports_sources:
             line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
             ret.append("    exports_sources = {}".format(line))
+        if self._exports:
+            line = ", ".join('"{}"'.format(e) for e in self._exports)
+            ret.append("    exports = {}".format(line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:

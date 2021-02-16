@@ -18,6 +18,7 @@ int {{name}}(){
     std::cout << "{{ msg or name }}: Debug!\n";
     #endif
 
+    // ARCHITECTURES
     #ifdef _M_X64
     std::cout << "  {{ msg or name }} _M_X64 defined\n";
     #endif
@@ -26,12 +27,25 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} _M_IX86 defined\n";
     #endif
 
+    #if __i386__
+    std::cout << "  {{ msg or name }} __i386__ defined\n";
+    #endif
+
+    #if __x86_64__
+    std::cout << "  {{ msg or name }} __x86_64__ defined\n";
+    #endif
+
+    // COMPILER VERSIONS
     #if _MSC_VER
     std::cout << "  {{ msg or name }} _MSC_VER" << _MSC_VER<< "\n";
     #endif
 
     #if _MSVC_LANG
     std::cout << "  {{ msg or name }} _MSVC_LANG" << _MSVC_LANG<< "\n";
+    #endif
+
+    #if __cplusplus
+    std::cout << "  {{ msg or name }} __cplusplus" << __cplusplus<< "\n";
     #endif
 
     #if __INTEL_COMPILER
@@ -58,12 +72,22 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} __apple_build_version__" << __apple_build_version__<< "\n";
     #endif
 
-    #if __i386__
-    std::cout << "  {{ msg or name }} __i386__ defined\n";
+    // SUBSYSTEMS
+
+    #if __MSYS__
+    std::cout << "  {{ msg or name }} __MSYS__" << __MSYS__<< "\n";
     #endif
 
-    #if __x86_64__
-    std::cout << "  {{ msg or name }} __x86_64__ defined\n";
+    #if __MINGW32__
+    std::cout << "  {{ msg or name }} __MINGW32__" << __MINGW32__<< "\n";
+    #endif
+
+    #if __MINGW64__
+    std::cout << "  {{ msg or name }} __MINGW64__" << __MINGW64__<< "\n";
+    #endif
+
+    #if __CYGWIN__
+    std::cout << "  {{ msg or name }} __CYGWIN__" << __CYGWIN__<< "\n";
     #endif
 
     {% for it in preprocessor -%}

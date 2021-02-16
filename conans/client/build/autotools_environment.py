@@ -349,17 +349,21 @@ class AutoToolsBuildEnvironment(object):
                 concat += " " + os.environ.get("CFLAGS", None)
             if os.environ.get("CXXFLAGS", None):
                 concat += " " + os.environ.get("CXXFLAGS", None)
-            if self._os_version and "-version-min" not in concat and "-target" not in concat:
+            if (self._os_version and "-version-min" not in concat and "-target" not in concat) or \
+                    self._os_subsystem:
                 tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
                                                                                 self._os_version,
                                                                                 self._os_sdk,
                                                                                 self._os_subsystem,
                                                                                 self._arch))
             if "-isysroot" not in concat and platform.system() == "Darwin":
-                tmp_compilation_flags.extend(["-isysroot",
-                                              tools.XCRun(self._conanfile.settings).sdk_path])
+                isysroot = tools.XCRun(self._conanfile.settings).sdk_path
+                if isysroot:
+                    tmp_compilation_flags.extend(["-isysroot", isysroot])
             if "-arch" not in concat and self._arch:
-                tmp_compilation_flags.extend(["-arch", tools.to_apple_arch(self._arch)])
+                apple_arch = tools.to_apple_arch(self._arch)
+                if apple_arch:
+                    tmp_compilation_flags.extend(["-arch", apple_arch])
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags
