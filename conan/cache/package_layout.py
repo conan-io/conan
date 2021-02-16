@@ -20,7 +20,7 @@ class PackageLayout(LockableMixin):
 
         #
         default_path = self._cache.get_default_path(pref)
-        reference_path, _ = self._cache._backend.get_or_create_directory(self._pref.ref, self._pref,
+        reference_path, _ = self._cache._backend.get_or_create_directory(item=self._pref,
                                                                          default_path=default_path)
         self._base_directory = reference_path
         resource_id = self._pref.full_str()

@@ -79,7 +79,7 @@ class Cache:
             old_path, created = self._backend.get_or_create_directory(new_pref.ref, new_pref)
             assert not created, "We've just updated it two lines above!"
             new_path = self.get_default_path(new_pref)
-            self._backend.update_path(new_pref.ref, new_path, new_pref)
+            self._backend.update_path(new_pref, new_path)
             if os.path.exists(old_path):
                 shutil.move(old_path, new_path)
             return new_path
