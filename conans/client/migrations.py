@@ -59,16 +59,6 @@ class ClientMigrator(Migrator):
             # We don't have the value for that version, so don't override
             save_new()
 
-    def _make_migrations(self, old_version):
-        # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
-        # VERSION 0.1
-        if old_version is None:
-            return
-
-        # Migrate the settings if they were the default for that version
-        cache = ClientCache(self.cache_folder, self.out)
-        self._update_settings_yml(cache, old_version)
-
 
 def _get_refs(cache):
     folders = list_folder_subdirs(cache.store, 4)

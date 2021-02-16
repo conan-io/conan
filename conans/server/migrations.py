@@ -18,9 +18,6 @@ class ServerMigrator(Migrator):
         self.store_path = store_path
         super(ServerMigrator, self).__init__(conf_path, current_version, out)
 
-    def _make_migrations(self, old_version):
-        pass
-
     def migrate_to_revisions_layout(self):
         # .conan/data/lib/1.0/user/channel/export/*
         # .conan/data/lib/1.0/user/channel/0/export/*

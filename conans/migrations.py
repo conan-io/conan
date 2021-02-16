@@ -20,14 +20,10 @@ class Migrator(object):
         try:
             old_version = self._load_old_version()
             if old_version != self.current_version:
-                self._make_migrations(old_version)
                 self._update_version_file()
         except Exception as e:
             self.out.error(str(e))
             raise ConanMigrationError(e)
-
-    def _make_migrations(self, old_version):
-        raise NotImplementedError("Implement in subclass")
 
     def _update_version_file(self):
         try:
