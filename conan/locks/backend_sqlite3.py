@@ -1,5 +1,5 @@
 import os
-
+from io import StringIO
 from conan.locks.backend import LockBackend
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 
@@ -14,11 +14,11 @@ class LockBackendSqlite3(LockBackend):
     _column_pid = 'pid'
     _column_writer = 'writer'
 
-    def dump(self):
+    def dump(self, output: StringIO):
         with self.connect() as conn:
             r = conn.execute(f'SELECT * FROM {self._table_name}')
             for it in r.fetchall():
-                print(it)
+                output.write(it)
 
     def create_table(self, if_not_exists: bool = True):
         guard = 'IF NOT EXISTS' if if_not_exists else ''

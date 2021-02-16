@@ -1,4 +1,5 @@
 import uuid
+from io import StringIO
 from typing import Tuple
 
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
@@ -30,11 +31,11 @@ class CacheDatabase:
         with self.connect() as conn:
             conn.execute(query)
 
-    def dump(self):
+    def dump(self, output: StringIO):
         with self.connect() as conn:
             r = conn.execute(f'SELECT * FROM {self._table_name}')
             for it in r.fetchall():
-                print(it)
+                output.write(it)
 
     def _get_random_directory(self, ref: ConanFileReference = None,
                               pref: PackageReference = None) -> str:

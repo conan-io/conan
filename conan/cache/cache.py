@@ -1,5 +1,6 @@
 import os
 import shutil
+from io import StringIO
 from typing import Optional, Union
 
 from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
@@ -33,9 +34,9 @@ class Cache:
         else:
             raise NotImplementedError(f'Backend {backend_id} for cache is not implemented')
 
-    def dump(self):
+    def dump(self, output: StringIO):
         """ Maybe just for debugging purposes """
-        self._backend.dump()
+        self._backend.dump(output)
 
     @property
     def base_folder(self) -> str:

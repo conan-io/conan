@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from io import StringIO
 
 from conan.locks.backend import LockBackend
 from conan.locks.backend_sqlite3 import LockBackendSqlite3Memory, LockBackendSqlite3Filesystem
@@ -22,8 +23,8 @@ class LocksManager:
         else:
             raise NotImplementedError(f'Backend {backend_id} for locks is not implemented')
 
-    def dump(self):
-        self._backend.dump()
+    def dump(self, output: StringIO):
+        self._backend.dump(output)
 
     def try_acquire(self, resource: str, blocking: bool, wait: bool):
         lock_id = None
