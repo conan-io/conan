@@ -14,7 +14,7 @@ class LockBundle(object):
     products. The format is a json with: For every reference, for each "package_id" for that
     reference, list the lockfiles that contain such reference:package_id and the node indexes
     inside that lockfile
-    
+
     lock_bundle": {
         "app1/0.1@#584778f98ba1d0eb7c80a5ae1fe12fe2": {
             "package_id": {
@@ -44,7 +44,7 @@ class LockBundle(object):
         self._nodes = {}
 
     @staticmethod
-    def create(lockfiles, revisions_enabled, cwd):
+    def create(lockfiles, cwd):
         def ref_convert(r):
             # Necessary so "build-order" output is usable by install
             if "@" not in r:
@@ -57,7 +57,7 @@ class LockBundle(object):
         result = LockBundle()
         for lockfile_name in lockfiles:
             lockfile_abs = os.path.normpath(os.path.join(cwd, lockfile_name))
-            lockfile = GraphLockFile.load(lockfile_abs, revisions_enabled)
+            lockfile = GraphLockFile.load(lockfile_abs)
 
             lock = lockfile.graph_lock
             for id_, node in lock.nodes.items():
@@ -109,7 +109,7 @@ class LockBundle(object):
         return levels
 
     @staticmethod
-    def update_bundle(bundle_path, revisions_enabled):
+    def update_bundle(bundle_path):
         """ Update both the bundle information as well as every individual lockfile, from the
         information that was modified in the individual lockfile. At the end, all lockfiles will
         have the same PREV for the binary of same package_id
@@ -124,7 +124,7 @@ class LockBundle(object):
                 # First, compute the modified PREV from all lockfiles
                 prev = modified = prev_lockfile = None
                 for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
-                    graph_lock_conf = GraphLockFile.load(lockfile, revisions_enabled)
+                    graph_lock_conf = GraphLockFile.load(lockfile)
                     graph_lock = graph_lock_conf.graph_lock
 
                     for node_id in nodes_ids:
@@ -144,7 +144,7 @@ class LockBundle(object):
 
                 # Then, update all prev of all config lockfiles
                 for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
-                    graph_lock_conf = GraphLockFile.load(lockfile, revisions_enabled)
+                    graph_lock_conf = GraphLockFile.load(lockfile)
                     graph_lock = graph_lock_conf.graph_lock
                     for node_id in nodes_ids:
                         if graph_lock.nodes[node_id].prev is None:

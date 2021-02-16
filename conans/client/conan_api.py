@@ -1316,7 +1316,7 @@ class ConanAPIV1(object):
     @api_method
     def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
         cwd = cwd or os.getcwd()
-        result = LockBundle.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
+        result = LockBundle.create(lockfiles, cwd)
         lockfile_out = _make_abs_path(lockfile_out, cwd)
         save(lockfile_out, result.dumps())
 
@@ -1333,8 +1333,7 @@ class ConanAPIV1(object):
     def lock_bundle_update(self, lock_bundle_path, cwd=None):
         cwd = cwd or os.getcwd()
         lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        revisions_enabled = self.app.cache.config.revisions_enabled
-        LockBundle.update_bundle(lock_bundle_path, revisions_enabled)
+        LockBundle.update_bundle(lock_bundle_path)
 
     @api_method
     def lock_create(self, path, lockfile_out,

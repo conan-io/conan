@@ -7,8 +7,6 @@ from conans.test.utils.tools import TestClient, GenConanfile
 
 def test_basic():
     client = TestClient()
-    # TODO: This is hardcoded
-    client.run("config set general.revisions_enabled=1")
     client.save({"pkga/conanfile.py": GenConanfile().with_settings("os"),
                  "pkgb/conanfile.py": GenConanfile().with_requires("pkga/0.1"),
                  "app1/conanfile.py": GenConanfile().with_settings("os").with_requires("pkgb/0.1"),
@@ -67,8 +65,7 @@ def test_basic():
                            "--lockfile-out={lockfile}".format(ref=ref, lockfile=lockfile))
                 client.run("lock bundle update lock1.bundle")
 
-    app1_win = GraphLockFile.load(os.path.join(client.current_folder, "app1_windows.lock"),
-                                  client.cache.config.revisions_enabled)
+    app1_win = GraphLockFile.load(os.path.join(client.current_folder, "app1_windows.lock"))
     nodes = app1_win.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app1/0.1#584778f98ba1d0eb7c80a5ae1fe12fe2"
@@ -85,8 +82,7 @@ def test_basic():
     assert nodes["3"].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
     assert nodes["3"].prev == "d0f0357277b3417d3984b5a9a85bbab6"
 
-    app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"),
-                                    client.cache.config.revisions_enabled)
+    app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app2/0.1#3850895c1eac8223c43c71d525348019"
@@ -175,8 +171,7 @@ def test_build_requires():
                            "--lockfile-out={lockfile}".format(ref=ref, lockfile=lockfile))
                 client.run("lock bundle update lock1.bundle")
 
-    app1_win = GraphLockFile.load(os.path.join(client.current_folder, "app1_windows.lock"),
-                                  client.cache.config.revisions_enabled)
+    app1_win = GraphLockFile.load(os.path.join(client.current_folder, "app1_windows.lock"))
     nodes = app1_win.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app1/0.1#584778f98ba1d0eb7c80a5ae1fe12fe2"
@@ -199,8 +194,7 @@ def test_build_requires():
         assert nodes[n].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
         assert nodes[n].prev == "d0f0357277b3417d3984b5a9a85bbab6"
 
-    app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"),
-                                    client.cache.config.revisions_enabled)
+    app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app2/0.1#3850895c1eac8223c43c71d525348019"
