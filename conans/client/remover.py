@@ -5,7 +5,7 @@ from conans.errors import ConanException, PackageNotFoundException, RecipeNotFou
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.search.search import filter_outdated, search_packages, search_recipes
+from conans.search.search import search_packages, search_recipes
 from conans.util.log import logger
 
 
@@ -189,13 +189,6 @@ class ConanRemover(object):
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
                     packages = search_packages(package_layout, packages_query)
-                if outdated:
-                    if remote_name:
-                        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
-                        recipe_hash = manifest.summary_hash
-                    else:
-                        recipe_hash = package_layout.recipe_manifest().summary_hash
-                    packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:

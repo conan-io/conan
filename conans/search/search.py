@@ -12,20 +12,6 @@ from conans.util.files import load
 from conans.util.log import logger
 
 
-def filter_outdated(packages_infos, recipe_hash):
-    if not recipe_hash:
-        return packages_infos
-    result = OrderedDict()
-    for package_id, info in packages_infos.items():
-        try:  # Existing package_info of old package might not have recipe_hash
-            if info["recipe_hash"] != recipe_hash:
-                raise Exception("This shouldn't happen with revisions!!!!")
-                result[package_id] = info
-        except KeyError:
-            pass
-    return result
-
-
 def filter_by_revision(metadata, packages_infos):
     ok = OrderedDict()
     recipe_revision = metadata.recipe.revision

@@ -1,8 +1,7 @@
 from collections import OrderedDict, namedtuple
 
 from conans.errors import NotFoundException, ConanException
-from conans.search.search import (filter_outdated, search_packages, search_recipes,
-                                  filter_by_revision)
+from conans.search.search import (search_packages, search_recipes, filter_by_revision)
 
 
 class Search(object):
@@ -64,13 +63,8 @@ class Search(object):
         except IOError:  # It could not exist in local
             recipe_hash = None
 
-        if outdated:
-            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-        else:
-            # With revisions, by default filter the packages not belonging to the recipe
-            # unless outdated is specified.
-            metadata = package_layout.load_metadata()
-            ordered_packages = filter_by_revision(metadata, ordered_packages)
+        metadata = package_layout.load_metadata()
+        ordered_packages = filter_by_revision(metadata, ordered_packages)
 
         references = OrderedDict()
         references[None] = self.remote_ref(ordered_packages, recipe_hash)
@@ -90,9 +84,6 @@ class Search(object):
 
                         recipe_hash = manifest.summary_hash
 
-                        if outdated and recipe_hash:
-                            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-
                         references[remote.name] = self.remote_ref(ordered_packages, recipe_hash)
                 except NotFoundException:
                     continue
@@ -107,9 +98,6 @@ class Search(object):
         manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
 
         recipe_hash = manifest.summary_hash
-
-        if outdated and recipe_hash:
-            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
 
         references = OrderedDict()
         references[remote.name] = self.remote_ref(ordered_packages, recipe_hash)
