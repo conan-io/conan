@@ -951,8 +951,7 @@ class ConanAPIV1(object):
                     search_recorder.add_package(remote_name, ref,
                                                 package_id, properties.get("options", []),
                                                 properties.get("settings", []),
-                                                requires,
-                                                remote_ref.recipe_hash != package_recipe_hash)
+                                                requires)
         return search_recorder.get_info()
 
     @api_method
