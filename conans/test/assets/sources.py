@@ -72,6 +72,24 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} __apple_build_version__" << __apple_build_version__<< "\n";
     #endif
 
+    // SUBSYSTEMS
+
+    #if __MSYS__
+    std::cout << "  {{ msg or name }} __MSYS__" << __MSYS__<< "\n";
+    #endif
+
+    #if __MINGW32__
+    std::cout << "  {{ msg or name }} __MINGW32__" << __MINGW32__<< "\n";
+    #endif
+
+    #if __MINGW64__
+    std::cout << "  {{ msg or name }} __MINGW64__" << __MINGW64__<< "\n";
+    #endif
+
+    #if __CYGWIN__
+    std::cout << "  {{ msg or name }} __CYGWIN__" << __CYGWIN__<< "\n";
+    #endif
+
     {% for it in preprocessor -%}
     std::cout << "  {{msg}} {{it}}: " <<  {{it}} << "\n";
     {%- endfor %}

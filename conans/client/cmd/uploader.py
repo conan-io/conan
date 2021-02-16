@@ -330,7 +330,8 @@ class CmdUpload(object):
         if files_to_upload or deleted:
             self._remote_manager.upload_recipe(ref, files_to_upload, deleted, remote, retry,
                                                retry_wait)
-            self._upload_recipe_end_msg(ref, remote)
+            msg = "\rUploaded conan recipe '%s' to '%s': %s" % (str(ref), remote.name, remote.url)
+            self._output.info(left_justify_message(msg))
         else:
             self._output.info("Recipe is up to date, upload skipped")
         duration = time.time() - t1
@@ -513,12 +514,6 @@ class CmdUpload(object):
                                      " overwrite.")
         deleted = set(remote_snapshot).difference(the_files)
         return the_files, deleted
-
-    def _upload_recipe_end_msg(self, ref, remote):
-        msg = "\rUploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
-        url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
-        msg += ": %s" % url
-        self._output.info(left_justify_message(msg))
 
     def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it

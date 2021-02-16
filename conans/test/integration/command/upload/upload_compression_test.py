@@ -1,14 +1,11 @@
 import os
 
-import pytest
-
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 def test_reuse_uploaded_tgz():
     client = TestClient(default_server_user=True)
     # Download packages from a remote, then copy to another channel
@@ -16,8 +13,8 @@ def test_reuse_uploaded_tgz():
 
     # UPLOAD A PACKAGE
     ref = ConanFileReference.loads("Hello0/0.1@user/stable")
-    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-    files["another_export_file.lib"] = "to compress"
+    files = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+             "another_export_file.lib": "to compress"}
     client.save(files)
     client.run("create . user/stable")
     client.run("upload %s --all" % str(ref))
@@ -31,14 +28,13 @@ def test_reuse_uploaded_tgz():
     assert "Compressing package" not in client.out
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 def test_reuse_downloaded_tgz():
     # Download packages from a remote, then copy to another channel
     # and reupload them. It needs to compress it again, not tgz is kept
     client = TestClient(default_server_user=True)
     # UPLOAD A PACKAGE
-    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-    files["another_export_file.lib"] = "to compress"
+    files = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+             "another_export_file.lib": "to compress"}
     client.save(files)
     client.run("create . user/stable")
     client.run("upload Hello0/0.1@user/stable --all")
@@ -55,13 +51,13 @@ def test_reuse_downloaded_tgz():
     assert "Compressing package" in client.out
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 def test_upload_only_tgz_if_needed():
     client = TestClient(default_server_user=True)
     ref = ConanFileReference.loads("Hello0/0.1@user/stable")
-    files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-    files["lib/another_export_file.lib"] = "to compress"
-    client.save(files)
+    conanfile = GenConanfile("Hello0", "0.1").with_exports("*").with_package_file("lib/file.lib",
+                                                                                  "File")
+    client.save({"conanfile.py": conanfile,
+                 "file.txt": "contents"})
     client.run("create . user/stable")
 
     # Upload conans

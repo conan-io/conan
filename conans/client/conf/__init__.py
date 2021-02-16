@@ -189,7 +189,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
     # cacert_path                         # environment CONAN_CACERT_PATH
-    # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
@@ -214,10 +213,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
-
-    [hooks]    # environment CONAN_HOOKS
-    attribute_checker
-
     """))
 
 
@@ -445,16 +440,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return download_cache
         except ConanException:
             return None
-
-    @property
-    def scm_to_conandata(self):
-        try:
-            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
-            if scm_to_conandata is None:
-                scm_to_conandata = self.get_item("general.scm_to_conandata")
-            return scm_to_conandata.lower() in ("1", "true")
-        except ConanException:
-            return False
 
     @property
     def default_package_id_mode(self):
