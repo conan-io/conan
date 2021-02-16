@@ -265,6 +265,10 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
     @pytest.mark.tool_conan
     def test_empty_defined_list_variable(self):
+        if os_info.is_windows:
+            # Windows doesn't make distinction between empty and undefined
+            # environment variables.
+            return
         self.assertNotIn("WHATEVER", os.environ)
         try:
             os.environ["WHATEVER"] = ""
