@@ -278,10 +278,7 @@ class VirtualEnvIntegrationTestCase(unittest.TestCase):
 
             _, environment = self._run_virtualenv(generator)
 
-            # FIXME: extra separator in Windows
-            extra_separator = os.pathsep if platform.system() == "Windows" else ""
-            self.assertEqual(environment["WHATEVER"],
-                             "{}{}{}{}".format("list", os.pathsep, "other", extra_separator))
+            self.assertEqual(environment["WHATEVER"], "{}{}{}".format("list", os.pathsep, "other"))
         finally:
             del os.environ["WHATEVER"]
 
