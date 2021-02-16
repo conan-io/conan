@@ -94,7 +94,7 @@ class CacheDatabase:
     def get_or_create_directory(self, item: Union[ConanFileReference, PackageReference],
                                 default_path: str = None) -> Tuple[str, bool]:
         # reference = str(ref)
-        # assert reference, "Empty reference cannot get into the cache"
+        assert str(item), "Empty reference cannot get into the cache"
         # assert not pref or ref == pref.ref, "Both parameters should belong to the same reference"
 
         # Search the database
