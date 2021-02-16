@@ -2,7 +2,6 @@ from contextlib import contextmanager
 
 from conan.locks.backend import LockBackend
 from conan.locks.backend_sqlite3 import LockBackendSqlite3Memory, LockBackendSqlite3Filesystem
-from conan.locks.lockable_resource import LockableResource
 
 
 class LocksManager:
@@ -50,6 +49,3 @@ class LocksManager:
             yield
         finally:
             self.release(lock_id)
-
-    def get_lockable_resource(self, resource: str, blocking: bool, wait: bool) -> LockableResource:
-        return LockableResource(manager=self, resource=resource, blocking=blocking, wait=wait)
