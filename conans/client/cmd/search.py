@@ -1,6 +1,6 @@
 from collections import OrderedDict, namedtuple
 
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException
 from conans.search.search import (search_packages, search_recipes, filter_by_revision)
 
 
@@ -33,7 +33,7 @@ class Search(object):
         references[remote.name] = sorted(refs)
         return references
 
-    remote_ref = namedtuple('remote_ref', 'ordered_packages recipe_hash')
+    remote_ref = namedtuple('remote_ref', 'ordered_packages')
 
     def search_packages(self, ref=None, remote_name=None, query=None):
         """ Return the single information saved in conan.vars about all the packages
@@ -58,16 +58,11 @@ class Search(object):
         packages_props = search_packages(package_layout, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
 
-        try:
-            recipe_hash = package_layout.recipe_manifest().summary_hash
-        except IOError:  # It could not exist in local
-            recipe_hash = None
-
         metadata = package_layout.load_metadata()
         ordered_packages = filter_by_revision(metadata, ordered_packages)
 
         references = OrderedDict()
-        references[None] = self.remote_ref(ordered_packages, recipe_hash)
+        references[None] = self.remote_ref(ordered_packages)
         return references
 
     def _search_packages_in_all(self, ref=None, query=None):
@@ -80,11 +75,7 @@ class Search(object):
                     packages_props = self._remote_manager.search_packages(remote, ref, query)
                     if packages_props:
                         ordered_packages = OrderedDict(sorted(packages_props.items()))
-                        manifest, _ = self._remote_manager.get_recipe_manifest(ref, remote)
-
-                        recipe_hash = manifest.summary_hash
-
-                        references[remote.name] = self.remote_ref(ordered_packages, recipe_hash)
+                        references[remote.name] = self.remote_ref(ordered_packages)
                 except NotFoundException:
                     continue
             return references
@@ -95,10 +86,6 @@ class Search(object):
         remote = self._remotes[remote_name]
         packages_props = self._remote_manager.search_packages(remote, ref, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
-        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
-
-        recipe_hash = manifest.summary_hash
-
         references = OrderedDict()
-        references[remote.name] = self.remote_ref(ordered_packages, recipe_hash)
+        references[remote.name] = self.remote_ref(ordered_packages)
         return references

@@ -345,7 +345,8 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         prev2 = client.package_revision(pref)
 
         self.assertNotEqual(rev2, rev)
-        self.assertNotEqual(prev2, prev)
+        # If the contents of the package is identical, the prev is identical, even if recipe changed
+        self.assertEqual(prev2, prev)
 
         self.assertIsNotNone(rev2)
         self.assertIsNotNone(prev2)
@@ -874,7 +875,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         c_v2.run("search {} --revisions -r default".format(pref_rev.full_str()))
         # I don't want to mock here because I want to run this test against Artifactory
-        self.assertIn("83c38d3b4e5f1b8450434436eec31b00 (", c_v2.out)
+        self.assertIn("cf924fbb5ed463b8bb960cf3a4ad4f3a (", c_v2.out)
         self.assertIn(" UTC)", c_v2.out)
 
 
