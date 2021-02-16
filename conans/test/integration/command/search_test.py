@@ -389,14 +389,12 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -419,7 +417,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<th>package_id</th>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -427,7 +424,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
