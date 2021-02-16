@@ -1087,9 +1087,6 @@ class Command(object):
                             help='Remove without requesting a confirmation')
         parser.add_argument("-l", "--locks", default=False, action="store_true",
                             help="Remove locks")
-        parser.add_argument("-o", "--outdated", default=False, action="store_true",
-                            help="Remove only outdated from recipe packages. "
-                                 "This flag can only be used with a pattern or a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Remove all packages of the specified reference if "
                                  "no specific package ID is provided")
@@ -1109,9 +1106,6 @@ class Command(object):
 
         if args.builds is not None and args.query:
             raise ConanException("'-q' and '-b' parameters can't be used at the same time")
-
-        if args.outdated and not args.pattern_or_reference:
-            raise ConanException("'--outdated' argument can only be used with a reference")
 
         if args.locks:
             if args.pattern_or_reference:
@@ -1135,7 +1129,7 @@ class Command(object):
 
         return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
-                                  force=args.force, remote_name=args.remote, outdated=args.outdated)
+                                  force=args.force, remote_name=args.remote)
 
     def copy(self, *args):
         """
@@ -1277,9 +1271,6 @@ class Command(object):
                                          prog="conan search",
                                          formatter_class=SmartFormatter)
         parser.add_argument('pattern_or_reference', nargs='?', help=_PATTERN_OR_REFERENCE_HELP)
-        parser.add_argument('-o', '--outdated', default=False, action='store_true',
-                            help="Show only outdated from recipe packages. "
-                                 "This flag can only be used with a reference")
         parser.add_argument('-q', '--query', default=None, action=OnceArgument, help=_QUERY_HELP)
         parser.add_argument('-r', '--remote', action=OnceArgument,
                             help="Remote to search in. '-r all' searches all remotes")
@@ -1354,19 +1345,15 @@ class Command(object):
 
             if ref:
                 info = self._conan.search_packages(repr(ref), query=args.query,
-                                                   remote_name=args.remote,
-                                                   outdated=args.outdated)
+                                                   remote_name=args.remote)
                 # search is done for one reference
                 template = self._conan.app.cache.get_template(templates.SEARCH_TABLE_HTML,
                                                               user_overrides=True)
                 self._outputer.print_search_packages(info["results"], ref, args.query,
-                                                     args.table, args.raw, outdated=args.outdated,
-                                                     template=template)
+                                                     args.table, args.raw, template=template)
             else:
                 if args.table:
                     raise ConanException("'--table' argument can only be used with a reference")
-                elif args.outdated:
-                    raise ConanException("'--outdated' argument can only be used with a reference")
 
                 info = self._conan.search_recipes(args.pattern_or_reference,
                                                   remote_name=args.remote,
@@ -2253,8 +2240,6 @@ _help_build_policies = '''Optional, specify which packages to build from source.
     --build=never      Disallow build for all packages, use binary packages or fail if a binary
                        package is not found. Cannot be combined with other '--build' options.
     --build=missing    Build packages from source whose binary package is not found.
-    --build=outdated   Build packages from source whose binary package was not generated from the
-                       latest recipe or is not found.
     --build=cascade    Build packages from source that have at least one dependency being built from
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The

@@ -247,13 +247,12 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              template, outdated=False):
+                              template):
         if table:
             html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query, raw,
-                                          outdated=outdated)
+            printer.print_search_packages(search_info, reference, packages_query, raw)
 
     def print_revisions(self, reference, revisions, raw, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""

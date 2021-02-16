@@ -35,7 +35,7 @@ class Search(object):
 
     remote_ref = namedtuple('remote_ref', 'ordered_packages recipe_hash')
 
-    def search_packages(self, ref=None, remote_name=None, query=None, outdated=False):
+    def search_packages(self, ref=None, remote_name=None, query=None):
         """ Return the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -46,14 +46,14 @@ class Search(object):
                                    packages properties: "arch=x86 AND os=Windows"
         """
         if not remote_name:
-            return self._search_packages_in_local(ref, query, outdated)
+            return self._search_packages_in_local(ref, query)
 
         if remote_name == 'all':
-            return self._search_packages_in_all(ref, query, outdated)
+            return self._search_packages_in_all(ref, query)
 
-        return self._search_packages_in(remote_name, ref, query, outdated)
+        return self._search_packages_in(remote_name, ref, query)
 
-    def _search_packages_in_local(self, ref=None, query=None, outdated=False):
+    def _search_packages_in_local(self, ref=None, query=None):
         package_layout = self._cache.package_layout(ref, short_paths=None)
         packages_props = search_packages(package_layout, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
@@ -70,7 +70,7 @@ class Search(object):
         references[None] = self.remote_ref(ordered_packages, recipe_hash)
         return references
 
-    def _search_packages_in_all(self, ref=None, query=None, outdated=False):
+    def _search_packages_in_all(self, ref=None, query=None):
         references = OrderedDict()
         # We have to check if there is a remote called "all"
         # Deprecate: 2.0 can remove this check
@@ -89,9 +89,9 @@ class Search(object):
                     continue
             return references
 
-        return self._search_packages_in('all', ref, query, outdated)
+        return self._search_packages_in('all', ref, query)
 
-    def _search_packages_in(self, remote_name, ref=None, query=None, outdated=False):
+    def _search_packages_in(self, remote_name, ref=None, query=None):
         remote = self._remotes[remote_name]
         packages_props = self._remote_manager.search_packages(remote, ref, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))

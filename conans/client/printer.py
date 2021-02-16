@@ -166,7 +166,7 @@ class Printer(object):
                     ref = ConanFileReference.loads(reference)
                     self._out.writeln(ref.full_str())
 
-    def print_search_packages(self, search_info, ref, packages_query, raw, outdated=False):
+    def print_search_packages(self, search_info, ref, packages_query, raw):
         assert(isinstance(ref, ConanFileReference))
         if not raw:
             self._out.info("Existing packages for recipe %s:\n" % str(ref))
@@ -176,11 +176,11 @@ class Printer(object):
 
             if not remote_info["items"][0]["packages"]:
                 if packages_query:
-                    warn_msg = "There are no %spackages for reference '%s' matching the query '%s'" \
-                               % ("outdated " if outdated else "", str(ref), packages_query)
+                    warn_msg = "There are no packages for reference '%s' matching the query '%s'" \
+                               % (str(ref), packages_query)
                 elif remote_info["items"][0]["recipe"]:
-                    warn_msg = "There are no %spackages for reference '%s', but package recipe " \
-                               "found." % ("outdated " if outdated else "", str(ref))
+                    warn_msg = "There are no packages for reference '%s', but package recipe " \
+                               "found." % (str(ref))
                 if not raw:
                     self._out.info(warn_msg)
                 continue
@@ -203,11 +203,6 @@ class Printer(object):
                         elif isinstance(attr, list):  # full requires
                             for key in sorted(attr):
                                 self._print_colored_line(key, indent=3)
-                # Always compare outdated with local recipe, simplification,
-                # if a remote check is needed install recipe first
-                if "outdated" in package:
-                    self._print_colored_line("Outdated from recipe: %s" % package["outdated"],
-                                             indent=2)
                 self._out.writeln("")
 
     def print_profile(self, name, profile):

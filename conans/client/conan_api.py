@@ -844,11 +844,11 @@ class ConanAPIV1(object):
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote_name=None, outdated=False):
+               remote_name=None):
         remotes = self.app.cache.registry.load_remotes()
         remover = ConanRemover(self.app.cache, self.app.remote_manager, self.app.user_io, remotes)
         remover.remove(pattern, remote_name, src, builds, packages, force=force,
-                       packages_query=query, outdated=outdated)
+                       packages_query=query)
 
     @api_method
     def copy(self, reference, user_channel, force=False, packages=None):
@@ -928,14 +928,14 @@ class ConanAPIV1(object):
         return search_recorder.get_info()
 
     @api_method
-    def search_packages(self, reference, query=None, remote_name=None, outdated=False):
+    def search_packages(self, reference, query=None, remote_name=None):
         search_recorder = SearchRecorder()
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
 
         try:
             ref = ConanFileReference.loads(reference)
-            references = search.search_packages(ref, remote_name, query=query, outdated=outdated)
+            references = search.search_packages(ref, remote_name, query=query)
         except ConanException as exc:
             search_recorder.error = True
             exc.info = search_recorder.get_info()
