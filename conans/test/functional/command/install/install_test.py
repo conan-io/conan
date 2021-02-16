@@ -223,7 +223,7 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
         self.client.run("install conanfile.py --build never --build Hello", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
-        self.client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
+        self.client.run("install ./conanfile.py --build never ", assert_error=True)
         self.assertIn("ERROR: --build=never not compatible with other options", self.client.out)
 
     def test_install_combined(self):

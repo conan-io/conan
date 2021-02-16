@@ -241,10 +241,6 @@ class TestConan(ConanFile):
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
 
-        # ensure the recipe hash is computed and added
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("Outdated from recipe: False", client.out)
-
     def test_build_folders(self):
         client = TestClient()
         conanfile = """

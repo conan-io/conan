@@ -389,8 +389,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         client.run("export ffmpeg.py ffmpeg/1.0@")
 
         # Building the graphlock we get the message
-        client.run("lock create variant.py --build cascade --build outdated "
-                   "--lockfile-out=conan.lock")
+        client.run("lock create variant.py --build cascade --lockfile-out=conan.lock")
 
         fmpe = "ffmpeg/1.0#5522e93e2abfbd455e6211fe4d0531a2"
         font = "fontconfig/1.0#f3367e0e7d170aa12abccb175fee5f97"

@@ -462,8 +462,6 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         # This is used for search functionality, search prints info from this file
-        # Other use is from the BinariesAnalyzer, to get the recipe_hash and know
-        # if package is outdated
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash", "env"],
                               raise_unexpected_field=False)
