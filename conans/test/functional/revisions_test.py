@@ -597,23 +597,6 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2 = TurboTestClient(servers=servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    def test_search_outdated_packages_locally_with_rrev(self):
-        """If we search for the packages of a ref specifying the RREV using --outdated:
-            - If the RREV do not exists it will raise
-            - If the RREV exists it won't show anything, if the recipe is there, is the current one
-        """
-        # Create locally a package outdated, because we export a new recipe revision
-        client = self.c_v2
-        client.create(self.ref)
-        ref = client.export(self.ref, conanfile=GenConanfile().
-                            with_build_msg("I'm your father, rev2"))
-
-        data = client.search(ref.full_str(), args="--outdated")
-        self.assertEqual([], data["results"][0]["items"][0]["packages"])
-
-        client.search("{}#fakerev".format(ref), args="--outdated", assert_error=True)
-        self.assertIn("Recipe not found: 'lib/1.0@conan/testing#fakerev'", client.out)
-
     def test_search_all_remotes_with_rrev(self):
         """If we search for the packages of a ref with the RREV in the "all" remote:
 

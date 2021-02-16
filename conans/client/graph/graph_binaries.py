@@ -244,23 +244,6 @@ class GraphBinariesAnalyzer(object):
             # Returned remote might be different than the passed one if iterating remotes
             recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
 
-        if build_mode.outdated:
-            if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
-                if node.binary == BINARY_UPDATE:
-                    info, pref = self._get_package_info(node, pref, remote)
-                    recipe_hash = info.recipe_hash
-                elif node.binary == BINARY_CACHE:
-                    package_folder = package_layout.package(pref)
-                    recipe_hash = ConanInfo.load_from_package(package_folder).recipe_hash
-
-                local_recipe_hash = package_layout.recipe_manifest().summary_hash
-                if local_recipe_hash != recipe_hash:
-                    conanfile.output.info("Outdated package!")
-                    node.binary = BINARY_BUILD
-                    node.prev = None
-                else:
-                    conanfile.output.info("Package is up to date")
-
         node.binary_remote = remote
 
     @staticmethod
