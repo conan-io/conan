@@ -62,7 +62,7 @@ class Cache:
 
         if move_reference_contents:
             old_path, created = self._backend.get_or_create_directory(new_ref)
-            assert not created, "Old reference was an existing one"
+            assert not created, "We've just updated it two lines above!"
             new_path = self.get_default_path(new_ref)
             self._backend.update_path(new_ref, new_path)
             if os.path.exists(old_path):
@@ -73,10 +73,11 @@ class Cache:
 
     def _move_prev(self, old_pref: PackageReference, new_pref: PackageReference,
                    move_package_contents: bool = False) -> Optional[str]:
+        # TODO: Add a little bit of all-or-nothing aka rollback
         self._backend.update_prev(old_pref, new_pref)
         if move_package_contents:
             old_path, created = self._backend.get_or_create_directory(new_pref.ref, new_pref)
-            assert not created, "It should exist"
+            assert not created, "We've just updated it two lines above!"
             new_path = self.get_default_path(new_pref)
             self._backend.update_path(new_pref.ref, new_path, new_pref)
             if os.path.exists(old_path):
