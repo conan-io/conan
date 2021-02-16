@@ -1,4 +1,5 @@
 class LockableResource:
+    # TODO: Remove
     def __init__(self, manager: 'LocksManager', resource: str, blocking: bool, wait: bool):
         self._manager = manager
         self._resource = resource
