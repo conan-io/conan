@@ -4,7 +4,7 @@ import tempfile
 import pytest
 
 from conan.locks.backend_sqlite3 import LockBackendSqlite3Memory, LockBackendSqlite3Filesystem
-from locks.locks_manager import LocksManager
+from conan.locks.locks_manager import LocksManager
 
 
 @pytest.fixture
