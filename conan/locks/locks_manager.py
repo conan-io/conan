@@ -3,6 +3,7 @@ from io import StringIO
 
 from conan.locks.backend import LockBackend
 from conan.locks.backend_sqlite3 import LockBackendSqlite3Memory, LockBackendSqlite3Filesystem
+from conan.locks.exceptions import AlreadyLockedException
 
 
 class LocksManager:
@@ -31,7 +32,7 @@ class LocksManager:
         while not lock_id:
             try:
                 lock_id = self._backend.try_acquire(resource, blocking)
-            except Exception as e:
+            except AlreadyLockedException:
                 if not wait:
                     raise
                 # TODO: Implement wait mechanism, timeout,...

@@ -8,7 +8,7 @@ class TestLocksManager:
         with lock_manager.lock(resource, blocking=True, wait=True):
             with pytest.raises(Exception) as excinfo:
                 lock_manager.try_acquire(resource, blocking=False, wait=False)
-            assert "Resource 'res' is blocked by a writer" == str(excinfo.value)
+            assert "Resource 'res' is already blocked by a writer" == str(excinfo.value)
 
         lock_id = lock_manager.try_acquire(resource, blocking=False, wait=False)
         lock_manager.release(lock_id)

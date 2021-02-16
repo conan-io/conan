@@ -1,6 +1,8 @@
 import os
 from io import StringIO
+
 from conan.locks.backend import LockBackend
+from conan.locks.exceptions import AlreadyLockedException
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 
 
@@ -41,14 +43,14 @@ class LockBackendSqlite3(LockBackend):
                                   f'FROM {self._table_name} '
                                   f'WHERE {self._column_resource} = "{resource}";')
             if blocking and result.fetchone():
-                raise Exception(f"Resource '{resource}' is already blocked")
+                raise AlreadyLockedException(resource)
 
             # Check if a writer (exclusive) is blocking
             blocked = any([it[1] for it in result.fetchall()])
             if blocked:
-                raise Exception(f"Resource '{resource}' is blocked by a writer")
+                raise AlreadyLockedException(resource, by_writer=True)
 
-            # Add me as a reader, one more reader
+            # Add me as a blocker, reader or writer
             blocking_value = 1 if blocking else 0
             result = conn.execute(f'INSERT INTO {self._table_name} '
                                   f'VALUES ("{resource}", {os.getpid()}, {blocking_value})')

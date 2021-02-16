@@ -19,7 +19,7 @@ class TestLockBackendSqlite3Memory:
         db.try_acquire('resid', blocking=True)
         with pytest.raises(Exception) as excinfo:
             db.try_acquire('resid', blocking=False)
-        assert "Resource 'resid' is blocked by a writer" == str(excinfo.value)
+        assert "Resource 'resid' is already blocked by a writer" == str(excinfo.value)
 
     def test_writer_after_reader(self, lock_backend_sqlite3):
         db = lock_backend_sqlite3
