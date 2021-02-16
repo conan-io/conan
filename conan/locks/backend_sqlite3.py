@@ -41,7 +41,7 @@ class LockBackendSqlite3(LockBackend):
             # Check if any is using the resource
             result = conn.execute(f'SELECT {self._column_pid}, {self._column_writer} '
                                   f'FROM {self._table_name} '
-                                  f'WHERE {self._column_resource} = "{resource}";')
+                                  f'WHERE {self._column_resource} = ?;', (resource,))
             if blocking and result.fetchone():
                 raise AlreadyLockedException(resource)
 
@@ -53,12 +53,12 @@ class LockBackendSqlite3(LockBackend):
             # Add me as a blocker, reader or writer
             blocking_value = 1 if blocking else 0
             result = conn.execute(f'INSERT INTO {self._table_name} '
-                                  f'VALUES ("{resource}", {os.getpid()}, {blocking_value})')
+                                  f'VALUES (?, ?, ?)', (resource, os.getpid(), blocking_value,))
             return result.lastrowid
 
     def release(self, backend_id: LockId):
         with self.connect() as conn:
-            conn.execute(f'DELETE FROM {self._table_name} WHERE rowid={backend_id}')
+            conn.execute(f'DELETE FROM {self._table_name} WHERE rowid=?', (backend_id,))
 
 
 class LockBackendSqlite3Memory(Sqlite3MemoryMixin, LockBackendSqlite3):

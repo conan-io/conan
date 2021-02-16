@@ -15,7 +15,7 @@ class PackageLayout(LockableMixin):
         self._pref = pref
         if not self._pref.revision:
             self._random_prev = True
-            self._pref = pref.copy_with_revs(pref.ref.revision, uuid.uuid4())
+            self._pref = pref.copy_with_revs(pref.ref.revision, str(uuid.uuid4()))
         self._cache = cache
 
         #

@@ -47,19 +47,19 @@ class CacheDatabase:
     def _where_clause(self, ref: ConanFileReference, pref: PackageReference = None,
                       filter_packages: bool = True):
         assert filter_packages or not pref, "It makes no sense to NOT filter by packages when they are explicit"
-        reference = str(ref)
         where_clauses = {
-            self._column_ref: f"'{reference}'",
-            self._column_rrev: f"'{ref.revision}'" if ref.revision else 'null',
+            self._column_ref: str(ref),
+            self._column_rrev: ref.revision if ref.revision else None,
         }
         if filter_packages:
             where_clauses.update({
-                self._column_pkgid: f"'{pref.id}'" if pref else 'null',
-                self._column_prev: f"'{pref.revision}'" if pref and pref.revision else 'null'
+                self._column_pkgid: pref.id if pref else None,
+                self._column_prev: pref.revision if pref and pref.revision else None
             })
-        cmp_expr = lambda k, v: f'{k} = {v}' if v != 'null' else f'{k} IS {v}'
+        cmp_expr = lambda k, v: f'{k} = ?' if v is not None else f'{k} IS ?'
         where_expr = ' AND '.join([cmp_expr(k, v) for k, v in where_clauses.items()])
-        return where_expr
+        where_values = tuple(where_clauses.values())
+        return where_expr, where_values
 
     def get_or_create_directory(self, ref: ConanFileReference, pref: PackageReference = None,
                                 default_path: str = None) -> Tuple[str, bool]:
@@ -68,69 +68,73 @@ class CacheDatabase:
         assert not pref or ref == pref.ref, "Both parameters should belong to the same reference"
 
         # Search the database
-        where_clause = self._where_clause(ref, pref, filter_packages=True)
+        where_clause, where_values = self._where_clause(ref, pref, filter_packages=True)
         query = f'SELECT {self._column_path} ' \
                 f'FROM {self._table_name} ' \
-                f'WHERE {where_clause}'
+                f'WHERE {where_clause};'
 
         with self.connect() as conn:
-            r = conn.execute(query)
+            r = conn.execute(query, where_values)
             rows = r.fetchall()
             assert len(rows) <= 1, f"Unique entry expected... found {rows}," \
                                    f" for where clause {where_clause}"  # TODO: Ensure this uniqueness
             if not rows:
                 path = default_path or self._get_random_directory(ref, pref)
-                values = [f'"{reference}"',
-                          f'"{ref.name}"',
-                          f'"{ref.revision}"' if ref.revision else 'NULL',
-                          f'"{pref.id}"' if pref else 'NULL',
-                          f'"{pref.revision}"' if pref and pref.revision else 'NULL',
-                          f'"{path}"'
-                          ]
+                values = (reference,
+                          ref.name,
+                          ref.revision if ref.revision else None,
+                          pref.id if pref else None,
+                          pref.revision if pref and pref.revision else None,
+                          path)
                 conn.execute(f'INSERT INTO {self._table_name} '
-                             f'VALUES ({", ".join(values)})')
+                             f'VALUES (?, ?, ?, ?, ?, ?)', values)
                 return path, True
             else:
                 return rows[0][0], False
 
     def update_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
-        query = f"UPDATE {self._table_name} " \
-                f"SET {self._column_rrev} = '{new_ref.revision}' " \
-                f"WHERE {self._where_clause(old_ref, filter_packages=False)}"
         with self.connect() as conn:
             # Check if the new_ref already exists, if not, we can move the old_one
+            where_clause, where_values = self._where_clause(new_ref, filter_packages=False)
             query_exists = f'SELECT EXISTS(SELECT 1 ' \
                            f'FROM {self._table_name} ' \
-                           f'WHERE {self._where_clause(new_ref, filter_packages=False)})'
-            r = conn.execute(query_exists)
+                           f'WHERE {where_clause})'
+            r = conn.execute(query_exists, where_values)
             if r.fetchone()[0] == 1:
                 raise DuplicateReferenceException(new_ref)
 
-            r = conn.execute(query)
+            where_clause, where_values = self._where_clause(old_ref, filter_packages=False)
+            query = f"UPDATE {self._table_name} " \
+                    f"SET {self._column_rrev} = '{new_ref.revision}' " \
+                    f"WHERE {where_clause}"
+            r = conn.execute(query, where_values)
             assert r.rowcount > 0
 
     def update_prev(self, old_pref: PackageReference, new_pref: PackageReference):
-        query = f"UPDATE {self._table_name} " \
-                f"SET {self._column_prev} = '{new_pref.revision}' " \
-                f"WHERE {self._where_clause(ref=old_pref.ref, pref=old_pref)}"
         with self.connect() as conn:
             # Check if the new_pref already exists, if not, we can move the old_one
+            where_clause, where_values = self._where_clause(new_pref.ref, pref=new_pref)
             query_exists = f'SELECT EXISTS(SELECT 1 ' \
                            f'FROM {self._table_name} ' \
-                           f'WHERE {self._where_clause(new_pref.ref, new_pref, filter_packages=True)})'
-            r = conn.execute(query_exists)
+                           f'WHERE {where_clause})'
+            r = conn.execute(query_exists, where_values)
             if r.fetchone()[0] == 1:
                 raise DuplicatePackageReferenceException(new_pref)
 
-            r = conn.execute(query)
+            where_clause, where_values = self._where_clause(old_pref.ref, pref=old_pref)
+            query = f"UPDATE {self._table_name} " \
+                    f"SET {self._column_prev} = '{new_pref.revision}' " \
+                    f"WHERE {where_clause}"
+            r = conn.execute(query, where_values)
             assert r.rowcount > 0
 
     def update_path(self, ref: ConanFileReference, new_path: str, pref: PackageReference = None):
+        where_clause, where_values = self._where_clause(ref, pref=pref)
         query = f"UPDATE {self._table_name} " \
                 f"SET    {self._column_path} = '{new_path}' " \
-                f"WHERE {self._where_clause(ref, pref)}"
+                f"WHERE {where_clause}"
         with self.connect() as conn:
-            r = conn.execute(query)
+            r = conn.execute(query, where_values)
             assert r.rowcount > 0
 
 

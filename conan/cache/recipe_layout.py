@@ -17,7 +17,7 @@ class RecipeLayout(LockableMixin):
         self._ref = ref
         if not self._ref.revision:
             self._random_rrev = True
-            self._ref = ref.copy_with_rev(uuid.uuid4())
+            self._ref = ref.copy_with_rev(str(uuid.uuid4()))
         self._cache = cache
 
         #
