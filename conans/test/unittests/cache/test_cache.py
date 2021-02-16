@@ -152,7 +152,7 @@ def test_concurrent_export(cache: Cache):
     # When R1 wants to claim that revision...
     with pytest.raises(Exception) as excinfo:
         r1_layout.assign_rrev(ref)
-    assert "Pretended reference already exists" == str(excinfo.value)
+    assert "An entry for reference 'name/version#1234567890' already exists" == str(excinfo.value)
 
 
 def test_concurrent_package(cache: Cache):
@@ -174,7 +174,8 @@ def test_concurrent_package(cache: Cache):
     # When P1 tries to claim the same revision...
     with pytest.raises(Exception) as excinfo:
         p1_layout.assign_prev(pref)
-    assert "Pretended prev already exists" == str(excinfo.value)
+    assert "An entry for package reference 'name/version#rrev:123456789#5555555555'" \
+           " already exists" == str(excinfo.value)
 
 
 def test_concurrent_read_write_recipe(cache: Cache):

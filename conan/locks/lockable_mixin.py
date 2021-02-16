@@ -11,7 +11,7 @@ class LockableMixin:
 
     @contextmanager
     def exchange(self, new_resource: str):
-        assert self._resource != new_resource, "It cannot be the same resource ID"
+        assert self._resource != new_resource, "Deadlock! It cannot be the same resource ID"
         with self._manager.lock(self._resource, blocking=True, wait=True):
             with self._manager.lock(new_resource, blocking=True, wait=False):
                 self._resource = new_resource

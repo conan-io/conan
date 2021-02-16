@@ -2,6 +2,7 @@ import uuid
 from io import StringIO
 from typing import Tuple
 
+from conan.cache.exceptions import DuplicateReferenceException, DuplicatePackageReferenceException
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -103,7 +104,7 @@ class CacheDatabase:
                            f'WHERE {self._where_clause(new_ref, filter_packages=False)})'
             r = conn.execute(query_exists)
             if r.fetchone()[0] == 1:
-                raise Exception('Pretended reference already exists')
+                raise DuplicateReferenceException(new_ref)
 
             r = conn.execute(query)
             assert r.rowcount > 0
@@ -119,7 +120,7 @@ class CacheDatabase:
                            f'WHERE {self._where_clause(new_pref.ref, new_pref, filter_packages=True)})'
             r = conn.execute(query_exists)
             if r.fetchone()[0] == 1:
-                raise Exception('Pretended prev already exists')
+                raise DuplicatePackageReferenceException(new_pref)
 
             r = conn.execute(query)
             assert r.rowcount > 0
