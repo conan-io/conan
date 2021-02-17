@@ -107,7 +107,7 @@ class MakeToolchainTest(unittest.TestCase):
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires mingw32-make")
     @pytest.mark.skipif(which("mingw32-make") is None, reason="Needs mingw32-make")
-    @pytest.mark.tool_mingw
+    @pytest.mark.tool_mingw32
     def test_toolchain_windows(self):
         client = TestClient(path_with_spaces=False)
 

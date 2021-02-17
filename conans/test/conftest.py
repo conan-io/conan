@@ -19,7 +19,7 @@ tool_environments = {
 
 tools_available = [
     'cmake',
-    'gcc', 'clang', 'visual_studio', 'mingw', 'xcode',
+    'gcc', 'clang', 'visual_studio', 'xcode',
     'msys2', 'cygwin', 'mingw32', 'mingw64',
     'autotools', 'pkg_config', 'premake', 'meson',
     'file',
@@ -45,7 +45,10 @@ if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]
     tools_available.remove("compiler")
 
 if not which("mingw32-make"):
-    tools_available.remove("mingw")
+    tools_available.remove("mingw32")
+
+if not which("mingw64-make"):
+    tools_available.remove("mingw64")
 
 if not which("xcodebuild"):
     tools_available.remove("xcode")

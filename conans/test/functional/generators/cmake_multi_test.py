@@ -136,7 +136,7 @@ int main(){{
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @pytest.mark.tool_mingw
+    @pytest.mark.tool_mingw32
     @pytest.mark.tool_gcc
     def test_cmake_multi_find(self):
         if platform.system() not in ["Windows", "Linux"]:
