@@ -97,7 +97,7 @@ def add_tool(request):
 def tool_check(mark):
     tool_name = mark.name[5:]
     if tool_name not in tools_available:
-        pytest.skip("required {} not satisfied".format(tool_name))
+        pytest.fail("Required tool: '{}' is not available".format(tool_name))
 
 
 def pytest_runtest_setup(item):
