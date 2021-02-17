@@ -238,8 +238,8 @@ class PackageCacheLayout(object):
 
     # Metadata
     def load_metadata(self):
-        with self.update_metadata() as metadata:
-            return metadata
+        with self._metadata_lock():
+            return self._load_metadata()
 
     def _load_metadata(self):
         try:
@@ -248,10 +248,20 @@ class PackageCacheLayout(object):
             raise RecipeNotFoundException(self._ref)
         return PackageMetadata.loads(text)
 
+    @contextmanager
+    def update_metadata(self):
+        with self._metadata_lock():
+            try:
+                metadata = self._load_metadata()
+            except RecipeNotFoundException:
+                metadata = PackageMetadata()
+            yield metadata
+            save(self.package_metadata(), metadata.dumps())
+
     _metadata_locks = {}  # Needs to be shared among all instances
 
     @contextmanager
-    def update_metadata(self):
+    def _metadata_lock(self):
         metadata_path = self.package_metadata()
         lockfile = metadata_path + ".lock"
         with fasteners.InterProcessLock(lockfile, logger=logger):
@@ -259,12 +269,7 @@ class PackageCacheLayout(object):
             thread_lock = PackageCacheLayout._metadata_locks.setdefault(lock_name, threading.Lock())
             thread_lock.acquire()
             try:
-                try:
-                    metadata = self._load_metadata()
-                except RecipeNotFoundException:
-                    metadata = PackageMetadata()
-                yield metadata
-                save(metadata_path, metadata.dumps())
+                yield
             finally:
                 thread_lock.release()
 
