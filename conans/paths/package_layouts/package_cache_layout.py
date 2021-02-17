@@ -238,6 +238,10 @@ class PackageCacheLayout(object):
 
     # Metadata
     def load_metadata(self):
+        with self.update_metadata() as metadata:
+            return metadata
+
+    def _load_metadata(self):
         try:
             text = load(self.package_metadata())
         except IOError:
@@ -256,7 +260,7 @@ class PackageCacheLayout(object):
             thread_lock.acquire()
             try:
                 try:
-                    metadata = self.load_metadata()
+                    metadata = self._load_metadata()
                 except RecipeNotFoundException:
                     metadata = PackageMetadata()
                 yield metadata
