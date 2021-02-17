@@ -99,6 +99,7 @@ def my_custom_function():
         hook_manager.execute("pre_source")
         self.assertEqual("", output)
 
+    @pytest.mark.skipif(six.PY2, reason="Does not pass on Py2 with Pytest")
     def test_exception_in_method(self):
         hook_manager, output, hook_path = self._init()
         my_hook = """
