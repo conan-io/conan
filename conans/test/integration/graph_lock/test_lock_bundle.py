@@ -102,8 +102,6 @@ def test_basic():
 
 def test_build_requires():
     client = TestClient()
-    # TODO: This is hardcoded
-    client.run("config set general.revisions_enabled=1")
     client.save({"tool/conanfile.py": GenConanfile().with_settings("os"),
                  "pkga/conanfile.py": GenConanfile().with_settings("os"),
                  "pkgb/conanfile.py": GenConanfile().with_requires("pkga/0.1"),

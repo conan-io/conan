@@ -511,8 +511,9 @@ class ConanAPIV1(object):
                     node.conanfile.generators = tmp
 
         installer = BinaryInstaller(self.app, recorder=recorder)
-        installer.install(deps_graph, remotes, build, update, keep_build=False,
-                          graph_info=graph_info)
+        installer.install(deps_graph, remotes, build, update, graph_info.profile_host,
+                          graph_info.profile_build, graph_lock=graph_info.graph_lock,
+                          keep_build=False)
 
         install_folder = install_folder or cwd
         workspace.generate(install_folder, deps_graph, self.app.out)
