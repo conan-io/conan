@@ -7,7 +7,7 @@ import unittest
 from jinja2 import Template
 
 from conans.client.cache.cache import ClientCache
-from conans.client.migrations_settings import settings_2_0_0
+from conans.client.conf import get_default_settings_yml
 from conans.client.profile_loader import profile_from_args
 from conans.errors import ConanException
 from conans.test.utils.test_files import temp_folder
@@ -50,7 +50,7 @@ class SettingsCppStdTests(unittest.TestCase):
             compiler.version=10.0
             compiler.cppstd = 14
             """)
-        save(self.cache.settings_path, settings_2_0_0.replace("cppstd", "foobar"))
+        save(self.cache.settings_path, get_default_settings_yml().replace("cppstd", "foobar"))
         save(fullpath, t)
         r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with self.assertRaisesRegex(ConanException,
