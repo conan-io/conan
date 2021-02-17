@@ -237,7 +237,7 @@ class GraphLockDynamicTest(unittest.TestCase):
         self.assertEqual(dep["build_requires"], ["2"])
         self.assertEqual(dep["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(dep["ref"], "dep/0.1#01b22a14739e1e2d4cd409c45cac6422")
-        self.assertEqual(dep["prev"], "08cd3e7664b886564720123959c05bdf")
+        self.assertEqual(dep["prev"], "cf924fbb5ed463b8bb960cf3a4ad4f3a")
 
     def test_conditional_env_var(self):
         client = TestClient()

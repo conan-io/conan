@@ -487,7 +487,7 @@ class BuildLockedTest(unittest.TestCase):
         lock = json.loads(client.load("conan.lock"))
         flac = lock["graph_lock"]["nodes"]["1"]
         ref = "flac/1.0#f3367e0e7d170aa12abccb175fee5f97"
-        prev = "83c38d3b4e5f1b8450434436eec31b00"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(flac.get("prev"))

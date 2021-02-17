@@ -1,11 +1,9 @@
 import json
 import unittest
 
-import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class BuildOrderTest(unittest.TestCase):
@@ -39,7 +37,7 @@ class BuildOrderTest(unittest.TestCase):
             client.run("create .")
             client.run("lock create --reference=test4/0.1@ --build=test4 --lockfile-out=conan.lock")
         ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
-        prev = "92cf292e73488c3527dab5f5ba81b947"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         build_order = [[["test4/0.1@#f876ec9ea0f44cb7adb1588e431b391a",
                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "1"]]]
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
@@ -71,7 +69,7 @@ class BuildOrderTest(unittest.TestCase):
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
         test4 = locked["1"]
         ref = "test4/0.1#f876ec9ea0f44cb7adb1588e431b391a"
-        prev = "92cf292e73488c3527dab5f5ba81b947"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         self.assertEqual(test4["ref"], ref)
         self.assertEqual(test4["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(test4["prev"], prev)
@@ -110,9 +108,9 @@ class BuildOrderTest(unittest.TestCase):
                          "0b3845ce7fd8c0b4e46566097797bd872cb5bcf6", "host", "2"]],
                        [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
                          "745ccd40fd696b66b0cb160fd5251a533563bbb4", "host", "1"]]]
-        prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
-        prev_pkg = "bcde0c25612a6d296cf2cab2c264054d"
-        prev_app = "9f30558ce471f676e3e06b633aabcf99"
+        prev_dep = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
+        prev_pkg = "fbebc40dde64aa569824b59cea32f1f6"
+        prev_app = "84273629eaca05cbeb60495124e19901"
 
         for level in build_order:
             for item in level:
@@ -261,9 +259,9 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
                        [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
                          "a925a8281740e4cb4bcad9cf41ecc4c215210604", "host", "1"]]]
-        prev_dep = "83c38d3b4e5f1b8450434436eec31b00"
-        prev_pkg = "5d3d587702b55a456c9b6b71e5f40cfa"
-        prev_app = "eeb6de9b69fb0905e15788315f77a8e2"
+        prev_dep = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
+        prev_pkg = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
+        prev_app = "24ce66b9b29f28a54b0cd9e4eddef21c"
 
         for level in build_order:
             for item in level:

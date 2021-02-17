@@ -80,7 +80,7 @@ def test_basic():
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-    assert nodes["3"].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+    assert nodes["3"].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes
@@ -186,13 +186,13 @@ def test_build_requires():
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-    assert nodes["3"].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+    assert nodes["3"].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     for n in ("5", "6", "7"):
         assert nodes[n].modified is True
         assert nodes[n].ref.full_str() == "tool/0.1#f096d7d54098b7ad7012f9435d9c33f3"
         assert nodes[n].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-        assert nodes[n].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+        assert nodes[n].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes

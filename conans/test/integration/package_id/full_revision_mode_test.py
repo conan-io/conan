@@ -1,11 +1,9 @@
 import unittest
 from textwrap import dedent
 
-import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class FullRevisionModeTest(unittest.TestCase):
@@ -191,7 +189,7 @@ class FullRevisionModeTest(unittest.TestCase):
         self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
                       client.out)
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
         self.assertIn("libb/0.1@user/testing:830b7cbbb4fc193a756c82b19904df775dc92204 - Build",
@@ -206,7 +204,7 @@ class FullRevisionModeTest(unittest.TestCase):
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . --build=liba")
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         # So it is not necessary to build the downstream consumers of LibA
         for lib in ("libb", "libc"):
             self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
