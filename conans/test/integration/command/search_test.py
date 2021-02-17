@@ -1367,19 +1367,15 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
-        second_prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
-        self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
         self.assertIn(first_prev, client.out)
-        self.assertIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")

@@ -3,11 +3,9 @@ import textwrap
 import time
 import unittest
 
-import pytest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class GraphLockErrorsTest(unittest.TestCase):
@@ -169,7 +167,7 @@ class ReproducibleLockfiles(unittest.TestCase):
 class GraphLockRevisionTest(unittest.TestCase):
     rrev_b = "9b64caa2465f7660e6f613b7e87f0cd7"
     pkg_b_id = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    prev_b = "2ec4fb334e1b4f3fd0a6f66605066ac7"
+    prev_b = "6324c2c313362c999645ac97ca0558f8"
 
     def setUp(self):
         client = TestClient(default_server_user=True)

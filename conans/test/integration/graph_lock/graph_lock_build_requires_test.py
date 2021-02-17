@@ -132,7 +132,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         lock = json.loads(client.load("conan.lock"))
         flac = lock["graph_lock"]["nodes"]["1"]
         ref = "flac/1.0#98ed25e4bb9bc0fdc6d5266afa81f9cf"
-        prev = "405174d701cf8c5478230a92bcc5cf75"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         self.assertEqual(flac["ref"], ref)
         self.assertEqual(flac["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertIsNone(flac.get("prev"))
