@@ -6,7 +6,7 @@ from tqdm import tqdm
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
-from conans.migrations import Migrator
+from conans.client.migrations import ClientMigrator
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import NoRemoteAvailable
@@ -50,7 +50,7 @@ class ConanAPIV2(object):
         self.http_requester = http_requester
         self.runner = runner
         # Migration system
-        migrator = Migrator(self.cache_folder, Version(client_version), self.out)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
 
     @api_method

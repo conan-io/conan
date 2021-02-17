@@ -35,6 +35,7 @@ from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import deps_install
+from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.recorder.action_recorder import ActionRecorder
@@ -67,7 +68,6 @@ from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.migrations import Migrator
 
 default_manifest_folder = '.conan_manifests'
 
@@ -229,7 +229,7 @@ class ConanAPIV1(object):
         self.runner = runner
         self.app = None  # Api calls will create a new one every call
         # Migration system
-        migrator = Migrator(self.cache_folder, Version(client_version), self.out)
+        migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
         check_required_conan_version(self.cache_folder, self.out)
         python_folder = os.path.join(self.cache_folder, "python")
