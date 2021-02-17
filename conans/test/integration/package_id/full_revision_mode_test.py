@@ -1,11 +1,9 @@
 import unittest
 from textwrap import dedent
 
-import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class FullRevisionModeTest(unittest.TestCase):
@@ -191,10 +189,10 @@ class FullRevisionModeTest(unittest.TestCase):
         self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
                       client.out)
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         client.save({"conanfile.py": GenConanfile().with_require('liba/0.1@user/testing')})
         client.run("create . libb/0.1@user/testing")
-        self.assertIn("libb/0.1@user/testing:830b7cbbb4fc193a756c82b19904df775dc92204 - Build",
+        self.assertIn("libb/0.1@user/testing:9f9d80d17f0a0a08e3d017e7fd0c077d56c475e3 - Build",
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require('libb/0.1@user/testing')})
@@ -206,7 +204,7 @@ class FullRevisionModeTest(unittest.TestCase):
         # Telling to build LibA doesn't change the final result of LibA, which has same ID and PREV
         client.run("install . --build=liba")
         self.assertIn("liba/0.1@user/testing: Created package revision "
-                      "83c38d3b4e5f1b8450434436eec31b00", client.out)
+                      "cf924fbb5ed463b8bb960cf3a4ad4f3a", client.out)
         # So it is not necessary to build the downstream consumers of LibA
         for lib in ("libb", "libc"):
             self.assertIn("%s/0.1@user/testing: Unknown binary" % lib, client.out)
@@ -242,9 +240,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install Invent.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package '3c5ba9bba23b494f3ce0649fd32a8b997098f08e' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
+        self.assertIn("Util/0.3.5: Package '3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb' created",
                       self.client.out)
 
     def test_triangle_dependency_graph(self):
@@ -257,9 +255,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package '3c5ba9bba23b494f3ce0649fd32a8b997098f08e' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package 'ba438cd9d192b914edb1669b3e0149822290f7d8' created",
+        self.assertIn("Util/0.3.5: Package '3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb' created",
                       self.client.out)
 
     def test_diamond_dependency_graph(self):
@@ -272,9 +270,9 @@ class PackageRevisionModeTest(unittest.TestCase):
         self._generate_graph(dependencies)
 
         self.client.run("install GenericSU.py --build missing")
-        self.assertIn("MccApi/3.0.9: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("MccApi/3.0.9: Package '3c5ba9bba23b494f3ce0649fd32a8b997098f08e' created",
                       self.client.out)
-        self.assertIn("Util/0.3.5: Package '484784c96c359def1283e7354eec200f9f9c5cd8' created",
+        self.assertIn("Util/0.3.5: Package '3c5ba9bba23b494f3ce0649fd32a8b997098f08e' created",
                       self.client.out)
 
     def test_full_dependency_graph(self):
@@ -294,20 +292,20 @@ class PackageRevisionModeTest(unittest.TestCase):
 
         # Obtained with with create and reevaluate_node
         ids = {"Log4Qt/0.3.0": "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-               "MccApi/3.0.9": "484784c96c359def1283e7354eec200f9f9c5cd8",
-               "Util/0.3.5": "ba438cd9d192b914edb1669b3e0149822290f7d8",
-               "GenericSU/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
-               "ManagementModule/0.3.5": "c152f6964d097021edab4a508d8fa926bad976fb",
-               "StationInterfaceModule/0.13.0": "7184518aa4cb352204d8b00d5424d3e52e5819d8",
-               "PleniterGenericSuApp/0.1.8": "7184518aa4cb352204d8b00d5424d3e52e5819d8"}
+               "MccApi/3.0.9": "3c5ba9bba23b494f3ce0649fd32a8b997098f08e",
+               "Util/0.3.5": "3b8e8cc0ba9594e28d17856df15bc7287bb4b3eb",
+               "GenericSU/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
+               "ManagementModule/0.3.5": "e55df1a3e79765d0a29a0cc1630c3a56dfaeea8e",
+               "StationInterfaceModule/0.13.0": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9",
+               "PleniterGenericSuApp/0.1.8": "d24f5fea9cfbcb155f5be8fb061d6193ea0b62d9"}
 
-        rev = {"Log4Qt/0.3.0": "ce3408b2884c458b2bcdfeff92404c85",
-               "MccApi/3.0.9": "45aeac67977b1509a2d02f9a205baccb",
-               "Util/0.3.5": "f446fb8e24603baafacda66aadd2503f",
-               "GenericSU/0.3.5": "d5761d4d690ded2003c3cdab86e55d15",
-               "ManagementModule/0.3.5": "743935f4f5664b059d54d361a232bf94",
-               "StationInterfaceModule/0.13.0": "fc81fa83c3c134db6ba5af99fd8460cb",
-               "PleniterGenericSuApp/0.1.8": "7191e6b6eaf79194f1b083c8dc508518"}
+        rev = {"Log4Qt/0.3.0": "cf924fbb5ed463b8bb960cf3a4ad4f3a",
+               "MccApi/3.0.9": "ee083a6a3593fa42571f9973254cf97c",
+               "Util/0.3.5": "5c2c94edcdc5d46cd9a0c0c798791e9a",
+               "GenericSU/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
+               "ManagementModule/0.3.5": "defb3fe7ee1e093b18512555ba04fe7c",
+               "StationInterfaceModule/0.13.0": "d96c69d1c47d66e6c7ed2ede43af3477",
+               "PleniterGenericSuApp/0.1.8": "d96c69d1c47d66e6c7ed2ede43af3477"}
 
         self.client.run("install StationinterfaceRpm.py --build missing")
         for pkg, id_ in ids.items():
@@ -334,4 +332,4 @@ def test_package_revision_mode_full_transitive_package_id():
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
-    assert "pkgb/0.1: Package 'f524f1981a44932e1445e13ae4cf9e2ff8112027' created" in client.out
+    assert "pkgb/0.1: Package '4af4f9ef444cffdb8dccb7f5148f16690aa6ecc9' created" in client.out

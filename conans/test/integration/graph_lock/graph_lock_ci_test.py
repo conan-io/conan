@@ -4,12 +4,10 @@ import textwrap
 import unittest
 
 from parameterized import parameterized
-import pytest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -409,15 +407,15 @@ class GraphLockCITest(unittest.TestCase):
         lockfile = json.loads(client.load("conan_out.lock"))
         nodes = lockfile["graph_lock"]["nodes"]
         self.assertEqual(nodes["3"]["ref"], "PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada")
-        self.assertEqual(nodes["3"]["package_id"], "6e9742c2106791c1c777da8ccfb12a1408385d8d")
-        self.assertEqual(nodes["3"]["prev"], "f971905c142e0de728f32a7237553622")
+        self.assertEqual(nodes["3"]["package_id"], "f57dad713eea5b15c7b57a2f7a2bed3377da6f0a")
+        self.assertEqual(nodes["3"]["prev"], "08c093abcf2e59b0a82fcd865f03040d")
 
         client.run("lock update conan.lock conan_out.lock")
         lockfile = json.loads(client.load("conan.lock"))
         nodes = lockfile["graph_lock"]["nodes"]
         self.assertEqual(nodes["3"]["ref"], "PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada")
-        self.assertEqual(nodes["3"]["package_id"], "6e9742c2106791c1c777da8ccfb12a1408385d8d")
-        self.assertEqual(nodes["3"]["prev"], "f971905c142e0de728f32a7237553622")
+        self.assertEqual(nodes["3"]["package_id"], "f57dad713eea5b15c7b57a2f7a2bed3377da6f0a")
+        self.assertEqual(nodes["3"]["prev"], "08c093abcf2e59b0a82fcd865f03040d")
 
 
 class CIPythonRequiresTest(unittest.TestCase):

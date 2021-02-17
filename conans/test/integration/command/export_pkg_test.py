@@ -1,17 +1,13 @@
 import json
 import os
-import platform
 import textwrap
 import unittest
 from textwrap import dedent
 
-from parameterized import parameterized
-import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, is_dirty
 
 
@@ -108,7 +104,7 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
-        self.assertIn("conaninfo.txt: f395060da1ffdeb934be8b62e4bd8a3a", manifest)
+        self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):

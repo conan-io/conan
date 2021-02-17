@@ -51,8 +51,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     layout.package_remove(pref)
 
     dest_package_folder = layout.package(pref)
-    recipe_hash = layout.recipe_manifest().summary_hash
-    conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
     with layout.set_dirty_context_manager(pref):
         if package_folder:

@@ -123,13 +123,11 @@ class GraphBinariesAnalyzer(object):
         if remote_info:
             node.binary = BINARY_DOWNLOAD
             node.prev = pref.revision
-            recipe_hash = remote_info.recipe_hash
         else:
-            recipe_hash = None
             node.prev = None
             node.binary = BINARY_MISSING
 
-        return recipe_hash, remote
+        return remote
 
     def _evaluate_is_cached(self, node, pref):
         previous_nodes = self._evaluated.get(pref)
@@ -239,10 +237,9 @@ class GraphBinariesAnalyzer(object):
 
         if package_layout.package_id_exists(pref.id):  # Binary already in cache, check for updates
             self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
-            recipe_hash = None
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
-            recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
+            remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
 
         node.binary_remote = remote
 

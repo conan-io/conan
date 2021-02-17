@@ -16,7 +16,6 @@ from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
@@ -151,11 +150,6 @@ class _PackageBuilder(object):
 
     def _package(self, conanfile, pref, package_layout, conanfile_path, build_folder,
                  package_folder):
-
-        # FIXME: Is weak to assign here the recipe_hash
-        manifest = package_layout.recipe_manifest()
-        conanfile.info.recipe_hash = manifest.summary_hash
-
         # Creating ***info.txt files
         save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
         self._output.info("Generated %s" % CONANINFO)

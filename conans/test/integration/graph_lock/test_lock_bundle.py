@@ -70,34 +70,34 @@ def test_basic():
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app1/0.1#584778f98ba1d0eb7c80a5ae1fe12fe2"
     assert nodes["1"].package_id == "3bcd6800847f779e0883ee91b411aad9ddd8e83c"
-    assert nodes["1"].prev == "c6658a5c66393cf4d210c35b5fbf34f8"
+    assert nodes["1"].prev == "ca93f8a2b7cfa755e3f769f230d3de08"
 
     assert nodes["2"].modified is True
     assert nodes["2"].ref.full_str() == "pkgb/0.1#cd8f22d6f264f65398d8c534046e8e20"
     assert nodes["2"].package_id == "cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23"
-    assert nodes["2"].prev == "d61b9f421cada3b4d8e39540b0aea3d0"
+    assert nodes["2"].prev == "bc71ad422e9e49cf476dac6a7faa384a"
 
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-    assert nodes["3"].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+    assert nodes["3"].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app2/0.1#3850895c1eac8223c43c71d525348019"
     assert nodes["1"].package_id == "156f38906bdcdceba1b26a206240cf199619fee1"
-    assert nodes["1"].prev == "f1ca88c668b7f573037d09cb04be0e6f"
+    assert nodes["1"].prev == "721c60fe5a1da4268781bc3a61d103ed"
 
     assert nodes["2"].modified is True
     assert nodes["2"].ref.full_str() == "pkgb/0.2#cd8f22d6f264f65398d8c534046e8e20"
     assert nodes["2"].package_id == "cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23"
-    assert nodes["2"].prev == "d61b9f421cada3b4d8e39540b0aea3d0"
+    assert nodes["2"].prev == "bc71ad422e9e49cf476dac6a7faa384a"
 
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
-    assert nodes["3"].prev == "9e99cfd92d0d7df79d687b01512ce844"
+    assert nodes["3"].prev == "49a476d1af8fd693e5a5858c0a1e7813"
 
 
 def test_build_requires():
@@ -176,43 +176,43 @@ def test_build_requires():
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app1/0.1#584778f98ba1d0eb7c80a5ae1fe12fe2"
     assert nodes["1"].package_id == "3bcd6800847f779e0883ee91b411aad9ddd8e83c"
-    assert nodes["1"].prev == "c6658a5c66393cf4d210c35b5fbf34f8"
+    assert nodes["1"].prev == "ca93f8a2b7cfa755e3f769f230d3de08"
 
     assert nodes["2"].modified is True
     assert nodes["2"].ref.full_str() == "pkgb/0.1#cd8f22d6f264f65398d8c534046e8e20"
     assert nodes["2"].package_id == "cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23"
-    assert nodes["2"].prev == "d61b9f421cada3b4d8e39540b0aea3d0"
+    assert nodes["2"].prev == "bc71ad422e9e49cf476dac6a7faa384a"
 
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-    assert nodes["3"].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+    assert nodes["3"].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     for n in ("5", "6", "7"):
         assert nodes[n].modified is True
         assert nodes[n].ref.full_str() == "tool/0.1#f096d7d54098b7ad7012f9435d9c33f3"
         assert nodes[n].package_id == "3475bd55b91ae904ac96fde0f106a136ab951a5e"
-        assert nodes[n].prev == "d0f0357277b3417d3984b5a9a85bbab6"
+        assert nodes[n].prev == "0f2ac617ecf857a183b812307b2902c1"
 
     app2_linux = GraphLockFile.load(os.path.join(client.current_folder, "app2_linux.lock"))
     nodes = app2_linux.graph_lock.nodes
     assert nodes["1"].modified is True
     assert nodes["1"].ref.full_str() == "app2/0.1#3850895c1eac8223c43c71d525348019"
     assert nodes["1"].package_id == "156f38906bdcdceba1b26a206240cf199619fee1"
-    assert nodes["1"].prev == "f1ca88c668b7f573037d09cb04be0e6f"
+    assert nodes["1"].prev == "721c60fe5a1da4268781bc3a61d103ed"
 
     assert nodes["2"].modified is True
     assert nodes["2"].ref.full_str() == "pkgb/0.2#cd8f22d6f264f65398d8c534046e8e20"
     assert nodes["2"].package_id == "cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23"
-    assert nodes["2"].prev == "d61b9f421cada3b4d8e39540b0aea3d0"
+    assert nodes["2"].prev == "bc71ad422e9e49cf476dac6a7faa384a"
 
     assert nodes["3"].modified is True
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
-    assert nodes["3"].prev == "9e99cfd92d0d7df79d687b01512ce844"
+    assert nodes["3"].prev == "49a476d1af8fd693e5a5858c0a1e7813"
 
     for n in ("5", "6", "7"):
         assert nodes[n].modified is True
         assert nodes[n].ref.full_str() == "tool/0.1#f096d7d54098b7ad7012f9435d9c33f3"
         assert nodes[n].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
-        assert nodes[n].prev == "9e99cfd92d0d7df79d687b01512ce844"
+        assert nodes[n].prev == "49a476d1af8fd693e5a5858c0a1e7813"

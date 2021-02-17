@@ -58,8 +58,6 @@ conan_vars1c = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
-[recipe_hash]
-  d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars1d = '''
@@ -400,7 +398,8 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> "
+                      "JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
     def test_search_html_table_all(self):
@@ -1338,7 +1337,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         first_rrev = "bd761686d5c57b31f4cd85fd0329751f"
-        first_prev = "e928490f2e24da2ab391f0b289dd73c1"
+        first_prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
@@ -1368,19 +1367,15 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
-        second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
-        self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
-        self.assertNotIn(first_prev, client.out)
-        self.assertIn(second_prev, client.out)
+        self.assertIn(first_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")

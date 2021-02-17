@@ -26,7 +26,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertTrue(order1 < order2 < order3)
         rrev = "f3367e0e7d170aa12abccb175fee5f97"
         pref_str = "Pkg/0.1@user/testing#%s" % rrev
-        prev = "83c38d3b4e5f1b8450434436eec31b00"
+        prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         self.pref = pref = PackageReference(ConanFileReference.loads(pref_str),
                                             NO_SETTINGS_PACKAGE_ID, prev)
         self.manifest_path = self.server.server_store.get_package_file_path(pref,

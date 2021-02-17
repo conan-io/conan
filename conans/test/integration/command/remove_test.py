@@ -15,7 +15,6 @@ from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
     TestServer, GenConanfile
-from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -87,7 +86,6 @@ class Test(ConanFile):
             self.assertIn("There are no packages", client.out)
 
 
-fake_recipe_hash = "999999999"
 conaninfo = '''
 [settings]
     arch=x64
@@ -100,8 +98,6 @@ conaninfo = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
-[recipe_hash]
-''' + fake_recipe_hash + '''
 [recipe_revision]
 '''
 
@@ -133,8 +129,8 @@ class RemoveTest(unittest.TestCase):
             fake_metadata = PackageMetadata()
             fake_metadata.recipe.revision = "myreciperev"
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
-            files["%s/%s/conanmanifest.txt" % (
-                folder, EXPORT_FOLDER)] = "%s\nconanfile.py: 234234234" % fake_recipe_hash
+            files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = \
+                "123\nconanfile.py: 234234234"
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
                 i = pack_id
