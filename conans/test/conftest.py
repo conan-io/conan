@@ -44,12 +44,6 @@ except ConanException:
 if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
     tools_available.remove("compiler")
 
-if not which("mingw32-make"):
-    tools_available.remove("mingw32")
-
-if not which("mingw64-make"):
-    tools_available.remove("mingw64")
-
 if not which("xcodebuild"):
     tools_available.remove("xcode")
 
