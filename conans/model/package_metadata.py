@@ -56,9 +56,12 @@ class _BinaryPackageMetadata(object):
         self._recipe_revision = DEFAULT_REVISION_V1 if r is None else r
 
     def to_dict(self):
-        # It is totally unexpected to save 'metadata.json' file without package-revsion, when
-        # even with revisions deactivated, it takes the value DEFAULT_REVISION_V1.
-        assert self._revision is not None, 'Trying to save to metadata packages without revision!'
+        # It is totally unexpected to save 'metadata.json' file without package-revision,
+        # even if revisions are deactivated, it takes the value DEFAULT_REVISION_V1.
+        # EXCEPT, for a requested feature to be able to asign the remote for a package-id before
+        # installing it to the cache.
+        if self.remote is None:
+            assert self._revision is not None, 'Trying to save to metadata without package revision!'
 
         ret = {"revision": self.revision,
                "recipe_revision": self.recipe_revision,

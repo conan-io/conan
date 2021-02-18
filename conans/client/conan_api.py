@@ -1068,6 +1068,7 @@ class ConanAPIV1(object):
             m = metadata.packages.get(pref.id)
             if m and m.remote:
                 raise ConanException("%s already exists. Use update" % str(pref))
+            # Create the package entry although we know nothing else about it
             metadata.packages[pref.id].remote = remote.name
 
     @api_method
