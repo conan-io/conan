@@ -71,6 +71,10 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                 + "python -m pip install -r conans/requirements_server.txt && " \
                                 + "python -m pip install -r conans/requirements_dev.txt && "
 
+                def conanToolInstall = "python setup.py install && " \
+                                     + "conan --version && conan --help && "
+
+
                 def launchTests = "python -m pytest ${module} -n=4"
 
                 if (nodeName=="Linux") {
@@ -80,13 +84,14 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                             def sourcedir = "/home/conan/"
                             def pyenvdir = "${sourcedir}.pyenv"
                             sh(script: "cp -R ./ ${sourcedir}")
-                            def command = "su - conan -c \"" \
-                                          + "export PYENV_ROOT=${pyenvdir} && " \
-                                          + "export PATH=\"${pyenvdir}/bin:\$PATH\" && " \
-                                          + "pyenv global \$${pythonVersion} && " \
-                                          + pipInstalls \
-                                          + "${launchTests}\""
-                            sh(script: command)
+                            def launchCommand = "su - conan -c \"" \
+                                              + "export PYENV_ROOT=${pyenvdir} && " \
+                                              + "export PATH=\"${pyenvdir}/bin:\$PATH\" && " \
+                                              + "pyenv global \$${pythonVersion} && " \
+                                              + pipInstalls \
+                                              + conanToolInstall \
+                                              + "${launchTests}\""
+                            sh(script: launchCommand)
                         }
                     }
                     finally {}
@@ -98,9 +103,9 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                         try {
                                 sh(script: "mkdir -p ${workDir}")
                                 def pythonLocation = "${localDir}/.pyenv/versions/\$${pythonVersion}/bin/python"
-                                def configVenv =  "${pythonLocation} -m virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
-                                                + "source ${workDir}${venvName}/bin/activate && python --version && "
-                                def launchCommand = configVenv + pipInstalls + launchTests
+                                def configVenv = "${pythonLocation} -m virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
+                                               + "source ${workDir}${venvName}/bin/activate && python --version && "
+                                def launchCommand = configVenv + pipInstalls + conanToolInstall + launchTests
                                 sh(script: launchCommand)
                         }
                         finally {
@@ -115,9 +120,9 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                         try {
                             bat(script: "if not exist \"${workDir}\" mkdir \"${workDir}\"")
                             def pythonLocation = "C:/%${pythonVersion}%/python.exe"
-                            def configVenv =  "virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
-                                            + "${workDir}${venvName}/Scripts/activate && python --version && "
-                            def launchCommand = configVenv + pipInstalls + launchTests
+                            def configVenv = "virtualenv --python ${pythonLocation} ${workDir}${venvName} && " \
+                                           + "${workDir}${venvName}/Scripts/activate && python --version && "
+                            def launchCommand = configVenv + pipInstalls + conanToolInstall + launchTests
                             bat(script: launchCommand)
                         }
                         finally {
