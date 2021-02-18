@@ -1,10 +1,11 @@
 import os
+
 import pytest
 
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture

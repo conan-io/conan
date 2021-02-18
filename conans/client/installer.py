@@ -144,8 +144,8 @@ class _PackageBuilder(object):
             mkdir(conanfile.build_folder)
             with tools.chdir(conanfile.build_folder):
                 run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
-                self._output.success("Package '%s' built" % pref.id)
-                self._output.info("Build folder %s" % conanfile.build_folder)
+            self._output.success("Package '%s' built" % pref.id)
+            self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
             self._output.writeln("")
             self._output.error("Package '%s' build failed" % pref.id)
