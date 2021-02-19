@@ -58,8 +58,6 @@ conan_vars1c = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
-[recipe_hash]
-  d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars1d = '''
@@ -389,20 +387,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> "
+                      "JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
     def test_search_html_table_all(self):
@@ -416,11 +413,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<th>remote</th>"
-                      "<th>package_id</th>"
-                      "<th>outdated</th>", html)
+                      "<th>package_id</th>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -428,7 +423,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -469,7 +463,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("Outdated from recipe: False", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -486,7 +479,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
-        self.assertEqual(str(self.client.out).count("Outdated from recipe: False"), 2)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -716,7 +708,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10@myuser/testing -q "arch=x86"')
-        # One package will be outdated from recipe and another don't
         self.assertEqual("""Existing packages for recipe Hello/1.4.10@myuser/testing:
 
     Package_ID: LinuxPackageSHA
@@ -732,7 +723,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@myuser/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        Outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -742,7 +732,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             compiler: gcc
             compiler.libcxx: libstdc++
             compiler.version: 4.3
-        Outdated from recipe: True
 
 """, self.client.out)
 
@@ -959,8 +948,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -971,8 +959,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -986,8 +973,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1025,8 +1011,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1037,8 +1022,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1052,8 +1036,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1091,8 +1074,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1103,8 +1085,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1118,8 +1099,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1145,8 +1125,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1157,8 +1136,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1172,8 +1150,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1360,7 +1337,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         first_rrev = "bd761686d5c57b31f4cd85fd0329751f"
-        first_prev = "e928490f2e24da2ab391f0b289dd73c1"
+        first_prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
@@ -1390,19 +1367,15 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
-        second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
-        self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
-        self.assertNotIn(first_prev, client.out)
-        self.assertIn(second_prev, client.out)
+        self.assertIn(first_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")

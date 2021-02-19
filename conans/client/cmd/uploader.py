@@ -478,12 +478,6 @@ class CmdUpload(object):
                 CONANINFO: files[CONANINFO],
                 CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
-    def _upload_recipe_end_msg(self, ref, remote):
-        msg = "\rUploaded conan recipe '%s' to '%s'" % (str(ref), remote.name)
-        url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
-        msg += ": %s" % url
-        self._output.info(left_justify_message(msg))
-
     def _package_integrity_check(self, pref, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         self._output.rewrite_line("Checking package integrity...")

@@ -13,26 +13,23 @@ class BuildModeTest(unittest.TestCase):
         self.conanfile = MockConanfile(None)
 
     def test_valid_params(self):
-        build_mode = BuildMode(["outdated", "missing"], self.output)
-        self.assertTrue(build_mode.outdated)
+        build_mode = BuildMode(["missing"], self.output)
         self.assertTrue(build_mode.missing)
         self.assertFalse(build_mode.never)
         self.assertFalse(build_mode.cascade)
 
         build_mode = BuildMode(["never"], self.output)
-        self.assertFalse(build_mode.outdated)
         self.assertFalse(build_mode.missing)
         self.assertTrue(build_mode.never)
         self.assertFalse(build_mode.cascade)
 
         build_mode = BuildMode(["cascade"], self.output)
-        self.assertFalse(build_mode.outdated)
         self.assertFalse(build_mode.missing)
         self.assertFalse(build_mode.never)
         self.assertTrue(build_mode.cascade)
 
     def test_invalid_configuration(self):
-        for mode in ["outdated", "missing", "cascade"]:
+        for mode in ["missing", "cascade"]:
             with self.assertRaisesRegex(ConanException,
                                        "--build=never not compatible with other options"):
                 BuildMode([mode, "never"], self.output)
@@ -94,7 +91,7 @@ class BuildModeTest(unittest.TestCase):
         self.assertIn("ERROR: No package matching", self.output)
 
     def test_allowed(self):
-        build_mode = BuildMode(["outdated", "missing"], self.output)
+        build_mode = BuildMode(["missing"], self.output)
         self.assertTrue(build_mode.allowed(self.conanfile))
 
         build_mode = BuildMode([], self.output)

@@ -8,9 +8,8 @@ from mock import Mock
 from mock.mock import call
 from parameterized import parameterized
 
-from conans.client.graph.python_requires import ConanPythonRequire
-from conans.client.loader import ConanFileLoader, ConanFileTextLoader,\
-    _parse_conanfile
+
+from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
 from conans.errors import ConanException
 from conans.model.options import OptionsValues
@@ -26,7 +25,7 @@ from conans.util.files import save
 class ConanLoaderTest(unittest.TestCase):
 
     def test_inherit_short_paths(self):
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, TestBufferConanOutput())
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from base_recipe import BasePackage
@@ -46,7 +45,7 @@ class BasePackage(ConanFile):
         self.assertEqual(result.short_paths, True)
 
     def test_requires_init(self):
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, TestBufferConanOutput())
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from conans import ConanFile
@@ -78,7 +77,7 @@ class MyTest(ConanFile):
         profile = Profile()
         profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, TestBufferConanOutput())
 
         recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Windows")

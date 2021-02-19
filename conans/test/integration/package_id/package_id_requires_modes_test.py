@@ -2,13 +2,11 @@ import os
 import textwrap
 import unittest
 
-import pytest
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 from conans.util.files import load
 
 
@@ -566,15 +564,15 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we only build pkg1, we get a new packageID for pkg3
         t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 283642385cc7b64ec7b5903f6895107e0848d238", t.out)
-        self.assertIn("ERROR: Missing binary: pkg3/1.0:283642385cc7b64ec7b5903f6895107e0848d238",
+        self.assertIn("pkg3/1.0: Updated ID: ffba90d1c0b46dce02239f621ede0aa8027d39f2", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:ffba90d1c0b46dce02239f621ede0aa8027d39f2",
                       t.out)
 
         # If we build both, we get the new package
         t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: 283642385cc7b64ec7b5903f6895107e0848d238", t.out)
-        self.assertIn("pkg3/1.0: Package '283642385cc7b64ec7b5903f6895107e0848d238' created", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: ffba90d1c0b46dce02239f621ede0aa8027d39f2", t.out)
+        self.assertIn("pkg3/1.0: Package 'ffba90d1c0b46dce02239f621ede0aa8027d39f2' created", t.out)
 
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
@@ -600,7 +598,7 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
         self.assertIn("pkg3/1.0:3ea4b5f291451dab54b09abbf324d99d1f4f8cd7 - Download", t.out)
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
-        self.assertIn("pkg2/1.0: Updated ID: d3afcd43f39697e7529bcc7d1ec5b31c947de74c", t.out)
+        self.assertIn("pkg2/1.0: Updated ID: ac9203e9ca51551d014c60ae4291cc635dceefb6", t.out)
         self.assertIn("pkg2/1.0: Binary for updated ID from: Download", t.out)
-        self.assertIn("pkg2/1.0: Retrieving package d3afcd43f39697e7529bcc7d1ec5b31c947de74c "
+        self.assertIn("pkg2/1.0: Retrieving package ac9203e9ca51551d014c60ae4291cc635dceefb6 "
                       "from remote 'default'", t.out)

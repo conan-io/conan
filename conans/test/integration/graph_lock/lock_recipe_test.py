@@ -2,10 +2,8 @@ import json
 import textwrap
 import unittest
 
-import pytest
 
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class LockRecipeTest(unittest.TestCase):
@@ -25,11 +23,11 @@ class LockRecipeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_setting("os")})
         client.run("create . pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build", client.out)
-        self.assertIn("pkg/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
+        self.assertIn("pkg/0.1: Created package revision 0f2ac617ecf857a183b812307b2902c1",
                       client.out)
         client.run("create . pkg/0.1@ -s os=Linux")
         self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build", client.out)
-        self.assertIn("pkg/0.1: Created package revision 9e99cfd92d0d7df79d687b01512ce844",
+        self.assertIn("pkg/0.1: Created package revision 49a476d1af8fd693e5a5858c0a1e7813",
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
@@ -44,7 +42,7 @@ class LockRecipeTest(unittest.TestCase):
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
         self.assertEqual(pkg_node["package_id"], "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31")
-        self.assertEqual(pkg_node["prev"], "9e99cfd92d0d7df79d687b01512ce844")
+        self.assertEqual(pkg_node["prev"], "49a476d1af8fd693e5a5858c0a1e7813")
         self.assertEqual(pkg_node["options"], "")
         self.assertIsNone(pkg_node.get("modified"))
 
@@ -54,7 +52,7 @@ class LockRecipeTest(unittest.TestCase):
         pkg_node = lock["graph_lock"]["nodes"]["1"]
         self.assertEqual(pkg_node["ref"], "pkg/0.1#f096d7d54098b7ad7012f9435d9c33f3")
         self.assertEqual(pkg_node["package_id"], "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        self.assertEqual(pkg_node["prev"], "d0f0357277b3417d3984b5a9a85bbab6")
+        self.assertEqual(pkg_node["prev"], "0f2ac617ecf857a183b812307b2902c1")
         self.assertEqual(pkg_node["options"], "")
 
         # Now it is possible to obtain the base one again from the full ones
@@ -135,9 +133,9 @@ class LockRecipeTest(unittest.TestCase):
         linux = lock["graph_lock"]["nodes"]["3"]
         self.assertNotIn("2", lock["graph_lock"]["nodes"])
         self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(common["prev"], "cf924fbb5ed463b8bb960cf3a4ad4f3a")
         self.assertEqual(linux["ref"], "linux/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(linux["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(linux["prev"], "cf924fbb5ed463b8bb960cf3a4ad4f3a")
         self.assertEqual(common["options"], "")
         self.assertEqual(common["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(linux["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -150,9 +148,9 @@ class LockRecipeTest(unittest.TestCase):
         common = lock["graph_lock"]["nodes"]["1"]
         win = lock["graph_lock"]["nodes"]["2"]
         self.assertEqual(common["ref"], "common/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(common["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(common["prev"], "cf924fbb5ed463b8bb960cf3a4ad4f3a")
         self.assertEqual(win["ref"], "win/0.1#f3367e0e7d170aa12abccb175fee5f97")
-        self.assertEqual(win["prev"], "83c38d3b4e5f1b8450434436eec31b00")
+        self.assertEqual(win["prev"], "cf924fbb5ed463b8bb960cf3a4ad4f3a")
         self.assertEqual(common["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual(common["options"], "")
         self.assertEqual(win["package_id"], "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -188,7 +186,7 @@ class LockRecipeTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_setting("os")})
         client.run("create . liba/0.1@ -s os=Windows")
         self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build", client.out)
-        self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
+        self.assertIn("liba/0.1: Created package revision 0f2ac617ecf857a183b812307b2902c1",
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("liba/0.1")})
@@ -198,7 +196,7 @@ class LockRecipeTest(unittest.TestCase):
         client.run("lock create --reference=libb/0.1 -s os=Windows "
                    "--lockfile-out=windows.lock --lockfile=conan.lock "
                    "--build=libb/0.1 --build=missing")
-        self.assertIn("libb/0.1:d9a360017881eddb68099b9a3573a4c0d39f3df5 - Build", client.out)
+        self.assertIn("libb/0.1:9c7e2792b2495e16c59388d255d5f2889c23c542 - Build", client.out)
 
         client.run("lock create --reference=libb/0.1 -s os=Linux "
                    "--lockfile-out=linux.lock --lockfile=conan.lock "
@@ -215,7 +213,7 @@ class LockRecipeTest(unittest.TestCase):
                      "myprofile": "[build_requires]\ncmake/1.0"})
         client.run("create . liba/0.1@ -s os=Windows --profile=myprofile")
         self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build", client.out)
-        self.assertIn("liba/0.1: Created package revision d0f0357277b3417d3984b5a9a85bbab6",
+        self.assertIn("liba/0.1: Created package revision 0f2ac617ecf857a183b812307b2902c1",
                       client.out)
 
         client.save({"conanfile.py": GenConanfile().with_require("liba/0.1")})
@@ -228,7 +226,7 @@ class LockRecipeTest(unittest.TestCase):
                    "--lockfile-out=windows.lock --lockfile=conan.lock "
                    "--build=libb/0.1 --build=missing --profile=myprofile")
         self.assertIn("liba/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache", client.out)
-        self.assertIn("libb/0.1:d9a360017881eddb68099b9a3573a4c0d39f3df5 - Build", client.out)
+        self.assertIn("libb/0.1:9c7e2792b2495e16c59388d255d5f2889c23c542 - Build", client.out)
         self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
 
         client.run("lock create --reference=libb/0.1 -s os=Linux "

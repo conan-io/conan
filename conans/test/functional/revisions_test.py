@@ -345,7 +345,8 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         prev2 = client.package_revision(pref)
 
         self.assertNotEqual(rev2, rev)
-        self.assertNotEqual(prev2, prev)
+        # If the contents of the package is identical, the prev is identical, even if recipe changed
+        self.assertEqual(prev2, prev)
 
         self.assertIsNotNone(rev2)
         self.assertIsNotNone(prev2)
@@ -596,23 +597,6 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
                                ("remote2", self.server2)])
         self.c_v2 = TurboTestClient(servers=servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
-
-    def test_search_outdated_packages_locally_with_rrev(self):
-        """If we search for the packages of a ref specifying the RREV using --outdated:
-            - If the RREV do not exists it will raise
-            - If the RREV exists it won't show anything, if the recipe is there, is the current one
-        """
-        # Create locally a package outdated, because we export a new recipe revision
-        client = self.c_v2
-        client.create(self.ref)
-        ref = client.export(self.ref, conanfile=GenConanfile().
-                            with_build_msg("I'm your father, rev2"))
-
-        data = client.search(ref.full_str(), args="--outdated")
-        self.assertEqual([], data["results"][0]["items"][0]["packages"])
-
-        client.search("{}#fakerev".format(ref), args="--outdated", assert_error=True)
-        self.assertIn("Recipe not found: 'lib/1.0@conan/testing#fakerev'", client.out)
 
     def test_search_all_remotes_with_rrev(self):
         """If we search for the packages of a ref with the RREV in the "all" remote:
@@ -891,7 +875,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         c_v2.run("search {} --revisions -r default".format(pref_rev.full_str()))
         # I don't want to mock here because I want to run this test against Artifactory
-        self.assertIn("83c38d3b4e5f1b8450434436eec31b00 (", c_v2.out)
+        self.assertIn("cf924fbb5ed463b8bb960cf3a4ad4f3a (", c_v2.out)
         self.assertIn(" UTC)", c_v2.out)
 
 

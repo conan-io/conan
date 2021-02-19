@@ -122,12 +122,6 @@ class InfoTest(unittest.TestCase):
         self.assert_last_line(self.clients["H3"], 'H0/0.1@lu/st, H1a/0.1@lu/st, '
                                                   'H2a/0.1@lu/st, H2c/0.1@lu/st')
 
-        # But with build outdated we have to build the private H0 (but only once) and H1a
-        self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info . --build outdated")
-        self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H1a/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
-
     def test_json_output_build(self):
         """ Test that the output of 'conan info --build' to json file is correct """
         json_file = os.path.join(temp_folder(), "output.json")

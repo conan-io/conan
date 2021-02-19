@@ -56,50 +56,6 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
 
-    def test_python_requires(self):
-        server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    _my_var = 123
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Base/0.1@lasote/testing")
-        conanfile = """from conans import python_requires
-base = python_requires("Base/0.1@lasote/testing")
-class Pkg(base.Pkg):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Pkg/0.1@lasote/testing")
-        client.run("upload * --all --confirm")
-        client.run("remove * -f")
-        client.run("inspect Pkg/0.1@lasote/testing -a=_my_var -r=default")
-        self.assertIn("_my_var: 123", client.out)
-        # Inspect fetch recipes into local cache
-        client.run("search")
-        self.assertIn("Base/0.1@lasote/testing", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing", client.out)
-
-    def test_python_requires_not_found(self):
-        server = TestServer()
-        client = TestClient(servers={"default": server}, users={"default": [("user", "channel")]})
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, python_requires
-
-            base = python_requires("name/version@user/channel")
-
-            class MyLib(ConanFile):
-                pass
-            """)
-
-        client.save({'conanfile.py': conanfile})
-        client.run("inspect . -a options", assert_error=True)
-        self.assertIn("Error loading conanfile at ", client.out)
-        self.assertIn('Unable to find python_requires("name/version@user/channel")'
-                      ' in remotes', client.out)
-        self.assertEqual(3, len(str(client.out).splitlines()))
-
     def test_name_version(self):
         server = TestServer()
         client = TestClient(servers={"default": server}, users={"default": [("lasote", "mypass")]})

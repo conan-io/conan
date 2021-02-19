@@ -4,7 +4,6 @@ import unittest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
@@ -165,19 +164,3 @@ class GraphLockPyRequiresTest(unittest.TestCase):
                    "--lockfile-out=conan.lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock(self.pkg_ref, self.pkg_id)
-
-
-class GraphLockPythonRequiresTest(GraphLockPyRequiresTest):
-    pkg_ref = "Pkg/0.1@user/channel#332c2615c2ff9f78fc40682e733e5aa5"
-    pkg_id = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    consumer = textwrap.dedent("""
-       from conans import ConanFile, python_requires
-       dep = python_requires("Tool/[>=0.1]@user/channel")
-
-       class Pkg(ConanFile):
-           name = "Pkg"
-           def configure(self):
-               self.output.info("CONFIGURE VAR=%s" % dep.var)
-           def build(self):
-               self.output.info("BUILD VAR=%s" % dep.var)
-       """)

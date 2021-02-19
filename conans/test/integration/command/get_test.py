@@ -92,9 +92,6 @@ class ConanGetTest(unittest.TestCase):
             [full_options]
 
 
-            [recipe_hash]
-                07e4bf611af374672215a94d84146e2d
-
             """), self.client.out)
 
         # List package dir

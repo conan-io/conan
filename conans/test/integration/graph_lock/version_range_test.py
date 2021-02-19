@@ -3,7 +3,6 @@ import unittest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
-from conans.util.env_reader import get_env
 
 
 class GraphLockVersionRangeTest(unittest.TestCase):
@@ -12,11 +11,11 @@ class GraphLockVersionRangeTest(unittest.TestCase):
     upload = False
     ref_a = "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a"
     pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    prev_a = "0d561e10e25511b9bfa339d06360d7c1"
+    prev_a = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
     ref_b = "PkgB/0.1@user/channel"
     rrev_b = "e8cabe5f1c737bcb8223b667f071842d"
     pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    prev_b = "97d1695f4e456433cc5a1dfa14655a0f"
+    prev_b = "6324c2c313362c999645ac97ca0558f8"
 
     def setUp(self):
         client = TestClient(default_server_user=True)
@@ -173,11 +172,11 @@ class GraphLockVersionRangeNoUserChannelTest(GraphLockVersionRangeTest):
     upload = False
     ref_a = "PkgA/0.1#fa090239f8ba41ad559f8e934494ee2a"
     pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    prev_a = "0d561e10e25511b9bfa339d06360d7c1"
+    prev_a = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
     ref_b = "PkgB/0.1"
     rrev_b = "afa95143c0c11c46ad57670e1e0a0aa0"
     pkg_id_b = "5bf1ba84b5ec8663764a406f08a7f9ae5d3d5fb5"
-    prev_b = "f97ac3d1bee62d55a35085dd42fa847a"
+    prev_b = "0f7f553dc5f68a8f0fec994e347716ec"
 
 
 class GraphLockVersionRangeNoUserChannelUploadTest(GraphLockVersionRangeNoUserChannelTest):
@@ -190,11 +189,11 @@ class GraphLockBuildRequireVersionRangeTest(GraphLockVersionRangeTest):
     upload = False
     ref_a = "PkgA/0.1@user/channel#fa090239f8ba41ad559f8e934494ee2a"
     pkg_id_a = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    prev_a = "0d561e10e25511b9bfa339d06360d7c1"
+    prev_a = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
     ref_b = "PkgB/0.1@user/channel"
     rrev_b = "b6f49e5ba6dd3d64af09a2f288e71330"
     pkg_id_b = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-    prev_b = "33a5634bbd9ec26b369d3900d91ea9a0"
+    prev_b = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
 
 
 class GraphLockBuildRequireVersionRangeUploadTest(GraphLockBuildRequireVersionRangeTest):

@@ -6,7 +6,7 @@ import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
-from conans.client.tools import detected_os, OSInfo
+from conans.client.tools import detected_os, detected_architecture, OSInfo
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -259,31 +259,28 @@ def _detect_compiler_version(result, output, profile_path):
 
 
 def _detect_os_arch(result, output):
-    architectures = {'i386': 'x86',
-                     'i686': 'x86',
-                     'i86pc': 'x86',
-                     'amd64': 'x86_64',
-                     'aarch64': 'armv8',
-                     'sun4v': 'sparc'}
+    from conans.client.conf import get_default_settings_yml
+    from conans.model.settings import Settings
+
     the_os = detected_os()
     result.append(("os", the_os))
     result.append(("os_build", the_os))
 
-    platform_machine = platform.machine().lower()
-    if platform_machine:
-        arch = architectures.get(platform_machine, platform_machine)
+    arch = detected_architecture()
+
+    if arch:
         if arch.startswith('arm'):
-            for a in ("armv6", "armv7hf", "armv7", "armv8"):
+            settings = Settings.loads(get_default_settings_yml())
+            defined_architectures = settings.arch.values_range
+            defined_arm_architectures = [v for v in defined_architectures if v.startswith("arm")]
+
+            for a in defined_arm_architectures:
                 if arch.startswith(a):
                     arch = a
                     break
             else:
                 output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                              "Please check your conan.conf and settings.yml files" % arch)
-        elif arch.startswith('e2k'):
-            arch = OSInfo.get_e2k_architecture() or arch
-        elif OSInfo().is_aix:
-            arch = OSInfo.get_aix_architecture() or arch
 
         result.append(("arch", arch))
         result.append(("arch_build", arch))

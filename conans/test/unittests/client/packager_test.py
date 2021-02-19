@@ -4,7 +4,6 @@ import unittest
 from mock import Mock
 
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
@@ -78,7 +77,7 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, TestBufferConanOutput())
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
         run_package_method(conanfile, None, build_folder, build_folder, package_folder,

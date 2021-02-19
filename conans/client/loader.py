@@ -23,13 +23,11 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None):
+    def __init__(self, runner, output, generator_manager=None, pyreq_loader=None):
         self._runner = runner
         self._generator_manager = generator_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
-        self._python_requires = python_requires
-        sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
@@ -51,15 +49,8 @@ class ConanFileLoader(object):
                     conanfile.init()
             return conanfile, cached[2]
 
-        if lock_python_requires is not None:
-            self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
-            self._python_requires.valid = True
-            module, conanfile = parse_conanfile(conanfile_path, self._python_requires,
-                                                self._generator_manager)
-            self._python_requires.valid = False
-
-            self._python_requires.locked_versions = None
+            module, conanfile = parse_conanfile(conanfile_path, self._generator_manager)
 
             # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
@@ -346,28 +337,13 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, python_requires, generator_manager):
-    with python_requires.capture_requires() as py_requires:
-        module, filename = _parse_conanfile(conanfile_path)
-        try:
-            conanfile = _parse_module(module, filename, generator_manager)
-
-            # Check for duplicates
-            # TODO: move it into PythonRequires
-            py_reqs = {}
-            for it in py_requires:
-                if it.ref.name in py_reqs:
-                    dupes = [str(it.ref), str(py_reqs[it.ref.name].ref)]
-                    raise ConanException("Same python_requires with different versions not allowed"
-                                         " for a conanfile. Found '{}'".format("', '".join(dupes)))
-                py_reqs[it.ref.name] = it
-
-            # Make them available to the conanfile itself
-            if py_reqs:
-                conanfile.python_requires = py_reqs
-            return module, conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+def parse_conanfile(conanfile_path, generator_manager):
+    module, filename = _parse_conanfile(conanfile_path)
+    try:
+        conanfile = _parse_module(module, filename, generator_manager)
+        return module, conanfile
+    except Exception as e:  # re-raise with file name
+        raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
 def _parse_conanfile(conan_file_path):

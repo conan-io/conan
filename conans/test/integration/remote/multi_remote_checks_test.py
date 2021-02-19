@@ -24,8 +24,8 @@ class RemoteChecksTest(unittest.TestCase):
         client.run("remote add_ref Pkg/0.1@lasote/testing server1")
         client.run("remote add_ref Pkg2/0.1@lasote/testing server2")
         client.run("upload Pkg* --all --confirm")
-        self.assertIn("Uploaded conan recipe 'Pkg/0.1@lasote/testing' to 'server1'", client.out)
-        self.assertIn("Uploaded conan recipe 'Pkg2/0.1@lasote/testing' to 'server2'", client.out)
+        self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client.out)
+        self.assertIn("Uploading Pkg2/0.1@lasote/testing to remote 'server2'", client.out)
 
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),

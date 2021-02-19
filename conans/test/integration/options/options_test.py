@@ -301,7 +301,7 @@ class MyConanFile(ConanFile):
         # Pkg SHARED, libA STATIC
         options = "-o pkg:shared=True  -o liba:shared=False"
         client.run("create . pkg/0.1@user/testing %s" % options)
-        self.assertIn("pkg/0.1@user/testing:5e7619965702ca25bdff1b2ce672a8236b8da689 - Build",
+        self.assertIn("pkg/0.1@user/testing:bf0155900ebfab70eaba45bb209cb719e180e3a4 - Build",
                       client.out)
 
     def test_overridable_no_shared_option(self):
