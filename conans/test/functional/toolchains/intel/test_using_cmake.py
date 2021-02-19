@@ -1,4 +1,6 @@
 import os
+import platform
+
 import pytest
 import textwrap
 
@@ -62,6 +64,8 @@ conanfile_py = textwrap.dedent("""
 @pytest.mark.toolchain
 @pytest.mark.tool_cmake
 @pytest.mark.tool_icc
+@pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 class CMakeIntelTestCase(BaseIntelTestCase):
 
     def test_use_cmake_toolchain(self):
