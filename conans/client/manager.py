@@ -41,18 +41,21 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
 
-    if graph_info.profile_build:
+    profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
+
+    if profile_build:
         out.info("Configuration (profile_host):")
-        out.writeln(graph_info.profile_host.dumps())
+        out.writeln(profile_host.dumps())
         out.info("Configuration (profile_build):")
-        out.writeln(graph_info.profile_build.dumps())
+        out.writeln(profile_build.dumps())
     else:
         out.info("Configuration:")
-        out.writeln(graph_info.profile_host.dumps())
+        out.writeln(profile_host.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder,
                                           lockfile_node_id=lockfile_node_id)
+    graph_lock = graph_info.graph_lock  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:
@@ -72,10 +75,10 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
-    installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
-                      graph_info=graph_info)
+    installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
+                      graph_lock, keep_build=keep_build)
 
-    graph_info.graph_lock.complete_matching_prevs()
+    graph_lock.complete_matching_prevs()
 
     if manifest_folder:
         manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)
@@ -112,8 +115,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             output.info("Generated %s" % CONANINFO)
             graph_info.save(install_folder)
             output.info("Generated graphinfo")
-            graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
-                                            graph_info.graph_lock)
+            graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
             run_imports(conanfile, install_folder)

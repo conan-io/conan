@@ -19,7 +19,7 @@ tool_environments = {
 
 tools_available = [
     'cmake',
-    'gcc', 'clang', 'visual_studio', 'mingw', 'xcode',
+    'gcc', 'clang', 'visual_studio', 'xcode',
     'msys2', 'cygwin', 'mingw32', 'mingw64',
     'autotools', 'pkg_config', 'premake', 'meson',
     'file',
@@ -43,9 +43,6 @@ except ConanException:
 
 if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
     tools_available.remove("compiler")
-
-if not which("mingw32-make"):
-    tools_available.remove("mingw")
 
 if not which("xcodebuild"):
     tools_available.remove("xcode")
@@ -97,7 +94,7 @@ def add_tool(request):
 def tool_check(mark):
     tool_name = mark.name[5:]
     if tool_name not in tools_available:
-        pytest.skip("required {} not satisfied".format(tool_name))
+        pytest.fail("Required tool: '{}' is not available".format(tool_name))
 
 
 def pytest_runtest_setup(item):

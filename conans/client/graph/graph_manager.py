@@ -111,41 +111,52 @@ class GraphManager(object):
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
-        root_node = self._load_root_node(reference, create_reference, graph_info, lockfile_node_id)
-        deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
-                                         remotes, recorder,
-                                         apply_build_requires=apply_build_requires)
+        profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
+        graph_lock, root_ref = graph_info.graph_lock, graph_info.root
 
+        root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
+                                         root_ref, lockfile_node_id)
+        deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
+                                         build_mode, check_updates, update, remotes, recorder,
+                                         apply_build_requires=apply_build_requires)
         # Run some validations once the graph is built
         self._validate_graph_provides(deps_graph)
 
+        # THIS IS NECESSARY to store dependencies options in profile, for consumer
+        # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
+        graph_info.options = root_node.conanfile.options.values
+        if root_node.ref:
+            graph_info.root = root_node.ref
+
+        if graph_info.graph_lock is None:
+            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
+
         return deps_graph
 
-    def _load_root_node(self, reference, create_reference, graph_info, lockfile_node_id):
+    def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
+                        lockfile_node_id):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
         """
-        profile = graph_info.profile_host
-        graph_lock = graph_info.graph_lock
-        profile.dev_reference = create_reference  # Make sure the created one has develop=True
+        profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, profile, scope_options=False)
+            conanfile = self._loader.load_virtual(reference, profile_host, scope_options=False)
             # Locking in workspaces not implemented yet
             return Node(ref=None, context=CONTEXT_HOST, conanfile=conanfile, recipe=RECIPE_VIRTUAL)
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
-            return self._load_root_direct_reference(reference, graph_lock, profile, lockfile_node_id)
+            return self._load_root_direct_reference(reference, graph_lock, profile_host,
+                                                    lockfile_node_id)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
-            return self._load_root_test_package(path, create_reference, graph_lock, profile)
+            return self._load_root_test_package(path, create_reference, graph_lock, profile_host)
 
         # It is a path to conanfile.py or conanfile.txt
-        root_node, ref = self._load_root_consumer(path, graph_lock, profile, graph_info.root)
-        graph_info.root = ref  # To store it for later calls
+        root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref)
         return root_node
 
     def _load_root_consumer(self, path, graph_lock, profile, ref):
@@ -191,7 +202,7 @@ class GraphManager(object):
             node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
-        return root_node, ref
+        return root_node
 
     def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id):
         """ When a full reference is provided:
@@ -233,27 +244,16 @@ class GraphManager(object):
             graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
-    def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
-                       update, remotes, recorder, apply_build_requires=True):
+    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
+                       check_updates, update, remotes, recorder, apply_build_requires=True):
         build_mode = BuildMode(build_mode, self._output)
-        profile_host = graph_info.profile_host
-        graph_lock = graph_info.graph_lock
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
                                       recorder=recorder,
                                       profile_host=profile_host,
-                                      profile_build=graph_info.profile_build,
+                                      profile_build=profile_build,
                                       apply_build_requires=apply_build_requires,
                                       graph_lock=graph_lock)
-
-        # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
-        graph_info.options = root_node.conanfile.options.values
-        if root_node.ref:
-            graph_info.root = root_node.ref
-
-        if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:

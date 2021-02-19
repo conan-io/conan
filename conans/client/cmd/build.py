@@ -45,6 +45,7 @@ def cmd_build(app, conanfile_path, base_path, source_folder, build_folder, packa
         conan_file.layout.set_base_source_folder(source_folder)
         conan_file.layout.set_base_package_folder(package_folder)
         conan_file.layout.set_base_generators_folder(base_path)
+
         conan_file.layout.set_base_install_folder(install_folder)
 
         mkdir(conan_file.build_folder)

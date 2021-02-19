@@ -21,6 +21,7 @@ class _LayoutEntry(object):
         self.folder = ""
 
 
+
 class Layout(object):
     def __init__(self):
 
@@ -50,6 +51,7 @@ class Layout(object):
 
         generators_defaults = CppInfoDefaultValues()
         self.generators = _LayoutEntry(generators_defaults)
+
 
     def __repr__(self):
         return str(self.__dict__)
@@ -128,6 +130,10 @@ class Layout(object):
         self.source.cpp_info.rootpath = self.source_folder
 
     @property
+    def base_source_folder(self):
+        return self._base_source_folder
+
+    @property
     def build_folder(self):
         if self._base_build_folder is None:
             return None
@@ -142,6 +148,10 @@ class Layout(object):
     def set_base_build_folder(self, folder):
         self._base_build_folder = folder
         self.build.cpp_info.rootpath = self.build_folder
+
+    @property
+    def base_build_folder(self):
+        return self._base_build_folder
 
     @property
     def base_install_folder(self):
