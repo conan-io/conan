@@ -93,7 +93,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         manifest_manager.print_log()
 
     if install_folder:
-        conanfile.install_folder = install_folder
+        conanfile.layout.set_base_install_folder(install_folder)
         # Write generators
         output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
         if generators is not False:

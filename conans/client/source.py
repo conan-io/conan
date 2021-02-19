@@ -47,24 +47,25 @@ def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
         raise ConanException("\n".join([str(e), msg]))
 
 
-def config_source_local(src_folder, conanfile, conanfile_path, hook_manager):
+def config_source_local(conanfile, conanfile_path, hook_manager):
     """ Entry point for the "conan source" command.
     """
     conanfile_folder = os.path.dirname(conanfile_path)
 
     def get_sources_from_exports():
+        src_folder = conanfile.source_folder
         if conanfile_folder != src_folder:
             _run_local_scm(conanfile, conanfile_folder, src_folder, output=conanfile.output)
             conanfile.output.info("Executing exports to: %s" % src_folder)
             export_recipe(conanfile, conanfile_folder, src_folder)
             export_source(conanfile, conanfile_folder, src_folder)
 
-    _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference=None, cache=None,
+    _run_source(conanfile, conanfile_path, hook_manager, reference=None, cache=None,
                 get_sources_from_exports=get_sources_from_exports)
 
 
-def config_source(export_folder, export_source_folder, scm_sources_folder,
-                  src_folder, conanfile, output, conanfile_path, reference, hook_manager, cache):
+def config_source(export_folder, export_source_folder, scm_sources_folder, conanfile, output,
+                  conanfile_path, reference, hook_manager, cache):
     """ Implements the sources configuration when a package is going to be built in the
     local cache:
     - remove old sources if dirty or build_policy=always
@@ -76,38 +77,40 @@ def config_source(export_folder, export_source_folder, scm_sources_folder,
     def remove_source():
         output.warn("This can take a while for big packages")
         try:
-            rmdir(src_folder)
+            rmdir(conanfile.layout.base_source_folder)
         except BaseException as e_rm:
             msg = str(e_rm)
-            output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
+            output.error("Unable to remove source folder %s\n%s"
+                         % (conanfile.layout.base_source_folder, msg))
+
             output.warn("**** Please delete it manually ****")
             raise ConanException("Unable to remove source folder")
 
-    if is_dirty(src_folder):
+    if is_dirty(conanfile.layout.base_source_folder):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
-        clean_dirty(src_folder)
+        clean_dirty(conanfile.layout.base_source_folder)
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 
-    if not os.path.exists(src_folder):  # No source folder, need to get it
-        with set_dirty_context_manager(src_folder):
-            mkdir(src_folder)
+    if not os.path.exists(conanfile.layout.base_source_folder):  # No source folder, need to get it
+        with set_dirty_context_manager(conanfile.layout.base_source_folder):
+            mkdir(conanfile.source_folder)
 
             def get_sources_from_exports():
                 # First of all get the exported scm sources (if auto) or clone (if fixed)
-                _run_cache_scm(conanfile, scm_sources_folder, src_folder, output)
+                _run_cache_scm(conanfile, scm_sources_folder, output)
                 # so self exported files have precedence over python_requires ones
-                merge_directories(export_folder, src_folder)
+                merge_directories(export_folder, conanfile.source_folder)
                 # Now move the export-sources to the right location
-                merge_directories(export_source_folder, src_folder)
+                merge_directories(export_source_folder, conanfile.source_folder)
 
-            _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference,
-                        cache, get_sources_from_exports=get_sources_from_exports)
+            _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
+                        get_sources_from_exports=get_sources_from_exports)
 
 
-def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, cache,
+def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
                 get_sources_from_exports):
     """Execute the source core functionality, both for local cache and user space, in order:
         - Calling pre_source hook
@@ -117,9 +120,11 @@ def _run_source(conanfile, conanfile_path, src_folder, hook_manager, reference, 
         - Executing the recipe source() method
         - Calling post_source hook
     """
-    conanfile.source_folder = src_folder
-    conanfile.build_folder = None
-    conanfile.package_folder = None
+
+
+    src_folder = conanfile.source_folder
+    mkdir(src_folder)
+
     with tools.chdir(src_folder):
         try:
             with get_env_context_manager(conanfile):
@@ -162,7 +167,7 @@ def _clean_source_folder(folder):
         pass
 
 
-def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
+def _run_cache_scm(conanfile, scm_sources_folder, output):
     """
     :param conanfile: recipe
     :param src_folder: sources folder in the cache, (Destination dir)
@@ -175,9 +180,9 @@ def _run_cache_scm(conanfile, scm_sources_folder, src_folder, output):
         return
 
     if scm_data.subfolder:
-        dest_dir = os.path.normpath(os.path.join(src_folder, scm_data.subfolder))
+        dest_dir = os.path.normpath(os.path.join(conanfile.source_folder, scm_data.subfolder))
     else:
-        dest_dir = src_folder
+        dest_dir = conanfile.source_folder
     if os.path.exists(scm_sources_folder):
         output.info("Copying previously cached scm sources")
         merge_directories(scm_sources_folder, dest_dir)
