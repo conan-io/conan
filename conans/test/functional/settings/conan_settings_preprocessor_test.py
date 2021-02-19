@@ -1,10 +1,13 @@
 import platform
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, save
 
 
+@pytest.mark.tool_compiler
 class ConanSettingsPreprocessorTest(unittest.TestCase):
 
     def setUp(self):

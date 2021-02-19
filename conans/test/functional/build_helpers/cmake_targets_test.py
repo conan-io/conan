@@ -1,7 +1,7 @@
 import platform
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from conans.test.utils.tools import TestClient
 
@@ -46,9 +46,9 @@ int main(){
 """
 
 
-@attr("slow")
+@pytest.mark.slow
 class CMakeTargetsTest(unittest.TestCase):
-    def transitive_flags_test(self):
+    def test_transitive_flags(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class Charlie(ConanFile):
@@ -75,7 +75,8 @@ class Alpha(ConanFile):
         self.assertIn('set(CONAN_SHARED_LINKER_FLAGS '
                       '"CharlieFlag BetaFlag ${CONAN_SHARED_LINKER_FLAGS}")', cmake)
 
-    def header_only_test(self):
+    @pytest.mark.tool_cmake
+    def test_header_only(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "hello.h": hello})
@@ -112,8 +113,8 @@ class Alpha(ConanFile):
             self.assertIn("Generating done", client.out)
             self.assertIn("Build files have been written", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Macos")
-    def apple_framework_test(self):
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
+    def test_apple_framework(self):
 
         client = TestClient()
         conanfile_fr = conanfile_py + '''
@@ -133,8 +134,8 @@ class Alpha(ConanFile):
         bili = client.load("conanbuildinfo.cmake")
         self.assertIn("-framework Foundation", bili)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Macos")
-    def custom_apple_framework_test(self):
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
+    def test_custom_apple_framework(self):
         """Build a custom apple framework and reuse it"""
         client = TestClient()
         lib_c = r"""

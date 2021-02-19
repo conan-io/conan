@@ -11,13 +11,12 @@ from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
+from conans.model.layout import Layout
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.conan_v2_mode import conan_v2_behavior
-from conans.util.env_reader import get_env
+from conans.util.conan_v2_mode import conan_v2_error
 
 
 def create_options(conanfile):
@@ -30,10 +29,10 @@ def create_options(conanfile):
             if isinstance(default_options, dict):
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, (list, tuple)):
-                conan_v2_behavior("Declare 'default_options' as a dictionary")
+                conan_v2_error("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, six.string_types):
-                conan_v2_behavior("Declare 'default_options' as a dictionary")
+                conan_v2_error("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list, "
@@ -69,17 +68,15 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("Error while initializing settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
 
 
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
-        if get_env(CONAN_V2_MODE_ENVVAR, False):
+        # FIXME Conan 2.0, Remove old ways of reusing python code
+        with pythonpath(conanfile):
             yield
-        else:
-            with pythonpath(conanfile):
-                yield
 
 
 def get_env_context_manager(conanfile, without_python=False):
@@ -132,6 +129,9 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
+    # layout
+    layout = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
@@ -144,6 +144,8 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_using_build_profile = False
 
+        self.layout = Layout()
+
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
@@ -152,9 +154,8 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
-        if 'cppstd' in self.settings.fields:
-            conan_v2_behavior("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                              " please update your recipe.", v1_behavior=self.output.warn)
+        conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                       " please update your recipe.", 'cppstd' in self.settings.fields)
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -173,6 +174,41 @@ class ConanFile(object):
         # user specified env variables
         self._conan_env_values = env.copy()  # user specified -e
 
+        if self.description is not None and not isinstance(self.description, six.string_types):
+            raise ConanException("Recipe 'description' must be a string.")
+
+    @property
+    def source_folder(self):
+        return self.layout.source_folder
+
+    @source_folder.setter
+    def source_folder(self, folder):
+        self.layout.set_base_source_folder(folder)
+
+    @property
+    def build_folder(self):
+        return self.layout.build_folder
+
+    @build_folder.setter
+    def build_folder(self, folder):
+        self.layout.set_base_build_folder(folder)
+
+    @property
+    def install_folder(self):
+        return self.layout.install_folder
+
+    @install_folder.setter
+    def install_folder(self, folder):
+        self.layout.set_base_install_folder(folder)
+
+    @property
+    def package_folder(self):
+        return self.layout.package_folder
+
+    @package_folder.setter
+    def package_folder(self, folder):
+        self.layout.set_base_package_folder(folder)
+
     @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
@@ -190,8 +226,7 @@ class ConanFile(object):
     def channel(self):
         if not self._conan_channel:
             _env_channel = os.getenv("CONAN_CHANNEL")
-            if _env_channel:
-                conan_v2_behavior("Environment variable 'CONAN_CHANNEL' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
             self._conan_channel = _env_channel or self.default_channel
             if not self._conan_channel:
                 raise ConanException("channel not defined, but self.channel is used in conanfile")
@@ -201,16 +236,14 @@ class ConanFile(object):
     def user(self):
         if not self._conan_user:
             _env_username = os.getenv("CONAN_USERNAME")
-            if _env_username:
-                conan_v2_behavior("Environment variable 'CONAN_USERNAME' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
             self._conan_user = _env_username or self.default_user
             if not self._conan_user:
                 raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
-        conan_v2_behavior("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                          v1_behavior=self.output.warn)
+        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property
@@ -272,8 +305,8 @@ class ConanFile(object):
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
-            # When using_build_profile the required environment is already applied through 'conanfile.env'
-            # in the contextmanager 'get_env_context_manager'
+            # When using_build_profile the required environment is already applied through
+            # 'conanfile.env' in the contextmanager 'get_env_context_manager'
             with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
                 if OSInfo().is_macos and isinstance(command, string_types):
                     # Security policy on macOS clears this variable when executing /bin/sh. To

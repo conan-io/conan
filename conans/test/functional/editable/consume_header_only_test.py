@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.editable_layout import DEFAULT_LAYOUT_FILE, LAYOUTS_FOLDER
@@ -12,6 +13,7 @@ from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
 
+@pytest.mark.tool_cmake
 class HeaderOnlyLibTestClient(TestClient):
     header = textwrap.dedent("""\
         #include <iostream>
@@ -80,7 +82,7 @@ class HeaderOnlyLibTestClient(TestClient):
                    "src/include-local/hello.hpp": self.header.format(word=hello_word,
                                                                      origin='local')})
 
-
+@pytest.mark.tool_cmake
 class EditableReferenceTest(unittest.TestCase):
 
     @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])

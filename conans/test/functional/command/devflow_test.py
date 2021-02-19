@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
@@ -39,7 +41,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         self.assertEqual(load(os.path.join(folder, "subdir/myartifact2.lib")),
                          "artifact2 contents!")
 
-    def parallel_folders_test(self):
+    def test_parallel_folders(self):
         client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         build_folder = os.path.join(client.current_folder, "build")
@@ -68,7 +70,7 @@ class DevInSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
-    def insource_build_test(self):
+    def test_insource_build(self):
         client = TestClient()
         repo_folder = client.current_folder
         package_folder = os.path.join(client.current_folder, "pkg")
@@ -91,7 +93,7 @@ class DevInSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
-    def child_build_test(self):
+    def test_child_build(self):
         client = TestClient()
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
@@ -149,7 +151,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         self.assertEqual(sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']),
                          sorted(os.listdir(folder)))
 
-    def parallel_folders_test(self):
+    def test_parallel_folders(self):
         client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
@@ -182,7 +184,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
-    def insource_build_test(self):
+    def test_insource_build(self):
         client = TestClient()
         repo_folder = client.current_folder
         package_folder = os.path.join(client.current_folder, "pkg")
@@ -205,7 +207,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
-    def child_build_test(self):
+    def test_child_build(self):
         client = TestClient()
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
@@ -232,7 +234,8 @@ class DevOutSourceFlowTest(unittest.TestCase):
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
 
-    def build_local_different_folders_test(self):
+    @pytest.mark.tool_compiler
+    def test_build_local_different_folders(self):
         # Real build, needed to ensure that the generator is put in the correct place and
         # cmake finds it, using an install_folder different from build_folder
         client = TestClient()

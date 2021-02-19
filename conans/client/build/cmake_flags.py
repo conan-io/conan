@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.client import tools
 from conans.client.build.compiler_flags import architecture_flag, parallel_compiler_cl_flag
 from conans.client.build.cppstd_flags import cppstd_from_settings, cppstd_flag_new as cppstd_flag
-from conans.client.tools import cross_building
+from conans.client.tools import cross_building, Version
 from conans.client.tools.apple import is_apple_os
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -55,6 +55,7 @@ def get_generator(conanfile):
 
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
+        major_version = version.split('.', 1)[0]
         _visuals = {'8': '8 2005',
                     '9': '9 2008',
                     '10': '10 2010',
@@ -62,7 +63,7 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(version, "UnknownVersion %s" % version)
+                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 
@@ -172,7 +173,7 @@ class CMakeDefinitionsBuilder(object):
         definitions["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._conanfile.settings)
         return definitions
 
-    def _cmake_cross_build_defines(self):
+    def _cmake_cross_build_defines(self, cmake_version):
         os_ = self._ss("os")
         arch = self._ss("arch")
         os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
@@ -202,12 +203,14 @@ class CMakeDefinitionsBuilder(object):
         if cmake_system_name is not True:  # String not empty
             definitions["CMAKE_SYSTEM_NAME"] = cmake_system_name
         else:  # detect if we are cross building and the system name and version
-            skip_x64_x86 = os_ in ['Windows', 'Linux']
+            skip_x64_x86 = os_ in ['Windows', 'Linux', 'SunOS', 'AIX']
             if cross_building(self._conanfile, skip_x64_x86=skip_x64_x86):  # We are cross building
+                apple_system_name = "Darwin" if cmake_version and Version(cmake_version) < Version(
+                    "3.14") or not cmake_version else None
                 cmake_system_name_map = {"Macos": "Darwin",
-                                         "iOS": "Darwin",
-                                         "tvOS": "Darwin",
-                                         "watchOS": "Darwin",
+                                         "iOS": apple_system_name or "iOS",
+                                         "tvOS": apple_system_name or "tvOS",
+                                         "watchOS": apple_system_name or "watchOS",
                                          "Neutrino": "QNX",
                                          "": "Generic",
                                          None: "Generic"}
@@ -235,13 +238,15 @@ class CMakeDefinitionsBuilder(object):
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
-            else:
-                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
-            if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs
-                # to know about the sysroot before any other thing
-                definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+                if sysroot_path:
+                    # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                    # to know about the sysroot before any other thing
+                    definitions["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            cmake_sysroot = os.getenv("CONAN_CMAKE_SYSROOT")
+            if cmake_sysroot is not None:
+                definitions["CMAKE_SYSROOT"] = cmake_sysroot.replace("\\", "/")
 
             # Adjust Android stuff
             if str(os_) == "Android" and definitions["CMAKE_SYSTEM_NAME"] == "Android":
@@ -280,7 +285,7 @@ class CMakeDefinitionsBuilder(object):
 
         return {}
 
-    def get_definitions(self):
+    def get_definitions(self, cmake_version):
 
         compiler = self._ss("compiler")
         compiler_base = self._ss("compiler.base")
@@ -310,7 +315,7 @@ class CMakeDefinitionsBuilder(object):
                 if sdk_path:
                     definitions["CMAKE_OSX_SYSROOT"] = sdk_path
 
-        definitions.update(self._cmake_cross_build_defines())
+        definitions.update(self._cmake_cross_build_defines(cmake_version))
         definitions.update(self._get_cpp_standard_vars())
 
         definitions.update(in_local_cache_definition(self._conanfile.in_local_cache))
@@ -374,7 +379,8 @@ class CMakeDefinitionsBuilder(object):
         if "cmake_find_package" in self._conanfile.generators:
             definitions["CMAKE_MODULE_PATH"] = install_folder
 
-        if "cmake_find_package_multi" in self._conanfile.generators:
+        if ("cmake_find_package_multi" in self._conanfile.generators
+                or "CMakeDeps" in self._conanfile.generators):
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
             definitions["CMAKE_PREFIX_PATH"] = install_folder

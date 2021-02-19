@@ -4,13 +4,16 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
 
+@pytest.mark.tool_cmake
 class RunEnvironmentTest(unittest.TestCase):
 
     def test_run_environment(self):
@@ -44,6 +47,7 @@ class RunEnvironmentTest(unittest.TestCase):
         self.assertIn("Hello Hello0", client.out)
 
 
+@pytest.mark.tool_cmake
 class RunEnvironmentSharedTest(unittest.TestCase):
 
     def setUp(self):
@@ -129,7 +133,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Check SIP protection shell=False")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Check SIP protection shell=False")
     def test_command_as_list(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
@@ -162,7 +166,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         self.assertNotIn("DYLD_LIBRARY_PATH", client.out)
         self.assertIn("Hello Tool!", client.out)
 
-    @unittest.skipIf(platform.system() == "Darwin", "SIP protection (read comment)")
+    @pytest.mark.skipif(platform.system() == "Darwin", reason="SIP protection (read comment)")
     def test_with_tools_run_environment(self):
         # This test is excluded from OSX, because of the SIP protection. CMake helper will
         # launch a subprocess with shell=True, which CLEANS the DYLD_LIBRARY_PATH. Injecting its

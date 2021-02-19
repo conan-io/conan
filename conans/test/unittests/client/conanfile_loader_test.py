@@ -8,6 +8,7 @@ import six
 from mock import Mock
 from mock.mock import call
 from parameterized import parameterized
+import pytest
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader,\
@@ -19,14 +20,14 @@ from conans.model.profile import Profile
 from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import test_profile
+from conans.test.utils.tools import create_profile
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
 class ConanLoaderTest(unittest.TestCase):
 
-    def inherit_short_paths_test(self):
+    def test_inherit_short_paths(self):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
@@ -43,10 +44,10 @@ class BasePackage(ConanFile):
         conan_file = loader.load_basic(conanfile_path)
         self.assertEqual(conan_file.short_paths, True)
 
-        result = loader.load_consumer(conanfile_path, profile_host=test_profile())
+        result = loader.load_consumer(conanfile_path, profile_host=create_profile())
         self.assertEqual(result.short_paths, True)
 
-    def requires_init_test(self):
+    def test_requires_init(self):
         loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
@@ -58,7 +59,7 @@ class MyTest(ConanFile):
 """
         for requires in ("''", "[]", "()", "None"):
             save(conanfile_path, conanfile.format(requires))
-            result = loader.load_consumer(conanfile_path, profile_host=test_profile())
+            result = loader.load_consumer(conanfile_path, profile_host=create_profile())
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 
@@ -100,7 +101,7 @@ class MyTest(ConanFile):
 
 
 class ConanLoaderTxtTest(unittest.TestCase):
-    def conanfile_txt_errors_test(self):
+    def test_conanfile_txt_errors(self):
         # Invalid content
         file_content = '''[requires}
 OpenCV/2.4.10@phil/stable # My requirement for CV
@@ -120,7 +121,7 @@ OpenCV/2.4.10@phil/stable # My requirement for CV
         with six.assertRaisesRegex(self, ConanException, "Unknown argument kk"):
             ConanFileTextLoader(file_content).imports_method(None)
 
-    def plain_text_parser_test(self):
+    def test_plain_text_parser(self):
         # Valid content
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable # My requirement for CV
@@ -141,7 +142,7 @@ OpenCV2:other_option=Cosa #
                'OpenCV3/2.4.10@phil/stable']
         self.assertEqual(parser.requirements, exp)
 
-    def revision_parsing_test(self):
+    def test_revision_parsing(self):
         # Valid content
         file_content = '''[requires]
 OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
@@ -150,7 +151,7 @@ OpenCV/2.4.10@user/stable#RREV1 # My requirement for CV
         exp = ['OpenCV/2.4.10@user/stable#RREV1']
         self.assertEqual(parser.requirements, exp)
 
-    def load_conan_txt_test(self):
+    def test_load_conan_txt(self):
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable
 OpenCV2/2.4.10@phil/stable
@@ -172,7 +173,7 @@ OpenCV2:other_option=Cosa
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        ret = loader.load_conanfile_txt(file_path, test_profile())
+        ret = loader.load_conanfile_txt(file_path, create_profile())
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
@@ -202,7 +203,7 @@ OpenCV/2.4.104phil/stable
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
         with six.assertRaisesRegex(self, ConanException, "The reference has too many '/'"):
-            loader.load_conanfile_txt(file_path, test_profile())
+            loader.load_conanfile_txt(file_path, create_profile())
 
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
@@ -214,34 +215,34 @@ OpenCV/bin/* - ./bin
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
         with six.assertRaisesRegex(self, ConanException, "is too long. Valid names must contain"):
-            loader.load_conanfile_txt(file_path, test_profile())
+            loader.load_conanfile_txt(file_path, create_profile())
 
-    def load_imports_arguments_test(self):
+    def test_load_imports_arguments(self):
         file_content = '''
 [imports]
 OpenCV/bin, * -> ./bin # I need this binaries
 OpenCV/lib, * -> ./lib @ root_package=Pkg
 OpenCV/data, * -> ./data @ root_package=Pkg, folder=True # Irrelevant
-docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=True, excludes="a b c" # Other
-licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, excludes="a b c", keep_path=False # Other
+docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=False, excludes="a b c" # Other
+licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, excludes="a b c", keep_path=False # Other
 '''
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, TestBufferConanOutput(), None)
-        ret = loader.load_conanfile_txt(file_path, test_profile())
+        ret = loader.load_conanfile_txt(file_path, create_profile())
 
         ret.copy = Mock()
         ret.imports()
-        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, False, None, True),
-                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, False, None, True),
-                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, False, None, True),
-                    call(u'*', u'./docs', u'docs', u'Pkg', True, True, [u'"a', u'b', u'c"'], True),
-                    call(u'*', u'./licenses', u'licenses', u'Pkg', True, True, [u'"a', u'b', u'c"'],
+        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, True, None, True),
+                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, True, None, True),
+                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, True, None, True),
+                    call(u'*', u'./docs', u'docs', u'Pkg', True, False, [u'"a', u'b', u'c"'], True),
+                    call(u'*', u'./licenses', u'licenses', u'Pkg', True, False, [u'"a', u'b', u'c"'],
                          False)]
         self.assertEqual(ret.copy.call_args_list, expected)
 
-    def load_options_error_test(self):
+    def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
             [options]
             myoption: myvalue
@@ -253,7 +254,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, exc
         with six.assertRaisesRegex(self, ConanException,
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):
-            loader.load_conanfile_txt(file_path, test_profile())
+            loader.load_conanfile_txt(file_path, create_profile())
 
 
 class ImportModuleLoaderTest(unittest.TestCase):
@@ -296,7 +297,7 @@ class ImportModuleLoaderTest(unittest.TestCase):
         return loaded, module_id, expected_return
 
     @parameterized.expand([(True, False), (False, True), (False, False)])
-    @unittest.skipIf(six.PY2, "Python 2 requires __init__.py file in modules")
+    @pytest.mark.skipif(six.PY2, reason="Python 2 requires __init__.py file in modules")
     def test_py3_recipe_colliding_init_filenames(self, sub1, sub2):
         myfunc1, value1 = "recipe1", 42
         myfunc2, value2 = "recipe2", 23

@@ -3,11 +3,13 @@ import os
 import random
 import shlex
 import shutil
+import socket
 import sys
 import textwrap
 import threading
 import time
 import uuid
+import zipfile
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -19,8 +21,11 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load
+from conans.cli.cli import Cli
+from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
+from conans.client.command import Command
 from conans.client.conan_api import Conan
 from conans.client.rest.file_uploader import IterableToFileAdapter
 from conans.client.runner import ConanRunner
@@ -32,7 +37,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets import copy_assets
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
@@ -67,7 +73,7 @@ def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     manifest.save(path)
 
 
-def test_profile(profile=None, settings=None):
+def create_profile(profile=None, settings=None):
     if profile is None:
         profile = Profile()
     if profile.processed_settings is None:
@@ -454,8 +460,8 @@ if get_env("CONAN_TEST_WITH_ARTIFACTORY", False):
 
 def _copy_cache_folder(target_folder):
     # Some variables affect to cache population (take a different default folder)
-    vars = [CONAN_V2_MODE_ENVVAR, 'CC', 'CXX', 'PATH']
-    cache_key = hash('|'.join(map(str, [os.environ.get(it, None) for it in vars])))
+    vars_ = [CONAN_V2_MODE_ENVVAR, 'CC', 'CXX', 'PATH']
+    cache_key = hash('|'.join(map(str, [os.environ.get(it, None) for it in vars_])))
     master_folder = _copy_cache_folder.master.setdefault(cache_key, temp_folder(create_dir=False))
     if not os.path.exists(master_folder):
         # Create and populate the cache folder with the defaults
@@ -468,6 +474,22 @@ def _copy_cache_folder(target_folder):
 
 
 _copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
+
+
+@contextmanager
+def redirect_output(target):
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    #TODO: change in 2.0
+    # redirecting both of them to the same target for the moment
+    # to assign to Testclient out
+    sys.stdout = target
+    sys.stderr = target
+    try:
+        yield
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
 
 
 class TestClient(object):
@@ -626,29 +648,34 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
-    def get_conan_api(self, user_io=None):
+    def get_conan_api_v2(self):
+        user_io = MockedUserIO(self.users, out=sys.stderr)
+        conan = ConanAPIV2(cache_folder=self.cache_folder, quiet=False, user_io=user_io,
+                           http_requester=self._http_requester, runner=self.runner)
+        return conan
+
+    def get_conan_api_v1(self, user_io=None):
         if user_io:
             self.out = user_io.out
         else:
             self.out = TestBufferConanOutput()
         user_io = user_io or MockedUserIO(self.users, out=self.out)
-
         conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def run(self, command_line, user_io=None, assert_error=False):
-        """ run a single command as in the command line.
-            If user or password is filled, user_io will be mocked to return this
-            tuple if required
-        """
+    def get_conan_api(self, user_io=None):
+        if os.getenv("CONAN_V2_CLI"):
+            return self.get_conan_api_v2()
+        else:
+            return self.get_conan_api_v1(user_io)
+
+    def run_cli(self, command_line, user_io=None, assert_error=False):
         conan = self.get_conan_api(user_io)
         self.api = conan
         if os.getenv("CONAN_V2_CLI"):
-            from conans.cli.cli import Cli
             command = Cli(conan)
         else:
-            from conans.client.command import Command
             command = Command(conan)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
@@ -666,6 +693,22 @@ class TestClient(object):
             for added in added_modules:
                 sys.modules.pop(added, None)
         self._handle_cli_result(command_line, assert_error=assert_error, error=error)
+        return error
+
+    def run(self, command_line, user_io=None, assert_error=False):
+        """ run a single command as in the command line.
+            If user or password is filled, user_io will be mocked to return this
+            tuple if required
+        """
+        # TODO: remove in 2.0
+        if os.getenv("CONAN_V2_CLI"):
+            from conans.test.utils.mocks import RedirectedTestOutput
+            self.out = RedirectedTestOutput()
+            with redirect_output(self.out):
+                error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
+        else:
+            error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
+
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):
@@ -703,14 +746,8 @@ class TestClient(object):
         if not files:
             mkdir(self.current_folder)
 
-    def copy_from_assets(self, origin_folder, assets):
-        for asset in assets:
-            s = os.path.join(origin_folder, asset)
-            d = os.path.join(self.current_folder, asset)
-            if os.path.isdir(s):
-                shutil.copytree(s, d)
-            else:
-                shutil.copy2(s, d)
+    def copy_assets(self, origin_folder, assets=None):
+        copy_assets(origin_folder, self.current_folder, assets)
 
     # Higher level operations
     def remove_all(self):
@@ -841,6 +878,14 @@ class TurboTestClient(TestClient):
         return rev
 
 
+def get_free_port():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    ret = sock.getsockname()[1]
+    sock.close()
+    return ret
+
+
 class StoppableThreadBottle(threading.Thread):
     """
     Real server to test download endpoints
@@ -848,8 +893,8 @@ class StoppableThreadBottle(threading.Thread):
 
     def __init__(self, host=None, port=None):
         self.host = host or "127.0.0.1"
-        self.port = port or random.randrange(48000, 49151)
         self.server = bottle.Bottle()
+        self.port = port or get_free_port()
         super(StoppableThreadBottle, self).__init__(target=self.server.run,
                                                     kwargs={"host": self.host, "port": self.port})
         self.daemon = True
@@ -861,3 +906,14 @@ class StoppableThreadBottle(threading.Thread):
     def run_server(self):
         self.start()
         time.sleep(1)
+
+
+def zipdir(path, zipfilename):
+    with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
+        for root, _, files in os.walk(path):
+            for f in files:
+                file_path = os.path.join(root, f)
+                if file_path == zipfilename:
+                    continue
+                relpath = os.path.relpath(file_path, path)
+                z.write(file_path, relpath)

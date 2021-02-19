@@ -9,7 +9,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 
 class VirtualEnvPythonGeneratorTest(unittest.TestCase):
 
-    def pythonpath_test(self):
+    def test_pythonpath(self):
         """
         Check PYTHONPATH env variable
         """

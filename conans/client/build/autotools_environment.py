@@ -18,7 +18,7 @@ from conans.client.tools.oss import OSInfo, args_to_string, cpu_count, cross_bui
 from conans.client.tools.win import unix_path
 from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB, DEFAULT_SHARE
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import get_abs_path
 
 
@@ -41,15 +41,15 @@ class AutoToolsBuildEnvironment(object):
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._os = conanfile.settings.get_safe("os")
         self._os_version = conanfile.settings.get_safe("os.version")
+        self._os_sdk = conanfile.settings.get_safe("os.sdk")
+        self._os_subsystem = conanfile.settings.get_safe("os.subsystem")
         self._arch = conanfile.settings.get_safe("arch")
         self._os_target, self._arch_target = get_target_os_arch(conanfile)
 
         self._build_type = conanfile.settings.get_safe("build_type")
 
         self._compiler = conanfile.settings.get_safe("compiler")
-        if not self._compiler:
-            conan_v2_behavior("compiler setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("compiler setting should be defined.", not self._compiler)
 
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._compiler_runtime = conanfile.settings.get_safe("compiler.runtime")
@@ -233,14 +233,13 @@ class AutoToolsBuildEnvironment(object):
     def make(self, args="", make_program=None, target=None, vars=None):
         if not self._conanfile.should_build:
             return
-        if not self._build_type:
-            conan_v2_behavior("build_type setting should be defined.",
-                              v1_behavior=self._conanfile.output.warn)
+        conan_v2_error("build_type setting should be defined.", not self._build_type)
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
             cpu_count_option = (("-j%s" % cpu_count(output=self._conanfile.output))
-                                if "-j" not in str_args else None)
+                                if ("-j" not in str_args and "nmake" not in make_program.lower())
+                                else None)
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args,
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
@@ -350,9 +349,21 @@ class AutoToolsBuildEnvironment(object):
                 concat += " " + os.environ.get("CFLAGS", None)
             if os.environ.get("CXXFLAGS", None):
                 concat += " " + os.environ.get("CXXFLAGS", None)
-            if self._os_version and "-version-min" not in concat and "-target" not in concat:
+            if (self._os_version and "-version-min" not in concat and "-target" not in concat) or \
+                    self._os_subsystem:
                 tmp_compilation_flags.append(tools.apple_deployment_target_flag(self._os,
-                                                                                self._os_version))
+                                                                                self._os_version,
+                                                                                self._os_sdk,
+                                                                                self._os_subsystem,
+                                                                                self._arch))
+            if "-isysroot" not in concat and platform.system() == "Darwin":
+                isysroot = tools.XCRun(self._conanfile.settings).sdk_path
+                if isysroot:
+                    tmp_compilation_flags.extend(["-isysroot", isysroot])
+            if "-arch" not in concat and self._arch:
+                apple_arch = tools.to_apple_arch(self._arch)
+                if apple_arch:
+                    tmp_compilation_flags.extend(["-arch", apple_arch])
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags

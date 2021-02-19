@@ -1,6 +1,8 @@
+import gzip
 import logging
 import os
 import platform
+import stat
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -53,7 +55,8 @@ def human_size(size_bytes):
     return "%s%s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None):
+def unzip(filename, destination=".", keep_permissions=False, pattern=None, output=None,
+          strip_root=False):
     """
     Unzip a zipped file
     :param filename: Path to the zip file
@@ -65,6 +68,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     :param pattern: Extract only paths matching the pattern. This should be a
     Unix shell-style wildcard, see fnmatch documentation for more details.
     :param output: output
+    :param flat: If all the contents are in a single dir, flat that directory.
     :return:
     """
     output = default_output(output, 'conans.client.tools.files.unzip')
@@ -72,9 +76,8 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern)
+        return untargz(filename, destination, pattern, strip_root)
     if filename.endswith(".gz"):
-        import gzip
         with gzip.open(filename, 'rb') as f:
             file_content = f.read()
         target_name = filename[:-3] if destination == "." else destination
@@ -83,7 +86,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
         if six.PY2:
             raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
-        return untargz(filename, destination, pattern)
+        return untargz(filename, destination, pattern, strip_root)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(get_cwd(), destination))
@@ -102,10 +105,23 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
-        if not pattern:
-            zip_info = z.infolist()
-        else:
-            zip_info = [zi for zi in z.infolist() if fnmatch(zi.filename, pattern)]
+        zip_info = z.infolist()
+        if pattern:
+            zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if strip_root:
+            names = [n.replace("\\", "/") for n in z.namelist()]
+            common_folder = os.path.commonprefix(names).split("/", 1)[0]
+            if not common_folder and len(names) > 1:
+                raise ConanException("The zip file contains more than 1 folder in the root")
+            if len(names) == 1 and len(names[0].split("/", 1)) == 1:
+                raise ConanException("The zip file contains a file in the root")
+            # Remove the directory entry if present
+            # Note: The "zip" format contains the "/" at the end if it is a directory
+            zip_info = [m for m in zip_info if m.filename != (common_folder + "/")]
+            for member in zip_info:
+                name = member.filename.replace("\\", "/")
+                member.filename = name.split("/", 1)[1]
+
         uncompress_size = sum((file_.file_size for file_ in zip_info))
         if uncompress_size > 100000:
             output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
@@ -138,14 +154,30 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None):
+def untargz(filename, destination=".", pattern=None, strip_root=False):
     import tarfile
     with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
-        if not pattern:
+        if not pattern and not strip_root:
             tarredgzippedFile.extractall(destination)
         else:
-            members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                  tarredgzippedFile.getmembers()))
+            members = tarredgzippedFile.getmembers()
+
+            if strip_root:
+                names = [n.replace("\\", "/") for n in tarredgzippedFile.getnames()]
+                common_folder = os.path.commonprefix(names).split("/", 1)[0]
+                if not common_folder and len(names) > 1:
+                    raise ConanException("The tgz file contains more than 1 folder in the root")
+                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
+                    raise ConanException("The tgz file contains a file in the root")
+                # Remove the directory entry if present
+                members = [m for m in members if m.name != common_folder]
+                for member in members:
+                    name = member.name.replace("\\", "/")
+                    member.name = name.split("/", 1)[1]
+                    member.path = member.name
+            if pattern:
+                members = list(filter(lambda m: fnmatch(m.name, pattern),
+                                      tarredgzippedFile.getmembers()))
             tarredgzippedFile.extractall(destination, members=members)
 
 
@@ -224,6 +256,21 @@ def _manage_text_not_found(search, file_path, strict, function_name, output):
         return False
 
 
+@contextmanager
+def _add_write_permissions(file_path):
+    # Assumes the file already exist in disk
+    write = stat.S_IWRITE
+    saved_permissions = os.stat(file_path).st_mode
+    if saved_permissions & write == write:
+        yield
+        return
+    try:
+        os.chmod(file_path, saved_permissions | write)
+        yield
+    finally:
+        os.chmod(file_path, saved_permissions)
+
+
 def replace_in_file(file_path, search, replace, strict=True, output=None, encoding=None):
     output = default_output(output, 'conans.client.tools.files.replace_in_file')
 
@@ -234,7 +281,8 @@ def replace_in_file(file_path, search, replace, strict=True, output=None, encodi
         _manage_text_not_found(search, file_path, strict, "replace_in_file", output=output)
     content = content.replace(search, replace)
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_write_permissions(file_path):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
 
 def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=None, output=None,
@@ -264,7 +312,8 @@ def replace_path_in_file(file_path, search, replace, strict=True, windows_paths=
         index = normalized_content.find(normalized_search)
 
     content = content.encode(encoding_out)
-    save(file_path, content, only_if_modified=False, encoding=encoding_out)
+    with _add_write_permissions(file_path):
+        save(file_path, content, only_if_modified=False, encoding=encoding_out)
 
     return True
 
@@ -277,7 +326,8 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
             lines.append('prefix=%s' % new_prefix)
         else:
             lines.append(line)
-    save(pc_file, "\n".join(lines))
+    with _add_write_permissions(pc_file):
+        save(pc_file, "\n".join(lines))
 
 
 def _path_equals(path1, path2):

@@ -3,14 +3,18 @@ import platform
 import textwrap
 import unittest
 
-from conans.test.utils.genconanfile import GenConanfile
+import pytest
+
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
 class PkgGeneratorTest(unittest.TestCase):
 
-    def pkg_config_dirs_test(self):
+    # Without compiler, def rpath_flags(settings, os_build, lib_paths): doesn't append the -Wl...etc
+    @pytest.mark.tool_compiler
+    def test_pkg_config_dirs(self):
         # https://github.com/conan-io/conan/issues/2756
         conanfile = """
 import os
@@ -40,9 +44,7 @@ class PkgConfigConan(ConanFile):
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
         expected_rpaths = ""
-        if platform.system() == "Linux":
-            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir2}"'
-        elif platform.system() == "Darwin":
+        if platform.system() in ("Linux", "Darwin"):
             expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir2=${prefix}/lib2
@@ -51,8 +53,9 @@ includedir=/my_absoulte_path/fake/mylib/include
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L${libdir} -L${libdir2}%s
-Cflags: -I${includedir}""" % expected_rpaths
+Libs: -L"${libdir}" -L"${libdir2}"%s
+Cflags: -I"${includedir}"\
+""" % expected_rpaths
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
@@ -68,7 +71,7 @@ Cflags: -I${includedir}""" % expected_rpaths
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
 
-    def pkg_config_without_libdir_test(self):
+    def test_pkg_config_without_libdir(self):
         conanfile = """
 import os
 from conans import ConanFile
@@ -99,7 +102,7 @@ class PkgConfigConan(ConanFile):
             Cflags: """ % " ")  # ugly hack for trailing whitespace removed by IDEs
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected)
 
-    def pkg_config_rpaths_test(self):
+    def test_pkg_config_rpaths(self):
         # rpath flags are only generated for gcc and clang
         profile = """
 [settings]
@@ -133,9 +136,9 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
+        self.assertIn("-Wl,-rpath,\"${libdir}\"", pc_content)
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         conanfile = """
 from conans import ConanFile
 from conans.tools import save
@@ -158,10 +161,10 @@ class PkgConfigConan(ConanFile):
         client.run("install MyLib/0.1@ -g pkg_config")
 
         pc_content = client.load("MyLib.pc")
-        self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
+        self.assertIn('Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ',
                       pc_content)
 
-    def multiple_include_test(self):
+    def test_multiple_include(self):
         # https://github.com/conan-io/conan/issues/7056
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -188,10 +191,10 @@ class PkgConfigConan(ConanFile):
         self.assertIn("includedir3=${prefix}/inc3/foo", pc_content)
         self.assertIn("libdir=${prefix}/lib1", pc_content)
         self.assertIn("libdir2=${prefix}/lib2", pc_content)
-        self.assertIn("Libs: -L${libdir} -L${libdir2}", pc_content)
-        self.assertIn("Cflags: -I${includedir} -I${includedir2} -I${includedir3}", pc_content)
+        self.assertIn('Libs: -L"${libdir}" -L"${libdir2}"', pc_content)
+        self.assertIn('Cflags: -I"${includedir}" -I"${includedir2}" -I"${includedir3}"', pc_content)
 
-    def empty_include_test(self):
+    def test_empty_include(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/0.1@")

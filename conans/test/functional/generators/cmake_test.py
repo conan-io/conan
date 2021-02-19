@@ -3,13 +3,14 @@ import platform
 import textwrap
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile, TurboTestClient
 
 
+@pytest.mark.tool_cmake
 class CMakeGeneratorTest(unittest.TestCase):
 
     def test_no_check_compiler(self):
@@ -41,7 +42,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @unittest.skipIf(platform.system() != "Linux", "Only linux")
+    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
     def test_check_compiler_package_id(self):
         # https://github.com/conan-io/conan/issues/6658
         file_content = textwrap.dedent("""
@@ -71,9 +72,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run_command('cmake .')
         self.assertIn("Conan: Checking correct version:", client.out)
 
-    @attr("slow")
-    @unittest.skipUnless(platform.system() == "Windows", "Requires MSBuild")
-    def skip_check_if_toolset_test(self):
+    @pytest.mark.slow
+    @pytest.mark.tool_visual_studio
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+    def test_skip_check_if_toolset(self):
         file_content = textwrap.dedent("""
             from conans import ConanFile, CMake
 
@@ -101,8 +103,8 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run("create . lib/1.0@ -s compiler='Visual Studio' -s compiler.toolset=v140")
         self.assertIn("Conan: Skipping compiler check: Declared 'compiler.toolset'", client.out)
 
-    @attr('slow')
-    def no_output_test(self):
+    @pytest.mark.slow
+    def test_no_output(self):
         client = TestClient()
         client.run("new Test/1.0 --sources")
         cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
@@ -133,7 +135,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
 
-    def system_libs_test(self):
+    def test_system_libs(self):
         mylib = textwrap.dedent("""
             import os
             from conans import ConanFile
@@ -188,7 +190,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("Target libs: CONAN_LIB::mylib_lib1;sys1;$", client.out)
         self.assertIn("CONAN_LIB::mylib_lib1 system libs: ;sys1;;", client.out)
 
-    def targets_system_libs_test(self):
+    def test_targets_system_libs(self):
         mylib = GenConanfile().with_package_info(cpp_info={"libs": ["lib1", "lib11"],
                                                            "system_libs": ["sys1"]},
                                                  env_info={})\
@@ -294,7 +296,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                       client.out)
         self.assertIn("CONAN_LIB::myotherlib_lib2 libs: ;sys2;;CONAN_PKG::mylib", client.out)
 
-    def user_appended_libs_test(self):
+    def test_user_appended_libs(self):
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -356,7 +358,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                 generators = "cmake"
                 settings = "os", "compiler", "arch", "build_type"
                 exports_sources = "CMakeLists.txt"
-                
+
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -366,7 +368,7 @@ class CMakeGeneratorTest(unittest.TestCase):
             cmake_minimum_required(VERSION 2.8)
             PROJECT(conanzlib LANGUAGES NONE)
             set(CONAN_DISABLE_CHECK_COMPILER TRUE)
-            # test with any old build policy as we may 
+            # test with any old build policy as we may
             # not have cmake version that supports 091
             cmake_policy(SET CMP0054 OLD)
             include(conanbuildinfo.cmake)
@@ -381,7 +383,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('create .')
         self.assertIn("POLICY CMP0054 IS OLD", client.out)
 
-    def do_not_mix_cflags_cxxflags_test(self):
+    def test_do_not_mix_cflags_cxxflags(self):
         client = TestClient()
 
         def run_test(consumer_generator, consumer_cmakelists, with_components=True):
@@ -393,7 +395,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                 client.run("create .")
                 consumer_conanfile = textwrap.dedent("""
                     from conans import ConanFile, CMake
-        
+
                     class Consumer(ConanFile):
                         name = "consumer"
                         version = "1.0"
@@ -401,7 +403,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                         exports_sources = "CMakeLists.txt"
                         requires = "upstream/1.0"
                         generators = "{}"
-                        
+
                         def build(self):
                             cmake = CMake(self)
                             cmake.configure()
@@ -426,10 +428,11 @@ class CMakeGeneratorTest(unittest.TestCase):
                     if consumer_generator == "cmake_find_package":
                         self.assertIn("comp compile options: one;two;three;four", client.out)
                     else:
-                        self.assertIn("$<$<CONFIG:Release>:;one;two;three;four>;"
-                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                        self.assertIn("$<$<CONFIG:Debug>:;>;"
                                       "$<$<CONFIG:MinSizeRel>:;>;"
-                                      "$<$<CONFIG:Debug>:;>", client.out)
+                                      "$<$<CONFIG:RelWithDebInfo>:;>;"
+                                      "$<$<CONFIG:Release>:;one;two;three;four>"
+                                      , client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
                                consumer_generator, consumer_cmakelists)
@@ -479,7 +482,6 @@ class CMakeGeneratorTest(unittest.TestCase):
             message("comp compile options: ${tmp}")
             """)
         run_test("cmake_find_package", cmakelists)
-        print(client.out)
 
         # Test cmake_find_package generator without components
         run_test("cmake_find_package", cmakelists, with_components=False)
@@ -502,3 +504,57 @@ class CMakeGeneratorTest(unittest.TestCase):
 
         # Test cmake_find_package_multi generator without components
         run_test("cmake_find_package_multi", cmakelists, with_components=False)
+
+    def test_build_modules_alias_target(self, use_components=False):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake"]
+
+                def package(self):
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
+                    self.cpp_info.libs = ["hello"]
+                    self.cpp_info.build_modules["cmake"].append(module)
+            """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE hello::hello)
+            """)
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup(TARGETS)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        assert "otherhello link libraries: hello::hello" in client.out

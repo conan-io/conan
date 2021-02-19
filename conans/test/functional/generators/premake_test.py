@@ -1,16 +1,14 @@
-import os
 import textwrap
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
-from conans import load
 from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 
 
-@attr("premake")
-@unittest.skipIf(which("premake5") is None, "Needs premake5")
+@pytest.mark.tool_premake
+@pytest.mark.skipif(which("premake5") is None, reason="Needs premake5")
 class PremakeGeneratorTest(unittest.TestCase):
 
     def setUp(self):

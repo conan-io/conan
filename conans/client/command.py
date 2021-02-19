@@ -280,7 +280,7 @@ class Command(object):
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help='Path to the "testing" folder containing a conanfile.py or'
                             ' to a recipe file with test() method'
-                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
+                            ' e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='pkg/version@user/channel of the package to be tested')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
@@ -473,6 +473,8 @@ class Command(object):
                             'written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+        parser.add_argument("--lockfile-node-id", action=OnceArgument,
+                            help="NodeID of the referenced package in the lockfile")
 
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
@@ -525,7 +527,8 @@ class Command(object):
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
-                                                     lockfile_out=args.lockfile_out)
+                                                     lockfile_out=args.lockfile_out,
+                                                     lockfile_node_id=args.lockfile_node_id)
 
         except ConanException as exc:
             info = exc.info
@@ -559,7 +562,7 @@ class Command(object):
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
                                     help='json file path where the config home will be written to')
         install_subparser.add_argument("item", nargs="?",
-                                       help="git repository, local folder or zip file (local or "
+                                       help="git repository, local file or folder or zip file (local or "
                                        "http) where the configuration is stored")
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
@@ -1088,7 +1091,7 @@ class Command(object):
                             help="Remove locks")
         parser.add_argument("-o", "--outdated", default=False, action="store_true",
                             help="Remove only outdated from recipe packages. "
-                                 "This flag can only be used with a reference")
+                                 "This flag can only be used with a pattern or a reference")
         parser.add_argument('-p', '--packages', nargs="*", action=Extender,
                             help="Remove all packages of the specified reference if "
                                  "no specific package ID is provided")
@@ -1531,8 +1534,10 @@ class Command(object):
         parser_rename.add_argument('remote', help='The old remote name')
         parser_rename.add_argument('new_remote', help='The new remote name')
 
-        subparsers.add_parser('list_ref',
-                              help='List the package recipes and its associated remotes')
+        parser_list_ref = subparsers.add_parser('list_ref', help='List the package recipes '
+                                                                 'and its associated remotes')
+        parser_list_ref.add_argument("--no-remote", action='store_true', default=False,
+                                     help='List the ones without remote')
         parser_padd = subparsers.add_parser('add_ref',
                                             help="Associate a recipe's reference to a remote")
         parser_padd.add_argument('reference', help='Package recipe reference')
@@ -1548,6 +1553,8 @@ class Command(object):
         list_pref = subparsers.add_parser('list_pref', help='List the package binaries and '
                                                             'its associated remotes')
         list_pref.add_argument('reference', help='Package recipe reference')
+        list_pref.add_argument("--no-remote", action='store_true', default=False,
+                               help='List the ones without remote')
 
         add_pref = subparsers.add_parser('add_pref',
                                          help="Associate a package reference to a remote")
@@ -1594,7 +1601,7 @@ class Command(object):
         elif args.subcommand == "update":
             return self._conan.remote_update(remote_name, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
-            refs = self._conan.remote_list_ref()
+            refs = self._conan.remote_list_ref(args.no_remote)
             self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
             return self._conan.remote_add_ref(reference, remote_name)
@@ -1603,7 +1610,7 @@ class Command(object):
         elif args.subcommand == "update_ref":
             return self._conan.remote_update_ref(reference, remote_name)
         elif args.subcommand == "list_pref":
-            refs = self._conan.remote_list_pref(reference)
+            refs = self._conan.remote_list_pref(reference, args.no_remote)
             self._outputer.remote_pref_list(refs)
         elif args.subcommand == "add_pref":
             return self._conan.remote_add_pref(package_reference, remote_name)
@@ -1900,11 +1907,39 @@ class Command(object):
         _add_common_install_arguments(create_cmd, build_help="Packages to build from source",
                                       lockfile=False)
 
+        bundle = subparsers.add_parser('bundle', help='Manages lockfile bundles')
+        bundle_subparsers = bundle.add_subparsers(dest='bundlecommand', help='sub-command help')
+        bundle_create_cmd = bundle_subparsers.add_parser('create', help='Create lockfile bundle')
+        bundle_create_cmd.add_argument("lockfiles", nargs="+",
+                                       help="Path to lockfiles")
+        bundle_create_cmd.add_argument("--bundle-out", action=OnceArgument, default="lock.bundle",
+                                       help="Filename of the created bundle")
+
+        build_order_bundle_cmd = bundle_subparsers.add_parser('build-order',
+                                                              help='Returns build-order')
+        build_order_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+        build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
+                                            help="generate output file in json format")
+
+        update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
+        update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
         if args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
+        elif args.subcommand == "bundle":
+            if args.bundlecommand == "create":
+                self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
+            elif args.bundlecommand == "update":
+                self._conan.lock_bundle_update(args.bundle)
+            elif args.bundlecommand == "build-order":
+                build_order = self._conan.lock_bundle_build_order(args.bundle)
+                self._out.writeln(build_order)
+                if args.json:
+                    json_file = _make_abs_path(args.json)
+                    save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "build-order":
             build_order = self._conan.lock_build_order(args.lockfile)
             self._out.writeln(build_order)

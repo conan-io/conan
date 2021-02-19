@@ -3,20 +3,95 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 import six
-from nose.plugins.attrib import attr
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.genconanfile import GenConanfile
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@attr('slow')
+@pytest.mark.tool_cmake
+class TestCMakeFindPackageGenerator:
+
+    @pytest.mark.parametrize("use_components", [False, True])
+    def test_build_modules_alias_target(self, use_components):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = ["target-alias.cmake"]
+                generators = "cmake"
+
+                def package(self):
+                    self.copy("target-alias.cmake", dst="share/cmake")
+
+                def package_info(self):
+                    module = os.path.join("share", "cmake", "target-alias.cmake")
+            %s
+            """)
+        if use_components:
+            info = textwrap.dedent("""\
+                self.cpp_info.name = "namespace"
+                self.cpp_info.filenames["cmake_find_package"] = "hello"
+                self.cpp_info.components["comp"].libs = ["hello"]
+                self.cpp_info.components["comp"].build_modules["cmake_find_package"].append(module)
+                """)
+        else:
+            info = textwrap.dedent("""\
+                self.cpp_info.libs = ["hello"]
+                self.cpp_info.build_modules["cmake_find_package"].append(module)
+                """)
+        target_alias = textwrap.dedent("""
+            add_library(otherhello INTERFACE IMPORTED)
+            target_link_libraries(otherhello INTERFACE {target_name})
+            """).format(target_name="namespace::comp" if use_components else "hello::hello")
+        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
+        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
+        client.run("create .")
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+            class Conan(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                exports_sources = ["CMakeLists.txt"]
+                generators = "cmake_find_package"
+                requires = "hello/1.0"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+        cmakelists = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.0)
+            project(test)
+            find_package(hello)
+            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
+            message("otherhello link libraries: ${tmp}")
+            """)
+        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+        client.run("create .")
+        if use_components:
+            assert "otherhello link libraries: namespace::comp" in client.out
+        else:
+            assert "otherhello link libraries: hello::hello" in client.out
+
+
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFindPathGeneratorTest(unittest.TestCase):
 
-    def cmake_find_package_system_libs_test(self):
+    def test_cmake_find_package_system_libs(self):
         conanfile = """from conans import ConanFile, tools
 class Test(ConanFile):
     name = "Test"
@@ -70,7 +145,7 @@ message("Compile options: ${tmp}")
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
-    def cmake_lock_target_redefinition_test(self):
+    def test_cmake_lock_target_redefinition(self):
         client = TestClient()
         files = cpp_hello_conan_files(name="Hello0",
                                       settings='"os", "compiler", "arch", "build_type"')
@@ -109,7 +184,7 @@ message("Target libs: ${tmp}")
         self.assertIn("Skipping already existing target: CONAN_LIB::Hello0_helloHello0", client.out)
         self.assertIn("Target libs: CONAN_LIB::Hello0_helloHello0", client.out)
 
-    def cmake_find_dependency_redefinition_test(self):
+    def test_cmake_find_dependency_redefinition(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
             class Consumer(ConanFile):
@@ -145,7 +220,7 @@ message("Target libs: ${tmp}")
         client.run("create . App/1.0@user/testing")
         self.assertIn("Dependency PkgA already found", client.out)
 
-    def cmake_find_package_test(self):
+    def test_cmake_find_package(self):
         """First package without custom find_package"""
         client = TestClient()
         files = cpp_hello_conan_files(name="Hello0",
@@ -252,7 +327,7 @@ target_link_libraries(say_hello helloHello2)
         self.assertIn("Conan: Using autogenerated FindHello1.cmake", client.out)
         self.assertIn("Version1: 0.1", client.out)
 
-    def cmake_find_package_cpp_info_system_libs_test(self):
+    def test_cmake_find_package_cpp_info_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile, tools
 
@@ -301,8 +376,8 @@ target_link_libraries(say_hello helloHello2)
         self.assertNotIn("-- Library sys1 not found in package, might be system one", client.out)
         self.assertIn("Target linked libs: lib1;sys1;;", client.out)
 
-    @unittest.skipUnless(platform.system() == "Darwin", "Requires Apple Frameworks")
-    def cmake_find_package_frameworks_test(self):
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple Frameworks")
+    def test_cmake_find_package_frameworks(self):
         conanfile = """from conans import ConanFile, tools
 class Test(ConanFile):
     name = "Test"
@@ -360,7 +435,7 @@ message("Target libs: ${tmp}")
         else:
             self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
 
-    def build_modules_test(self):
+    def test_build_modules(self):
         conanfile = textwrap.dedent("""
             import os
             from conans import ConanFile, CMake
@@ -387,7 +462,7 @@ message("Target libs: ${tmp}")
             """)
         # This is a module that defines some functionality
         find_module = textwrap.dedent("""
-            function(conan_message MESSAGE_OUTPUT)
+            function(custom_message MESSAGE_OUTPUT)
                 message(${ARGV${0}})
             endfunction()
             """)
@@ -421,13 +496,13 @@ message("Target libs: ${tmp}")
             cmake_minimum_required(VERSION 3.0)
             project(test)
             find_package(test)
-            conan_message("Printing using a external module!")
+            custom_message("Printing using a external module!")
             """)
         client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
         client.run("create .")
         self.assertIn("Printing using a external module!", client.out)
 
-    def cpp_info_name_test(self):
+    def test_cpp_info_name(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
@@ -437,8 +512,8 @@ message("Target libs: ${tmp}")
         client.run("create .")
         client.run("new hello2/1.0 -s")
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        'self.cpp_info.libs = ["hello"]',
-                        'self.cpp_info.libs = ["hello"]\n        self.cpp_info.name = "MYHELLO2"',
+                        'self.cpp_info.libs = ["hello2"]',
+                        'self.cpp_info.libs = ["hello2"]\n        self.cpp_info.name = "MYHELLO2"',
                         output=client.out)
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                         'exports_sources = "src/*"',
@@ -474,7 +549,7 @@ message("Target libs: ${tmp}")
         self.assertIn('Found MYHELLO2: 1.0 (found version "1.0")', client.out)
         self.assertIn('Found MYHELLO: 1.0 (found version "1.0")', client.out)
         self.assertIn("Target libs (hello2): "
-                      "CONAN_LIB::MYHELLO2_hello;MYHELLO::MYHELLO;"
+                      "CONAN_LIB::MYHELLO2_hello2;MYHELLO::MYHELLO;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
@@ -485,7 +560,7 @@ message("Target libs: ${tmp}")
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
 
-    def cpp_info_filename_test(self):
+    def test_cpp_info_filename(self):
         client = TestClient()
         client.run("new hello/1.0 -s")
         indent = '\n        '
@@ -504,14 +579,8 @@ message("Target libs: ${tmp}")
 
         client.run("new hello2/1.0 -s")
         replace_in_file(
-            os.path.join(client.current_folder, "src/CMakeLists.txt"),
-            search='add_library(hello hello.cpp)',
-            replace='add_library(hello2 hello.cpp)',
-            output=client.out
-        )
-        replace_in_file(
             os.path.join(client.current_folder, "conanfile.py"),
-            search='self.cpp_info.libs = ["hello"]',
+            search='self.cpp_info.libs = ["hello2"]',
             replace=indent.join([
                 'self.cpp_info.name = "MYHELLO2"',
                 'self.cpp_info.filenames["cmake_find_package"] = "hello_2"',
@@ -570,7 +639,7 @@ message("Target libs: ${tmp}")
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
                       client.out)
 
-    def cpp_info_config_test(self):
+    def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -606,7 +675,7 @@ message("Target libs: ${tmp}")
         self.assertIn('set(requirement_COMPILE_OPTIONS_LIST "-req_both;-req_debug" "")', content)
         self.assertIn('set(requirement_LIBRARY_LIST lib_both lib_debug)', content)
 
-    def components_system_libs_test(self):
+    def test_components_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 

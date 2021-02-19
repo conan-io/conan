@@ -3,12 +3,13 @@ import stat
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 
@@ -31,7 +32,7 @@ class ExportSettingsTest(unittest.TestCase):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.out)
         self.assertIn("Possible values are ['Linux']", client.out)
 
-    def export_without_full_reference_test(self):
+    def test_export_without_full_reference(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . lasote/stable", assert_error=True)
@@ -403,6 +404,7 @@ class ExportMetadataTest(unittest.TestCase):
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertEqual(meta.recipe.revision, self.summary_hash)
 
+    @pytest.mark.tool_git
     def test_revision_mode_scm(self):
         t = TestClient()
         commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
@@ -433,14 +435,14 @@ class ExportMetadataTest(unittest.TestCase):
         client.run('export . ')
         self.assertIn("lib/1.0: The stored package has not changed", client.out)
 
-    def export_with_name_and_version_test(self):
+    def test_export_with_name_and_version(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . lib/1.0@')
         self.assertIn("lib/1.0: A new conanfile.py version was exported", client.out)
 
-    def export_with_only_user_channel_test(self):
+    def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
@@ -448,7 +450,7 @@ class ExportMetadataTest(unittest.TestCase):
         client.run('export . @user/channel')
         self.assertIn("lib/1.0@user/channel: A new conanfile.py version was exported", client.out)
 
-    def export_conflict_no_user_channel_test(self):
+    def test_export_conflict_no_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 

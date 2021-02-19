@@ -4,12 +4,12 @@ import textwrap
 import unittest
 from textwrap import dedent
 
-from nose.plugins.attrib import attr
+import pytest
+
 from parameterized.parameterized import parameterized
 
-from conans.client.build.cmake import CMakeBuildHelper
+from conans.client.build.cmake import CMake
 from conans.model.version import Version
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.tools import TestClient
 
 conanfile_py = """
@@ -60,7 +60,8 @@ message(STATUS "HELLO_DEFINES=${HELLO_DEFINES}")
 """
 
 
-@attr("slow")
+@pytest.mark.slow
+@pytest.mark.tool_cmake
 class CMakeFlagsTest(unittest.TestCase):
 
     def _get_line(self, text, begin):
@@ -72,7 +73,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn('"', flags)
         return flags
 
-    @unittest.skipIf(platform.system() != "Windows", "Needs windows for vcvars")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for vcvars")
     def test_vcvars_priority(self):
         # https://github.com/conan-io/conan/issues/5999
         client = TestClient()
@@ -92,11 +93,17 @@ class CMakeFlagsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile_vcvars})
-        client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
+        # FIXME this would fail:
+        # client.run('create . pkg/1.0@ -e PATH="MyCustomPath"')
+        # because cmake will not be in the PATH anymore, and CMake.get_version() fails
+        # For some reason cmake.configure() worked in the past, because it is finding the
+        # cmake inside VISUAL STUDIO!!! (cmake version 3.12.18081601-MSVC_2), because VS vcvars
+        # is activated by CMake for Ninja
+        client.run('create . pkg/1.0@ -e PATH=["MyCustomPath"]')
         self.assertIn("pkg/1.0: PATH ENV VAR: MyCustomPath;", client.out)
 
     @parameterized.expand([(True, ), (False, )])
-    def build_app_test(self, targets):
+    def test_build_app(self, targets):
         client = TestClient()
         conanfile_py = """
 from conans import ConanFile
@@ -148,7 +155,7 @@ int main(){
         self.assertIn("Msg1: My${} $string", client.out)
         self.assertIn("Msg2: My$ other string", client.out)
 
-    def flags_test(self):
+    def test_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -166,7 +173,7 @@ int main(){
         self.assertIn('CONAN_DEFINES_HELLO=-DMY_DEF=My" \string;-DMY_DEF2=My${} other \string',
                       client.out)
 
-    def transitive_flags_test(self):
+    def test_transitive_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -183,7 +190,7 @@ int main(){
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.out)
 
-    def targets_flags_test(self):
+    def test_targets_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -208,7 +215,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def targets_own_flags_test(self):
+    def test_targets_own_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py.replace('version = "0.1"',
                                                           'version = "0.1"\n'
@@ -236,7 +243,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def transitive_targets_flags_test(self):
+    def test_transitive_targets_flags(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
         client.run("export . lasote/testing")
@@ -270,7 +277,7 @@ int main(){
                       "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn('HELLO_DEFINES=MY_DEF=My" \string;MY_DEF2=My${} other \string;', client.out)
 
-    def cmake_test_needed_settings(self):
+    def test_cmake_needed_settings(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -289,7 +296,7 @@ class MyLib(ConanFile):
             client.run("install .")
             client.run("build .")
 
-    def cmake_shared_flag_test(self):
+    def test_cmake_shared_flag(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -321,7 +328,7 @@ class MyLib(ConanFile):
         client.run("install .")
         client.run("build .")
 
-    def std_flag_applied_test(self):
+    def test_std_flag_applied(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -351,22 +358,19 @@ target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
         if platform.system() != "Windows":
-            with catch_deprecation_warning(self):
-                client.run("install . --install-folder=build -s cppstd=gnu98")
+            client.run("install . --install-folder=build -s cppstd=gnu98")
             client.run("build . --build-folder=build", assert_error=True)
             self.assertIn("Error in build()", client.out)
 
             # Now specify c++14
-            with catch_deprecation_warning(self):
-                client.run("install . --install-folder=build -s cppstd=gnu14")
+            client.run("install . --install-folder=build -s cppstd=gnu14")
             client.run("build . --build-folder=build")
             self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
             libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
             libpath = os.path.join(client.current_folder, "build", "lib", libname)
             self.assertTrue(os.path.exists(libpath))
 
-        with catch_deprecation_warning(self):
-            client.run("install . --install-folder=build -s cppstd=14")
+        client.run("install . --install-folder=build -s cppstd=14")
         client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
         self.assertNotIn("Conan setting CXX_FLAGS flags", client.out)
@@ -374,7 +378,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
 
-    def standard_20_as_cxx_flag_test(self):
+    def test_standard_20_as_cxx_flag(self):
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
         conanfile = """
 import os
@@ -404,26 +408,24 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = CMakeBuildHelper.get_version()
+            cmake_version = CMake.get_version()
             return cmake_version < Version("3.12")
 
-        with catch_deprecation_warning(self):
-            client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc "
-                       "-s compiler.version=8 -s compiler.libcxx=libstdc++11")
+        client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc "
+                   "-s compiler.version=8 -s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=gnu++2a", client.out)
         else:
             self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS ON", client.out)
 
-        with catch_deprecation_warning(self):
-            client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
-                       "-s compiler.libcxx=libstdc++11")
+        client.run("create . user/channel -s cppstd=20 -s compiler=gcc -s compiler.version=8 "
+                   "-s compiler.libcxx=libstdc++11")
         if conan_set_std_branch():
             self.assertIn("Conan setting CXX_FLAGS flags: -std=c++2a", client.out)
         else:
             self.assertIn("Conan setting CPP STANDARD: 20 WITH EXTENSIONS OFF", client.out)
 
-    def fpic_applied_test(self):
+    def test_fpic_applied(self):
         conanfile = """
 import os
 from conans import ConanFile, CMake
@@ -468,7 +470,7 @@ conan_basic_setup()
         client.run("create . user/channel -o MyLib:fPIC=True")
         self.assertNotIn("Conan: Adjusting fPIC flag", client.out)
 
-    def header_only_generator_test(self):
+    def test_header_only_generator(self):
         """ Test cmake.install() is possible although Generetaor could not be deduced from
         settings
         """

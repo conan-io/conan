@@ -2,6 +2,8 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 hello_cpp = """
@@ -65,7 +67,8 @@ Cflags: -I${includedir}
 """
 
 
-@unittest.skipIf(platform.system() == "Windows", ".pc files not in Win")
+@pytest.mark.skipif(platform.system() == "Windows", reason=".pc files not in Win")
+@pytest.mark.tool_pkg_config
 class PkgConfigTest(unittest.TestCase):
     """
     Test WITHOUT a build helper nor a generator, explicitly defining pkg-config in the
