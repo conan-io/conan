@@ -39,12 +39,16 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_test = should_test
 
     try:
-        mkdir(build_folder)
-        os.chdir(build_folder)
-        conan_file.build_folder = build_folder
-        conan_file.source_folder = source_folder
-        conan_file.package_folder = package_folder
-        conan_file.install_folder = install_folder
+        # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
+        #  Only base_path and conanfile_path will remain
+        conan_file.layout.set_base_build_folder(build_folder)
+        conan_file.layout.set_base_source_folder(source_folder)
+        conan_file.layout.set_base_package_folder(package_folder)
+        conan_file.layout.set_base_install_folder(install_folder)
+
+        mkdir(conan_file.build_folder)
+        os.chdir(conan_file.build_folder)
+
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):

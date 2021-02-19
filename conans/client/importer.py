@@ -110,7 +110,7 @@ def run_deploy(conanfile, install_folder):
 
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
-    conanfile.install_folder = install_folder
+    conanfile.layout.set_base_install_folder(install_folder)
     with get_env_context_manager(conanfile):
         with tools.chdir(install_folder):
             conanfile.deploy()
