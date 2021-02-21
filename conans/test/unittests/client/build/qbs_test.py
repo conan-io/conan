@@ -99,7 +99,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.use_profile))
 
         build_helper.build(products=['app1', 'app2', 'lib'])
         self.assertEqual(
@@ -107,7 +107,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --products app1,app2,lib --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.use_profile))
 
     def test_build_all(self):
         conanfile = MockConanfile(
@@ -123,7 +123,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --all-products --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.use_profile))
 
     @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
     def test_build_with_custom_configuration(self):
@@ -148,7 +148,7 @@ class QbsTest(unittest.TestCase):
              '--file %s --jobs %s profile:%s '
              'config:%s %s:%s %s:%s %s:%s %s:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile,
+                build_helper.jobs, build_helper.use_profile,
                 config_name,
                 'product.App.boolProperty',
                 'true',
