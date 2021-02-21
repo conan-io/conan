@@ -192,8 +192,9 @@ def _flags_from_env():
     return flags_from_env
 
 
-class QbsToolchain(object):
-    filename = 'conan_toolchain.qbs'
+class QbsProfile(object):
+    filename = 'conan_toolchain_profile.qbs'
+    old_filename = 'conan_toolchain.qbs'
 
     _template_toolchain = textwrap.dedent('''\
         import qbs
@@ -266,6 +267,7 @@ class QbsToolchain(object):
             conanfile.options.get_safe('fPIC'))
 
     def generate(self):
+        save(self.old_filename, self.content)
         save(self.filename, self.content)
 
     @property
