@@ -1,6 +1,7 @@
 import copy
 from collections import OrderedDict, defaultdict
 
+from conan.tools.env.environment import ProfileEnvironment
 from conans.client import settings_preprocessor
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
@@ -22,6 +23,7 @@ class Profile(object):
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # ref pattern: list of ref
         self.conf = ConfDefinition()
+        self.buildenv = ProfileEnvironment()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -114,6 +116,7 @@ class Profile(object):
             self.build_requires[pattern] = list(existing.values())
 
         self.conf.update_conf_definition(other.conf)
+        self.buildenv.compose(other.buildenv)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.

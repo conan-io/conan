@@ -66,7 +66,8 @@ class GeneratorManager(object):
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
-                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild"]
+                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+                                "VirtualEnv"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -110,6 +111,9 @@ class GeneratorManager(object):
         elif generator_name == "QbsToolchain":
             from conan.tools.qbs.qbstoolchain import QbsToolchain
             return QbsToolchain
+        elif generator_name == "VirtualEnv":
+            from conan.tools.env.virtualenv import VirtualEnv
+            return VirtualEnv
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -195,5 +199,3 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
-
-        # TODO: Lets discuss what to do with the environment

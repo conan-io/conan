@@ -205,7 +205,7 @@ class DepsGraphBuilder(object):
                                              remotes, profile_host, profile_build, graph_lock,
                                              context_switch=context_switch,
                                              populate_settings_target=populate_settings_target)
-
+            node.conanfile.dependencies.add(new_node.conanfile)
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
             new_node.transitive_closure[new_node.name] = new_node
@@ -237,6 +237,7 @@ class DepsGraphBuilder(object):
                     node.transitive_closure[name] = n
 
         else:  # a public node already exist with this name
+            node.conanfile.dependencies.add(previous.conanfile)
             self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
             conflict = self._conflicting_references(previous, require.ref, node.ref)

@@ -4,12 +4,14 @@ from contextlib import contextmanager
 import six
 from six import string_types
 
+from conan.tools.env import Environment
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
+from conans.model.conanfile_dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Layout
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -145,8 +147,21 @@ class ConanFile(object):
         self._conan_using_build_profile = False
 
         self.layout = Layout()
+        self.dependencies = ConanFileDependencies()
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
+        self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
 
-    def initialize(self, settings, env):
+    @property
+    def buildenv(self):
+        # Lazy computation of the package buildenv based on the profileone
+        if not isinstance(self._conan_buildenv, Environment):
+            ref_str = "{}/{}".format(self.name, self.version)
+            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+        return self._conan_buildenv
+
+    def initialize(self, settings, env, buildenv=None):
+        self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
