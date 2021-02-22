@@ -97,8 +97,8 @@ class RestApiClient(object):
     def upload_recipe(self, ref, files_to_upload, retry, retry_wait):
         return self._get_api().upload_recipe(ref, files_to_upload, retry, retry_wait)
 
-    def upload_package(self, pref, files_to_upload, deleted, retry, retry_wait):
-        return self._get_api().upload_package(pref, files_to_upload, deleted, retry, retry_wait)
+    def upload_package(self, pref, files_to_upload, retry, retry_wait):
+        return self._get_api().upload_package(pref, files_to_upload, retry, retry_wait)
 
     def authenticate(self, user, password):
         api_v2 = RestV2Methods(self._remote_url, self._token, self._custom_headers, self._output,
