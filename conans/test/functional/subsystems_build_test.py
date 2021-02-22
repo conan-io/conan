@@ -4,7 +4,6 @@ import pytest
 import textwrap
 
 
-from conans.client.tools.win import unix_path, MSYS2, CYGWIN
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
@@ -145,13 +144,13 @@ class TestSubsystemsAutotoolsBuild:
         app_SOURCES = main.cpp
         """)
 
-    def _build(self, client, subsystem):
+    def _build(self, client):
         main_cpp = gen_function_cpp(name="main")
         client.save({"configure.ac": self.configure_ac,
                      "Makefile.am": self.makefile_am,
                      "main.cpp": main_cpp})
 
-        path = unix_path(client.current_folder, subsystem)
+        path = client.current_folder  # Seems unix_path not necessary for this to pass
         client.run_command('bash -lc "cd \\"%s\\" && autoreconf -fiv"' % path)
         client.run_command('bash -lc "cd \\"%s\\" && ./configure"' % path)
         client.run_command("make")
@@ -165,7 +164,7 @@ class TestSubsystemsAutotoolsBuild:
         """
         client = TestClient()
         # pacman -S gcc
-        self._build(client, MSYS2)
+        self._build(client)
 
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
 
@@ -181,7 +180,7 @@ class TestSubsystemsAutotoolsBuild:
         """
         client = TestClient()
         # pacman -S mingw-w64-x86_64-gcc
-        self._build(client, MSYS2)
+        self._build(client)
 
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
 
@@ -197,7 +196,7 @@ class TestSubsystemsAutotoolsBuild:
         """
         client = TestClient()
         # pacman -S mingw-w64-i686-gcc
-        self._build(client, MSYS2)
+        self._build(client)
 
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None)
 
@@ -213,7 +212,7 @@ class TestSubsystemsAutotoolsBuild:
         """
         client = TestClient()
         # install "gcc-c++" and "make" packages
-        self._build(client, CYGWIN)
+        self._build(client)
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
 
         assert "__CYGWIN__" in client.out
