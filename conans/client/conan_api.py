@@ -55,6 +55,7 @@ from conans.errors import (ConanException, RecipeNotFoundException,
 from conans.model.editable_layout import get_editable_abs_path
 from conans.model.graph_info import GraphInfo, GRAPH_INFO_FILE
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
+from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
@@ -518,8 +519,9 @@ class ConanAPIV1(object):
                     node.conanfile.generators = tmp
 
         installer = BinaryInstaller(self.app, recorder=recorder)
-        installer.install(deps_graph, remotes, build, update, keep_build=False,
-                          graph_info=graph_info)
+        installer.install(deps_graph, remotes, build, update, graph_info.profile_host,
+                          graph_info.profile_build, graph_lock=graph_info.graph_lock,
+                          keep_build=False)
 
         install_folder = install_folder or cwd
         workspace.generate(install_folder, deps_graph, self.app.out)
@@ -775,16 +777,19 @@ class ConanAPIV1(object):
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
+
+        conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
+                                                                   deps_info_required=True)
+
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        if package_folder == build_folder:
-            raise ConanException("Cannot 'conan package' to the build folder. "
-                                 "--build-folder and package folder can't be the same")
-        conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                                   deps_info_required=True)
-        run_package_method(conanfile, None, source_folder, build_folder, package_folder,
-                           install_folder, self.app.hook_manager, conanfile_path, None,
+        conanfile.layout.set_base_build_folder(build_folder)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.set_base_install_folder(install_folder)
+
+        run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
                            copy_info=True)
 
     @api_method
@@ -802,7 +807,11 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
-        config_source_local(source_folder, conanfile, conanfile_path, self.app.hook_manager)
+        conanfile.layout.set_base_source_folder(source_folder)
+        conanfile.layout.set_base_build_folder(None)
+        conanfile.layout.set_base_package_folder(None)
+
+        config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method
     def imports(self, path, dest=None, info_folder=None, cwd=None):
@@ -1333,6 +1342,29 @@ class ConanAPIV1(object):
         graph_lock = graph_lock_file.graph_lock
         graph_lock.clean_modified()
         graph_lock_file.save(lockfile)
+
+    @api_method
+    def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
+        cwd = cwd or os.getcwd()
+        result = LockBundle.create(lockfiles, self.app.cache.config.revisions_enabled, cwd)
+        lockfile_out = _make_abs_path(lockfile_out, cwd)
+        save(lockfile_out, result.dumps())
+
+    @api_method
+    def lock_bundle_build_order(self, lockfile, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = _make_abs_path(lockfile, cwd)
+        lock_bundle = LockBundle()
+        lock_bundle.loads(load(lockfile))
+        build_order = lock_bundle.build_order()
+        return build_order
+
+    @api_method
+    def lock_bundle_update(self, lock_bundle_path, cwd=None):
+        cwd = cwd or os.getcwd()
+        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
+        revisions_enabled = self.app.cache.config.revisions_enabled
+        LockBundle.update_bundle(lock_bundle_path, revisions_enabled)
 
     @api_method
     def lock_create(self, path, lockfile_out,
