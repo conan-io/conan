@@ -642,7 +642,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         It requires to have MSYS2, CYGWIN, or WSL
     """
     env = env or {}
-    if platform.system() != "Windows":
+    if not OSInfo().is_windows:
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or OSInfo.detect_windows_subsystem()
 
@@ -700,7 +700,11 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         login = "--login" if with_login else ""
-        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        if platform.system() == "Windows":
+            # cmd.exe shell
+            wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        else:
+            wincmd = '%s %s -c %s' % (bash_path, login, to_run)
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path
