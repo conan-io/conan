@@ -1,6 +1,7 @@
 import platform
 
 from conan.tools.env import Environment
+from conans.client.graph.graph import CONTEXT_BUILD
 
 
 class VirtualEnv:
@@ -18,16 +19,21 @@ class VirtualEnv:
         # Visit all dependencies
         deps_env = Environment()
         # TODO: The visitor of dependencies needs to be implemented correctly
+        # TODO: The environment should probably be composed with direct dependencies first
+        # TODO: in paths, but this is the opposite
         for dep in self._conanfile.dependencies.all:
             # environ_info is always "build"
             dep_env = dep.buildenv_info
             if dep_env is not None:
-                deps_env = deps_env.compose(dep_env)
+                deps_env.compose(dep_env)
+            if dep.context == CONTEXT_BUILD:
+                runenv = self._runenv_from_cpp_info(dep)
+                deps_env.compose(runenv)
 
         # The profile environment has precedence, applied last
         profile_env = self._conanfile.buildenv
-        result = deps_env.compose(profile_env)
-        return result
+        deps_env.compose(profile_env)
+        return deps_env
 
     def autorun_environment(self):
         """ automatically collects the runtime environment from 'cpp_info' from dependencies
@@ -35,19 +41,30 @@ class VirtualEnv:
         by parameter or [conf]
         """
         dyn_runenv = Environment()
-        # TODO: New cpp_info access
         for dep in self._conanfile.dependencies.all:
-            cpp_info = dep.cpp_info
-            if cpp_info.exes:
-                dyn_runenv.append_path("PATH", cpp_info.bin_paths)
-            os_ = self._conanfile.settings.get_safe("os")
-            if cpp_info.lib_paths:
-                if os_ == "Linux":
-                    dyn_runenv.append_path("LD_LIBRARY_PATH", cpp_info.lib_paths)
-                elif os_ == "Macos":
-                    dyn_runenv.append_path("DYLD_LIBRARY_PATH", cpp_info.lib_paths)
-            if cpp_info.framework_paths:
-                dyn_runenv.append_path("DYLD_FRAMEWORK_PATH", cpp_info.framework_paths)
+            if dep.context == CONTEXT_BUILD:  # Build environment cannot happen in runtime
+                continue
+            env = self._runenv_from_cpp_info(dep)
+            dyn_runenv.compose(env)
+        return dyn_runenv
+
+    @staticmethod
+    def _runenv_from_cpp_info(conanfile_dep):
+        """ return an Environment deducing the runtime information from a cpp_info
+        """
+        dyn_runenv = Environment()
+        cpp_info = conanfile_dep.cpp_info
+        if cpp_info.exes:
+            dyn_runenv.prepend_path("PATH", cpp_info.bin_paths)
+        # If it is a build_require this will be the build-os, otherwise it will be the host-os
+        os_ = conanfile_dep.settings.get_safe("os")
+        if cpp_info.lib_paths:
+            if os_ == "Linux":
+                dyn_runenv.prepend_path("LD_LIBRARY_PATH", cpp_info.lib_paths)
+            elif os_ == "Macos":
+                dyn_runenv.prepend_path("DYLD_LIBRARY_PATH", cpp_info.lib_paths)
+        if cpp_info.framework_paths:
+            dyn_runenv.prepend_path("DYLD_FRAMEWORK_PATH", cpp_info.framework_paths)
         return dyn_runenv
 
     def run_environment(self):
@@ -60,10 +77,10 @@ class VirtualEnv:
             # run_environ_info is always "host"
             dep_env = dep.runenv_info
             if dep_env is not None:
-                deps_env = deps_env.compose(dep_env)
+                deps_env.compose(dep_env)
 
         autorun = self.autorun_environment()
-        deps_env = deps_env.compose(autorun)
+        deps_env.compose(autorun)
         # FIXME: Missing profile info
         result = deps_env
         return result

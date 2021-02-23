@@ -20,3 +20,11 @@ class ConanFileInterface:
     @property
     def cpp_info(self):
         return self._conanfile.cpp_info
+
+    @property
+    def settings(self):
+        return self._conanfile.settings
+
+    @property
+    def context(self):
+        return self._conanfile._conan_context

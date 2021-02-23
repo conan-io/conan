@@ -2,25 +2,46 @@ import os
 import platform
 import textwrap
 
-from conans.test.utils.test_files import temp_folder
+import pytest
+
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.util.files import save
 
 
-def test_complete():
+@pytest.fixture()
+def client():
+    openssl = textwrap.dedent(r"""
+        import os
+        from conans import ConanFile
+        from conans.tools import save, chdir
+        class Pkg(ConanFile):
+            settings = "os"
+            def package(self):
+                with chdir(self.package_folder):
+                    echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
+                    save("bin/myopenssl.bat", echo)
+                    save("bin/myopenssl.sh", echo)
+                    os.chmod("bin/myopenssl.sh", 0o777)
+            """)
+
     cmake = textwrap.dedent(r"""
         import os
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
+            settings = "os"
+            requires = "openssl/1.0"
             def package(self):
                 with chdir(self.package_folder):
-                    save("mycmake.bat", "@echo off\necho MYCMAKE!!")
-                    save("mycmake.sh", "@echo off\necho MYCMAKE!!")
+                    echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
+                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save("mycmake.sh", echo + "\n myopenssl.sh")
                     os.chmod("mycmake.sh", 0o777)
 
             def package_info(self):
+                # Custom buildenv not defined by cpp_info
                 self.buildenv_info.prepend_path("PATH", self.package_folder)
+                self.buildenv_info.define("MYCMAKEVAR", "MYCMAKEVALUE!!")
             """)
 
     gtest = textwrap.dedent(r"""
@@ -28,82 +49,102 @@ def test_complete():
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
+            settings = "os"
             def package(self):
                 with chdir(self.package_folder):
-                    save("mygtest.bat", "@echo off\necho MYGTEST!!")
-                    save("mygtest.sh", "@echo off\necho MYGTEST!!")
-                    os.chmod("mygtest.sh", 0o777)
+                    echo = "@echo off\necho MYGTEST={}!!".format(self.settings.os)
+                    save("bin/mygtest.bat", echo)
+                    save("bin/mygtest.sh", echo)
+                    os.chmod("bin/mygtest.sh", 0o777)
 
             def package_info(self):
-                self.buildenv_info.prepend_path("PATH", self.package_folder)
-                self.runenv_info.define("MYGTESTVAR", "MyGTestValue")
+                self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
             """)
     client = TestClient()
     client.save({"cmake/conanfile.py": cmake,
-                 "gtest/conanfile.py": gtest})
-    client.run("create cmake mycmake/0.1@")
-    client.run("create gtest mygtest/0.1@")
-    conanfile = textwrap.dedent("""
-        from conans import ConanFile
-        class Pkg(ConanFile):
-            generators = "VirtualEnv"
-            build_requires = "mycmake/0.1"
+                 "gtest/conanfile.py": gtest,
+                 "openssl/conanfile.py": openssl})
 
-            def build_requirements(self):
-                self.build_requires("mygtest/0.1", force_host_context=True)
-        """)
-
-    # Some scripts in a random system folders, path adding to the profile [env]
-    tmp_folder = temp_folder()
-    save(os.path.join(tmp_folder, "mycompiler.bat"), "@echo off\n"
-                                                     "echo MYCOMPILER!!\n"
-                                                     "echo MYPATH=%PATH%")
-    save(os.path.join(tmp_folder, "mycompiler.sh"), "echo MYCOMPILER!!\n"
-                                                    "echo MYPATH=$PATH")
-    os.chmod(os.path.join(tmp_folder, "mycompiler.sh"), 0o777)
-    tmp_folder2 = temp_folder()
-    save(os.path.join(tmp_folder2, "mycompiler.bat"), "@echo off\n"
-                                                      "echo MYCOMPILER2!!\n"
-                                                      "echo MYPATH2=%PATH%")
-    save(os.path.join(tmp_folder2, "mycompiler.sh"), "echo MYCOMPILER2!!\n"
-                                                     "echo MYPATH2=$PATH")
-    os.chmod(os.path.join(tmp_folder2, "mycompiler.sh"), 0o777)
+    client.run("export openssl openssl/1.0@")
+    client.run("export cmake mycmake/1.0@")
+    client.run("export gtest mygtest/1.0@")
 
     myrunner_bat = "@echo off\necho MYGTESTVAR=%MYGTESTVAR%!!\n"
     myrunner_sh = "echo MYGTESTVAR=$MYGTESTVAR!!\n"
-
-    myprofile = textwrap.dedent("""
-        [buildenv]
-        PATH+=(path){}
-        mypkg*:PATH=!
-        mypkg*:PATH+=(path){}
-        """.format(tmp_folder, tmp_folder2))
-    client.save({"conanfile.py": conanfile,
-                 "myprofile": myprofile,
-                 "myrunner.bat": myrunner_bat,
+    client.save({"myrunner.bat": myrunner_bat,
                  "myrunner.sh": myrunner_sh}, clean_first=True)
     os.chmod(os.path.join(client.current_folder, "myrunner.sh"), 0o777)
+    return client
+
+
+def test_complete(client):
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       class Pkg(ConanFile):
+           generators = "VirtualEnv"
+           requires = "openssl/1.0"
+           build_requires = "mycmake/1.0"
+
+           def build_requirements(self):
+               self.build_requires("mygtest/1.0", force_host_context=True)
+       """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    # Run the BUILD environment
+    if platform.system() == "Windows":
+        client.run_command("buildenv.bat && mycmake.bat")
+    else:
+        client.run_command('bash -c "source buildenv.sh && mycmake.sh"')
+    assert "MYCMAKE=Windows!!" in client.out
+    assert "MYOPENSSL=Windows!!" in client.out
+
+    # Run the RUN environment
+    if platform.system() == "Windows":
+        client.run_command("runenv.bat && mygtest.bat && myrunner.bat")
+    else:
+        client.run_command('bash -c "source runenv.sh && mygtest.sh && ./myrunner.sh"')
+    assert "MYGTEST=Linux!!" in client.out
+    assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+
+
+def test_profile_buildenv(client):
+    conanfile = GenConanfile().with_generator("VirtualEnv")
+    # Some scripts in a random system folders, path adding to the profile [env]
+
+    compiler_bat = "@echo off\necho MYCOMPILER!!\necho MYPATH=%PATH%"
+    compiler_sh = "echo MYCOMPILER!!\necho MYPATH=$PATH"
+    compiler2_bat = "@echo off\necho MYCOMPILER2!!\necho MYPATH2=%PATH%"
+    compiler2_sh = "echo MYCOMPILER2!!\necho MYPATH2=$PATH"
+
+    myprofile = textwrap.dedent("""
+           [buildenv]
+           PATH+=(path){}
+           mypkg*:PATH=!
+           mypkg*:PATH+=(path){}
+           """.format(os.path.join(client.current_folder, "compiler"),
+                      os.path.join(client.current_folder, "compiler2")))
+    client.save({"conanfile.py": conanfile,
+                 "myprofile": myprofile,
+                 "compiler/mycompiler.bat": compiler_bat,
+                 "compiler/mycompiler.sh": compiler_sh,
+                 "compiler2/mycompiler.bat": compiler2_bat,
+                 "compiler2/mycompiler.sh": compiler2_sh})
+
+    os.chmod(os.path.join(client.current_folder, "compiler", "mycompiler.sh"), 0o777)
+    os.chmod(os.path.join(client.current_folder, "compiler2", "mycompiler.sh"), 0o777)
 
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     if platform.system() == "Windows":
-        client.run_command("buildenv.bat && mycmake.bat && mygtest.bat && mycompiler.bat")
+        client.run_command("buildenv.bat && mycompiler.bat")
     else:
-        client.run_command('bash -c "source buildenv.sh && mycmake.sh && '
-                           'mygtest.sh && mycompiler.sh"')
-    assert "MYCMAKE!!" in client.out
+        client.run_command('bash -c "source buildenv.sh && mycompiler.sh"')
     assert "MYCOMPILER!!" in client.out
-    assert "MYGTEST!!" in client.out
-
-    # Run the RUN environment
-    if platform.system() == "Windows":
-        client.run_command("runenv.bat && myrunner.bat")
-    else:
-        client.run_command('bash -c "source runenv.sh && ./myrunner.sh"')
-    assert "MYGTESTVAR=MyGTestValue!!" in client.out
+    assert "MYPATH=" in client.out
 
     # Now with pkg-specific env-var
-    client.run("install . mypkg/0.1@ -pr=myprofile")
+    client.run("install . mypkg/1.0@  -pr=myprofile")
     if platform.system() == "Windows":
         client.run_command('buildenv.bat && mycompiler.bat')
     else:

@@ -53,6 +53,7 @@ class DepsGraphBuilder(object):
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
         # compute the conanfile entry point for this dependency graph
+        root_node.conanfile.context = CONTEXT_HOST  # FIXME: Is this always true?
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
         root_node.transitive_closure[root_node.name] = root_node
@@ -205,6 +206,7 @@ class DepsGraphBuilder(object):
                                              remotes, profile_host, profile_build, graph_lock,
                                              context_switch=context_switch,
                                              populate_settings_target=populate_settings_target)
+            new_node.conanfile._conan_context = context
             node.conanfile.dependencies.add(new_node.conanfile)
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
