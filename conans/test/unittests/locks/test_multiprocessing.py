@@ -81,7 +81,7 @@ def connect_and_raise(c1, manager, return_dict):
         with manager.connect() as _:
             pass
     except Exception as e:
-        assert 'cannot rollback - no transaction is active' == str(e)
+        assert 'database is locked' == str(e)
         return_dict['connect_and_raise'] = True
     finally:
         with c1:

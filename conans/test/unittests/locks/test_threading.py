@@ -63,4 +63,4 @@ def test_underlying_sqlite(lock_backend_sqlite3: LockBackendSqlite3):
             with lock_backend_sqlite3.connect() as _:
                 pass
         assert str(excinfo.value) in ["database schema is locked: main",  # Output with memory
-                                      "cannot rollback - no transaction is active"]  # Filesystem DB
+                                      "database is locked"]  # Filesystem DB

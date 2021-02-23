@@ -46,7 +46,7 @@ class Sqlite3FilesystemMixin:
             yield conn.cursor()
             conn.execute("commit")
         except Exception as e:
-            conn.execute("rollback")
+            # conn.execute("rollback")  # Rollback is executed automatically on close
             raise e
         finally:
             conn.close()

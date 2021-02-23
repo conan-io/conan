@@ -52,7 +52,7 @@ def run_reader():
         with cache2.connect() as _:
             exit(-1)
     except Exception as e:
-        assert str(e) == f"cannot rollback - no transaction is active"
+        assert str(e) == f"database is locked"
 
     open(reader_sentinel, 'w').close()
 
