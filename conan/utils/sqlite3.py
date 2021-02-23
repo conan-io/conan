@@ -25,9 +25,6 @@ class Sqlite3MemoryMixin:
             conn.execute('begin EXCLUSIVE')
             yield conn.cursor()
             conn.execute("commit")
-        except Exception as e:
-            conn.execute("rollback")
-            raise e
         finally:
             conn.close()
 
@@ -45,8 +42,5 @@ class Sqlite3FilesystemMixin:
             conn.execute('begin EXCLUSIVE')
             yield conn.cursor()
             conn.execute("commit")
-        except Exception as e:
-            # conn.execute("rollback")  # Rollback is executed automatically on close
-            raise e
         finally:
             conn.close()
