@@ -5,7 +5,7 @@ from multiprocessing import Process, Manager
 
 import pytest
 
-from conan.locks.backend_sqlite3 import LockBackendSqlite3
+from conan.locks.backend_sqlite3 import LockBackendSqlite3Filesystem
 from conan.locks.lockable_mixin import LockableMixin
 
 
@@ -88,7 +88,7 @@ def connect_and_raise(c1, manager, return_dict):
             c1.notify_all()
 
 
-def test_underlying_sqlite(lock_backend_sqlite3_filesystem: LockBackendSqlite3):
+def test_underlying_sqlite(lock_backend_sqlite3_filesystem: LockBackendSqlite3Filesystem):
     """ Test that the sqlite3 database is locked while we are negotiating the locks """
     multiprocessing_manager = Manager()
     return_dict = multiprocessing_manager.dict()
