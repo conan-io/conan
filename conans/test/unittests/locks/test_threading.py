@@ -1,7 +1,11 @@
 # Test locks using 'multiprocessing' library
 # TODO: Not sure if this is unittesting
+import sqlite3
 import threading
 
+import pytest
+
+from conan.locks.backend_sqlite3 import LockBackendSqlite3
 from conan.locks.lockable_mixin import LockableMixin
 
 
@@ -28,7 +32,7 @@ def one_that_raises(c1, manager, resource_id, return_dict):
             c1.notify_all()
 
 
-def test_backend_filename(lock_manager):
+def test_lock_mechanism(lock_manager):
     return_dict = dict()
     c1 = threading.Condition()
     c2 = threading.Condition()
@@ -50,3 +54,13 @@ def test_backend_filename(lock_manager):
 
     assert return_dict['one_which_raises']
     assert return_dict['one_which_locks']
+
+
+def test_underlying_sqlite(lock_backend_sqlite3: LockBackendSqlite3):
+    """ Test that the sqlite3 database is locked while we are negotiating the locks """
+    with lock_backend_sqlite3.connect() as _:
+        with pytest.raises(sqlite3.OperationalError) as excinfo:
+            with lock_backend_sqlite3.connect() as _:
+                pass
+        assert str(excinfo.value) in ["database schema is locked: main",  # Output with memory
+                                      "cannot rollback - no transaction is active"]  # Filesystem DB

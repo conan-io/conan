@@ -20,7 +20,7 @@ class LockBackendSqlite3(LockBackend):
         with self.connect() as conn:
             r = conn.execute(f'SELECT * FROM {self._table_name}')
             for it in r.fetchall():
-                output.write(it)
+                output.write(str(it))
 
     def create_table(self, if_not_exists: bool = True):
         guard = 'IF NOT EXISTS' if if_not_exists else ''
