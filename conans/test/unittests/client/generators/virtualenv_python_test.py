@@ -22,6 +22,6 @@ class VirtualEnvPythonGeneratorTest(unittest.TestCase):
         gen.output_path = "not-used"
         content = gen.content
 
-        self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH+:$PYTHONPATH}',
+        self.assertIn('PYTHONPATH="1":"2":"three":"DepAPath":"DepBPath"${PYTHONPATH:+:$PYTHONPATH}',
                       content["environment_run_python.sh.env"])
 
