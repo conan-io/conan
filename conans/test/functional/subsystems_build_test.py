@@ -220,3 +220,88 @@ class TestSubsystemsAutotoolsBuild:
         assert "__MINGW32__" not in client.out
         assert "__MINGW64__" not in client.out
         assert "__MSYS__" not in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
+class TestSubsystemsCMakeBuild:
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 2.8)
+        project(app)
+        add_executable(app main.cpp)
+        """)
+
+    def _build(self, client, generator="Unix Makefiles"):
+        main_cpp = gen_function_cpp(name="main")
+        client.save({"CMakeLists.txt": self.cmakelists,
+                     "main.cpp": main_cpp})
+
+        client.run_command("cmake "
+                           " -DCMAKE_C_FLAGS=\"-Wl,-verbose\""
+                           " -DCMAKE_CXX_FLAGS=\"-Wl,-verbose\""
+                           " -DCMAKE_SH=\"CMAKE_SH-NOTFOUND\" -G \"%s\" ." % generator)
+        client.run_command("cmake --build .")
+        client.run_command("app")
+
+    @pytest.mark.tool_msys2
+    def test_msys(self):
+        """
+        native MSYS environment, binaries depend on MSYS runtime (msys-2.0.dll)
+        posix-compatible, intended to be run only in MSYS environment (not in pure Windows)
+        """
+        client = TestClient()
+        # pacman -S gcc
+        self._build(client)
+
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
+
+        assert "__MINGW32__" not in client.out
+        assert "__MINGW64__" not in client.out
+        assert "__MSYS__" in client.out
+
+    @pytest.mark.tool_msys2
+    @pytest.mark.tool_mingw64
+    def test_mingw64(self):
+        """
+        64-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
+        """
+        client = TestClient()
+        # pacman -S mingw-w64-x86_64-gcc
+        self._build(client, generator="MinGW Makefiles")
+
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
+
+        assert "__MINGW64__" in client.out
+        assert "__CYGWIN__" not in client.out
+        assert "__MSYS__" not in client.out
+
+    @pytest.mark.tool_msys2
+    @pytest.mark.tool_mingw32
+    def test_mingw32(self):
+        """
+        32-bit GCC, binaries for generic Windows (no dependency on MSYS runtime)
+        """
+        client = TestClient()
+        # pacman -S mingw-w64-i686-gcc
+        self._build(client, generator="MinGW Makefiles")
+
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None)
+
+        assert "__MINGW32__" in client.out
+        assert "__CYGWIN__" not in client.out
+        assert "__MSYS__" not in client.out
+
+    @pytest.mark.tool_cygwin
+    def test_cygwin(self):
+        """
+        Cygwin environment, binaries depend on Cygwin runtime (cygwin1.dll)
+        posix-compatible, intended to be run only in Cygwin environment (not in pure Windows)
+        """
+        client = TestClient()
+        # install "gcc-c++" and "make" packages
+        self._build(client)
+        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None)
+
+        assert "__CYGWIN__" in client.out
+        assert "__MINGW32__" not in client.out
+        assert "__MINGW64__" not in client.out
+        assert "__MSYS__" not in client.out
