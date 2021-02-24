@@ -203,7 +203,7 @@ class ConanApp(object):
                                                   self.generator_manager)
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out, self.python_requires,
-                                      self.generator_manager, self.pyreq_loader)
+                                      self.generator_manager, self.pyreq_loader, self.requester)
 
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
