@@ -9,7 +9,6 @@ from conans.client.run_environment import RunEnvironment
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
-from conans.model.env_info import Env
 from conans.util.files import load
 
 

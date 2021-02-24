@@ -8,30 +8,6 @@ from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.values import Values
-from model.settings import SettingsItem
-
-
-class ProfileOptions(dict):
-
-    def __setattr__(self, field, value):
-        if field[0] == "_":
-            return super(ProfileOptions, self).__setattr__(field, value)
-        self[field] = ProfileSettings(value)
-
-
-class ProfileSettings(defaultdict):
-
-    def __init__(self):
-        super(ProfileSettings, self).__init__()
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-
-class ProfileSettingsItem(ProfileSettings):
-
-    def __init__(self, value):
-        self.value = value
 
 
 class Profile(object):
