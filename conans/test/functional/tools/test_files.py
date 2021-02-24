@@ -34,6 +34,24 @@ class TestConanToolFiles:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
+    def test_load_save_mkdir(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.files import load, save, mkdir
+
+            class Pkg(ConanFile):
+                name = "mypkg"
+                version = "1.0"
+                def source(self):
+                    mkdir(self, "myfolder")
+                    save(self, "./myfolder/myfile", "some_content")
+                    assert load(self, "./myfolder/myfile") == "some_content"
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("source .")
+
     def test_download(self):
         http_server = StoppableThreadBottle()
         file_path = os.path.join(temp_folder(), "myfile.txt")
