@@ -143,7 +143,7 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
-        self._requester = requester
+        self._conan_requester = requester
 
         self.layout = Layout()
 

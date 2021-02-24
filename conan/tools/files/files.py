@@ -24,8 +24,8 @@ def ftp_download(conanfile, ip, filename, login='', password=''):
 
 
 def download(conanfile, *args, **kwargs):
-    return util_download(out=conanfile.output, requester=conanfile._requester, *args, **kwargs)
+    return util_download(out=conanfile.output, requester=conanfile._conan_requester, *args, **kwargs)
 
 
 def get(conanfile, *args, **kwargs):
-    return util_get(output=conanfile.output, requester=conanfile._requester, *args, **kwargs)
+    return util_get(output=conanfile.output, requester=conanfile._conan_requester, *args, **kwargs)
