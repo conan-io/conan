@@ -1,52 +1,56 @@
 import pytest
 
+from conan.locks.backend_sqlite3 import LockBackendSqlite3
+from conan.locks.backend import LockBackend
+from locks.backend_fasteners import LockBackendFasteners
+
 
 class TestLockBackendSqlite3Memory:
 
-    def test_two_writers(self, lock_backend_sqlite3):
-        db = lock_backend_sqlite3
-        db.create_table()
+    def test_two_writers(self, lock_backend: LockBackend):
+        db = lock_backend
 
-        db.try_acquire('resid', blocking=True)
-        with pytest.raises(Exception) as excinfo:
-            db.try_acquire('resid', blocking=True)
-        assert "Resource 'resid' is already blocked" == str(excinfo.value)
+        with db.lock('resid', blocking=True):
+            with pytest.raises(Exception) as excinfo:
+                with db.lock('resid', blocking=True):
+                    pass
+            assert "Resource 'resid' is already blocked" == str(excinfo.value)
 
-    def test_reader_after_writer(self, lock_backend_sqlite3):
-        db = lock_backend_sqlite3
-        db.create_table()
+    def test_reader_after_writer(self, lock_backend: LockBackend):
+        db = lock_backend
 
-        db.try_acquire('resid', blocking=True)
-        with pytest.raises(Exception) as excinfo:
-            db.try_acquire('resid', blocking=False)
-        assert "Resource 'resid' is already blocked by a writer" == str(excinfo.value)
+        with db.lock('resid', blocking=True):
+            with pytest.raises(Exception) as excinfo:
+                with db.lock('resid', blocking=False):
+                    pass
+            assert "Resource 'resid' is already blocked by a writer" == str(excinfo.value)
 
-    def test_writer_after_reader(self, lock_backend_sqlite3):
-        db = lock_backend_sqlite3
-        db.create_table()
+    def test_writer_after_reader(self, lock_backend: LockBackend):
+        db = lock_backend
 
-        db.try_acquire('resid', blocking=False)
-        with pytest.raises(Exception) as excinfo:
-            db.try_acquire('resid', blocking=True)
-        assert "Resource 'resid' is already blocked" == str(excinfo.value)
+        with db.lock('resid', blocking=False):
+            with pytest.raises(Exception) as excinfo:
+                with db.lock('resid', blocking=True):
+                    pass
+            assert "Resource 'resid' is already blocked" == str(excinfo.value)
 
-    def test_reader_after_reader(self, lock_backend_sqlite3):
-        db = lock_backend_sqlite3
-        db.create_table()
+    def test_reader_after_reader(self, lock_backend: LockBackend):
+        db = lock_backend
 
-        db.try_acquire('resid', blocking=False)
-        db.try_acquire('resid', blocking=False)
+        with db.lock('resid', blocking=False):
+            with db.lock('resid', blocking=False):
+                pass
 
-    def test_remove_lock(self, lock_backend_sqlite3):
-        db = lock_backend_sqlite3
-        db.create_table()
+    def test_remove_lock(self, lock_backend: LockBackend):
+        db = lock_backend
 
         # Writer after reader
-        reader_id = db.try_acquire('resid', blocking=False)
-        with pytest.raises(Exception) as excinfo:
-            db.try_acquire('resid', blocking=True)
-        assert "Resource 'resid' is already blocked" == str(excinfo.value)
+        with db.lock('resid', blocking=False):
+            with pytest.raises(Exception) as excinfo:
+                with db.lock('resid', blocking=True):
+                    pass
+            assert "Resource 'resid' is already blocked" == str(excinfo.value)
 
-        # Remove the reader
-        db.release(reader_id)
-        db.try_acquire('resid', blocking=True)
+        # Now I can the writer
+        with db.lock('resid', blocking=True):
+            pass

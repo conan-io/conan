@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 from io import StringIO
 
 from conan.locks.backend import LockBackend
@@ -59,6 +60,14 @@ class LockBackendSqlite3(LockBackend):
     def release(self, backend_id: LockId):
         with self.connect() as conn:
             conn.execute(f'DELETE FROM {self._table_name} WHERE rowid=?', (backend_id,))
+
+    @contextmanager
+    def lock(self, resource: str, blocking: bool):
+        lock_id = self.try_acquire(resource, blocking)
+        try:
+            yield
+        finally:
+            self.release(lock_id)
 
 
 class LockBackendSqlite3Memory(Sqlite3MemoryMixin, LockBackendSqlite3):
