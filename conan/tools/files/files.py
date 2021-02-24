@@ -14,53 +14,29 @@ def load(conanfile, path, binary=False, encoding="auto"):
         return tmp if binary else decode_text(tmp, encoding)
 
 
-def save_append(path, content, encoding="utf-8"):
-    try:
-        os.makedirs(os.path.dirname(path))
-    except Exception:
-        pass
-
-    with open(path, "ab") as handle:
-        handle.write(to_file_bytes(content, encoding=encoding))
-
-
-def files_save(path, content, only_if_modified=False, encoding="utf-8"):
-    """
-    Saves a file with given content
-    Params:
-        path: path to write file to
-        content: contents to save in the file
-        only_if_modified: file won't be modified if the content hasn't changed
-        encoding: target file text encoding
-    """
-    dir_path = os.path.dirname(path)
-    if not os.path.isdir(dir_path):
-        try:
-            os.makedirs(dir_path)
-        except OSError as error:
-            if error.errno not in (errno.EEXIST, errno.ENOENT):
-                raise OSError("The folder {} does not exist and could not be created ({})."
-                              .format(dir_path, error.strerror))
-        except Exception:
-            raise
-
-    new_content = to_file_bytes(content, encoding)
-
-    if only_if_modified and os.path.exists(path):
-        old_content = load(path, binary=True, encoding=encoding)
-        if old_content == new_content:
-            return
-
-    with open(path, "wb") as handle:
-        handle.write(new_content)
-
-
 def save(conanfile, path, content, append=False):
     # TODO: All this three functions: save, save_append and this one should be merged into one.
     if append:
-        return save_append(path=path, content=content)
+        mode = "ab"
+        try:
+            os.makedirs(os.path.dirname(path))
+        except Exception:
+            pass
     else:
-        return files_save(path=path, content=content, only_if_modified=False)
+        mode = "wb"
+        dir_path = os.path.dirname(path)
+        if not os.path.isdir(dir_path):
+            try:
+                os.makedirs(dir_path)
+            except OSError as error:
+                if error.errno not in (errno.EEXIST, errno.ENOENT):
+                    raise OSError("The folder {} does not exist and could not be created ({})."
+                                  .format(dir_path, error.strerror))
+            except Exception:
+                raise
+
+    with open(path, mode) as handle:
+        handle.write(to_file_bytes(content, encoding="utf-8"))
 
 
 def mkdir(conanfile, path):
