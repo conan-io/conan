@@ -33,6 +33,9 @@ class Environment:
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
 
+    def __repr__(self):
+        return repr(self._values)
+
     def vars(self):
         return list(self._values.keys())
 
@@ -201,8 +204,13 @@ class ProfileEnvironment:
     def __init__(self):
         self._environments = OrderedDict()
 
+    def __repr__(self):
+        return repr(self._environments)
+
     def get_env(self, ref):
-        # TODO: Maybe we want to make this lazy, so this is not evaluated for every package
+        """ computes package-specific Environment
+        it is only called when conanfile.buildenv is called
+        """
         result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):

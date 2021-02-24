@@ -230,7 +230,7 @@ def _apply_inner_profile(doc, base_profile):
         buildenv = ProfileEnvironment()
         buildenv.loads(doc.buildenv)
         # TODO: compose ProfileEnvironment
-        base_profile.buildenv = buildenv
+        base_profile.buildenv.compose(buildenv)
 
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):
