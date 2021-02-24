@@ -1,4 +1,4 @@
-from conans.util.files import load as util_load, save as files_save, save_append
+from conans.util.files import load as util_load, save as files_save, save_append, mkdir as util_mkdir
 
 
 def load(conanfile, path, binary=False, encoding="auto"):
@@ -11,3 +11,7 @@ def save(conanfile, path, content, append=False):
         save_append(path=path, content=content)
     else:
         files_save(path=path, content=content, only_if_modified=False)
+
+
+def mkdir(conanfile, path):
+    util_mkdir(path)

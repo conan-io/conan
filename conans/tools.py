@@ -25,13 +25,13 @@ from conans.client.tools.apple import *
 from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
-from conans.util.files import _generic_algorithm_sum, md5, md5sum, mkdir, relative_dirs, \
+from conans.util.files import _generic_algorithm_sum, md5, md5sum, relative_dirs, \
     rmdir, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
-from conan.tools.files import load as tools_load, save as tools_save
+from conan.tools.files import load as tools_load, save as tools_save, mkdir as tools_mkdir
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
@@ -63,13 +63,17 @@ set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_r
 From here onwards only currification is expected, no logic
 """
 
+
 def save(path, content, append=False):
-    tools_save(None, path, content, append=append)
+    return tools_save(None, path, content, append=append)
 
 
 def load(path, binary=False, encoding="auto"):
-    tools_load(None, path, binary=binary, encoding=encoding)
+    return tools_load(None, path, binary=binary, encoding=encoding)
 
+
+def mkdir(path):
+    return tools_mkdir(None, path)
 
 # From conans.client.tools.net
 ftp_download = tools_net.ftp_download
