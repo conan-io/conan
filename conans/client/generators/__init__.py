@@ -65,7 +65,8 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeGen", "CMakeToolchain", "CMakeDeps",
+                                "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualEnv"]
 
@@ -90,7 +91,10 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        if generator_name == "CMakeDeps":
+        elif generator_name == "CMakeGen":
+            from conan.tools.cmake import CMakeGen
+            return CMakeGen
+        elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
         elif generator_name == "MakeToolchain":

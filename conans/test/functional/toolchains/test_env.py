@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -92,18 +93,17 @@ def test_complete(client):
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
-    if platform.system() == "Windows":
-        client.run_command("buildenv.bat && mycmake.bat")
-    else:
-        client.run_command('bash -c "source buildenv.sh && mycmake.sh"')
+    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
+    cmd = environment_wrap_command("buildenv.{}".format(ext), "mycmake.{}".format(ext))
+    client.run_command(cmd)
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    if platform.system() == "Windows":
-        client.run_command("runenv.bat && mygtest.bat && myrunner.bat")
-    else:
-        client.run_command('bash -c "source runenv.sh && mygtest.sh && ./myrunner.sh"')
+    cmd = environment_wrap_command("runenv.{}".format(ext),
+                                   "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
+                                                                                  sep=os.sep))
+    client.run_command(cmd)
     assert "MYGTEST=Linux!!" in client.out
     assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
@@ -136,18 +136,14 @@ def test_profile_buildenv(client):
 
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
-    if platform.system() == "Windows":
-        client.run_command("buildenv.bat && mycompiler.bat")
-    else:
-        client.run_command('bash -c "source buildenv.sh && mycompiler.sh"')
+    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
+    cmd = environment_wrap_command("buildenv.{}".format(ext), "mycompiler.{}".format(ext))
+    client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
     assert "MYPATH=" in client.out
 
     # Now with pkg-specific env-var
     client.run("install . mypkg/1.0@  -pr=myprofile")
-    if platform.system() == "Windows":
-        client.run_command('buildenv.bat && mycompiler.bat')
-    else:
-        client.run_command('bash -c "source buildenv.sh && mycompiler.sh"')
+    client.run_command(cmd)
     assert "MYCOMPILER2!!" in client.out
     assert "MYPATH2=" in client.out

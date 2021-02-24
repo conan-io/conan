@@ -10,6 +10,14 @@ _ENV_VAR_PLACEHOLDER = "$PREVIOUS_ENV_VAR_VALUE%"
 _PATHSEP = "$CONAN_PATHSEP%"
 
 
+def environment_wrap_command(filename, cmd):
+    if filename.endswith(".bat"):
+        return "{} && {}".format(filename, cmd)
+    elif filename.endswith(".sh"):
+        return 'bash -c ". {} && {}"'.format(filename, cmd.replace('"', r'\"'))
+    raise Exception("Unsupported environment file type {}".format(filename))
+
+
 class Environment:
     def __init__(self):
         # TODO: Maybe we need to pass conanfile to get the [conf]
