@@ -31,7 +31,8 @@ from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
-from conan.tools.files import load as tools_load, save as tools_save, mkdir as tools_mkdir
+from conan.tools.files import load as tools_load, save as tools_save, mkdir as tools_mkdir, \
+                              ftp_download as tools_ftp_download
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
@@ -75,8 +76,9 @@ def load(path, binary=False, encoding="auto"):
 def mkdir(path):
     return tools_mkdir(None, path)
 
-# From conans.client.tools.net
-ftp_download = tools_net.ftp_download
+
+def ftp_download(ip, filename, login='', password=''):
+    return tools_ftp_download(None, ip, filename, login=login, password=password)
 
 
 def download(*args, **kwargs):

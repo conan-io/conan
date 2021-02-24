@@ -1,2 +1,2 @@
-# download, get, ftp_download
-from .files import load, save, mkdir
+# download, get
+from .files import load, save, mkdir, ftp_download

@@ -1,4 +1,5 @@
 from conans.util.files import load as util_load, save as files_save, save_append, mkdir as util_mkdir
+from conans.client.tools.net import ftp_download as util_ftp_download
 
 
 def load(conanfile, path, binary=False, encoding="auto"):
@@ -15,3 +16,7 @@ def save(conanfile, path, content, append=False):
 
 def mkdir(conanfile, path):
     util_mkdir(path)
+
+
+def ftp_download(conanfile, ip, filename, login='', password=''):
+    return util_ftp_download(ip, filename, login=login, password=password)
