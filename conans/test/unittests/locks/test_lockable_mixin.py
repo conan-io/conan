@@ -1,10 +1,11 @@
 import pytest
 from conan.locks.lockable_mixin import LockableMixin
+from conan.locks.locks_manager import LocksManager
 
 
 class TestLockableMixin:
 
-    def test_with_writers(self, lock_manager):
+    def test_with_writers(self, lock_manager: LocksManager):
         resource = 'res'
 
         l1 = LockableMixin(lock_manager, resource)
@@ -22,7 +23,7 @@ class TestLockableMixin:
                     pass
             assert "Resource 'res' is already blocked" == str(excinfo.value)
 
-    def test_readers(self, lock_manager):
+    def test_readers(self, lock_manager: LocksManager):
         resource = 'res'
 
         l1 = LockableMixin(lock_manager, resource)

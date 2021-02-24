@@ -7,6 +7,7 @@ import pytest
 
 from conan.locks.backend_sqlite3 import LockBackendSqlite3Filesystem
 from conan.locks.lockable_mixin import LockableMixin
+from conan.locks.locks_manager import LocksManager
 
 
 def one_that_locks(c1, c2, manager, resource_id, return_dict):
@@ -41,7 +42,7 @@ def test_backend_memory(lock_manager_memory):
     assert "A memory Sqlite3 database is not pickable" == str(excinfo.value)
 
 
-def test_lock_mechanism(lock_manager_sqlite3):
+def test_lock_mechanism(lock_manager_multiprocessing: LocksManager):
     multiprocessing_manager = Manager()
     return_dict = multiprocessing_manager.dict()
     c1 = multiprocessing.Condition()
@@ -50,13 +51,14 @@ def test_lock_mechanism(lock_manager_sqlite3):
     resource_id = 'whatever'
 
     p1 = Process(target=one_that_locks,
-                 args=(c1, c2, lock_manager_sqlite3, resource_id, return_dict))
+                 args=(c1, c2, lock_manager_multiprocessing, resource_id, return_dict))
     p1.start()
 
     with c2:
         c2.wait()
 
-    p2 = Process(target=one_that_raises, args=(c1, lock_manager_sqlite3, resource_id, return_dict))
+    p2 = Process(target=one_that_raises,
+                 args=(c1, lock_manager_multiprocessing, resource_id, return_dict))
     p2.start()
 
     p2.join()

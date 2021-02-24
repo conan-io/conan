@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 from contextlib import contextmanager
@@ -7,6 +8,8 @@ import fasteners
 
 from conan.locks.backend import LockBackend
 from conan.locks.exceptions import AlreadyLockedException
+
+log = logging.getLogger(__name__)
 
 
 class RWLock(object):
@@ -19,27 +22,30 @@ class RWLock(object):
 
     def r_acquire(self):
         self.num_r_lock.acquire()
-        if self.num_r == 0:
-            ret = self.w_lock.acquire(blocking=False)
-            if not ret:
-                raise AlreadyLockedException(self._resource, by_writer=True)
+        try:
+            if self.num_r == 0:
+                ret = self.w_lock.acquire(blocking=False)
+                if not ret:
+                    raise AlreadyLockedException(self._resource, by_writer=True)
 
-            if not self._interprocess_lock.acquire_read_lock(blocking=False):
-                self.w_lock.release()
-                raise AlreadyLockedException(self._resource, by_writer=True)
+                if not self._interprocess_lock.acquire_read_lock(blocking=False):
+                    self.w_lock.release()
+                    raise AlreadyLockedException(self._resource, by_writer=True)
 
-        self.num_r += 1
-        self.num_r_lock.release()
+            self.num_r += 1
+        finally:
+            self.num_r_lock.release()
 
     def r_release(self):
         assert self.num_r > 0
         self.num_r_lock.acquire()
-        self.num_r -= 1
-        if self.num_r == 0:
-            self._interprocess_lock.release_read_lock()
-            self.w_lock.release()
-
-        self.num_r_lock.release()
+        try:
+            self.num_r -= 1
+            if self.num_r == 0:
+                self._interprocess_lock.release_read_lock()
+                self.w_lock.release()
+        finally:
+            self.num_r_lock.release()
 
     def w_acquire(self):
         if not self.w_lock.acquire(blocking=False):
@@ -70,8 +76,8 @@ class LockBackendFasteners(LockBackend):
     @classmethod
     @contextmanager
     def _locks_guard(cls):
+        cls._threading_locks_guard.acquire(blocking=True)
         try:
-            cls._threading_locks_guard.acquire(blocking=True)
             yield
         finally:
             cls._threading_locks_guard.release()
@@ -88,6 +94,7 @@ class LockBackendFasteners(LockBackend):
 
     @contextmanager
     def lock(self, resource: str, blocking: bool):
+        log.error("lock(resource='%s', blocking='%s')", resource, blocking)
         with self._locks_guard():
             lock_threading = self._get_locks(resource)
 

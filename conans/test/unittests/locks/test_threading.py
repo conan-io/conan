@@ -7,6 +7,7 @@ import pytest
 
 from conan.locks.backend_sqlite3 import LockBackendSqlite3
 from conan.locks.lockable_mixin import LockableMixin
+from conan.locks.locks_manager import LocksManager
 
 
 def one_that_locks(c1, c2, manager, resource_id, return_dict):
@@ -32,7 +33,7 @@ def one_that_raises(c1, manager, resource_id, return_dict):
             c1.notify_all()
 
 
-def test_lock_mechanism(lock_manager):
+def test_lock_mechanism(lock_manager: LocksManager):
     return_dict = dict()
     c1 = threading.Condition()
     c2 = threading.Condition()

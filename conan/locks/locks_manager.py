@@ -31,11 +31,13 @@ class LocksManager:
     def dump(self, output: StringIO):
         self._backend.dump(output)
 
-    def try_acquire(self, resource: str, blocking: bool, wait: bool):
-        lock_id = None
-        while not lock_id:
+    @contextmanager
+    def lock(self, resource: str, blocking: bool, wait: bool):
+        lock_acquired = False
+        while not lock_acquired:
             try:
-                lock_id = self._backend.try_acquire(resource, blocking)
+                with self._backend.lock(resource, blocking):
+                    yield
             except AlreadyLockedException:
                 if not wait:
                     raise
@@ -43,15 +45,4 @@ class LocksManager:
                 import time
                 time.sleep(0.1)
             else:
-                return lock_id
-
-    def release(self, lock_id: LockBackend.LockId):
-        self._backend.release(backend_id=lock_id)
-
-    @contextmanager
-    def lock(self, resource: str, blocking: bool, wait: bool):
-        lock_id = self.try_acquire(resource, blocking, wait)
-        try:
-            yield
-        finally:
-            self.release(lock_id)
+                lock_acquired = True

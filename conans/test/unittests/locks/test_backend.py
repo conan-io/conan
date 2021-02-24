@@ -1,11 +1,9 @@
 import pytest
 
-from conan.locks.backend_sqlite3 import LockBackendSqlite3
 from conan.locks.backend import LockBackend
-from locks.backend_fasteners import LockBackendFasteners
 
 
-class TestLockBackendSqlite3Memory:
+class TestLockBackend:
 
     def test_two_writers(self, lock_backend: LockBackend):
         db = lock_backend

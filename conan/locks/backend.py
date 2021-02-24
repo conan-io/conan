@@ -7,6 +7,9 @@ class LockBackend:
     def dump(self, output: StringIO):
         raise NotImplementedError
 
+    def lock(self, resource: str, blocking: bool):
+        raise NotImplementedError
+
     def try_acquire(self, resource: str, blocking: bool) -> LockId:
         # Returns a backend-id
         raise NotImplementedError

@@ -24,7 +24,17 @@ def cache_sqlite3():
         yield cache
 
 
-@pytest.fixture(params=['cache_memory', 'cache_sqlite3'])
+@pytest.fixture
+def cache_sqlite3_fasteners():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        locks_directory = os.path.join(tmpdirname, '.locks')
+        locks_manager = LocksManager.create('fasteners', locks_directory=locks_directory)
+        db_filename = os.path.join(tmpdirname, 'cache.sqlite3')
+        cache = Cache.create('sqlite3', tmpdirname, locks_manager, filename=db_filename)
+        yield cache
+
+
+@pytest.fixture(params=['cache_memory', 'cache_sqlite3', 'cache_sqlite3_fasteners'])
 def cache(request):
     # These fixtures will parameterize tests that use it with all database backends
     return request.getfixturevalue(request.param)

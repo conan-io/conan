@@ -4,7 +4,7 @@ from conan.locks.locks_manager import LocksManager
 
 
 class TestLocksManager:
-    def test_plain_inside_context(self, lock_manager):
+    def test_plain_inside_context(self, lock_manager: LocksManager):
         resource = 'res'
         with lock_manager.lock(resource, blocking=True, wait=True):
             with pytest.raises(Exception) as excinfo:
@@ -15,7 +15,7 @@ class TestLocksManager:
         with lock_manager.lock(resource, blocking=False, wait=False):
             pass
 
-    def test_contextmanager_after_plain(self, lock_manager):
+    def test_contextmanager_after_plain(self, lock_manager: LocksManager):
         lock_manager = LocksManager.create('memory')
         resource = 'res'
 

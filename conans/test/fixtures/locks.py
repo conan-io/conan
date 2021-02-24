@@ -31,6 +31,12 @@ def lock_backend_fasteners():
         yield backend
 
 
+@pytest.fixture(params=['lock_backend_sqlite3_memory', 'lock_backend_sqlite3_filesystem'])
+def lock_backend_sqlite3(request):
+    # This fixtures will parameterize tests that use it with all database backends
+    return request.getfixturevalue(request.param)
+
+
 @pytest.fixture(params=['lock_backend_sqlite3_memory', 'lock_backend_sqlite3_filesystem',
                         'lock_backend_fasteners'])
 def lock_backend(request):
@@ -59,4 +65,11 @@ def lock_manager_fasteners():
 @pytest.fixture(params=['lock_manager_memory', 'lock_manager_sqlite3', 'lock_manager_fasteners'])
 def lock_manager(request):
     # This fixtures will parameterize tests that use it with all database backends
+    return request.getfixturevalue(request.param)
+
+
+@pytest.fixture(params=['lock_manager_sqlite3', 'lock_manager_fasteners'])
+def lock_manager_multiprocessing(request):
+    # This fixtures will parameterize tests that use it with all database backends
+    # Only the managers that support multiprocessing scenario
     return request.getfixturevalue(request.param)
