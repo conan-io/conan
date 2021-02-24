@@ -25,14 +25,12 @@ from conans.client.tools.apple import *
 from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
-from conans.util.files import _generic_algorithm_sum, md5, md5sum, relative_dirs, \
-    rmdir, sha1sum, sha256sum, to_file_bytes, touch
+from conans.util.files import _generic_algorithm_sum, load, md5, md5sum, mkdir, relative_dirs, \
+    rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
-from conan.tools.files import load as tools_load, save as tools_save, mkdir as tools_mkdir, \
-                              ftp_download as tools_ftp_download
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
@@ -66,19 +64,15 @@ From here onwards only currification is expected, no logic
 
 
 def save(path, content, append=False):
-    return tools_save(None, path, content, append=append)
+    # TODO: All this three functions: save, save_append and this one should be merged into one.
+    if append:
+        save_append(path=path, content=content)
+    else:
+        files_save(path=path, content=content, only_if_modified=False)
 
 
-def load(path, binary=False, encoding="auto"):
-    return tools_load(None, path, binary=binary, encoding=encoding)
-
-
-def mkdir(path):
-    return tools_mkdir(None, path)
-
-
-def ftp_download(ip, filename, login='', password=''):
-    return tools_ftp_download(None, ip, filename, login=login, password=password)
+# From conans.client.tools.net
+ftp_download = tools_net.ftp_download
 
 
 def download(*args, **kwargs):
