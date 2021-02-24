@@ -17,8 +17,8 @@ def test_cmakegen():
             def package(self):
                 with chdir(self.package_folder):
                     save("cmake.bat", "@echo off\necho MYCMAKE WRAPPER!!\ncmake.exe %*")
-                    save("cmake", 'echo MYCMAKE WRAPPER!!\n/usr/bin/cmake "$@"')
-                    os.chmod("cmake", 0o777)
+                    save("cmake.sh", 'echo MYCMAKE WRAPPER!!\ncmake "$@"')
+                    os.chmod("cmake.sh", 0o777)
 
             def package_info(self):
                 # Custom buildenv not defined by cpp_info
@@ -36,6 +36,8 @@ def test_cmakegen():
 
             def build(self):
                 cmake = CMake(self)
+                if self.settings.os != "Windows":
+                    cmake._cmake_program = "cmake.sh"  # VERY DIRTY HACK
                 cmake.configure()
                 cmake.build()
         """)
