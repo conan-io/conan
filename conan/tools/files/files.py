@@ -15,7 +15,6 @@ def load(conanfile, path, binary=False, encoding="auto"):
 
 
 def save(conanfile, path, content, append=False):
-    # TODO: All this three functions: save, save_append and this one should be merged into one.
     if append:
         mode = "ab"
         try:
