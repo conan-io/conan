@@ -39,7 +39,7 @@ virtualenv
 
         if platform.system() != "Windows":
             contents = client.load("environment_run_python.sh.env")
-            self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH+:$PYTHONPATH}', contents)
+            self.assertIn('PYTHONPATH="/path/to/something"${PYTHONPATH:+:$PYTHONPATH}', contents)
         else:
             contents = client.load("environment_run_python.bat.env")
             self.assertIn('PYTHONPATH=/path/to/something;%PYTHONPATH%', contents)
@@ -76,7 +76,7 @@ class BaseConan(ConanFile):
             if platform.system() != "Windows":
                 contents = client.load("environment_run_python.sh.env")
                 self.assertIn('PYTHONPATH="/path/to/something":"/otherpath"'
-                              '${PYTHONPATH+:$PYTHONPATH}', contents)
+                              '${PYTHONPATH:+:$PYTHONPATH}', contents)
             else:
                 contents = client.load("environment_run_python.bat.env")
                 self.assertIn('PYTHONPATH=/path/to/something;/otherpath;%PYTHONPATH%', contents)
