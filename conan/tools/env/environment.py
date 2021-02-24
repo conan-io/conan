@@ -6,8 +6,17 @@ from collections import OrderedDict
 from conans.errors import ConanException
 from conans.util.files import save
 
-_ENV_VAR_PLACEHOLDER = "$PREVIOUS_ENV_VAR_VALUE%"
-_PATHSEP = "$CONAN_PATHSEP%"
+
+class _EnvVarPlaceHolder:
+    pass
+
+
+class _Sep(str):
+    pass
+
+
+class _PathSep:
+    pass
 
 
 def environment_wrap_command(filename, cmd):
@@ -27,16 +36,17 @@ class Environment:
     def vars(self):
         return list(self._values.keys())
 
-    def value(self, name, placeholder="{}", pathsep=os.pathsep):
+    def value(self, name, placeholder="{name}", pathsep=os.pathsep):
         return self._format_value(name, self._values[name], placeholder, pathsep)
 
     @staticmethod
     def _format_value(name, varvalues, placeholder, pathsep):
         values = []
         for v in varvalues:
-            if v == _ENV_VAR_PLACEHOLDER:
+
+            if v is _EnvVarPlaceHolder:
                 values.append(placeholder.format(name=name))
-            elif v == _PATHSEP:
+            elif v is _PathSep:
                 values.append(pathsep)
             else:
                 values.append(v)
@@ -55,11 +65,12 @@ class Environment:
             return [value]
 
     def define(self, name, value, separator=" "):
-        value = self._list_value(value, separator)
+        value = self._list_value(value, _Sep(separator))
         self._values[name] = value
 
     def define_path(self, name, value):
-        self.define(name, value, _PATHSEP)
+        value = self._list_value(value, _PathSep)
+        self._values[name] = value
 
     def unset(self, name):
         """
@@ -68,18 +79,20 @@ class Environment:
         self._values[name] = []
 
     def append(self, name, value, separator=" "):
-        value = self._list_value(value, separator)
-        self._values[name] = [_ENV_VAR_PLACEHOLDER] + [separator] + value
+        value = self._list_value(value, _Sep(separator))
+        self._values[name] = [_EnvVarPlaceHolder] + [_Sep(separator)] + value
 
     def append_path(self, name, value):
-        self.append(name, value, _PATHSEP)
+        value = self._list_value(value, _PathSep)
+        self._values[name] = [_EnvVarPlaceHolder] + [_PathSep] + value
 
     def prepend(self, name, value, separator=" "):
-        value = self._list_value(value, separator)
-        self._values[name] = value + [separator] + [_ENV_VAR_PLACEHOLDER]
+        value = self._list_value(value, _Sep(separator))
+        self._values[name] = value + [_Sep(separator)] + [_EnvVarPlaceHolder]
 
     def prepend_path(self, name, value):
-        self.prepend(name, value, _PATHSEP)
+        value = self._list_value(value, _PathSep)
+        self._values[name] = value + [_PathSep] + [_EnvVarPlaceHolder]
 
     def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
@@ -167,14 +180,20 @@ class Environment:
                 self._values[k] = v
             else:
                 try:
-                    index = v.index(_ENV_VAR_PLACEHOLDER)
+                    index = v.index(_EnvVarPlaceHolder)
                 except ValueError:  # The other doesn't have placeholder, overwrites
                     self._values[k] = v
                 else:
                     new_value = v[:]  # do a copy
                     new_value[index:index + 1] = existing  # replace the placeholder
+                    # Trim front and back separators
+                    val = new_value[0]
+                    if isinstance(val, _Sep) or val is _PathSep:
+                        new_value = new_value[1:]
+                    val = new_value[-1]
+                    if isinstance(val, _Sep) or val is _PathSep:
+                        new_value = new_value[:-1]
                     self._values[k] = new_value
-
         return self
 
 
