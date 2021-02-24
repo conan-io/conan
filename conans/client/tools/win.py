@@ -614,18 +614,25 @@ def unix_path(path, path_flavor=None):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
 
     path_flavor = path_flavor or OSInfo.detect_windows_subsystem() or MSYS2
+    if path.startswith('\\\\?\\'):
+        path = path[4:]
     path = path.replace(":/", ":\\")
+    append_prefix = re.match(r'[a-z]:\\', path, re.IGNORECASE)
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
     path = pattern.sub('/\\1/', path).replace('\\', '/')
-    if path_flavor in (MSYS, MSYS2):
-        return path.lower()
-    elif path_flavor == CYGWIN:
-        return '/cygdrive' + path.lower()
-    elif path_flavor == WSL:
-        return '/mnt' + path[0:2].lower() + path[2:]
-    elif path_flavor == SFU:
-        path = path.lower()
-        return '/dev/fs' + path[0] + path[1:].capitalize()
+
+    if append_prefix:
+        if path_flavor in (MSYS, MSYS2):
+            return path.lower()
+        elif path_flavor == CYGWIN:
+            return '/cygdrive' + path.lower()
+        elif path_flavor == WSL:
+            return '/mnt' + path[0:2].lower() + path[2:]
+        elif path_flavor == SFU:
+            path = path.lower()
+            return '/dev/fs' + path[0] + path[1:].capitalize()
+    else:
+        return path if path_flavor == WSL else path.lower()
     return None
 
 
@@ -635,7 +642,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         It requires to have MSYS2, CYGWIN, or WSL
     """
     env = env or {}
-    if platform.system() != "Windows":
+    if not OSInfo().is_windows:
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or OSInfo.detect_windows_subsystem()
 
@@ -693,7 +700,11 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         login = "--login" if with_login else ""
-        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        if platform.system() == "Windows":
+            # cmd.exe shell
+            wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        else:
+            wincmd = '%s %s -c %s' % (bash_path, login, to_run)
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path
