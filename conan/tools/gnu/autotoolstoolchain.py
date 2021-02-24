@@ -4,7 +4,7 @@ from conan.tools.env import Environment
 from conans.client.build.cppstd_flags import cppstd_flag_new
 
 
-class AutotoolsToolchain(object):
+class AutotoolsToolchain:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         build_type = self._conanfile.settings.get_safe("build_type")
@@ -72,7 +72,7 @@ class AutotoolsToolchain(object):
         elif compiler == "qcc":
             return "-Y _%s" % str(libcxx)
 
-    def _environment(self):
+    def environment(self):
         env = Environment()
         # defines
         if self.ndebug:
@@ -99,13 +99,13 @@ class AutotoolsToolchain(object):
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
-        env["CPPFLAGS"].append(["-D{}".format(d) for d in self.defines])
-        env["CXXFLAGS"].append(self.cxxflags)
-        env["CFLAGS"].append(self.cflags)
-        env["LDFLAGS"].append(self.ldflags)
+        env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
+        env.append("CXXFLAGS", self.cxxflags)
+        env.append("CFLAGS", self.cflags)
+        env.append("LDFLAGS", self.ldflags)
         return env
 
     def generate(self):
-        env = self._environment()
+        env = self.environment()
         env.save_sh("autotools.sh")
         env.save_bat("autotools.bat")

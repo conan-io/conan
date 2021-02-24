@@ -2,7 +2,7 @@ import copy
 import os
 import platform
 
-
+from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.tools.oss import OSInfo,  cross_building, \
     detected_architecture, detected_os, get_gnu_triplet, get_target_os_arch, get_build_os_arch
@@ -183,12 +183,12 @@ class Autotools(object):
         make_program = self._conanfile.conf["tools.gnu"].make_program
         if make_program is None:
             make_program = "mingw32-make" if platform.system() == "Windows" else "make"
-        if platform.system() == "Windows":
-            cmd = "autotoolsdeps.bat && autotools.bat && {}".format(make_program)
-        else:
-            cmd = "bash -c 'source autotoolsdeps.sh "\
-                  "&& source autotools.sh && {}'".format(make_program)
-        self._conanfile.run(cmd, win_bash=self._win_bash, subsystem=self.subsystem)
+        # Need to activate the buildenv if existing
+        env_filename = "buildenv.bat" if platform.system() == "Windows" else "buildenv.sh"
+        command = make_program
+        if os.path.isfile(env_filename):
+            command = environment_wrap_command(env_filename, make_program)
+        self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 
     def install(self, args=""):
         if not self._conanfile.should_install:

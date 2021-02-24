@@ -70,7 +70,7 @@ class GeneratorManager(object):
                                 "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualEnv",
-                                "AutotoolsDeps", "AutotoolsToolchain"]
+                                "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -108,6 +108,9 @@ class GeneratorManager(object):
         elif generator_name == "AutotoolsToolchain":
             from conan.tools.gnu import AutotoolsToolchain
             return AutotoolsToolchain
+        elif generator_name == "AutotoolsGen":
+            from conan.tools.gnu import AutotoolsGen
+            return AutotoolsGen
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain

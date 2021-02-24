@@ -5,6 +5,7 @@ import time
 
 import pytest
 
+from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
@@ -90,12 +91,7 @@ def build_windows_subsystem(profile, make_program):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "Makefile"
-
-            def generate(self):
-                deps = AutotoolsDeps(self)
-                deps.generate()
-                tc = AutotoolsToolchain(self)
-                tc.generate()
+            generators = "AutotoolsGen"
 
             def build(self):
                 autotools = Autotools(self)
@@ -107,7 +103,8 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    client.run_command("autotoolsdeps.bat && autotools.bat && {}".format(make_program))
+    cmd = environment_wrap_command("buildenv.bat", make_program)
+    client.run_command(cmd)
     print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
@@ -147,24 +144,6 @@ def test_autotoolsdeps_cygwin():
     assert "__MSYS__" not in out
     assert "MINGW" not in out
     assert "main2 __CYGWIN__1" in out
-
-
-@pytest.mark.tool_mingw
-@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
-def test_autotoolsdeps_mingw():
-    gcc = textwrap.dedent("""
-        [settings]
-        os=Windows
-        compiler=gcc
-        compiler.version=4.9
-        compiler.libcxx=libstdc++
-        arch=x86_64
-        build_type=Release
-        """)
-    out = build_windows_subsystem(gcc, make_program="mingw32-make")
-    print(out)
-    assert "__MSYS__" not in out
-    assert "main2 __MINGW64__1" in out
 
 
 @pytest.mark.tool_mingw64

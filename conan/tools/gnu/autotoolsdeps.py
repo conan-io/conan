@@ -1,26 +1,52 @@
 from conan.tools.env import Environment
+from conans.client.graph.graph import CONTEXT_BUILD
 
 
-class AutotoolsDeps(object):
+class AutotoolsDeps:
     def __init__(self, conanfile):
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
         self._conanfile = conanfile
-        deps_cpp_info = conanfile.deps_cpp_info
-        self.libs = list(deps_cpp_info.libs)
-        self.libs.extend(list(deps_cpp_info.system_libs))
-        self.include_paths = list(deps_cpp_info.include_paths)
-        self.library_paths = list(deps_cpp_info.lib_paths)
-        self.defines = list(deps_cpp_info.defines)
-        self.cflags = list(deps_cpp_info.cflags)
-        self.cxx_flags = list(deps_cpp_info.cxxflags)
-        self.sharedlinkflags = list(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = list(deps_cpp_info.exelinkflags)
-        self.frameworks = list(deps_cpp_info.frameworks)
-        self.frameworks_paths = list(deps_cpp_info.framework_paths)
-        self.sysroot = deps_cpp_info.sysroot
 
-    def generate(self):
+        self.libs = []
+        self.system_libs = []
+        self.include_paths = []
+        self.lib_paths = []
+        self.defines = []
+        self.cflags = []
+        self.cxxflags = []
+        self.sharedlinkflags = []
+        self.exelinkflags = []
+        self.frameworks = []
+        self.framework_paths = []
+        self.sysroot = None
+
+        def merge_lists(seq1, seq2):
+            return [s for s in seq1 if s not in seq2] + seq2
+
+        for dep in self._conanfile.dependencies.all:
+            if dep.context == CONTEXT_BUILD:
+                continue
+            # environ_info is always "build"
+            dep_cpp_info = dep.cpp_info
+            self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
+            self.include_paths = merge_lists(self.include_paths, dep_cpp_info.include_paths)
+            self.lib_paths = merge_lists(self.lib_paths, dep_cpp_info.lib_paths)
+            self.framework_paths = merge_lists(self.framework_paths, dep_cpp_info.framework_paths)
+            self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+            self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
+
+            # Note these are in reverse order
+            self.defines = merge_lists(dep_cpp_info.defines, self.defines)
+            self.cxxflags = merge_lists(dep_cpp_info.cxxflags, self.cxxflags)
+            self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
+            self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
+            self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+
+            if not self.sysroot:
+                self.sysroot = dep_cpp_info.sysroot
+
+    def environment(self):
         # cpp_flags
         cpp_flags = []
         include_paths = ['-I"%s"' % p for p in self.include_paths]
@@ -33,17 +59,17 @@ class AutotoolsDeps(object):
         # Ldflags
         # TODO: Discuss, should the helper filter frameworks based on compiler?
         frameworks = ["-framework %s" % framework for framework in self.frameworks]
-        frameworks_paths = ["-F %s" % framework_path for framework_path in self.frameworks_paths]
+        frameworks_paths = ["-F %s" % framework_path for framework_path in self.framework_paths]
         ldflags = self.sharedlinkflags
         ldflags.extend(self.exelinkflags)
         ldflags.extend(frameworks)
         ldflags.extend(frameworks_paths)
-        lib_paths = ['-L"%s"' % p for p in self.library_paths]
+        lib_paths = ['-L"%s"' % p for p in self.lib_paths]
         ldflags.extend(lib_paths)
 
         # cflags
-        cflags = []
-        cxxflags = []
+        cflags = self.cflags
+        cxxflags = self.cxxflags
 
         if self.sysroot:
             srf = '--sysroot={}'.format(self.sysroot)
@@ -52,11 +78,14 @@ class AutotoolsDeps(object):
             ldflags.append(srf)
 
         env = Environment()
-        env["CPPFLAGS"].append(cpp_flags)
-        env["LIBS"].append(libs)
-        env["LDFLAGS"].append(ldflags)
-        env["CXXFLAGS"].append(cxxflags)
-        env["CFLAGS"].append(cflags)
+        env.append("CPPFLAGS", cpp_flags)
+        env.append("LIBS", libs)
+        env.append("LDFLAGS", ldflags)
+        env.append("CXXFLAGS", cxxflags)
+        env.append("CFLAGS", cflags)
+        return env
 
+    def generate(self):
+        env = self.environment()
         env.save_sh("autotoolsdeps.sh")
         env.save_bat("autotoolsdeps.bat")
