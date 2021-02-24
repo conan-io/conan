@@ -65,8 +65,11 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
+
+        self._new_generators = ["CMakeGen", "CMakeToolchain", "CMakeDeps",
+                                "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+                                "VirtualEnv",
                                 "AutotoolsDeps", "AutotoolsToolchain"]
 
     def add(self, name, generator_class, custom=False):
@@ -90,7 +93,10 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        if generator_name == "CMakeDeps":
+        elif generator_name == "CMakeGen":
+            from conan.tools.cmake import CMakeGen
+            return CMakeGen
+        elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
         elif generator_name == "MakeToolchain":
@@ -115,8 +121,11 @@ class GeneratorManager(object):
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
         elif generator_name == "QbsToolchain":
-            from conan.tools.qbs.qbstoolchain import QbsToolchain
+            from conan.tools.qbs import QbsToolchain
             return QbsToolchain
+        elif generator_name == "VirtualEnv":
+            from conan.tools.env.virtualenv import VirtualEnv
+            return VirtualEnv
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -202,5 +211,3 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
-
-        # TODO: Lets discuss what to do with the environment

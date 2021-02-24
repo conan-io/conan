@@ -1,67 +1,103 @@
+import fnmatch
+import os
 import textwrap
 from collections import OrderedDict
 
+from conans.errors import ConanException
 from conans.util.files import save
 
-PLACEHOLDER = "$CONANVARPLACEHOLDER%"
+
+class _EnvVarPlaceHolder:
+    pass
 
 
-class EnvironmentItem:
+class _Sep(str):
+    pass
 
-    def __init__(self, value=None, separator=None):
-        self._value = value
-        self._separator = separator
 
-    def value(self, placeholder):
-        value = [v if v != PLACEHOLDER else placeholder for v in self._value]
-        value = self._separator.join(value) if value else ""
-        return value
+class _PathSep:
+    pass
 
-    def copy(self):
-        return EnvironmentItem(self._value[:], self._separator)
 
-    def define(self, value, separator=" "):
-        self._value = value if isinstance(value, list) else [value]
-        self._separator = separator
-
-    def append(self, value, separator=" "):
-        value = value if isinstance(value, list) else [value]
-        self._value = [PLACEHOLDER] + value
-        self._separator = separator
-
-    def prepend(self, value, separator=" "):
-        value = value if isinstance(value, list) else [value]
-        self._value = value + [PLACEHOLDER]
-        self._separator = separator
-
-    def clean(self):
-        self._value = []
-        self._separator = None
-
-    def update(self, other):
-        """
-       :type other: EnvironmentItem
-       """
-        result = other._value
-        try:
-            index = result.index(PLACEHOLDER)
-            result[index:index+1] = self._value
-            assert self._separator == other._separator
-        except ValueError:
-            pass
-        self._value = result
-        self._separator = other._separator
+def environment_wrap_command(filename, cmd):
+    if filename.endswith(".bat"):
+        return "{} && {}".format(filename, cmd)
+    elif filename.endswith(".sh"):
+        return 'bash -c ". {} && {}"'.format(filename, cmd.replace('"', r'\"'))
+    raise Exception("Unsupported environment file type {}".format(filename))
 
 
 class Environment:
     def __init__(self):
+        # TODO: Maybe we need to pass conanfile to get the [conf]
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()
+        self._values = OrderedDict()  # {var_name: [] of values, including separators}
 
-    def __getitem__(self, name):
-        return self._values.setdefault(name, EnvironmentItem())
+    def __repr__(self):
+        return repr(self._values)
 
-    def save_bat(self, filename, generate_deactivate=True):
+    def vars(self):
+        return list(self._values.keys())
+
+    def value(self, name, placeholder="{name}", pathsep=os.pathsep):
+        return self._format_value(name, self._values[name], placeholder, pathsep)
+
+    @staticmethod
+    def _format_value(name, varvalues, placeholder, pathsep):
+        values = []
+        for v in varvalues:
+
+            if v is _EnvVarPlaceHolder:
+                values.append(placeholder.format(name=name))
+            elif v is _PathSep:
+                values.append(pathsep)
+            else:
+                values.append(v)
+        return "".join(values)
+
+    @staticmethod
+    def _list_value(value, separator):
+        if isinstance(value, list):
+            result = []
+            for v in value[:-1]:
+                result.append(v)
+                result.append(separator)
+            result.extend(value[-1:])
+            return result
+        else:
+            return [value]
+
+    def define(self, name, value, separator=" "):
+        value = self._list_value(value, _Sep(separator))
+        self._values[name] = value
+
+    def define_path(self, name, value):
+        value = self._list_value(value, _PathSep)
+        self._values[name] = value
+
+    def unset(self, name):
+        """
+        clears the variable, equivalent to a unset or set XXX=
+        """
+        self._values[name] = []
+
+    def append(self, name, value, separator=" "):
+        value = self._list_value(value, _Sep(separator))
+        self._values[name] = [_EnvVarPlaceHolder] + [_Sep(separator)] + value
+
+    def append_path(self, name, value):
+        value = self._list_value(value, _PathSep)
+        self._values[name] = [_EnvVarPlaceHolder] + [_PathSep] + value
+
+    def prepend(self, name, value, separator=" "):
+        value = self._list_value(value, _Sep(separator))
+        self._values[name] = value + [_Sep(separator)] + [_EnvVarPlaceHolder]
+
+    def prepend_path(self, name, value):
+        value = self._list_value(value, _PathSep)
+        self._values[name] = value + [_PathSep] + [_EnvVarPlaceHolder]
+
+    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -88,14 +124,29 @@ class Environment:
             echo Configuring environment variables
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
-        for k, v in self._values.items():
-            value = v.value("%{}%".format(k))
-            result.append('set {}={}'.format(k, value))
+        for varname, varvalues in self._values.items():
+            value = self._format_value(varname, varvalues, "%{name}%", pathsep)
+            result.append('set {}={}'.format(varname, value))
 
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename):
+    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+        # FIXME: This is broken and doesnt work
+        deactivate = ""
+        capture = textwrap.dedent("""\
+            {deactivate}
+            """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
+        for varname, varvalues in self._values.items():
+            value = self._format_value(varname, varvalues, "$env:{name}", pathsep)
+            result.append('Write-Output "Error: whatever message {}"'.format(varname))
+            result.append('$env:{}={}'.format(varname, value))
+
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_sh(self, filename, pathsep=os.pathsep):
         capture = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -112,12 +163,12 @@ class Environment:
             echo Configuring environment variables
             """.format(filename=filename, vars=" ".join(self._values.keys())))
         result = [capture]
-        for k, v in self._values.items():
-            value = v.value("${}".format(k))
+        for varname, varvalues in self._values.items():
+            value = self._format_value(varname, varvalues, "${name}", pathsep)
             if value:
-                result.append('export {}="{}"'.format(k, value))
+                result.append('export {}="{}"'.format(varname, value))
             else:
-                result.append('unset {}'.format(k))
+                result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
         save(filename, content)
@@ -126,13 +177,89 @@ class Environment:
         """
         :type other: Environment
         """
-        result = Environment()
-        result._values = OrderedDict([(k, v.copy()) for k, v in self._values.items()])
         for k, v in other._values.items():
-            v = v.copy()
-            existing = result._values.get(k)
+            existing = self._values.get(k)
             if existing is None:
-                result._values[k] = v
+                self._values[k] = v
             else:
-                existing.update(v)
+                try:
+                    index = v.index(_EnvVarPlaceHolder)
+                except ValueError:  # The other doesn't have placeholder, overwrites
+                    self._values[k] = v
+                else:
+                    new_value = v[:]  # do a copy
+                    new_value[index:index + 1] = existing  # replace the placeholder
+                    # Trim front and back separators
+                    val = new_value[0]
+                    if isinstance(val, _Sep) or val is _PathSep:
+                        new_value = new_value[1:]
+                    val = new_value[-1]
+                    if isinstance(val, _Sep) or val is _PathSep:
+                        new_value = new_value[:-1]
+                    self._values[k] = new_value
+        return self
+
+
+class ProfileEnvironment:
+    def __init__(self):
+        self._environments = OrderedDict()
+
+    def __repr__(self):
+        return repr(self._environments)
+
+    def get_env(self, ref):
+        """ computes package-specific Environment
+        it is only called when conanfile.buildenv is called
+        """
+        result = Environment()
+        for pattern, env in self._environments.items():
+            if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+                env = self._environments[pattern]
+                result = result.compose(env)
         return result
+
+    def compose(self, other):
+        """
+        :type other: ProfileEnvironment
+        """
+        for pattern, environment in other._environments.items():
+            existing = self._environments.get(pattern)
+            if existing is not None:
+                self._environments[pattern] = existing.compose(environment)
+            else:
+                self._environments[pattern] = environment
+
+    def loads(self, text):
+        for line in text.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            for op, method in (("+=", "append"), ("=+", "prepend"),
+                               ("=!", "unset"), ("=", "define")):
+                tokens = line.split(op, 1)
+                if len(tokens) != 2:
+                    continue
+                pattern_name, value = tokens
+                pattern_name = pattern_name.split(":", 1)
+                if len(pattern_name) == 2:
+                    pattern, name = pattern_name
+                else:
+                    pattern, name = None, pattern_name[0]
+
+                env = Environment()
+                if method == "unset":
+                    env.unset(name)
+                else:
+                    if value.startswith("(path)"):
+                        value = value[6:]
+                        method = method + "_path"
+                    getattr(env, method)(name, value)
+
+                existing = self._environments.get(pattern)
+                if existing is None:
+                    self._environments[pattern] = env
+                else:
+                    self._environments[pattern] = existing.compose(env)
+                break
+            else:
+                raise ConanException("Bad env defintion: {}".format(line))
