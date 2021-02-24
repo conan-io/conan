@@ -26,12 +26,12 @@ from conans.client.tools.android import *
 # Tools form conans.util
 from conans.util.env_reader import get_env
 from conans.util.files import _generic_algorithm_sum, md5, md5sum, mkdir, relative_dirs, \
-    rmdir, save as files_save, save_append, sha1sum, sha256sum, to_file_bytes, touch
+    rmdir, sha1sum, sha256sum, to_file_bytes, touch
 from conans.util.log import logger
 from conans.client.tools.version import Version
 from conans.client.build.cppstd_flags import cppstd_flag_new as cppstd_flag  # pylint: disable=unused-import
 
-from conan.tools.files import load as tools_load
+from conan.tools.files import load as tools_load, save as tools_save
 
 # This global variables are intended to store the configuration of the running Conan application
 _global_output = None
@@ -63,13 +63,8 @@ set_global_instances(the_output=ConanOutput(sys.stdout, sys.stderr, True), the_r
 From here onwards only currification is expected, no logic
 """
 
-
 def save(path, content, append=False):
-    # TODO: All this three functions: save, save_append and this one should be merged into one.
-    if append:
-        save_append(path=path, content=content)
-    else:
-        files_save(path=path, content=content, only_if_modified=False)
+    tools_save(None, path, content, append=append)
 
 
 def load(path, binary=False, encoding="auto"):
