@@ -24,6 +24,19 @@ class ProfileOptions(defaultdict):
         self[key] = value
 
 
+class ProfileEnv(defaultdict):
+
+    def __getattr__(self, item):
+        return self[item]
+
+    def __setattr__(self, key, value):
+        self[key] = value
+
+    def __delattr__(self, key):
+        if key in self:
+            del self[item]
+
+
 class ProfileSettings(object):
 
     def __init__(self, value=None):
@@ -54,7 +67,7 @@ class ProfileSettings(object):
 
 settings = ProfileSettings()
 options = ProfileOptions()
-env = ProfileOptions()
+env = ProfileEnv(list)
 
 
 # complex_search: With ORs and not filtering by not restricted settings

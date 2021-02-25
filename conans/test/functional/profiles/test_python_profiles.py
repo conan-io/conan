@@ -7,7 +7,7 @@ import pytest
 
 from conans.client.tools import environment_append
 from conans.test.utils.tools import TestClient
-from conans import ProfileSettings, ProfileOptions
+from conans import ProfileSettings, ProfileOptions, ProfileEnv
 
 
 class ProfileLoader(object):
@@ -17,7 +17,7 @@ class ProfileLoader(object):
         import conans
         conans.settings = ProfileSettings()
         conans.options = ProfileOptions()
-        conans.env = ProfileOptions()
+        conans.env = ProfileEnv(list)
 
     @staticmethod
     def _load_module_from_file(filename):
@@ -167,3 +167,51 @@ def test_load_command_line_related_profiles(client, pr1_content, pr2_content):
     assert profile2["options"] == {"shared": False, "fPIC": True}
     assert profile2["env"] == {"env_var": "bar", "CXXFLAGS": "-fPIC -stdlib=libc++11",
                                "cpu_count": "12"}
+
+
+def test_profile(client):
+    myprofile = textwrap.dedent("""
+        from conans import env
+
+        # define
+        env.MyVar1= "MyValue1"
+        #  append
+        env.MyVar2.append("MyValue2")
+        #  multiple append works
+        env.MyVar2.append("MyValue2_2")
+        #  prepend
+        env.MyVar3.insert(0, "MyValue3")
+        # unset
+        del env.MyVar4
+        # Empty
+        env.MyVar5 = ""
+
+        # PATHS
+        # define
+        env.MyPath1 = "(path)/my/path1"
+        #  append
+        env.MyPath2.append("(path)/my/path2")
+        #  multiple append works
+        env.MyPath2.append("(path)/my/path2_2")
+        #  prepend
+        env.MyPath3.insert(0, "(path)/my/path3")
+        # unset
+        del env.MyPath4
+        # PER-PACKAGE
+        env["mypkg*:MyVar2"] = "MyValue2"
+        """)
+
+    myprofile_path = os.path.join(client.current_folder, "myprofile.py")
+    client.save({myprofile_path: myprofile})
+    myprofile = ProfileLoader.load_profile_python(myprofile_path)
+    assert myprofile["env"].MyVar1 == "MyValue1"
+    assert myprofile["env"].MyVar2 == ["MyValue2", "MyValue2_2"]
+    assert myprofile["env"].MyVar3 == ["MyValue3"]
+    assert "Myvar4" not in myprofile["env"]
+    assert myprofile["env"].MyVar5 == ""
+
+    assert myprofile["env"].MyPath1 == "(path)/my/path1"
+    assert myprofile["env"].MyPath2 == ["(path)/my/path2", "(path)/my/path2_2"]
+    assert myprofile["env"].MyPath3 == ["(path)/my/path3"]
+    assert "MyPath4" not in myprofile["env"]
+    assert myprofile["env"]["mypkg*:MyVar2"] == "MyValue2"
