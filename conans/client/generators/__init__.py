@@ -107,7 +107,7 @@ class GeneratorManager(object):
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
-        elif generator_name == "QbsToolchain" || generator_name == "QbsProfile":
+        elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
         else:
