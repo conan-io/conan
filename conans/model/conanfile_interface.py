@@ -27,4 +27,4 @@ class ConanFileInterface:
 
     @property
     def context(self):
-        return self._conanfile._conan_context
+        return self._conanfile.context

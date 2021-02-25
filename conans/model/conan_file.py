@@ -151,11 +151,17 @@ class ConanFile(object):
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_context = None  # build/host context
+
+    @property
+    def context(self):
+        return self._conan_context
 
     @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
         if not isinstance(self._conan_buildenv, Environment):
+            # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
             self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
         return self._conan_buildenv
