@@ -1,23 +1,19 @@
 import os
 import textwrap
 
-from bottle import static_file, request
+from bottle import static_file
 
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.files import save
+from conans.test.assets.genconanfile import GenConanfile
 
 
 class TestConanToolFiles:
 
     def test_imports(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.files import load, save, mkdir, download, get, ftp_download
-
-            class Pkg(ConanFile):
-                pass
-            """)
+        conanfile = GenConanfile().with_import("from conan.tools.files import load, "
+                                               "save, mkdir, download, get, ftp_download")
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
