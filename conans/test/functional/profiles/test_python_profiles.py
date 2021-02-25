@@ -1,9 +1,9 @@
 import os
 import textwrap
-import unittest
 from collections import defaultdict
-
 from importlib.util import spec_from_file_location, module_from_spec
+
+import pytest
 
 from conans.client.tools import environment_append
 from conans.test.utils.tools import TestClient
@@ -46,119 +46,124 @@ class ProfileLoader(object):
         return profile.copy()
 
 
-class PythonProfilesTest(unittest.TestCase):
+@pytest.fixture
+def client():
+    return TestClient()
 
-    def setUp(self):
-        self.client = TestClient()
-        self.pr1_content = textwrap.dedent("""
-            import os
-            from conans import settings, options, env
 
-            settings.os = "Linux"
-            settings.build_type = "Release"
+@pytest.fixture
+def pr1_content():
+    return textwrap.dedent("""
+        import os
+        from conans import settings, options, env
 
-            options.shared = True
+        settings.os = "Linux"
+        settings.build_type = "Release"
 
-            env.env_var = "bar"
-            cxxflags = os.environ.get('CXXFLAGS', "")
-            if cxxflags:
-                env.CXXFLAGS = cxxflags + " -stdlib=libc++11"
-            """)
-        self.pr2_content = textwrap.dedent("""
-            from conans import settings, options, env
-
-            settings.os = "Windows"
-            settings.compiler = "Visual Studio"
-            settings.compiler.version = "16"
-
-            options.shared = False
-            options.fPIC = True
-
-            env.cpu_count = "12"
-            """)
-
-    def test_settings_simple(self):
-        settings = ProfileSettings()
-        settings.value()
-        self.assertDictEqual({}, settings.value())
-
-    def test_settings(self):
-        settings = ProfileSettings()
-        settings.os = "Windows"
-        settings.compiler = "Visual"
-        settings.compiler.version = "16"
-        settings.whatever.annd.ever = "14"
-        self.assertIn("Windows", settings.os.value())
-        self.assertIn("Visual", settings.compiler.value())
-        self.assertIn("16", settings.compiler.version.value())
-        self.assertIn("14", settings.whatever.annd.ever.value())
-        self.assertDictEqual({"os": "Windows",
-                              "compiler": {"Visual": {"version": "16"}},
-                              "whatever": {"annd": {"ever": "14"}}
-                              }, settings.value())
-
-    def test_options(self):
-        options = ProfileOptions()
         options.shared = True
-        options.SHARED = False
-        options.fpic = True
-        options.fpic = False
-        options["new"] = "other"
-        self.assertTrue(options.shared)
-        self.assertFalse(options.SHARED)
-        self.assertFalse(options.fpic)
-        self.assertIn("other", options.new)
-        self.assertIn("other", options["new"])
 
-    def test_load_profile(self):
-        self.client.save({"profile.py": self.pr2_content})
-        profile_path = os.path.join(self.client.current_folder, "profile.py")
-        profile = ProfileLoader.load_profile_python(profile_path)
-        self.assertDictEqual({"os": "Windows", "compiler": {"Visual Studio": {"version": "16"}}},
-                             profile["settings"].value())
-        self.assertDictEqual({"shared": False, "fPIC": True}, profile["options"])
-        self.assertDictEqual({"cpu_count": "12"}, profile["env"])
+        env.env_var = "bar"
+        cxxflags = os.environ.get('CXXFLAGS', "")
+        if cxxflags:
+            env.CXXFLAGS = cxxflags + " -stdlib=libc++11"
+        """)
 
-    def test_load_unrelated_profiles(self):
-        self.client.save({"pr1.py": self.pr1_content, "pr2.py": self.pr2_content})
-        pr1_path = os.path.join(self.client.current_folder, "pr1.py")
-        with environment_append({"CXXFLAGS": "-fPIC"}):
-            profile1 = ProfileLoader.load_profile_python(pr1_path)
-        self.assertDictEqual({"os": "Linux", "build_type": "Release"},
-                             profile1["settings"].value())
-        self.assertDictEqual({"shared": True}, profile1["options"])
-        self.assertDictEqual({"env_var": "bar", "CXXFLAGS": "-fPIC -stdlib=libc++11"},
-                             profile1["env"])
 
-        pr2_path = os.path.join(self.client.current_folder, "pr2.py")
-        profile2 = ProfileLoader.load_profile_python(pr2_path)
-        self.assertDictEqual({"os": "Windows",
-                              "compiler": {"Visual Studio": {"version": "16"}}},
-                             profile2["settings"].value())
-        self.assertDictEqual({"shared": False, "fPIC": True}, profile2["options"])
-        self.assertDictEqual({"cpu_count": "12"}, profile2["env"])
+@pytest.fixture
+def pr2_content():
+    return textwrap.dedent("""
+        from conans import settings, options, env
 
-    def test_load_command_line_related_profiles(self):
-        # Equivalent to conan install ... --profile pr1 --profile pr2
-        self.client.save({"pr1.py": self.pr1_content, "pr2.py": self.pr2_content})
-        pr1_path = os.path.join(self.client.current_folder, "pr1.py")
-        with environment_append({"CXXFLAGS": "-fPIC"}):
-            profile1 = ProfileLoader.load_profile_python(pr1_path)
-        self.assertDictEqual({"os": "Linux", "build_type": "Release"},
-                             profile1["settings"].value())
-        self.assertDictEqual(profile1["options"], {"shared": True})
-        self.assertDictEqual(profile1["env"], {"env_var": "bar",
-                                               "CXXFLAGS": "-fPIC -stdlib=libc++11"})
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "16"
 
-        pr2_path = os.path.join(self.client.current_folder, "pr2.py")
-        with environment_append({"CXXFLAGS": "-fPIC"}):
-            profile2 = ProfileLoader.load_profile_python(pr2_path, pr1_path)
-        self.assertDictEqual({"os": "Windows",
-                              "compiler": {"Visual Studio": {"version": "16"}},
-                              "build_type": "Release"},
-                             profile2["settings"].value())
-        self.assertDictEqual({"shared": False, "fPIC": True}, profile2["options"])
-        self.assertDictEqual({"env_var": "bar",
-                              "CXXFLAGS": "-fPIC -stdlib=libc++11",
-                              "cpu_count": "12"},
-                             profile2["env"])
+        options.shared = False
+        options.fPIC = True
+
+        env.cpu_count = "12"
+        """)
+
+
+def test_settings_simple():
+    settings = ProfileSettings()
+    settings.value()
+    assert {} == settings.value()
+
+
+def test_settings():
+    settings = ProfileSettings()
+    settings.os = "Windows"
+    settings.compiler = "Visual"
+    settings.compiler.version = "16"
+    settings.whatever.annd.ever = "14"
+    assert settings.os.value() == "Windows"
+    assert settings.compiler.value() == {"Visual": {"version": "16"}}
+    assert settings.compiler.version.value() == "16"
+    assert settings.whatever.annd.ever.value() == "14"
+    assert settings.value() == {"os": "Windows",
+                                "compiler": {"Visual": {"version": "16"}},
+                                "whatever": {"annd": {"ever": "14"}}
+                                }
+
+
+def test_options():
+    options = ProfileOptions()
+    options.shared = True
+    options.SHARED = False
+    options.fpic = True
+    options.fpic = False
+    options["new"] = "other"
+    assert options.shared is True
+    assert options.SHARED is False
+    assert options.fpic is False
+    assert options.new == "other"
+    assert options["new"] == "other"
+
+
+def test_load_profile(client, pr1_content, pr2_content):
+    client.save({"profile.py": pr2_content})
+    profile_path = os.path.join(client.current_folder, "profile.py")
+    profile = ProfileLoader.load_profile_python(profile_path)
+    assert profile["settings"].value() == {"os": "Windows",
+                                           "compiler": {"Visual Studio": {"version": "16"}}}
+    assert profile["options"] == {"shared": False, "fPIC": True}
+    assert profile["env"] == {"cpu_count": "12"}
+
+
+def test_load_unrelated_profiles(client, pr1_content, pr2_content):
+    client.save({"pr1.py": pr1_content, "pr2.py": pr2_content})
+    pr1_path = os.path.join(client.current_folder, "pr1.py")
+    with environment_append({"CXXFLAGS": "-fPIC"}):
+        profile1 = ProfileLoader.load_profile_python(pr1_path)
+    assert profile1["settings"].value() == {"os": "Linux", "build_type": "Release"}
+    assert profile1["options"] == {"shared": True}
+    assert profile1["env"] == {"env_var": "bar", "CXXFLAGS": "-fPIC -stdlib=libc++11"}
+
+    pr2_path = os.path.join(client.current_folder, "pr2.py")
+    profile2 = ProfileLoader.load_profile_python(pr2_path)
+    assert profile2["settings"].value() == {"os": "Windows",
+                                            "compiler": {"Visual Studio": {"version": "16"}}}
+    assert profile2["options"] == {"shared": False, "fPIC": True}
+    assert profile2["env"] == {"cpu_count": "12"}
+
+
+def test_load_command_line_related_profiles(client, pr1_content, pr2_content):
+    # Equivalent to conan install ... --profile pr1 --profile pr2
+    client.save({"pr1.py": pr1_content, "pr2.py": pr2_content})
+    pr1_path = os.path.join(client.current_folder, "pr1.py")
+    with environment_append({"CXXFLAGS": "-fPIC"}):
+        profile1 = ProfileLoader.load_profile_python(pr1_path)
+    assert profile1["settings"].value() == {"os": "Linux", "build_type": "Release"}
+    assert profile1["options"] == {"shared": True}
+    assert profile1["env"] == {"env_var": "bar", "CXXFLAGS": "-fPIC -stdlib=libc++11"}
+
+    pr2_path = os.path.join(client.current_folder, "pr2.py")
+    with environment_append({"CXXFLAGS": "-fPIC"}):
+        profile2 = ProfileLoader.load_profile_python(pr2_path, pr1_path)
+    assert profile2["settings"].value() == {"os": "Windows",
+                                            "compiler": {"Visual Studio": {"version": "16"}},
+                                            "build_type": "Release"}
+    assert profile2["options"] == {"shared": False, "fPIC": True}
+    assert profile2["env"] == {"env_var": "bar", "CXXFLAGS": "-fPIC -stdlib=libc++11",
+                               "cpu_count": "12"}
