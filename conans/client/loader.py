@@ -24,7 +24,7 @@ from conans.util.files import load
 class ConanFileLoader(object):
 
     def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None,
-                 requester=None, config=None):
+                 requester=None):
         self._runner = runner
         self._generator_manager = generator_manager
         self._output = output
