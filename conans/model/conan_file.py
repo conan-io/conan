@@ -132,8 +132,7 @@ class ConanFile(object):
     # layout
     layout = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None,
-                 config=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
