@@ -55,12 +55,12 @@ class CacheDatabaseDirectories:
                 output.write(str(it) + '\n')
 
     def _get_random_directory(self, item: Union[ConanFileReference, PackageReference]) -> str:
-        # TODO: We could implement deterministic output for some inputs, not now.
         # TODO: If we are creating the 'path' here, we need the base_folder (and lock depending on implementation)
         return str(uuid.uuid4())
 
     @staticmethod
     def get_default_reference_path(ref: ConanFileReference) -> Optional[str]:
+        """ Returns a deterministic folder for a ConanFileReference """
         if ref.revision:
             return ref.full_str().replace('@', '/').replace('#', '/').replace(':', '/')  # TODO: TBD
         else:
@@ -68,6 +68,7 @@ class CacheDatabaseDirectories:
 
     @staticmethod
     def get_default_package_path(pref: PackageReference, folder: ConanFolders) -> Optional[str]:
+        """ Returns a deterministic folder for a PackageReference (and Conan folder) """
         if pref.revision:
             package_folder = pref.full_str().replace('@', '/') \
                 .replace('#', '/').replace(':', '/')  # TODO: TBD
