@@ -22,7 +22,7 @@ class RecipeLayout(LockableMixin):
         self._cache = cache
 
         # Get the base_directory that is assigned to this ref.
-        default_path = self._cache.get_default_reference_path(ref)
+        default_path = self._cache._backend.get_default_reference_path(ref)
         self._base_directory = \
             self._cache._backend.get_or_create_reference_directory(self._ref, path=default_path)
 

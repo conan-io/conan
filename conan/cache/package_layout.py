@@ -21,15 +21,15 @@ class PackageLayout(LockableMixin):
         self._cache = cache
 
         # Get paths for this package revision
-        default_package_path = self._cache.get_default_package_path(pref, ConanFolders.PKG_PACKAGE)
+        package_path = self._cache._backend.get_default_package_path(pref, ConanFolders.PKG_PACKAGE)
         self._package_path = \
             self._cache._backend.get_or_create_package_directory(self._pref,
                                                                  ConanFolders.PKG_PACKAGE,
-                                                                 default_package_path)
-        default_build_path = self._cache.get_default_package_path(pref, ConanFolders.PKG_BUILD)
+                                                                 package_path)
+        build_path = self._cache._backend.get_default_package_path(pref, ConanFolders.PKG_BUILD)
         self._build_path = \
             self._cache._backend.get_or_create_package_directory(self._pref, ConanFolders.PKG_BUILD,
-                                                                 default_build_path)
+                                                                 build_path)
 
         resource_id = self._pref.full_str()
         super().__init__(resource=resource_id, **kwargs)
@@ -63,9 +63,11 @@ class PackageLayout(LockableMixin):
             * persistent folder
             * deterministic folder (forced from outside)
         """
+
         def get_build_directory():
             with self.lock(blocking=False):
                 return os.path.join(self._cache.base_folder, self._build_path)
+
         build_directory = lambda: get_build_directory()
         return CacheFolder(build_directory, False, manager=self._manager, resource=self._resource)
 
@@ -73,6 +75,7 @@ class PackageLayout(LockableMixin):
         """ We want this folder to be deterministic, although the final location is not known
             until we have the package revision... so it has to be updated!
         """
+
         def get_package_directory():
             with self.lock(blocking=False):
                 return os.path.join(self._cache.base_folder, self._package_path)

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import time
 import uuid
@@ -57,6 +58,22 @@ class CacheDatabaseDirectories:
         # TODO: We could implement deterministic output for some inputs, not now.
         # TODO: If we are creating the 'path' here, we need the base_folder (and lock depending on implementation)
         return str(uuid.uuid4())
+
+    @staticmethod
+    def get_default_reference_path(ref: ConanFileReference) -> Optional[str]:
+        if ref.revision:
+            return ref.full_str().replace('@', '/').replace('#', '/').replace(':', '/')  # TODO: TBD
+        else:
+            return None
+
+    @staticmethod
+    def get_default_package_path(pref: PackageReference, folder: ConanFolders) -> Optional[str]:
+        if pref.revision:
+            package_folder = pref.full_str().replace('@', '/') \
+                .replace('#', '/').replace(':', '/')  # TODO: TBD
+            return os.path.join(package_folder, folder.name)
+        else:
+            return None
 
     """
     Functions to filter the 'conan_cache_directories' table using a Conan reference or package-ref
