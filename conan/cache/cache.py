@@ -3,8 +3,9 @@ import shutil
 from io import StringIO
 from typing import Optional
 
-from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
-    CacheDatabaseSqlite3Memory, ConanFolders
+from conan.cache.cache_database_directories import CacheDatabaseDirectories, \
+    CacheDatabaseDirectoriesSqlite3Filesystem, \
+    CacheDatabaseDirectoriesSqlite3Memory, ConanFolders
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -15,7 +16,8 @@ from conans.model.ref import ConanFileReference, PackageReference
 
 
 class Cache:
-    def __init__(self, base_folder: str, backend: CacheDatabase, locks_manager: LocksManager):
+    def __init__(self, base_folder: str, backend: CacheDatabaseDirectories,
+                 locks_manager: LocksManager):
         self._base_folder = base_folder
         self._locks_manager = locks_manager
         self._backend = backend
@@ -23,11 +25,11 @@ class Cache:
     @staticmethod
     def create(backend_id: str, base_folder: str, locks_manager: LocksManager, **backend_kwargs):
         if backend_id == 'sqlite3':
-            backend = CacheDatabaseSqlite3Filesystem(**backend_kwargs)
+            backend = CacheDatabaseDirectoriesSqlite3Filesystem(**backend_kwargs)
             backend.create_table(if_not_exists=True)
             return Cache(base_folder, backend, locks_manager)
         elif backend_id == 'memory':
-            backend = CacheDatabaseSqlite3Memory(**backend_kwargs)
+            backend = CacheDatabaseDirectoriesSqlite3Memory(**backend_kwargs)
             backend.create_table(if_not_exists=True)
             return Cache(base_folder, backend, locks_manager)
         else:

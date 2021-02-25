@@ -11,7 +11,7 @@ def try_write_else_read_wait(lockable: LockableMixin) -> bool:
     try:
         with lockable.lock(blocking=True, wait=False):
             yield True
-    except Exception as e:
+    except Exception as e:  # TODO: Explicit exception
         # If we cannot get an exclusive lock, then we want a shared lock to read.
         # FIXME: We are assuming it fails because of the wait=False
         with lockable.lock(blocking=False, wait=True):

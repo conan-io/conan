@@ -18,7 +18,7 @@ class ConanFolders(Enum):
     PKG_PACKAGE = 2
 
 
-class CacheDatabase:
+class CacheDatabaseDirectories:
     _table_name = "conan_cache_directories"
     _column_ref = 'reference'
     _column_ref_name = 'reference_name'
@@ -264,9 +264,9 @@ class CacheDatabase:
             assert r.rowcount > 0
 
 
-class CacheDatabaseSqlite3Memory(CacheDatabase, Sqlite3MemoryMixin):
+class CacheDatabaseDirectoriesSqlite3Memory(CacheDatabaseDirectories, Sqlite3MemoryMixin):
     pass
 
 
-class CacheDatabaseSqlite3Filesystem(CacheDatabase, Sqlite3FilesystemMixin):
+class CacheDatabaseDirectoriesSqlite3Filesystem(CacheDatabaseDirectories, Sqlite3FilesystemMixin):
     pass
