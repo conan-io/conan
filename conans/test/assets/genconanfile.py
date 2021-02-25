@@ -410,6 +410,6 @@ class GenConanfile(object):
             ret.append("    {}".format(self._package_id_method))
         if self._test_method:
             ret.append("    {}".format(self._test_method))
-        if len(ret) == 2:
+        if len(ret) == 2 or (len(ret) == 3 and "import" in ret[1]):
             ret.append("    pass")
         return "\n".join(ret)

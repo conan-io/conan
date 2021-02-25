@@ -33,7 +33,6 @@ class ConanFileLoader(object):
         sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
         self._requester = requester
-        self._config = config
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
                    display=""):
@@ -49,7 +48,7 @@ class ConanFileLoader(object):
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
             conanfile = cached[0](self._output, self._runner, display, user, channel,
-                                  self._requester, self._config)
+                                  self._requester)
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
                     conanfile.init()
@@ -86,8 +85,7 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display, user, channel, self._requester,
-                               self._config)
+            result = conanfile(self._output, self._runner, display, user, channel, self._requester)
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
                     result.init()

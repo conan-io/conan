@@ -12,8 +12,8 @@ from conans.test.assets.genconanfile import GenConanfile
 class TestConanToolFiles:
 
     def test_imports(self):
-        conanfile = GenConanfile().with_import("from conan.tools.files import load, "
-                                               "save, mkdir, download, get, ftp_download")
+        conanfile = GenConanfile().with_import("from conan.tools.files import load, save, "
+                                               "mkdir, download, get, ftp_download")
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
@@ -31,7 +31,6 @@ class TestConanToolFiles:
                     save(self, "./myfolder/myfile", "some_content")
                     assert load(self, "./myfolder/myfile") == "some_content"
             """)
-
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
@@ -47,7 +46,14 @@ class TestConanToolFiles:
 
         http_server.run_server()
 
+        profile = textwrap.dedent("""\
+            [conf]
+            tools.files.download:retry=1
+            tools.files.download:retry_wait=0
+            """)
+
         conanfile = textwrap.dedent("""
+            import os
             from conans import ConanFile
             from conan.tools.files import download
 
@@ -55,13 +61,11 @@ class TestConanToolFiles:
                 name = "mypkg"
                 version = "1.0"
                 def source(self):
-                    download(self,
-                             "http://localhost:{}/myfile.txt",
-                             "myfile.txt")
+                    download(self, "http://localhost:{}/myfile.txt", "myfile.txt")
+                    assert os.path.exists("myfile.txt")
             """.format(http_server.port))
 
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("source .")
-        local_path = os.path.join(client.current_folder, "myfile.txt")
-        assert os.path.exists(local_path)
+        client.save({"profile": profile})
+        client.run("create . -pr=profile")
