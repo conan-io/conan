@@ -21,7 +21,7 @@ def _configuration_dict_to_commandlist(name, config_dict):
 class Qbs(object):
     def __init__(self, conanfile, project_file=None):
         # hardcoded name, see qbs toolchain
-        self.use_toolchain_profile = 'conan_toolchain_profile'
+        self.profile = 'conan_toolchain_profile'
         self._conanfile = conanfile
         self._set_project_file(project_file)
         self.jobs = tools.cpu_count()
@@ -52,8 +52,8 @@ class Qbs(object):
 
         args.extend(['--jobs', '%s' % self.jobs])
 
-        if self.use_toolchain_profile:
-            args.append('profile:%s' % self.use_toolchain_profile)
+        if self.profile:
+            args.append('profile:%s' % self.profile)
 
         for name in self._configuration:
             config = self._configuration[name]
@@ -72,8 +72,8 @@ class Qbs(object):
 
         args.extend(['--jobs', '%s' % self.jobs])
 
-        if self.use_toolchain_profile:
-            args.append('profile:%s' % self.use_toolchain_profile)
+        if self.profile:
+            args.append('profile:%s' % self.profile)
 
         for name in self._configuration:
             config = self._configuration[name]
