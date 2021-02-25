@@ -481,7 +481,6 @@ class Command(object):
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
-
         cwd = get_cwd()
         # We need @ otherwise it could be a path, so check strict
         path_is_reference = check_valid_ref(args.path_or_reference)

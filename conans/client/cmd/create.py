@@ -59,16 +59,17 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                 # FIXME: It needs to clear the cache, otherwise it fails
                 app.binaries_analyzer._evaluated = {}
                 # FIXME: Forcing now not building test dependencies, binaries should be there
-                install_build_and_test(app, test_conanfile_path, None, ref, graph_info, remotes,
+                install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes,
                                        update, build_modes=None,
-                                       test_build_folder=test_build_folder, recorder=recorder)
+                                       test_build_folder=test_build_folder, recorder=recorder,
+                                       base_folder=None)
             except Exception as e:
                 raise ConanException("Something failed while testing '%s' test_package after "
                                      "it was built using the lockfile. Please report this error: %s"
                                      % (str(ref), str(e)))
 
         else:
-            install_build_and_test(app, test_conanfile_path, None,
+            install_build_and_test(app, test_conanfile_path,
                                    ref, graph_info, remotes, update,
                                    build_modes=build_modes,
                                    manifest_folder=manifest_folder,
@@ -76,7 +77,8 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                                    manifest_interactive=manifest_interactive,
                                    keep_build=keep_build,
                                    test_build_folder=test_build_folder,
-                                   recorder=recorder)
+                                   recorder=recorder,
+                                   base_folder=None)
     else:
         deps_install(app=app,
                      ref_or_path=ref,

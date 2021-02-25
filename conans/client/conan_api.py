@@ -328,9 +328,10 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out, lockfile=lockfile)
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
-        install_build_and_test(self.app, conanfile_path, cwd, ref, graph_info, remotes,
+        install_build_and_test(self.app, conanfile_path, ref, graph_info, remotes,
                                update, build_modes=build_modes,
-                               test_build_folder=test_build_folder, recorder=recorder)
+                               test_build_folder=test_build_folder, recorder=recorder,
+                               base_folder=cwd)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -761,8 +762,9 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        cmd_build(self.app, conanfile_path, cwd,
-                  source_folder, build_folder, package_folder, install_folder,
+        cmd_build(self.app, conanfile_path, base_path=cwd,
+                  source_folder=source_folder, build_folder=build_folder,
+                  package_folder=package_folder, install_folder=install_folder,
                   should_configure=should_configure, should_build=should_build,
                   should_install=should_install, should_test=should_test)
 
