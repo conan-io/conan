@@ -3,6 +3,7 @@ import uuid
 from contextlib import contextmanager, ExitStack
 from typing import List
 
+from conan.cache.cache import Cache
 from conan.cache.cache_folder import CacheFolder
 from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
@@ -13,18 +14,19 @@ from conans.model.ref import PackageReference
 class RecipeLayout(LockableMixin):
     _random_rrev = False
 
-    def __init__(self, ref: ConanFileReference, cache: 'Cache', **kwargs):
+    def __init__(self, ref: ConanFileReference, cache: Cache, **kwargs):
         self._ref = ref
         if not self._ref.revision:
             self._random_rrev = True
             self._ref = ref.copy_with_rev(str(uuid.uuid4()))
         self._cache = cache
 
-        #
-        default_path = self._cache.get_default_path(ref)
-        reference_path, _ = self._cache._backend.get_or_create_directory(self._ref,
-                                                                         default_path=default_path)
-        self._base_directory = reference_path
+        # Get the base_directory that is assigned to this ref.
+        default_path = self._cache.get_default_reference_path(ref)
+        self._base_directory = \
+            self._cache._backend.get_or_create_reference_directory(self._ref, path=default_path)
+
+        # Add place for package layouts
         self._package_layouts: List[PackageLayout] = []
         resource_id = self._ref.full_str()
         super().__init__(resource=resource_id, **kwargs)
@@ -44,9 +46,9 @@ class RecipeLayout(LockableMixin):
             self._random_rrev = False
 
             # Reassign folder in the database (only the recipe-folders)
-            new_directory = self._cache._move_rrev(old_ref, self._ref, move_contents)
-            if new_directory:
-                self._base_directory = new_directory
+            new_path = self._cache._move_rrev(old_ref, self._ref, move_contents)
+            if new_path:
+                self._base_directory = new_path
 
     def get_package_layout(self, pref: PackageReference) -> PackageLayout:
         assert str(pref.ref) == str(self._ref), "Only for the same reference"

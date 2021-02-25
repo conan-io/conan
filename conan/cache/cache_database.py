@@ -1,10 +1,12 @@
+import sqlite3
 import time
 import uuid
 from enum import Enum, unique
 from io import StringIO
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
-from conan.cache.exceptions import DuplicateReferenceException, DuplicatePackageReferenceException
+from conan.cache.exceptions import DuplicateReferenceException, DuplicatePackageReferenceException, \
+    CacheDirectoryNotFound, CacheDirectoryAlreadyExists
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -56,6 +58,10 @@ class CacheDatabase:
         # TODO: If we are creating the 'path' here, we need the base_folder (and lock depending on implementation)
         return str(uuid.uuid4())
 
+    """
+    Functions to filter the 'conan_cache_directories' table using a Conan reference or package-ref
+    """
+
     def _where_reference_clause(self, ref: ConanFileReference, filter_packages: bool) -> dict:
         where_clauses = {
             self._column_ref: str(ref),
@@ -91,40 +97,123 @@ class CacheDatabase:
         where_values = tuple(where_clauses.values())
         return where_expr, where_values
 
-    def get_or_create_directory(self, item: Union[ConanFileReference, PackageReference],
-                                default_path: str = None) -> Tuple[str, bool]:
-        # reference = str(ref)
-        assert str(item), "Empty reference cannot get into the cache"
-        # assert not pref or ref == pref.ref, "Both parameters should belong to the same reference"
+    """
+    Functions to retrieve and create entries in the database database.
+    """
 
-        # Search the database
+    def _try_get_reference_directory(self, item: ConanFileReference, conn: sqlite3.Cursor):
         where_clause, where_values = self._where_clause(item, filter_packages=True)
         query = f'SELECT {self._column_path} ' \
                 f'FROM {self._table_name} ' \
                 f'WHERE {where_clause};'
+        r = conn.execute(query, where_values)
+        rows = r.fetchall()
+        assert len(rows) <= 1, f"Unique entry expected... found {rows}," \
+                               f" for where clause {where_clause}"  # TODO: Ensure this uniqueness
+        if not rows:
+            raise CacheDirectoryNotFound(item)
+        return rows[0][0]
 
+    def _try_get_package_directory(self, item: PackageReference, folder: ConanFolders,
+                                   conn: sqlite3.Cursor):
+        where_clause, where_values = self._where_clause(item, filter_packages=True)
+        query = f'SELECT {self._column_path} ' \
+                f'FROM {self._table_name} ' \
+                f'WHERE {where_clause} AND {self._column_folder} = ?;'
+        where_values = where_values + (folder.value,)
+
+        r = conn.execute(query, where_values)
+        rows = r.fetchall()
+        assert len(rows) <= 1, f"Unique entry expected... found {rows}," \
+                               f" for where clause {where_clause}"  # TODO: Ensure this uniqueness
+        if not rows:
+            raise CacheDirectoryNotFound(item)
+        return rows[0][0]
+
+    def _create_reference_directory(self, ref: ConanFileReference, conn: sqlite3.Cursor,
+                                    path: Optional[str] = None) -> str:
+        # It doesn't exists, create the directory
+        path = path or self._get_random_directory(ref)
+        values = (str(ref),
+                  ref.name,
+                  ref.revision if ref.revision else None,
+                  None,
+                  None,
+                  path,
+                  ConanFolders.REFERENCE.value,
+                  int(time.time()))
+        r = conn.execute(f'INSERT INTO {self._table_name} '
+                         f'VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
+        assert r.lastrowid  # FIXME: Check it has inserted something
+        return path
+
+    def _create_package_directory(self, pref: PackageReference, folder: ConanFolders,
+                                  conn: sqlite3.Cursor, path: Optional[str] = None) -> str:
+        # It doesn't exist, create the directory
+        path = path or self._get_random_directory(pref)
+        ref = pref.ref
+        pref = pref
+        values = (str(ref),
+                  ref.name,
+                  ref.revision,
+                  pref.id,
+                  pref.revision if pref.revision else None,
+                  path,
+                  folder.value,
+                  int(time.time()))
+        r = conn.execute(f'INSERT INTO {self._table_name} '
+                         f'VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
+        assert r.lastrowid  # FIXME: Check it has inserted something
+        return path
+
+    def try_get_reference_directory(self, item: ConanFileReference):
+        """ Returns the directory or fails """
         with self.connect() as conn:
-            r = conn.execute(query, where_values)
-            rows = r.fetchall()
-            assert len(rows) <= 1, f"Unique entry expected... found {rows}," \
-                                   f" for where clause {where_clause}"  # TODO: Ensure this uniqueness
-            if not rows:
-                path = default_path or self._get_random_directory(item)
-                ref = item if isinstance(item, ConanFileReference) else item.ref
-                pref = item if isinstance(item, PackageReference) else None
-                values = (str(ref),
-                          ref.name,
-                          ref.revision if ref.revision else None,
-                          pref.id if pref else None,
-                          pref.revision if pref and pref.revision else None,
-                          path,
-                          ConanFolders.REFERENCE.value,
-                          int(time.time()))
-                conn.execute(f'INSERT INTO {self._table_name} '
-                             f'VALUES (?, ?, ?, ?, ?, ?, ?, ?)', values)
-                return path, True
+            return self._try_get_reference_directory(item, conn)
+
+    def try_get_package_directory(self, item: PackageReference, folder: ConanFolders):
+        """ Returns the directory or fails """
+        with self.connect() as conn:
+            return self._try_get_package_directory(item, folder, conn)
+
+    def create_reference_directory(self, ref: ConanFileReference, path: Optional[str] = None) -> str:
+        with self.connect() as conn:
+            try:
+                self._try_get_reference_directory(ref, conn)
+            except CacheDirectoryNotFound:
+                return self._create_reference_directory(ref, conn, path)
             else:
-                return rows[0][0], False
+                raise CacheDirectoryAlreadyExists(ref)
+
+    def create_package_directory(self, pref: PackageReference, folder: ConanFolders,
+                                 path: Optional[str] = None) -> str:
+        with self.connect() as conn:
+            try:
+                self._try_get_package_directory(item=pref, folder=folder, conn=conn)
+            except CacheDirectoryNotFound:
+                return self._create_package_directory(pref, folder, conn, path)
+            else:
+                raise CacheDirectoryAlreadyExists(pref)
+
+    def get_or_create_reference_directory(self, ref: ConanFileReference,
+                                          path: Optional[str] = None) -> str:
+        with self.connect() as conn:
+            try:
+                return self._try_get_reference_directory(ref, conn)
+            except CacheDirectoryNotFound:
+                return self._create_reference_directory(ref, conn, path)
+
+    def get_or_create_package_directory(self, pref: PackageReference, folder: ConanFolders,
+                                        path: Optional[str] = None) -> str:
+        with self.connect() as conn:
+            try:
+                return self._try_get_package_directory(pref, folder, conn)
+            except CacheDirectoryNotFound:
+                return self._create_package_directory(pref, folder, conn, path)
+
+    """
+    Functions to update information already in the database: rrev, prev, paths,...
+    """
 
     def update_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
         with self.connect() as conn:
@@ -137,6 +226,7 @@ class CacheDatabase:
             if r.fetchone()[0] == 1:
                 raise DuplicateReferenceException(new_ref)
 
+            # TODO: Fix Sql injection here
             where_clause, where_values = self._where_clause(old_ref, filter_packages=False)
             query = f"UPDATE {self._table_name} " \
                     f"SET {self._column_rrev} = '{new_ref.revision}' " \
@@ -155,6 +245,7 @@ class CacheDatabase:
             if r.fetchone()[0] == 1:
                 raise DuplicatePackageReferenceException(new_pref)
 
+            # TODO: Fix Sql injection here
             where_clause, where_values = self._where_clause(old_pref, filter_packages=True)
             query = f"UPDATE {self._table_name} " \
                     f"SET {self._column_prev} = '{new_pref.revision}' " \
@@ -164,6 +255,7 @@ class CacheDatabase:
 
     def update_path(self, item: Union[ConanFileReference, PackageReference], new_path: str):
         where_clause, where_values = self._where_clause(item, filter_packages=True)
+        # TODO: Fix Sql injection here
         query = f"UPDATE {self._table_name} " \
                 f"SET    {self._column_path} = '{new_path}' " \
                 f"WHERE {where_clause}"

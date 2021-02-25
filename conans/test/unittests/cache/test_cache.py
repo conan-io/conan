@@ -8,7 +8,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 
 def is_random_folder(cache_folder: str, folder):
     # TODO: This can be shared and should be agree with the strategy used to generate random folders in the cache
-    pattern = rf'{cache_folder}/[a-f0-9]{{8}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{12}}/[\w@]+'
+    pattern = rf'{cache_folder}/[a-f0-9]{{8}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{12}}(/[\w@]+)?'
     return bool(re.match(pattern, str(folder)))
 
 
@@ -130,8 +130,7 @@ def test_create_workflow(cache: Cache):
     package1_layout.assign_prev(pref, move_contents=True)
 
     # Data and information is moved to the new (and final location)
-    assert not is_random_folder(cache_folder,
-                                package1_layout.build())  # FIXME: This folder shouldn't be moved.
+    assert str(build_folder) == str(package1_layout.build())  # Build folder is not moved
     assert not is_random_folder(cache_folder, package1_layout.package())
 
 

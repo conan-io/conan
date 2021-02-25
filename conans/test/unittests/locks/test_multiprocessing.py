@@ -68,8 +68,8 @@ def test_lock_mechanism(lock_manager_multiprocessing: LocksManager):
     assert return_dict['one_which_locks']
 
 
-@pytest.mark.xfail
-def test_lock_killed(lock_manager_multiprocessing: LocksManager):
+def test_lock_killed(lock_manager_fasteners: LocksManager):
+    lock_manager = lock_manager_fasteners
     multiprocessing_manager = Manager()
     return_dict = multiprocessing_manager.dict()
     c1 = multiprocessing.Condition()
@@ -78,7 +78,7 @@ def test_lock_killed(lock_manager_multiprocessing: LocksManager):
     resource_id = 'whatever'
 
     p1 = Process(target=one_that_locks,
-                 args=(c1, c2, lock_manager_multiprocessing, resource_id, return_dict))
+                 args=(c1, c2, lock_manager, resource_id, return_dict))
     p1.start()
 
     with c2:
@@ -87,12 +87,9 @@ def test_lock_killed(lock_manager_multiprocessing: LocksManager):
     # Now we kill p1... expectation is it won't leave trash behind
     p1.kill()
 
-    # A lock for the same resource should succeed (if no trash left behind)
-    # FIXME: The objective is to find a locking mechanism that has no leftovers when killed
-    # with pytest.raises(Exception) as excinfo:
-    with lock_manager_multiprocessing.lock(resource_id, blocking=False, wait=False):
+    # We need to wait here, the underlying OS might need time to organize file accessors again
+    with lock_manager.lock(resource_id, blocking=False, wait=True):
         pass
-    # assert f"Resource '{resource_id}' is already blocked by a writer" == str(excinfo.value)
 
 
 def connect_and_wait(c1, c2, manager, return_dict):

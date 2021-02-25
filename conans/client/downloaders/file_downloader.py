@@ -72,7 +72,7 @@ class FileDownloader(object):
             range_start = 0
 
         try:
-            response = self._requester.get(url, stream=True, verify=self._verify_ssl, auth=auth,
+            response = self._requester.get(url, stream=True, verify=False, auth=auth,
                                            headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exc))
