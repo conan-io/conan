@@ -69,9 +69,13 @@ class LockBackendFasteners(LockBackend):
 
     def dump(self, output: StringIO):
         with self._locks_guard():
+            output.write('Backend fasterners, all threading locks:\n')
             for key, value in self._threading_locks.items():
                 _, _, blocking = value
                 output.write(f'{key}: {"blocking" if blocking else "non-blocking"}')
+            output.write('Backend fasterners, files:\n')
+            for it in os.listdir(self._locks_directory):
+                output.write(f' - {it}')
 
     @classmethod
     @contextmanager
@@ -94,7 +98,7 @@ class LockBackendFasteners(LockBackend):
 
     @contextmanager
     def lock(self, resource: str, blocking: bool):
-        log.error("lock(resource='%s', blocking='%s')", resource, blocking)
+        log.debug("lock(resource='%s', blocking='%s')", resource, blocking)
         with self._locks_guard():
             lock_threading = self._get_locks(resource)
 
