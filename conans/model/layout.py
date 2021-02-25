@@ -52,13 +52,10 @@ class Layout(object):
         generators_defaults = CppInfoDefaultValues()
         self.generators = _LayoutEntry(generators_defaults)
 
-
     def __repr__(self):
         return str(self.__dict__)
 
     def package_files(self):
-        # Map of origin paths and the patterns
-
         matching_vars = ["include", "lib", "bin", "framework", "src", "build", "res"]
 
         # Check that the components declared in source/build are in package
