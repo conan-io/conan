@@ -5,7 +5,6 @@ from typing import List
 
 from conan.cache.cache import Cache
 from conan.cache.cache_folder import CacheFolder
-from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
@@ -27,7 +26,7 @@ class RecipeLayout(LockableMixin):
             self._cache._backend.get_or_create_reference_directory(self._ref, path=default_path)
 
         # Add place for package layouts
-        self._package_layouts: List[PackageLayout] = []
+        self._package_layouts = []
         resource_id = self._ref.full_str()
         super().__init__(resource=resource_id, **kwargs)
 
@@ -50,10 +49,11 @@ class RecipeLayout(LockableMixin):
             if new_path:
                 self._base_directory = new_path
 
-    def get_package_layout(self, pref: PackageReference) -> PackageLayout:
+    def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
         assert not self._random_rrev, "When requesting a package, the rrev is already known"
         assert self._ref.revision == pref.ref.revision, "Ensure revision is the same"
+        from conan.cache.package_layout import PackageLayout
         layout = PackageLayout(self, pref, cache=self._cache, manager=self._manager)
         self._package_layouts.append(layout)  # TODO: Not good, persists even if it is not used
         return layout
@@ -61,6 +61,7 @@ class RecipeLayout(LockableMixin):
     @contextmanager
     def lock(self, blocking: bool, wait: bool = True):  # TODO: Decide if we want to wait by default
         # I need the same level of blocking for all the packages
+        # TODO: Here we don't want to block all MY package_layouts, but ALL existings
         with ExitStack() as stack:
             if blocking:
                 for package_layout in self._package_layouts:

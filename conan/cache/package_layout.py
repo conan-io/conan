@@ -6,12 +6,13 @@ from conan.cache.cache_database_directories import ConanFolders
 from conan.cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
+from conan.cache.recipe_layout import RecipeLayout
 
 
 class PackageLayout(LockableMixin):
     _random_prev = False
 
-    def __init__(self, recipe_layout: 'RecipeLayout', pref: PackageReference, cache: Cache,
+    def __init__(self, recipe_layout: RecipeLayout, pref: PackageReference, cache: Cache,
                  **kwargs):
         self._recipe_layout = recipe_layout
         self._pref = pref

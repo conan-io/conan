@@ -3,12 +3,13 @@ import shutil
 from io import StringIO
 from typing import Optional
 
+from conan.cache.exceptions import CacheDirectoryNotFound
 from conan.cache.cache_database_directories import CacheDatabaseDirectories, \
     CacheDatabaseDirectoriesSqlite3Filesystem, \
     CacheDatabaseDirectoriesSqlite3Memory, ConanFolders
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
-
+from conans.util import files
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -47,11 +48,30 @@ class Cache:
         from conan.cache.recipe_layout import RecipeLayout
         return RecipeLayout(ref, cache=self, manager=self._locks_manager)
 
+    """
+    def get_package_layout(self, pref: ConanFileReference) -> 'PackageLayout':
+        from conan.cache.package_layout import PackageLayout
+        return PackageLayout(pref, cache=self, manager=self._locks_manager)
+
     def remove_reference(self, ref: ConanFileReference):
-        pass
+        try:
+            layout = self.get_reference_layout(ref)  # FIXME: Here we create the entry if it didn't exist
+            with layout.lock(blocking=True):
+                pass
+        except CacheDirectoryNotFound:
+            pass
+    """
 
     def remove_package(self, pref: PackageReference):
-        pass
+        assert pref.ref.revision, 'It requires known recipe revision'
+        assert pref.revision, 'It requires known package revision'
+        pkg_layout = self.get_reference_layout(pref.ref).get_package_layout(pref)
+        with pkg_layout.lock(blocking=True):
+            # Remove contents and entries from database
+            files.rmdir(str(pkg_layout.build()))
+            files.rmdir(str(pkg_layout.package()))
+            self._backend.remove_package_directory(pref, ConanFolders.PKG_BUILD)
+            self._backend.remove_package_directory(pref, ConanFolders.PKG_PACKAGE)
 
     def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
                    move_reference_contents: bool = False) -> Optional[str]:

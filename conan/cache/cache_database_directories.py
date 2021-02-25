@@ -281,6 +281,19 @@ class CacheDatabaseDirectories:
             r = conn.execute(query, where_values)
             assert r.rowcount > 0
 
+    """
+    Function to remove entries from the database
+    """
+
+    def remove_package_directory(self, pref: PackageReference, folder: ConanFolders):
+        where_clause, where_values = self._where_clause(pref, filter_packages=True)
+        query = f'DELETE ' \
+                f'FROM {self._table_name} ' \
+                f'WHERE {where_clause} AND {self._column_folder} = ?;'
+        where_values = where_values + (folder.value,)
+        with self.connect() as conn:
+            conn.execute(query, where_values)
+
 
 class CacheDatabaseDirectoriesSqlite3Memory(CacheDatabaseDirectories, Sqlite3MemoryMixin):
     pass
