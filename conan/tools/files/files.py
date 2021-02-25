@@ -11,6 +11,7 @@ def load(conanfile, path, binary=False, encoding="auto"):
     """ Loads a file content """
     with open(path, 'rb') as handle:
         tmp = handle.read()
+        # TODO: Get rid of encoding auto-detection
         return tmp if binary else decode_text(tmp, encoding)
 
 
@@ -116,6 +117,7 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
     :param sha256: SHA-256 hash code to check the downloaded file
     :return: None
     """
+    # TODO: Add all parameters to the new conf
     out = conanfile.output
     requester = conanfile._conan_requester
     config = conanfile.conf
