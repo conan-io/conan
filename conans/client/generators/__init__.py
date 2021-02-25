@@ -107,9 +107,9 @@ class GeneratorManager(object):
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
-        elif generator_name == "QbsToolchain":
-            from conan.tools.qbs.qbstoolchain import QbsToolchain
-            return QbsToolchain
+        elif generator_name == "QbsToolchain" || generator_name == "QbsProfile":
+            from conan.tools.qbs.qbsprofile import QbsProfile
+            return QbsProfile
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
