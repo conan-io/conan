@@ -11,7 +11,7 @@ from conans import __version__ as client_version
 from conans.client.cmd.frogarian import cmd_frogarian
 from conans.client.cmd.uploader import UPLOAD_POLICY_FORCE, \
     UPLOAD_POLICY_NO_OVERWRITE, UPLOAD_POLICY_NO_OVERWRITE_RECIPE, UPLOAD_POLICY_SKIP
-from conans.client.conan_api import Conan, default_manifest_folder, _make_abs_path, ProfileData
+from conans.client.conan_api import Conan, _make_abs_path, ProfileData
 from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
@@ -335,7 +335,6 @@ class Command(object):
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
 
-        _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
         args = parser.parse_args(*args)
@@ -364,8 +363,7 @@ class Command(object):
             info = self._conan.create(args.path, name, version, user, channel,
                                       args.profile_host, args.settings_host, args.options_host,
                                       args.env_host, args.test_folder, args.not_export,
-                                      args.build, args.keep_source, args.keep_build, args.verify,
-                                      args.manifests, args.manifests_interactive,
+                                      args.build, args.keep_source, args.keep_build,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
@@ -462,7 +460,6 @@ class Command(object):
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files. e.g., conaninfo/conanbuildinfo.txt')
-        _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
@@ -496,8 +493,6 @@ class Command(object):
                                            env=args.env_host, profile_names=args.profile_host,
                                            profile_build=profile_build,
                                            remote_name=args.remote,
-                                           verify=args.verify, manifests=args.manifests,
-                                           manifests_interactive=args.manifests_interactive,
                                            build=args.build,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
@@ -510,7 +505,6 @@ class Command(object):
                                          "argument not allowed")
 
                 ref = ConanFileReference.loads(args.path_or_reference, validate=False)
-                manifest_interactive = args.manifests_interactive
                 info = self._conan.install_reference(ref,
                                                      settings=args.settings_host,
                                                      options=args.options_host,
@@ -518,8 +512,6 @@ class Command(object):
                                                      profile_names=args.profile_host,
                                                      profile_build=profile_build,
                                                      remote_name=args.remote,
-                                                     verify=args.verify, manifests=args.manifests,
-                                                     manifests_interactive=manifest_interactive,
                                                      build=args.build,
                                                      update=args.update,
                                                      generators=args.generator,
@@ -2148,22 +2140,6 @@ class Command(object):
             self._out.error(msg)
 
         return ret_code
-
-
-def _add_manifests_arguments(parser):
-    parser.add_argument("-m", "--manifests", const=default_manifest_folder, nargs="?",
-                        help='Install dependencies manifests in folder for later verify.'
-                             ' Default folder is .conan_manifests, but can be changed',
-                        action=OnceArgument)
-    parser.add_argument("-mi", "--manifests-interactive", const=default_manifest_folder,
-                        nargs="?",
-                        help='Install dependencies manifests in folder for later verify, '
-                             'asking user for confirmation. '
-                             'Default folder is .conan_manifests, but can be changed',
-                        action=OnceArgument)
-    parser.add_argument("-v", "--verify", const=default_manifest_folder, nargs="?",
-                        help='Verify dependencies manifests against stored ones',
-                        action=OnceArgument)
 
 
 def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):

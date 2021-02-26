@@ -27,7 +27,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 
 def create(app, ref, graph_info, remotes, update, build_modes,
-           manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
+           keep_build, test_build_folder,
            test_folder, conanfile_path, recorder):
     assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
@@ -43,9 +43,6 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                          ref_or_path=ref,
                          create_reference=ref,
                          install_folder=None,  # Not output anything
-                         manifest_folder=manifest_folder,
-                         manifest_verify=manifest_verify,
-                         manifest_interactive=manifest_interactive,
                          remotes=remotes,
                          graph_info=graph_info,
                          build_modes=build_modes,
@@ -69,9 +66,6 @@ def create(app, ref, graph_info, remotes, update, build_modes,
         else:
             install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes, update,
                                    build_modes=build_modes,
-                                   manifest_folder=manifest_folder,
-                                   manifest_verify=manifest_verify,
-                                   manifest_interactive=manifest_interactive,
                                    keep_build=keep_build,
                                    test_build_folder=test_build_folder,
                                    recorder=recorder)
@@ -80,9 +74,6 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                      ref_or_path=ref,
                      create_reference=ref,
                      install_folder=None,  # Not output anything
-                     manifest_folder=manifest_folder,
-                     manifest_verify=manifest_verify,
-                     manifest_interactive=manifest_interactive,
                      remotes=remotes,
                      graph_info=graph_info,
                      build_modes=build_modes,

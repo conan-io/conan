@@ -69,8 +69,6 @@ from conans.util.files import exception_message_safe, mkdir, save_files, load, s
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 
-default_manifest_folder = '.conan_manifests'
-
 
 class ProfileData(namedtuple("ProfileData", ["profiles", "settings", "options", "env"])):
     def __bool__(self):
@@ -331,9 +329,7 @@ class ConanAPIV1(object):
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
                profile_names=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
-               build_modes=None,
-               keep_source=False, keep_build=False, verify=None,
-               manifests=None, manifests_interactive=None,
+               build_modes=None, keep_source=False, keep_build=False,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
                lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
         """
@@ -372,14 +368,10 @@ class ConanAPIV1(object):
             if build_modes is None:  # Not specified, force build the tested library
                 build_modes = [ref.name]
 
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-            manifest_folder, manifest_interactive, manifest_verify = manifests
-
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
             graph_info.root = ConanFileReference(None, None, None, None, validate=False)
             recorder.add_recipe_being_developed(ref)
-            create(self.app, ref, graph_info, remotes, update, build_modes,
-                   manifest_folder, manifest_verify, manifest_interactive, keep_build,
+            create(self.app, ref, graph_info, remotes, update, build_modes, keep_build,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder)
 
             if lockfile_out:
@@ -520,8 +512,7 @@ class ConanAPIV1(object):
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
-                          remote_name=None, verify=None, manifests=None,
-                          manifests_interactive=None, build=None, profile_names=None,
+                          remote_name=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
                           lockfile_node_id=None):
@@ -530,9 +521,6 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         cwd = cwd or os.getcwd()
         try:
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-            manifest_folder, manifest_interactive, manifest_verify = manifests
-
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                         self.app.cache, self.app.out, lockfile=lockfile)
@@ -546,10 +534,7 @@ class ConanAPIV1(object):
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
                          remotes=remotes, graph_info=graph_info, build_modes=build,
-                         update=update, manifest_folder=manifest_folder,
-                         manifest_verify=manifest_verify,
-                         manifest_interactive=manifest_interactive,
-                         generators=generators, recorder=recorder,
+                         update=update, generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id)
 
             if lockfile_out:
@@ -566,8 +551,7 @@ class ConanAPIV1(object):
     @api_method
     def install(self, path="", name=None, version=None, user=None, channel=None,
                 settings=None, options=None, env=None,
-                remote_name=None, verify=None, manifests=None,
-                manifests_interactive=None, build=None, profile_names=None,
+                remote_name=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
                 lockfile=None, lockfile_out=None, profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
@@ -575,9 +559,6 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         cwd = cwd or os.getcwd()
         try:
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-            manifest_folder, manifest_interactive, manifest_verify = manifests
-
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                         self.app.cache, self.app.out,
@@ -595,9 +576,6 @@ class ConanAPIV1(object):
                          graph_info=graph_info,
                          build_modes=build,
                          update=update,
-                         manifest_folder=manifest_folder,
-                         manifest_verify=manifest_verify,
-                         manifest_interactive=manifest_interactive,
                          generators=generators,
                          no_imports=no_imports,
                          recorder=recorder)
@@ -1482,27 +1460,6 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
     if graph_info.profile_build is not None:
         graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
     return graph_info
-
-
-def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
-    if manifests and manifests_interactive:
-        raise ConanException("Do not specify both manifests and "
-                             "manifests-interactive arguments")
-    if verify and (manifests or manifests_interactive):
-        raise ConanException("Do not specify both 'verify' and "
-                             "'manifests' or 'manifests-interactive' arguments")
-    manifest_folder = verify or manifests or manifests_interactive
-    if manifest_folder:
-        if not os.path.isabs(manifest_folder):
-            if not cwd:
-                raise ConanException("'cwd' should be defined if the manifest folder is relative.")
-            manifest_folder = os.path.join(cwd, manifest_folder)
-        manifest_verify = verify is not None
-        manifest_interactive = manifests_interactive is not None
-    else:
-        manifest_verify = manifest_interactive = False
-
-    return manifest_folder, manifest_interactive, manifest_verify
 
 
 def existing_info_files(folder):

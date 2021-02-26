@@ -5,7 +5,6 @@ from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
-from conans.client.manifest_manager import ManifestManager
 from conans.client.output import Color
 from conans.client.source import retrieve_exports_sources
 from conans.client.generators import write_toolchain
@@ -19,8 +18,7 @@ from conans.util.files import normalize, save
 
 
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
-                 update=False, manifest_folder=None, manifest_verify=False,
-                 manifest_interactive=False, generators=None, no_imports=False,
+                 update=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -28,10 +26,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
     @param update: Check for updated in the upstream remotes (and update)
-    @param manifest_folder: Folder to install the manifests
-    @param manifest_verify: Verify dependencies manifests against stored ones
-    @param manifest_interactive: Install deps manifests in folder for later verify, asking user
-    for confirmation
     @param generators: List of generators from command line. If False, no generator will be
     written
     @param no_imports: Install specified packages but avoid running imports
@@ -81,16 +75,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                       graph_lock, keep_build=keep_build)
 
     graph_lock.complete_matching_prevs()
-
-    if manifest_folder:
-        manifest_manager = ManifestManager(manifest_folder, user_io=user_io, cache=cache)
-        for node in deps_graph.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            retrieve_exports_sources(remote_manager, cache, node.conanfile, node.ref, remotes)
-        manifest_manager.check_graph(deps_graph, verify=manifest_verify,
-                                     interactive=manifest_interactive)
-        manifest_manager.print_log()
 
     if install_folder:
         conanfile.layout.set_base_install_folder(install_folder)
