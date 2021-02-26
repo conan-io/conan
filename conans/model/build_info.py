@@ -358,7 +358,7 @@ class CppInfo(_CppInfo):
     def merge(self, other, rootpath=None):
         """ Used to aggregate build info objects when we have build and source declared
         in the recipe layout and it is consumed as an editable package"""
-        super().merge(other, rootpath or self.rootpath)
+        super(CppInfo, self).merge(other, rootpath or self.rootpath)
 
         for k, v in other.components.items():
             # Use the rootpath from this general build info, not from the component
