@@ -6,12 +6,12 @@ from six import string_types
 
 from conan.tools.env import Environment
 from conans.client import tools
+from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
-from conans.model.conanfile_dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Layout
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -70,7 +70,8 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                                        conanfile.display_name, str(e)))
 
 
 @contextmanager
@@ -147,15 +148,18 @@ class ConanFile(object):
         self._conan_using_build_profile = False
 
         self.layout = Layout()
-        self.dependencies = ConanFileDependencies()
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
-        self._conan_context = None  # build/host context
+        self._conan_node = None  # access to container Node object, to access info, context, deps...
 
     @property
     def context(self):
-        return self._conan_context
+        return self._conan_node.context
+
+    @property
+    def dependencies(self):
+        return ConanFileDependencies(self._conan_node)
 
     @property
     def buildenv(self):
