@@ -104,7 +104,7 @@ def test_merge2_components():
     agg.merge(build)
 
     for var in names_dirs:
-        values = getattr(agg.components["c1"], "{}dirs".format(var))
+        values = [a.replace("\\", "/") for a in getattr(agg.components["c1"], "{}dirs".format(var))]
         assert values == ["source/{}".format(var),
                           "source/other_{}".format(var),
                           "../build/{}".format(var),
