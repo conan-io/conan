@@ -19,7 +19,7 @@ def test_merge1_without_components():
     agg.merge(build)
 
     for var in names_dirs:
-        values = getattr(agg, "{}dirs".format(var))
+        values = [a.replace("\\", "/") for a in getattr(agg, "{}dirs".format(var))]
         assert values == ["source_folder/{}".format(var),
                           "source_folder/{}_source1".format(var),
                           "source_folder/{}_source2".format(var),
@@ -43,7 +43,7 @@ def test_merge2_without_components():
     agg.merge(build)
 
     for var in names_dirs:
-        values = getattr(agg, "{}dirs".format(var))
+        values = [a.replace("\\", "/") for a in getattr(agg, "{}dirs".format(var))]
         assert values == ["build/{}".format(var),
                           "build/other_{}".format(var)]
 
@@ -62,7 +62,7 @@ def test_merge3_without_components():
     agg.merge(build)
 
     for var in names_dirs:
-        values = getattr(agg, "{}dirs".format(var))
+        values = [a.replace("\\", "/") for a in getattr(agg, "{}dirs".format(var))]
         assert values == ["source/{}".format(var),
                           "source/other_{}".format(var),
                           "../build/{}".format(var),
@@ -83,7 +83,7 @@ def test_merge1_components():
     agg.merge(build)
 
     for var in names_dirs:
-        values = getattr(agg.components["c1"], "{}dirs".format(var))
+        values = [a.replace("\\", "/") for a in getattr(agg.components["c1"], "{}dirs".format(var))]
         assert values == ["source/{}".format(var),
                           "source/other_{}".format(var),
                           "build/{}".format(var),
