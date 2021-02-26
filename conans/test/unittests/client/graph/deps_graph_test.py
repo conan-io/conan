@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from mock import Mock
 
 from conans.client.graph.graph import CONTEXT_HOST
 from conans.client.graph.graph_builder import DepsGraph, Node
