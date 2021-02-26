@@ -210,12 +210,20 @@ class _CppInfo(object):
         self._name = value
 
     def get_name(self, generator):
+        if generator == "CMakeDeps":
+            return self.names.get(generator, self.names.get("cmake_find_package_multi", self._name))
+        if generator == "cmake_find_package_multi":
+            return self.names.get(generator, self.names.get("CMakeDeps", self._name))
         return self.names.get(generator, self._name)
 
     def get_filename(self, generator):
         result = self.filenames.get(generator)
         if result:
             return result
+        if generator == "CMakeDeps":
+            return self.filenames.get("cmake_find_package_multi", self.get_name(generator))
+        if generator == "cmake_find_package_multi":
+            return self.filenames.get("CMakeDeps", self.get_name(generator))
         return self.get_name(generator)
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
