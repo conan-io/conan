@@ -9,8 +9,7 @@ from conans.util.files import rmdir
 
 
 def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
-                           remotes, update, build_modes=None, manifest_folder=None,
-                           manifest_verify=False, manifest_interactive=False, keep_build=False,
+                           remotes, update, build_modes=None, keep_build=False,
                            test_build_folder=None, recorder=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
@@ -31,9 +30,6 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      graph_info=graph_info,
                      update=update,
                      build_modes=build_modes,
-                     manifest_folder=manifest_folder,
-                     manifest_verify=manifest_verify,
-                     manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
                      recorder=recorder)
         cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
