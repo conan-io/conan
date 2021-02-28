@@ -5,6 +5,7 @@ import subprocess
 import sys
 import unittest
 from collections import namedtuple
+from unittest.mock import Mock
 
 import pytest
 import requests
