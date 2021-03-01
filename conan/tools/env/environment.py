@@ -23,7 +23,8 @@ def environment_wrap_command(filename, cmd):
     if filename.endswith(".bat"):
         return "{} && {}".format(filename, cmd)
     elif filename.endswith(".sh"):
-        return 'bash -c ". {} && {}"'.format(filename, cmd.replace('"', r'\"'))
+        # Generic shell, not bash specific, but deactivate will not work
+        return '. ./{} && {}'.format(filename, cmd.replace('"', r'\"'))
     raise Exception("Unsupported environment file type {}".format(filename))
 
 
@@ -97,7 +98,7 @@ class Environment:
         value = self._list_value(value, _PathSep)
         self._values[name] = value + [_PathSep] + [_EnvVarPlaceHolder]
 
-    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -131,7 +132,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -146,13 +147,13 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename, pathsep=os.pathsep):
-        capture = textwrap.dedent("""\
+    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+        deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
             for v in {vars}
             do
-                value=${{!v}}
+                value=$(printenv $v)
                 if [ -n "$value" ]
                 then
                     echo export "$v=$value" >> deactivate_{filename}
@@ -162,6 +163,10 @@ class Environment:
             done
             echo Configuring environment variables
             """.format(filename=filename, vars=" ".join(self._values.keys())))
+        capture = textwrap.dedent("""\
+           {deactivate}
+           echo Configuring environment variables
+           """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
             value = self._format_value(varname, varvalues, "${name}", pathsep)

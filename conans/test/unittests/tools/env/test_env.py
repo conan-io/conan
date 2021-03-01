@@ -236,7 +236,7 @@ def test_env_files():
 
     with chdir(folder):
         if platform.system() == "Windows":
-            env.save_bat("test.bat", pathsep=":")
+            env.save_bat("test.bat", pathsep=":", generate_deactivate=True)
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
             check(cmd)
@@ -246,10 +246,10 @@ def test_env_files():
             # cmd = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
             # check(cmd)
         else:
-            env.save_sh("test.sh")
+            env.save_sh("test.sh", generate_deactivate=True)
             save("display.sh", display_sh)
             os.chmod("display.sh", 0o777)
-            cmd = 'bash -c ". test.sh && ./display.sh && . deactivate_test.sh && ./display.sh"'
+            cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
             check(cmd)
 
 
@@ -270,7 +270,7 @@ def test_windows_case_insensitive():
         """)
 
     with chdir(folder):
-        env.save_bat("test.bat")
+        env.save_bat("test.bat", generate_deactivate=True)
         save("display.bat", display_bat)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
