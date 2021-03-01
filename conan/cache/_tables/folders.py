@@ -44,13 +44,37 @@ class Folders(BaseTable):
         return self.row_type(reference_pk=reference_pk, package_pk=package_pk, path=path,
                              folder=folder.value, last_modified=last_modified)
 
+    """
+    Functions to touch (update) the timestamp of given entries
+    """
+
     def _touch(self, conn: sqlite3.Cursor, rowid: int):
         timestamp = int(time.time())
         query = f"UPDATE {self.table_name} " \
                 f"SET {self.columns.last_modified} = ? " \
                 f"WHERE rowid = {rowid}"
         r = conn.execute(query, [timestamp, ])
-        assert r.rowcount > 0
+        assert r.rowcount == 1
+
+    def touch_ref(self, conn: sqlite3.Cursor, ref: ConanFileReference):
+        timestamp = int(time.time())
+        ref_pk = self.references.pk(conn, ref)
+        query = f"UPDATE {self.table_name} " \
+                f"SET {self.columns.last_modified} = ? " \
+                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} IS NULL;'
+        r = conn.execute(query, [timestamp, ref_pk, ])
+        assert r.rowcount == 1
+
+    def touch_pref(self, conn: sqlite3.Cursor, pref: PackageReference):
+        """ Touching a pref implies touching the reference """
+        timestamp = int(time.time())
+        pref_pk = self.packages.pk(conn, pref)
+        query = f"UPDATE {self.table_name} " \
+                f"SET {self.columns.last_modified} = ? " \
+                f'WHERE {self.columns.package_pk} = ?;'
+        r = conn.execute(query, [timestamp, pref_pk, ])
+        assert r.rowcount >= 1
+        self.touch_ref(conn, pref.ref)
 
     """
     Functions to manage the data in this table using Conan types
@@ -82,7 +106,7 @@ class Folders(BaseTable):
         r = conn.execute(query, [ref_pk, ])
         row = r.fetchone()
         # TODO: Raise if not exists
-        self._touch(conn, row[0])  # Update LRU timestamp
+        self._touch(conn, row[0])  # Update LRU timestamp (only the reference)
         return row[1]
 
     def get_path_pref(self, conn: sqlite3.Cursor, pref: PackageReference,
@@ -96,5 +120,23 @@ class Folders(BaseTable):
         r = conn.execute(query, [ref_pk, pref_pk, folder.value, ])
         row = r.fetchone()
         # TODO: Raise if not exists
-        self._touch(conn, row[0])  # Update LRU timestamp
+        # Update LRU timestamp (the package and the reference)
+        self._touch(conn, row[0])
+        self.touch_ref(conn, pref.ref)
         return row[1]
+
+    def get_lru_ref(self, conn: sqlite3.Cursor, timestamp: int):
+        """ Returns references not used after given 'timestamp' """
+        query = f'SELECT {self.columns.reference_pk} FROM {self.table_name} ' \
+                f'WHERE {self.columns.package_pk} IS NULL AND {self.columns.last_modified} < ?;'
+        r = conn.execute(query, [timestamp, ])
+        for row in r.fetchall():
+            yield self.references.get(conn, row[0])
+
+    def get_lru_pref(self, conn: sqlite3.Cursor, timestamp: int):
+        """ Returns packages not used after given 'timestamp' """
+        query = f'SELECT DISTINCT {self.columns.package_pk} FROM {self.table_name} ' \
+                f'WHERE {self.columns.package_pk} IS NOT NULL AND {self.columns.last_modified} < ?;'
+        r = conn.execute(query, [timestamp, ])
+        for row in r.fetchall():
+            yield self.packages.get(conn, row[0])
