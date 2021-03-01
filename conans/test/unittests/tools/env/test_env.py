@@ -242,8 +242,10 @@ def test_env_files():
             check(cmd)
             # FIXME: Powershell still not working
             # env.save_ps1("test.ps1", pathsep=":")
-            # print(load("test.ps1"))
-            # cmd = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+            # cmd = 'powershell.exe -ExecutionPolicy ./test.ps1; gci env:'
+            # shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # (stdout, stderr) = shell.communicate()
+            # stdout, stderr = decode_text(stdout), decode_text(stderr)
             # check(cmd)
         else:
             env.save_sh("test.sh", generate_deactivate=True)

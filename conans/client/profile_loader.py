@@ -229,7 +229,6 @@ def _apply_inner_profile(doc, base_profile):
     if doc.buildenv:
         buildenv = ProfileEnvironment()
         buildenv.loads(doc.buildenv)
-        # TODO: compose ProfileEnvironment
         base_profile.buildenv.compose(buildenv)
 
 

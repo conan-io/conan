@@ -141,7 +141,6 @@ class Environment:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = self._format_value(varname, varvalues, "$env:{name}", pathsep)
-            result.append('Write-Output "Error: whatever message {}"'.format(varname))
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
