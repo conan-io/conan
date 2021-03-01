@@ -1,3 +1,4 @@
+import sqlite3
 from io import StringIO
 from typing import List
 
@@ -36,16 +37,22 @@ class CacheDatabase:
     Functions related to references
     """
 
-    def save_reference(self, ref: ConanFileReference, fail_if_exists: bool = False):
+    def save_reference(self, ref: ConanFileReference, fail_if_exists: bool = True):
         with self.connect() as conn:
-            self._references.save(conn, ref)
-            # TODO: Implement fail_if_exists ==> integrity check in database
+            try:
+                self._references.save(conn, ref)
+            except sqlite3.IntegrityError:
+                if fail_if_exists:
+                    raise References.AlreadyExist(f"Reference '{ref.full_str()}' already exists")
 
     def update_reference(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
             ref_pk = self._references.pk(conn, old_ref)
-            self._references.update(conn, ref_pk, new_ref)
+            try:
+                self._references.update(conn, ref_pk, new_ref)
+            except sqlite3.IntegrityError:
+                raise References.AlreadyExist(f"Reference '{new_ref.full_str()}' already exists")
 
     def update_reference_directory(self, ref: ConanFileReference, path: str):
         with self.connect() as conn:
@@ -77,16 +84,22 @@ class CacheDatabase:
     Functions related to package references
     """
 
-    def save_package_reference(self, pref: PackageReference, fail_if_exists: bool = False):
+    def save_package_reference(self, pref: PackageReference, fail_if_exists: bool = True):
         with self.connect() as conn:
-            self._packages.save(conn, pref)
-            # TODO: Implement fail_if_exists ==> integrity check in database
+            try:
+                self._packages.save(conn, pref)
+            except sqlite3.IntegrityError:
+                if fail_if_exists:
+                    raise Packages.AlreadyExist(f"Package '{pref.full_str()}' already exists")
 
     def update_package_reference(self, old_pref: PackageReference, new_pref: PackageReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
             pref_pk = self._packages.pk(conn, old_pref)
-            self._packages.update(conn, pref_pk, new_pref)
+            try:
+                self._packages.update(conn, pref_pk, new_pref)
+            except sqlite3.IntegrityError:
+                raise Packages.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
 
     def get_all_package_reference(self, ref: ConanFileReference) -> List[PackageReference]:
         with self.connect() as conn:

@@ -1,7 +1,10 @@
 import re
+import sqlite3
 
 import pytest
 
+from cache._tables.packages import Packages
+from cache._tables.references import References
 from conan.cache.cache import Cache
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -149,9 +152,9 @@ def test_concurrent_export(cache: Cache):
         r2_layout.assign_rrev(ref, move_contents=True)
 
     # When R1 wants to claim that revision...
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(References.AlreadyExist) as excinfo:
         r1_layout.assign_rrev(ref)
-    assert "An entry for reference 'name/version#1234567890' already exists" == str(excinfo.value)
+    assert "Reference 'name/version#1234567890' already exists" == str(excinfo.value)
 
 
 def test_concurrent_package(cache: Cache):
@@ -171,10 +174,9 @@ def test_concurrent_package(cache: Cache):
         p2_layout.assign_prev(pref, move_contents=True)
 
     # When P1 tries to claim the same revision...
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(Packages.AlreadyExist) as excinfo:
         p1_layout.assign_prev(pref)
-    assert "An entry for package reference 'name/version#rrev:123456789#5555555555'" \
-           " already exists" == str(excinfo.value)
+    assert "Package 'name/version#rrev:123456789#5555555555' already exists" == str(excinfo.value)
 
 
 def test_concurrent_read_write_recipe(cache: Cache):
@@ -198,6 +200,11 @@ def test_concurrent_write_recipe_package(cache: Cache):
     pref = PackageReference.loads('name/version#11111111:123456789')
     recipe_layout = cache.get_reference_layout(pref.ref)
     package_layout = recipe_layout.get_package_layout(pref)
+
+    from io import StringIO
+    output = StringIO()
+    cache.dump(output)
+    print(output.getvalue())
 
     with package_layout.lock(blocking=True, wait=True):
         # We can read the recipe

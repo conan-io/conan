@@ -19,6 +19,9 @@ class BaseTable:
     class MultipleObjectsReturned(ConanException):
         pass
 
+    class AlreadyExist(ConanException):
+        pass
+
     def __init__(self):
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)

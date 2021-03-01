@@ -13,9 +13,7 @@ class References(BaseTable):
                            ('name', str),
                            ('rrev', str),
                            ('rrev_order', int)]
-    unique_together = ('reference', 'rrev')
-
-    # TODO: Add unique constraint for (reference, rrev)
+    unique_together = ('reference', 'rrev')  # TODO: Add unittest
 
     def _as_tuple(self, ref: ConanFileReference, rrev_order: int):
         return self.row_type(reference=str(ref), name=ref.name, rrev=ref.revision,
@@ -61,7 +59,8 @@ class References(BaseTable):
                 f'WHERE {where_clause};'
         r = conn.execute(query, where_values)
         row = r.fetchone()
-        # TODO: Raise some NotFoundException if failed
+        if not row:
+            raise References.DoesNotExist(f"No entry for reference '{ref.full_str()}'")
         return row[0]
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:

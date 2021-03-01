@@ -64,7 +64,7 @@ class Cache:
             ref = ref.copy_with_rev(str(uuid.uuid4()))
 
         # Get data from the database
-        self.db.save_reference(ref)
+        self.db.save_reference(ref, fail_if_exists=False)
         reference_path = self.db.get_or_create_reference_directory(ref, path=path)
 
         return RecipeLayout(ref, cache=self, manager=self._locks_manager, base_folder=reference_path,
@@ -82,7 +82,7 @@ class Cache:
             pref = pref.copy_with_revs(pref.ref.revision, str(uuid.uuid4()))
 
         # Get data from the database
-        self.db.save_package_reference(pref)
+        self.db.save_package_reference(pref, fail_if_exists=False)
         package_path = self.db.get_or_create_package_reference_directory(
             pref, path=package_path, folder=ConanFolders.PKG_PACKAGE)
 

@@ -20,13 +20,10 @@ class Folders(BaseTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
-                           ('path', str, False, None, True),
+                           ('path', str, False, None, True),  # TODO: Add unittest
                            ('folder', int, False, [it.value for it in ConanFolders]),
                            ('last_modified', int)]
-    unique_together = ('reference_pk', 'package_pk', 'path', 'folder')
-
-    # TODO: Add uniqueness constraints
-
+    unique_together = ('reference_pk', 'package_pk', 'path', 'folder')  # TODO: Add unittest
     references: References = None
     packages: Packages = None
 
@@ -137,7 +134,8 @@ class Folders(BaseTable):
         self.touch_ref(conn, pref.ref)
         return row[1]
 
-    def update_path_pref(self, conn: sqlite3.Cursor, pref: ConanFileReference, path: str, folder: ConanFolders):
+    def update_path_pref(self, conn: sqlite3.Cursor, pref: ConanFileReference, path: str,
+                         folder: ConanFolders):
         """ Updates the value of the path assigned to given package reference and folder-type """
         ref_pk = self.references.pk(conn, pref.ref)
         pref_pk = self.packages.pk(conn, pref)

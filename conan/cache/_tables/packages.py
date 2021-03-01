@@ -14,7 +14,7 @@ class Packages(BaseTable):
                            ('package_id', str),
                            ('prev', str),
                            ('prev_order', int)]
-    unique_together = ('reference_pk', 'package_id', 'prev')
+    unique_together = ('reference_pk', 'package_id', 'prev')  # TODO: Add unittest
     references: References = None
 
     def create_table(self, conn: sqlite3.Cursor, references: References, if_not_exists: bool = True):

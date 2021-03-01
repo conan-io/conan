@@ -1,8 +1,6 @@
 import os
-import uuid
 from contextlib import contextmanager, ExitStack
 
-from cache._tables.folders import ConanFolders
 from conan.cache.cache import Cache
 from conan.cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
@@ -49,7 +47,7 @@ class RecipeLayout(LockableMixin):
         # I need the same level of blocking for all the packages
         with ExitStack() as stack:
             if blocking:
-                for pref in self._cache.db.get_all_package_reference(self._ref):
+                for pref in list(self._cache.db.get_all_package_reference(self._ref)):
                     layout = self._cache.get_package_layout(pref)
                     stack.enter_context(layout.lock(blocking, wait))
                     # TODO: Fix somewhere else: cannot get a new package-layout for a reference that is blocked.
