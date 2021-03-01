@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized_class
-
 from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS, CONAN_REQUEST_HEADER_OPTIONS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
@@ -52,7 +50,7 @@ class RequestHeadersTestCase(unittest.TestCase):
 
     def _get_header(self, requester, header_name):
         hits = sum([header_name in headers for _, headers in requester.requests])
-        self.assertEquals(hits, 2 if self.revs_enabled else 1)
+        assert hits == 2 if self.revs_enabled else 1
         for url, headers in requester.requests:
             if header_name in headers:
                 if self.revs_enabled:
