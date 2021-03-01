@@ -14,6 +14,7 @@ class Packages(BaseTable):
                            ('package_id', str),
                            ('prev', str),
                            ('prev_order', int)]
+    # TODO: Add uniqueness contraint
     references: References = None
 
     def create_table(self, conn: sqlite3.Cursor, references: References, if_not_exists: bool = True):
