@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 from conan.cache._tables.packages import Packages
@@ -41,3 +39,28 @@ def test_save_and_retrieve(sqlite3memory):
 
     pref = table.get(sqlite3memory, pk_pref)
     assert pref.full_str() == package_reference
+
+
+def test_filter(sqlite3memory):
+    references_table = References()
+    references_table.create_table(sqlite3memory)
+    table = Packages()
+    table.create_table(sqlite3memory, references_table, True)
+
+    ref1 = ConanFileReference.loads('name/v1@user/channel#123456789')
+    ref2 = ConanFileReference.loads('other/v1@user/channel#132456798')
+    references_table.save(sqlite3memory, ref1)
+    references_table.save(sqlite3memory, ref2)
+
+    pref1 = PackageReference.loads(f'{ref1.full_str()}:111111111#999')
+    pref2 = PackageReference.loads(f'{ref1.full_str()}:111111111#888')
+    pref3 = PackageReference.loads(f'{ref1.full_str()}:222222222#999')
+    prefn = PackageReference.loads(f'{ref2.full_str()}:111111111#999')
+
+    table.save(sqlite3memory, pref1)
+    table.save(sqlite3memory, pref2)
+    table.save(sqlite3memory, pref3)
+    table.save(sqlite3memory, prefn)
+
+    prefs = table.filter(sqlite3memory, ref1)
+    assert list(prefs) == [pref1, pref2, pref3]
