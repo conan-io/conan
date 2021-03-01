@@ -50,7 +50,7 @@ class TestFolders:
         # By default the cache will assign deterministics folders
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789#999999999')
         pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert not is_random_folder(cache.base_folder, pkg_layout.build())
+        assert is_random_folder(cache.base_folder, pkg_layout.build())
         assert not is_random_folder(cache.base_folder, pkg_layout.package())
 
     def test_package_existing(self, cache: Cache):

@@ -20,9 +20,10 @@ class Folders(BaseTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
-                           ('path', str),
+                           ('path', str, False, None, True),
                            ('folder', int, False, [it.value for it in ConanFolders]),
                            ('last_modified', int)]
+    unique_together = ('reference_pk', 'package_pk', 'path', 'folder')
 
     # TODO: Add uniqueness constraints
 
@@ -129,11 +130,23 @@ class Folders(BaseTable):
                 f'       AND {self.columns.folder} = ?;'
         r = conn.execute(query, [ref_pk, pref_pk, folder.value, ])
         row = r.fetchone()
-        # TODO: Raise if not exists
+        if not row:
+            raise Folders.DoesNotExist(f"No entry folder for package reference '{pref.full_str()}'")
         # Update LRU timestamp (the package and the reference)
         self._touch(conn, row[0])
         self.touch_ref(conn, pref.ref)
         return row[1]
+
+    def update_path_pref(self, conn: sqlite3.Cursor, pref: ConanFileReference, path: str, folder: ConanFolders):
+        """ Updates the value of the path assigned to given package reference and folder-type """
+        ref_pk = self.references.pk(conn, pref.ref)
+        pref_pk = self.packages.pk(conn, pref)
+        query = f'UPDATE {self.table_name} ' \
+                f'SET {self.columns.path} = ? ' \
+                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} = ?' \
+                f'       AND {self.columns.folder} = ?;'
+        r = conn.execute(query, [path, ref_pk, pref_pk, folder.value, ])
+        return r.lastrowid
 
     def get_lru_ref(self, conn: sqlite3.Cursor, timestamp: int):
         """ Returns references not used after given 'timestamp' """

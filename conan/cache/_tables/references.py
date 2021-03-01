@@ -13,6 +13,7 @@ class References(BaseTable):
                            ('name', str),
                            ('rrev', str),
                            ('rrev_order', int)]
+    unique_together = ('reference', 'rrev')
 
     # TODO: Add unique constraint for (reference, rrev)
 
@@ -44,7 +45,7 @@ class References(BaseTable):
 
     def update(self, conn: sqlite3.Cursor, pk: int, ref: ConanFileReference):
         """ Updates row 'pk' with values from 'ref' """
-        timestamp = int(time.time())
+        timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
         setters = ', '.join([f"{it} = ?" for it in self.columns])
         query = f"UPDATE {self.table_name} " \
                 f"SET {setters} " \

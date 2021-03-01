@@ -14,7 +14,7 @@ class Packages(BaseTable):
                            ('package_id', str),
                            ('prev', str),
                            ('prev_order', int)]
-    # TODO: Add uniqueness contraint
+    unique_together = ('reference_pk', 'package_id', 'prev')
     references: References = None
 
     def create_table(self, conn: sqlite3.Cursor, references: References, if_not_exists: bool = True):
@@ -49,6 +49,17 @@ class Packages(BaseTable):
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})', list(self._as_tuple(conn, pref, timestamp)))
+        return r.lastrowid
+
+    def update(self, conn: sqlite3.Cursor, pk: int, pref: PackageReference):
+        """ Updates row 'pk' with values from 'pref' """
+        timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
+        setters = ', '.join([f"{it} = ?" for it in self.columns])
+        query = f"UPDATE {self.table_name} " \
+                f"SET {setters} " \
+                f"WHERE rowid = ?;"
+        pref_as_tuple = list(self._as_tuple(conn, pref, timestamp))
+        r = conn.execute(query, pref_as_tuple + [pk, ])
         return r.lastrowid
 
     def pk(self, conn: sqlite3.Cursor, pref: PackageReference) -> int:

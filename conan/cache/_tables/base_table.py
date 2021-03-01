@@ -11,6 +11,7 @@ class BaseTable:
     columns_description: List[Tuple[str, type]] = None
     row_type: namedtuple = None
     columns: namedtuple = None
+    unique_together: tuple = None
 
     class DoesNotExist(ConanException):
         pass
@@ -24,7 +25,7 @@ class BaseTable:
         self.columns = self.row_type(*column_names)
 
     def create_table(self, conn: sqlite3.Cursor, if_not_exists: bool = True):
-        def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None):
+        def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None, unique = False):
             field_str = name
             if typename in [str, ]:
                 field_str += ' text'
@@ -42,11 +43,15 @@ class BaseTable:
                 constraints = ', '.join([str(it) for it in check_constraints])
                 field_str += f' CHECK ({name} IN ({constraints}))'
 
+            if unique:
+                field_str += ' UNIQUE'
+
             return field_str
 
         fields = ', '.join([field_str(*it) for it in self.columns_description])
         guard = 'IF NOT EXISTS' if if_not_exists else ''
-        conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields});")
+        table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
+        conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
 
     def dump(self, conn: sqlite3.Cursor, output: StringIO):
         r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')

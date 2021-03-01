@@ -1,8 +1,8 @@
 import os
 import uuid
 from contextlib import contextmanager, ExitStack
-from typing import List
 
+from cache._tables.folders import ConanFolders
 from conan.cache.cache import Cache
 from conan.cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
@@ -12,7 +12,8 @@ from conans.model.ref import PackageReference
 
 class RecipeLayout(LockableMixin):
 
-    def __init__(self, ref: ConanFileReference, cache: Cache, base_folder: str, locked=True, **kwargs):
+    def __init__(self, ref: ConanFileReference, cache: Cache, base_folder: str, locked=True,
+                 **kwargs):
         self._ref = ref
         self._cache = cache
         self._locked = locked
@@ -39,21 +40,19 @@ class RecipeLayout(LockableMixin):
 
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
-        assert not self._random_rrev, "When requesting a package, the rrev is already known"
+        assert self._locked, "When requesting a package, the rrev is already known"
         assert self._ref.revision == pref.ref.revision, "Ensure revision is the same"
-        from conan.cache.package_layout import PackageLayout
-        layout = PackageLayout(self, pref, cache=self._cache, manager=self._manager)
-        self._package_layouts.append(layout)  # TODO: Not good, persists even if it is not used
-        return layout
+        return self._cache.get_package_layout(pref)
 
     @contextmanager
     def lock(self, blocking: bool, wait: bool = True):  # TODO: Decide if we want to wait by default
         # I need the same level of blocking for all the packages
-        # TODO: Here we don't want to block all MY package_layouts, but ALL existings
         with ExitStack() as stack:
             if blocking:
-                for package_layout in self._package_layouts:
-                    stack.enter_context(package_layout.lock(blocking, wait))
+                for pref in self._cache.db.get_all_package_reference(self._ref):
+                    layout = self._cache.get_package_layout(pref)
+                    stack.enter_context(layout.lock(blocking, wait))
+                    # TODO: Fix somewhere else: cannot get a new package-layout for a reference that is blocked.
             stack.enter_context(super().lock(blocking, wait))
             yield
 
