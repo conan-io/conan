@@ -24,7 +24,7 @@ def environment_wrap_command(filename, cmd):
         return "{} && {}".format(filename, cmd)
     elif filename.endswith(".sh"):
         # Generic shell, not bash specific, but deactivate will not work
-        return '. ./{} && {}'.format(filename, cmd.replace('"', r'\"'))
+        return '. ./{} && {}'.format(filename, cmd)
     raise Exception("Unsupported environment file type {}".format(filename))
 
 
