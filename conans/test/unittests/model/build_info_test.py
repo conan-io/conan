@@ -238,30 +238,6 @@ VAR2=23
         self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
         self.assertIn("MyNameForMyGenerator", deps_cpp_info["myname"].get_name("my_generator"))
 
-    @staticmethod
-    def test_cpp_info_name_cmakedeps():
-        info = CppInfo("pkg", "folder")
-        info.names["CMakeDeps"] = "MyNameForMyGenerator"
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.add("pkg", DepCppInfo(info))
-        assert "MyNameForMyGenerator" == deps_cpp_info["pkg"].get_name("cmake_find_package_multi")
-        assert "MyNameForMyGenerator" == deps_cpp_info["pkg"].get_name("CMakeDeps")
-
-        info = CppInfo("pkg2", "folder")
-        info.names["cmake_find_package_multi"] = "MyNameForMyGenerator"
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.add("pkg2", DepCppInfo(info))
-        assert "MyNameForMyGenerator" == deps_cpp_info["pkg2"].get_name("cmake_find_package_multi")
-        assert "MyNameForMyGenerator" == deps_cpp_info["pkg2"].get_name("CMakeDeps")
-
-        info = CppInfo("pkg3", "folder")
-        info.names["cmake_find_package_multi"] = "MyNameForMyGenerator"
-        info.names["CMakeDeps"] = "MyNameForMyGenerator2"
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.add("pkg3", DepCppInfo(info))
-        assert "MyNameForMyGenerator" == deps_cpp_info["pkg3"].get_name("cmake_find_package_multi")
-        assert "MyNameForMyGenerator2" == deps_cpp_info["pkg3"].get_name("CMakeDeps")
-
     def test_cpp_info_build_modules(self):
         folder = temp_folder()
         info = CppInfo("myname", folder)
