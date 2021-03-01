@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -101,28 +102,31 @@ def test_export_pkg():
     # FIXME: The configure is not valid to change the layout, we need the settings and options
     #        ready
     client = TestClient()
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
-    conan_file += """
-        no_copy_source = True
+    conan_file = textwrap.dedent("""
+        from conans import ConanFile
+        from conans import tools
 
-        def configure(self):
-            self.layout.source.folder = "my_source"
-            self.layout.build.folder = "my_build"
+        class HelloConan(ConanFile):
+            no_copy_source = True
 
-        def source(self):
-            tools.save("downloaded.h", "bar")
+            def configure(self):
+                self.layout.source.folder = "my_source"
+                self.layout.build.folder = "my_build"
 
-        def build(self):
-            tools.save("library.lib", "bar")
-            tools.save("generated.h", "bar")
+            def source(self):
+                tools.save("downloaded.h", "bar")
 
-        def package(self):
-            self.output.warn("Source folder: {}".format(self.source_folder))
-            self.output.warn("Build folder: {}".format(self.build_folder))
-            self.output.warn("Package folder: {}".format(self.package_folder))
-            self.copy("*.h")
-            self.copy("*.lib")
-        """
+            def build(self):
+                tools.save("library.lib", "bar")
+                tools.save("generated.h", "bar")
+
+            def package(self):
+                self.output.warn("Source folder: {}".format(self.source_folder))
+                self.output.warn("Build folder: {}".format(self.build_folder))
+                self.output.warn("Package folder: {}".format(self.package_folder))
+                self.copy("*.h")
+                self.copy("*.lib")
+        """)
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -149,28 +153,31 @@ def test_export_pkg_local():
     # FIXME: The configure is not valid to change the layout, we need the settings and options
     #        ready
     client = TestClient()
-    conan_file = str(GenConanfile().with_import("from conans import tools"))
-    conan_file += """
-        no_copy_source = True
+    conan_file = textwrap.dedent("""
+        from conans import ConanFile
+        from conans import tools
 
-        def configure(self):
-            self.layout.source.folder = "my_source"
-            self.layout.build.folder = "my_build"
+        class HelloConan(ConanFile):
+            no_copy_source = True
 
-        def source(self):
-            tools.save("downloaded.h", "bar")
+            def configure(self):
+                self.layout.source.folder = "my_source"
+                self.layout.build.folder = "my_build"
 
-        def build(self):
-            tools.save("library.lib", "bar")
-            tools.save("generated.h", "bar")
+            def source(self):
+                tools.save("downloaded.h", "bar")
 
-        def package(self):
-            self.output.warn("Source folder: {}".format(self.source_folder))
-            self.output.warn("Build folder: {}".format(self.build_folder))
-            self.output.warn("Package folder: {}".format(self.package_folder))
-            self.copy("*.h")
-            self.copy("*.lib")
-        """
+            def build(self):
+                tools.save("library.lib", "bar")
+                tools.save("generated.h", "bar")
+
+            def package(self):
+                self.output.warn("Source folder: {}".format(self.source_folder))
+                self.output.warn("Build folder: {}".format(self.build_folder))
+                self.output.warn("Package folder: {}".format(self.package_folder))
+                self.copy("*.h")
+                self.copy("*.lib")
+        """)
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
