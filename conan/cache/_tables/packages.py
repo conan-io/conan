@@ -27,7 +27,7 @@ class Packages(BaseTable):
 
     def _as_ref(self, conn: sqlite3.Cursor, row: namedtuple, ref: ConanFileReference = None):
         ref = ref or self.references.get(conn, row.reference_pk)
-        return PackageReference.loads(f'{ref.full_str()}:{row.package_id}#{row.prev_order}',
+        return PackageReference.loads(f'{ref.full_str()}:{row.package_id}#{row.prev}',
                                       validate=False)
 
     def _where_clause(self, conn: sqlite3.Cursor, pref: PackageReference) -> Tuple[str, Tuple]:
