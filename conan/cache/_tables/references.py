@@ -42,6 +42,17 @@ class References(BaseTable):
                          f'VALUES ({placeholders})', list(self._as_tuple(ref, timestamp)))
         return r.lastrowid
 
+    def update(self, conn: sqlite3.Cursor, pk: int, ref: ConanFileReference):
+        """ Updates row 'pk' with values from 'ref' """
+        timestamp = int(time.time())
+        setters = ', '.join([f"{it} = ?" for it in self.columns])
+        query = f"UPDATE {self.table_name} " \
+                f"SET {setters} " \
+                f"WHERE rowid = ?;"
+        ref_as_tuple = list(self._as_tuple(ref, timestamp))
+        r = conn.execute(query, ref_as_tuple + [pk, ])
+        return r.lastrowid
+
     def pk(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> int:
         """ Returns the row matching the reference or fails """
         where_clause, where_values = self._where_clause(ref)

@@ -105,9 +105,19 @@ class Folders(BaseTable):
                 f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} IS NULL;'
         r = conn.execute(query, [ref_pk, ])
         row = r.fetchone()
-        # TODO: Raise if not exists
+        if not row:
+            raise Folders.DoesNotExist(f"No entry folder for reference '{ref.full_str()}'")
         self._touch(conn, row[0])  # Update LRU timestamp (only the reference)
         return row[1]
+
+    def update_path_ref(self, conn: sqlite3.Cursor, ref: ConanFileReference, path: str):
+        """ Updates the value of the path assigned to given reference """
+        ref_pk = self.references.pk(conn, ref)
+        query = f'UPDATE {self.table_name} ' \
+                f'SET {self.columns.path} = ? ' \
+                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} IS NULL;'
+        r = conn.execute(query, [path, ref_pk, ])
+        return r.lastrowid
 
     def get_path_pref(self, conn: sqlite3.Cursor, pref: PackageReference,
                       folder: ConanFolders) -> str:

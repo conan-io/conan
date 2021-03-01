@@ -3,12 +3,20 @@ from collections import namedtuple
 from io import StringIO
 from typing import Tuple, List, Optional
 
+from errors import ConanException
+
 
 class BaseTable:
     table_name: str = None
     columns_description: List[Tuple[str, type]] = None
     row_type: namedtuple = None
     columns: namedtuple = None
+
+    class DoesNotExist(ConanException):
+        pass
+
+    class MultipleObjectsReturned(ConanException):
+        pass
 
     def __init__(self):
         column_names: List[str] = [it[0] for it in self.columns_description]

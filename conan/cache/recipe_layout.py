@@ -11,30 +11,18 @@ from conans.model.ref import PackageReference
 
 
 class RecipeLayout(LockableMixin):
-    _random_rrev = False
 
-    def __init__(self, ref: ConanFileReference, cache: Cache, **kwargs):
+    def __init__(self, ref: ConanFileReference, cache: Cache, base_folder: str, locked=True, **kwargs):
         self._ref = ref
-        if not self._ref.revision:
-            self._random_rrev = True
-            self._ref = ref.copy_with_rev(str(uuid.uuid4()))
         self._cache = cache
-
-        # Get the base_directory that is assigned to this ref.
-        default_path = self._cache._backend.get_default_reference_path(ref)
-        self._base_directory = \
-            self._cache._backend.get_or_create_reference_directory(self._ref, path=default_path)
-
-        # Add place for package layouts
-        self._package_layouts = []
-        resource_id = self._ref.full_str()
-        super().__init__(resource=resource_id, **kwargs)
+        self._locked = locked
+        self._base_folder = base_folder
+        super().__init__(resource=self._ref.full_str(), **kwargs)
 
     def assign_rrev(self, ref: ConanFileReference, move_contents: bool = False):
+        assert not self._locked, "You can only change it if it was not assigned at the beginning"
         assert str(ref) == str(self._ref), "You cannot change the reference here"
-        assert self._random_rrev, "You can only change it if it was not assigned at the beginning"
         assert ref.revision, "It only makes sense to change if you are providing a revision"
-        assert not self._package_layouts, "No package_layout is created before the revision is known"
         new_resource: str = ref.full_str()
 
         # Block the recipe and all the packages too
@@ -42,12 +30,12 @@ class RecipeLayout(LockableMixin):
             # Assign the new revision
             old_ref = self._ref
             self._ref = ref
-            self._random_rrev = False
+            self._locked = True
 
             # Reassign folder in the database (only the recipe-folders)
             new_path = self._cache._move_rrev(old_ref, self._ref, move_contents)
             if new_path:
-                self._base_directory = new_path
+                self._base_folder = new_path
 
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
@@ -73,7 +61,7 @@ class RecipeLayout(LockableMixin):
     @property
     def base_directory(self):
         with self.lock(blocking=False):
-            return os.path.join(self._cache.base_folder, self._base_directory)
+            return os.path.join(self._cache.base_folder, self._base_folder)
 
     def export(self):
         export_directory = lambda: os.path.join(self.base_directory, 'export')
