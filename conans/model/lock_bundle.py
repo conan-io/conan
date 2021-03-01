@@ -62,7 +62,7 @@ class LockBundle(object):
                 ref_node = result._nodes.setdefault(ref_str, {})
                 packages_node = ref_node.setdefault("packages", [])
                 # Find existing package_id in the list of packages
-                # This is the equivalend of a setdefault over a dict, but on a list
+                # This is the equivalent of a setdefault over a dict, but on a list
                 for pkg in packages_node:
                     if pkg["package_id"] == node.package_id:
                         pid_node = pkg
