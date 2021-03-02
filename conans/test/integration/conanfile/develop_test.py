@@ -72,12 +72,12 @@ class DevelopTest(unittest.TestCase):
 
         client.run("build .")
         self.assertIn("Develop True configure!", client.out)
-        self.assertNotIn("requirements!", client.out)
+        self.assertIn("Develop True requirements!", client.out)
         self.assertNotIn("source!", client.out)
+        self.assertIn("Develop True package_id!", client.out)
         self.assertIn("Develop True build!", client.out)
         self.assertNotIn("package!", client.out)
         self.assertNotIn("package_info!", client.out)
-        self.assertNotIn("package_id!", client.out)
 
         client.run("package .")
         self.assertIn("Develop True configure!", client.out)
