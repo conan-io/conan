@@ -16,8 +16,8 @@ class ConanOps:
     def log(self, msg: str):
         self.q.put(f'{threading.current_thread().name} > {msg}')
 
-    def install_recipe(self, cache, ref, writing_to_cache: threading.Event,
-                       writing_release: threading.Event):
+    def install_recipe(self, cache: Cache, ref: ConanFileReference,
+                       writing_to_cache: threading.Event, writing_release: threading.Event):
         # Basically, installing a reference is about getting a write lock on the recipe_layout, but
         # some other threads might be using (writing) the same resource
         recipe_layout = cache.get_reference_layout(ref)

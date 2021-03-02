@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from conan.cache.cache import Cache
+from conan.cache.cache_implementation import CacheImplementation
 from conan.cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
@@ -11,7 +11,7 @@ from ._tables.folders import ConanFolders
 class PackageLayout(LockableMixin):
     _random_prev = False
 
-    def __init__(self, pref: PackageReference, cache: Cache, package_folder: str, locked=True,
+    def __init__(self, pref: PackageReference, cache: CacheImplementation, package_folder: str, locked=True,
                  **kwargs):
         self._pref = pref
         self._cache = cache

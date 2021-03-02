@@ -3,15 +3,16 @@ import sqlite3
 
 import pytest
 
-from cache._tables.packages import Packages
-from cache._tables.references import References
+from conan.cache._tables.packages import Packages
+from conan.cache._tables.references import References
 from conan.cache.cache import Cache
+from conan.cache.cache_implementation import CacheImplementation
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-def is_random_folder(cache_folder: str, folder):
+def is_random_folder(folder: str):
     # TODO: This can be shared and should be agree with the strategy used to generate random folders in the cache
-    pattern = rf'{cache_folder}/[a-f0-9]{{8}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{12}}(/[\w@]+)?'
+    pattern = rf'.+/[a-f0-9]{{8}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{4}}-[a-f0-9]{{12}}(/[\w@]+)?'
     return bool(re.match(pattern, str(folder)))
 
 
@@ -19,17 +20,17 @@ class TestFolders:
     def test_random_reference(self, cache: Cache):
         ref = ConanFileReference.loads('name/version@user/channel')
         ref_layout = cache.get_reference_layout(ref)
-        assert is_random_folder(cache.base_folder, ref_layout.export())
-        assert is_random_folder(cache.base_folder, ref_layout.export_sources())
-        assert is_random_folder(cache.base_folder, ref_layout.source())
+        assert is_random_folder(ref_layout.export())
+        assert is_random_folder(ref_layout.export_sources())
+        assert is_random_folder(ref_layout.source())
 
     def test_reference_with_rrev(self, cache: Cache):
         # By default the cache will assign deterministics folders
         ref = ConanFileReference.loads('name/version@user/channel#1111111111')
         ref_layout = cache.get_reference_layout(ref)
-        assert not is_random_folder(cache.base_folder, ref_layout.export())
-        assert not is_random_folder(cache.base_folder, ref_layout.export_sources())
-        assert not is_random_folder(cache.base_folder, ref_layout.source())
+        assert not is_random_folder(ref_layout.export())
+        assert not is_random_folder(ref_layout.export_sources())
+        assert not is_random_folder(ref_layout.source())
 
     def test_reference_existing(self, cache: Cache):
         ref = ConanFileReference.loads('name/version@user/channel')
@@ -39,22 +40,22 @@ class TestFolders:
         # If the folders are not moved when assigning the rrev, they will be retrieved as they are
         creation_layout.assign_rrev(ref, move_contents=False)
         ref_layout = cache.get_reference_layout(ref)
-        assert is_random_folder(cache.base_folder, ref_layout.export())
-        assert is_random_folder(cache.base_folder, ref_layout.export_sources())
-        assert is_random_folder(cache.base_folder, ref_layout.source())
+        assert is_random_folder(ref_layout.export())
+        assert is_random_folder(ref_layout.export_sources())
+        assert is_random_folder(ref_layout.source())
 
     def test_random_package(self, cache: Cache):
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
         pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert is_random_folder(cache.base_folder, pkg_layout.build())
-        assert is_random_folder(cache.base_folder, pkg_layout.package())
+        assert is_random_folder(pkg_layout.build())
+        assert is_random_folder(pkg_layout.package())
 
     def test_package_with_prev(self, cache: Cache):
         # By default the cache will assign deterministics folders
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789#999999999')
         pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert is_random_folder(cache.base_folder, pkg_layout.build())
-        assert not is_random_folder(cache.base_folder, pkg_layout.package())
+        assert is_random_folder(pkg_layout.build())
+        assert not is_random_folder(pkg_layout.package())
 
     def test_package_existing(self, cache: Cache):
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789')
@@ -64,20 +65,18 @@ class TestFolders:
         # If the folders are not moved when assigning the prev, they will be retrieved as they are
         creation_layout.assign_prev(pref, move_contents=False)
         pkg_layout = cache.get_reference_layout(pref.ref).get_package_layout(pref)
-        assert is_random_folder(cache.base_folder, pkg_layout.build())
-        assert is_random_folder(cache.base_folder, pkg_layout.package())
+        assert is_random_folder(pkg_layout.build())
+        assert is_random_folder(pkg_layout.package())
 
 
 def test_create_workflow(cache: Cache):
-    cache_folder = cache.base_folder
-
     # 1. First we have a reference without revision
     ref = ConanFileReference.loads('name/version@user/channel')
     ref_layout = cache.get_reference_layout(ref)
     export_folder = ref_layout.export()
-    assert is_random_folder(cache_folder, export_folder)
+    assert is_random_folder(export_folder)
     export_sources_folder = ref_layout.export_sources()
-    assert is_random_folder(cache_folder, export_sources_folder)
+    assert is_random_folder(export_sources_folder)
 
     # Without assigning the revision, there are many things we cannot do:
     with pytest.raises(AssertionError) as excinfo:
@@ -97,8 +96,8 @@ def test_create_workflow(cache: Cache):
     ref_layout.assign_rrev(ref, move_contents=True)
 
     # Data and information is moved to the new (and final location)
-    assert not is_random_folder(cache_folder, ref_layout.export())
-    assert not is_random_folder(cache_folder, ref_layout.export_sources())
+    assert not is_random_folder(ref_layout.export())
+    assert not is_random_folder(ref_layout.export_sources())
 
     # If the reference is in the cache, we can retrieve it.
     ref_layout2 = cache.get_reference_layout(ref)
@@ -115,16 +114,16 @@ def test_create_workflow(cache: Cache):
     pref = PackageReference.loads(f'{ref.full_str()}:99999999')
     package1_layout = ref_layout.get_package_layout(pref)
     build_folder = package1_layout.build()
-    assert is_random_folder(cache_folder, build_folder)
+    assert is_random_folder(build_folder)
     package_folder = package1_layout.package()
-    assert is_random_folder(cache_folder, package_folder)
+    assert is_random_folder(package_folder)
 
     # Other package will have other random directories (also for the same packageID)
     package2_layout = ref_layout.get_package_layout(pref)
     build2_folder = package2_layout.build()
     package2_folder = package2_layout.package()
-    assert is_random_folder(cache_folder, build2_folder)
-    assert is_random_folder(cache_folder, package2_folder)
+    assert is_random_folder(build2_folder)
+    assert is_random_folder(package2_folder)
     assert str(build_folder) != str(build2_folder)
     assert str(package_folder) != str(package2_folder)
 
@@ -134,7 +133,7 @@ def test_create_workflow(cache: Cache):
 
     # Data and information is moved to the new (and final location)
     assert str(build_folder) == str(package1_layout.build())  # Build folder is not moved
-    assert not is_random_folder(cache_folder, package1_layout.package())
+    assert not is_random_folder(package1_layout.package())
 
 
 def test_concurrent_export(cache: Cache):
@@ -200,11 +199,6 @@ def test_concurrent_write_recipe_package(cache: Cache):
     pref = PackageReference.loads('name/version#11111111:123456789')
     recipe_layout = cache.get_reference_layout(pref.ref)
     package_layout = recipe_layout.get_package_layout(pref)
-
-    from io import StringIO
-    output = StringIO()
-    cache.dump(output)
-    print(output.getvalue())
 
     with package_layout.lock(blocking=True, wait=True):
         # We can read the recipe
