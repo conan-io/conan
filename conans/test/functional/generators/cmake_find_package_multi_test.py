@@ -276,21 +276,19 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             self.assertNotIn("-- Library %s not found in package, might be system one" %
                              library_name, client.out)
             if build_type == "Release":
-                target_libs = "$<$<CONFIG:Debug>:;>;" \
-                              "$<$<CONFIG:MinSizeRel>:;>;" \
-                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
-                              "$<$<CONFIG:Release>:lib1;sys1;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
+                target_libs = ("$<$<CONFIG:Debug>:;>;"
+                               "$<$<CONFIG:Release>:lib1;sys1;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                               "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             else:
-                target_libs = "$<$<CONFIG:Debug>:lib1;sys1d;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;" \
-                              "$<$<CONFIG:MinSizeRel>:;>;" \
-                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
-                              "$<$<CONFIG:Release>:;>"
+                target_libs = ("$<$<CONFIG:Debug>:lib1;sys1d;>;"
+                               "$<$<CONFIG:Release>:;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                               "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
     def test_cpp_info_name(self):
@@ -336,24 +334,21 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
-        self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Debug>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
-                      client.out)
-        self.assertIn("Target libs (hello): "
-                      "$<$<CONFIG:Debug>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
-                      client.out)
+        assert ("Target libs (hello2): "
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;") in client.out
+
+        assert ("Target libs (hello): "
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;") in client.out
 
     def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
@@ -435,9 +430,12 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         t.run("create . --build missing -s build_type=Release")
 
-        self.assertIn("component libs: $<$<CONFIG:Debug>:;>;$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:Release>:system_lib_component;",
-                      t.out)
+        assert ("component libs: $<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:system_lib_component;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in t.out
 
 
 @pytest.mark.tool_cmake
