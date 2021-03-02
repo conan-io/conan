@@ -163,7 +163,6 @@ class FileCopier(object):
 
         for exclude in excludes:
             if ignore_case:
-                exclude = exclude.lower()
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f.lower(), exclude)]
             else:
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatchcase(f, exclude)]
