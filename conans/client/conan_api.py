@@ -722,9 +722,15 @@ class ConanAPIV1(object):
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True,
-              should_test=True, cwd=None):
-        self.app.load_remotes()
-        cwd = cwd or get_cwd()
+              should_test=True, cwd=None, settings=None, options=None, env=None,
+              remote_name=None, build=None, profile_names=None,
+              update=False, generators=None, no_imports=False,
+              lockfile=None, lockfile_out=None, profile_build=None):
+
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+        recorder = ActionRecorder()
+        cwd = cwd or os.getcwd()
+
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -732,10 +738,46 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
-        cmd_build(self.app, conanfile_path,
-                  source_folder, build_folder, package_folder, install_folder,
-                  should_configure=should_configure, should_build=should_build,
-                  should_install=should_install, should_test=should_test)
+        try:
+            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+            graph_info = get_graph_info(profile_host, profile_build, cwd, None,
+                                        self.app.cache, self.app.out,
+                                        name=None, version=None, user=None, channel=None,
+                                        lockfile=lockfile)
+
+            install_folder = _make_abs_path(install_folder, cwd)
+
+            remotes = self.app.load_remotes(remote_name=remote_name, update=update)
+
+            deps_info = deps_install(app=self.app,
+                                     ref_or_path=conanfile_path,
+                                     install_folder=install_folder,
+                                     remotes=remotes,
+                                     graph_info=graph_info,
+                                     build_modes=build,
+                                     update=update,
+                                     generators=generators,
+                                     no_imports=no_imports,
+                                     recorder=recorder)
+
+            if lockfile_out:
+                lockfile_out = _make_abs_path(lockfile_out, cwd)
+                graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
+                                                graph_info.graph_lock)
+                graph_lock_file.save(lockfile_out)
+
+            conanfile = deps_info.root.conanfile
+
+            cmd_build(self.app, conanfile_path, conanfile,
+                      source_folder, build_folder, package_folder, install_folder,
+                      should_configure=should_configure, should_build=should_build,
+                      should_install=should_install, should_test=should_test)
+
+            return recorder.get_info()
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None,
@@ -1390,6 +1432,79 @@ Conan = ConanAPIV1
 
 
 def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, output,
+                   name=None, version=None, user=None, channel=None, lockfile=None):
+    if lockfile:
+        try:
+            graph_info_folder = lockfile if os.path.isdir(lockfile) else os.path.dirname(lockfile)
+            graph_info = GraphInfo.load(graph_info_folder)
+            if name or version or user or channel:
+                root_ref = ConanFileReference(name, version, user, channel, validate=False)
+                graph_info.root = root_ref
+        except IOError:  # Only if file is missing
+            graph_info = GraphInfo()
+            root_ref = ConanFileReference(name, version, user, channel, validate=False)
+            graph_info.root = root_ref
+        lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
+        graph_lock_file = GraphLockFile.load(lockfile)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_build = graph_lock_file.profile_build
+        if graph_info.profile_host is None:
+            raise ConanException("Lockfiles with --base do not contain profile information, "
+                                 "cannot be used. Create a full lockfile")
+        graph_info.profile_host.process_settings(cache, preprocess=False)
+        if graph_info.profile_build is not None:
+            graph_info.profile_build.process_settings(cache, preprocess=False)
+        graph_info.graph_lock = graph_lock_file.graph_lock
+        output.info("Using lockfile: '{}'".format(lockfile))
+        return graph_info
+
+    try:
+        graph_info = GraphInfo.load(install_folder)
+    except IOError:  # Only if file is missing
+        if install_folder:
+            raise ConanException("Failed to load graphinfo file in install-folder: %s"
+                                 % install_folder)
+        graph_info = None
+    else:
+        lockfilename = os.path.join(install_folder, LOCKFILE)
+        graph_lock_file = GraphLockFile.load(lockfilename)
+        graph_info.profile_host = graph_lock_file.profile_host
+        graph_info.profile_host.process_settings(cache, preprocess=False)
+
+    if profile_host or profile_build or not graph_info:
+        if graph_info:
+            # FIXME: Convert to Exception in Conan 2.0
+            output.warn("Settings, options, env or profile specified. "
+                        "GraphInfo found from previous install won't be used: %s\n"
+                        "Don't pass settings, options or profile arguments if you want to reuse "
+                        "the installed graph-info file."
+                        % install_folder)
+
+        phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
+                                  profile_host.env, cwd, cache)
+        phost.process_settings(cache)
+        if profile_build:
+            # Only work on the profile_build if something is provided
+            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                       profile_build.options, profile_build.env, cwd, cache)
+            pbuild.process_settings(cache)
+        else:
+            pbuild = None
+
+        root_ref = ConanFileReference(name, version, user, channel, validate=False)
+        graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
+        # Preprocess settings and convert to real settings
+
+    # Apply the new_config to the profiles the global one, so recipes get it too
+    # TODO: This means lockfiles contain whole copy of the config here?
+    # FIXME: Apply to locked graph-info as well
+    graph_info.profile_host.conf.rebase_conf_definition(cache.new_config)
+    if graph_info.profile_build is not None:
+        graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
+    return graph_info
+
+
+def get_graph_info2(profile_host, profile_build, cwd, install_folder, cache, output,
                    name=None, version=None, user=None, channel=None, lockfile=None):
     if lockfile:
         try:

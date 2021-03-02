@@ -8,24 +8,14 @@ from conans.util.files import mkdir
 from conans.util.log import logger
 
 
-def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-              test=False, should_configure=True, should_build=True, should_install=True,
+def cmd_build(app, conanfile_path, conan_file, source_folder, build_folder, package_folder,
+              install_folder, test=False, should_configure=True, should_build=True, should_install=True,
               should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
     logger.debug("BUILD: folder '%s'" % build_folder)
     logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
-
-    try:
-        conan_file = app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                               deps_info_required=True, test=test)
-    except NotFoundException:
-        # TODO: Auto generate conanfile from requirements file
-        raise ConanException("'%s' file is needed for build.\n"
-                             "Create a '%s' and move manually the "
-                             "requirements and generators from '%s' file"
-                             % (CONANFILE, CONANFILE, CONANFILE_TXT))
 
     if test:
         try:
