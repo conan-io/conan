@@ -472,15 +472,24 @@ def test_export_casing():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class Pkg(ConanFile):
+            exports = "file1", "FILE1"
             exports_sources = "test", "TEST"
         """)
     client.save({"conanfile.py": conanfile,
                  "test": "some lowercase",
-                 "TEST": "some UPPERCASE"})
+                 "TEST": "some UPPERCASE",
+                 "file1": "file1 lowercase",
+                 "FILE1": "file1 UPPERCASE"
+                 })
     assert client.load("test") == "some lowercase"
     assert client.load("TEST") == "some UPPERCASE"
+    assert client.load("file1") == "file1 lowercase"
+    assert client.load("FILE1") == "file1 UPPERCASE"
     client.run("export . pkg/0.1@")
     ref = ConanFileReference.loads("pkg/0.1@")
     export_src_folder = client.cache.package_layout(ref).export_sources()
     assert load(os.path.join(export_src_folder, "test")) == "some lowercase"
     assert load(os.path.join(export_src_folder, "TEST")) == "some UPPERCASE"
+    exports_folder = client.cache.package_layout(ref).export()
+    assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
+    assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
