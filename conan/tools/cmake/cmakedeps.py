@@ -5,6 +5,7 @@ from jinja2 import Template
 
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo, merge_dicts
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import save
 
 COMPONENT_SCOPE = "::"
@@ -560,24 +561,40 @@ endforeach()
         for pkg_require in cpp_info.requires:
             _check_component_in_requirements(pkg_require)
 
-    def _get_name(self, cpp_info):
+    def _get_name(self, cpp_info, pkg_name):
         # FIXME: This is a workaround to be able to use existing recipes that declare
         # FIXME: cpp_info.names["cmake_find_package_multi"] = "xxxxx"
-        return cpp_info.names.get(self.name, cpp_info.names.get("cmake_find_package_multi",
-                                                                cpp_info._name))
+        name = cpp_info.names.get(self.name)
+        if name is not None:
+            return name
+        find_name = cpp_info.names.get("cmake_find_package_multi")
+        if find_name is not None:
+            # Not displaying a warning, too noisy as this is called many times
+            conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
+                           "but not 'CMakeDeps'".format(pkg_name))
+            return find_name
+        return cpp_info._name
 
-    def _get_filename(self, cpp_info):
+    def _get_filename(self, cpp_info, pkg_name):
         # FIXME: This is a workaround to be able to use existing recipes that declare
         # FIXME: cpp_info.filenames["cmake_find_package_multi"] = "xxxxx"
-        return cpp_info.filenames.get(self.name, cpp_info.filenames.get("cmake_find_package_multi",
-                                                                        cpp_info._name))
+        name = cpp_info.filenames.get(self.name)
+        if name is not None:
+            return name
+        find_name = cpp_info.filenames.get("cmake_find_package_multi")
+        if find_name is not None:
+            # Not displaying a warning, too noisy as this is called many times
+            conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
+                           "but not 'CMakeDeps'".format(pkg_name))
+            return find_name
+        return cpp_info._name
 
     def _get_require_name(self, pkg_name, req):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
         pkg_cpp_info = self._conanfile.deps_cpp_info[pkg]
-        pkg_name = self._get_name(pkg_cpp_info)
+        pkg_name = self._get_name(pkg_cpp_info, pkg_name)
         if cmp in pkg_cpp_info.components:
-            cmp_name = self._get_name(pkg_cpp_info.components[cmp])
+            cmp_name = self._get_name(pkg_cpp_info.components[cmp], pkg_name)
         else:
             cmp_name = pkg_name
         return pkg_name, cmp_name
@@ -587,7 +604,7 @@ endforeach()
         sorted_comps = cpp_info._get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
-            comp_genname = self._get_name(cpp_info.components[comp_name])
+            comp_genname = self._get_name(cpp_info.components[comp_name], pkg_name)
             comp_requires_gennames = []
             for require in comp.requires:
                 comp_requires_gennames.append(self._get_require_name(pkg_name, require))
@@ -629,8 +646,8 @@ endforeach()
 
         for pkg_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             self._validate_components(cpp_info)
-            pkg_filename = self._get_filename(cpp_info)
-            pkg_findname = self._get_name(cpp_info)
+            pkg_filename = self._get_filename(cpp_info, pkg_name)
+            pkg_findname = self._get_name(cpp_info, pkg_name)
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
@@ -640,7 +657,8 @@ endforeach()
                 if name not in deps_names:
                     deps_names.append(name)
             deps_names = ';'.join(deps_names)
-            pkg_public_deps_filenames = [self._get_filename(self._conanfile.deps_cpp_info[it[0]])
+            pkg_public_deps_filenames = [self._get_filename(self._conanfile.deps_cpp_info[it[0]],
+                                                            pkg_name)
                                          for it in public_deps]
             config_version = self.config_version_template.format(version=pkg_version)
             ret[self._config_version_filename(pkg_filename)] = config_version
