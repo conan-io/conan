@@ -283,11 +283,11 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             else:
-                target_libs = ("$<$<CONFIG:Debug>:lib1;sys1d;>;"
-                               "$<$<CONFIG:Release>:;"
+                target_libs = ("$<$<CONFIG:Debug>:lib1;sys1d;"
                                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
                                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                               "$<$<CONFIG:Release>:;>;"
                                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
@@ -335,20 +335,20 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         assert ("Target libs (hello2): "
+                "$<$<CONFIG:Debug>:;>;"
                 "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
                 "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                 "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
-                "$<$<CONFIG:Debug>:;>;"
-                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;") in client.out
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
         assert ("Target libs (hello): "
+                "$<$<CONFIG:Debug>:;>;"
                 "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
                 "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                 "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
-                "$<$<CONFIG:Debug>:;>;"
-                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;") in client.out
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
     def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
