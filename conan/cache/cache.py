@@ -6,10 +6,9 @@ from typing import Optional, Union
 
 from cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
     CacheDatabaseSqlite3Memory
-from conan.cache.cache_database_directories import ConanFolders
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util import files
+from ._tables.folders import ConanFolders
 
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
@@ -145,4 +144,3 @@ class Cache:
             self.db.update_package_reference_directory(new_pref, new_path, ConanFolders.PKG_PACKAGE)
             return new_path
         return None
-

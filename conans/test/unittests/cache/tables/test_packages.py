@@ -65,7 +65,7 @@ def test_filter(sqlite3memory):
     table.save(sqlite3memory, prefn)
 
     prefs = table.filter(sqlite3memory, ref1)
-    assert list(prefs) == [pref1, pref2, pref3]
+    assert sorted(list(prefs)) == [pref2, pref1, pref3]
 
 
 def test_latest_prev(sqlite3memory):

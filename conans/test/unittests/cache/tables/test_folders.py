@@ -58,6 +58,7 @@ def test_save_and_retrieve_pref(sqlite3memory):
     pref1 = PackageReference.loads('name/version@user/channel#111111:123456789#9999')
     references_table.save(sqlite3memory, pref1.ref)
     packages_table.save(sqlite3memory, pref1)
+    table.save_ref(sqlite3memory, pref1.ref, 'path/to/ref')
 
     path1 = 'path/for/pref1/build'
     path2 = 'path/for/pref1/package'
