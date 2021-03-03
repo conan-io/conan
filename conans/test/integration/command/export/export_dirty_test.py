@@ -15,7 +15,7 @@ class SourceDirtyTest(unittest.TestCase):
     def test_keep_failing_source_folder(self):
         # https://github.com/conan-io/conan/issues/4025
         client = TestClient()
-        conanfile = textwrap.dedent("""
+        conanfile = textwrap.dedent("""\
             from conans import ConanFile
             from conans.tools import save
             class Pkg(ConanFile):
