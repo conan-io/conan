@@ -60,11 +60,10 @@ class Pkg(ConanFile):
         self.output.info("REF: %s, %s, %s, %s" % (self.name, self.version, self.user, self.channel))
 """
         client.save({"conanfile.py": conanfile})
-        client.run("install . Pkg/0.1@myuser/testing")
+        client.run("build . --name=Pkg --version=0.1 --user=myuser --channel=testing")
+        self.assertIn("REF: Pkg, 0.1, myuser, testing", client.out)
         client.run("info .")
         self.assertIn("Pkg/0.1@myuser/testing", client.out)
-        client.run("build .")
-        self.assertIn("REF: Pkg, 0.1, myuser, testing", client.out)
 
         # Trying with partial name
         conanfile = conanfile + "    name = 'Other'\n"
@@ -73,12 +72,10 @@ class Pkg(ConanFile):
         client.run("install . Pkg/0.1@myuser/testing", assert_error=True)
         self.assertIn("ERROR: Package recipe with name Pkg!=Other", client.out)
         # Partial reference works
-        client.run("install . 0.1@myuser/testing")
-        client.run("build .")
+        client.run("build . --version=0.1 --user=myuser --channel=testing")
         self.assertIn("REF: Other, 0.1, myuser, testing", client.out)
         # And also full reference matching
-        client.run("install . Other/0.1@myuser/testing")
-        client.run("build .")
+        client.run("build . --name=Other --version=0.1 --user=myuser --channel=testing")
         self.assertIn("REF: Other, 0.1, myuser, testing", client.out)
 
         # Trying with partial name and version
@@ -88,12 +85,10 @@ class Pkg(ConanFile):
         client.run("install . Other/0.1@myuser/testing", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 0.1!=0.2", client.out)
         # Partial reference works
-        client.run("install . myuser/testing")
-        client.run("build .")
+        client.run("build . --user=myuser --channel=testing")
         self.assertIn("REF: Other, 0.2, myuser, testing", client.out)
         # And also full reference matching
-        client.run("install . Other/0.2@myuser/testing")
-        client.run("build .")
+        client.run("build . --name=Other --version=0.2 --user=myuser --channel=testing")
         self.assertIn("REF: Other, 0.2, myuser, testing", client.out)
 
     def test_four_subfolder_install(self):

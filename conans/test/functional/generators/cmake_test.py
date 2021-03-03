@@ -110,9 +110,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
 
         # Test output works as expected
-        client.run("install .")
-        # No need to do a full create, the build --configure is good
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertIn("Conan: Using cmake global configuration", client.out)
         self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertIn("Conan: Adjusting language standard", client.out)
@@ -122,7 +120,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake global configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
@@ -130,7 +128,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # Use TARGETS
         replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)

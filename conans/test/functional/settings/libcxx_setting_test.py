@@ -43,33 +43,27 @@ class LibcxxSettingTest(unittest.TestCase):
         client.run("export . pkg/0.1@lasote/testing")
 
         if platform.system() == "SunOS":
-            client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
-            client.run('build .')
+            client.run('build . -s compiler=sun-cc -s compiler.libcxx=libCstd')
             self.assertIn("-library=Cstd", client.out)
 
-            client.run('install -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
-            client.run('build .')
+            client.run('build -s compiler=sun-cc -s compiler.libcxx=libstdcxx')
             self.assertIn("-library=stdcxx4", client.out)
 
-            client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstlport')
-            client.run('build .')
+            client.run('build . -s compiler=sun-cc -s compiler.libcxx=libstlport')
             self.assertIn("-library=stlport4", client.out)
         else:
-            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+            client.run('build . -s compiler=clang -s compiler.version=3.3 '
                        '-s compiler.libcxx=libstdc++ ')
-            client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", client.out)
 
-            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+            client.run('build . -s compiler=clang -s compiler.version=3.3 '
                        '-s compiler.libcxx=libstdc++11')
-            client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", client.out)
 
-            client.run('install . -s compiler=clang -s compiler.version=3.3 '
+            client.run('build . -s compiler=clang -s compiler.version=3.3 '
                        '-s compiler.libcxx=libc++')
-            client.run('build .')
             self.assertIn("-stdlib=libc++", client.out)
             self.assertNotIn("Found Define: _GLIBCXX_USE_CXX11", client.out)
 
