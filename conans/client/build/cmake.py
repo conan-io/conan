@@ -259,7 +259,7 @@ class CMake(object):
 
         if pkg_config_paths:
             pkg_env = {"PKG_CONFIG_PATH":
-                       os.pathsep.join(get_abs_path(f, self._conanfile.layout.generators_folder)
+                       os.pathsep.join(get_abs_path(f, self._conanfile.generators_folder)
                                        for f in pkg_config_paths)}
         else:
             # If we are using pkg_config generator automate the pcs location, otherwise it could

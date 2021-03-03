@@ -475,6 +475,7 @@ class BinaryInstaller(object):
             # FIXME: Imports probably should go to a new imports_folder
             copied_files = run_imports(conanfile, conanfile.build_folder)
             report_copied_files(copied_files, output)
+            return
 
         # OLD EDITABLE LAYOUTS:
         # Try with package-provided file
