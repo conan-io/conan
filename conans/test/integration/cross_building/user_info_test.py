@@ -89,6 +89,5 @@ class UserInfoTestCase(unittest.TestCase):
         self._check_user_info_data("app/1.0", self.t.out)
 
     def test_user_info_local_workflow(self):
-        self.t.run("install app.py app/1.0@ --profile:host=host --profile:build=build")
-        self.t.run("build app.py")
+        self.t.run("build app.py --name=app --version=1.0 --profile:host=host --profile:build=build")
         self._check_user_info_data("app.py (app/1.0)", self.t.out)
