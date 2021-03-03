@@ -26,9 +26,9 @@ def environment_wrap_command(filename, cmd, cwd=None):
     for f in filenames:
         full_path = os.path.join(cwd, f) if cwd else f
         if os.path.isfile("{}.bat".format(full_path)):
-            bats.append(f)
+            bats.append("{}.bat".format(f))
         elif os.path.isfile("{}.sh".format(full_path)):
-            shs.append(f)
+            shs.append("{}.sh".format(f))
     if bats and shs:
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
 
