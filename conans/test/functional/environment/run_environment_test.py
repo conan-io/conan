@@ -42,8 +42,7 @@ class RunEnvironmentTest(unittest.TestCase):
         """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertIn("Hello Hello0", client.out)
 
 
@@ -129,7 +128,6 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         """)
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .")
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 
@@ -155,14 +153,12 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         client.run("config set log.print_run_commands=1")
 
         # Using a string, a new shell is expanded, DYLD_... paths has to be informed
-        client.run("install . -o cmd_list=False")
-        client.run("build .")
+        client.run("build . -o cmd_list=False")
         self.assertIn("> DYLD_LIBRARY_PATH=", client.out)
         self.assertIn("Hello Tool!", client.out)
 
         # Using a list, no new shell, DYLD_... are already in the environment
-        client.run("install . -o cmd_list=True")
-        client.run("build .")
+        client.run("build . -o cmd_list=True")
         self.assertNotIn("DYLD_LIBRARY_PATH", client.out)
         self.assertIn("Hello Tool!", client.out)
 
@@ -202,7 +198,6 @@ class RunEnvironmentSharedTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse,
                      "CMakeLists.txt": cmake}, clean_first=True)
-        client.run("install .")
         client.run("build .")
         self.assertIn("Hello Tool!", client.out)
 

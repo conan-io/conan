@@ -114,9 +114,7 @@ class IOSMesonTestCase(unittest.TestCase):
                      "main.cpp": app,
                      "profile_host": self.profile()})
 
-        self.t.run("install . --profile:build=default --profile:host=profile_host")
-
-        self.t.run("build .")
+        self.t.run("build . --profile:build=default --profile:host=profile_host")
 
         libhello = os.path.join(self.t.current_folder, "build", "libhello.a")
         self.assertTrue(os.path.isfile(libhello))

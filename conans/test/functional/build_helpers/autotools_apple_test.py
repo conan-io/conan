@@ -78,8 +78,7 @@ class AutoToolsAppleTest(unittest.TestCase):
                      "conanfile.py": self.conanfile_py,
                      "profile": profile})
 
-        self.t.run("install . --profile:host=profile")
-        self.t.run("build .")
+        self.t.run("build . --profile:host=profile")
 
         libhello = os.path.join(self.t.current_folder, "libhello.a")
         app = os.path.join(self.t.current_folder, "app")
@@ -130,8 +129,7 @@ class AutoToolsAppleTest(unittest.TestCase):
                      "conanfile.py": self.conanfile_py,
                      "profile": profile})
 
-        self.t.run("install . --profile:host=profile")
-        self.t.run("build .")
+        self.t.run("build . --profile:host=profile")
 
         libhello = os.path.join(self.t.current_folder, "libhello.a")
         app = os.path.join(self.t.current_folder, "app")
