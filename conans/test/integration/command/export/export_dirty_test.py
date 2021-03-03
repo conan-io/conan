@@ -1,12 +1,12 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
 
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -15,13 +15,14 @@ class SourceDirtyTest(unittest.TestCase):
     def test_keep_failing_source_folder(self):
         # https://github.com/conan-io/conan/issues/4025
         client = TestClient()
-        conanfile = """from conans import ConanFile
-from conans.tools import save
-class Pkg(ConanFile):
-    def source(self):
-        save("somefile.txt", "hello world!!!")
-        raise Exception("boom")
-"""
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            class Pkg(ConanFile):
+                def source(self):
+                    save("somefile.txt", "hello world!!!")
+                    raise Exception("boom")
+            """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/1.0@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
@@ -50,40 +51,37 @@ class ExportDirtyTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
-        self.client.run("install Hello0/0.1@lasote/stable --build")
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        self.client.save({"conanfile.py": GenConanfile().with_exports("main.cpp"),
+                          "main.cpp": ""})
+        self.client.run("create . pkg/0.1@user/stable")
+        ref = ConanFileReference.loads("pkg/0.1@user/stable")
         source_path = self.client.cache.package_layout(ref).source()
         file_open = os.path.join(source_path, "main.cpp")
 
         self.f = open(file_open, 'wb')
         self.f.write(b"Hello world")
-        files[CONANFILE] = files[CONANFILE].replace("build2(", "build3(")
-        self.client.save(files)
-        self.client.run("export . lasote/stable")
+
+        self.client.save({"conanfile.py": GenConanfile().with_exports("main.cpp", "other.h"),
+                          "main.cpp": ""})
+        self.client.run("export . pkg/0.1@user/stable")
         self.assertIn("ERROR: Unable to delete source folder. "
                       "Will be marked as corrupted for deletion",
                       self.client.out)
 
-        self.client.run("install Hello0/0.1@lasote/stable --build", assert_error=True)
+        self.client.run("install pkg/0.1@user/stable --build", assert_error=True)
         self.assertIn("ERROR: Unable to remove source folder", self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_export_remove(self):
         # export is able to remove dirty source folders
         self.f.close()
-        self.client.run("export . lasote/stable")
+        self.client.run("export . pkg/0.1@user/stable")
         self.assertIn("Source folder is corrupted, forcing removal", self.client.out)
-        self.client.run("install Hello0/0.1@lasote/stable --build")
+        self.client.run("install pkg/0.1@user/stable --build")
         self.assertNotIn("WARN: Trying to remove corrupted source folder", self.client.out)
 
-    @pytest.mark.tool_compiler
     def test_install_remove(self):
         # install is also able to remove dirty source folders
         # Now, release the handle to the file
         self.f.close()
-        self.client.run("install Hello0/0.1@lasote/stable --build")
+        self.client.run("install pkg/0.1@user/stable --build")
         self.assertIn("WARN: Trying to remove corrupted source folder", self.client.out)
