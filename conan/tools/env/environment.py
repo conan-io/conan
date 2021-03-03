@@ -19,13 +19,27 @@ class _PathSep:
     pass
 
 
-def environment_wrap_command(filename, cmd):
-    if filename.endswith(".bat"):
-        return "{} && {}".format(filename, cmd)
-    elif filename.endswith(".sh"):
-        # Generic shell, not bash specific, but deactivate will not work
-        return '. ./{} && {}'.format(filename, cmd)
-    raise Exception("Unsupported environment file type {}".format(filename))
+def environment_wrap_command(filename, cmd, cwd=None):
+    assert filename
+    filenames = [filename] if not isinstance(filename, list) else filename
+    bats, shs = [], []
+    for f in filenames:
+        full_path = os.path.join(cwd, f) if cwd else f
+        if os.path.isfile("{}.bat".format(full_path)):
+            bats.append(f)
+        elif os.path.isfile("{}.sh".format(full_path)):
+            shs.append(f)
+    if bats and shs:
+        raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
+
+    if bats:
+        command = " && ".join(bats)
+        return "{} && {}".format(command, cmd)
+    elif shs:
+        command = " && ".join(". ./{}".format(f) for f in shs)
+        return "{} && {}".format(command, cmd)
+    else:
+        return cmd
 
 
 class Environment:

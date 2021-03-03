@@ -80,32 +80,45 @@ def client():
 
 def test_complete(client):
     conanfile = textwrap.dedent("""
-       from conans import ConanFile
-       class Pkg(ConanFile):
-           generators = "VirtualEnv"
-           requires = "openssl/1.0"
-           build_requires = "mycmake/1.0"
+        import platform
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            generators = "VirtualEnv"
+            requires = "openssl/1.0"
+            build_requires = "mycmake/1.0"
 
-           def build_requirements(self):
-               self.build_requires("mygtest/1.0", force_host_context=True)
+            def build_requirements(self):
+                self.build_requires("mygtest/1.0", force_host_context=True)
+
+            def build(self):
+                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
+                self.run(mybuild_cmd)
+                mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
+                self.run(mytest_cmd, env="runenv")
        """)
 
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("buildenv.{}".format(ext), "mycmake.{}".format(ext))
+    cmd = environment_wrap_command("buildenv", "mycmake.{}".format(ext), cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command("runenv.{}".format(ext),
+    cmd = environment_wrap_command("runenv",
                                    "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
-                                                                                  sep=os.sep))
+                                                                                  sep=os.sep),
+                                   cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYGTEST=Linux!!" in client.out
     assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+
+    client.run("build .")
+    assert "MYCMAKE=Windows!!" in client.out
+    assert "MYOPENSSL=Windows!!" in client.out
+    assert "MYGTEST=Linux!!" in client.out
 
 
 def test_profile_buildenv(client):
@@ -137,7 +150,8 @@ def test_profile_buildenv(client):
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("buildenv.{}".format(ext), "mycompiler.{}".format(ext))
+    cmd = environment_wrap_command("buildenv", "mycompiler.{}".format(ext),
+                                   cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
     assert "MYPATH=" in client.out
