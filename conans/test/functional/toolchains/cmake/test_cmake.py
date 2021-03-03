@@ -466,7 +466,6 @@ class CMakeInstallTest(unittest.TestCase):
         # folder yet. We need to define the layout for local development
         """
         with client.chdir("build"):
-            client.run("install ..")
             client.run("build ..")
             client.run("package .. -pf=mypkg")  # -pf=mypkg ignored
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build",
@@ -512,6 +511,5 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist})
-        client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
