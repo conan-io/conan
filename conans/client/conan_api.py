@@ -720,7 +720,8 @@ class ConanAPIV1(object):
         return deps_graph, deps_graph.root.conanfile
 
     @api_method
-    def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
+    def build(self, conanfile_path, name=None, version=None, user=None, channel=None,
+              source_folder=None, package_folder=None, build_folder=None,
               install_folder=None, should_configure=True, should_build=True, should_install=True,
               should_test=True, cwd=None, settings=None, options=None, env=None,
               remote_name=None, build=None, profile_names=None,
@@ -742,7 +743,7 @@ class ConanAPIV1(object):
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
             graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                         self.app.cache, self.app.out,
-                                        name=None, version=None, user=None, channel=None,
+                                        name=name, version=version, user=user, channel=channel,
                                         lockfile=lockfile)
 
             install_folder = _make_abs_path(install_folder, cwd)

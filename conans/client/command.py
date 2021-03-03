@@ -810,7 +810,12 @@ class Command(object):
                                          prog="conan build",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-
+        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
+                                                                'if not specified in conanfile')
+        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
+                                                                   'if not specified in conanfile')
+        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
+        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument("--should_build", default=None, action="store_true",
                             help="Execute the build step (variable should_build=True). When "
@@ -870,6 +875,10 @@ class Command(object):
         info = None
         try:
             info = self._conan.build(conanfile_path=args.path,
+                                     name=args.name,
+                                     version=args.version,
+                                     user=args.user,
+                                     channel=args.channel,
                                      source_folder=args.source_folder,
                                      package_folder=args.package_folder,
                                      build_folder=args.build_folder,
