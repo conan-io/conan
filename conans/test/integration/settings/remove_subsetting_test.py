@@ -73,10 +73,8 @@ class Pkg(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
+        client.run('build .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 '
                    '-s arch=x86')
-        # Before fixing #2327 this raised an error because build_type wasn't defined
-        client.run("build ..")
         self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
         self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
         self.assertIn('-DCONAN_COMPILER="Visual Studio"', client.out)
@@ -135,9 +133,8 @@ class ConanLib(ConanFile):
         self.output.info("BUILD " + cmake.command_line)
 """
         client.save({"conanfile.py": conanfile})
-        client.run("install . -s arch=x86_64 -s compiler=gcc -s compiler.version=4.9 "
+        client.run("build . -s arch=x86_64 -s compiler=gcc -s compiler.version=4.9 "
                    "-s compiler.libcxx=libstdc++11")
-        client.run("build .")
         self.assertIn("ERROR: BUILD 'settings.compiler.libcxx' doesn't exist for 'gcc'",
                       client.out)
         self.assertNotIn("LIBCXX", client.out)

@@ -296,8 +296,7 @@ class ToolsTest(ConanFile):
             external.external_baz()
 """
         client.save({CONANFILE: reuse})
-        client.run("install . --build -e PYTHONPATH=['%s']" % external_dir)
-        client.run("build .")
+        client.run("build . --build -e PYTHONPATH=['%s']" % external_dir)
         info = ConanInfo.loads(client.load("conaninfo.txt"))
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]
         self.assertEqual(os.path.normpath(pythonpath[0]), os.path.normpath(external_dir))
