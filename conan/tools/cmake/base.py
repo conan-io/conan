@@ -85,6 +85,7 @@ class CMakeToolchainBase(object):
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
