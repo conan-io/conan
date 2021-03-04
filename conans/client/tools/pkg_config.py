@@ -6,7 +6,6 @@ import subprocess
 
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
-from util.env_reader import get_env
 
 
 class PkgConfig(object):
