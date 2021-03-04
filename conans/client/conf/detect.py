@@ -6,7 +6,7 @@ import textwrap
 
 from conans.client.conf.compiler_id import UNKNOWN_COMPILER, LLVM_GCC, detect_compiler_id
 from conans.client.output import Color
-from conans.client.tools import detected_os, detected_architecture, OSInfo
+from conans.client.tools import detected_os, detected_architecture
 from conans.client.tools.win import latest_visual_studio_version_installed
 from conans.model.version import Version
 from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
@@ -41,7 +41,7 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         if ret != 0:
             return None
         compiler = "gcc"
-        installed_version = re.search("([0-9]+(\.[0-9])?)", out).group()
+        installed_version = re.search(r"([0-9]+(\.[0-9])?)", out).group()
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
@@ -61,7 +61,7 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("([0-9]+\.[0-9])", out).group()
+        installed_version = re.search(r"([0-9]+\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -73,11 +73,11 @@ def _sun_cc_compiler(output, compiler_exe="cc"):
     try:
         _, out = detect_runner('%s -V' % compiler_exe)
         compiler = "sun-cc"
-        installed_version = re.search("Sun C.*([0-9]+\.[0-9]+)", out)
+        installed_version = re.search(r"Sun C.*([0-9]+\.[0-9]+)", out)
         if installed_version:
             installed_version = installed_version.group(1)
         else:
-            installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
+            installed_version = re.search(r"([0-9]+\.[0-9]+)", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
