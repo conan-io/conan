@@ -1,7 +1,7 @@
 import sqlite3
 import time
 from collections import namedtuple
-from typing import Tuple, List
+from typing import Tuple, List, Iterator
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import ConanFileReference
@@ -81,7 +81,7 @@ class References(BaseTable):
         return self._as_ref(self.row_type(*row))
 
     def filter(self, conn: sqlite3.Cursor, pattern: str,
-               only_latest_rrev: bool) -> List[ConanFileReference]:
+               only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         """ Returns the references that match a given pattern (sql style) """
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \

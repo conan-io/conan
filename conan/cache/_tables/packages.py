@@ -1,7 +1,7 @@
 import sqlite3
 import time
 from collections import namedtuple
-from typing import Tuple
+from typing import Tuple, Iterator
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import PackageReference, ConanFileReference
@@ -90,12 +90,38 @@ class Packages(BaseTable):
         row = r.fetchone()
         return self._as_ref(conn, self.row_type(*row))
 
-    def filter(self, conn: sqlite3.Cursor, ref: ConanFileReference):
+    def filter(self, conn: sqlite3.Cursor, ref: ConanFileReference,
+               only_latest_prev: bool) -> Iterator[PackageReference]:
         """ Returns all the packages for a given reference """
         ref_pk = self.references.pk(conn, ref)
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference_pk} = ?;'
+        if only_latest_prev:
+            query = f'SELECT DISTINCT {self.columns.reference_pk}, {self.columns.package_id},' \
+                    f'                {self.columns.prev}, MAX({self.columns.prev_order}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference_pk} = ? ' \
+                    f'GROUP BY {self.columns.reference_pk}, {self.columns.package_id} ' \
+                    f'ORDER BY MAX({self.columns.prev_order}) DESC'
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference_pk} = ?;'
         r = conn.execute(query, [ref_pk, ])
+        for row in r.fetchall():
+            yield self._as_ref(conn, self.row_type(*row), ref=ref)
+
+    def search(self, conn: sqlite3.Cursor, ref: ConanFileReference, package_id: str,
+               only_latest_prev: bool) -> Iterator[PackageReference]:
+        ref_pk = self.references.pk(conn, ref)
+        if only_latest_prev:
+            query = f'SELECT DISTINCT {self.columns.reference_pk}, {self.columns.package_id},' \
+                    f'                {self.columns.prev}, MAX({self.columns.prev_order}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_id} = ?' \
+                    f'GROUP BY {self.columns.reference_pk}, {self.columns.package_id} ' \
+                    f'ORDER BY MAX({self.columns.prev_order}) DESC'
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_id} = ?;'
+        r = conn.execute(query, [ref_pk, package_id, ])
         for row in r.fetchall():
             yield self._as_ref(conn, self.row_type(*row), ref=ref)
 

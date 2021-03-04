@@ -53,14 +53,21 @@ class Cache:
 
     # <editor-fold desc="Methods for packages">
 
-    """
-    def list_packages(self, ref: ConanFileReference,
-                      only_latest_prev: bool) -> List[PackageReference]:
+    def list_package_references(self, ref: ConanFileReference,
+                                only_latest_prev: bool) -> Iterator[PackageReference]:
+        """ Returns an iterator to the all the PackageReference for the given recipe reference. The
+            argument 'only_latest_prev' can be used to filter and return only the latest package
+            revision for each of them.
+        """
         raise NotImplementedError
 
-    def get_package_layout_latest(self, pref: PackageReference) -> 'PackageLayout':
+    def search_package_references(self, ref: ConanFileReference, package_id: str,
+                                  only_latest_prev: bool) -> Iterator[PackageReference]:
+        """ Returns an iterator to the all the PackageReference for the given recipe reference and
+            package-id. The argument 'only_latest_prev' can be used to filter and return only the
+            latest package revision for each of them.
+        """
         raise NotImplementedError
-    """
 
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         """ Returns the layout for a package. The recipe revision and the package revision are a

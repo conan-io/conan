@@ -21,16 +21,14 @@ def populated_cache() -> Cache:
 
         # Now populate the cache
         for rrev in ('rrev1', 'rrev2', 'rrev3'):
-            time.sleep(1)  # TODO: Add more resolution to timestamp in database
-            for version in ('v1', 'v2', 'v3'):
-                ref = ConanFileReference.loads(f'name/{version}#{rrev}')
-                cache.get_or_create_reference_layout(ref)
-
-                for pkg_id in ('pkg1', 'pkg2'):
-                    for prev in ('prev1', 'prev2'):
+            for prev in ('prev1', 'prev2'):
+                time.sleep(1)  # TODO: Add more resolution to timestamp in database
+                for version in ('v1', 'v2', 'v3'):
+                    ref = ConanFileReference.loads(f'name/{version}#{rrev}')
+                    cache.get_or_create_reference_layout(ref)
+                    for pkg_id in ('pkg1', 'pkg2'):
                         pref = PackageReference.loads(f'{ref.full_str()}:{pkg_id}#{prev}')
                         cache.get_or_create_package_layout(pref)
-
         yield cache
 
 
@@ -68,3 +66,29 @@ def test_list_reference_versions(populated_cache):
     refs = list(populated_cache.list_reference_versions(ref, only_latest_rrev=True))
     assert 3 == len(refs)
     assert ['name/v1#rrev3', 'name/v2#rrev3', 'name/v3#rrev3'] == [r.full_str() for r in refs]
+
+
+def test_list_package_references(populated_cache):
+    ref = ConanFileReference.loads('name/v1#rrev1')
+    prefs = list(populated_cache.list_package_references(ref, only_latest_prev=False))
+    assert 4 == len(prefs)
+    assert ['name/v1#rrev1:pkg1#prev1', 'name/v1#rrev1:pkg1#prev2',
+            'name/v1#rrev1:pkg2#prev1', 'name/v1#rrev1:pkg2#prev2'] == [r.full_str() for r in prefs]
+
+    prefs = list(populated_cache.list_package_references(ref, only_latest_prev=True))
+    assert 2 == len(prefs)
+    assert ['name/v1#rrev1:pkg1#prev2', 'name/v1#rrev1:pkg2#prev2'] == [r.full_str() for r in prefs]
+
+
+def test_search_package_references(populated_cache):
+    ref = ConanFileReference.loads('name/v1#rrev1')
+    prefs = list(populated_cache.search_package_references(ref, 'pkg1', only_latest_prev=False))
+    assert 2 == len(prefs)
+    assert ['name/v1#rrev1:pkg1#prev1', 'name/v1#rrev1:pkg1#prev2'] == [r.full_str() for r in prefs]
+
+    prefs = list(populated_cache.search_package_references(ref, 'pkg1', only_latest_prev=True))
+    assert 1 == len(prefs)
+    assert ['name/v1#rrev1:pkg1#prev2'] == [r.full_str() for r in prefs]
+
+    prefs = list(populated_cache.search_package_references(ref, 'not-found', only_latest_prev=True))
+    assert 0 == len(prefs)

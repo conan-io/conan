@@ -71,7 +71,6 @@ class CacheImplementation(Cache):
             return str(uuid.uuid4())
 
     def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
-        """ BNBBBBB """
         for it in self.db.list_references(only_latest_rrev):
             yield it
 
@@ -106,6 +105,16 @@ class CacheImplementation(Cache):
         return RecipeLayout(ref, cache=self, manager=self._locks_manager,
                             base_folder=reference_path,
                             locked=locked), created
+
+    def list_package_references(self, ref: ConanFileReference,
+                                only_latest_prev: bool) -> Iterator[PackageReference]:
+        for it in self.db.list_package_references(ref, only_latest_prev):
+            yield it
+
+    def search_package_references(self, ref: ConanFileReference, package_id: str,
+                                  only_latest_prev: bool) -> Iterator[PackageReference]:
+        for it in self.db.search_package_references(ref, package_id, only_latest_prev):
+            yield it
 
     def _get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         package_path = self.db.try_get_package_reference_directory(pref,
