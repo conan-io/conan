@@ -63,7 +63,6 @@ from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
-from conans.unicode import get_cwd
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
@@ -110,7 +109,7 @@ def _make_abs_path(path, cwd=None, default=None):
     """convert 'path' to absolute if necessary (could be already absolute)
     if not defined (empty, or None), will return 'default' one or 'cwd'
     """
-    cwd = cwd or get_cwd()
+    cwd = cwd or os.getcwd()
     if not path:
         abs_path = default or cwd
     elif os.path.isabs(path):
@@ -199,7 +198,7 @@ class ConanApp(object):
         self.generator_manager = GeneratorManager()
         self.pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver)
         self.loader = ConanFileLoader(self.runner, self.out,
-                                      self.generator_manager, self.pyreq_loader)
+                                      self.generator_manager, self.pyreq_loader, self.requester)
         self.binaries_analyzer = GraphBinariesAnalyzer(self.cache, self.out, self.remote_manager)
         self.graph_manager = GraphManager(self.out, self.cache, self.remote_manager, self.loader,
                                           self.proxy, self.range_resolver, self.binaries_analyzer)
@@ -246,7 +245,7 @@ class ConanAPIV1(object):
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
             template=None):
         from conans.client.cmd.new import cmd_new
-        cwd = os.path.abspath(cwd or get_cwd())
+        cwd = os.path.abspath(cwd or os.getcwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
                         exports_sources=exports_sources, bare=bare,
                         visual_versions=visual_versions,
@@ -271,7 +270,7 @@ class ConanAPIV1(object):
         try:
             ref = ConanFileReference.loads(path)
         except ConanException:
-            conanfile_path = _get_conanfile_path(path, get_cwd(), py=True)
+            conanfile_path = _get_conanfile_path(path, os.getcwd(), py=True)
             conanfile = self.app.loader.load_named(conanfile_path, None, None, None, None)
         else:
             if remote_name:
@@ -315,7 +314,7 @@ class ConanAPIV1(object):
 
         remotes = self.app.load_remotes(remote_name=remote_name, update=update)
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                     self.app.cache, self.app.out, lockfile=lockfile)
@@ -394,7 +393,7 @@ class ConanAPIV1(object):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         remotes = self.app.load_remotes()
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
 
         recorder = ActionRecorder()
         try:
@@ -473,7 +472,7 @@ class ConanAPIV1(object):
                           update=False, cwd=None, install_folder=None, profile_build=None):
         profile_host = ProfileData(profiles=profile_name, settings=settings, options=options,
                                    env=env)
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         abs_path = os.path.normpath(os.path.join(cwd, path))
 
         remotes = self.app.load_remotes(remote_name=remote_name, update=update)
@@ -652,7 +651,7 @@ class ConanAPIV1(object):
 
     def _info_args(self, reference_or_path, install_folder, profile_host, profile_build,
                    lockfile=None):
-        cwd = get_cwd()
+        cwd = os.getcwd()
         if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
             install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
@@ -724,7 +723,7 @@ class ConanAPIV1(object):
               install_folder=None, should_configure=True, should_build=True, should_install=True,
               should_test=True, cwd=None):
         self.app.load_remotes()
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -742,7 +741,7 @@ class ConanAPIV1(object):
                 cwd=None):
         self.app.load_remotes()
 
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
@@ -766,7 +765,7 @@ class ConanAPIV1(object):
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
         self.app.load_remotes()
 
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
         info_folder = _make_abs_path(info_folder, cwd)
@@ -792,7 +791,7 @@ class ConanAPIV1(object):
         :param cwd: Current working directory
         :return: None
         """
-        cwd = cwd or get_cwd()
+        cwd = cwd or os.getcwd()
         info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
 
@@ -805,7 +804,7 @@ class ConanAPIV1(object):
 
     @api_method
     def imports_undo(self, manifest_path):
-        cwd = get_cwd()
+        cwd = os.getcwd()
         manifest_path = _make_abs_path(manifest_path, cwd)
         undo_imports(manifest_path, self.app.out)
 
@@ -1109,7 +1108,7 @@ class ConanAPIV1(object):
 
     @api_method
     def read_profile(self, profile=None):
-        p, _ = read_profile(profile, get_cwd(), self.app.cache.profiles_path)
+        p, _ = read_profile(profile, os.getcwd(), self.app.cache.profiles_path)
         return p
 
     @api_method
@@ -1326,7 +1325,7 @@ class ConanAPIV1(object):
                     base=None, lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None)
-        cwd = get_cwd()
+        cwd = os.getcwd()
 
         if path and reference:
             raise ConanException("Both path and reference arguments were provided. Please provide "
