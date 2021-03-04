@@ -9,7 +9,6 @@ import pytest
 import six
 from mock import patch
 
-from client.tools import environment_append
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
