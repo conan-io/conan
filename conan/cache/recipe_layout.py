@@ -37,10 +37,19 @@ class RecipeLayout(LockableMixin):
                 self._base_folder = new_path
 
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
+        """
+        Returns the package_layout for the given 'pref' in the SAME CACHE where this recipe_layout
+        is stored. If the package doesn't already exists it is created.
+        """
+        # TODO: Alternatively we can add a 'get_or_create_package_layout' method
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
-        assert self._locked, "When requesting a package, the rrev is already known"
+        assert self._locked, "Before requesting a package, assign the rrev using 'assign_rrev'"
         assert self._ref.revision == pref.ref.revision, "Ensure revision is the same"
-        return self._cache.get_package_layout(pref)
+        if pref.revision:
+            return self._cache.get_package_layout(pref)
+        else:
+            pkg_layout, _ = self._cache.get_or_create_package_layout(pref)
+            return pkg_layout
 
     @contextmanager
     def lock(self, blocking: bool, wait: bool = True):  # TODO: Decide if we want to wait by default

@@ -1,6 +1,6 @@
 import sqlite3
 from io import StringIO
-from typing import List
+from typing import List, Tuple
 
 from conan.cache.exceptions import CacheDirectoryNotFound, CacheDirectoryAlreadyExists
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
@@ -80,6 +80,18 @@ class CacheDatabase:
                 self._folders.save_ref(conn, ref, path)
                 return path
 
+    def get_or_create_reference(self, ref: ConanFileReference, path: str) -> Tuple[str, bool]:
+        """ Returns the path for the given reference. If the reference doesn't exist in the
+            database, it will create the entry for the reference using the path given as argument.
+        """
+        with self.connect() as conn:
+            try:
+                return self._folders.get_path_ref(conn, ref), False
+            except References.DoesNotExist:
+                self._references.save(conn, ref)
+                self._folders.save_ref(conn, ref, path)
+                return path, True
+
     """
     Functions related to package references
     """
@@ -134,6 +146,20 @@ class CacheDatabase:
             except Folders.DoesNotExist:
                 self._folders.save_pref(conn, pref, path, folder)
                 return path
+
+    def get_or_create_package(self, pref: PackageReference, path: str,
+                              folder: ConanFolders) -> Tuple[str, bool]:
+        """ Returns the path for the given package. The corresponding reference must exist.
+            If the package doesn't exist in the database, it will create the entry for the package
+            using the path given as argument.
+        """
+        with self.connect() as conn:
+            try:
+                return self._folders.get_path_pref(conn, pref, folder), False
+            except Packages.DoesNotExist:
+                self._packages.save(conn, pref)
+                self._folders.save_pref(conn, pref, path, folder)
+                return path, True
 
 
 class CacheDatabaseSqlite3Memory(CacheDatabase, Sqlite3MemoryMixin):

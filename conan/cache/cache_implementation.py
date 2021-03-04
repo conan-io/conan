@@ -4,17 +4,16 @@ import uuid
 from io import StringIO
 from typing import Optional, Union, Tuple
 
-from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
-    CacheDatabaseSqlite3Memory
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.cache import Cache
+from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
+    CacheDatabaseSqlite3Memory
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from ._tables.folders import ConanFolders
 from ._tables.packages import Packages
-from ._tables.references import References
 
 
 class CacheImplementation(Cache):
@@ -62,24 +61,19 @@ class CacheImplementation(Cache):
                             locked=True)
 
     def get_or_create_reference_layout(self, ref: ConanFileReference) -> Tuple['RecipeLayout', bool]:
-        try:
-            return self._get_reference_layout(ref), False
-        except References.DoesNotExist:
-            path = self.get_default_path(ref)
+        path = self.get_default_path(ref)
 
-            # Assign a random (uuid4) revision if not set
-            locked = bool(ref.revision)
-            if not ref.revision:
-                ref = ref.copy_with_rev(str(uuid.uuid4()))
+        # Assign a random (uuid4) revision if not set
+        locked = bool(ref.revision)
+        if not ref.revision:
+            ref = ref.copy_with_rev(str(uuid.uuid4()))
 
-            # Get data from the database
-            self.db.save_reference(ref, fail_if_exists=False)
-            reference_path = self.db.get_or_create_reference_directory(ref, path=path)
+        reference_path, created = self.db.get_or_create_reference(ref, path=path)
 
-            from conan.cache.recipe_layout import RecipeLayout
-            return RecipeLayout(ref, cache=self, manager=self._locks_manager,
-                                base_folder=reference_path,
-                                locked=locked), True
+        from conan.cache.recipe_layout import RecipeLayout
+        return RecipeLayout(ref, cache=self, manager=self._locks_manager,
+                            base_folder=reference_path,
+                            locked=locked), created
 
     def _get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         package_path = self.db.try_get_package_reference_directory(pref,
@@ -89,24 +83,19 @@ class CacheImplementation(Cache):
                              package_folder=package_path, locked=True)
 
     def get_or_create_package_layout(self, pref: PackageReference) -> Tuple['PackageLayout', bool]:
-        try:
-            return self._get_package_layout(pref), False
-        except Packages.DoesNotExist:
-            package_path = self.get_default_path(pref)
+        package_path = self.get_default_path(pref)
 
-            # Assign a random (uuid4) revision if not set
-            locked = bool(pref.revision)
-            if not pref.revision:
-                pref = pref.copy_with_revs(pref.ref.revision, str(uuid.uuid4()))
+        # Assign a random (uuid4) revision if not set
+        locked = bool(pref.revision)
+        if not pref.revision:
+            pref = pref.copy_with_revs(pref.ref.revision, str(uuid.uuid4()))
 
-            # Get data from the database
-            self.db.save_package_reference(pref, fail_if_exists=False)
-            package_path = self.db.get_or_create_package_reference_directory(
-                pref, path=package_path, folder=ConanFolders.PKG_PACKAGE)
+        package_path, created = self.db.get_or_create_package(pref, path=package_path,
+                                                              folder=ConanFolders.PKG_PACKAGE)
 
-            from conan.cache.package_layout import PackageLayout
-            return PackageLayout(pref, cache=self, manager=self._locks_manager,
-                                 package_folder=package_path, locked=locked), True
+        from conan.cache.package_layout import PackageLayout
+        return PackageLayout(pref, cache=self, manager=self._locks_manager,
+                             package_folder=package_path, locked=locked), created
 
     """
     def get_package_layout(self, pref: ConanFileReference) -> 'PackageLayout':

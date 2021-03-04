@@ -44,7 +44,7 @@ class References(BaseTable):
     Functions to manage the data in this table using Conan types
     """
 
-    def save(self, conn: sqlite3.Cursor, ref: ConanFileReference):
+    def save(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '

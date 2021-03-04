@@ -100,17 +100,16 @@ def test_create_workflow(cache_implementation: CacheImplementation):
 
     # 1. First we have a reference without revision
     ref = ConanFileReference.loads('name/version@user/channel')
-    ref_layout = cache_implementation.get_reference_layout(ref)
-    export_folder = ref_layout.export()
-    assert is_random_folder(cache_folder, export_folder)
-    export_sources_folder = ref_layout.export_sources()
-    assert is_random_folder(cache_folder, export_sources_folder)
+    ref_layout, created = cache_implementation.get_or_create_reference_layout(ref)
+    assert created
+    assert is_random_folder(cache_folder, str(ref_layout.export()))
+    assert is_random_folder(cache_folder, str(ref_layout.export_sources()))
 
     # Without assigning the revision, there are many things we cannot do:
     with pytest.raises(AssertionError) as excinfo:
         pref = PackageReference.loads('name/version@user/channel:123456')
         ref_layout.get_package_layout(pref)
-    assert "When requesting a package, the rrev is already known" == str(excinfo.value)
+    assert "Before requesting a package, assign the rrev using 'assign_rrev'" == str(excinfo.value)
 
     # Of course the reference must match
     with pytest.raises(AssertionError) as excinfo:
@@ -167,10 +166,10 @@ def test_create_workflow(cache_implementation: CacheImplementation):
 def test_concurrent_export(cache_implementation: CacheImplementation):
     # It can happen that two jobs are creating the same recipe revision.
     ref = ConanFileReference.loads('name/version')
-    r1_layout = cache_implementation.get_reference_layout(ref)
+    r1_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
     with r1_layout.lock(blocking=True, wait=False):
         # R1 is exporting the information, and R2 starts to do the same
-        r2_layout = cache_implementation.get_reference_layout(ref)
+        r2_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
         with r2_layout.lock(blocking=True, wait=False):
             pass
 
@@ -187,7 +186,7 @@ def test_concurrent_export(cache_implementation: CacheImplementation):
 def test_concurrent_package(cache_implementation: CacheImplementation):
     # When two jobs are generating the same packageID and it happens that both compute the same prev
     ref = ConanFileReference.loads('name/version#rrev')
-    recipe_layout = cache_implementation.get_reference_layout(ref)
+    recipe_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
     pref = PackageReference.loads(f'{ref.full_str()}:123456789')
     p1_layout = recipe_layout.get_package_layout(pref)
     with p1_layout.lock(blocking=True, wait=True):
@@ -209,9 +208,9 @@ def test_concurrent_package(cache_implementation: CacheImplementation):
 def test_concurrent_read_write_recipe(cache_implementation: CacheImplementation):
     # For whatever the reason, two concurrent jobs want to read and write the recipe
     ref = ConanFileReference.loads('name/version#1111111111')
-    r1_layout = cache_implementation.get_reference_layout(ref)
-    r2_layout = cache_implementation.get_reference_layout(ref)
-    r3_layout = cache_implementation.get_reference_layout(ref)
+    r1_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    r2_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    r3_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
     with r1_layout.lock(blocking=False, wait=False):
         with r2_layout.lock(blocking=False, wait=False):
             assert str(r1_layout.export()) == str(r2_layout.export())
@@ -225,7 +224,7 @@ def test_concurrent_read_write_recipe(cache_implementation: CacheImplementation)
 def test_concurrent_write_recipe_package(cache_implementation: CacheImplementation):
     # A job is creating a package while another ones tries to modify the recipe
     pref = PackageReference.loads('name/version#11111111:123456789')
-    recipe_layout = cache_implementation.get_reference_layout(pref.ref)
+    recipe_layout, _ = cache_implementation.get_or_create_reference_layout(pref.ref)
     package_layout = recipe_layout.get_package_layout(pref)
 
     with package_layout.lock(blocking=True, wait=True):
