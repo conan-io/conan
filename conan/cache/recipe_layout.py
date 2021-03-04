@@ -63,7 +63,7 @@ class RecipeLayout(LockableMixin):
         # I need the same level of blocking for all the packages
         with ExitStack() as stack:
             if blocking:
-                for pref in list(self._cache.db.get_all_package_references(self._ref)):
+                for pref in list(self._cache.db.list_package_references(self._ref)):
                     layout = self._cache.get_package_layout(pref)
                     stack.enter_context(layout.lock(blocking, wait))
                     # TODO: Fix somewhere else: cannot get a new package-layout for a reference that is blocked.

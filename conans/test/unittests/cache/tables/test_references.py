@@ -53,10 +53,10 @@ def test_filter(sqlite3memory):
     table.save(sqlite3memory, ref3)
     table.save(sqlite3memory, ref4)
 
-    name_refs = table.filter(sqlite3memory, '%name%')
+    name_refs = table.filter(sqlite3memory, '%name%', False)
     assert list(name_refs) == [ref1, ref2]
 
-    v1_refs = table.filter(sqlite3memory, '%v1%')
+    v1_refs = table.filter(sqlite3memory, '%v1%', False)
     assert list(v1_refs) == [ref1, ref3]
 
 
@@ -74,7 +74,7 @@ def test_versions(sqlite3memory):
     table.save(sqlite3memory, ref3)
     table.save(sqlite3memory, ref4)
 
-    name_versions = table.versions(sqlite3memory, ref1.name)
+    name_versions = table.versions(sqlite3memory, ref1.name, False)
     assert list(name_versions) == [ref1, ref2]
 
 

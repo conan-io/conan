@@ -80,18 +80,48 @@ class References(BaseTable):
         row = r.fetchone()
         return self._as_ref(self.row_type(*row))
 
-    def filter(self, conn: sqlite3.Cursor, pattern: str) -> List[ConanFileReference]:
+    def filter(self, conn: sqlite3.Cursor, pattern: str,
+               only_latest_rrev: bool) -> List[ConanFileReference]:
         """ Returns the references that match a given pattern (sql style) """
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} LIKE ?;'
+        if only_latest_rrev:
+            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
+                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference} LIKE ? ' \
+                    f'GROUP BY {self.columns.reference} ' \
+                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference} LIKE ?;'
         r = conn.execute(query, [pattern, ])
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def versions(self, conn: sqlite3.Cursor, name: str) -> List[ConanFileReference]:
-        """ Returns the references that match a given pattern (sql style) """
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.name} = ?;'
+    def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
+        if only_latest_rrev:
+            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
+                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'GROUP BY {self.columns.reference} ' \
+                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
+        else:
+            query = f'SELECT * FROM {self.table_name};'
+        r = conn.execute(query)
+        for row in r.fetchall():
+            yield self._as_ref(self.row_type(*row))
+
+    def versions(self, conn: sqlite3.Cursor, name: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+        """ Returns the references matching a given name """
+        if only_latest_rrev:
+            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
+                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.name} = ? ' \
+                    f'GROUP BY {self.columns.reference} ' \
+                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.name} = ?;'
         r = conn.execute(query, [name, ])
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))

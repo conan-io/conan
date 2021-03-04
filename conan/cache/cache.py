@@ -1,5 +1,5 @@
 from io import StringIO
-from typing import Tuple
+from typing import Tuple, List
 
 from model.ref import ConanFileReference, PackageReference
 
@@ -11,6 +11,15 @@ class Cache:
         raise NotImplementedError
 
     # <editor-fold desc="Methods for references">
+    def list_references(self, only_latest_rrev: bool) -> List[ConanFileReference]:
+        raise NotImplementedError
+
+    def search_references(self, pattern: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+        raise NotImplementedError
+
+    def list_reference_versions(self, ref: ConanFileReference,
+                                only_latest_rrev: bool) -> List[ConanFileReference]:
+        raise NotImplementedError
 
     def get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
         """ Returns the layout for a reference. The recipe revision is a requirement, only references
@@ -29,6 +38,15 @@ class Cache:
     # </editor-fold>
 
     # <editor-fold desc="Methods for packages">
+
+    """
+    def list_packages(self, ref: ConanFileReference,
+                      only_latest_prev: bool) -> List[PackageReference]:
+        raise NotImplementedError
+
+    def get_package_layout_latest(self, pref: PackageReference) -> 'PackageLayout':
+        raise NotImplementedError
+    """
 
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         """ Returns the layout for a package. The recipe revision and the package revision are a

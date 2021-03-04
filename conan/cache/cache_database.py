@@ -36,6 +36,21 @@ class CacheDatabase:
     Functions related to references
     """
 
+    def list_references(self, only_latest_rrev: bool) -> List[ConanFileReference]:
+        with self.connect() as conn:
+            for it in self._references.all(conn, only_latest_rrev):
+                yield it
+
+    def search_references(self, pattern: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+        with self.connect() as conn:
+            for it in self._references.filter(conn, pattern, only_latest_rrev):
+                yield it
+
+    def list_reference_versions(self, name: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+        with self.connect() as conn:
+            for it in self._references.versions(conn, name, only_latest_rrev):
+                yield it
+
     def update_reference(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
@@ -70,6 +85,11 @@ class CacheDatabase:
     Functions related to package references
     """
 
+    def list_package_references(self, ref: ConanFileReference) -> List[PackageReference]:
+        with self.connect() as conn:
+            for it in self._packages.filter(conn, ref):
+                yield it
+
     def update_package_reference(self, old_pref: PackageReference, new_pref: PackageReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
@@ -78,11 +98,6 @@ class CacheDatabase:
                 self._packages.update(conn, pref_pk, new_pref)
             except sqlite3.IntegrityError:
                 raise Packages.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
-
-    def get_all_package_references(self, ref: ConanFileReference) -> List[PackageReference]:
-        with self.connect() as conn:
-            for it in self._packages.filter(conn, ref):
-                yield it
 
     def update_package_reference_directory(self, pref: PackageReference, path: str,
                                            folder: ConanFolders):

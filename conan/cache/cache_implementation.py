@@ -2,7 +2,7 @@ import os
 import shutil
 import uuid
 from io import StringIO
-from typing import Optional, Union, Tuple
+from typing import Optional, Union, Tuple, List
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -69,6 +69,19 @@ class CacheImplementation(Cache):
             return item.full_str().replace('@', '/').replace('#', '/').replace(':', '/')  # TODO: TBD
         else:
             return str(uuid.uuid4())
+
+    def list_references(self, only_latest_rrev: bool) -> List[ConanFileReference]:
+        for it in self.db.list_references(only_latest_rrev):
+            yield it
+
+    def search_references(self, pattern: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+        for it in self.db.search_references(pattern, only_latest_rrev):
+            yield it
+
+    def list_reference_versions(self, ref: ConanFileReference,
+                                only_latest_rrev: bool) -> List[ConanFileReference]:
+        for it in self.db.list_reference_versions(ref.name, only_latest_rrev):
+            yield it
 
     def _get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
         from conan.cache.recipe_layout import RecipeLayout
