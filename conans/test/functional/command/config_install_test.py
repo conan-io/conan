@@ -9,6 +9,7 @@ import pytest
 import six
 from mock import patch
 
+from client.tools import environment_append
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
 from conans.client.conf.config_installer import _hide_password, _ConfigOrigin
@@ -752,3 +753,18 @@ class ConfigInstallSchedTest(unittest.TestCase):
             self.assertNotIn("Repo cloned!", self.client.out)
             # ... and updates the next schedule
             self.assertGreater(os.path.getmtime(self.client.cache.config_install_file), last_change)
+
+    def test_config_fails_git_folder(self):
+        folder = os.path.join(temp_folder(), ".gitlab-conan", ".conan")
+        client = TestClient(cache_folder=folder)
+        assert ".gitlab-conan" in client.cache_folder
+        assert os.path.basename(client.cache_folder) == ".conan"
+        with self.client.chdir(self.folder):
+            self.client.run_command('git init .')
+            self.client.run_command('git add .')
+            self.client.run_command('git config user.name myname')
+            self.client.run_command('git config user.email myname@mycompany.com')
+            self.client.run_command('git commit -m "mymsg"')
+        client.run("config install '%s'" % self.folder)
+        conf = load(client.cache.conan_conf_path)
+        assert "config_install_interval = 5m" in conf
