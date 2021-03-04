@@ -54,7 +54,12 @@ class PyRequires(object):
         try:
             return self._pyrequires[item]
         except KeyError:
-            raise ConanException("'%s' is not a python_require" % item)
+            # https://github.com/conan-io/conan/issues/8546
+            # Transitive pyrequires are accessed by inheritance derived classes
+            try:
+                return self._transitive[item]
+            except KeyError:
+                raise ConanException("'%s' is not a python_require" % item)
 
     def __setitem__(self, key, value):
         # single item assignment, direct

@@ -149,8 +149,8 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
 
-    def test_transitive_access_error(self):
-        # https://github.com/conan-io/conan/issues/5529
+    @staticmethod
+    def test_transitive_access():
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . base/1.0@user/channel")
@@ -171,18 +171,18 @@ class PyRequiresExtendTest(unittest.TestCase):
                     self.python_requires["base"]
             """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("'base' is not a python_require", client.out)
+        client.run("create . pkg/0.1@user/channel")
+        assert "pkg/0.1@user/channel: Created package" in client.out
 
         conanfile = textwrap.dedent("""
-                    from conans import ConanFile
-                    class Pkg(ConanFile):
-                        python_requires = "helper/1.0@user/channel"
-                        python_requires_extend = "base.HelloConan"
-                    """)
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                python_requires = "helper/1.0@user/channel"
+                python_requires_extend = "base.HelloConan"
+            """)
         client.save({"conanfile.py": conanfile})
-        client.run("create . pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("'base' is not a python_require", client.out)
+        client.run("create . pkg/0.1@user/channel")
+        assert "pkg/0.1@user/channel: Created package" in client.out
 
     def test_multiple_requires_error(self):
         client = TestClient()
@@ -853,3 +853,45 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
+
+
+def test_transitive_python_requires():
+    # https://github.com/conan-io/conan/issues/8546
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        myvar = 123
+        def myfunct():
+            return 234
+        class SharedFunction(ConanFile):
+            name = "shared-function"
+            version = "1.0"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("export . @user/channel")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class BaseClass(ConanFile):
+            name = "base-class"
+            version = "1.0"
+            python_requires = "shared-function/1.0@user/channel"
+            def build(self):
+                pyreqs = self.python_requires
+                v = pyreqs["shared-function"].module.myvar  # v will be 123
+                f = pyreqs["shared-function"].module.myfunct()  # f will be 234
+                self.output.info("%s, %s" % (v, f))
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("export . user/channel")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            python_requires = "base-class/1.0@user/channel"
+            python_requires_extend = "base-class.BaseClass"
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . @user/channel")
