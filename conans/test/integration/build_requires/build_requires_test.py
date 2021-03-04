@@ -150,7 +150,7 @@ class Boost(ConanFile):
 Boost/1.0@user/channel
 """
         client.save({"conanfile.txt": other}, clean_first=True)
-        client.run("install .")
+        client.run("install . -g txt")
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
