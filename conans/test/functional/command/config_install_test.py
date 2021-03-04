@@ -759,6 +759,8 @@ class ConfigInstallSchedTest(unittest.TestCase):
         client = TestClient(cache_folder=folder)
         assert ".gitlab-conan" in client.cache_folder
         assert os.path.basename(client.cache_folder) == ".conan"
+        conf = load(client.cache.conan_conf_path)
+        assert "config_install_interval = 5m" not in conf
         with self.client.chdir(self.folder):
             self.client.run_command('git init .')
             self.client.run_command('git add .')
