@@ -115,32 +115,6 @@ class CacheImplementation(Cache):
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=locked), created
 
-    """
-    def get_package_layout(self, pref: ConanFileReference) -> 'PackageLayout':
-        from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, manager=self._locks_manager)
-
-    def remove_reference(self, ref: ConanFileReference):
-        try:
-            layout = self.get_reference_layout(ref)  # FIXME: Here we create the entry if it didn't exist
-            with layout.lock(blocking=True):
-                pass
-        except CacheDirectoryNotFound:
-            pass
-    """
-    """
-    def remove_package(self, pref: PackageReference):
-        assert pref.ref.revision, 'It requires known recipe revision'
-        assert pref.revision, 'It requires known package revision'
-        pkg_layout = self.get_reference_layout(pref.ref).get_package_layout(pref)
-        with pkg_layout.lock(blocking=True):
-            # Remove contents and entries from database
-            files.rmdir(str(pkg_layout.build()))
-            files.rmdir(str(pkg_layout.package()))
-            self._backend.remove_package_directory(pref, ConanFolders.PKG_BUILD)
-            self._backend.remove_package_directory(pref, ConanFolders.PKG_PACKAGE)
-    """
-
     def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
                    move_reference_contents: bool = False) -> Optional[str]:
         # Once we know the revision for a given reference, we need to update information in the

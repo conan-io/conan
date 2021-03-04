@@ -2,9 +2,8 @@ import sqlite3
 from io import StringIO
 from typing import List, Tuple
 
-from conan.cache.exceptions import CacheDirectoryNotFound, CacheDirectoryAlreadyExists
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
-from model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference
 from ._tables.folders import Folders, ConanFolders
 from ._tables.packages import Packages
 from ._tables.references import References
@@ -37,14 +36,6 @@ class CacheDatabase:
     Functions related to references
     """
 
-    def save_reference(self, ref: ConanFileReference, fail_if_exists: bool = True):
-        with self.connect() as conn:
-            try:
-                self._references.save(conn, ref)
-            except sqlite3.IntegrityError:
-                if fail_if_exists:
-                    raise References.AlreadyExist(f"Reference '{ref.full_str()}' already exists")
-
     def update_reference(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
@@ -63,23 +54,6 @@ class CacheDatabase:
         with self.connect() as conn:
             return self._folders.get_path_ref(conn, ref)
 
-    def create_reference_directory(self, ref: ConanFileReference, path: str):
-        with self.connect() as conn:
-            try:
-                self._folders.get_path_ref(conn, ref)
-            except CacheDirectoryNotFound:
-                self._folders.save_ref(conn, ref, path)
-            else:
-                raise CacheDirectoryAlreadyExists(ref)
-
-    def get_or_create_reference_directory(self, ref: ConanFileReference, path: str) -> str:
-        with self.connect() as conn:
-            try:
-                return self._folders.get_path_ref(conn, ref)
-            except Folders.DoesNotExist:
-                self._folders.save_ref(conn, ref, path)
-                return path
-
     def get_or_create_reference(self, ref: ConanFileReference, path: str) -> Tuple[str, bool]:
         """ Returns the path for the given reference. If the reference doesn't exist in the
             database, it will create the entry for the reference using the path given as argument.
@@ -96,14 +70,6 @@ class CacheDatabase:
     Functions related to package references
     """
 
-    def save_package_reference(self, pref: PackageReference, fail_if_exists: bool = True):
-        with self.connect() as conn:
-            try:
-                self._packages.save(conn, pref)
-            except sqlite3.IntegrityError:
-                if fail_if_exists:
-                    raise Packages.AlreadyExist(f"Package '{pref.full_str()}' already exists")
-
     def update_package_reference(self, old_pref: PackageReference, new_pref: PackageReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
@@ -113,7 +79,7 @@ class CacheDatabase:
             except sqlite3.IntegrityError:
                 raise Packages.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
 
-    def get_all_package_reference(self, ref: ConanFileReference) -> List[PackageReference]:
+    def get_all_package_references(self, ref: ConanFileReference) -> List[PackageReference]:
         with self.connect() as conn:
             for it in self._packages.filter(conn, ref):
                 yield it
@@ -127,16 +93,6 @@ class CacheDatabase:
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
             return self._folders.get_path_pref(conn, pref, folder)
-
-    def create_package_reference_directory(self, pref: PackageReference, path: str,
-                                           folder: ConanFolders):
-        with self.connect() as conn:
-            try:
-                self._folders.get_path_pref(conn, pref, folder)
-            except CacheDirectoryNotFound:
-                self._folders.save_pref(conn, pref, path, folder)
-            else:
-                raise CacheDirectoryAlreadyExists(pref)
 
     def get_or_create_package_reference_directory(self, pref: PackageReference, path: str,
                                                   folder: ConanFolders) -> str:
