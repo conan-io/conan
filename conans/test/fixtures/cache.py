@@ -3,7 +3,6 @@ import tempfile
 
 import pytest
 
-from conan.cache.cache_two_levels import CacheTwoLevels
 from conan.cache.cache import Cache
 from conan.cache.cache_implementation import CacheImplementation
 from conan.locks.locks_manager import LocksManager
@@ -48,24 +47,3 @@ def cache_implementation(request) -> CacheImplementation:
 def cache_1level(request) -> Cache:
     # These fixtures will parameterize tests that use it with all database backends
     return request.getfixturevalue(request.param)
-
-
-@pytest.fixture
-def cache_2level() -> Cache:
-    # TODO: Implement some kind of factory
-    # Retrieve a 2-level cache based on sqlite3 and fasteners
-    with tempfile.TemporaryDirectory(suffix='-ws-cache') as wstmpdirname:
-        with tempfile.TemporaryDirectory(suffix='-user-cache') as usertmpdirname:
-            locks_directory = os.path.join(usertmpdirname, '.locks')
-            locks_manager = LocksManager.create('fasteners', locks_directory=locks_directory)
-
-            db_ws_filename = os.path.join(wstmpdirname, 'cache.sqlite3')
-            ws_cache = CacheImplementation.create('sqlite3', wstmpdirname, locks_manager,
-                                                  filename=db_ws_filename)
-
-            db_user_filename = os.path.join(usertmpdirname, 'cache.sqlite3')
-            user_cache = CacheImplementation.create('sqlite3', usertmpdirname, locks_manager,
-                                                    filename=db_user_filename)
-
-            cache = CacheTwoLevels(ws_cache, user_cache, locks_manager)
-            yield cache

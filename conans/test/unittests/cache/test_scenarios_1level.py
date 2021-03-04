@@ -20,14 +20,14 @@ class ConanOps:
                        writing_to_cache: threading.Event, writing_release: threading.Event):
         # Basically, installing a reference is about getting a write lock on the recipe_layout, but
         # some other threads might be using (writing) the same resource
-        recipe_layout = cache.get_reference_layout(ref)
+        recipe_layout, _ = cache.get_or_create_reference_layout(ref)
         try:
             self.log('Request lock for recipe')
             with try_write_else_read_wait(recipe_layout) as writer:
                 if writer:
                     self.log('WRITE lock: write files to the corresponding folder')
                     writing_to_cache.set()
-                    writing_release.wait()
+                    writing_release.wait(timeout=1)
                     self.log('WRITE lock: released')
                 else:
                     self.log('READER lock: Check files are there and use them')
@@ -58,13 +58,13 @@ def test_concurrent_install(cache_1level: Cache):
                           args=(cache_1level, ref, writing_to_cache, writing_release,))
 
     t1.start()
-    writing_to_cache.wait()  # Wait for t1 to start writing to cache
+    writing_to_cache.wait(timeout=1)  # Wait for t1 to start writing to cache
     t2.start()
     time.sleep(1)  # Ensure t2 is waiting to write/read
 
     writing_release.set()
-    t1.join(timeout=10)
-    t2.join(timeout=10)
+    t1.join(timeout=1)
+    t2.join(timeout=1)
 
     output = '\n'.join(list(conan_ops.q.queue))
     assert output == textwrap.dedent(f'''\

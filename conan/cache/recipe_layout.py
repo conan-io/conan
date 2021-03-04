@@ -1,8 +1,11 @@
 import os
 from contextlib import contextmanager, ExitStack
 
-from conan.cache.cache_implementation import CacheImplementation
+from conan.cache._tables.packages import Packages
 from conan.cache.cache_folder import CacheFolder
+from conan.cache.cache_implementation import CacheImplementation
+from conan.cache.exceptions import ReadOnlyCache
+from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
@@ -10,7 +13,8 @@ from conans.model.ref import PackageReference
 
 class RecipeLayout(LockableMixin):
 
-    def __init__(self, ref: ConanFileReference, cache: CacheImplementation, base_folder: str, locked=True,
+    def __init__(self, ref: ConanFileReference, cache: CacheImplementation, base_folder: str,
+                 locked=True,
                  **kwargs):
         self._ref = ref
         self._cache = cache
@@ -36,7 +40,7 @@ class RecipeLayout(LockableMixin):
             if new_path:
                 self._base_folder = new_path
 
-    def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
+    def get_package_layout(self, pref: PackageReference) -> PackageLayout:
         """
         Returns the package_layout for the given 'pref' in the SAME CACHE where this recipe_layout
         is stored. If the package doesn't already exists it is created.
@@ -45,6 +49,9 @@ class RecipeLayout(LockableMixin):
         assert str(pref.ref) == str(self._ref), "Only for the same reference"
         assert self._locked, "Before requesting a package, assign the rrev using 'assign_rrev'"
         assert self._ref.revision == pref.ref.revision, "Ensure revision is the same"
+        return self._get_package_layout(pref)
+
+    def _get_package_layout(self, pref: PackageReference) -> PackageLayout:
         if pref.revision:
             return self._cache.get_package_layout(pref)
         else:
@@ -81,3 +88,4 @@ class RecipeLayout(LockableMixin):
     def source(self):
         source_directory = lambda: os.path.join(self.base_directory, 'source')
         return CacheFolder(source_directory, False, manager=self._manager, resource=self._resource)
+

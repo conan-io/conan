@@ -12,27 +12,28 @@ from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesy
     CacheDatabaseSqlite3Memory
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.util import files
 from ._tables.folders import ConanFolders
-from ._tables.packages import Packages
 
 
 class CacheImplementation(Cache):
+
     def __init__(self, base_folder: str, db: CacheDatabase,
                  locks_manager: LocksManager):
-        self._base_folder = base_folder
+        self._base_folder = os.path.realpath(base_folder)
         self._locks_manager = locks_manager
         self.db = db
 
-    @staticmethod
-    def create(backend_id: str, base_folder: str, locks_manager: LocksManager, **backend_kwargs):
+    @classmethod
+    def create(cls, backend_id: str, base_folder: str, locks_manager: LocksManager, **backend):
         if backend_id == 'sqlite3':
-            backend = CacheDatabaseSqlite3Filesystem(**backend_kwargs)
+            backend = CacheDatabaseSqlite3Filesystem(**backend)
             backend.initialize(if_not_exists=True)
-            return CacheImplementation(base_folder, backend, locks_manager)
+            return cls(base_folder, backend, locks_manager)
         elif backend_id == 'memory':
-            backend = CacheDatabaseSqlite3Memory(**backend_kwargs)
+            backend = CacheDatabaseSqlite3Memory(**backend)
             backend.initialize(if_not_exists=True)
-            return CacheImplementation(base_folder, backend, locks_manager)
+            return cls(base_folder, backend, locks_manager)
         else:
             raise NotImplementedError(f'Backend {backend_id} for cache is not implemented')
 
@@ -41,6 +42,21 @@ class CacheImplementation(Cache):
         output.write("*" * 40)
         output.write(f"\nBase folder: {self._base_folder}\n\n")
         self.db.dump(output)
+
+    def _create_path(self, relative_path: str, remove_contents=True):
+        path = self._full_path(relative_path)
+        if os.path.exists(path) and remove_contents:
+            self._remove_path(relative_path)
+        os.makedirs(path, exist_ok=True)
+
+    def _remove_path(self, relative_path: str):
+        files.rmdir(self._full_path(relative_path))
+
+    def _full_path(self, relative_path: str) -> str:
+        path = os.path.realpath(os.path.join(self._base_folder, relative_path))
+        assert path.startswith(self._base_folder), f"Path '{relative_path}' isn't contained inside" \
+                                                   f" the cache '{self._base_folder}'"
+        return path
 
     @property
     def base_folder(self) -> str:
@@ -69,6 +85,7 @@ class CacheImplementation(Cache):
             ref = ref.copy_with_rev(str(uuid.uuid4()))
 
         reference_path, created = self.db.get_or_create_reference(ref, path=path)
+        self._create_path(reference_path, remove_contents=created)
 
         from conan.cache.recipe_layout import RecipeLayout
         return RecipeLayout(ref, cache=self, manager=self._locks_manager,
@@ -92,6 +109,7 @@ class CacheImplementation(Cache):
 
         package_path, created = self.db.get_or_create_package(pref, path=package_path,
                                                               folder=ConanFolders.PKG_PACKAGE)
+        self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
@@ -133,8 +151,7 @@ class CacheImplementation(Cache):
         if move_reference_contents:
             old_path = self.db.try_get_reference_directory(new_ref)
             new_path = self.get_default_path(new_ref)
-            if os.path.exists(old_path):
-                shutil.move(old_path, new_path)
+            shutil.move(self._full_path(old_path), self._full_path(new_path))
             self.db.update_reference_directory(new_ref, new_path)
             return new_path
         return None
@@ -148,8 +165,7 @@ class CacheImplementation(Cache):
             old_path = self.db.try_get_package_reference_directory(new_pref,
                                                                    ConanFolders.PKG_PACKAGE)
             new_path = self.get_default_path(new_pref)
-            if os.path.exists(old_path):
-                shutil.move(old_path, new_path)
+            shutil.move(self._full_path(old_path), self._full_path(new_path))
             self.db.update_package_reference_directory(new_pref, new_path, ConanFolders.PKG_PACKAGE)
             return new_path
         return None
