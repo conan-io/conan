@@ -89,7 +89,7 @@ class DiamondTest(unittest.TestCase):
         files3[CONANFILE] = content
         self.client.save(files3)
 
-        self.client.run("install . --build missing")
+        self.client.run("build . --build missing")
         if use_cmake:
             if cmake_targets:
                 self.assertIn("Conan: Using cmake targets configuration", self.client.out)
@@ -97,7 +97,6 @@ class DiamondTest(unittest.TestCase):
             else:
                 self.assertIn("Conan: Using cmake global configuration", self.client.out)
                 self.assertNotIn("Conan: Using cmake targets configuration", self.client.out)
-        self.client.run("build .")
         self._check_individual_deps()
 
         def check_run_output(client):
@@ -123,7 +122,6 @@ class DiamondTest(unittest.TestCase):
                              path_with_spaces=use_cmake)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
-        client2.run("install .")
         client2.run("build .")
 
         self.assertNotIn("libhello0.a", client2.out)

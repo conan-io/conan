@@ -93,8 +93,7 @@ class BasicTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        client.run("build .", assert_error=True)  # No CMakeLists.txt
+        client.run("build .", assert_error=True) # No CMakeLists.txt
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 

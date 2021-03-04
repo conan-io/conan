@@ -93,9 +93,7 @@ class Conan(ConanFile):
         client.save({CONANFILE: conanfile_dep})
         client.run("export . lasote/testing")
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install . --build=missing")
-
-        client.run("build .")  # We do not need to specify -g txt anymore
+        client.run("build . --build=missing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
 
         conanfile_user_info = """
@@ -113,8 +111,7 @@ class AConan(ConanFile):
         assert(hasattr(self, "package_folder"))
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
-        client.run("install . --build=missing")
-        client.run("build ./conanfile.py")
+        client.run("build ./conanfile.py --build=missing")
 
     def test_build(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
@@ -127,7 +124,7 @@ class AConan(ConanFile):
         client.run("install . --build=missing")
 
         client.save({"my_conanfile.py": conanfile_scope_env})
-        client.run("build ./my_conanfile.py")
+        client.run("build ./my_conanfile.py --build=missing")
         pref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
         package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/")
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
@@ -237,8 +234,7 @@ class AConan(ConanFile):
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
 """
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install conanfile.py --build=missing")
-        client.run("build .")
+        client.run("build conanfile.py --build=missing")
 
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
@@ -265,7 +261,6 @@ cmake_minimum_required(VERSION 2.8.12)
         client.save({CONANFILE: conanfile,
                      "CMakeLists.txt": cmake,
                      "header.h": "my header h!!"})
-        client.run("install .")
         client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
         header = client.load("package/include/header.h")
         self.assertEqual(header, "my header h!!")
@@ -313,8 +308,7 @@ class AConan(ConanFile):
         assert(self.deps_env_info["lib"].MYVAR == "23")
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
 
     def test_build_single_full_reference(self):
         client = TestClient()
