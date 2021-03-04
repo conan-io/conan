@@ -17,9 +17,6 @@ class CMakeiOSToolchain(CMakeToolchainBase):
             # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
             # but full path is necessary for others
             set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }})
-            if(NOT DEFINED CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM)
-              set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "123456789A" CACHE INTERNAL "")
-            endif()
         {% endblock %}
     """)
 

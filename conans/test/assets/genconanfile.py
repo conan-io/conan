@@ -410,6 +410,6 @@ class GenConanfile(object):
             ret.append("    {}".format(self._package_id_method))
         if self._test_method:
             ret.append("    {}".format(self._test_method))
-        if len(ret) == 2:
+        if ret[-1] == "class HelloConan(ConanFile):":
             ret.append("    pass")
         return "\n".join(ret)
