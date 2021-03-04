@@ -393,19 +393,28 @@ class WinTest(unittest.TestCase):
             shutil.copy(command_str, new_cmd)
         client.run_command(new_cmd)
 
-    @pytest.mark.tool_cmake
-    @parameterized.expand([("Visual Studio", "15", "MT"),
-                           ("msvc", "19.1", "static")]
+    @parameterized.expand([("Visual Studio", "15", "MT", "17"),
+                           ("msvc", "19.1", "static", "17"),
+                           ("msvc", "19.0", "static", "14")]
                           )
-    def test_toolchain_win(self, compiler, version, runtime):
+    @pytest.mark.tool_cmake
+    def test_toolchain_win(self, compiler, version, runtime, cppstd):
         client = TestClient(path_with_spaces=False)
         settings = {"compiler": compiler,
                     "compiler.version": version,
-                    "compiler.cppstd": "17",
+                    "compiler.cppstd": cppstd,
                     "compiler.runtime": runtime,
                     "build_type": "Release",
                     "arch": "x86"}
 
+        profile = textwrap.dedent("""
+            [settings]
+            os=Windows
+
+            [conf]
+            tools.microsoft.msbuild:vs_version=15
+            """)
+        client.save({"myprofile": profile})
         # Build the profile according to the settings provided
         settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
 
@@ -416,11 +425,12 @@ class WinTest(unittest.TestCase):
         client.save({"conanfile.py": self.conanfile,
                      "MyProject.sln": sln_file,
                      "MyApp/MyApp.vcxproj": myapp_vcxproj,
-                     "MyApp/MyApp.cpp": self.app},
+                     "MyApp/MyApp.cpp": self.app,
+                     "myprofile": profile},
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("install . %s -if=conan" % (settings, ))
+        client.run("install . %s -if=conan -pr=myprofile" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         client.run("build . -if=conan")
@@ -429,7 +439,8 @@ class WinTest(unittest.TestCase):
 
         self._run_app(client, "x86", "Release")
         self.assertIn("Hello World Release", client.out)
-        check_exe_run(client.out, "main", "msvc", "19.1", "Release", "x86", "17",
+        compiler_version = version if compiler == "msvc" else "19.1"
+        check_exe_run(client.out, "main", "msvc", compiler_version, "Release", "x86", cppstd,
                       {"DEFINITIONS_BOTH": "True",
                        "DEFINITIONS_CONFIG": "Release"})
         check_vs_runtime("Release/MyApp.exe", client, "15", static=True, build_type="Release")
