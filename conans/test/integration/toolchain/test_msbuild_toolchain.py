@@ -1,10 +1,14 @@
+import platform
 import textwrap
 
+import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @parameterized.expand([("msvc", "19.0", "dynamic"),
                        ("msvc", "19.1", "static")]
                       )
