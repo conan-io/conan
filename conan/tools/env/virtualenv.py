@@ -55,6 +55,8 @@ class VirtualEnv:
         """
         dyn_runenv = Environment()
         cpp_info = conanfile_dep.cpp_info
+        if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
+            return dyn_runenv
         if cpp_info.exes:
             dyn_runenv.prepend_path("PATH", cpp_info.bin_paths)
         # If it is a build_require this will be the build-os, otherwise it will be the host-os
@@ -91,9 +93,10 @@ class VirtualEnv:
         run_env = self.run_environment()
         # FIXME: Use settings, not platform Not always defined :(
         # os_ = self._conanfile.settings_build.get_safe("os")
-        if platform.system() == "Windows":
-            build_env.save_bat("conanbuildenv.bat")
-            run_env.save_bat("conanrunenv.bat")
-        else:
-            build_env.save_sh("conanbuildenv.sh")
-            run_env.save_sh("conanrunenv.sh")
+        if build_env:  # Only if there is something defined
+            if platform.system() == "Windows":
+                build_env.save_bat("conanbuildenv.bat")
+                run_env.save_bat("conanrunenv.bat")
+            else:
+                build_env.save_sh("conanbuildenv.sh")
+                run_env.save_sh("conanrunenv.sh")

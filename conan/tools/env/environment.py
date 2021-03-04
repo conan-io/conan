@@ -48,6 +48,11 @@ class Environment:
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
 
+    def __bool__(self):
+        return bool(self._values)
+
+    __nonzero__ = __bool__
+
     def __repr__(self):
         return repr(self._values)
 
