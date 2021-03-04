@@ -21,7 +21,8 @@ from conans.util.files import normalize, save
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
+                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
+                 build_exclude=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -35,7 +36,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param generators: List of generators from command line. If False, no generator will be
     written
     @param no_imports: Install specified packages but avoid running imports
-
+    @param build_exclude: package references to be excluded from build_mode
     """
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
@@ -54,7 +55,9 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder,
-                                          lockfile_node_id=lockfile_node_id)
+                                          lockfile_node_id=lockfile_node_id,
+                                          build_exclude=build_exclude)
+
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:
@@ -73,7 +76,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     installer = BinaryInstaller(app, recorder=recorder)
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
-    build_modes = BuildMode(build_modes, out)
+    build_modes = BuildMode(build_modes, out, build_exclude)
     installer.install(deps_graph, remotes, build_modes, update, keep_build=keep_build,
                       graph_info=graph_info)
 

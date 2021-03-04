@@ -12,7 +12,7 @@ class BuildMode(object):
                    => "outdated" if user wrote "--build outdated"
                    => ["!foo"] means exclude when building all from sources
     """
-    def __init__(self, params, output):
+    def __init__(self, params, output, excluded_build=None):
         self._out = output
         self.outdated = False
         self.missing = False
@@ -20,10 +20,15 @@ class BuildMode(object):
         self.cascade = False
         self.patterns = []
         self._unused_patterns = []
-        self._excluded_patterns = []
+        self._excluded_patterns = excluded_build or []
         self.all = False
         if params is None:
             return
+
+        def clear_param(param):
+            # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
+            clean_pattern = param[:-1] if param.endswith("@") else param
+            return clean_pattern.replace("@#", "#")
 
         assert isinstance(params, list)
         if len(params) == 0:
@@ -39,16 +44,11 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
-                    clean_pattern = param[:-1] if param.endswith("@") else param
-                    clean_pattern = clean_pattern.replace("@#", "#")
-                    self.patterns.append(clean_pattern)
+                    self.patterns.append(clear_param(param))
 
             if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
-        self._excluded_patterns = [it for it in list(self.patterns) if it.startswith("!")]
-        self._unused_patterns = [it for it in list(self.patterns)
-                                 if it not in self._excluded_patterns]
+        self._unused_patterns = list(self.patterns)
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
         def pattern_match(pattern):
@@ -56,8 +56,8 @@ class BuildMode(object):
                     fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern) or
                     fnmatch.fnmatchcase(repr(ref), pattern))
 
-        for pattern in self.patterns:
-            if pattern.startswith("!") and pattern_match(pattern[1:]):
+        for pattern in self._excluded_patterns:
+            if pattern_match(pattern):
                 try:
                     self._excluded_patterns.remove(pattern)
                 except ValueError:

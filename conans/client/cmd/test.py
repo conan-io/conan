@@ -11,7 +11,7 @@ from conans.util.files import rmdir
 def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                            remotes, update, build_modes=None, manifest_folder=None,
                            manifest_verify=False, manifest_interactive=False, keep_build=False,
-                           test_build_folder=None, recorder=None):
+                           test_build_folder=None, recorder=None, build_exclude=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
     and builds the test_package/conanfile.py running the test() method.
@@ -35,7 +35,8 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      manifest_verify=manifest_verify,
                      manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
-                     recorder=recorder)
+                     recorder=recorder,
+                     build_exclude=build_exclude)
         cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)

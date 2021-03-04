@@ -107,13 +107,15 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
+                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
+                   build_exclude=None):
         """ main entry point to compute a full dependency graph
         """
         root_node = self._load_root_node(reference, create_reference, graph_info, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
                                          remotes, recorder,
-                                         apply_build_requires=apply_build_requires)
+                                         apply_build_requires=apply_build_requires,
+                                         build_exclude=build_exclude)
 
         # Run some validations once the graph is built
         self._validate_graph_provides(deps_graph)
@@ -233,8 +235,9 @@ class GraphManager(object):
         return root_node
 
     def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
-                       update, remotes, recorder, apply_build_requires=True):
-        build_mode = BuildMode(build_mode, self._output)
+                       update, remotes, recorder, apply_build_requires=True,
+                       build_exclude=None):
+        build_mode = BuildMode(build_mode, self._output, build_exclude)
         profile_host = graph_info.profile_host
         graph_lock = graph_info.graph_lock
         deps_graph = self._load_graph(root_node, check_updates, update,
@@ -243,7 +246,8 @@ class GraphManager(object):
                                       profile_host=profile_host,
                                       profile_build=graph_info.profile_build,
                                       apply_build_requires=apply_build_requires,
-                                      graph_lock=graph_lock)
+                                      graph_lock=graph_lock,
+                                      build_exclude=build_exclude)
 
         # THIS IS NECESSARY to store dependencies options in profile, for consumer
         # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
@@ -351,7 +355,7 @@ class GraphManager(object):
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
-                    graph_lock):
+                    graph_lock, build_exclude):
         assert isinstance(build_mode, BuildMode)
         profile_host_build_requires = profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,

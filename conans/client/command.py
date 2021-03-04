@@ -58,11 +58,6 @@ class Extender(argparse.Action):
                 dest.extend(values)
             except ValueError:
                 dest.append(values)
-        # --build --build=foo == ["*", "foo"]
-        elif hasattr(namespace, "build") and isinstance(namespace.build, list):
-            if len(namespace.build) == 0 or \
-               any(str(it).startswith("!") for it in namespace.build):
-                dest.append("*")
 
 
 class OnceArgument(argparse.Action):
@@ -506,6 +501,7 @@ class Command(object):
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
                                            build=args.build,
+                                           build_exclude=args.build_exclude,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
@@ -528,6 +524,7 @@ class Command(object):
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=manifest_interactive,
                                                      build=args.build,
+                                                     build_exclude=args.build_exclude,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
@@ -2161,6 +2158,9 @@ def _add_manifests_arguments(parser):
 def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
+        parser.add_argument("-be", "--build-exclude", action=Extender, nargs="?",
+                            help="Exclude packages to be built from source whose package reference "
+                                 "matches the pattern. The pattern uses 'fnmatch' style wildcards.")
 
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')
@@ -2238,9 +2238,6 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
-    --build=![pattern] Exclude packages to be built from source whose package reference matches the
-                       pattern. The pattern uses 'fnmatch' style wildcards.
-
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.
