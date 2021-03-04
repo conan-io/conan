@@ -1,6 +1,6 @@
 import sqlite3
 from io import StringIO
-from typing import List, Tuple
+from typing import Tuple, Iterator
 
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from conans.model.ref import ConanFileReference, PackageReference
@@ -36,17 +36,19 @@ class CacheDatabase:
     Functions related to references
     """
 
-    def list_references(self, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         with self.connect() as conn:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it
 
-    def search_references(self, pattern: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def search_references(self, pattern: str,
+                          only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         with self.connect() as conn:
             for it in self._references.filter(conn, pattern, only_latest_rrev):
                 yield it
 
-    def list_reference_versions(self, name: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def list_reference_versions(self, name: str,
+                                only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         with self.connect() as conn:
             for it in self._references.versions(conn, name, only_latest_rrev):
                 yield it
@@ -85,7 +87,7 @@ class CacheDatabase:
     Functions related to package references
     """
 
-    def list_package_references(self, ref: ConanFileReference) -> List[PackageReference]:
+    def list_package_references(self, ref: ConanFileReference) -> Iterator[PackageReference]:
         with self.connect() as conn:
             for it in self._packages.filter(conn, ref):
                 yield it

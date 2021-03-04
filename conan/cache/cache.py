@@ -1,5 +1,5 @@
 from io import StringIO
-from typing import Tuple, List
+from typing import Tuple, Iterator
 
 from model.ref import ConanFileReference, PackageReference
 
@@ -8,17 +8,31 @@ class Cache:
     """ Interface for different cache implementations: single cache, two-level cache,... """
 
     def dump(self, output: StringIO):
+        """ Dump the content of the cache in a human-readable format, only for debugging purposes """
         raise NotImplementedError
 
     # <editor-fold desc="Methods for references">
-    def list_references(self, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+        """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
+            can be used to filter and return only the latest recipe revision for each reference.
+        """
         raise NotImplementedError
 
-    def search_references(self, pattern: str, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def search_references(self, pattern: str,
+                          only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+        """ Returns an iterator to all the references matching the pattern given. The pattern is
+            checked against the references full name using SQL LIKE functionality. The argument
+            'only_latest_rrev' can be used to filter and return only the latest recipe revision for
+            the matching references.
+        """
         raise NotImplementedError
 
     def list_reference_versions(self, ref: ConanFileReference,
-                                only_latest_rrev: bool) -> List[ConanFileReference]:
+                                only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+        """ Returns an iterator to all the references with the same 'ref.name' as the one provided.
+            The argument 'only_latest_rrev' can be used to filter and return only the latest recipe
+            revision for each of them.
+        """
         raise NotImplementedError
 
     def get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
