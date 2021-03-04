@@ -956,6 +956,7 @@ class Command(object):
         conanbuildinfo.txt generated file in the --install-folder (defaulted to
         the current directory).
         """
+
         parser = argparse.ArgumentParser(description=self.imports.__doc__,
                                          prog="conan imports",
                                          formatter_class=SmartFormatter)
@@ -963,13 +964,15 @@ class Command(object):
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
                             " execution. e.g.: conan imports ./imported_files --undo ")
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
                             help="Undo imports. Remove imported files")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile")
+        _add_profile_arguments(parser)
+
         args = parser.parse_args(*args)
 
         if args.undo:
@@ -982,7 +985,17 @@ class Command(object):
         except ConanException:
             pass
         self._warn_python_version()
-        return self._conan.imports(args.path, args.import_folder, args.install_folder)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+
+        self._warn_python_version()
+
+        self._conan.imports(args.path,
+                            args.import_folder, settings=args.settings_host,
+                            options=args.options_host, env=args.env_host,
+                            profile_names=args.profile_host, profile_build=profile_build,
+                            lockfile=args.lockfile)
 
     def export_pkg(self, *args):
         """

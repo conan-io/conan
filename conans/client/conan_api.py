@@ -827,7 +827,8 @@ class ConanAPIV1(object):
         config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method
-    def imports(self, path, dest=None, info_folder=None, cwd=None):
+    def imports(self, conanfile_path, dest=None, info_folder=None, cwd=None, settings=None,
+                options=None, env=None, profile_names=None, profile_build=None, lockfile=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
@@ -836,15 +837,29 @@ class ConanAPIV1(object):
         :return: None
         """
         cwd = cwd or get_cwd()
-        info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
-
-        self.app.load_remotes()
         mkdir(dest)
-        conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
-        conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_abs_path, info_folder,
-                                                                   deps_info_required=True)
-        run_imports(conanfile, dest)
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+        recorder = ActionRecorder()
+        try:
+            lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+            graph_info = get_graph_info(profile_host, profile_build, cwd, None,
+                                        self.app.cache, self.app.out, lockfile=lockfile)
+
+            remotes = self.app.load_remotes(remote_name=None, update=False)
+            deps_info = deps_install(app=self.app,
+                                     ref_or_path=conanfile_path,
+                                     install_folder=info_folder,
+                                     graph_info=graph_info,
+                                     recorder=recorder,
+                                     remotes=remotes)
+            conanfile = deps_info.root.conanfile
+            return run_imports(conanfile, dest)
+        except ConanException as exc:
+            recorder.error = True
+            exc.info = recorder.get_info()
+            raise
 
     @api_method
     def imports_undo(self, manifest_path):
