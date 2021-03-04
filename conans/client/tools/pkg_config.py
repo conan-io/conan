@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import subprocess
 
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
+from util.env_reader import get_env
 
 
 class PkgConfig(object):
@@ -12,8 +14,8 @@ class PkgConfig(object):
     def _cmd_output(command):
         return check_output_runner(command).strip()
 
-    def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None,
-                 print_errors=True):
+    def __init__(self, library, pkg_config_executable="pkg-config", static=False, msvc_syntax=False,
+                 variables=None, print_errors=True):
         """
         :param library: library (package) name, such as libastral
         :param pkg_config_executable: specify custom pkg-config executable (e.g. for cross-compilation)
@@ -23,7 +25,8 @@ class PkgConfig(object):
         :param print_errors: output error messages (adds --print-errors)
         """
         self.library = library
-        self.pkg_config_executable = pkg_config_executable
+        pkg_config_env = os.environ.get("PKG_CONFIG", None)
+        self.pkg_config_executable = pkg_config_env or pkg_config_executable
         self.static = static
         self.msvc_syntax = msvc_syntax
         self.define_variables = variables

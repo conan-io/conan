@@ -114,3 +114,12 @@ Cflags: -I${includedir}"""
                         "-Wl,-rpath=/my_prefix/path/lib2")
             pkg_config = PkgConfig("MyLib")
             self.assertIn(expected, " ".join(lib for lib in pkg_config.libs))
+
+    def test_override_pkg_config_executable(self):
+        assert PkgConfig("MyLib").pkg_config_executable == "pkg-config"
+        assert PkgConfig("MyLib", pkg_config_executable="my_pkg_config").pkg_config_executable == \
+               "my_pkg_config"
+        with environment_append({"PKG_CONFIG": "env_pkg_config"}):
+            assert PkgConfig("MyLib", pkg_config_executable="my_pkg_config").pkg_config_executable == \
+                   "env_pkg_config"
+            assert PkgConfig("MyLib").pkg_config_executable == "env_pkg_config"
