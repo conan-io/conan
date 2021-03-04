@@ -1,3 +1,5 @@
+import os
+import platform
 import traceback
 from os.path import join
 
@@ -203,3 +205,9 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
+
+    if conanfile.virtualenv:
+        with chdir(path):
+            from conan.tools.env.virtualenv import VirtualEnv
+            env = VirtualEnv(conanfile)
+            env.generate()

@@ -154,6 +154,7 @@ class ConanFile(object):
         self.runenv_info = Environment()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
+        self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
     @property
     def context(self):

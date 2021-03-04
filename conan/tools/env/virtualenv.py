@@ -11,6 +11,7 @@ class VirtualEnv:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._conanfile.virtualenv = False
 
     def build_environment(self):
         """ collects the buildtime information from dependencies. This is the typical use case

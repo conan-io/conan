@@ -83,7 +83,6 @@ def test_complete(client):
         import platform
         from conans import ConanFile
         class Pkg(ConanFile):
-            generators = "VirtualEnv"
             requires = "openssl/1.0"
             build_requires = "mycmake/1.0"
 
@@ -123,7 +122,7 @@ def test_complete(client):
 
 
 def test_profile_buildenv(client):
-    conanfile = GenConanfile().with_generator("VirtualEnv")
+    conanfile = GenConanfile()
     # Some scripts in a random system folders, path adding to the profile [env]
 
     compiler_bat = "@echo off\necho MYCOMPILER!!\necho MYPATH=%PATH%"
