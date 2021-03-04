@@ -5,6 +5,7 @@ from typing import Tuple
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import PackageReference, ConanFileReference
+from errors import ConanException
 from .references import References
 
 
@@ -16,6 +17,15 @@ class Packages(BaseTable):
                            ('prev_order', int)]
     unique_together = ('reference_pk', 'package_id', 'prev')  # TODO: Add unittest
     references: References = None
+
+    class DoesNotExist(ConanException):
+        pass
+
+    class MultipleObjectsReturned(ConanException):
+        pass
+
+    class AlreadyExist(ConanException):
+        pass
 
     def create_table(self, conn: sqlite3.Cursor, references: References, if_not_exists: bool = True):
         super().create_table(conn, if_not_exists)
@@ -69,7 +79,8 @@ class Packages(BaseTable):
                 f'WHERE {where_clause};'
         r = conn.execute(query, where_values)
         row = r.fetchone()
-        # TODO: Raise some NotFoundException if failed
+        if not row:
+            raise Packages.DoesNotExist(f"No entry for package '{pref.full_str()}'")
         return row[0]
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> PackageReference:

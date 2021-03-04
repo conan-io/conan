@@ -39,7 +39,7 @@ class ConanOps:
             self.log(f'ERROR (sqlite3) {e}')
 
 
-def test_concurrent_install(cache_memory: Cache):
+def test_concurrent_install(cache_1level: Cache):
     """ When installing/downloading from a remote server, we already know the final revision,
         but still two processes can be running in parallel. The second process doesn't want to
         download **again** if the first one already put the files in place
@@ -51,11 +51,11 @@ def test_concurrent_install(cache_memory: Cache):
     conan_ops = ConanOps()
     # First thread acquires the lock and starts to write to the cache folder
     t1 = threading.Thread(target=conan_ops.install_recipe,
-                          args=(cache_memory, ref, writing_to_cache, writing_release,))
+                          args=(cache_1level, ref, writing_to_cache, writing_release,))
 
     # Second thread arrives later
     t2 = threading.Thread(target=conan_ops.install_recipe,
-                          args=(cache_memory, ref, writing_to_cache, writing_release,))
+                          args=(cache_1level, ref, writing_to_cache, writing_release,))
 
     t1.start()
     writing_to_cache.wait()  # Wait for t1 to start writing to cache
@@ -68,10 +68,10 @@ def test_concurrent_install(cache_memory: Cache):
 
     output = '\n'.join(list(conan_ops.q.queue))
     assert output == textwrap.dedent(f'''\
-        Thread-1 > Request lock for recipe
-        Thread-1 > WRITE lock: write files to the corresponding folder
-        Thread-2 > Request lock for recipe
-        Thread-1 > WRITE lock: released
-        Thread-1 > Done with the job
-        Thread-2 > READER lock: Check files are there and use them
-        Thread-2 > Done with the job''')
+        {t1.name} > Request lock for recipe
+        {t1.name} > WRITE lock: write files to the corresponding folder
+        {t2.name} > Request lock for recipe
+        {t1.name} > WRITE lock: released
+        {t1.name} > Done with the job
+        {t2.name} > READER lock: Check files are there and use them
+        {t2.name} > Done with the job''')

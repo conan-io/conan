@@ -2,7 +2,7 @@ import sqlite3
 from io import StringIO
 from typing import List
 
-from cache.exceptions import CacheDirectoryNotFound, CacheDirectoryAlreadyExists
+from conan.cache.exceptions import CacheDirectoryNotFound, CacheDirectoryAlreadyExists
 from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from model.ref import ConanFileReference, PackageReference
 from ._tables.folders import Folders, ConanFolders

@@ -5,6 +5,7 @@ from typing import Optional
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import ConanFileReference, PackageReference
+from errors import ConanException
 from .packages import Packages
 from .references import References
 
@@ -26,6 +27,15 @@ class Folders(BaseTable):
     unique_together = ('reference_pk', 'package_pk', 'path', 'folder')  # TODO: Add unittest
     references: References = None
     packages: Packages = None
+
+    class DoesNotExist(ConanException):
+        pass
+
+    class MultipleObjectsReturned(ConanException):
+        pass
+
+    class AlreadyExist(ConanException):
+        pass
 
     def create_table(self, conn: sqlite3.Cursor, references: References, packages: Packages,
                      if_not_exists: bool = True):

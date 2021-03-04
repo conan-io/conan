@@ -5,6 +5,7 @@ from typing import Tuple, List
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import ConanFileReference
+from errors import ConanException
 
 
 class References(BaseTable):
@@ -14,6 +15,15 @@ class References(BaseTable):
                            ('rrev', str),
                            ('rrev_order', int)]
     unique_together = ('reference', 'rrev')  # TODO: Add unittest
+
+    class DoesNotExist(ConanException):
+        pass
+
+    class MultipleObjectsReturned(ConanException):
+        pass
+
+    class AlreadyExist(ConanException):
+        pass
 
     def _as_tuple(self, ref: ConanFileReference, rrev_order: int):
         return self.row_type(reference=str(ref), name=ref.name, rrev=ref.revision,
