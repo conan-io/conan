@@ -7,11 +7,11 @@ from parameterized import parameterized
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_visual_studio
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @parameterized.expand([("msvc", "19.0", "dynamic"),
                        ("msvc", "19.1", "static")]
                       )
+@pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_toolchain_win(compiler, version, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
