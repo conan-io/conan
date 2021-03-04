@@ -29,6 +29,7 @@ class RunSCMTest(unittest.TestCase):
         # Mock the conanfile (return scm_data)
         conanfile = mock.MagicMock()
         conanfile.scm = {'type': 'git', 'url': 'auto', 'revision': 'auto'}
+        conanfile.source_folder = self.src_folder
 
         # Mock functions called from inside _run_scm (tests will be here)
         def merge_directories(src, dst, excluded=None):
@@ -44,7 +45,6 @@ class RunSCMTest(unittest.TestCase):
 
                 _run_cache_scm(conanfile,
                                scm_sources_folder=local_sources_path,
-                               src_folder=self.src_folder,
                                output=output)
 
         self.assertIn("Copying previously cached scm sources", output)
@@ -58,6 +58,7 @@ class RunSCMTest(unittest.TestCase):
         url = 'whatever'
         conanfile = mock.MagicMock()
         conanfile.scm = {'type': 'git', 'url': url, 'revision': 'auto', 'subfolder': subfolder}
+        conanfile.source_folder = self.src_folder
 
         # Mock functions called from inside _run_scm (tests will be here)
         def clean_source_folder(folder):
@@ -71,7 +72,6 @@ class RunSCMTest(unittest.TestCase):
             with mock.patch.object(SCM, "checkout", new=scm_checkout):
                 _run_cache_scm(conanfile,
                                scm_sources_folder="/not/existing/path",
-                               src_folder=self.src_folder,
                                output=output)
 
         self.assertIn("SCM: Getting sources from url: '{}'".format(url), output)

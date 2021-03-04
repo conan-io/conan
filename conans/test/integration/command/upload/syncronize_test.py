@@ -2,14 +2,12 @@ import os
 import shutil
 import unittest
 
-import pytest
-
 from conans import DEFAULT_REVISION_V1
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_TGZ_NAME
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
@@ -17,14 +15,14 @@ from conans.util.files import load, save
 
 class SynchronizeTest(unittest.TestCase):
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        ref = ConanFileReference.loads("Hello0/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["to_be_deleted.txt"] = "delete me"
-        files["to_be_deleted2.txt"] = "delete me2"
+        save(client.cache.default_profile_path, "")
+        ref = ConanFileReference.loads("hello/0.1@lasote/stable#%s" % DEFAULT_REVISION_V1)
+        files = {"conanfile.py": GenConanfile("hello", "0.1").with_exports("*"),
+                 "to_be_deleted.txt": "delete me",
+                 "to_be_deleted2.txt": "delete me2"}
 
         remote_paths = client.servers["default"].server_store
 

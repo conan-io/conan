@@ -16,7 +16,6 @@ from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGES_FOLDER
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile, TestRequester, TestingResponse
 from conans.util.env_reader import get_env
@@ -290,8 +289,7 @@ class UploadTest(unittest.TestCase):
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                      client.out)
+        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
 
         client2 = TestClient(servers=client.servers, users=client.users)
         client2.save({"conanfile.py": conanfile + "\r\n#end",
@@ -303,8 +301,7 @@ class UploadTest(unittest.TestCase):
         manifest.save(client2.cache.package_layout(ref).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client2.out)
-        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                      client2.out)
+        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
 
         # first client tries to upload again
         if not client.cache.config.revisions_enabled:
@@ -317,17 +314,14 @@ class UploadTest(unittest.TestCase):
             client.run("upload Hello0/1.2.1@frodo/stable")
             self.assertIn("Recipe is up to date, upload skipped", client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_unmodified_recipe(self):
         client = TestClient(default_server_user=True)
-
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                      client.out)
+        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
 
         client2 = TestClient(servers=client.servers, users=client.users)
         client2.save(files)
@@ -338,15 +332,13 @@ class UploadTest(unittest.TestCase):
         manifest.save(client2.cache.package_layout(ref).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
-        self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                         client2.out)
+        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
         self.assertIn("Recipe is up to date, upload skipped", client2.out)
 
         # first client tries to upload again
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertNotIn("Uploading conanmanifest.txt", client.out)
-        self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                         client.out)
+        assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client.out
         self.assertIn("Recipe is up to date, upload skipped", client.out)
 
     def test_upload_unmodified_package(self):
@@ -534,13 +526,13 @@ class MyPkg(ConanFile):
         else:
             self.assertIn("Uploading conan_package.tgz", client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_skip_upload(self):
         """ Check that the option --dry does not upload anything
         """
         client = TestClient(default_server_user=True)
 
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*"),
+                 "file.txt": ""}
         client.save(files)
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip-upload")
@@ -587,11 +579,10 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_no_user(self):
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
@@ -605,10 +596,9 @@ class MyPkg(ConanFile):
         self.assertNotIn("Uploading conanfile.py", client.out)
         self.assertNotIn("Uploading conan_export.tgz", client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client = TestClient(default_server_user=True)
         client.save(files)
         client.run("config set general.non_interactive=True")
@@ -623,7 +613,6 @@ class MyPkg(ConanFile):
         self.assertNotIn("Uploading conan_export.tgz", client.out)
         self.assertNotIn("Please enter a password for", client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_login_prompt_disabled_user_authenticated(self):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
         client = TestClient(default_server_user=True)
@@ -637,9 +626,8 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanfile.py", client.out)
 
     @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_key_error(self):
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         servers = OrderedDict()
@@ -746,7 +734,7 @@ class MyPkg(ConanFile):
         client.run('create . lib/1.0@')
         self.assertIn("lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID), client.out)
         client.run('upload lib/1.0 -c --all')
-        self.assertIn("Uploaded conan recipe 'lib/1.0' to 'default'", client.out)
+        assert "Uploading lib/1.0 to remote" in client.out
 
         # Verify that in the remote it is stored as "_"
         pref = PackageReference.loads("lib/1.0@#0:{}#0".format(NO_SETTINGS_PACKAGE_ID))
@@ -789,7 +777,6 @@ class MyPkg(ConanFile):
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["md5"], recipe_md5)
         self.assertEqual(metadata.recipe.checksums["conanfile.py"]["sha1"], recipe_sha1)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_without_cleaned_user(self):
         """ When a user is not authenticated, uploads failed first time
         https://github.com/conan-io/conan/issues/5878
@@ -833,12 +820,12 @@ class MyPkg(ConanFile):
         servers = {"default": server}
         client = TestClient(requester_class=ServerCapabilitiesRequester, servers=servers,
                             revisions_enabled=True)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         client.save(files)
         client.run("create . user/testing")
         client.run("user -c")
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
-        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@user/testing' to 'default'", client.out)
+        assert "Uploading Hello0/1.2.1@user/testing to remote" in client.out
 
     @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_upload_with_rev_revs_disabled(self):

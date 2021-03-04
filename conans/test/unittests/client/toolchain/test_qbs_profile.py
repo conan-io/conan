@@ -4,7 +4,7 @@ import textwrap
 
 import six
 
-import conan.tools.qbs.qbstoolchain as qbs
+import conan.tools.qbs.qbsprofile as qbs
 
 from conans import tools
 from conans.errors import ConanException
@@ -58,7 +58,7 @@ class QbsGenericTest(unittest.TestCase):
             'os': 'Linux',
             'compiler': 'gcc'}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._build_variant, None)
 
         for build_type, build_variant in qbs._build_variant.items():
@@ -67,7 +67,7 @@ class QbsGenericTest(unittest.TestCase):
                 'compiler': 'gcc',
                 'build_type': build_type}))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._build_variant, build_variant)
 
     def test_convert_architecture(self):
@@ -75,7 +75,7 @@ class QbsGenericTest(unittest.TestCase):
             'os': 'Linux',
             'compiler': 'gcc'}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._architecture, None)
 
         for arch, architecture in qbs._architecture.items():
@@ -84,7 +84,7 @@ class QbsGenericTest(unittest.TestCase):
                 'compiler': 'gcc',
                 'arch': arch}))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._architecture, architecture)
 
     def test_convert_optimization(self):
@@ -92,7 +92,7 @@ class QbsGenericTest(unittest.TestCase):
             'os': 'Linux',
             'compiler': 'gcc'}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._optimization, None)
 
         for build_type, optimization in qbs._optimization.items():
@@ -101,7 +101,7 @@ class QbsGenericTest(unittest.TestCase):
                 'compiler': 'gcc',
                 'build_type': build_type}))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._optimization, optimization)
 
     def test_use_sysroot_from_env(self):
@@ -111,7 +111,7 @@ class QbsGenericTest(unittest.TestCase):
 
         sysroot = '/path/to/sysroot/foo/bar'
         with tools.environment_append({'SYSROOT': sysroot}):
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._sysroot, sysroot)
 
     def test_detect_fpic_from_options(self):
@@ -130,7 +130,7 @@ class QbsGenericTest(unittest.TestCase):
                     'fPIC': option
                 }))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._position_independent_code, value)
 
     def test_convert_cxx_language_version(self):
@@ -138,14 +138,14 @@ class QbsGenericTest(unittest.TestCase):
             'os': 'Linux',
             'compiler': 'gcc'}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._cxx_language_version, None)
         conanfile = MockConanfileWithFolders(MockSettings({
             'os': 'Linux',
             'compiler': 'gcc',
             'compiler.cppstd': 17}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._cxx_language_version, 'c++17')
 
         for cppstd, cxx_language_version in qbs._cxx_language_version.items():
@@ -154,7 +154,7 @@ class QbsGenericTest(unittest.TestCase):
                 'compiler': 'gcc',
                 'compiler.cppstd': cppstd}))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._cxx_language_version,
                              cxx_language_version)
 
@@ -162,7 +162,7 @@ class QbsGenericTest(unittest.TestCase):
         conanfile = MockConanfileWithFolders(MockSettings({
             'compiler': 'gcc'}))
 
-        qbs_toolchain = qbs.QbsToolchain(conanfile)
+        qbs_toolchain = qbs.QbsProfile(conanfile)
         self.assertEqual(qbs_toolchain._target_platform, None)
 
         for os, target_platform in qbs._target_platform.items():
@@ -170,7 +170,7 @@ class QbsGenericTest(unittest.TestCase):
                 'os': os,
                 'compiler': 'gcc'}))
 
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
             self.assertEqual(qbs_toolchain._target_platform,
                              target_platform)
 
@@ -408,6 +408,6 @@ class QbsGenericTest(unittest.TestCase):
                 ]))
 
         with tools.environment_append({'SYSROOT': '/foo/bar/path'}):
-            qbs_toolchain = qbs.QbsToolchain(conanfile)
+            qbs_toolchain = qbs.QbsProfile(conanfile)
 
         self.assertEqual(qbs_toolchain.content, expected_content)

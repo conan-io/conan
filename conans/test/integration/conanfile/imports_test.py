@@ -214,7 +214,7 @@ LibC/0.1@lasote/testing
         client = TestClient()
         client.save({"conanfile.py": pkg_conanfile})
         client.run("create . pkg/0.1@")
-        consumer_conanfile = textwrap.dedent("""
+        consumer_conanfile = textwrap.dedent(r"""
             from conans import ConanFile
             import platform
 

@@ -68,3 +68,20 @@ class DetectTest(unittest.TestCase):
             self.assertEqual("AIX", result['os_build'])
             self.assertEqual(expected_arch, result['arch'])
             self.assertEqual(expected_arch, result['arch_build'])
+
+    @parameterized.expand([
+        ['arm64', 'armv8'],
+        ['i386', 'x86'],
+        ['i686', 'x86'],
+        ['i86pc', 'x86'],
+        ['amd64', 'x86_64'],
+        ['aarch64', 'armv8'],
+        ['sun4v', 'sparc']
+    ])
+    def test_detect_arch(self, machine, expected_arch):
+        with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
+            result = detect_defaults_settings(output=TestBufferConanOutput(),
+                                              profile_path=DEFAULT_PROFILE_NAME)
+            result = dict(result)
+            self.assertEqual(expected_arch, result['arch'])
+            self.assertEqual(expected_arch, result['arch_build'])

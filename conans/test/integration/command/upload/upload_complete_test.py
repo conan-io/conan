@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import stat
+import textwrap
 import unittest
 
 import pytest
@@ -63,8 +64,10 @@ class UploadTest(unittest.TestCase):
         self.test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                       users={"lasote": "mypass"})
         servers["default"] = self.test_server
-        return TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
-                          requester_class=requester)
+        test_client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
+                                 requester_class=requester)
+        save(test_client.cache.default_profile_path, "")
+        return test_client
 
     def setUp(self):
         self.client = self._get_client()
@@ -118,7 +121,6 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_try_upload_bad_recipe(self):
         files = cpp_hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
@@ -130,7 +132,6 @@ class UploadTest(unittest.TestCase):
 
         self.assertIn("Cannot upload corrupted recipe", self.client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_with_pattern(self):
         for num in range(5):
             files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
@@ -149,13 +150,12 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Hello2", self.client.out)
         self.assertNotIn("Hello3", self.client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error(self):
         """Cause an error in the transfer and see some message"""
 
         # Check for the default behaviour
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm")
@@ -165,7 +165,7 @@ class UploadTest(unittest.TestCase):
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry-wait=0")
@@ -174,7 +174,8 @@ class UploadTest(unittest.TestCase):
 
         # but not with 0
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*"),
+                 "somefile.txt": ""}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 0 --retry-wait=1", assert_error=True)
@@ -185,7 +186,7 @@ class UploadTest(unittest.TestCase):
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry-wait=0", assert_error=True)
@@ -195,21 +196,20 @@ class UploadTest(unittest.TestCase):
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
+        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_upload_error_with_config(self):
         """Cause an error in the transfer and see some message"""
 
         # This will fail in the first put file, so, as we need to
         # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry_wait=0')
@@ -219,7 +219,8 @@ class UploadTest(unittest.TestCase):
 
         # but not with 0
         client = self._get_client(BadConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*"),
+                 "somefile.txt": ""}
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry=0')
@@ -232,7 +233,7 @@ class UploadTest(unittest.TestCase):
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run('config set general.retry=10')
@@ -244,14 +245,14 @@ class UploadTest(unittest.TestCase):
 
         # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
-        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        files = {"conanfile.py": GenConanfile("Hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run('config set general.retry=3')
         client.run('config set general.retry_wait=0')
         client.run("upload Hello* --confirm --all")
-        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 6)
+        self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
     def test_upload_with_pattern_and_package_error(self):
         files = cpp_hello_conan_files("Hello1", "1.2.1")
@@ -262,7 +263,6 @@ class UploadTest(unittest.TestCase):
         self.assertIn("-p parameter only allowed with a valid recipe reference",
                       self.client.out)
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_check_upload_confirm_question(self):
         user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
         files = cpp_hello_conan_files("Hello1", "1.2.1")
@@ -300,26 +300,23 @@ class UploadTest(unittest.TestCase):
     def test_upload_with_no_valid_settings(self):
         # Check if upload is still working even if the specified setting is not valid.
         # If this test fails, will fail in Linux/OSx
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    settings = {"os": ["Windows"]}
-"""
-        files = {CONANFILE: conanfile}
-        self.client.save(files)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Hello"
+                version = "1.2"
+                settings = {"os": ["Windows"]}
+            """)
+        self.client.save({CONANFILE: conanfile})
         self.client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.out)
         self.client.run("upload Hello/1.2@lasote/stable")
         self.assertIn("Uploading conanmanifest.txt", self.client.out)
 
     def test_single_binary(self):
-        """ basic installation of a new conans
-        """
         # Try to upload an package without upload conans first
         self.client.run('upload %s -p %s' % (self.ref, str(self.pref.id)))
-        self.assertIn("Uploaded conan recipe '%s'" % str(self.ref), self.client.out)
+        self.assertIn("Uploading %s to remote" % str(self.ref), self.client.out)
 
     def test_simple(self):
         # Upload package
@@ -371,7 +368,7 @@ class TestConan(ConanFile):
                              stat.S_IRWXU, stat.S_IRWXU)
 
     def test_upload_all(self):
-        """Upload conans and package together"""
+        """Upload recipe and package together"""
         # Try to upload all conans and packages
         self.client.run('user -p mypass -r default lasote')
         self.client.run('upload %s --all' % str(self.ref))
@@ -438,16 +435,16 @@ class TestConan(ConanFile):
         self.assertIn("Uploading conanfile.py", self.client.out)
 
     def test_upload_json(self):
-        conanfile = """
-from conans import ConanFile
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
 
-class TestConan(ConanFile):
-    name = "test"
-    version = "0.1"
+            class TestConan(ConanFile):
+                name = "test"
+                version = "0.1"
 
-    def package(self):
-        self.copy("mylib.so", dst="lib")
-"""
+                def package(self):
+                    self.copy("mylib.so", dst="lib")
+            """)
 
         client = self._get_client()
         client.save({"conanfile.py": conanfile,

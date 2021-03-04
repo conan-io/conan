@@ -137,7 +137,7 @@ def _load_profile(text, profile_path, default_folder):
         for include in profile_parser.get_includes():
             # Recursion !!
             profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.update(profile)
+            inherited_profile.compose(profile)
             profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
@@ -237,12 +237,12 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
         result = Profile()
         for p in profiles:
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.update(tmp)
+            result.compose(tmp)
 
     args_profile = _profile_parse_args(settings, options, env)
 
     if result:
-        result.update(args_profile)
+        result.compose(args_profile)
     else:
         result = args_profile
     return result

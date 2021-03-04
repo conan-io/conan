@@ -307,6 +307,7 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 
 
 @pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msvc_runtime_flag():
     client = TestClient()
     conanfile = textwrap.dedent("""

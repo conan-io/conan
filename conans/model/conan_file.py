@@ -68,7 +68,8 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                                        conanfile.display_name, str(e)))
 
 
 @contextmanager
@@ -132,7 +133,7 @@ class ConanFile(object):
     # layout
     layout = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
@@ -143,6 +144,7 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
+        self._conan_requester = requester
 
         self.layout = Layout()
 
@@ -194,20 +196,20 @@ class ConanFile(object):
         self.layout.set_base_build_folder(folder)
 
     @property
-    def install_folder(self):
-        return self.layout.install_folder
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
-
-    @property
     def package_folder(self):
-        return self.layout.package_folder
+        return self.layout.base_package_folder
 
     @package_folder.setter
     def package_folder(self, folder):
         self.layout.set_base_package_folder(folder)
+
+    @property
+    def install_folder(self):
+        return self.layout.base_install_folder
+
+    @install_folder.setter
+    def install_folder(self, folder):
+        self.layout.set_base_install_folder(folder)
 
     @property
     def env(self):

@@ -6,6 +6,7 @@ from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
+from conans.model.ref import ConanFileReference
 from conans.model.values import Values
 
 
@@ -89,15 +90,29 @@ class Profile(object):
 
         return "\n".join(result).replace("\n\n", "\n")
 
-    def update(self, other):
+    def compose(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
         # this is the opposite
         other.env_values.update(self.env_values)
         self.env_values = other.env_values
         self.options.update(other.options)
+        # It is possible that build_requires are repeated, or same package but different versions
         for pattern, req_list in other.build_requires.items():
-            self.build_requires.setdefault(pattern, []).extend(req_list)
+            existing_build_requires = self.build_requires.get(pattern)
+            existing = OrderedDict()
+            if existing_build_requires is not None:
+                for br in existing_build_requires:
+                    # TODO: Understand why sometimes they are str and other are ConanFileReference
+                    r = ConanFileReference.loads(br) \
+                         if not isinstance(br, ConanFileReference) else br
+                    existing[r.name] = br
+            for req in req_list:
+                r = ConanFileReference.loads(req) \
+                     if not isinstance(req, ConanFileReference) else req
+                existing[r.name] = req
+            self.build_requires[pattern] = list(existing.values())
+
         self.conf.update_conf_definition(other.conf)
 
     def update_settings(self, new_settings):

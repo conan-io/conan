@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -106,6 +107,7 @@ def test_config_profile_forbidden(client):
 
 
 @pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""

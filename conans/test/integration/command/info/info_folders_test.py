@@ -251,5 +251,5 @@ class InfoFoldersTest(unittest.TestCase):
             self.assertIn("package_folder: %s" % short_folder, client.out)
 
             client.run("upload pkga/0.1@lasote/testing --all")
-            self.assertIn("Uploaded conan recipe", client.out)
+            self.assertIn("Uploading pkga/0.1@lasote/testing to remote", client.out)
             self.assertNotIn("Uploading package 1/1", client.out)

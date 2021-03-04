@@ -45,7 +45,7 @@ class SettingsItem(object):
             self._definition = "ANY"
         else:
             # list or tuple of possible values
-            self._definition = sorted(str(v) for v in definition)
+            self._definition = [str(v) for v in definition]
 
     def __contains__(self, value):
         return value in (self._value or "")

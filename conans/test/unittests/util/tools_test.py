@@ -388,7 +388,7 @@ class HelloConan(ConanFile):
         with patch.object(OSInfo, "bash_path", return_value='bash'):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
                                       env={"PATH": "/other/path", "MYVAR": "34"})
-            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+            self.assertIn('^&^& PATH=\\^"/other/path:/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def test_download_retries_errors(self):
