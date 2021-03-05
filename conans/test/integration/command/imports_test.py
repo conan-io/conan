@@ -107,10 +107,6 @@ class ConanLib(ConanFile):
 
     def test_imports_error(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run("install . --no-imports")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
-
         self.client.run("imports .")  # Automatic conanbuildinfo.txt
         self.assertNotIn("conanbuildinfo.txt file not found", self.client.out)
 
@@ -129,10 +125,6 @@ class ConanLib(ConanFile):
 
     def test_install_dest(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run("install ./ --no-imports")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
-
         self.client.run("imports . -imf myfolder")
         files = os.listdir(os.path.join(self.client.current_folder, "myfolder"))
         self.assertIn("file1.txt", files)
@@ -143,7 +135,6 @@ class ConanLib(ConanFile):
         tmp = self.client.current_folder
         self.client.current_folder = os.path.join(self.client.current_folder, "build")
         mkdir(self.client.current_folder)
-        self.client.run("install .. --no-imports")
         self.client.current_folder = tmp
         self.client.run("imports . --install-folder=build --import-folder=.")
         files = os.listdir(self.client.current_folder)
@@ -183,9 +174,6 @@ class ConanLib(ConanFile):
 
     def test_imports(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        self.client.run("install . --no-imports -g txt")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
         self.client.run("imports .")
         self.assertIn("imports(): Copied 2 '.txt' files", self.client.out)
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
@@ -196,10 +184,6 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.txt": test1,
                           "conanfile.py": test2,
                           "conanfile2.py": test3}, clean_first=True)
-        self.client.run("install . --no-imports")
-        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
-        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
-
         self.client.run("imports conanfile2.py")
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
