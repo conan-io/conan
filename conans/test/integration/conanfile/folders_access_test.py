@@ -188,13 +188,6 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.run("install . --build missing")
         self.client.run("package .")
 
-    def test_imports_local(self):
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("imports .", assert_error=True)
-        self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
-
     def test_deploy(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
                           "local_command": False}
