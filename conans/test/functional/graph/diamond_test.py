@@ -41,7 +41,8 @@ class DiamondTest(unittest.TestCase):
 
     def _check_individual_deps(self):
         self.assertIn("INCLUDE [", self.client.out)
-        self.assertIn("/data/Hello0/0.1/lasote/stable", self.client.out)
+        output = str(self.client.out)
+        self.assertIn("/data/Hello0/0.1/lasote/stable", output.replace("\\", "/"))
         build_file = os.path.join(self.client.current_folder, BUILD_INFO)
         content = load(build_file)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))

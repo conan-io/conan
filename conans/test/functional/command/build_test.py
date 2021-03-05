@@ -231,8 +231,10 @@ class AConan(ConanFile):
     requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
 
     def build(self):
-        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello.Pkg"].rootpath)
-        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
+        self.output.info("HELLO ROOT PATH: %s" %
+            self.deps_cpp_info["Hello.Pkg"].rootpath.replace('\\\\', '/'))
+        self.output.info("HELLO ROOT PATH: %s" %
+            self.deps_cpp_info["Hello-Tools"].rootpath.replace('\\\\', '/'))
 """
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         client.run("build conanfile.py --build=missing")
