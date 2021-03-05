@@ -420,10 +420,9 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("install . %s -if=conan" % (settings, ))
+        client.run("build . %s -if=conan" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
-        client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x86'", client.out)
 
@@ -458,10 +457,9 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("install . %s -if=conan" % (settings, ))
+        client.run("build . %s -if=conan" % (settings, ))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props",
                       client.out)
-        client.run("build . -if=conan")
         self.assertIn("Visual Studio 2017", client.out)
         self.assertIn("[vcvarsall.bat] Environment initialized for: 'x64'", client.out)
         self._run_app(client, "x64", "Debug")
