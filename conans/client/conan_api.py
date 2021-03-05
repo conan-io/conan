@@ -840,7 +840,7 @@ class ConanAPIV1(object):
         dest = _make_abs_path(dest, cwd)
         mkdir(dest)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
-        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=False)
         recorder = ActionRecorder()
         try:
             lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
