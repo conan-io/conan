@@ -760,12 +760,12 @@ class ConfigInstallSchedTest(unittest.TestCase):
         assert os.path.basename(client.cache_folder) == ".conan"
         conf = load(client.cache.conan_conf_path)
         assert "config_install_interval = 5m" not in conf
-        with self.client.chdir(self.folder):
-            self.client.run_command('git init .')
-            self.client.run_command('git add .')
-            self.client.run_command('git config user.name myname')
-            self.client.run_command('git config user.email myname@mycompany.com')
-            self.client.run_command('git commit -m "mymsg"')
-        client.run("config install '%s'" % self.folder)
+        with client.chdir(self.folder):
+            client.run_command('git init .')
+            client.run_command('git add .')
+            client.run_command('git config user.name myname')
+            client.run_command('git config user.email myname@mycompany.com')
+            client.run_command('git commit -m "mymsg"')
+        client.run('config install "%s/.git" --type git' % self.folder)
         conf = load(client.cache.conan_conf_path)
         assert "config_install_interval = 5m" in conf
