@@ -33,6 +33,7 @@ def test_cmakegen():
             requires = "hello/0.1"
             build_requires = "cmakewrapper/0.1"
             generators = "CMakeGen"
+            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
