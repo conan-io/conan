@@ -28,7 +28,7 @@ def test_complete():
                 cmake.build()
 
             def package(self):
-                src = str(self.settings.build_type) if self.settings.os == "Windows" else None
+                src = str(self.settings.build_type) if self.settings.os == "Windows" else ""
                 self.copy("mycmake*", src=src, dst="bin")
 
             def package_info(self):
