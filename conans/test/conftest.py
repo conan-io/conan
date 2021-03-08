@@ -41,7 +41,7 @@ try:
 except ConanException:
     tools_available.remove("visual_studio")
 
-if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
+if not any([x for x in ("gcc", "clang", "visual_studio") if x in tools_available]):
     tools_available.remove("compiler")
 
 if not which("xcodebuild"):
