@@ -1,6 +1,5 @@
 import json
 import os
-import random
 import shlex
 import shutil
 import socket
@@ -39,7 +38,7 @@ from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
+from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput, RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
@@ -553,7 +552,6 @@ class TestClient(object):
         mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
-        from conans.test.utils.mocks import RedirectedTestOutput
         self.out = RedirectedTestOutput()
 
     def load(self, filename):
