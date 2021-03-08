@@ -68,7 +68,8 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                                        conanfile.display_name, str(e)))
 
 
 @contextmanager
@@ -132,7 +133,7 @@ class ConanFile(object):
     # Folders
     folders = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
@@ -143,6 +144,7 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
+        self._conan_requester = requester
 
         self.folders = Folders()
 

@@ -9,7 +9,6 @@ from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
-from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
 from conans.util.files import save
 from conans import __version__ as client_version
@@ -63,13 +62,13 @@ class CommandOutputer(object):
         if json_output is True:  # To the output
             self._output.write(json_str)
         else:  # Path to a file
-            cwd = os.path.abspath(cwd or get_cwd())
+            cwd = os.path.abspath(cwd or os.getcwd())
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
             save(json_output, json_str)
 
     def json_output(self, info, json_output, cwd):
-        cwd = os.path.abspath(cwd or get_cwd())
+        cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):
             json_output = os.path.join(cwd, json_output)
 

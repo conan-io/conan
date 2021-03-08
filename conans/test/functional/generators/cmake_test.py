@@ -429,9 +429,9 @@ class CMakeGeneratorTest(unittest.TestCase):
                         self.assertIn("comp compile options: one;two;three;four", client.out)
                     else:
                         self.assertIn("$<$<CONFIG:Debug>:;>;"
-                                      "$<$<CONFIG:MinSizeRel>:;>;"
+                                      "$<$<CONFIG:Release>:;one;two;three;four>;"
                                       "$<$<CONFIG:RelWithDebInfo>:;>;"
-                                      "$<$<CONFIG:Release>:;one;two;three;four>"
+                                      "$<$<CONFIG:MinSizeRel>:;>"
                                       , client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},
