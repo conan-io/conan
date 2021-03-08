@@ -99,12 +99,10 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
         # Use a consumer with a version range
         client.save({"conanfile.py": self.consumer})
-        client.run("install . Pkg/0.1@user/channel")
+        client.run("build . --name=Pkg --version=0.1 --user=user --channel=channel")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self._check_lock("Pkg/0.1@user/channel")
-
-        client.run("build .")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 
@@ -129,17 +127,15 @@ class GraphLockPyRequiresTest(unittest.TestCase):
     def test_install_info(self):
         client = self.client
         # Make sure to use temporary if to not change graph_info.json
-        client.run("install . -if=tmp")
-        self.assertIn("Tool/0.2@user/channel", client.out)
         client.run("build . -if=tmp")
+        self.assertIn("Tool/0.2@user/channel", client.out)
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=111", client.out)
         self.assertIn("conanfile.py (Pkg/None): BUILD VAR=111", client.out)
 
-        client.run("install . --lockfile=conan.lock")
+        client.run("build . --lockfile=conan.lock")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
         self._check_lock("Pkg/0.1@user/channel")
-        client.run("build .")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 

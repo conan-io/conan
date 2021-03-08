@@ -58,7 +58,6 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
 
         self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake"),
                      'CMakeLists.txt': app_cmakelists})
-        self.t.run("install .")
         self.t.run("build .")
         self._check_frameworks_found(str(self.t.out))
 
@@ -75,9 +74,8 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
 
         self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake_multi"),
                      'CMakeLists.txt': app_cmakelists})
-        self.t.run("install . -s build_type=Release")
-        self.t.run("install . -s build_type=Debug")
-        self.t.run("build .")
+        self.t.run("build . -s build_type=Release")
+        self.t.run("build . -s build_type=Debug")
         self._check_frameworks_found(str(self.t.out))
 
     def test_apple_framework_cmake_multi_xcode(self):
@@ -94,9 +92,8 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake_multi"),
                      'CMakeLists.txt': app_cmakelists})
         with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
-            self.t.run("install . -s build_type=Release")
-            self.t.run("install . -s build_type=Debug")
-            self.t.run("build .")
+            self.t.run("build . -s build_type=Release")
+            self.t.run("build . -s build_type=Debug")
             self._check_frameworks_found(str(self.t.out))
 
     def test_apple_framework_cmake_find_package(self):
@@ -110,7 +107,6 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
 
         self.t.save({'conanfile.py': self.app_conanfile.format(generator="cmake_find_package"),
                      'CMakeLists.txt': app_cmakelists})
-        self.t.run("install .")
         self.t.run("build .")
         self._check_frameworks_found(str(self.t.out))
 
@@ -463,15 +459,13 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
         with t.chdir('test_package/build'):
             if generator == 'cmake':
                 assert not use_components
-                t.run("install .. --build=missing"
+                t.run("build .. --build=missing"
                       " -o name:use_components=False -o use_find_package=False")
-                t.run("build ..")
                 self.assertIn(">> not USE_FIND_PACKAGE", t.out)
             else:
                 assert generator == 'cmake_find_package'
-                t.run("install .. --build=missing"
+                t.run("build .. --build=missing"
                       " -o name:use_components={} -o use_find_package=True".format(use_components))
-                t.run("build ..")
                 self.assertIn(">> USE_FIND_PACKAGE", t.out)
                 self.assertIn(">> {}USE_COMPONENTS".format("" if use_components else "not "), t.out)
 

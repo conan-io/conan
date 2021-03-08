@@ -223,9 +223,8 @@ class GraphLockRevisionTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
-        client.run("install . -g=cmake --lockfile=conan.lock --lockfile-out=conan.lock --update")
+        client.run("build . -g=cmake --lockfile=conan.lock --lockfile-out=conan.lock --update")
         self._check_lock("PkgB/0.1@user/channel")
-        client.run("build .")
         self.assertIn("conanfile.py (PkgB/0.1@user/channel): BUILD DEP LIBS: !!", client.out)
 
         # Info also works

@@ -122,9 +122,8 @@ class Base(unittest.TestCase):
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("install .. %s %s" % (settings, options))
+            self.client.run("build .. %s %s" % (settings, options))
             install_out = self.client.out
-            self.client.run("build ..")
         return install_out
 
     def _modify_code(self):
@@ -468,7 +467,6 @@ class CMakeInstallTest(unittest.TestCase):
         # folder yet. We need to define the layout for local development
         """
         with client.chdir("build"):
-            client.run("install ..")
             client.run("build ..")
             client.run("package .. -pf=mypkg")  # -pf=mypkg ignored
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build",
@@ -514,6 +512,5 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist})
-        client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)

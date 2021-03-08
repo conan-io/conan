@@ -22,17 +22,18 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
     if build_modes is None:
         build_modes = ["never"]
     try:
-        deps_install(app=app,
-                     create_reference=reference,
-                     ref_or_path=conanfile_abs_path,
-                     install_folder=test_build_folder,
-                     remotes=remotes,
-                     graph_info=graph_info,
-                     update=update,
-                     build_modes=build_modes,
-                     keep_build=keep_build,
-                     recorder=recorder)
-        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
+        deps_info = deps_install(app=app,
+                                 create_reference=reference,
+                                 ref_or_path=conanfile_abs_path,
+                                 install_folder=test_build_folder,
+                                 remotes=remotes,
+                                 graph_info=graph_info,
+                                 update=update,
+                                 build_modes=build_modes,
+                                 keep_build=keep_build,
+                                 recorder=recorder)
+        conanfile = deps_info.root.conanfile
+        cmd_build(app, conanfile_abs_path, conanfile, base_folder, test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)
     finally:

@@ -150,7 +150,7 @@ class Boost(ConanFile):
 Boost/1.0@user/channel
 """
         client.save({"conanfile.txt": other}, clean_first=True)
-        client.run("install .")
+        client.run("install . -g txt")
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
@@ -212,10 +212,9 @@ class App(ConanFile):
         client.run("create . mingw/0.1@myuser/stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
-        client.run("install . -pr=myprofile")
+        client.run("build . -pr=myprofile")
         self.assertIn("conanfile.py (consumer/None): Applying build-requirement: "
                       "mingw/0.1@myuser/stable", client.out)
-        client.run("build .")
         self.assertIn("conanfile.py (consumer/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 

@@ -809,49 +809,98 @@ class Command(object):
                                          prog="conan build",
                                          formatter_class=SmartFormatter)
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("-b", "--build", default=None, action="store_true",
-                            help="Execute the build step (variable should_build=True). When "
-                            "specified, configure/install/test won't run unless "
-                            "--configure/--install/--test specified")
+        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
+                                                                'if not specified in conanfile')
+        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
+                                                                   'if not specified in conanfile')
+        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
+        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-c", "--configure", default=None, action="store_true",
+        parser.add_argument("--should_build", default=None, action="store_true",
+                            help="Execute the build step (variable should_build=True). When "
+                                 "specified, configure/install/test won't run unless "
+                                 "--configure/--install/--test specified")
+        parser.add_argument("--should_configure", default=None, action="store_true",
                             help="Execute the configuration step (variable should_configure=True). "
-                            "When specified, build/install/test won't run unless "
-                            "--build/--install/--test specified")
-        parser.add_argument("-i", "--install", default=None, action="store_true",
+                                 "When specified, build/install/test won't run unless "
+                                 "--build/--install/--test specified")
+        parser.add_argument("--should_install", default=None, action="store_true",
                             help="Execute the install step (variable should_install=True). When "
-                            "specified, configure/build/test won't run unless "
-                            "--configure/--build/--test specified")
-        parser.add_argument("-t", "--test", default=None, action="store_true",
+                                 "specified, configure/build/test won't run unless "
+                                 "--configure/--build/--test specified")
+        parser.add_argument("--should_test", default=None, action="store_true",
                             help="Execute the test step (variable should_test=True). When "
-                            "specified, configure/build/install won't run unless "
-                            "--configure/--build/--install specified")
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP)
+                                 "specified, configure/build/install won't run unless "
+                                 "--configure/--build/--install specified")
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="Directory to install the package (when the build system or "
-                            "build() method does it). Defaulted to the '{build_folder}/package' "
-                            "folder. A relative path can be specified, relative to the current "
-                            "folder. Also an absolute path is allowed.")
+                                 "build() method does it). Defaulted to the '{build_folder}/package' "
+                                 "folder. A relative path can be specified, relative to the current "
+                                 "folder. Also an absolute path is allowed.")
         parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
+
+        parser.add_argument("-g", "--generator", nargs=1, action=Extender,
+                            help='Generators to use')
+
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
+                            help='Use this directory as the directory where to put the generator'
+                                 'files. e.g., conaninfo/conanbuildinfo.txt')
+
+        parser.add_argument("--no-imports", action='store_true', default=False,
+                            help='Install specified packages but avoid running imports')
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information will be '
+                                 'written')
+
+        _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
+        parser.add_argument("--lockfile-node-id", action=OnceArgument,
+                            help="NodeID of the referenced package in the lockfile")
+
         args = parser.parse_args(*args)
+        self._check_lockfile_args(args)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
 
         self._warn_python_version()
 
-        if args.build or args.configure or args.install or args.test:
-            build, config, install, test = (bool(args.build), bool(args.configure),
-                                            bool(args.install), bool(args.test))
+        if args.should_build or args.should_configure or args.should_install or args.should_test:
+            should_build, should_config, should_install, should_test = \
+                (bool(args.should_build), bool(args.should_configure), bool(args.should_install),
+                 bool(args.should_test))
         else:
-            build = config = install = test = True
-        return self._conan.build(conanfile_path=args.path,
-                                 source_folder=args.source_folder,
-                                 package_folder=args.package_folder,
-                                 build_folder=args.build_folder,
-                                 install_folder=args.install_folder,
-                                 should_configure=config,
-                                 should_build=build,
-                                 should_install=install,
-                                 should_test=test)
+            should_build = should_config = should_install = should_test = True
+
+        info = None
+        try:
+            info = self._conan.build(conanfile_path=args.path,
+                                     name=args.name,
+                                     version=args.version,
+                                     user=args.user,
+                                     channel=args.channel,
+                                     source_folder=args.source_folder,
+                                     package_folder=args.package_folder,
+                                     build_folder=args.build_folder,
+                                     install_folder=args.install_folder,
+                                     should_configure=should_config,
+                                     should_build=should_build,
+                                     should_install=should_install,
+                                     should_test=should_test,
+                                     settings=args.settings_host, options=args.options_host,
+                                     env=args.env_host, profile_names=args.profile_host,
+                                     profile_build=profile_build,
+                                     remote_name=args.remote,
+                                     build=args.build,
+                                     update=args.update, generators=args.generator,
+                                     no_imports=args.no_imports,
+                                     lockfile=args.lockfile,
+                                     lockfile_out=args.lockfile_out)
+        except ConanException as exc:
+            info = exc.info
+            raise
+        finally:
+            if args.json and info:
+                self._outputer.json_output(info, args.json, os.getcwd())
 
     def package(self, *args):
         """
@@ -906,6 +955,7 @@ class Command(object):
         conanbuildinfo.txt generated file in the --install-folder (defaulted to
         the current directory).
         """
+
         parser = argparse.ArgumentParser(description=self.imports.__doc__,
                                          prog="conan imports",
                                          formatter_class=SmartFormatter)
@@ -913,13 +963,15 @@ class Command(object):
                             help=_PATH_HELP + " With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
                             " execution. e.g.: conan imports ./imported_files --undo ")
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP)
         parser.add_argument("-imf", "--import-folder", action=OnceArgument,
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
                             help="Undo imports. Remove imported files")
+        parser.add_argument("-l", "--lockfile", action=OnceArgument,
+                            help="Path to a lockfile")
+        _add_profile_arguments(parser)
+
         args = parser.parse_args(*args)
 
         if args.undo:
@@ -932,7 +984,17 @@ class Command(object):
         except ConanException:
             pass
         self._warn_python_version()
-        return self._conan.imports(args.path, args.import_folder, args.install_folder)
+
+        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
+                                    options=args.options_build, env=args.env_build)
+
+        self._warn_python_version()
+
+        self._conan.imports(args.path,
+                            args.import_folder, settings=args.settings_host,
+                            options=args.options_host, env=args.env_host,
+                            profile_names=args.profile_host, profile_build=profile_build,
+                            lockfile=args.lockfile)
 
     def export_pkg(self, *args):
         """

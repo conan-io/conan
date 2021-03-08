@@ -303,8 +303,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create . -s build_type=Debug")
 
     def _install_build_run_test_package(self, client, build_type, run_example2=False):
-        client.run("install fake_test_package -s build_type=%s" % build_type)
-        client.run("build fake_test_package")
+        client.run("build fake_test_package -s build_type=%s" % build_type)
         with client.chdir(os.path.join(client.current_folder, build_type)):
             client.run_command(".%sexample" % os.sep)
             if run_example2:
@@ -590,7 +589,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             find_package(greetings COMPONENTS non-existent)
             """)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
         client.run("build .", assert_error=True)
         self.assertIn("Conan: Component 'hello' found in package 'greetings'", client.out)
         self.assertIn("Conan: Component 'non-existent' NOT found in package 'greetings'", client.out)
@@ -786,7 +784,6 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             message("Target libs (hello): ${tmp}")
             """)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
         client.run("build .")
 
         self.assertIn('Library hello2 found', client.out)
