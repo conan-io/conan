@@ -136,12 +136,8 @@ int main(){{
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires mingw32-make")
-    @pytest.mark.tool_mingw32
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool_mingw64
     def test_cmake_multi_find(self):
-        if platform.system() not in ["Windows", "Linux"]:
-            return
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 class HelloConan(ConanFile):
