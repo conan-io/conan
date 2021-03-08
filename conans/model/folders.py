@@ -167,9 +167,6 @@ class Folders(object):
 
     @property
     def generators_folder(self):
-        #if not self.generators.folder:
-        #    return self.base_install
-        #return os.path.join(self._base_generators, self.generators.folder)
         if self._base_generators is None:
             return None
         if not self.generators.folder:
