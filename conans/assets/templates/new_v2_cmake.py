@@ -70,7 +70,8 @@ class {package_name}TestConan(ConanFile):
     def test(self):
         if not tools.cross_building(self):
             os.chdir("bin")
-            self.run(".%sexample" % os.sep)
+            # TODO: The run_environment=True will be replaced by new Environment
+            self.run(".%sexample" % os.sep, run_environment=True)
 """
 
 
