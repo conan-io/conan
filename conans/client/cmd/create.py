@@ -61,8 +61,7 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                 # FIXME: Forcing now not building test dependencies, binaries should be there
                 install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes,
                                        update, build_modes=None,
-                                       test_build_folder=test_build_folder, recorder=recorder,
-                                       base_folder=None)
+                                       test_build_folder=test_build_folder, recorder=recorder)
             except Exception as e:
                 raise ConanException("Something failed while testing '%s' test_package after "
                                      "it was built using the lockfile. Please report this error: %s"
@@ -77,8 +76,7 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                                    manifest_interactive=manifest_interactive,
                                    keep_build=keep_build,
                                    test_build_folder=test_build_folder,
-                                   recorder=recorder,
-                                   base_folder=None)
+                                   recorder=recorder)
     else:
         deps_install(app=app,
                      ref_or_path=ref,

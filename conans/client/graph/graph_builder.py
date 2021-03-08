@@ -122,8 +122,8 @@ class DepsGraphBuilder(object):
                                                             down_reqs, graph_lock, update, remotes)
 
         # Once the node is configured call the shape to init the layout
-        if hasattr(node.conanfile, "shape"):
-            node.conanfile.shape()
+        if hasattr(node.conanfile, "layout"):
+            node.conanfile.layout()
 
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():

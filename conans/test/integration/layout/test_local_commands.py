@@ -16,7 +16,7 @@ def test_local_build():
     conan_file += """
 
     def configure(self):
-        self.layout.build.folder = "my_build"
+        self.folders.build.folder = "my_build"
 
     def build(self):
         tools.save("build_file.dll", "bar")
@@ -40,7 +40,7 @@ def test_local_build_change_base():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def configure(self):
-        self.layout.build.folder = "my_build"
+        self.folders.build.folder = "my_build"
     def build(self):
         tools.save("build_file.dll", "bar")
     """
@@ -61,7 +61,7 @@ def test_local_source():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def configure(self):
-        self.layout.source.folder = "my_source"
+        self.folders.source.folder = "my_source"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -84,7 +84,7 @@ def test_local_source_change_base():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def configure(self):
-        self.layout.source.folder = "my_source"
+        self.folders.source.folder = "my_source"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -105,9 +105,9 @@ def test_export_pkg():
     conan_file += """
         no_copy_source = True
 
-        def configure(self):
-            self.layout.source.folder = "my_source"
-            self.layout.build.folder = "my_build"
+        def layout(self):
+            self.folders.source.folder = "my_source"
+            self.folders.build.folder = "my_build"
 
         def source(self):
             tools.save("downloaded.h", "bar")
@@ -154,8 +154,8 @@ def test_export_pkg_local():
         no_copy_source = True
 
         def configure(self):
-            self.layout.source.folder = "my_source"
-            self.layout.build.folder = "my_build"
+            self.folders.source.folder = "my_source"
+            self.folders.build.folder = "my_build"
 
         def source(self):
             tools.save("downloaded.h", "bar")

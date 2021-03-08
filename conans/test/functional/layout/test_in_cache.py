@@ -16,9 +16,9 @@ def conanfile():
     conan_file += """
     no_copy_sources = True
 
-    def shape(self):
-        self.layout.source.folder = "my_sources"
-        self.layout.build.folder = "my_build"
+    def layout(self):
+        self.folders.source.folder = "my_sources"
+        self.folders.build.folder = "my_build"
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))

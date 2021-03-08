@@ -6,7 +6,7 @@ from conans.model.build_info import CppInfo, CppInfoDefaultValues
 from conans.util.log import logger
 
 
-class _LayoutEntry(object):
+class _FoldersEntry(object):
 
     def __init__(self, default_cpp_info_values=None):
         self.cpp_info = CppInfo(None, None, default_values=default_cpp_info_values)
@@ -21,41 +21,41 @@ class _LayoutEntry(object):
         self.folder = ""
 
 
-
-class Layout(object):
+class Folders(object):
     def __init__(self):
 
-        self._base_install_folder = None
-        self._base_source_folder = None
-        self._base_build_folder = None
-        self._base_package_folder = None
-        self._base_generators_folder = None
+        self._base_install = None
+        self._base_source = None
+        self._base_build = None
+        self._base_package = None
+        self._base_generators = None
 
         # By default, the cpp_info of the components are empty.
         # Otherwise it become very difficult and confusing to override the default layout, for
         # example, to clion, because every component created have the defaults again.
         source_defaults = CppInfoDefaultValues()
-        self.source = _LayoutEntry(source_defaults)
+        self.source = _FoldersEntry(source_defaults)
         self.source.cpp_info.includedirs = ["include"]
         self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
 
         build_defaults = CppInfoDefaultValues()
-        self.build = _LayoutEntry(build_defaults)
+        self.build = _FoldersEntry(build_defaults)
         self.build.cpp_info.builddirs = ["."]
         self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.build.bin_patterns = ["*.exe", "*.dll"]
 
         # FIXME: Conan 2.0 I think the defaults (propagated to the components) should be empty too
         #        in package. It is confusing a component being created with the "include" and so on.
-        self.package = _LayoutEntry()
+        self.package = _FoldersEntry()
 
         generators_defaults = CppInfoDefaultValues()
-        self.generators = _LayoutEntry(generators_defaults)
+        self.generators = _FoldersEntry(generators_defaults)
 
     def __repr__(self):
         return str(self.__dict__)
 
     def package_files(self):
+        # FIXME: To be replaced with something like a LayoutPackager to be called explicitly
         matching_vars = ["include", "lib", "bin", "framework", "src", "build", "res"]
 
         # Check that the components declared in source/build are in package
@@ -104,72 +104,77 @@ class Layout(object):
         for src in origin_paths:
             logger.debug("Copying '{}': "
                          "From '{}' patterns '{}'".format(var_name, src, patterns))
-            copier = FileCopier([src], self._base_package_folder)
+            copier = FileCopier([src], self._base_package)
             for pattern in patterns:
                 copier(pattern, dst=destinations[0])
 
 
     @property
     def source_folder(self):
-        if self._base_source_folder is None:
+        if self._base_source is None:
             return None
         if not self.source.folder:
-            return self._base_source_folder
+            return self._base_source
 
-        return os.path.join(self._base_source_folder, self.source.folder)
+        return os.path.join(self._base_source, self.source.folder)
 
     @property
-    def base_source_folder(self):
-        return self._base_source_folder
+    def base_source(self):
+        return self._base_source
 
-    def set_base_source_folder(self, folder):
-        self._base_source_folder = folder
+    def set_base_source(self, folder):
+        self._base_source = folder
         self.source.cpp_info.rootpath = self.source_folder
 
     @property
-    def base_source_folder(self):
-        return self._base_source_folder
+    def base_source(self):
+        return self._base_source
 
     @property
     def build_folder(self):
-        if self._base_build_folder is None:
+        if self._base_build is None:
             return None
         if not self.build.folder:
-            return self._base_build_folder
-        return os.path.join(self._base_build_folder, self.build.folder)
+            return self._base_build
+        return os.path.join(self._base_build, self.build.folder)
 
     @property
-    def base_build_folder(self):
-        return self._base_build_folder
+    def base_build(self):
+        return self._base_build
 
-    def set_base_build_folder(self, folder):
-        self._base_build_folder = folder
+    def set_base_build(self, folder):
+        self._base_build = folder
         self.build.cpp_info.rootpath = self.build_folder
 
     @property
-    def base_build_folder(self):
-        return self._base_build_folder
+    def base_build(self):
+        return self._base_build
 
     @property
-    def base_install_folder(self):
-        return self._base_install_folder
+    def base_install(self):
+        return self._base_install
 
-    def set_base_install_folder(self, folder):
-        self._base_install_folder = folder
+    def set_base_install(self, folder):
+        self._base_install = folder
 
     @property
-    def base_package_folder(self):
-        return self._base_package_folder
+    def base_package(self):
+        return self._base_package
 
-    def set_base_package_folder(self, folder):
-        self._base_package_folder = folder
+    def set_base_package(self, folder):
+        self._base_package = folder
         self.package.cpp_info.rootpath = folder
 
     @property
     def generators_folder(self):
+        #if not self.generators.folder:
+        #    return self.base_install
+        #return os.path.join(self._base_generators, self.generators.folder)
+        if self._base_generators is None:
+            return None
         if not self.generators.folder:
-            return self.base_install_folder
-        return os.path.join(self._base_generators_folder, self.generators.folder)
+            return self._base_generators
+        return os.path.join(self._base_generators, self.generators.folder)
 
-    def set_base_generators_folder(self, folder):
-        self._base_generators_folder = folder
+    def set_base_generators(self, folder):
+        self._base_generators = folder

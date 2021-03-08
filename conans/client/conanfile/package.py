@@ -70,19 +70,19 @@ def _create_aux_files(conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-    logger.debug("PACKAGE: Creating config files to %s" % conanfile.layout.base_package_folder)
+    logger.debug("PACKAGE: Creating config files to %s" % conanfile.folders.base_package)
     if copy_info:
         try:
             shutil.copy(os.path.join(conanfile.install_folder, CONANINFO),
-                        conanfile.layout.base_package_folder)
+                        conanfile.folders.base_package)
         except IOError:
             raise ConanException("%s does not exist inside of your %s folder. "
                                  "Try to re-build it again to solve it."
                                  % (CONANINFO, conanfile.install_folder))
     else:
-        save(os.path.join(conanfile.layout.base_package_folder, CONANINFO), conanfile.info.dumps())
+        save(os.path.join(conanfile.folders.base_package, CONANINFO), conanfile.info.dumps())
 
     # Create the digest for the package
-    manifest = FileTreeManifest.create(conanfile.layout.base_package_folder)
-    manifest.save(conanfile.layout.base_package_folder)
+    manifest = FileTreeManifest.create(conanfile.folders.base_package)
+    manifest.save(conanfile.folders.base_package)
     return manifest

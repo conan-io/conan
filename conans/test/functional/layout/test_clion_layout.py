@@ -21,8 +21,11 @@ def conanfile():
     def build(self):
         tools.save("mylib.lib", "")
 
-    def shape(self):
+    def layout(self):
         clion_layout(self)
+
+    def package(self):
+        self.folders.package_files()
     """
     return conanfile
 

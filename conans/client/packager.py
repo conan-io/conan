@@ -22,9 +22,9 @@ def export_pkg(conanfile, package_id, src_package_folder, hook_manager, conanfil
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    save(os.path.join(conanfile.layout.base_package_folder, CONANINFO), conanfile.info.dumps())
-    manifest = FileTreeManifest.create(conanfile.layout.base_package_folder)
-    manifest.save(conanfile.layout.base_package_folder)
+    save(os.path.join(conanfile.folders.base_package, CONANINFO), conanfile.info.dumps())
+    manifest = FileTreeManifest.create(conanfile.folders.base_package)
+    manifest.save(conanfile.folders.base_package)
     report_files_from_manifest(output, manifest)
 
     output.success("Package '%s' created" % package_id)

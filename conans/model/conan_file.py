@@ -11,7 +11,7 @@ from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Layout
+from conans.model.folders import Folders
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -129,8 +129,8 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
-    # layout
-    layout = None
+    # Folders
+    folders = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -144,7 +144,7 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_using_build_profile = False
 
-        self.layout = Layout()
+        self.folders = Folders()
 
     def initialize(self, settings, env):
         if isinstance(self.generators, str):
@@ -179,47 +179,47 @@ class ConanFile(object):
 
     @property
     def source_folder(self):
-        return self.layout.source_folder
+        return self.folders.source_folder
 
     @source_folder.setter
     def source_folder(self, folder):
-        self.layout.set_base_source_folder(folder)
+        self.folders.set_base_source(folder)
 
     @property
     def build_folder(self):
-        return self.layout.build_folder
+        return self.folders.build_folder
 
     @build_folder.setter
     def build_folder(self, folder):
-        self.layout.set_base_build_folder(folder)
+        self.folders.set_base_build(folder)
 
     @property
     def package_folder(self):
-        return self.layout.base_package_folder
+        return self.folders.base_package
 
     @package_folder.setter
     def package_folder(self, folder):
-        self.layout.set_base_package_folder(folder)
+        self.folders.set_base_package(folder)
 
     @property
     def install_folder(self):
-        return self.layout.base_install_folder
+        return self.folders.base_install
 
     @install_folder.setter
     def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
+        self.folders.set_base_install(folder)
 
     @property
     def generators_folder(self):
-        return self.layout.generators_folder
+        return self.folders.generators_folder
 
     @property
     def install_folder(self):
-        return self.layout.base_install_folder
+        return self.folders.base_install
 
     @install_folder.setter
     def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
+        self.folders.set_base_install(folder)
 
     @property
     def env(self):
@@ -303,8 +303,6 @@ class ConanFile(object):
         E.g. self.copy("*.h", src="src/includes", dst="includes")
         """
         # self.output.warn("This conanfile has no package step")
-        if hasattr(self, "shape"):
-            self.layout.package_files()
 
     def package_info(self):
         """ define cpp_build_info, flags, etc

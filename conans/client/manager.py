@@ -90,8 +90,8 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
-    conanfile.layout.set_base_install_folder(install_folder)
-    conanfile.layout.set_base_generators_folder(base_folder)
+    conanfile.folders.set_base_install(install_folder)
+    conanfile.folders.set_base_generators(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 
@@ -101,13 +101,15 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        app.generator_manager.write_generators(conanfile, conanfile.generators_folder,
+        app.generator_manager.write_generators(conanfile, install_folder,
+                                               conanfile.generators_folder,
                                                output)
         write_toolchain(conanfile, conanfile.generators_folder, output)
         if add_txt_generator:
             # FIXME: This should be removed in 2.0, the local commmands need the txt generator
             conanfile.generators = ["txt"]
-            app.generator_manager.write_generators(conanfile, install_folder, output)
+            app.generator_manager.write_generators(conanfile, install_folder,
+                                                   conanfile.generators_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
