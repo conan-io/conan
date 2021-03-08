@@ -13,7 +13,7 @@ class ConanFileTest(unittest.TestCase):
             if member.startswith('_') and not member.startswith("__"):
                 self.assertTrue(member.startswith('_conan'))
 
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings(), EnvValues())
 
         for member in vars(conanfile):

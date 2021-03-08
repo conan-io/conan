@@ -7,11 +7,11 @@ import textwrap
 import unittest
 
 import pytest
+from mock import Mock
 
 from conans.client.remote_manager import uncompress_file
 from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -21,9 +21,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
     def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
-            uncompress_file(src_path=tgz,
-                            dest_folder=tmp_folder,
-                            output=TestBufferConanOutput())
+            uncompress_file(src_path=tgz, dest_folder=tmp_folder, output=Mock())
             self.assertTrue(os.path.exists(os.path.join(tmp_folder, annotated_file)))
             self.assertEqual(dot_file_expected,
                              os.path.exists(os.path.join(tmp_folder, "._" + annotated_file)))

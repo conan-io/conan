@@ -5,6 +5,7 @@ import unittest
 
 import pytest
 import yaml
+from mock import Mock
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
@@ -12,7 +13,6 @@ from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.paths import DATA_YML
 from conans.test.utils.tools import TestClient
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import load
 from conans.util.files import save_files
 
@@ -165,7 +165,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
 
 
 class ParseSCMFromConanDataTestCase(unittest.TestCase):
-    loader = ConanFileLoader(runner=None, output=TestBufferConanOutput(),
+    loader = ConanFileLoader(runner=None, output=Mock(),
                              python_requires=ConanPythonRequire(None, None))
 
     def test_parse_data(self):

@@ -13,7 +13,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 class PkgGeneratorTest(unittest.TestCase):
 
     def test_variables_setup(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "/dummy_root_folder1")
@@ -85,7 +85,7 @@ Cflags: -I"${includedir}" -Flag1=23 -DMYDEFINE1
 """)
 
     def test_pkg_config_custom_names(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -192,7 +192,7 @@ Requires: my_pkg_custom_name my_pkg1_custom_name zlib
         settings = Settings.loads(get_default_settings_yml())
         settings.compiler = "apple-clang"
         settings.os = "Macos"
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.settings = settings
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")

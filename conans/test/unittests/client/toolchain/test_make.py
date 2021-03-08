@@ -49,7 +49,7 @@ class MakeToolchainTest(unittest.TestCase):
 
     def test_toolchain(self):
         settings_mock = _MockSettings()
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings_mock, EnvValues())
         toolchain = MakeToolchain(conanfile)
         toolchain.variables["TEST_VAR_01"] = "TEST_VAR_VAL_01"

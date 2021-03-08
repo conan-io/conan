@@ -17,8 +17,8 @@ class DepsGraphTest(unittest.TestCase):
         ref1 = ConanFileReference.loads("Hello/0.1@user/stable")
         ref2 = ConanFileReference.loads("Hello/0.1@user/stable")
 
-        conanfile1 = ConanFile(TestBufferConanOutput(), None)
-        conanfile2 = ConanFile(TestBufferConanOutput(), None)
+        conanfile1 = ConanFile(Mock(), None)
+        conanfile2 = ConanFile(Mock(), None)
         n1 = Node(ref1, conanfile1, context=CONTEXT_HOST)
         n2 = Node(ref2, conanfile2, context=CONTEXT_HOST)
 

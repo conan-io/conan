@@ -26,7 +26,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         env.add("PATH", ["another_path", ])
         env.add("PATH2", ["p1", "p2"])
         env.add("PATH3", ["p1", "p2", "p1", "p3", "p4", "p2"])
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), env)
 
         cls.generator = VirtualEnvGenerator(conanfile)

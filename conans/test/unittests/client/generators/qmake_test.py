@@ -1,19 +1,20 @@
 import os
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.qmake import QmakeGenerator
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class QmakeGeneratorTest(unittest.TestCase):
 
     def test_system_libs(self):
         # https://github.com/conan-io/conan/issues/7558
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         cpp_info = CppInfo("MyPkg", "/rootpath")
         cpp_info.libs = ["mypkg"]
@@ -26,7 +27,7 @@ class QmakeGeneratorTest(unittest.TestCase):
         self.assertIn('CONAN_SYSTEMLIBS += -lpthread', qmake_lines)
 
     def test_frameworks(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         framework_path = os.getcwd()  # must exist, otherwise filtered by framework_paths
         cpp_info = CppInfo("MyPkg", "/rootpath")

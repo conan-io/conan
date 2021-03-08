@@ -15,7 +15,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 class VisualStudioLegacyGeneratorTest(unittest.TestCase):
 
     def test_valid_xml(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         folder1 = temp_folder()
