@@ -553,6 +553,9 @@ class TestClient(object):
         mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count, revisions_enabled)
 
+        from conans.test.utils.mocks import RedirectedTestOutput
+        self.out = RedirectedTestOutput()
+
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
 
@@ -654,24 +657,20 @@ class TestClient(object):
                            http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api_v1(self, user_io=None):
-        if user_io:
-            self.out = user_io.out
-        else:
-            self.out = TestBufferConanOutput()
-        user_io = user_io or MockedUserIO(self.users, out=self.out)
-        conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+    def get_conan_api_v1(self):
+        user_io = MockedUserIO(self.users)
+        conan = Conan(cache_folder=self.cache_folder, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api(self, user_io=None):
+    def get_conan_api(self):
         if os.getenv("CONAN_V2_CLI"):
             return self.get_conan_api_v2()
         else:
-            return self.get_conan_api_v1(user_io)
+            return self.get_conan_api_v1()
 
-    def run_cli(self, command_line, user_io=None, assert_error=False):
-        conan = self.get_conan_api(user_io)
+    def run_cli(self, command_line, assert_error=False):
+        conan = self.get_conan_api()
         self.api = conan
         if os.getenv("CONAN_V2_CLI"):
             command = Cli(conan)
@@ -695,20 +694,15 @@ class TestClient(object):
         self._handle_cli_result(command_line, assert_error=assert_error, error=error)
         return error
 
-    def run(self, command_line, user_io=None, assert_error=False):
+    def run(self, command_line, assert_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        # TODO: remove in 2.0
-        if os.getenv("CONAN_V2_CLI"):
-            from conans.test.utils.mocks import RedirectedTestOutput
-            self.out = RedirectedTestOutput()
-            with redirect_output(self.out):
-                error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
-        else:
-            error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
-
+        from conans.test.utils.mocks import RedirectedTestOutput
+        self.out = RedirectedTestOutput()  # Initialize each command
+        with redirect_output(self.out):
+            error = self.run_cli(command_line, assert_error=assert_error)
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):
