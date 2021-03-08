@@ -378,7 +378,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
 
-    @pytest.mark.tool_mingw64
+    @pytest.mark.tool_msys2
     @pytest.mark.tool_gcc
     def test_standard_20_as_cxx_flag(self):
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
