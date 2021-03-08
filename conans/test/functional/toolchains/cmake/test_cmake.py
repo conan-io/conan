@@ -260,6 +260,7 @@ class WinTest(Base):
 
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
+    @pytest.mark.tool_mingw64
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
