@@ -1,6 +1,7 @@
 import os
 import textwrap
 import unittest
+import platform
 
 import pytest
 
