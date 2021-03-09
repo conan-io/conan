@@ -181,29 +181,6 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertIn("MYCUSTOMVAR=MYCUSTOMVALUE", conaninfo)
 
-    def test_options_install(self):
-        # https://github.com/conan-io/conan/issues/2242
-        conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
-    name = "Hello"
-    options = { "optionOne": [True, False, 123] }
-    default_options = "optionOne=True"
-"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export-pkg . Hello/0.1@lasote/stable")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        client.run("export-pkg . Hello/0.1@lasote/stable -o optionOne=False")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        client.run("export-pkg . Hello/0.1@lasote/stable -o Hello:optionOne=123")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        self.assertIn("optionOne: 123", client.out)
-
     def _consume(self, client, install_args):
         consumer = """
 from conans import ConanFile
