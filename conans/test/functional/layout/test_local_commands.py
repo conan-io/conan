@@ -206,26 +206,26 @@ def test_export_pkg():
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
-        no_copy_source = True
+    no_copy_source = True
 
-        def layout(self):
-            self.folders.source.folder = "my_source"
-            self.folders.build.folder = "my_build"
+    def layout(self):
+        self.folders.source.folder = "my_source"
+        self.folders.build.folder = "my_build"
 
-        def source(self):
-            tools.save("downloaded.h", "bar")
+    def source(self):
+        tools.save("downloaded.h", "bar")
 
-        def build(self):
-            tools.save("library.lib", "bar")
-            tools.save("generated.h", "bar")
+    def build(self):
+        tools.save("library.lib", "bar")
+        tools.save("generated.h", "bar")
 
-        def package(self):
-            self.output.warn("Source folder: {}".format(self.source_folder))
-            self.output.warn("Build folder: {}".format(self.build_folder))
-            self.output.warn("Package folder: {}".format(self.package_folder))
-            self.copy("*.h")
-            self.copy("*.lib")
-        """
+    def package(self):
+        self.output.warn("Source folder: {}".format(self.source_folder))
+        self.output.warn("Build folder: {}".format(self.build_folder))
+        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.copy("*.h")
+        self.copy("*.lib")
+    """
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -252,26 +252,26 @@ def test_export_pkg_local():
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
-        no_copy_source = True
+    no_copy_source = True
 
-        def layout(self):
-            self.folders.source.folder = "my_source"
-            self.folders.build.folder = "my_build"
+    def layout(self):
+        self.folders.source.folder = "my_source"
+        self.folders.build.folder = "my_build"
 
-        def source(self):
-            tools.save("downloaded.h", "bar")
+    def source(self):
+        tools.save("downloaded.h", "bar")
 
-        def build(self):
-            tools.save("library.lib", "bar")
-            tools.save("generated.h", "bar")
+    def build(self):
+        tools.save("library.lib", "bar")
+        tools.save("generated.h", "bar")
 
-        def package(self):
-            self.output.warn("Source folder: {}".format(self.source_folder))
-            self.output.warn("Build folder: {}".format(self.build_folder))
-            self.output.warn("Package folder: {}".format(self.package_folder))
-            self.copy("*.h")
-            self.copy("*.lib")
-        """
+    def package(self):
+        self.output.warn("Source folder: {}".format(self.source_folder))
+        self.output.warn("Build folder: {}".format(self.build_folder))
+        self.output.warn("Package folder: {}".format(self.package_folder))
+        self.copy("*.h")
+        self.copy("*.lib")
+    """
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
