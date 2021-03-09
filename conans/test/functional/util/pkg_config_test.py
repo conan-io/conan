@@ -29,18 +29,15 @@ Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
 
 
 @pytest.mark.unix
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires pkg-config")
 class PkgConfigTest(unittest.TestCase):
     def test_negative(self):
-        if platform.system() == "Windows":
-            return
         pc = PkgConfig('libsomething_that_does_not_exist_in_the_world')
         with self.assertRaises(ConanException):
             pc.libs()
 
     @pytest.mark.tool_pkg_config
     def test_pc(self):
-        if platform.system() == "Windows":
-            return
         tmp_dir = temp_folder()
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
@@ -64,8 +61,6 @@ class PkgConfigTest(unittest.TestCase):
 
     @pytest.mark.tool_pkg_config
     def test_define_prefix(self):
-        if platform.system() == "Windows":
-            return
         tmp_dir = temp_folder()
         filename = os.path.join(tmp_dir, 'libastral.pc')
         with open(filename, 'w') as f:
@@ -91,8 +86,6 @@ class PkgConfigTest(unittest.TestCase):
 
     @pytest.mark.tool_pkg_config
     def test_rpaths_libs(self):
-        if platform.system() == "Windows":
-            return
         pc_content = """prefix=/my_prefix/path
 libdir=/my_absoulte_path/fake/mylib/lib
 libdir3=${prefix}/lib2
