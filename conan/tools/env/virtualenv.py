@@ -57,7 +57,7 @@ class VirtualEnv:
         cpp_info = conanfile_dep.cpp_info
         if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
             return dyn_runenv
-        if cpp_info.exes:
+        if cpp_info.bin_paths:  # cpp_info.exes is not defined yet
             dyn_runenv.prepend_path("PATH", cpp_info.bin_paths)
         # If it is a build_require this will be the build-os, otherwise it will be the host-os
         os_ = conanfile_dep.settings.get_safe("os")
