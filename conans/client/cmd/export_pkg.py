@@ -37,9 +37,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
         add_env_conaninfo(conanfile, subtree_libnames)
 
     _init_conanfile_infos()
-    from conans.client.conan_api import existing_info_files
-    if install_folder and existing_info_files(install_folder):
-        load_deps_info(install_folder, conanfile, required=True)
+
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
