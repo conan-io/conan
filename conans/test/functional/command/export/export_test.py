@@ -1,4 +1,5 @@
 import os
+import platform
 import stat
 import textwrap
 import unittest
@@ -462,3 +463,33 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
         client.run('export . Pkg/0.1@', assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case", client.out)
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")
+def test_export_casing():
+    # https://github.com/conan-io/conan/issues/8583
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            exports = "file1", "FILE1"
+            exports_sources = "test", "TEST"
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "test": "some lowercase",
+                 "TEST": "some UPPERCASE",
+                 "file1": "file1 lowercase",
+                 "FILE1": "file1 UPPERCASE"
+                 })
+    assert client.load("test") == "some lowercase"
+    assert client.load("TEST") == "some UPPERCASE"
+    assert client.load("file1") == "file1 lowercase"
+    assert client.load("FILE1") == "file1 UPPERCASE"
+    client.run("export . pkg/0.1@")
+    ref = ConanFileReference.loads("pkg/0.1@")
+    export_src_folder = client.cache.package_layout(ref).export_sources()
+    assert load(os.path.join(export_src_folder, "test")) == "some lowercase"
+    assert load(os.path.join(export_src_folder, "TEST")) == "some UPPERCASE"
+    exports_folder = client.cache.package_layout(ref).export()
+    assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
+    assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"
