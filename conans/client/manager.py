@@ -91,8 +91,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             content = normalize(conanfile.info.dumps())
             save(os.path.join(install_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            graph_info.save(install_folder)
-            output.info("Generated graphinfo")
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
