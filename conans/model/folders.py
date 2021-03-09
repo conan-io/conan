@@ -20,8 +20,6 @@ class _FoldersEntry(object):
         self.framework_patterns = []
         self.folder = ""
 
-# self.
-# self.source_cpp_info <= nuevo sin filters ni agregacion
 
 class Folders(object):
     def __init__(self):
