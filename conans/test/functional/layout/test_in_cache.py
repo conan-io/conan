@@ -43,7 +43,7 @@ def conanfile():
     return conan_file
 
 
-def test_create_test_package(conanfile):
+def test_create_test_package_no_layout(conanfile):
     """The test package using the new generators work (having the generated files in the build
     folder)"""
     client = TestClient()
@@ -75,6 +75,41 @@ def test_create_test_package(conanfile):
     assert "hey! building" in client.out
     assert "hey! testing" in client.out
 
+
+def test_create_test_package_with_layout(conanfile):
+    """The test package using the new generators work (having the generated files in the build
+    folder)"""
+    client = TestClient()
+    conanfile_test = textwrap.dedent("""
+        import os
+
+        from conans import ConanFile, tools
+        from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+
+            def layout(self):
+                self.folders.generators.folder = "my_generators"
+
+            def build(self):
+                assert os.path.exists("my_generators/conan_toolchain.cmake")
+                self.output.warn("hey! building")
+                self.output.warn(os.getcwd())
+
+            def test(self):
+                self.output.warn("hey! testing")
+    """)
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
+    client.run("create . lib/1.0@")
+    assert "hey! building" in client.out
+    assert "hey! testing" in client.out
 
 
 def test_cache_in_layout(conanfile):
