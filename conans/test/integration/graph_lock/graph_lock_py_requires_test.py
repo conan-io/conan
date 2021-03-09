@@ -33,7 +33,9 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
         self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
 
         client.run("source .")
-        self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+        # TODO: New local source method
+        # self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Configuring sources in", client.out)
 
     def test_inherit_with_init(self):
         client = TestClient()
