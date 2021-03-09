@@ -37,7 +37,8 @@ def install_build_and_test(app, conanfile_abs_path, reference, graph_info,
                      manifest_interactive=manifest_interactive,
                      keep_build=keep_build,
                      recorder=recorder)
-        cmd_build(app, conanfile_abs_path, base_folder, test_build_folder,
+        cmd_build(app, conanfile_abs_path, conanfile_abs_path,
+                  source_folder=base_folder, build_folder=test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)
     finally:
