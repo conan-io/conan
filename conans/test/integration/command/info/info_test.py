@@ -599,23 +599,6 @@ class InfoTest2(unittest.TestCase):
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
 
-    def test_wrong_graph_info(self):
-        # https://github.com/conan-io/conan/issues/4443
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
-        client = TestClient()
-        client.save({"conanfile.py": str(conanfile)})
-        client.run("install .")
-        path = os.path.join(client.current_folder, "graph_info.json")
-        graph_info = client.load(path)
-        graph_info = json.loads(graph_info)
-        graph_info.pop("root")
-        save(path, json.dumps(graph_info))
-        client.run("info .")
-        self.assertIn("conanfile.py (Hello/0.1)", client.out)
-        save(path, "broken thing")
-        client.run("info .", assert_error=True)
-        self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
-
     def test_previous_lockfile_error(self):
         # https://github.com/conan-io/conan/issues/5479
         client = TestClient()
