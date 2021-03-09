@@ -96,7 +96,10 @@ class VirtualEnv:
         if build_env:  # Only if there is something defined
             if platform.system() == "Windows":
                 build_env.save_bat("conanbuildenv.bat")
-                run_env.save_bat("conanrunenv.bat")
             else:
                 build_env.save_sh("conanbuildenv.sh")
+        if run_env:
+            if platform.system() == "Windows":
+                run_env.save_bat("conanrunenv.bat")
+            else:
                 run_env.save_sh("conanrunenv.sh")

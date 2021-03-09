@@ -21,6 +21,7 @@ def test_complete():
             default_options = {"myopenssl:shared": True}
             generators = "CMakeGen"
             exports = "*"
+            apply_env = False
 
             def build(self):
                 cmake = CMake(self)

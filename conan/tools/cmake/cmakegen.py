@@ -12,3 +12,10 @@ class CMakeGen:
         self.toolchain.generate()
         self.deps.generate()
         self.env.generate()
+
+    def _output_path(self, value):
+        self.toolchain.output_path = value
+        self.deps.output_path = value
+        self.env.output_path = value
+
+    output_path = property(fset=_output_path)  # now value has only a setter
