@@ -1017,10 +1017,6 @@ class Command(object):
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP + " If these files are found in the specified"
-                            " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
-                            "will raise an error.")
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
@@ -1057,7 +1053,6 @@ class Command(object):
                                           source_folder=args.source_folder,
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
-                                          install_folder=args.install_folder,
                                           profile_names=args.profile_host,
                                           env=args.env_host,
                                           settings=args.settings_host,
