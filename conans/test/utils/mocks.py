@@ -139,7 +139,6 @@ class MockConanfile(ConanFile):
 
         self.package_folder = None
 
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -221,7 +220,8 @@ class TestBufferConanOutput(ConanOutput):
 # cli2.0
 class RedirectedTestOutput(StringIO):
     def __init__(self):
-        super(RedirectedTestOutput, self).__init__()
+        # Chage to super() for Py3
+        StringIO.__init__(self)
 
     def __repr__(self):
         return self.getvalue()
