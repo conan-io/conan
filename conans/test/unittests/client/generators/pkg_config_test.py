@@ -1,5 +1,7 @@
 import unittest
 
+from mock import Mock
+
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.build_info import CppInfo
@@ -7,7 +9,6 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class PkgGeneratorTest(unittest.TestCase):

@@ -3,10 +3,11 @@
 import platform
 import unittest
 
+from mock import Mock
+
 from conans import ConanFile, Settings
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.model.env_info import EnvValues
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VirtualEnvGeneratorTest(unittest.TestCase):

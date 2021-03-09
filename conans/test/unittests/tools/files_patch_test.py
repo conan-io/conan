@@ -2,13 +2,13 @@ import os
 import unittest
 from textwrap import dedent
 
+from mock import Mock
 from parameterized.parameterized import parameterized
 
 from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, create_profile
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save, load
 
 base_conanfile = '''

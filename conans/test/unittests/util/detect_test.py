@@ -1,6 +1,7 @@
 import mock
 import unittest
 
+from mock import Mock
 from parameterized import parameterized
 
 from conans.client import tools

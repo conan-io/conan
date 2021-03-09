@@ -1,10 +1,11 @@
 import unittest
 
+from mock import Mock
+
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.settings import Settings
 from conans.test.utils.tools import TestClient
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ConanFileTest(unittest.TestCase):
