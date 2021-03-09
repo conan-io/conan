@@ -68,7 +68,6 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("lock create consumer.py --lockfile-out=output.lock "
                    "--name=name --version=version")
         client.run("install consumer.py name/version@ --lockfile=output.lock")
-        self.assertIn("consumer.py (name/version): Generated graphinfo", client.out)
 
     def test_commands_cannot_create_lockfile(self):
         client = TestClient()
