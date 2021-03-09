@@ -408,10 +408,7 @@ class ConanAPIV1(object):
             build_folder = _make_abs_path(build_folder, cwd)
             if install_folder:
                 install_folder = _make_abs_path(install_folder, cwd)
-            else:
-                # FIXME: This is a hack for old UI, need to be fixed in Conan 2.0
-                if os.path.exists(os.path.join(build_folder, GRAPH_INFO_FILE)):
-                    install_folder = build_folder
+
             source_folder = _make_abs_path(source_folder, cwd,
                                            default=os.path.dirname(conanfile_path))
 
