@@ -2,7 +2,7 @@ from conan.tools.cmake import CMakeDeps, CMakeToolchain
 from conan.tools.env import VirtualEnv
 
 
-class CMakeGen:
+class CMakeGen(object):  # Needed for Py2
     def __init__(self, conanfile):
         self.toolchain = CMakeToolchain(conanfile)
         self.deps = CMakeDeps(conanfile)

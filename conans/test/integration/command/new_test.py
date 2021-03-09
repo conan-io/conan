@@ -362,6 +362,6 @@ class NewCommandTest(unittest.TestCase):
         conanfile = client.load("conanfile.py")
         self.assertIn("CMakeToolchain", conanfile)
         conanfile = client.load("test_package/conanfile.py")
-        self.assertIn("CMakeToolchain", conanfile)
+        self.assertIn("CMakeGen", conanfile)
         cmake = client.load("test_package/CMakeLists.txt")
         self.assertIn("find_package", cmake)

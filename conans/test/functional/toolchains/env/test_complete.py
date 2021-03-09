@@ -33,7 +33,6 @@ def test_complete():
                 self.copy("mycmake*", src=src, dst="bin")
 
             def package_info(self):
-                self.cpp_info.exes = ["mycmake"]
                 self.cpp_info.bindirs = ["bin"]
         """)
     mycmake_cmakelists = textwrap.dedent("""
