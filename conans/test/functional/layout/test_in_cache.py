@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 import pytest
 
@@ -40,6 +41,40 @@ def conanfile():
         self.cpp_info.libdirs = ["lib"]
     """
     return conan_file
+
+
+def test_create_test_package(conanfile):
+    """The test package using the new generators work (having the generated files in the build
+    folder)"""
+    client = TestClient()
+    conanfile_test = textwrap.dedent("""
+        import os
+
+        from conans import ConanFile, tools
+        from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+
+            def build(self):
+                assert os.path.exists("conan_toolchain.cmake")
+                self.output.warn("hey! building")
+                self.output.warn(os.getcwd())
+
+            def test(self):
+                self.output.warn("hey! testing")
+    """)
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
+    client.run("create . lib/1.0@")
+    assert "hey! building" in client.out
+    assert "hey! testing" in client.out
+
 
 
 def test_cache_in_layout(conanfile):

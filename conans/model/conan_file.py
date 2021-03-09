@@ -216,14 +216,6 @@ class ConanFile(object):
         return self.folders.generators_folder
 
     @property
-    def install_folder(self):
-        return self.folders.base_install
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        self.folders.set_base_install(folder)
-
-    @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
         self._conan_env_values, user specified from profiles or -e first, then inherited)"""
