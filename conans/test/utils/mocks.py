@@ -216,7 +216,6 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-# cli2.0
 class RedirectedTestOutput(StringIO):
     def __init__(self):
         # Chage to super() for Py3
