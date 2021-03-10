@@ -694,7 +694,7 @@ class ConanAPIV1(object):
              profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference_or_path, None, profile_host,
+        reference, graph_info = self._info_args(reference_or_path, profile_host,
                                                 profile_build, lockfile=lockfile)
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
