@@ -3,10 +3,11 @@
 import platform
 import unittest
 
+from mock import Mock
+
 from conans import ConanFile, Settings
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.model.env_info import EnvValues
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class VirtualEnvGeneratorTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class VirtualEnvGeneratorTest(unittest.TestCase):
         env.add("PATH", ["another_path", ])
         env.add("PATH2", ["p1", "p2"])
         env.add("PATH3", ["p1", "p2", "p1", "p3", "p4", "p2"])
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), env)
 
         cls.generator = VirtualEnvGenerator(conanfile)
