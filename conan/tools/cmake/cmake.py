@@ -85,11 +85,7 @@ class CMake(object):
         is_windows_mingw = platform.system() == "Windows" and self._generator == "MinGW Makefiles"
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
-            if is_windows_mingw:
-                with tools.remove_from_path("sh"):
-                    self._conanfile.run(command)
-            else:
-                self._conanfile.run(command)
+            self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
