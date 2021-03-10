@@ -552,7 +552,7 @@ class GraphLock(object):
                                          % (str(node.ref), str(req_node.ref)))
 
     def check_locked_build_requires(self, node, package_build_requires, profile_build_requires):
-        if self._relaxed:
+        if self._relaxed or node.recipe == RECIPE_VIRTUAL:
             return
         locked_node = node.graph_lock_node
         locked_requires = locked_node.build_requires
