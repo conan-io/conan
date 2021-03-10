@@ -560,5 +560,7 @@ class TestMinGW:
         client = TestClient()
         client.save({"conanfile.py": self.conanfile, "CMakeLists.txt": self.cmakelists,
                      "main.cpp": self.main_cpp, "profile": profile})
+        client.run_command("cmake --version")
+        assert "cmake version 3.16.9" in client.out
         client.run("create . test/1.0@ --profile profile", assert_error=True)
         print(client.out)
