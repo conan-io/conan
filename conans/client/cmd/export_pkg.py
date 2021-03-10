@@ -38,6 +38,9 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
 
     _init_conanfile_infos()
 
+    # FIXME: Local methods. Fix when conanbuildinfo.txt is not generated in local any more
+    load_deps_info(os.getcwd(), conanfile, required=True)
+    
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
