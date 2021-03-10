@@ -646,21 +646,16 @@ class ConanAPIV1(object):
             self.app.cache.initialize_default_profile()
             self.app.cache.initialize_settings()
 
-    def _info_args(self, reference_or_path, install_folder, profile_host, profile_build,
+    def _info_args(self, reference_or_path, profile_host, profile_build,
                    lockfile=None):
         cwd = os.getcwd()
         if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
-            install_folder = _make_abs_path(install_folder, cwd) if install_folder else None
         else:
             ref = _get_conanfile_path(reference_or_path, cwd=None, py=None)
 
-            install_folder = _make_abs_path(install_folder, cwd)
-            if not os.path.exists(os.path.join(install_folder, GRAPH_INFO_FILE)):
-                install_folder = None
-
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        graph_info = get_graph_info(profile_host, profile_build, cwd, install_folder,
+        graph_info = get_graph_info(profile_host, profile_build, cwd, None,
                                     self.app.cache, self.app.out, lockfile=lockfile)
 
         return ref, graph_info
@@ -668,11 +663,10 @@ class ConanAPIV1(object):
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_names=None, remote_name=None, build_order=None, check_updates=None,
-                         install_folder=None, profile_build=None):
+                         profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference, install_folder, profile_host,
-                                                profile_build)
+        reference, graph_info = self._info_args(reference, profile_host, profile_build)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
         deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
@@ -682,10 +676,10 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_names=None, remote_name=None, check_updates=None,
-                            install_folder=None, profile_build=None):
+                            profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference, install_folder, profile_host,
+        reference, graph_info = self._info_args(reference, profile_host,
                                                 profile_build)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
@@ -696,23 +690,17 @@ class ConanAPIV1(object):
 
     @api_method
     def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
-             profile_names=None, update=False, install_folder=None, build=None, lockfile=None,
+             profile_names=None, update=False, build=None, lockfile=None,
              profile_build=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference_or_path, install_folder, profile_host,
-                                                profile_build,
-                                                lockfile=lockfile)
+        reference, graph_info = self._info_args(reference_or_path, None, profile_host,
+                                                profile_build, lockfile=lockfile)
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
                                                        update, False, remotes, recorder)
-
-        if install_folder:
-            output_folder = _make_abs_path(install_folder)
-            graph_info.save(output_folder)
-            self.app.out.info("Generated graphinfo")
         return deps_graph, deps_graph.root.conanfile
 
     @api_method

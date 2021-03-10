@@ -642,12 +642,6 @@ class Command(object):
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
-                            "files (from a previous conan install execution). Defaulted to "
-                            "current folder, unless --profile, -s or -o is specified. If you "
-                            "specify both install-folder and any setting/option "
-                            "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
@@ -677,11 +671,6 @@ class Command(object):
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
                            " wrong results. Use `conan lock build-order ...` instead.")
 
-        if args.install_folder and (args.profile_host or args.settings_host
-                                    or args.options_host or args.env_host):
-            raise ArgumentError(None, "--install-folder cannot be used together with a"
-                                      " host profile (-s, -o, -e or -pr)")
-
         if args.build_order and args.graph:
             raise ArgumentError(None, "--build-order cannot be used together with --graph")
 
@@ -695,8 +684,7 @@ class Command(object):
                                                profile_build=profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
-                                               check_updates=args.update,
-                                               install_folder=args.install_folder)
+                                               check_updates=args.update)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, os.getcwd())
@@ -713,8 +701,7 @@ class Command(object):
                                                        profile_names=args.profile_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
-                                                       check_updates=args.update,
-                                                       install_folder=args.install_folder)
+                                                       check_updates=args.update)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
@@ -731,7 +718,6 @@ class Command(object):
                                     profile_names=args.profile_host,
                                     profile_build=profile_build,
                                     update=args.update,
-                                    install_folder=args.install_folder,
                                     build=args.dry_build,
                                     lockfile=args.lockfile)
             deps_graph, _ = data
