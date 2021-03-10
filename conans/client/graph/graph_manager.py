@@ -107,14 +107,15 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
+                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
+                   is_build_require=False):
         """ main entry point to compute a full dependency graph
         """
         profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
         graph_lock, root_ref = graph_info.graph_lock, graph_info.root
 
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
-                                         root_ref, lockfile_node_id)
+                                         root_ref, lockfile_node_id, is_build_require)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
@@ -133,7 +134,7 @@ class GraphManager(object):
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
-                        lockfile_node_id):
+                        lockfile_node_id, is_build_require):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
@@ -148,7 +149,7 @@ class GraphManager(object):
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
             return self._load_root_direct_reference(reference, graph_lock, profile_host,
-                                                    lockfile_node_id)
+                                                    lockfile_node_id, is_build_require)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
@@ -203,7 +204,8 @@ class GraphManager(object):
 
         return root_node
 
-    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id):
+    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id,
+                                    is_build_require):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
@@ -212,7 +214,8 @@ class GraphManager(object):
             raise ConanException("Revisions not enabled in the client, specify a "
                                  "reference without revision")
 
-        conanfile = self._loader.load_virtual([reference], profile)
+        conanfile = self._loader.load_virtual([reference], profile,
+                                              is_build_require=is_build_require)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
             graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
@@ -230,12 +233,23 @@ class GraphManager(object):
                                                channel=create_reference.channel)
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
-        # Injecting the tested reference
-        require = conanfile.requires.get(create_reference.name)
-        if require:
-            require.ref = require.range_ref = create_reference
+
+        # Injection of the tested reference
+        if getattr(conanfile, "test_build_require", None):
+            if getattr(conanfile, "build_requires", None):
+                # Injecting the tested reference
+                existing = conanfile.build_requires
+                if not isinstance(existing, (list, tuple)):
+                    existing = [existing]
+                conanfile.build_requires = list(existing) + [create_reference]
+            else:
+                conanfile.build_requires = str(create_reference)
         else:
-            conanfile.requires.add_ref(create_reference)
+            require = conanfile.requires.get(create_reference.name)
+            if require:
+                require.ref = require.range_ref = create_reference
+            else:
+                conanfile.requires.add_ref(create_reference)
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)
@@ -282,6 +296,7 @@ class GraphManager(object):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
         """
+        print("RECUSRS BUILD REQUIRES!!!!!!!!!!!!!!!!!!!!!!!!!", apply_build_requires, nodes_subset)
         default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
         self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
         if not apply_build_requires:
@@ -290,11 +305,11 @@ class GraphManager(object):
         for node in graph.ordered_iterate(nodes_subset):
             # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
             # FIXME: To be improved and build a explicit model for this
-            if node.recipe == RECIPE_VIRTUAL:
-                continue
+            #if node.recipe == RECIPE_VIRTUAL:
+            #    continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe != RECIPE_CONSUMER):
+                    and node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
