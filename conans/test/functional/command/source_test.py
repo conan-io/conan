@@ -117,13 +117,6 @@ class ConanLib(ConanFile):
             % os.path.join(client.current_folder, "conanfile.txt"),
             client.out)
 
-        # Path with wrong conanfile path
-        client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
-                   assert_error=True)
-        self.assertIn("Conanfile not found at %s"
-                      % os.path.join(client.current_folder, "not_real_dir", "conanfile.py"),
-                      client.out)
-
     def test_source_local_cwd(self):
         conanfile = '''
 import os
