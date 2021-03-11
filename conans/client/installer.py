@@ -474,8 +474,6 @@ class BinaryInstaller(object):
                 graph_info_node = GraphInfo(profile_host, root_ref=node.ref)
                 graph_info_node.options = node.conanfile.options.values
                 graph_info_node.graph_lock = graph_lock
-                graph_info_node.save(build_folder)
-                output.info("Generated graphinfo")
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
 

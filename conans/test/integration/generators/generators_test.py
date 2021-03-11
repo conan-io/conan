@@ -4,7 +4,6 @@ import re
 import textwrap
 import unittest
 
-from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
 

@@ -2,13 +2,11 @@ import os
 import re
 import unittest
 
-from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
