@@ -126,8 +126,6 @@ class ToolsTest(ConanFile):
         self.assertIn("Consumer/0.1@conan/testing: Hello Baz", client.out)
         self.assertNotIn("WARN: Linter. Line 8: Unable to import 'mytest'", client.out)
 
-    # FIXME: Local methods
-    @pytest.mark.xfail(reason="Will fail until export-pkg is fixed not to read conanbuildinfo.txt")
     def test_reuse(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -147,9 +145,6 @@ class ToolsTest(ConanFile):
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
-
-        client.run("export-pkg . lasote/stable -f")
-        self.assertIn("Hello Boom", client.out)
 
     def test_upload_reuse(self):
         server = TestServer()
