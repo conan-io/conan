@@ -9,7 +9,7 @@ from conans.errors import ConanException
 from conans.model.ref import PackageReference
 
 
-def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
+def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder,
                graph_info, force, remotes):
     ref = full_ref.copy_clear_rev()
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
@@ -53,7 +53,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     conanfile.layout.set_base_build_folder(build_folder)
     conanfile.layout.set_base_source_folder(source_folder)
     conanfile.layout.set_base_package_folder(dest_package_folder)
-    conanfile.layout.set_base_install_folder(install_folder)
 
     with layout.set_dirty_context_manager(pref):
         if package_folder:
