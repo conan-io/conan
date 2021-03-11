@@ -128,8 +128,6 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertEqual(pkg["python_requires"], [tool])
         self.assertEqual(pkg.get("package_id"), pkg_id_b)
 
-    # FIXME: Local methods
-    @pytest.mark.xfail(reason="Will fail until all local methods completed")
     def test_install_info(self):
         client = self.client
         # Make sure to use temporary if to not change graph_info.json
@@ -145,9 +143,6 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self._check_lock("Pkg/0.1@user/channel")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
-
-        client.run("package .")
-        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
         client.run("info . --lockfile=conan.lock")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)

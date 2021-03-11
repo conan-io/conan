@@ -141,10 +141,6 @@ class ToolsTest(ConanFile):
         self.assertNotIn("Hello Bar", client.out)
         self.assertIn("Hello Foo", client.out)
 
-        client.run("package . -pf=mypkg")
-        self.assertNotIn("Hello Bar", client.out)
-        self.assertIn("Hello Boom", client.out)
-
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.out).splitlines()

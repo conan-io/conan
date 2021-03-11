@@ -182,16 +182,14 @@ def test_export_pkg_local():
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     client.run("source . -if=my_install")
-    client.run("build . -if=my_install")
-    client.run("package . -if=my_install")
+    client.run("build .")
+
+    client.run("export-pkg . lib/1.0@")
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = os.path.join(client.current_folder, "package")
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
-    assert "WARN: Package folder: {}".format(pf) in client.out
 
-    client.run("export-pkg . lib/1.0@ -pf=package")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     pf_cache = client.cache.package_layout(ref).package(pref)

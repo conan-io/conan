@@ -888,51 +888,6 @@ class Command(object):
             if args.json and info:
                 self._outputer.json_output(info, args.json, os.getcwd())
 
-    def package(self, *args):
-        """
-        Calls your local conanfile.py 'package()' method.
-
-        This command works in the user space and it will copy artifacts from
-        the --build-folder and --source-folder folder to the --package-folder
-        one.  It won't create a new package in the local cache, if you want to
-        do it, use 'conan create' or 'conan export-pkg' after a 'conan build'
-        command.
-        """
-        parser = argparse.ArgumentParser(description=self.package.__doc__,
-                                         prog="conan package",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP)
-        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="folder to install the package. Defaulted to the "
-                                 "'{build_folder}/package' folder. A relative path can be specified"
-                                 " (relative to the current directory). Also an absolute path"
-                                 " is allowed.")
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-        args = parser.parse_args(*args)
-        try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
-                raise ArgumentError(None,
-                                    "'conan package' doesn't accept a reference anymore. "
-                                    "The path parameter should be a conanfile.py or a folder "
-                                    "containing one. If you were using the 'conan package' "
-                                    "command for development purposes we recommend to use "
-                                    "the local development commands: 'conan build' + "
-                                    "'conan package' and finally 'conan create' to regenerate the "
-                                    "package, or 'conan export_package' to store the already built "
-                                    "binaries in the local cache without rebuilding them.")
-        except ConanException:
-            pass
-
-        self._warn_python_version()
-        return self._conan.package(path=args.path,
-                                   build_folder=args.build_folder,
-                                   package_folder=args.package_folder,
-                                   source_folder=args.source_folder,
-                                   install_folder=args.install_folder)
-
     def imports(self, *args):
         """
         Calls your local conanfile.py or conanfile.txt 'imports' method.
@@ -1994,8 +1949,7 @@ class Command(object):
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "editable",
-                                                  "workspace")),
+                ("Package development commands", ("source", "build", "editable", "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help", "lock", "frogarian"))]
 
