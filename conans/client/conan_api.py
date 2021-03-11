@@ -664,10 +664,11 @@ class ConanAPIV1(object):
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_names=None, remote_name=None, build_order=None, check_updates=None,
-                         profile_build=None):
+                         profile_build=None,name=None, version=None, user=None, channel=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference, profile_host, profile_build)
+        reference, graph_info = self._info_args(reference, profile_host, profile_build, name=name,
+                                                version=version, user=user, channel=channel)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
         deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
@@ -677,11 +678,11 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_names=None, remote_name=None, check_updates=None,
-                            profile_build=None):
+                            profile_build=None, name=None, version=None, user=None, channel=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
-        reference, graph_info = self._info_args(reference, profile_host,
-                                                profile_build)
+        reference, graph_info = self._info_args(reference, profile_host, profile_build, name=name,
+                                                version=version, user=user, channel=channel)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
         deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build_modes,
