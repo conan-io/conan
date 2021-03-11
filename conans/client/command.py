@@ -633,6 +633,12 @@ class Command(object):
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
+                                                                'if not specified in conanfile')
+        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
+                                                                   'if not specified in conanfile')
+        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
+        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
@@ -719,7 +725,11 @@ class Command(object):
                                     profile_build=profile_build,
                                     update=args.update,
                                     build=args.dry_build,
-                                    lockfile=args.lockfile)
+                                    lockfile=args.lockfile,
+                                    name=args.name,
+                                    version=args.version,
+                                    user=args.user,
+                                    channel=args.channel)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:

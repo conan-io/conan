@@ -647,7 +647,7 @@ class ConanAPIV1(object):
             self.app.cache.initialize_settings()
 
     def _info_args(self, reference_or_path, profile_host, profile_build,
-                   lockfile=None):
+                   name=None, version=None, user=None, channel=None, lockfile=None):
         cwd = os.getcwd()
         if check_valid_ref(reference_or_path):
             ref = ConanFileReference.loads(reference_or_path)
@@ -656,7 +656,8 @@ class ConanAPIV1(object):
 
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(profile_host, profile_build, cwd, None,
-                                    self.app.cache, self.app.out, lockfile=lockfile)
+                                    self.app.cache, self.app.out, name=name, version=version,
+                                    user=user, channel=channel, lockfile=lockfile)
 
         return ref, graph_info
 
@@ -691,11 +692,12 @@ class ConanAPIV1(object):
     @api_method
     def info(self, reference_or_path, remote_name=None, settings=None, options=None, env=None,
              profile_names=None, update=False, build=None, lockfile=None,
-             profile_build=None):
+             profile_build=None, name=None, version=None, user=None, channel=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         reference, graph_info = self._info_args(reference_or_path, profile_host,
-                                                profile_build, lockfile=lockfile)
+                                                profile_build, name=name, version=version,
+                                                user=user, channel=channel, lockfile=lockfile)
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)

@@ -144,7 +144,8 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 
-        client.run("info . --lockfile=conan.lock")
+        client.run("info . --name=Pkg --version=0.1 --user=user --channel=channel "
+                   "--lockfile=conan.lock")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
     def test_create(self):
