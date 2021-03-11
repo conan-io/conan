@@ -1,10 +1,11 @@
 import textwrap
 import unittest
 
+from mock import Mock
+
 from conan.tools.gnu import MakeToolchain
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
-from conans.test.utils.tools import TestBufferConanOutput
 
 
 class _MockSettings(object):
@@ -49,7 +50,7 @@ class MakeToolchainTest(unittest.TestCase):
 
     def test_toolchain(self):
         settings_mock = _MockSettings()
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(settings_mock, EnvValues())
         toolchain = MakeToolchain(conanfile)
         toolchain.variables["TEST_VAR_01"] = "TEST_VAR_VAL_01"
@@ -57,6 +58,5 @@ class MakeToolchainTest(unittest.TestCase):
         toolchain.preprocessor_definitions["TEST_PPD_01"] = "TEST_PPD_VAL_01"
         toolchain.preprocessor_definitions["TEST_PPD_02"] = "TEST_PPD_VAL_02"
         content = toolchain.content
-        print(content)
         self.maxDiff = None
         self.assertIn(EXPECTED_OUT, content)
