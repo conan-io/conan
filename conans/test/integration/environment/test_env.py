@@ -10,13 +10,15 @@ from conans.test.utils.tools import TestClient
 def test_profile_buildenv():
     client = TestClient()
     conanfile = textwrap.dedent("""\
-        import os
+        import os, platform
         from conans import ConanFile
         class Pkg(ConanFile):
             def generate(self):
-                self.buildenv.save_bat("pkgenv.bat")
-                self.buildenv.save_sh("pkgenv.sh")
-                os.chmod("pkgenv.sh", 0o777)
+                if platform.system() == "Windows":
+                    self.buildenv.save_bat("pkgenv.bat")
+                else:
+                    self.buildenv.save_sh("pkgenv.sh")
+                    os.chmod("pkgenv.sh", 0o777)
 
         """)
     # Some scripts in a random system folders, path adding to the profile [env]
