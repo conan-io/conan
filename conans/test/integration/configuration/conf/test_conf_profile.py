@@ -106,8 +106,6 @@ def test_config_profile_forbidden(client):
             "'cache:verbosity=Minimal' not allowed in profiles" in client.out)
 
 
-@pytest.mark.tool_visual_studio
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -137,6 +135,8 @@ def test_msbuild_config():
     assert "/verbosity:Minimal" in client.out
 
 
+@pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msbuild_compile_options():
     client = TestClient()
     conanfile = textwrap.dedent("""
