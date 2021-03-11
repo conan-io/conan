@@ -65,8 +65,7 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeToolchain", "CMakeDeps",
-                                "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild"]
 
     def add(self, name, generator_class, custom=False):
@@ -196,3 +195,5 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
+
+    # TODO: Lets discuss what to do with the environment

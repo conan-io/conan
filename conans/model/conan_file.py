@@ -5,7 +5,6 @@ import six
 from six import string_types
 
 from conan.tools.env import Environment
-from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
@@ -314,9 +313,7 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
-
-        command = environment_wrap_command(env, command)
+            ignore_errors=False, run_environment=False, with_login=True):
 
         def _run():
             if not win_bash:

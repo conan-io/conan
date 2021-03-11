@@ -45,22 +45,32 @@ class {package_name}Conan(ConanFile):
 test_conanfile_v2 = """import os
 
 from conans import ConanFile, tools
-from conan.tools.cmake import CMake
+from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
 
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeGen"
-    apply_env = False
+
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.generate()
 
     def build(self):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
+    def imports(self):
+        self.copy("*.dll", dst="bin", src="bin")
+        self.copy("*.dylib*", dst="bin", src="lib")
+        self.copy('*.so*', dst='bin', src='lib')
+
     def test(self):
         if not tools.cross_building(self):
-            self.run(os.path.sep.join([".", "bin", "example"]), env="conanrunenv")
+            os.chdir("bin")
+            self.run(".%sexample" % os.sep)
 """
 
 
