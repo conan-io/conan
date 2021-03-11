@@ -237,7 +237,6 @@ class ProfileEnvironment:
         result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                env = self._environments[pattern]
                 result = result.compose(env)
         return result
 
