@@ -563,6 +563,6 @@ class TestMinGW:
         client.run_command("where cmake")
         print("CMAKE PATH: %s" % client.out)
         client.run_command("cmake --version")
-        assert "cmake version 3.16.9" in client.out
+        assert "cmake version 3.16" in client.out
         client.run("create . test/1.0@ --profile profile", assert_error=True)
         print(client.out)
