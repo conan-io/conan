@@ -138,6 +138,3 @@ class ConanLib(ConanFile):
         self.assertIn("ERROR: BUILD 'settings.compiler.libcxx' doesn't exist for 'gcc'",
                       client.out)
         self.assertNotIn("LIBCXX", client.out)
-        client.run("package .")
-        self.assertIn("ERROR: PACKAGE 'settings.compiler.libcxx' doesn't exist for 'gcc'",
-                      client.out)

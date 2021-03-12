@@ -373,7 +373,7 @@ class InfoTest2(unittest.TestCase):
         self.assertIn("There are no packages", client.out)
         self.assertNotIn("Pkg/1.0.x@user/testing", client.out)
 
-    def test_install_folder(self):
+    def test_info_settings(self):
         conanfile = GenConanfile("Pkg", "0.1").with_setting("build_type")
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -381,29 +381,9 @@ class InfoTest2(unittest.TestCase):
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.out)
 
-        client.run('install . -s build_type=Debug')
-        client.run("info .")  # Re-uses debug from curdir
-        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
-        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.out)
-
-        client.run('install . -s build_type=Release --install-folder=MyInstall')
-        client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
-
+        client.run("info . -s build_type=Release")
         self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
         self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.out)
-
-        client.run('install . -s build_type=Debug --install-folder=MyInstall')
-        client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
-
-        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
-        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.out)
-
-        # Both should raise
-        client.run("info . --install-folder=MyInstall -s build_type=Release",
-                   assert_error=True)  # Re-uses debug from MyInstall folder
-
-        self.assertIn("--install-folder cannot be used together with a"
-                      " host profile (-s, -o, -e or -pr)", client.out)
 
     def test_graph_html_embedded_visj(self):
         client = TestClient()
@@ -598,23 +578,6 @@ class InfoTest2(unittest.TestCase):
         html_content = client.load("file.html")
         self.assertIn("<h3>Pkg/0.2@lasote/testing</h3>", html_content)
         self.assertIn("<li><b>topics</b>: foo", html_content)
-
-    def test_wrong_graph_info(self):
-        # https://github.com/conan-io/conan/issues/4443
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")
-        client = TestClient()
-        client.save({"conanfile.py": str(conanfile)})
-        client.run("install .")
-        path = os.path.join(client.current_folder, "graph_info.json")
-        graph_info = client.load(path)
-        graph_info = json.loads(graph_info)
-        graph_info.pop("root")
-        save(path, json.dumps(graph_info))
-        client.run("info .")
-        self.assertIn("conanfile.py (Hello/0.1)", client.out)
-        save(path, "broken thing")
-        client.run("info .", assert_error=True)
-        self.assertIn("ERROR: Error parsing GraphInfo from file", client.out)
 
     def test_previous_lockfile_error(self):
         # https://github.com/conan-io/conan/issues/5479

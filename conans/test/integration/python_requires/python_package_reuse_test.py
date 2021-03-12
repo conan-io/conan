@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 from conans.paths import BUILD_INFO, CONANFILE
 from conans.test.utils.test_files import temp_folder
@@ -137,19 +139,12 @@ class ToolsTest(ConanFile):
         self.assertNotIn("Hello Bar", client.out)
         self.assertIn("Hello Foo", client.out)
 
-        client.run("package . -pf=mypkg")
-        self.assertNotIn("Hello Bar", client.out)
-        self.assertIn("Hello Boom", client.out)
-
         client.run("export . lasote/stable")
         client.run("install Consumer/0.1@lasote/stable --build")
         lines = [line.split(":")[1] for line in str(client.out).splitlines()
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
-
-        client.run("export-pkg . lasote/stable -f")
-        self.assertIn("Hello Boom", client.out)
 
     def test_upload_reuse(self):
         server = TestServer()

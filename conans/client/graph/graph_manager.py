@@ -52,38 +52,17 @@ class GraphManager(object):
         self._loader = loader
         self._binary_analyzer = binary_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder,
-                                deps_info_required=False, test=False):
-        """loads a conanfile for local flow: source, imports, package, build
+    def load_consumer_conanfile(self, conanfile_path, info_folder):
+        """loads a conanfile for local flow: source
         """
-        try:
-            graph_info = GraphInfo.load(info_folder)
-            lock_path = os.path.join(info_folder, "conan.lock")
-            graph_lock_file = GraphLockFile.load(lock_path)
-            graph_lock = graph_lock_file.graph_lock
-            self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
-            profile_host = graph_lock_file.profile_host
-            profile_build = graph_lock_file.profile_build
-            self._output.info("Using cached profile from lockfile")
-        except IOError:  # Only if file is missing
-            graph_lock = None
-            # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile_host = self._cache.default_profile
-            profile_host.process_settings(self._cache)
-            profile_build = None
-            name, version, user, channel = None, None, None, None
-        else:
-            name, version, user, channel, _ = graph_info.root
-            profile_host.process_settings(self._cache, preprocess=False)
-            # This is the hack of recovering the options from the graph_info
-            profile_host.options.update(graph_info.options)
-            if profile_build:
-                profile_build.process_settings(self._cache, preprocess=False)
+        # This is very dirty, should be removed for Conan 2.0 (source() method only)
+        profile_host = self._cache.default_profile
+        profile_host.process_settings(self._cache)
+        profile_build = None
+        name, version, user, channel = None, None, None, None
+
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
-            if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_consumer(graph_info.root)
-                lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
@@ -94,15 +73,11 @@ class GraphManager(object):
                 conanfile.settings_build = profile_build.processed_settings.copy()
                 conanfile.settings_target = None
 
-            if test:
-                conanfile.display_name = "%s (test package)" % str(test)
-                conanfile.output.scope = conanfile.display_name
-
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
-        load_deps_info(info_folder, conanfile, required=deps_info_required)
+        load_deps_info(info_folder, conanfile, required=False)
 
         return conanfile
 

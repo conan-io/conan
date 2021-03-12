@@ -4,7 +4,6 @@ import re
 import textwrap
 import unittest
 
-from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
 
@@ -51,7 +50,7 @@ ycm
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 GRAPH_INFO_FILE, LOCKFILE] + venv_files),
+                                 LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):

@@ -190,9 +190,6 @@ class HookTest(unittest.TestCase):
         client.run("build .")
         self._check_build(conanfile_path, client.out)
 
-        client.run("package .")
-        self._check_package(conanfile_path, client.out)
-
         client.run("export . danimtb/testing")
         self._check_export(conanfile_path, conanfile_cache_path, client.out)
 

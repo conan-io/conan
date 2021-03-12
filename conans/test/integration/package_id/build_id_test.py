@@ -234,7 +234,7 @@ class BuildIdTest(unittest.TestCase):
             client.save({"conanfile.txt": consumer}, clean_first=True)
         client.run('install . -s os=Windows -s build_type=Debug')
         client.run('install . -s os=Windows -s build_type=Release')
-        client.run("info .")  # Uses release
+        client.run("info . -s os=Windows -s build_type=Release")
 
         def _check():
             build_ids = str(client.out).count("BuildID: 427f426a482a2b22a1744e9e949aa7f2544f5b7c")

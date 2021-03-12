@@ -6,8 +6,6 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
 
-GRAPH_INFO_FILE = "graph_info.json"
-
 
 class GraphInfo(object):
 
@@ -18,18 +16,6 @@ class GraphInfo(object):
         self.profile_host = profile_host
         self.profile_build = profile_build
         self.graph_lock = None
-
-    @staticmethod
-    def load(path):
-        if not path:
-            raise IOError("Invalid path")
-        p = os.path.join(path, GRAPH_INFO_FILE)
-        content = load(p)
-        try:
-            graph_info = GraphInfo.loads(content)
-            return graph_info
-        except Exception as e:
-            raise ConanException("Error parsing GraphInfo from file '{}': {}".format(p, e))
 
     @staticmethod
     def loads(text):
@@ -45,12 +31,6 @@ class GraphInfo(object):
                                       validate=False)
 
         return GraphInfo(options=options, root_ref=root_ref)
-
-    def save(self, folder, filename=None):
-        filename = filename or GRAPH_INFO_FILE
-        p = os.path.join(folder, filename)
-        serialized_graph_str = self._dumps()
-        save(p, serialized_graph_str)
 
     def _dumps(self):
         result = {}

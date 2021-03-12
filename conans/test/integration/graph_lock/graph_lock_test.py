@@ -68,7 +68,6 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.run("lock create consumer.py --lockfile-out=output.lock "
                    "--name=name --version=version")
         client.run("install consumer.py name/version@ --lockfile=output.lock")
-        self.assertIn("consumer.py (name/version): Generated graphinfo", client.out)
 
     def test_commands_cannot_create_lockfile(self):
         client = TestClient()
@@ -223,7 +222,8 @@ class GraphLockRevisionTest(unittest.TestCase):
 
         # Locked install will use PkgA/0.1
         # This is a bit weird, that is necessary to force the --update the get the rigth revision
-        client.run("build . -g=cmake --lockfile=conan.lock --lockfile-out=conan.lock --update")
+        client.run("build . -g=cmake --lockfile=conan.lock --lockfile-out=conan.lock --user=user "
+                   "--channel=channel --update")
         self._check_lock("PkgB/0.1@user/channel")
         self.assertIn("conanfile.py (PkgB/0.1@user/channel): BUILD DEP LIBS: !!", client.out)
 

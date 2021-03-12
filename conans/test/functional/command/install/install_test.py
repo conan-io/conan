@@ -62,7 +62,7 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("build . --name=Pkg --version=0.1 --user=myuser --channel=testing")
         self.assertIn("REF: Pkg, 0.1, myuser, testing", client.out)
-        client.run("info .")
+        client.run("info . --name=Pkg --version=0.1 --user=myuser --channel=testing")
         self.assertIn("Pkg/0.1@myuser/testing", client.out)
 
         # Trying with partial name

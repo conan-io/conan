@@ -633,6 +633,12 @@ class Command(object):
         parser.add_argument("path_or_reference", help="Path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
+        parser.add_argument("--name", action=OnceArgument, help='Provide a package name '
+                                                                'if not specified in conanfile')
+        parser.add_argument("--version", action=OnceArgument, help='Provide a package version '
+                                                                   'if not specified in conanfile')
+        parser.add_argument("--user", action=OnceArgument, help='Provide a user')
+        parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("-bo", "--build-order",
@@ -642,12 +648,6 @@ class Command(object):
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
-                            "files (from a previous conan install execution). Defaulted to "
-                            "current folder, unless --profile, -s or -o is specified. If you "
-                            "specify both install-folder and any setting/option "
-                            "it will raise an error.")
         parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Path to a json file where the information will be written')
         parser.add_argument("-n", "--only", nargs=1, action=Extender,
@@ -677,11 +677,6 @@ class Command(object):
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
                            " wrong results. Use `conan lock build-order ...` instead.")
 
-        if args.install_folder and (args.profile_host or args.settings_host
-                                    or args.options_host or args.env_host):
-            raise ArgumentError(None, "--install-folder cannot be used together with a"
-                                      " host profile (-s, -o, -e or -pr)")
-
         if args.build_order and args.graph:
             raise ArgumentError(None, "--build-order cannot be used together with --graph")
 
@@ -695,8 +690,7 @@ class Command(object):
                                                profile_build=profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
-                                               check_updates=args.update,
-                                               install_folder=args.install_folder)
+                                               check_updates=args.update)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, os.getcwd())
@@ -713,8 +707,7 @@ class Command(object):
                                                        profile_names=args.profile_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
-                                                       check_updates=args.update,
-                                                       install_folder=args.install_folder)
+                                                       check_updates=args.update)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
@@ -731,9 +724,12 @@ class Command(object):
                                     profile_names=args.profile_host,
                                     profile_build=profile_build,
                                     update=args.update,
-                                    install_folder=args.install_folder,
                                     build=args.dry_build,
-                                    lockfile=args.lockfile)
+                                    lockfile=args.lockfile,
+                                    name=args.name,
+                                    version=args.version,
+                                    user=args.user,
+                                    channel=args.channel)
             deps_graph, _ = data
             only = args.only
             if args.only == ["None"]:
@@ -902,51 +898,6 @@ class Command(object):
             if args.json and info:
                 self._outputer.json_output(info, args.json, os.getcwd())
 
-    def package(self, *args):
-        """
-        Calls your local conanfile.py 'package()' method.
-
-        This command works in the user space and it will copy artifacts from
-        the --build-folder and --source-folder folder to the --package-folder
-        one.  It won't create a new package in the local cache, if you want to
-        do it, use 'conan create' or 'conan export-pkg' after a 'conan build'
-        command.
-        """
-        parser = argparse.ArgumentParser(description=self.package.__doc__,
-                                         prog="conan package",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP)
-        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
-                            help="folder to install the package. Defaulted to the "
-                                 "'{build_folder}/package' folder. A relative path can be specified"
-                                 " (relative to the current directory). Also an absolute path"
-                                 " is allowed.")
-        parser.add_argument("-sf", "--source-folder", action=OnceArgument, help=_SOURCE_FOLDER_HELP)
-        args = parser.parse_args(*args)
-        try:
-            if "@" in args.path and ConanFileReference.loads(args.path):
-                raise ArgumentError(None,
-                                    "'conan package' doesn't accept a reference anymore. "
-                                    "The path parameter should be a conanfile.py or a folder "
-                                    "containing one. If you were using the 'conan package' "
-                                    "command for development purposes we recommend to use "
-                                    "the local development commands: 'conan build' + "
-                                    "'conan package' and finally 'conan create' to regenerate the "
-                                    "package, or 'conan export_package' to store the already built "
-                                    "binaries in the local cache without rebuilding them.")
-        except ConanException:
-            pass
-
-        self._warn_python_version()
-        return self._conan.package(path=args.path,
-                                   build_folder=args.build_folder,
-                                   package_folder=args.package_folder,
-                                   source_folder=args.source_folder,
-                                   install_folder=args.install_folder)
-
     def imports(self, *args):
         """
         Calls your local conanfile.py or conanfile.txt 'imports' method.
@@ -1017,10 +968,6 @@ class Command(object):
         parser.add_argument("-bf", "--build-folder", action=OnceArgument, help=_BUILD_FOLDER_HELP)
         parser.add_argument('-f', '--force', default=False, action='store_true',
                             help='Overwrite existing package if existing')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP + " If these files are found in the specified"
-                            " folder and any of '-e', '-o', '-pr' or '-s' arguments are used, it "
-                            "will raise an error.")
         parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder containing a locally created package. If a value is given,"
                                  " it won't call the recipe 'package()' method, and will run a copy"
@@ -1057,7 +1004,6 @@ class Command(object):
                                           source_folder=args.source_folder,
                                           build_folder=args.build_folder,
                                           package_folder=args.package_folder,
-                                          install_folder=args.install_folder,
                                           profile_names=args.profile_host,
                                           env=args.env_host,
                                           settings=args.settings_host,
@@ -2013,8 +1959,7 @@ class Command(object):
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "package", "editable",
-                                                  "workspace")),
+                ("Package development commands", ("source", "build", "editable", "workspace")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help", "lock", "frogarian"))]
 

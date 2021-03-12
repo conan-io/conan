@@ -185,7 +185,5 @@ class Lib(ConanFile):
         client.run("install . -if tmp/install")
         client.run("build . -if tmp/install -bf tmp/build")
         self.assertIn("My URL: this url", client.out)
-        client.run("package . -sf tmp/source -if tmp/install -bf tmp/build -pf tmp/package")
-        self.assertIn("My URL: this url", client.out)
-        client.run("export-pkg . name/version@ -sf tmp/source -if tmp/install -bf tmp/build")
+        client.run("export-pkg . name/version@ -sf tmp/source -bf tmp/build")
         self.assertIn("My URL: this url", client.out)

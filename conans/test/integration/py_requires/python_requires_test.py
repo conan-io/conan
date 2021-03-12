@@ -577,8 +577,6 @@ class PyRequiresExtendTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("conanfile.py: Pkg1 build: 42", client.out)
-        client.run("package .")
-        self.assertIn("conanfile.py: Pkg1 package: 42", client.out)
         client.run("export-pkg . pkg1/0.1@user/testing")
 
     def test_reuse_name_version(self):

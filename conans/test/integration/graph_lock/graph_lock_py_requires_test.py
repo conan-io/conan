@@ -2,6 +2,8 @@ import json
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -33,7 +35,9 @@ class GraphLockPyRequiresTransitiveTest(unittest.TestCase):
         self.assertIn("helper/1.0@user/channel#539219485c7a9e8e19561db523512b39", lockfile)
 
         client.run("source .")
-        self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+        # TODO: New local source method
+        # self.assertIn("conanfile.py (pkg/0.1@user/channel): Configuring sources in", client.out)
+        self.assertIn("conanfile.py: Configuring sources in", client.out)
 
     def test_inherit_with_init(self):
         client = TestClient()
@@ -132,17 +136,16 @@ class GraphLockPyRequiresTest(unittest.TestCase):
         self.assertIn("conanfile.py (Pkg/None): CONFIGURE VAR=111", client.out)
         self.assertIn("conanfile.py (Pkg/None): BUILD VAR=111", client.out)
 
-        client.run("build . --lockfile=conan.lock")
+        client.run("build . --name=Pkg --version=0.1 --user=user --channel=channel "
+                   "--lockfile=conan.lock")
         self.assertIn("Tool/0.1@user/channel", client.out)
         self.assertNotIn("Tool/0.2@user/channel", client.out)
         self._check_lock("Pkg/0.1@user/channel")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): BUILD VAR=42", client.out)
 
-        client.run("package .")
-        self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
-
-        client.run("info . --lockfile=conan.lock")
+        client.run("info . --name=Pkg --version=0.1 --user=user --channel=channel "
+                   "--lockfile=conan.lock")
         self.assertIn("conanfile.py (Pkg/0.1@user/channel): CONFIGURE VAR=42", client.out)
 
     def test_create(self):
@@ -156,7 +159,7 @@ class GraphLockPyRequiresTest(unittest.TestCase):
 
     def test_export_pkg(self):
         client = self.client
-        client.run("export-pkg . Pkg/0.1@user/channel --install-folder=. --lockfile=conan.lock "
+        client.run("export-pkg . Pkg/0.1@user/channel --lockfile=conan.lock "
                    "--lockfile-out=conan.lock")
         self.assertIn("Pkg/0.1@user/channel: CONFIGURE VAR=42", client.out)
         self._check_lock(self.pkg_ref, self.pkg_id)
