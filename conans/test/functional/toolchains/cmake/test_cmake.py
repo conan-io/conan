@@ -346,9 +346,7 @@ class LinuxTest(Base):
         pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";'\
-                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",'\
-                  '$<IF:$<CONFIG:release>,"MYDEF_RELEASE","">>' % cxx11_abi_str
+        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
