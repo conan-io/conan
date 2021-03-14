@@ -1,6 +1,7 @@
 import textwrap
 from collections import OrderedDict, defaultdict
 
+import six
 from jinja2 import DictLoader, Environment
 
 from conans.util.files import save
@@ -28,6 +29,15 @@ class Variables(OrderedDict):
                 ret[k].append((conf, v))
         return ret
 
+    def quote_preprocessor_strings(self):
+        for key, var in self.items():
+            if isinstance(var, six.string_types):
+                self[key] = '"{}"'.format(var)
+        for config, data in self._configuration_types.items():
+            for key, var in data.items():
+                if isinstance(var, six.string_types):
+                    data[key] = '"{}"'.format(var)
+
 
 class CMakeToolchainBase(object):
     filename = "conan_toolchain.cmake"
@@ -38,7 +48,7 @@ class CMakeToolchainBase(object):
                 {%- set genexpr = namespace(str='') %}
                 {%- for conf, value in values -%}
                     {%- set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,' + value|string + ',' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
                 {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
@@ -95,8 +105,8 @@ class CMakeToolchainBase(object):
         {% endblock %}
 
         {% if shared_libs -%}
-            message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
-            set(BUILD_SHARED_LIBS {{ shared_libs }})
+        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+        set(BUILD_SHARED_LIBS {{ shared_libs }})
         {%- endif %}
 
         {% if parallel -%}
@@ -125,7 +135,7 @@ class CMakeToolchainBase(object):
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
-        add_definitions(-D{{ it }}="{{ value }}")
+        add_definitions(-D{{ it }}={{ value }})
         {%- endfor %}
         # Preprocessor definitions per configuration
         {{ toolchain_macros.iterate_configs(preprocessor_definitions_config,
@@ -152,6 +162,8 @@ class CMakeToolchainBase(object):
     def _get_template_context_data(self):
         """ Returns dict, the context for the '_template_toolchain'
         """
+        self.preprocessor_definitions.quote_preprocessor_strings()
+
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
