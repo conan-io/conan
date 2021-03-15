@@ -83,8 +83,6 @@ _PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to the current directory can also be specified")
-_INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
-                        "(from previous 'conan install'). Defaulted to --build-folder")
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
                      "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
