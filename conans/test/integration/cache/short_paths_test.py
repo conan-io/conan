@@ -92,20 +92,15 @@ class TestConan(ConanFile):
         self.assertIn("test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
-        # try local flow still works, but no pkg id available
-        client.run("install .")
-        client.run("package .")
-        self.assertIn("conanfile.py (test/1.0): Package 'package' created", client.out)
-
         # try export-pkg with package folder
         client.run("remove test/1.0@danimtb/testing --force")
-        client.run("export-pkg . test/1.0@danimtb/testing --package-folder package")
+        client.run("export-pkg . test/1.0@danimtb/testing")
         self.assertIn("test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
         # try export-pkg without package folder
         client.run("remove test/1.0@danimtb/testing --force")
-        client.run("export-pkg . test/1.0@danimtb/testing --install-folder .")
+        client.run("export-pkg . test/1.0@danimtb/testing")
         self.assertIn("test/1.0@danimtb/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID,
                       client.out)
 
