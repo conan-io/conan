@@ -14,7 +14,7 @@ class PatchLogHandler(logging.Handler):
     def __init__(self, conanfile, patch_file):
         logging.Handler.__init__(self, logging.DEBUG)
         self._output = conanfile.output
-        self.patchname = patch_file if patch_file else "patch_ng"
+        self.patchname = patch_file or "patch_ng"
 
     def emit(self, record):
         logstr = self.format(record)
