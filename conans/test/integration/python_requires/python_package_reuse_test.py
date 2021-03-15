@@ -203,19 +203,6 @@ class ToolsTest(ConanFile):
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
 
-    def test_basic_source(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
-        client.run("export . lasote/stable")
-
-        client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("install .")
-        client.run("source .")
-        self.assertIn("Hello Baz", client.out)
-        self.assertNotIn("Hello Foo", client.out)
-        self.assertNotIn("Hello Bar", client.out)
-        self.assertNotIn("Hello Boom", client.out)
-
     def test_errors(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})

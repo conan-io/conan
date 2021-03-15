@@ -132,29 +132,6 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("source .")
 
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        self.client.run("source .", assert_error=True)
-        self.assertIn("self.deps_user_info not defined. If you need it for a "
-                      "local command run 'conan install'", self.client.out)
-
-        # Now use infos to get the deps_cpp_info
-        self.client.run("install . --build missing")
-        self.client.run("source .")  # Default folder, not needed to specify --install-folder
-
-        # Install in different location
-        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
-                          "local_command": True}
-        self.client.save({"conanfile.py": c1}, clean_first=True)
-        old_dir = self.client.current_folder
-        build_dir = os.path.join(self.client.current_folder, "build1")
-        mkdir(build_dir)
-        self.client.current_folder = build_dir
-        self.client.run("install .. ")
-        self.client.current_folder = old_dir
-        self.client.run("source . --install-folder=build1")
-
     def test_build_local_command(self):
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
