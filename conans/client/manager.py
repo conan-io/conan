@@ -37,7 +37,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     if generators is not False:
         generators = set(generators) if generators else set()
-        generators.add("txt")  # Add txt generator by default
 
     if profile_build:
         out.info("Configuration (profile_host):")
