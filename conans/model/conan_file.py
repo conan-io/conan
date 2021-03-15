@@ -1,9 +1,8 @@
 import os
-from contextlib import contextmanager
 
 from conans.client import tools
 from conans.client.output import ScopedOutput
-from conans.client.tools.env import environment_append, no_op, pythonpath
+from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
@@ -69,20 +68,11 @@ def create_settings(conanfile, settings):
                                         conanfile.display_name, str(e)))
 
 
-@contextmanager
-def _env_and_python(conanfile):
-    with environment_append(conanfile.env):
-        # FIXME Conan 2.0, Remove old ways of reusing python code
-        with pythonpath(conanfile):
-            yield
-
-
-def get_env_context_manager(conanfile, without_python=False):
+def get_env_context_manager(conanfile):
     if not conanfile.apply_env:
         return no_op()
-    if without_python:
-        return environment_append(conanfile.env)
-    return _env_and_python(conanfile)
+
+    return environment_append(conanfile.env)
 
 
 class ConanFile(object):

@@ -325,7 +325,7 @@ class DepsGraphBuilder(object):
         try:
             run_configure_method(conanfile, down_options, down_ref, ref)
 
-            with get_env_context_manager(conanfile, without_python=True):
+            with get_env_context_manager(conanfile):
                 # Update requirements (overwrites), computing new upstream
                 if hasattr(conanfile, "requirements"):
                     # If re-evaluating the recipe, in a diamond graph, with different options,
