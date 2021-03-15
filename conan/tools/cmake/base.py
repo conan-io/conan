@@ -1,5 +1,5 @@
 import textwrap
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 import six
 from jinja2 import DictLoader, Environment
@@ -18,15 +18,15 @@ class Variables(OrderedDict):
         try:
             return super(Variables, self).__getattribute__(config)
         except AttributeError:
-            return self._configuration_types.setdefault(config, dict())
+            return self._configuration_types.setdefault(config, OrderedDict())
 
     @property
     def configuration_types(self):
         # Reverse index for the configuration_types variables
-        ret = defaultdict(list)
+        ret = OrderedDict()
         for conf, definitions in self._configuration_types.items():
             for k, v in definitions.items():
-                ret[k].append((conf, v))
+                ret.setdefault(k, []).append((conf, v))
         return ret
 
     def quote_preprocessor_strings(self):
