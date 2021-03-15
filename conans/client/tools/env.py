@@ -1,6 +1,6 @@
 import os
 import platform
-import sys
+
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -8,22 +8,6 @@ from conans.client.run_environment import RunEnvironment
 from conans.client.tools.files import _path_equals, which
 from conans.errors import ConanException
 from conans.util.runners import check_output_runner
-
-
-@contextmanager
-def pythonpath(conanfile):
-    python_path = conanfile.env.get("PYTHONPATH", None)
-    if python_path:
-        old_path = sys.path[:]
-        if isinstance(python_path, list):
-            sys.path.extend(python_path)
-        else:
-            sys.path.append(python_path)
-
-        yield
-        sys.path = old_path
-    else:
-        yield
 
 
 @contextmanager
