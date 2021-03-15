@@ -17,8 +17,9 @@ class LockBundle(object):
 
     lock_bundle": {
         "app1/0.1@#584778f98ba1d0eb7c80a5ae1fe12fe2": {
-            "package_id": {
-                "3bcd6800847f779e0883ee91b411aad9ddd8e83c": {
+            "packages": [
+                {
+                    "package_id": "3bcd6800847f779e0883ee91b411aad9ddd8e83c",
                     "lockfiles": {
                         "app1_windows.lock": [
                             "1"
@@ -27,9 +28,7 @@ class LockBundle(object):
                     "prev": null,
                     "modified": null
                 },
-                "60fbb0a22359b4888f7ecad69bcdfcd6e70e2784": {
-                }
-            },
+            ],
             "requires": [
                 "pkgb/0.1@#cd8f22d6f264f65398d8c534046e8e20",
                 "tool/0.1@#f096d7d54098b7ad7012f9435d9c33f3"
@@ -38,9 +37,6 @@ class LockBundle(object):
     """
 
     def __init__(self):
-        """ The structure is
-        "
-        """
         self._nodes = {}
 
     @staticmethod
@@ -64,8 +60,16 @@ class LockBundle(object):
                 ref_str = node.ref.full_str()
                 ref_str = ref_convert(ref_str)
                 ref_node = result._nodes.setdefault(ref_str, {})
-                pids_node = ref_node.setdefault("package_id", {})
-                pid_node = pids_node.setdefault(node.package_id, {})
+                packages_node = ref_node.setdefault("packages", [])
+                # Find existing package_id in the list of packages
+                # This is the equivalent of a setdefault over a dict, but on a list
+                for pkg in packages_node:
+                    if pkg["package_id"] == node.package_id:
+                        pid_node = pkg
+                        break
+                else:
+                    pid_node = {"package_id": node.package_id}
+                    packages_node.append(pid_node)
                 ids = pid_node.setdefault("lockfiles", {})
                 # TODO: Add check that this prev is always the same
                 pid_node["prev"] = node.prev
@@ -95,16 +99,21 @@ class LockBundle(object):
         opened = list(self._nodes.keys())
         while opened:
             current_level = []
+            closed = []
             for o in opened:
                 node = self._nodes[o]
                 requires = node.get("requires", [])
-                if not any(n in opened for n in requires):
-                    current_level.append(o)
+                if not any(n in opened for n in requires):  # Doesn't have an open requires
+                    # iterate all packages to see if some has prev=null
+                    if any(pkg["prev"] is None for pkg in node["packages"]):
+                        current_level.append(o)
+                    closed.append(o)
 
-            current_level.sort()
-            levels.append(current_level)
+            if current_level:
+                current_level.sort()
+                levels.append(current_level)
             # now initialize new level
-            opened = set(opened).difference(current_level)
+            opened = set(opened).difference(closed)
 
         return levels
 
@@ -118,12 +127,12 @@ class LockBundle(object):
         bundle.loads(load(bundle_path))
         for node in bundle._nodes.values():
             # Each node in bundle belongs to a "ref", and contains lockinfo for every package_id
-            for bundle_package_ids in node["package_id"].values():
+            for pkg in node["packages"]:
                 # Each package_id contains information of multiple lockfiles
 
                 # First, compute the modified PREV from all lockfiles
                 prev = modified = prev_lockfile = None
-                for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
+                for lockfile, nodes_ids in pkg["lockfiles"].items():
                     graph_lock_conf = GraphLockFile.load(lockfile)
                     graph_lock = graph_lock_conf.graph_lock
 
@@ -139,11 +148,12 @@ class LockBundle(object):
                             msg = "Lock mismatch for {} prev: {}:{} != {}:{}".format(
                                 ref, prev_lockfile, prev, lockfile, lock_prev)
                             raise ConanException(msg)
-                bundle_package_ids["prev"] = prev
-                bundle_package_ids["modified"] = modified
+                pkg["prev"] = prev
+                pkg["modified"] = modified
 
                 # Then, update all prev of all config lockfiles
-                for lockfile, nodes_ids in bundle_package_ids["lockfiles"].items():
+
+                for lockfile, nodes_ids in pkg["lockfiles"].items():
                     graph_lock_conf = GraphLockFile.load(lockfile)
                     graph_lock = graph_lock_conf.graph_lock
                     for node_id in nodes_ids:

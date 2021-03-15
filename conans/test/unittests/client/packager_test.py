@@ -9,7 +9,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.tools import TestClient, create_profile
-from conans.test.utils.mocks import TestBufferConanOutput
+
 
 myconan1 = """
 from conans import ConanFile
@@ -77,7 +77,7 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, TestBufferConanOutput())
+        loader = ConanFileLoader(None, Mock())
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
         conanfile.layout.set_base_build_folder(build_folder)

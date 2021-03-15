@@ -4,10 +4,8 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
-from mock import Mock
-from mock.mock import call
+from mock import Mock, call
 from parameterized import parameterized
-
 
 from conans.client.loader import ConanFileLoader, ConanFileTextLoader, _parse_conanfile
 from conans.client.tools.files import chdir
@@ -18,14 +16,14 @@ from conans.model.requires import Requirements
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import create_profile
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
 class ConanLoaderTest(unittest.TestCase):
 
     def test_inherit_short_paths(self):
-        loader = ConanFileLoader(None, TestBufferConanOutput())
+        loader = ConanFileLoader(None, Mock())
+
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from base_recipe import BasePackage
@@ -45,7 +43,7 @@ class BasePackage(ConanFile):
         self.assertEqual(result.short_paths, True)
 
     def test_requires_init(self):
-        loader = ConanFileLoader(None, TestBufferConanOutput())
+        loader = ConanFileLoader(None, Mock())
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from conans import ConanFile
@@ -77,8 +75,7 @@ class MyTest(ConanFile):
         profile = Profile()
         profile.processed_settings = Settings({"os": ["Windows", "Linux"]})
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, TestBufferConanOutput())
-
+        loader = ConanFileLoader(None, Mock())
         recipe = loader.load_consumer(conanfile_path, profile)
         self.assertEqual(recipe.settings.os, "Windows")
 
@@ -169,7 +166,7 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        loader = ConanFileLoader(None, Mock(), None)
         ret = loader.load_conanfile_txt(file_path, create_profile())
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
@@ -198,7 +195,7 @@ OpenCV/2.4.104phil/stable
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        loader = ConanFileLoader(None, Mock(), None)
         with self.assertRaisesRegex(ConanException, "The reference has too many '/'"):
             loader.load_conanfile_txt(file_path, create_profile())
 
@@ -210,7 +207,7 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        loader = ConanFileLoader(None, Mock(), None)
         with self.assertRaisesRegex(ConanException, "is too long. Valid names must contain"):
             loader.load_conanfile_txt(file_path, create_profile())
 
@@ -226,7 +223,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        loader = ConanFileLoader(None, Mock(), None)
         ret = loader.load_conanfile_txt(file_path, create_profile())
 
         ret.copy = Mock()
@@ -247,7 +244,7 @@ licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=False, ex
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, conanfile_txt)
-        loader = ConanFileLoader(None, TestBufferConanOutput(), None)
+        loader = ConanFileLoader(None, Mock(), None)
         with self.assertRaisesRegex(ConanException,
                                    r"Error while parsing \[options\] in conanfile\n"
                                    "Options should be specified as 'pkg:option=value'"):
