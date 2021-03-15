@@ -769,11 +769,6 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP + " Optional, source method will run without "
-                            "the information retrieved from the conaninfo.txt and "
-                            "conanbuildinfo.txt, only required when using conditional source() "
-                            "based on settings, options, env_info and user_info")
         args = parser.parse_args(*args)
 
         try:
@@ -789,7 +784,7 @@ class Command(object):
             pass
 
         self._warn_python_version()
-        return self._conan.source(args.path, args.source_folder, args.install_folder)
+        return self._conan.source(args.path, args.source_folder)
 
     def build(self, *args):
         """
