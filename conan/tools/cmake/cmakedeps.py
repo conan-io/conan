@@ -105,7 +105,7 @@ set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
 """
 
 
-preprocess_variables_template = """
+dynamic_variables_template = """
 set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
 conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}" "${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
 
@@ -663,14 +663,14 @@ endforeach()
                     variables_template.format(name=pkg_findname, deps=deps,
                                               build_type_suffix=build_type_suffix)
                              }
-                preprocess_variables = {
+                dynamic_variables = {
                     "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
-                    preprocess_variables_template.format(name=pkg_findname, deps=deps,
-                                                         build_type_suffix=build_type_suffix,
-                                                         deps_names=deps_names)
+                    dynamic_variables_template.format(name=pkg_findname, deps=deps,
+                                                      build_type_suffix=build_type_suffix,
+                                                      deps_names=deps_names)
                 }
                 ret.update(variables)
-                ret.update(preprocess_variables)
+                ret.update(dynamic_variables)
                 ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
