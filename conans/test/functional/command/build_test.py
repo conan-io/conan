@@ -86,34 +86,6 @@ class Conan(ConanFile):
         self.assertIn("INSTALL=True!", client.out)
         self.assertIn("TEST=True!", client.out)
 
-    def test_build_error(self):
-        """ If not using -g txt generator, and build() requires self.deps_cpp_info,
-        or self.deps_user_info it wont fail because now it's automatic
-        """
-        client = TestClient()
-        client.save({CONANFILE: conanfile_dep})
-        client.run("export . lasote/testing")
-        client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("build . --build=missing")
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
-
-        conanfile_user_info = """
-import os
-from conans import ConanFile
-
-class AConan(ConanFile):
-    requires = "Hello/0.1@lasote/testing"
-    generators = "cmake"
-
-    def build(self):
-        self.deps_user_info
-        self.deps_env_info
-        assert(self.build_folder == os.getcwd())
-        assert(hasattr(self, "package_folder"))
-"""
-        client.save({CONANFILE: conanfile_user_info}, clean_first=True)
-        client.run("build ./conanfile.py --build=missing")
-
     def test_build(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """

@@ -655,13 +655,6 @@ virtualenv
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
-        info = client.load("conanbuildinfo.txt")
-        info = info.replace("\r\n", "\n")
-        self.assertIn("""
-[ENV_libA]
-PATH=["path_from_A"]
-[ENV_libB]
-PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
             activate = client.load("environment.sh.env")
             self.assertIn('PATH="path_from_A":"path_from_B"${PATH:+:$PATH}', activate)
