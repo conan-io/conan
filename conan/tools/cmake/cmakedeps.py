@@ -693,6 +693,8 @@ endforeach()
                     version=cpp_info.version,
                     public_deps_names=pkg_public_deps_filenames
                 )
+                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
+                    filename=pkg_filename, name=pkg_findname)
             else:
                 cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info, self.name)
