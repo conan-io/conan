@@ -1,6 +1,7 @@
 import os
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -43,10 +44,10 @@ class BoostConan(ConanFile):
 """
         files = {"conanfile.py": boost}
         client.save(files, clean_first=True)
-        client.run("export . lasote/testing")
-
-        files = {"conanfile.txt": "[requires]\nBoostDbg/1.0@lasote/testing"}
-        client.save(files, clean_first=True)
-        client.run("install . -o BoostDbg:shared=True --build=missing")
-        conaninfo = client.load(CONANINFO)
+        client.run("create . lasote/testing -o BoostDbg:shared=True --build=missing")
+        ref = ConanFileReference.loads("BoostDbg/1.0@lasote/testing")
+        pkg_folder = client.cache.package_layout(ref).packages()
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertIn("zlib:shared=True", conaninfo)
