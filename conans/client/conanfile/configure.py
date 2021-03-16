@@ -8,7 +8,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
     """ Run all the config-related functions for the given conanfile object """
 
     # Avoid extra time manipulating the sys.path for python
-    with get_env_context_manager(conanfile, without_python=True):
+    with get_env_context_manager(conanfile):
         if hasattr(conanfile, "config"):
             conan_v2_error("config() has been deprecated. Use config_options() and configure()")
             with conanfile_exception_formatter(str(conanfile), "config"):

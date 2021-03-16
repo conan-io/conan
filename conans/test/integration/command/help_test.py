@@ -1,8 +1,5 @@
-import sys
 import unittest
 import textwrap
-
-from io import StringIO
 
 from conans import __version__
 from conans.test.utils.tools import TestClient
@@ -69,29 +66,14 @@ class BasicClientTest(unittest.TestCase):
 
     def test_help_cmd(self):
         client = TestClient()
-        try:
-            old_stdout = sys.stdout
-            result = StringIO()
-            sys.stdout = result
-            client.run("help new")
-        finally:
-            sys.stdout = old_stdout
-        self.assertIn("Creates a new package recipe template with a 'conanfile.py'",
-                      result.getvalue())
+        client.run("help new")
+        self.assertIn("Creates a new package recipe template with a 'conanfile.py'", client.out)
 
-        try:
-            old_stdout = sys.stdout
-            result = StringIO()
-            sys.stdout = result
-            client.run("help build")
-        finally:
-            sys.stdout = old_stdout
-        self.assertIn("Calls your local conanfile.py 'build()' method",
-                      result.getvalue())
+        client.run("help build")
+        self.assertIn("Calls your local conanfile.py 'build()' method", client.out)
 
         client.run("help")
-        self.assertIn("Creator commands",
-                      client.out)
+        self.assertIn("Creator commands", client.out)
 
     def test_help_cmd_error(self):
         client = TestClient()

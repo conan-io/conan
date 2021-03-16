@@ -1,19 +1,20 @@
 import platform
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.scons import SConsGenerator
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class SConsGeneratorTest(unittest.TestCase):
 
     def test_variables_setup(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "")
@@ -37,7 +38,7 @@ class SConsGeneratorTest(unittest.TestCase):
 
     def test_system_frameworks_libs(self):
         # https://github.com/conan-io/conan/issues/7301
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         cpp_info = CppInfo("MyPkg", "/rootpath")
         cpp_info.version = "0.1"

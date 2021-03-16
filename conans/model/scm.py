@@ -63,11 +63,12 @@ class SCMData(object):
         d = {"url": self.url, "revision": self.revision, "username": self.username,
              "password": self.password, "type": self.type,
              "subfolder": self.subfolder, "submodule": self.submodule}
+        d = {k: v for k, v in d.items() if v is not None}
+        # Preserve the value 'None' for those entries with not falsy default.
         if self.shallow != self.SHALLOW_DEFAULT:
             d.update({"shallow": self.shallow})
         if self.verify_ssl != self.VERIFY_SSL_DEFAULT:
             d.update({"verify_ssl": self.verify_ssl})
-        d = {k: v for k, v in d.items() if v is not None}
         return d
 
     def __repr__(self):
@@ -76,6 +77,8 @@ class SCMData(object):
         def _kv_to_string(key, value):
             if isinstance(value, bool):
                 return '"{}": {}'.format(key, value)
+            elif value is None:
+                return '"{}": None'.format(key)
             else:
                 value_str = str(value).replace('"', r'\"')
                 return '"{}": "{}"'.format(key, value_str)

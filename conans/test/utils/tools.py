@@ -1,6 +1,5 @@
 import json
 import os
-import random
 import shlex
 import shutil
 import socket
@@ -39,7 +38,7 @@ from conans.model.settings import Settings
 from conans.server.revision_list import _RevisionEntry
 from conans.test.assets import copy_assets
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
+from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput, RedirectedTestOutput
 from conans.test.utils.scm import create_local_git_repo, create_local_svn_checkout, \
     create_remote_svn_repo
 from conans.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_PASS,
@@ -485,7 +484,7 @@ _copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
 def redirect_output(target):
     original_stdout = sys.stdout
     original_stderr = sys.stderr
-    #TODO: change in 2.0
+    # TODO: change in 2.0
     # redirecting both of them to the same target for the moment
     # to assign to Testclient out
     sys.stdout = target
@@ -558,6 +557,8 @@ class TestClient(object):
         mkdir(self.current_folder)
         self.tune_conan_conf(cache_folder, cpu_count)
 
+        self.out = RedirectedTestOutput()
+
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
 
@@ -606,7 +607,7 @@ class TestClient(object):
         if cpu_count:
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput(), strict=not bool(cache_folder))
+                            output=Mock(), strict=not bool(cache_folder))
 
     def update_servers(self):
         cache = self.cache
@@ -641,24 +642,20 @@ class TestClient(object):
                            http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api_v1(self, user_io=None):
-        if user_io:
-            self.out = user_io.out
-        else:
-            self.out = TestBufferConanOutput()
-        user_io = user_io or MockedUserIO(self.users, out=self.out)
-        conan = Conan(cache_folder=self.cache_folder, output=self.out, user_io=user_io,
+    def get_conan_api_v1(self):
+        user_io = MockedUserIO(self.users)
+        conan = Conan(cache_folder=self.cache_folder, user_io=user_io,
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api(self, user_io=None):
+    def get_conan_api(self):
         if os.getenv("CONAN_V2_CLI"):
             return self.get_conan_api_v2()
         else:
-            return self.get_conan_api_v1(user_io)
+            return self.get_conan_api_v1()
 
-    def run_cli(self, command_line, user_io=None, assert_error=False):
-        conan = self.get_conan_api(user_io)
+    def run_cli(self, command_line, assert_error=False):
+        conan = self.get_conan_api()
         self.api = conan
         if os.getenv("CONAN_V2_CLI"):
             command = Cli(conan)
@@ -682,20 +679,15 @@ class TestClient(object):
         self._handle_cli_result(command_line, assert_error=assert_error, error=error)
         return error
 
-    def run(self, command_line, user_io=None, assert_error=False):
+    def run(self, command_line, assert_error=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
-        # TODO: remove in 2.0
-        if os.getenv("CONAN_V2_CLI"):
-            from conans.test.utils.mocks import RedirectedTestOutput
-            self.out = RedirectedTestOutput()
-            with redirect_output(self.out):
-                error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
-        else:
-            error = self.run_cli(command_line, user_io=user_io, assert_error=assert_error)
-
+        from conans.test.utils.mocks import RedirectedTestOutput
+        self.out = RedirectedTestOutput()  # Initialize each command
+        with redirect_output(self.out):
+            error = self.run_cli(command_line, assert_error=assert_error)
         return error
 
     def run_command(self, command, cwd=None, assert_error=False):
