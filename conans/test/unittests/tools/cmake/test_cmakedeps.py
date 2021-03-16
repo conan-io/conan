@@ -51,6 +51,8 @@ def test_cpp_info_name_cmakedeps_components():
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
+    assert "set(GlobakPkgName1_INCLUDE_DIRS_NONE )" in files["ComplexFileName1-none-None-data.cmake"]
+    assert "set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_NONE )" in files["ComplexFileName1-none-None-data.cmake"]
 
     with pytest.raises(ConanException,
                        match="'mypkg' defines information for 'cmake_find_package_multi'"):
