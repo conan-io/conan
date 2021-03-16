@@ -1,4 +1,5 @@
 import os
+import platform
 
 import pytest
 
@@ -6,15 +7,21 @@ from conans.client.tools import vswhere, which
 from conans.errors import ConanException
 
 tool_locations = {
-    'msys2': os.getenv("CONAN_MSYS2_PATH", "C:/msys64/usr/bin"),
-    'cygwin': os.getenv("CONAN_CYGWIN_PATH", "C:/cygwin64/bin"),
-    'mingw32': os.getenv('CONAN_MINGW32_PATH', "C:/msys64/mingw32/bin"),
-    'mingw64': os.getenv('CONAN_MINGW64_PATH', "C:/msys64/mingw64/bin"),
+    'msys2': {'Windows': {'default': os.getenv("CONAN_MSYS2_PATH", "C:/msys64/usr/bin")}},
+    'cygwin': {'Windows': {'default': os.getenv("CONAN_CYGWIN_PATH", "C:/cygwin64/bin")}},
+    'mingw32': {'Windows': {'default': os.getenv('CONAN_MINGW32_PATH', "C:/msys64/mingw32/bin")}},
+    'mingw64': {'Windows': {'default': os.getenv('CONAN_MINGW64_PATH', "C:/msys64/mingw64/bin")}},
+    'cmake': {
+        'Windows': {
+            'default': 'C:/Program Files/Cmake/bin',
+            '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin'
+        }
+    }
 }
 
 tool_environments = {
-    'mingw32': {'MSYSTEM': 'MINGW32'},
-    'mingw64': {'MSYSTEM': 'MINGW64'}
+    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
 
 tools_available = [
@@ -73,11 +80,20 @@ def add_tool(request):
     env_tools = dict()
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
+            version = mark.kwargs.get('version', 'default')
             tool_name = mark.name[5:]
-            if tool_name in tool_locations:
-                add_tools.append(tool_locations[tool_name])
-            if tool_name in tool_environments:
-                env_tools.update(tool_environments[tool_name])
+            if tool_name in tool_locations and tool_locations[tool_name].get(platform.system()):
+                tool_versions = tool_locations[tool_name].get(platform.system())
+                if version in tool_versions:
+                    add_tools.append(tool_versions[version])
+                else:
+                    pytest.fail("Required {} version: '{}' is not available".format(tool_name,
+                                                                                    version))
+
+            if tool_name in tool_environments and tool_environments[tool_name].get(platform.system()):
+                tool_env = tool_environments[tool_name].get(platform.system())
+                env_tools.update(tool_env)
+
     if add_tools:
         add_tools.append(os.environ["PATH"])
         temp_env = {'PATH': os.pathsep.join(add_tools)}
