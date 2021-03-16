@@ -1,11 +1,19 @@
 import os
 import unittest
+import platform
+import subprocess
+import json
 
+import pytest
+
+from conans.client import tools
 from conans.test.utils.profiles import create_profile
+from conans.client.conf.detect import detect_defaults_settings
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
-import platform
-import json
+from conans.util.runners import check_output_runner
+from conans.paths import DEFAULT_PROFILE_NAME
+from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class ProfileTest(unittest.TestCase):
@@ -227,3 +235,44 @@ class ProfileTest(unittest.TestCase):
         client = TestClient()
         client.run("profile", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+
+class DetectCompilersTest(unittest.TestCase):
+    @pytest.mark.tool_compiler
+    def test_detect_default_compilers(self):
+        platform_default_compilers = {
+            "Linux": "gcc",
+            "Darwin": "apple-clang",
+            "Windows": "Visual Studio"
+        }
+        output = TestBufferConanOutput()
+        result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)
+        platform_compiler = platform_default_compilers.get(platform.system(), None)
+        if platform_compiler is not None:
+            self.assertEqual(result.get("compiler", None), platform_compiler)
+
+    @pytest.mark.tool_gcc
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="only OSX test")
+    def test_detect_default_in_mac_os_using_gcc_as_default(self):
+        """
+        Test if gcc in Mac OS X is using apple-clang as frontend
+        """
+        # See: https://github.com/conan-io/conan/issues/2231
+        output = check_output_runner(["gcc", "--version"], stderr=subprocess.STDOUT)
+
+        if "clang" not in output:
+            # Not test scenario gcc should display clang in output
+            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
+            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore!")
+
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "gcc"}):
+            result = detect_defaults_settings(output, profile_path=DEFAULT_PROFILE_NAME)
+        # result is a list of tuples (name, value) so converting it to dict
+        result = dict(result)
+        # No compiler should be detected
+        self.assertIsNone(result.get("compiler", None))
+        self.assertIn("gcc detected as a frontend using apple-clang", output)
+        self.assertIsNotNone(output.error)

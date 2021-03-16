@@ -20,7 +20,7 @@ conanfile = textwrap.dedent('''
 ''')
 
 
-@unittest.skipIf(platform.system() == 'Linux', "Only for case insensitive OS")
+@pytest.mark.skipif(platform.system() == 'Linux', reason="Only for case insensitive OS")
 class CaseSensitiveTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler

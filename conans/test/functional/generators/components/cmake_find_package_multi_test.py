@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from nose.plugins.attrib import attr
 
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -12,7 +11,6 @@ from conans.test.assets.sources import gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@attr('slow')
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
@@ -793,18 +791,22 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
         self.assertIn('Library hello2 found', client.out)
         self.assertIn('Library hello found', client.out)
-        self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)
-        self.assertIn("Target libs (hello): "
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>",
-                      client.out)
+
+        assert ("Target libs (hello2): "
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
+
+        assert ("Target libs (hello): "
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
@@ -940,8 +942,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         self.assertIn('Library middle found', client.out)
         self.assertIn('Library expected found', client.out)
         self.assertIn('Library variant found', client.out)
-        self.assertIn("Middle link libraries: "
-                      "$<$<CONFIG:Release>:CONAN_LIB::middle_middle_RELEASE;nonstd::nonstd;$",
-                      client.out)
+        assert ("Middle link libraries: "
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:CONAN_LIB::middle_middle_RELEASE;nonstd::nonstd;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
         self.assertIn('expected/1.0: Hello World Release!', client.out)
         self.assertIn('variant/1.0: Hello World Release!', client.out)

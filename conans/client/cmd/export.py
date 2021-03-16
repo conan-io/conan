@@ -16,6 +16,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
@@ -298,6 +299,7 @@ def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
 
         save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
     else:
+        conan_v2_error("general.scm_to_conandata should be set to 1")
         _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
 
 

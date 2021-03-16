@@ -7,8 +7,7 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.conan_v2_mode import conan_v2_behavior
+from conans.util.conan_v2_mode import conan_v2_error
 
 PythonRequire = namedtuple("PythonRequire", ["ref", "module", "conanfile",
                                              "exports_folder", "exports_sources_folder"])
@@ -135,8 +134,8 @@ class PyRequireLoader(object):
         conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
                                                      channel=new_ref.channel)
         conanfile.name = new_ref.name
-        conanfile.version = str(new_ref.version) \
-            if os.environ.get(CONAN_V2_MODE_ENVVAR, False) else new_ref.version
+        # FIXME Conan 2.0 version should be a string, not a Version object
+        conanfile.version = new_ref.version
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
@@ -203,7 +202,7 @@ class ConanPythonRequire(object):
         return python_require
 
     def __call__(self, reference):
-        conan_v2_behavior("Old syntax for python_requires is deprecated")
+        conan_v2_error("Old syntax for python_requires is deprecated")
         if not self.valid:
             raise ConanException("Invalid use of python_requires(%s)" % reference)
         try:

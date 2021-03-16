@@ -29,7 +29,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
 
-    @unittest.skipIf(get_env("TESTING_REVISIONS_ENABLED", False), "No sense with revs")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
     def test_install_outdated(self):
         # If we try to install the same package with --build oudated it's already ok
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")

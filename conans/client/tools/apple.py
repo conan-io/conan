@@ -22,11 +22,7 @@ def to_apple_arch(arch):
             'armv7k': 'armv7k'}.get(str(arch))
 
 
-def apple_sdk_name(settings):
-    """returns proper SDK name suitable for OS and architecture
-    we're building for (considering simulators)"""
-    arch = settings.get_safe('arch')
-    os_ = settings.get_safe('os')
+def _guess_apple_sdk_name(os_, arch):
     if str(arch).startswith('x86'):
         return {'Macos': 'macosx',
                 'iOS': 'iphonesimulator',
@@ -37,6 +33,15 @@ def apple_sdk_name(settings):
                 'iOS': 'iphoneos',
                 'watchOS': 'watchos',
                 'tvOS': 'appletvos'}.get(str(os_), None)
+
+
+def apple_sdk_name(settings):
+    """returns proper SDK name suitable for OS and architecture
+    we're building for (considering simulators)"""
+    arch = settings.get_safe('arch')
+    os_ = settings.get_safe('os')
+    os_sdk = settings.get_safe('os.sdk')
+    return os_sdk or _guess_apple_sdk_name(os_, arch)
 
 
 def apple_deployment_target_env(os_, os_version):
@@ -50,12 +55,19 @@ def apple_deployment_target_env(os_, os_version):
     return {env_name: os_version}
 
 
-def apple_deployment_target_flag(os_, os_version):
+def apple_deployment_target_flag(os_, os_version, os_sdk=None, os_subsystem=None, arch=None):
     """compiler flag name which controls deployment target"""
-    flag = {'Macos': '-mmacosx-version-min',
-            'iOS': '-mios-version-min',
-            'watchOS': '-mwatchos-version-min',
-            'tvOS': '-mappletvos-version-min'}.get(str(os_))
+    os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)
+    flag = {'macosx': '-mmacosx-version-min',
+            'iphoneos': '-mios-version-min',
+            'iphonesimulator': '-mios-simulator-version-min',
+            'watchos': '-mwatchos-version-min',
+            'watchsimulator': '-mwatchos-simulator-version-min',
+            'appletvos': '-mtvos-version-min',
+            'appletvsimulator': '-mtvos-simulator-version-min'}.get(str(os_sdk))
+    if os_subsystem == 'catalyst':
+        # especial case, despite Catalyst is macOS, it requires an iOS version argument
+        flag = '-mios-version-min'
     if not flag:
         return ''
     return "%s=%s" % (flag, os_version)
@@ -74,7 +86,7 @@ class XCRun(object):
         def cmd_output(cmd):
             return check_output_runner(cmd).strip()
 
-        command = ['xcrun', '-find']
+        command = ['xcrun']
         if self.sdk:
             command.extend(['-sdk', self.sdk])
         command.extend(args)

@@ -4,7 +4,7 @@ from conans.client.generators.cmake_common import (cmake_dependencies, cmake_dep
                                                    cmake_package_info, cmake_user_info_vars,
                                                    generate_targets_section, CMakeCommonMacros)
 from conans.model import Generator
-from conans.model.build_info import CppInfo
+from conans.model.build_info import CppInfo, merge_dicts
 
 
 def extend(cpp_info, config):
@@ -14,6 +14,7 @@ def extend(cpp_info, config):
     if config_info:
         def add_lists(seq1, seq2):
             return seq1 + [s for s in seq2 if s not in seq1]
+
         result = CppInfo(str(config_info), config_info.rootpath)
         result.filter_empty = cpp_info.filter_empty
         result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
@@ -28,12 +29,13 @@ def extend(cpp_info, config):
         result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
         result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
-        result.build_modules = add_lists(cpp_info.build_modules, config_info.build_modules)
+        result.build_modules = merge_dicts(cpp_info.build_modules, config_info.build_modules)
         return result
     return cpp_info
 
 
 class CMakeMultiGenerator(Generator):
+    name = "cmake_multi"
 
     @property
     def content(self):
@@ -51,10 +53,10 @@ class CMakeMultiGenerator(Generator):
 
         # Per requirement variables
         for _, dep_cpp_info in self.deps_build_info.dependencies:
-            dep_name = dep_cpp_info.get_name("cmake_multi")
+            dep_name = dep_cpp_info.get_name(self.name)
             # Only the specific of the build_type
             dep_cpp_info = extend(dep_cpp_info, build_type)
-            deps = DepsCppCmake(dep_cpp_info)
+            deps = DepsCppCmake(dep_cpp_info, self.name)
             dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=build_type)
             sections.append(dep_flags)
 
@@ -65,7 +67,7 @@ class CMakeMultiGenerator(Generator):
         sections.append(all_flags)
 
         dep_cpp_info = extend(self.deps_build_info, build_type)
-        deps = DepsCppCmake(dep_cpp_info)
+        deps = DepsCppCmake(dep_cpp_info, self.name)
         all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
 
@@ -84,7 +86,7 @@ class CMakeMultiGenerator(Generator):
                                            version=self.conanfile.version))
 
         # TARGETS
-        sections.extend(generate_targets_section(self.deps_build_info.dependencies, "cmake_multi"))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies, self.name))
         # MACROS
         sections.append(cmake_macros_multi)
 

@@ -44,9 +44,7 @@ class PkgConfigConan(ConanFile):
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
         expected_rpaths = ""
-        if platform.system() == "Linux":
-            expected_rpaths = ' -Wl,-rpath="${libdir}" -Wl,-rpath="${libdir2}"'
-        elif platform.system() == "Darwin":
+        if platform.system() in ("Linux", "Darwin"):
             expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
         expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
 libdir2=${prefix}/lib2
@@ -55,8 +53,9 @@ includedir=/my_absoulte_path/fake/mylib/include
 Name: MyLib
 Description: Conan package: MyLib
 Version: 0.1
-Libs: -L${libdir} -L${libdir2}%s
-Cflags: -I${includedir}""" % expected_rpaths
+Libs: -L"${libdir}" -L"${libdir2}"%s
+Cflags: -I"${includedir}"\
+""" % expected_rpaths
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
@@ -137,7 +136,7 @@ class PkgConfigConan(ConanFile):
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
         pc_content = load(pc_path)
-        self.assertIn("-Wl,-rpath=\"${libdir}\"", pc_content)
+        self.assertIn("-Wl,-rpath,\"${libdir}\"", pc_content)
 
     def test_system_libs(self):
         conanfile = """
@@ -162,7 +161,7 @@ class PkgConfigConan(ConanFile):
         client.run("install MyLib/0.1@ -g pkg_config")
 
         pc_content = client.load("MyLib.pc")
-        self.assertIn("Libs: -L${libdir} -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ",
+        self.assertIn('Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ',
                       pc_content)
 
     def test_multiple_include(self):
@@ -192,8 +191,8 @@ class PkgConfigConan(ConanFile):
         self.assertIn("includedir3=${prefix}/inc3/foo", pc_content)
         self.assertIn("libdir=${prefix}/lib1", pc_content)
         self.assertIn("libdir2=${prefix}/lib2", pc_content)
-        self.assertIn("Libs: -L${libdir} -L${libdir2}", pc_content)
-        self.assertIn("Cflags: -I${includedir} -I${includedir2} -I${includedir3}", pc_content)
+        self.assertIn('Libs: -L"${libdir}" -L"${libdir2}"', pc_content)
+        self.assertIn('Cflags: -I"${includedir}" -I"${includedir2}" -I"${includedir3}"', pc_content)
 
     def test_empty_include(self):
         client = TestClient()

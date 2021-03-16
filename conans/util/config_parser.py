@@ -30,7 +30,7 @@ class ConfigParser(object):
     def __init__(self, text, allowed_fields=None, parse_lines=False, raise_unexpected_field=True):
         self._sections = {}
         self._allowed_fields = allowed_fields or []
-        pattern = re.compile("^\[([a-z_]{2,50})\]")
+        pattern = re.compile(r"^\[([a-z_]{2,50})]")
         current_lines = None
         for line in text.splitlines():
             line = line.strip()

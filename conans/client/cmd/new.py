@@ -390,6 +390,9 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
                                         version=version,
                                         package_name=package_name)
             files = {"conanfile.py": replaced}
+        elif template == "v2_cmake":
+            from conans.assets.templates.new_v2_cmake import get_files
+            files = get_files(name, version, user, channel, package_name)
         else:
             if not os.path.isabs(template):
                 template = os.path.join(cache.cache_folder, "templates", "command/new", template)

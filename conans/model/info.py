@@ -557,6 +557,8 @@ class ConanInfo(object):
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)
+        if hasattr(self, "conf"):
+            result.append(self.conf.sha)
         package_id = sha1('\n'.join(result).encode())
         return package_id
 
@@ -574,6 +576,27 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.clear()
+
+    def msvc_compatible(self):
+        if self.settings.compiler != "msvc":
+            return
+
+        compatible = self.clone()
+        version = compatible.settings.compiler.version
+        runtime = compatible.settings.compiler.runtime
+        runtime_type = compatible.settings.compiler.runtime_type
+
+        compatible.settings.compiler = "Visual Studio"
+        version = str(version)[:4]
+        _visuals = {'19.0': '14',
+                    '19.1': '15',
+                    '19.2': '16'}
+        compatible.settings.compiler.version = _visuals[version]
+        runtime = "MT" if runtime == "static" else "MD"
+        if  runtime_type == "Debug":
+            runtime = "{}d".format(runtime)
+        compatible.settings.compiler.runtime = runtime
+        return compatible
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
@@ -611,7 +634,11 @@ class ConanInfo(object):
         If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
         """
-
+        if self.full_settings.compiler == "msvc":
+            # This post-processing of package_id was a hack to introduce this in a non-breaking way
+            # This whole function will be removed in Conan 2.0, and the responsibility will be
+            # of the input profile
+            return
         if (self.full_settings.compiler and
                 self.full_settings.compiler.version):
             default = cppstd_default(self.full_settings)

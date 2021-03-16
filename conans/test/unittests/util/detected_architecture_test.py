@@ -10,6 +10,7 @@ from parameterized import parameterized
 
 from conans.client.tools.oss import detected_architecture
 
+
 class DetectedArchitectureTest(unittest.TestCase):
 
     @parameterized.expand([
@@ -29,13 +30,13 @@ class DetectedArchitectureTest(unittest.TestCase):
         ['sparc', 'sparc'],
         ['sparc64', 'sparcv9'],
         ['s390', 's390'],
-        ['s390x', 's390x']
+        ['s390x', 's390x'],
+        ['arm64', "armv8"]
     ])
     def test_various(self, mocked_machine, expected_arch):
 
         with mock.patch("platform.machine", mock.MagicMock(return_value=mocked_machine)):
             self.assertEqual(expected_arch, detected_architecture(), "given '%s' expected '%s'" % (mocked_machine, expected_arch))
-
 
     def test_aix(self):
         with mock.patch("platform.machine", mock.MagicMock(return_value='00FB91F44C00')),\
@@ -52,7 +53,6 @@ class DetectedArchitectureTest(unittest.TestCase):
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value='7.1.0.0')):
             self.assertEqual('ppc64', detected_architecture())
 
-
     def test_solaris(self):
         with mock.patch("platform.machine", mock.MagicMock(return_value='sun4v')),\
                 mock.patch("platform.processor", mock.MagicMock(return_value='sparc')),\
@@ -67,3 +67,20 @@ class DetectedArchitectureTest(unittest.TestCase):
                 mock.patch("platform.architecture", mock.MagicMock(return_value=('64bit', 'ELF'))),\
                 mock.patch("platform.release", mock.MagicMock(return_value='5.11')):
             self.assertEqual('x86_64', detected_architecture())
+
+    @parameterized.expand([
+        ["E1C+", "e2k-v4"],
+        ["E2C+", "e2k-v2"],
+        ["E2C+DSP", "e2k-v2"],
+        ["E2C3", "e2k-v6"],
+        ["E2S", "e2k-v3"],
+        ["E8C", "e2k-v4"],
+        ["E8C2", "e2k-v5"],
+        ["E12C", "e2k-v6"],
+        ["E16C", "e2k-v6"],
+        ["E32C", "e2k-v7"]
+    ])
+    def test_e2k(self, processor, expected_arch):
+        with mock.patch("platform.machine", mock.MagicMock(return_value='e2k')), \
+                mock.patch("platform.processor", mock.MagicMock(return_value=processor)):
+            self.assertEqual(expected_arch, detected_architecture())

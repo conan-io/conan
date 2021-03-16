@@ -46,6 +46,10 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 {find_dependencies_block}
             endif()
         endif()
+
+        foreach(_BUILD_MODULE_PATH ${{{name}_BUILD_MODULES_PATHS}})
+            include(${{_BUILD_MODULE_PATH}})
+        endforeach()
         """)
 
     find_components_tpl = Template(textwrap.dedent("""\
@@ -156,10 +160,6 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         set(CMAKE_MODULE_PATH {{ comp.build_paths }} ${CMAKE_MODULE_PATH})
         set(CMAKE_PREFIX_PATH {{ comp.build_paths }} ${CMAKE_PREFIX_PATH})
 
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
-            include(${_BUILD_MODULE_PATH})
-        endforeach()
-
         {%- endfor %}
 
 
@@ -199,6 +199,18 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                          INTERFACE_LINK_LIBRARIES "{{ '${'+pkg_name+'_COMPONENTS}' }}")
         endif()
 
+        ########## BUILD MODULES ####################################################################
+        #############################################################################################
+
+        {%- for comp_name, comp in components %}
+        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
+
+        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS}' }})
+            include(${_BUILD_MODULE_PATH})
+        endforeach()
+
+        {%- endfor %}
+
     """))
 
     @property
@@ -227,7 +239,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         components = super(CMakeFindPackageGenerator, self)._get_components(pkg_name, cpp_info)
         ret = []
         for comp_genname, comp, comp_requires_gennames in components:
-            deps_cpp_cmake = DepsCppCmake(comp)
+            deps_cpp_cmake = DepsCppCmake(comp, self.name)
             deps_cpp_cmake.public_deps = " ".join(
                 ["{}::{}".format(*it) for it in comp_requires_gennames])
             ret.append((comp_genname, deps_cpp_cmake))
@@ -253,7 +265,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
             # Note these are in reversed order, from more dependent to less dependent
             pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                        comp_findname, _ in reversed(components)])
-            pkg_info = DepsCppCmake(cpp_info)
+            pkg_info = DepsCppCmake(cpp_info, self.name)
             global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
                                                              build_type_suffix="",
                                                              deps_names=deps_names)
@@ -283,7 +295,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
                 dep_cpp_info = extend(dep_cpp_info, build_type.lower())
 
             # The find_libraries_block, all variables for the package, and creation of targets
-            deps = DepsCppCmake(dep_cpp_info)
+            deps = DepsCppCmake(dep_cpp_info, self.name)
             find_libraries_block = target_template.format(name=pkg_findname, deps=deps,
                                                           build_type_suffix="",
                                                           deps_names=deps_names)

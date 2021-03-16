@@ -12,7 +12,7 @@ Conan is developed by the Conan maintainers and a great community of contributor
 Dev-flow & Pull Requests
 ------------------------
 
-Conan follows the ["GitFlow"](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model. 
+Conan follows the ["GitFlow"](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model.
 Issues are triaged and categorized mainly by type (feature, bug...) complexity (high, medium...) and priority (high, medium...) using GitHub
  labels. Then they are moved to a stage called "queue" when they are considered to be ready for implementation.
 
@@ -97,7 +97,6 @@ import os
 import platform
 import shutil
 
-from nose.plugins.attrib import attr
 from tqdm import tqdm
 
 from conans.client.tools import which

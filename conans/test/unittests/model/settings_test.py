@@ -327,7 +327,7 @@ os: [Windows, Linux]
         with self.assertRaises(ConanException) as cm:
             self.sut.constraint(s2)
         self.assertEqual(str(cm.exception),
-                         bad_value_msg("os", "Win", ["Linux", "Windows"]))
+                         bad_value_msg("os", "Win", ["Windows", "Linux"]))
 
     def test_constraint4(self):
         s2 = {"os": ["Windows"]}

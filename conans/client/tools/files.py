@@ -13,7 +13,6 @@ from patch_ng import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.unicode import get_cwd
 from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
@@ -24,7 +23,7 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 @contextmanager
 def chdir(newdir):
-    old_path = get_cwd()
+    old_path = os.getcwd()
     os.chdir(newdir)
     try:
         yield
@@ -89,7 +88,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         return untargz(filename, destination, pattern, strip_root)
 
     import zipfile
-    full_path = os.path.normpath(os.path.join(get_cwd(), destination))
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
@@ -115,7 +114,9 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
                 raise ConanException("The zip file contains more than 1 folder in the root")
             if len(names) == 1 and len(names[0].split("/", 1)) == 1:
                 raise ConanException("The zip file contains a file in the root")
-
+            # Remove the directory entry if present
+            # Note: The "zip" format contains the "/" at the end if it is a directory
+            zip_info = [m for m in zip_info if m.filename != (common_folder + "/")]
             for member in zip_info:
                 name = member.filename.replace("\\", "/")
                 member.filename = name.split("/", 1)[1]
@@ -167,7 +168,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False):
                     raise ConanException("The tgz file contains more than 1 folder in the root")
                 if len(names) == 1 and len(names[0].split("/", 1)) == 1:
                     raise ConanException("The tgz file contains a file in the root")
-
+                # Remove the directory entry if present
+                members = [m for m in members if m.name != common_folder]
                 for member in members:
                     name = member.name.replace("\\", "/")
                     member.name = name.split("/", 1)[1]
