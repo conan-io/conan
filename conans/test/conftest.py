@@ -14,7 +14,8 @@ tool_locations = {
     'cmake': {
         'Windows': {
             'default': 'C:/Program Files/Cmake/bin',
-            '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin'
+            '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
+            '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin'
         }
     }
 }

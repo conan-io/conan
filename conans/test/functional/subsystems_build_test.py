@@ -18,13 +18,6 @@ class TestSubsystems:
         client.run_command('uname')
         assert "MSYS" in client.out
 
-    @pytest.mark.tool_msys2
-    @pytest.mark.tool_cmake(version="3.16")
-    def test_custom_cmake_msys2(self):
-        client = TestClient()
-        client.run_command('cmake --version')
-        assert "cmake version 3.16" in client.out
-
     @pytest.mark.tool_cygwin
     def test_cygwin_available(self):
         client = TestClient()
