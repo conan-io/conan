@@ -346,15 +346,11 @@ endforeach()
         endif()
         """)
 
-    components_target_build_type_tpl = Template(textwrap.dedent("""\
-        ########## MACROS ###########################################################################
-        #############################################################################################
-        include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
-
+    components_variables_tpl = Template(textwrap.dedent("""\
         ########### VARIABLES #######################################################################
         #############################################################################################
 
-        {{ global_target_variables }}
+        {{ global_variables }}
         set({{ pkg_name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
 
         {%- for comp_name, comp in components %}
@@ -362,8 +358,6 @@ endforeach()
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
 
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIR_{{ build_type }} {{ comp.include_path }})
-        set({{ pkg_name }}_{{ comp_name }}_INCLUDES_{{ build_type }} {{ comp.include_paths }})
         set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
@@ -381,6 +375,20 @@ endforeach()
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
         )
+        {%- endfor %}
+    """))
+
+    components_dynamic_variables_tpl = Template(textwrap.dedent("""\
+        ########## MACROS ###########################################################################
+        #############################################################################################
+        include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
+
+        ########### VARIABLES #######################################################################
+        #############################################################################################
+
+        {{ global_dynamic_variables }}
+
+        {%- for comp_name, comp in components %}
 
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
@@ -415,6 +423,14 @@ endforeach()
         if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
             add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
         endif()
+
+        # Load the debug and release variables
+        get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+        file(GLOB DATA_FILES "${_DIR}/{{ pkg_filename }}-*-*-data.cmake")
+
+        foreach(f ${DATA_FILES})
+            include(${f})
+        endforeach()
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
@@ -684,17 +700,27 @@ endforeach()
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
-                                                                 build_type_suffix=build_type_suffix,
-                                                                 deps_names=deps_names)
-                variables = self.components_target_build_type_tpl.render(
-                    pkg_name=pkg_findname,
-                    global_target_variables=global_target_variables,
-                    pkg_components=pkg_components,
-                    build_type=build_type,
-                    components=components
-                )
-                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = variables
+                global_variables = variables_template.format(name=pkg_findname, deps=pkg_info,
+                                                             build_type_suffix=build_type_suffix,
+                                                             deps_names=deps_names)
+                variables = {
+                    "{}-{}-{}-data.cmake".format(pkg_filename, build_type.lower(), self.arch):
+                    self.components_variables_tpl.render(
+                        pkg_name=pkg_findname, global_variables=global_variables,
+                        pkg_components=pkg_components, build_type=build_type, components=components)
+                }
+                ret.update(variables)
+                global_dynamic_variables = dynamic_variables_template.format(name=pkg_findname,
+                                                                             deps=pkg_info,
+                                                                             build_type_suffix=build_type_suffix,
+                                                                             deps_names=deps_names)
+                dynamic_variables = {
+                    "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
+                    self.components_dynamic_variables_tpl.render(
+                        pkg_name=pkg_findname, global_dynamic_variables=global_dynamic_variables,
+                        pkg_components=pkg_components, build_type=build_type, components=components)
+                }
+                ret.update(dynamic_variables)
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
                     pkg_filename=pkg_filename,
