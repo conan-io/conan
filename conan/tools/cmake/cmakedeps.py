@@ -96,8 +96,8 @@ set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
 set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
 set({name}_COMPILE_OPTIONS_C{build_type_suffix} "{deps.cflags_list}")
 set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} "{deps.cxxflags_list}")
-set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
-set({name}_LIBS{build_type_suffix} {deps.libs})
+set({name}_LIBRARY_DIRS{build_type_suffix} {deps.lib_paths})
+set({name}_LIBRARIES{build_type_suffix} {deps.libs})
 set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
 set({name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
 set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
@@ -115,7 +115,7 @@ set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_ty
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
 set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
 conan_package_library_targets("${{{name}_LIBS{build_type_suffix}}}"           # libraries
-                              "${{{name}_LIB_DIRS{build_type_suffix}}}"       # package_libdir
+                              "${{{name}_LIBRARY_DIRS{build_type_suffix}}}"   # package_libdir
                               "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
                               {name}_LIBRARIES{build_type_suffix}             # out_libraries
                               {name}_LIBRARIES_TARGETS{build_type_suffix}     # out_libraries_targets
@@ -358,13 +358,13 @@ endforeach()
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
 
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_LIBRARY_DIRS_{{ build_type }} {{ comp.lib_paths }})
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS_{{ build_type }} {{ comp.compile_definitions }})
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C_{{ build_type }} "{{ comp.cflags_list }}")
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX_{{ build_type }} "{{ comp.cxxflags_list }}")
-        set({{ pkg_name }}_{{ comp_name }}_LIBS_{{ build_type }} {{ comp.libs }})
+        set({{ pkg_name }}_{{ comp_name }}_LIBRARIES_{{ build_type }} {{ comp.libs }})
         set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ build_type }} {{ comp.system_libs }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ build_type }} {{ comp.framework_paths }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ build_type }} {{ comp.frameworks }})
@@ -398,8 +398,8 @@ endforeach()
         set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }} "")
         set({{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }} "")
         set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})
-        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS_'+build_type+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS_'+build_type+'}' }}"
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBRARIES_'+build_type+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBRARY_DIRS_'+build_type+'}' }}"
                                       "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }}"
                                       {{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }}
                                       {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }}
