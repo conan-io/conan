@@ -492,13 +492,7 @@ class Hello2Conan(ConanFile):
         client.run("build . -e VAR1=100 --build missing")
         self.assertIn("VAR1=>100", client.out)
 
-        # Remove conaninfo
-        os.remove(os.path.join(client.current_folder, CONANINFO))
-        client.run("build . -e VAR1=100 --build missing")
-        self.assertIn("VAR1=>100", client.out)
-
         # Now from a profile
-        os.remove(os.path.join(client.current_folder, CONANINFO))
         client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
         client.run("build . --profile ./myprofile --build missing")
         self.assertIn("VAR1=>102", client.out)
@@ -795,14 +789,6 @@ class LibConan(ConanFile):
                                                                 {'VAR3': ['newappend']}))
         self.assertEqual(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
                                                                {'VAR3': ['newappend']}))
-
-        # Now check the info for the project
-        info = ConanInfo.loads(client.load(CONANINFO))
-        self.assertEqual(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
-                                                                 {'VAR3': ['newappend']}))
-
-        _, _, buildinfo, _ = TXTGenerator.loads(client.load(BUILD_INFO))
-        self.assertEqual(buildinfo["LIB_A"].VAR1, ["900"])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
