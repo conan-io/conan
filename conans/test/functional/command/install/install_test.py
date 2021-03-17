@@ -202,7 +202,6 @@ class Pkg(ConanFile):
             """)})
         client.run("install .")
         self.assertNotIn("Hello", client.out)
-        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
@@ -397,14 +396,12 @@ class Pkg(ConanFile):
         client.run("install . --build=missing -s os=Windows -s os_build=Windows "
                    "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("os=Windows", client.out)
+        self.assertNotIn("os=Macos", client.out)
         client.run("install . --build=missing -s os=Macos -s os_build=Macos "
                    "--install-folder=os_dir")
-        conaninfo = client.load("win_dir/conaninfo.txt")
-        self.assertIn("os=Windows", conaninfo)
-        self.assertNotIn("os=Macos", conaninfo)
-        conaninfo = client.load("os_dir/conaninfo.txt")
-        self.assertNotIn("os=Windows", conaninfo)
-        self.assertIn("os=Macos", conaninfo)
+        self.assertNotIn("os=Windows", client.out)
+        self.assertIn("os=Macos", client.out)
 
     def test_install_reference_not_conanbuildinfo(self):
         client = TestClient()

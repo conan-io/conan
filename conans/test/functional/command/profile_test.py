@@ -30,7 +30,6 @@ class ProfileTest(unittest.TestCase):
         client.save({"conanfile.txt": "",
                      "mylocalprofile": "\n".join(profile)})
         client.run("install . -pr=mylocalprofile")
-        self.assertIn("conanfile.txt: Generated conaninfo.txt", client.out)
 
     def test_empty(self):
         client = TestClient(cache_autopopulate=False)
