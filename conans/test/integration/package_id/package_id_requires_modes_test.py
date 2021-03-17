@@ -2,8 +2,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -12,7 +10,6 @@ from conans.util.files import load
 
 
 # TODO: Fix tests with local methods
-@pytest.mark.xfail(reason="Fails after removing conaninfo.txt from local methods")
 class PackageIDTest(unittest.TestCase):
 
     def setUp(self):
@@ -20,15 +17,21 @@ class PackageIDTest(unittest.TestCase):
 
     def test_cross_build_settings(self):
         client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    settings = "os", "arch", "compiler", "os_build", "arch_build"
-        """
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "arch", "compiler", "os_build", "arch_build"
+                def configure(self):
+                    if self.settings.compiler.toolset:
+                        self.output.info("compiler.toolset={}".format(self.settings.compiler.toolset))
+                    self.output.info("os_build={}".format(self.settings.os_build))
+                    self.output.info("arch_build={}".format(self.settings.arch_build))
+            """)
         client.save({"conanfile.py": conanfile})
         client.run('install . -s os=Windows -s compiler="Visual Studio" '
                    '-s compiler.version=15 -s compiler.runtime=MD '
                    '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
-        conaninfo = client.load("conaninfo.txt")
+        conaninfo = client.out
         self.assertNotIn("compiler.toolset=None", conaninfo)
         self.assertNotIn("os_build=None", conaninfo)
         self.assertNotIn("arch_build=None", conaninfo)
@@ -50,10 +53,6 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         self.client.run("export . %s" % (channel or "lasote/stable"))
 
-    @property
-    def conaninfo(self):
-        return self.client.load(CONANINFO)
-
     def test_version_semver_schema(self):
         self._export("Hello", "1.2.0")
         self._export("Hello2", "2.3.8",
@@ -64,7 +63,6 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         self.client.run("install . --build missing")
-        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
         # Now change the Hello version and build it, if we install out requires should not be
         # needed the --build needed because Hello2 don't need to be rebuilt
@@ -112,7 +110,6 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         self.client.run("install . --build missing")
-        self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change the user and channel should not be needed to rebuild
         self._export("Hello", "1.2.0", package_id_text=None, requires=None,
@@ -154,7 +151,7 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         self.client.run("install . --build missing")
-        self.assertIn("Hello2/2.3.8", self.conaninfo)
+
         pkg_id = "586c42dfdef8986cde85cda46b44133db925baae"
         self.assertIn("Hello2/2.3.8@lasote/stable:{} - Build".format(pkg_id),
                       self.client.out)
@@ -198,7 +195,6 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         self.client.run("install . --build missing")
-        self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change only the package ID from hello (one more defaulted option
         #  to True) should affect
@@ -222,7 +218,6 @@ class Pkg(ConanFile):
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"},
                          clean_first=True)
         self.client.run("install . --build missing")
-        self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change even the require, should not affect
         self._export("HelloNew", "1.2.0")
