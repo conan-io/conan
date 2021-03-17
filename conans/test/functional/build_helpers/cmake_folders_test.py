@@ -60,6 +60,4 @@ install(FILES header.h DESTINATION include)
         client.run("build ..")  # same as --build-folder=. --source-folder=..
         self.assertIn("-- HEADER CMAKE CONTENTS //myheader.h", client.out)
         if cmake_install:
-            self.assertTrue(os.path.exists(os.path.join(build_folder, "conaninfo.txt")))
-            self.assertTrue(os.path.exists(os.path.join(build_folder, "conanbuildinfo.txt")))
             self.assertEqual(load(os.path.join(build_folder, "package/include/header.h")), "//myheader.h")
