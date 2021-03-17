@@ -23,10 +23,9 @@ class TestToolsCustomVersions:
         client.run_command('cmake --version')
         assert "cmake version 3.17" in client.out
 
-    @pytest.mark.tool_msys2
     @pytest.mark.tool_mingw64
     @pytest.mark.tool_cmake(version="3.16")
-    def test_custom_cmake_msys2(self):
+    def test_custom_cmake_mingw64(self):
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.16" in client.out
