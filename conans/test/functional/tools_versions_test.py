@@ -7,6 +7,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 from conans.test.conftest import tools_default_version
 
+
 # TODO: add versions for all platforms
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only versions for Windows at the moment")
 class TestToolsCustomVersions:
