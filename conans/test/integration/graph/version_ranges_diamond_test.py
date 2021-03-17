@@ -162,8 +162,6 @@ class HelloReuseConan(ConanFile):
             if upload:
                 self.client.run("upload %s/%s@lasote/stable -r=%s" % (name, version, remote))
 
-    # TODO: Fix tests with local methods
-    @pytest.mark.xfail(reason="Fails after removing conaninfo.txt from local methods")
     def test_resolve_from_remotes(self):
         self._export("Hello0", "0.1")
         self._export("Hello0", "0.2")
@@ -178,10 +176,6 @@ class HelloReuseConan(ConanFile):
                           "'conanfile.py (Hello1/0.1)' "
                           "resolved to 'Hello0/%s@lasote/stable'" % solution,
                           self.client.out)
-            self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
-                          self.client.out)
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
 
 class VersionRangesDiamondTest(unittest.TestCase):
@@ -209,8 +203,6 @@ class HelloReuseConan(ConanFile):
             if upload:
                 self.client.run("upload %s/%s@lasote/stable" % (name, version))
 
-    # TODO: Fix tests with local methods
-    @pytest.mark.xfail(reason="Fails after removing conaninfo.txt from local methods")
     def test_local_then_remote(self):
         self._export("Hello0", "0.1")
         self._export("Hello0", "0.2")
@@ -223,15 +215,8 @@ class HelloReuseConan(ConanFile):
         self.client.run("install . --build missing")
         self.assertIn("Version range '>0.1,<0.3' required by 'conanfile.py (Hello1/0.1)' "
                       "resolved to 'Hello0/0.2@lasote/stable'", self.client.out)
-        self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
-                      self.client.out)
-
-        content = self.client.load("conaninfo.txt")
-        self.assertIn("Hello0/0.2@lasote/stable", content)
 
     @parameterized.expand([(False, ), (True,)])
-    # TODO: Fix tests with local methods
-    @pytest.mark.xfail(reason="Fails after removing conaninfo.txt from local methods")
     def test_reuse(self, upload):
         self._export("Hello0", "0.1", upload=upload)
         self._export("Hello0", "0.2", upload=upload)
@@ -254,13 +239,6 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2@lasote/stable'", self.client.out)
             self.assertNotIn("Conflict", self.client.out)
-            self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
-                          self.client.out)
-
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/0.2@lasote/stable", content)
-            self.assertIn("Hello1/0.1@lasote/stable", content)
-            self.assertIn("Hello2/0.1@lasote/stable", content)
 
         check1()
 
@@ -281,13 +259,6 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2.1@lasote/stable'", self.client.out)
             self.assertNotIn("Conflict", self.client.out)
-            self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
-                          self.client.out)
-
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/0.2.1@lasote/stable", content)
-            self.assertIn("Hello1/0.1@lasote/stable", content)
-            self.assertIn("Hello2/0.1@lasote/stable", content)
 
     def test_no_joint_compatibility_resolved(self):
         """Test to verify that conan is not resolving using joint-compatibility of the full graph
