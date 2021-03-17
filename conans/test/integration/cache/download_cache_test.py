@@ -149,7 +149,7 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ConanException: md5 signature failed for", client.out)
         self.assertIn("Provided signature: kk", client.out)
         self.assertIn("Computed signature: 9893532233caff98cd083a116b013c0b", client.out)
-        self.assertEqual(1, len(os.listdir(cache_folder)))  # Nothing was cached
+        self.assertEqual(2, len(os.listdir(cache_folder)))  # Nothing was cached
 
         # This is the right checksum
         conanfile = textwrap.dedent("""
@@ -171,7 +171,7 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertEqual("some query", client.load("myfile2.txt"))
 
         # 2 files cached, plus "locks" folder = 3
-        self.assertEqual(3, len(os.listdir(cache_folder)))
+        self.assertEqual(4, len(os.listdir(cache_folder)))
 
         # remove remote file
         os.remove(file_path)
