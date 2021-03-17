@@ -516,3 +516,60 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
+
+
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class CMakeFindPackagePreferConfigTest(unittest.TestCase):
+
+    @parameterized.expand([(True,), (False,)])
+    def test_prefer_config(self, prefer_config):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeToolchain
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                exports_sources = "CMakeLists.txt"
+                def generate(self):
+                    toolchain = CMakeToolchain(self)
+                    toolchain.generate()
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+        """)
+
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(my_project)
+            message(STATUS "CMAKE_FIND_PACKAGE_PREFER_CONFIG ${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+            find_package(Comandante REQUIRED)
+        """)
+
+        find = textwrap.dedent("""
+            message(STATUS "using FindComandante.cmake")
+        """)
+
+        config = textwrap.dedent("""
+            message(STATUS "using Comandante-config.cmake")
+        """)
+
+        profile = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.cmake.cmaketoolchain:find_package_prefer_config={}
+        """).format(prefer_config)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "FindComandante.cmake": find,
+                     "Comandante-config.cmake": config,
+                     "profile": profile})
+
+        client.run("install . --profile profile")
+        client.run("build .")
+
+        if prefer_config:
+            self.assertIn("using Comandante-config.cmake", client.out)
+        else:
+            self.assertIn("using FindComandante.cmake", client.out)

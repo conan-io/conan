@@ -85,7 +85,10 @@ class CMakeToolchainBase(object):
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+            {%- if find_package_prefer_config %}
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
+            {%- endif %}
+            #set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
@@ -134,6 +137,8 @@ class CMakeToolchainBase(object):
         """)
 
     def __init__(self, conanfile, **kwargs):
+        import six
+
         self._conanfile = conanfile
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -143,6 +148,15 @@ class CMakeToolchainBase(object):
         self.cmake_module_path = "${CMAKE_BINARY_DIR}"
 
         self.build_type = None
+
+        self.find_package_prefer_config = \
+            conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if self.find_package_prefer_config is not None:
+            if isinstance(self.find_package_prefer_config, six.string_types):
+                self.find_package_prefer_config = self.find_package_prefer_config == "True"
+            elif isinstance(self.find_package_prefer_config, six.integer_types):
+                self.find_package_prefer_config = bool(self.find_package_prefer_config)
+            self.find_package_prefer_config = "ON" if self.find_package_prefer_config else "OFF"
 
     def _get_templates(self):
         return {
@@ -161,6 +175,7 @@ class CMakeToolchainBase(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
+            "find_package_prefer_config": self.find_package_prefer_config,
         }
         return ctxt_toolchain
 
