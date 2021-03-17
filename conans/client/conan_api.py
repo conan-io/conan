@@ -34,7 +34,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.manager import deps_install
+from conans.client.manager import deps_install, compute_dependency_graph
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
@@ -1345,7 +1345,7 @@ class ConanAPIV1(object):
     @api_method
     def lock_install(self, lockfile, remote_name=None, build=None,
                      generators=None, install_folder=None, cwd=None,
-                     lockfile_out=None):
+                     lockfile_out=None, recipes=None):
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
         graph_info = get_graph_info(None, None, cwd, None,
                                     self.app.cache, self.app.out, lockfile=lockfile)
@@ -1361,9 +1361,15 @@ class ConanAPIV1(object):
         graph_lock = graph_info.graph_lock
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
-        deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                     remotes=remotes, graph_info=graph_info, build_modes=build,
-                     generators=generators, recorder=recorder)
+        if recipes:
+            graph = compute_dependency_graph(self.app, ref_or_path=reference, remotes=remotes,
+                                             graph_info=graph_info, build_modes=build,
+                                             generators=generators, recorder=recorder)
+            print_graph(graph, self.app.out)
+        else:
+            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                         remotes=remotes, graph_info=graph_info, build_modes=build,
+                         generators=generators, recorder=recorder)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)

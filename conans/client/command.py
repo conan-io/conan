@@ -1886,6 +1886,8 @@ class Command(object):
 
         install_cmd = subparsers.add_parser('install', help='Install a lockfile')
         install_cmd.add_argument('lockfile', help='Path to the lockfile')
+        install_cmd.add_argument("--recipes", action="store_true",
+                                 help="Install only recipes, not binaries")
         install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
                                  help='Generators to use')
 
@@ -1932,7 +1934,7 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "install":
-            self._conan.lock_install(args.lockfile, generators=args.generator)
+            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
         elif args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "bundle":
