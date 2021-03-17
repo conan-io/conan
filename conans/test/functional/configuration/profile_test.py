@@ -224,13 +224,13 @@ class ProfileTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         for setting, value in profile_settings.items():
             self.assertIn("%s=%s" % (setting, value), info)
 
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86 -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         for setting, value in profile_settings.items():
             if setting != "compiler.version":
                 self.assertIn("%s=%s" % (setting, value), info)
@@ -248,7 +248,7 @@ class ProfileTest(unittest.TestCase):
                        package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertIn("compiler.libcxx=libstdc++11", info)
 
@@ -257,11 +257,6 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.cache.profiles_path,
                        "vs_12_86_Hello0_gcc", settings=profile_settings,
                        package_settings=package_settings)
-        # Try to override some settings in install command
-        self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=Visual Studio", info)
-        self.assertNotIn("compiler.libcxx", info)
 
         # Mix command line package settings with profile
         package_settings = {"Hello0": tmp_settings}
@@ -271,7 +266,7 @@ class ProfileTest(unittest.TestCase):
         # Try to override some settings in install command
         self.client.run("install . --build missing -pr vs_12_86_Hello0_gcc"
                         " -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.libcxx=libstdc++", info)

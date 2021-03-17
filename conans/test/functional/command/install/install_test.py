@@ -263,15 +263,7 @@ class Pkg(ConanFile):
 
             self.client.run("install . -o language=%d %s --build missing" % (lang, self.settings))
             self.assertIn("Configuration:[settings]", "".join(str(self.client.out).splitlines()))
-            info_path = os.path.join(self.client.current_folder, CONANINFO)
-            conan_info = ConanInfo.load_file(info_path)
-            self.assertEqual("arch=x86\n"
-                             "compiler=Visual Studio\n"
-                             "compiler.runtime=MD\n"
-                             "compiler.version=12\n"
-                             "os=Windows",
-                             conan_info.settings.dumps())
-            self.assertEqual("language=%s\nstatic=True" % lang, conan_info.options.dumps())
+
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
             hello0 = self.client.cache.package_layout(ref).package(PackageReference(ref, id0))
@@ -292,9 +284,7 @@ class Pkg(ConanFile):
 
         self.client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 "
                         "-o Hello0:language=1 %s --build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
+
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
         pref = PackageReference(ref, "8b964e421a5b7e48b7bc19b94782672be126be8b")
@@ -318,11 +308,6 @@ class Pkg(ConanFile):
 
         self.client.run("install . -o language=0 -o Hello1:language=1 -o Hello0:language=0 %s "
                         "--build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-
-        conan_info = ConanInfo.load_file(info_path)
-
-        self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         pref = PackageReference(ref, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26")
         hello0 = self.client.cache.package_layout(ref).package(pref)
@@ -354,9 +339,6 @@ class Pkg(ConanFile):
         self.client.save(files, clean_first=True)
 
         self.client.run("install . %s --build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         pref = PackageReference(ref, "8b964e421a5b7e48b7bc19b94782672be126be8b")
         hello0 = self.client.cache.package_layout(ref).package(pref)
