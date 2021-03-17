@@ -3,9 +3,18 @@ import textwrap
 from collections import OrderedDict
 
 from jinja2 import Template
+
 from conans.client.build.compiler_flags import build_type_define, libcxx_define
+from conans.client.tools.oss import cpu_count
 from conans.client.tools.oss import detected_architecture, detected_os, get_build_os_arch
 from conans.util.files import save
+
+
+def make_jobs_cmd_line_arg(conanfile):
+    njobs = conanfile.conf["tools.gnu.make"].jobs or \
+            conanfile.conf["core.build"].processes or \
+            cpu_count(output=conanfile.output)
+    return "-j".format(njobs)
 
 
 class MakeToolchain(object):

@@ -5,9 +5,20 @@ from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
 from conans.client.tools.oss import cross_building, cpu_count
 
 
+def ninja_jobs_cmd_line_arg(conanfile, parallel):
+    if parallel:
+        njobs = conanfile.conf["tools.ninja"].jobs or \
+                conanfile.conf["core.build"].processes or \
+                cpu_count(output=conanfile.output)
+    else:
+        njobs = 1
+    return "-j".format(njobs)
+
+
 class Meson(object):
-    def __init__(self, conanfile, build_folder='build'):
+    def __init__(self, conanfile, build_folder='build', parallel=True):
         self._conanfile = conanfile
+        self._parallel = parallel
         self._build_folder = build_folder
 
     def _run(self, cmd):
@@ -33,14 +44,15 @@ class Meson(object):
         if cross_building(self._conanfile):
             cmd += ' --cross-file "{}"'.format(MesonToolchain.cross_filename)
         else:
-            cmd += ' --native-file "{}"'. format(MesonToolchain.native_filename)
+            cmd += ' --native-file "{}"'.format(MesonToolchain.native_filename)
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
         self._run(cmd)
 
     def build(self, target=None):
-        cmd = 'meson compile -C "{}" -j {}'.format(self._build_dir, cpu_count())
+        njobs = ninja_jobs_cmd_line_arg(self._conanfile, parallel=self._parallel)
+        cmd = 'meson compile -C "{}" {}'.format(self._build_dir, njobs)
         if target:
             cmd += " {}".format(target)
         self._run(cmd)

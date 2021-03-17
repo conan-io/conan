@@ -1,17 +1,26 @@
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf["tools.microsoft"].msbuild_verbosity
+    verbosity = conanfile.conf["tools.microsoft.msbuild"].verbosity
     if verbosity:
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
             raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
         return '/verbosity:{}'.format(verbosity)
 
 
+def msbuild_max_cpu_count_cmd_line_arg(conanfile):
+    max_cpu_count = conanfile.conf["tools.microsoft.msbuild"].maxCpuCount or \
+                    conanfile.conf["core.build"].processes or \
+                    cpu_count(output=conanfile.output)
+    return "/m:{}".format(max_cpu_count)
+
+
 class MSBuild(object):
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, parallel=True):
         self._conanfile = conanfile
+        self._parallel = parallel
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
@@ -33,6 +42,9 @@ class MSBuild(object):
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
         if verbosity:
             cmd += " {}".format(verbosity)
+
+        if self._parallel:
+            cmd += " {}".format(msbuild_max_cpu_count_cmd_line_arg(self._conanfile))
 
         return cmd
 

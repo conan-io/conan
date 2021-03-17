@@ -52,11 +52,11 @@ def test_cmake_config(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        tools.microsoft:msbuild_verbosity=Minimal
+        tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
-    assert "/verbosity:Minimal" in client.out
+    assert "/verbosity:Minimal" in str(client.out)
 
 
 def test_cmake_config_error(client):

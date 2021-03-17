@@ -3,15 +3,17 @@ import platform
 
 from conan.tools.cmake.base import CMakeToolchainBase
 from conan.tools.cmake.utils import get_generator, is_multi_configuration
-from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
+from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
+from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
+    msbuild_max_cpu_count_cmd_line_arg
 from conans.client import tools
 from conans.client.build import join_arguments
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import mkdir
+from conan.tools.gnu.make import make_jobs_cmd_line_arg
 
 
 def _validate_recipe(conanfile):
@@ -23,15 +25,21 @@ def _validate_recipe(conanfile):
 
 def _cmake_cmd_line_args(conanfile, generator, parallel):
     args = []
-    compiler_version = conanfile.settings.get_safe("compiler.version")
-    if generator and parallel:
-        if ("Makefiles" in generator or "Ninja" in generator) and "NMake" not in generator:
-            args.append("-j%i" % cpu_count(conanfile.output))
-        elif "Visual Studio" in generator and compiler_version and Version(compiler_version) >= "10":
-            # Parallel for building projects in the solution
-            args.append("/m:%i" % cpu_count(output=conanfile.output))
+    if not generator:
+        return args
 
-    if generator and "Visual Studio" in generator:
+    # Arguments related to parallel
+    if "MakeFiles" in generator and "NMake" not in generator and parallel:
+        args.append(make_jobs_cmd_line_arg(conanfile))
+
+    if "Ninja" in generator and "NMake" not in generator:
+        args.append(ninja_jobs_cmd_line_arg(conanfile, parallel=parallel))
+
+    if "Visual Studio" in generator and parallel:
+        args.append(msbuild_max_cpu_count_cmd_line_arg(conanfile))
+
+    # Arguments for verbosity
+    if "Visual Studio" in generator:
         verbosity = msbuild_verbosity_cmd_line_arg(conanfile)
         if verbosity:
             args.append(verbosity)
