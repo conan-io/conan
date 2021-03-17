@@ -9,10 +9,11 @@ from bottle import static_file, request
 import pytest
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
 from conans.util.env_reader import get_env
-from conans.util.files import load, save
+from conans.util.files import load, save, set_dirty
 
 
 class DownloadCacheTest(unittest.TestCase):
@@ -96,6 +97,28 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: md5 signature failed", client.out)
         self.assertIn("Cached downloaded file corrupted", client.out)
 
+    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
+    def test_dirty_download(self):
+        # https://github.com/conan-io/conan/issues/8578
+        client = TestClient(default_server_user=True)
+        cache_folder = temp_folder()
+        client.run('config set storage.download_cache="%s"' % cache_folder)
+        client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
+        client.run("create . pkg/0.1@")
+        client.run("upload * --all -c")
+        client.run("remove * -f")
+        client.run("install pkg/0.1@")
+        for f in os.listdir(cache_folder):
+            # damage the file
+            path = os.path.join(cache_folder, f)
+            if os.path.isfile(path):
+                save(path, "broken!")
+                set_dirty(path)
+
+        client.run("remove * -f")
+        client.run("install pkg/0.1@")
+        assert "pkg/0.1: Downloaded package" in client.out
+
     def test_user_downloads_cached(self):
         http_server = StoppableThreadBottle()
 
@@ -169,7 +192,8 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Hybrid test with both v1 and v2")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
+                        reason="Hybrid test with both v1 and v2")
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         client.run("config set general.revisions_enabled=False")
