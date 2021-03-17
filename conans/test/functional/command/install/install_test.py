@@ -372,51 +372,6 @@ class Pkg(ConanFile):
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
 
-    def test_change_option_txt(self):
-        self._create("Hello0", "0.1")
-
-        # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(cache_folder=self.client.cache_folder, cpu_count=False)
-        files = {CONANFILE_TXT: """[requires]
-        Hello0/0.1@lasote/stable
-
-        [options]
-        Hello0:language=1
-        """}
-        client.save(files)
-
-        client.run("install conanfile.txt %s --build missing" % self.settings)
-        info_path = os.path.join(client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=1", conan_info.full_options.dumps())
-        self.assertIn("Hello0/0.1@lasote/stable:8b964e421a5b7e48b7bc19b94782672be126be8b",
-                      conan_info.full_requires.dumps())
-
-        files = {CONANFILE_TXT: """[requires]
-        Hello0/0.1@lasote/stable
-
-        [options]
-        Hello0:language=0
-        """}
-        client.save(files)
-        client.run("install . %s --build missing" % self.settings)
-
-        info_path = os.path.join(client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        # For conan install options are not cached anymore
-        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
-
-        # it is necessary to clean the cached conaninfo
-        client.save(files, clean_first=True)
-        client.run("install ./conanfile.txt %s --build missing" % self.settings)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
-        self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
-                      conan_info.full_requires.dumps())
-
     @pytest.mark.tool_compiler
     def test_cross_platform_msg(self):
         # Explicit with os_build and os_arch settings
