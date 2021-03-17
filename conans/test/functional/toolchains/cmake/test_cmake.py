@@ -541,7 +541,6 @@ class CMakeFindPackagePreferConfigTest(unittest.TestCase):
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
             project(my_project)
-            message(STATUS "CMAKE_FIND_PACKAGE_PREFER_CONFIG ${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
             find_package(Comandante REQUIRED)
         """)
 

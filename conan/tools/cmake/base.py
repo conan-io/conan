@@ -88,7 +88,6 @@ class CMakeToolchainBase(object):
             {%- if find_package_prefer_config %}
             set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
             {%- endif %}
-            #set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
