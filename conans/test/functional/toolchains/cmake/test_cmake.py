@@ -549,7 +549,7 @@ class CMakeFindPackagePreferConfigTest(unittest.TestCase):
         """)
 
         config = textwrap.dedent("""
-            message(STATUS "using Comandante-config.cmake")
+            message(STATUS "using ComandanteConfig.cmake")
         """)
 
         profile = textwrap.dedent("""
@@ -562,13 +562,13 @@ class CMakeFindPackagePreferConfigTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist,
                      "FindComandante.cmake": find,
-                     "Comandante-config.cmake": config,
+                     "ComandanteConfig.cmake": config,
                      "profile": profile})
 
         client.run("install . --profile profile")
         client.run("build .")
 
         if prefer_config:
-            self.assertIn("using Comandante-config.cmake", client.out)
+            self.assertIn("using ComandanteConfig.cmake", client.out)
         else:
             self.assertIn("using FindComandante.cmake", client.out)
