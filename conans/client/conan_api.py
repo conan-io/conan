@@ -34,7 +34,7 @@ from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
-from conans.client.manager import deps_install, compute_dependency_graph
+from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
@@ -1362,14 +1362,16 @@ class ConanAPIV1(object):
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
         if recipes:
-            graph = compute_dependency_graph(self.app, ref_or_path=reference, remotes=remotes,
-                                             graph_info=graph_info, build_modes=build,
-                                             generators=generators, recorder=recorder)
+            graph = self.app.graph_manager.load_graph(reference, create_reference=None,
+                                                      graph_info=graph_info, build_mode=None,
+                                                      check_updates=False, update=None,
+                                                      remotes=remotes, recorder=recorder,
+                                                      lockfile_node_id=root_id)
             print_graph(graph, self.app.out)
         else:
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
                          remotes=remotes, graph_info=graph_info, build_modes=build,
-                         generators=generators, recorder=recorder)
+                         generators=generators, recorder=recorder, lockfile_node_id=root_id)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)

@@ -23,34 +23,22 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
-        @param app: The ConanApp instance with all collaborators
-        @param ref_or_path: ConanFileReference or path to user space conanfile
-        @param install_folder: where the output files will be saved
-        @param build_modes: List of build_modes specified
-        @param update: Check for updated in the upstream remotes (and update)
-        @param manifest_folder: Folder to install the manifests
-        @param manifest_verify: Verify dependencies manifests against stored ones
-        @param manifest_interactive: Install deps manifests in folder for later verify, asking user
-        for confirmation
-        @param generators: List of generators from command line. If False, no generator will be
-        written
-        @param no_imports: Install specified packages but avoid running imports
-
-        """
-    graph = compute_dependency_graph(app, ref_or_path, graph_info, remotes, build_modes, update,
-                                     generators, create_reference, recorder, lockfile_node_id)
-
-    install_dependency_graph(app, graph, ref_or_path, install_folder, graph_info, remotes,
-                             build_modes, update, manifest_folder, manifest_verify,
-                             manifest_interactive, generators, no_imports, create_reference,
-                             keep_build, recorder)
-
-
-def compute_dependency_graph(app, ref_or_path, graph_info, remotes=None, build_modes=None,
-                             update=False, generators=None, create_reference=None,  recorder=None,
-                             lockfile_node_id=None):
+    @param app: The ConanApp instance with all collaborators
+    @param ref_or_path: ConanFileReference or path to user space conanfile
+    @param install_folder: where the output files will be saved
+    @param build_modes: List of build_modes specified
+    @param update: Check for updated in the upstream remotes (and update)
+    @param manifest_folder: Folder to install the manifests
+    @param manifest_verify: Verify dependencies manifests against stored ones
+    @param manifest_interactive: Install deps manifests in folder for later verify, asking user
+    for confirmation
+    @param generators: List of generators from command line. If False, no generator will be
+    written
+    @param no_imports: Install specified packages but avoid running imports
+    """
 
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
+    remote_manager, hook_manager = app.remote_manager, app.hook_manager
     profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
 
     if generators is not False:
@@ -69,17 +57,6 @@ def compute_dependency_graph(app, ref_or_path, graph_info, remotes=None, build_m
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder,
                                           lockfile_node_id=lockfile_node_id)
-    return deps_graph
-
-
-def install_dependency_graph(app, deps_graph, ref_or_path, install_folder, graph_info, remotes=None,
-                             build_modes=None, update=False, manifest_folder=None,
-                             manifest_verify=False, manifest_interactive=False, generators=None,
-                             no_imports=False, create_reference=None, keep_build=False,
-                             recorder=None):
-    out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
-    remote_manager, hook_manager = app.remote_manager, app.hook_manager
-    profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
     graph_lock = graph_info.graph_lock  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
