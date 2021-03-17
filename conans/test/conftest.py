@@ -75,7 +75,7 @@ if not which("conan"):
     tools_available.remove("conan")
 
 
-def _get_tool_location(locations, name, version, tool_platform):
+def _get_tool_path(locations, name, version, tool_platform):
     path = None
     try:
         path = locations[name][tool_platform][version]
@@ -103,7 +103,7 @@ def add_tool(request):
             version = mark.kwargs.get('version', 'default')
             tool_name = mark.name[5:]
             try:
-                tool_path = _get_tool_location(tool_locations, tool_name, version, platform.system())
+                tool_path = _get_tool_path(tool_locations, tool_name, version, platform.system())
                 if tool_path:
                     tools_paths.append(tool_path)
             except ConanException:
