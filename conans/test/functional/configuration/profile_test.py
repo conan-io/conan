@@ -352,7 +352,7 @@ class ProfileTest(unittest.TestCase):
 
         self.client.save(files)
         self.client.run("install . --build missing -pr vs_12_86")
-        info = self.client.load("conaninfo.txt")
+        info = self.client.out
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
