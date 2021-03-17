@@ -1,8 +1,9 @@
 import platform
+import textwrap
 
 import pytest
 
-
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
@@ -28,3 +29,12 @@ class TestToolsCustomVersions:
         client = TestClient()
         client.run_command('cmake --version')
         assert "cmake version 3.16" in client.out
+        main = gen_function_cpp(name="main")
+        cmakelist = textwrap.dedent("""
+            cmake_minimum_required(VERSION 3.15)
+            project(App C CXX)
+            add_executable(app app.cpp)
+            """)
+        client.save({"CMakeLists.txt": cmakelist, "app.cpp": main})
+        client.run_command('cmake . -G "MinGW Makefiles"')
+        client.run_command("cmake --build .")
