@@ -7,7 +7,11 @@ from conans.client.tools import vswhere, which
 from conans.errors import ConanException
 
 tools_default_version = {
-    'cmake': '3.15'
+    'cmake': '3.15',
+    'msys2': 'default',
+    'cygwin': 'default',
+    'mingw32': 'default',
+    'mingw64': 'default'
 }
 
 tools_locations = {
