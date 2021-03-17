@@ -83,12 +83,11 @@ class ConanFileToolsTest(ConanFile):
         client.save({"conanfile.py": conanfile})
         # Check that it not fails the config method with Visual Studio, because of the lack of libcxx
         client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
-        self.assertIn("conanfile.py (test/1.9): Generated conaninfo.txt", client.out)
 
-        conaninfo = client.load("conaninfo.txt")
+        conaninfo = client.out
         self.assertNotIn("libcxx", conaninfo)
         client.run('install . -s compiler=gcc -s compiler.version=4.9')
-        conaninfo = client.load("conaninfo.txt")
+        conaninfo = client.out
         self.assertNotIn("libcxx", conaninfo)
 
         client.run("create . lasote/testing -s compiler=gcc -s compiler.version=4.9")
@@ -107,10 +106,8 @@ class ConanFileToolsTest(ConanFile):
                    '-s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
-        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
-        conaninfo = client.load("conaninfo.txt")
+        conaninfo = client.out
         self.assertIn("libcxx", conaninfo)
         client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
-        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)

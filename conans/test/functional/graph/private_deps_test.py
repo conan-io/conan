@@ -336,9 +336,6 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
 
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
-        self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
-
         # Try to upload and reuse the binaries
         client.run("upload Hello1/0.1@lasote/stable --all")
         self.assertEqual(str(client.out).count("Uploading package"), 1)
