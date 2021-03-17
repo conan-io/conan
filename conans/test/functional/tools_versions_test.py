@@ -5,11 +5,18 @@ import pytest
 
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
-
+from conans.test.conftest import tools_default_version
 
 # TODO: add versions for all platforms
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only versions for Windows at the moment")
 class TestToolsCustomVersions:
+
+    @pytest.mark.tool_cmake
+    def test_default_cmake(self):
+        client = TestClient()
+        client.run_command('cmake --version')
+        default_cmake_version = tools_default_version.get("cmake")
+        assert "cmake version {}".format(default_cmake_version) in client.out
 
     @pytest.mark.tool_cmake(version="3.16")
     def test_custom_cmake_3_16(self):

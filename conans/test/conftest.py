@@ -6,21 +6,25 @@ import pytest
 from conans.client.tools import vswhere, which
 from conans.errors import ConanException
 
-tool_locations = {
+tools_default_version = {
+    'cmake': '3.15'
+}
+
+tools_locations = {
     'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
     'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
     'mingw32': {'Windows': {'default': os.getenv('CONAN_MINGW32_PATH', 'C:/msys64/mingw32/bin')}},
     'mingw64': {'Windows': {'default': os.getenv('CONAN_MINGW64_PATH', 'C:/msys64/mingw64/bin')}},
     'cmake': {
         'Windows': {
-            'default': 'C:/Program Files/Cmake/bin',
+            '3.15': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
             '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
             '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin'
         }
     }
 }
 
-tool_environments = {
+tools_environments = {
     'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
     'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
@@ -100,16 +104,17 @@ def add_tool(request):
     tools_env_vars = dict()
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
-            version = mark.kwargs.get('version', 'default')
             tool_name = mark.name[5:]
-            try:
-                tool_path = _get_tool_path(tool_locations, tool_name, version, platform.system())
-                if tool_path:
-                    tools_paths.append(tool_path)
-            except ConanException:
-                pytest.fail("Required {} version: '{}' is not available".format(tool_name, version))
+            version = mark.kwargs.get('version', None) or tools_default_version.get(tool_name)
+            if version:
+                try:
+                    tool_path = _get_tool_path(tools_locations, tool_name, version, platform.system())
+                    if tool_path:
+                        tools_paths.append(tool_path)
+                except ConanException:
+                    pytest.fail("Required {} version: '{}' is not available".format(tool_name, version))
 
-            tool_env = _get_tool_environment(tool_environments, tool_name, platform.system())
+            tool_env = _get_tool_environment(tools_environments, tool_name, platform.system())
             if tool_env:
                 tools_env_vars.update(tool_env)
 
