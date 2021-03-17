@@ -11,6 +11,7 @@ from parameterized import parameterized
 from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -276,8 +277,17 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler.libcxx=libstdc++", info)
 
     def test_install_profile_package_settings(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class HelloConan(ConanFile):
+                name = 'Hello0'
+                version = '0.1'
+                settings = "os", "compiler", "arch", "build_type"
+                def configure(self):
+                    self.output.info(self.settings.compiler)
+                    self.output.info(self.settings.compiler.version)
+            """)
+        self.client.save({"conanfile.py": conanfile})
 
         # Create a profile and use it
         profile_settings = OrderedDict([("os", "Windows"),
@@ -297,10 +307,9 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=gcc", info)
-        self.assertIn("compiler.libcxx=libstdc++11", info)
-        self.assertIn("compiler.version=4.8", info)
+        info = self.client.out
+        self.assertIn("(Hello0/0.1@lasote/testing): gcc", info)
+        self.assertIn("(Hello0/0.1@lasote/testing): 4.8", info)
 
         package_settings = {"*@other/*": tmp_settings}
         _create_profile(self.client.cache.profiles_path,
@@ -308,12 +317,11 @@ class ProfileTest(unittest.TestCase):
                         package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install . lasote/testing -pr myprofile")
-        info = self.client.load("conaninfo.txt")
-        self.assertIn("compiler=Visual Studio", info)
-        self.assertIn("compiler.runtime=MD", info)
-        self.assertIn("compiler.version=12", info)
-        self.assertNotIn("gcc", info)
-        self.assertNotIn("libcxx", info)
+        info = self.client.out
+        self.assertIn("(Hello0/0.1@lasote/testing): Visual Studio", info)
+        self.assertIn("(Hello0/0.1@lasote/testing): 12", info)
+        self.assertNotIn("(Hello0/0.1@lasote/testing): gcc", info)
+        self.assertNotIn("(Hello0/0.1@lasote/testing): 4.8", info)
 
     def test_package_settings_no_user_channel(self):
         conanfile = textwrap.dedent("""
