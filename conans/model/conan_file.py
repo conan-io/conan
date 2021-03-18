@@ -94,7 +94,7 @@ class ConanFile(object):
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
-    generators = ["txt"]
+    generators = []
     revision_mode = "hash"
 
     # Vars to control the build steps (build(), package())

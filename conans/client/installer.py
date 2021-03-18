@@ -8,7 +8,7 @@ from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
-from conans.client.generators import TXTGenerator, write_toolchain
+from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
 from conans.client.importer import remove_imports, run_imports
@@ -159,9 +159,6 @@ class _PackageBuilder(object):
         # Creating ***info.txt files
         save(os.path.join(conanfile.layout.base_build_folder, CONANINFO), conanfile.info.dumps())
         self._output.info("Generated %s" % CONANINFO)
-        save(os.path.join(conanfile.layout.base_build_folder, BUILD_INFO),
-             TXTGenerator(conanfile).content)
-        self._output.info("Generated %s" % BUILD_INFO)
 
         package_id = pref.id
         # Do the actual copy, call the conanfile.package() method
@@ -475,9 +472,6 @@ class BinaryInstaller(object):
                 graph_info_node.graph_lock = graph_lock
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
-
-                save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(node.conanfile).content)
-                output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
                 copied_files = run_imports(node.conanfile, build_folder)

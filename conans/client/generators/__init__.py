@@ -36,8 +36,7 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"txt": TXTGenerator,
-                            "gcc": GCCGenerator,
+        self._generators = {"gcc": GCCGenerator,
                             "compiler_args": CompilerArgsGenerator,
                             "cmake": CMakeGenerator,
                             "cmake_multi": CMakeMultiGenerator,
