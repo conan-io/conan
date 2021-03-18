@@ -227,8 +227,7 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.conf.update_conf_definition(new_prof)
 
     if doc.buildenv:
-        buildenv = ProfileEnvironment()
-        buildenv.loads(doc.buildenv)
+        buildenv = ProfileEnvironment.loads(doc.buildenv)
         base_profile.buildenv.compose(buildenv)
 
 

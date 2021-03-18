@@ -86,7 +86,6 @@ class CMake(object):
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
             if is_windows_mingw:
-                # FIXME: Remove this and use -DCMAKE_SH="CMAKE_SH-NOTFOUND" (in toolchain)
                 with tools.remove_from_path("sh"):
                     self._conanfile.run(command)
             else:
@@ -119,7 +118,6 @@ class CMake(object):
 
         arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
         command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
-
         self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 

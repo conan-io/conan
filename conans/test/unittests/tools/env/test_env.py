@@ -137,8 +137,7 @@ def test_profile():
         mypkg*:MyVar2=MyValue2
         """)
 
-    profile_env = ProfileEnvironment()
-    profile_env.loads(myprofile)
+    profile_env = ProfileEnvironment.loads(myprofile)
     env = profile_env.get_env("")
     assert env.value("MyVar1") == "MyValue1"
     assert env.value("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'

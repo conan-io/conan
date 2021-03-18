@@ -237,7 +237,6 @@ class ProfileEnvironment:
         result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                env = self._environments[pattern]
                 result = result.compose(env)
         return result
 
@@ -252,7 +251,9 @@ class ProfileEnvironment:
             else:
                 self._environments[pattern] = environment
 
-    def loads(self, text):
+    @staticmethod
+    def loads(text):
+        result = ProfileEnvironment()
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
@@ -278,11 +279,12 @@ class ProfileEnvironment:
                         method = method + "_path"
                     getattr(env, method)(name, value)
 
-                existing = self._environments.get(pattern)
+                existing = result._environments.get(pattern)
                 if existing is None:
-                    self._environments[pattern] = env
+                    result._environments[pattern] = env
                 else:
-                    self._environments[pattern] = existing.compose(env)
+                    result._environments[pattern] = existing.compose(env)
                 break
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
+        return result

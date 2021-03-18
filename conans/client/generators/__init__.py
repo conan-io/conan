@@ -1,5 +1,3 @@
-import os
-import platform
 import traceback
 from os.path import join
 
@@ -67,8 +65,7 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeGen", "CMakeToolchain", "CMakeDeps",
-                                "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualEnv"]
 
@@ -93,9 +90,6 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        elif generator_name == "CMakeGen":
-            from conan.tools.cmake import CMakeGen
-            return CMakeGen
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps

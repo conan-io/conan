@@ -11,7 +11,7 @@ import requests
 from mock import patch
 
 from conans import REVISIONS
-from conans.client.cmd.uploader import CmdUpload
+from conans.client.cmd.uploader import CmdUpload, _PackagePreparator
 from conans.client.tools.env import environment_append
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
@@ -696,7 +696,7 @@ class MyPkg(ConanFile):
         client.create(ref)
         client.upload_all(ref)
         # The _check_recipe_date returns None, but later it will get the manifest ok
-        with patch.object(CmdUpload, "_check_recipe_date") as check_date:
+        with patch.object(_PackagePreparator, "_check_recipe_date") as check_date:
             check_date.return_value = None
             # Upload same with client2
             client2.create(ref)

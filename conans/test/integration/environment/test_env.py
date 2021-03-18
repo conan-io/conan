@@ -5,7 +5,6 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -122,8 +121,20 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
 
 
-def test_profile_buildenv(client):
-    conanfile = GenConanfile()
+def test_profile_buildenv():
+    client = TestClient()
+    conanfile = textwrap.dedent("""\
+        import os, platform
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def generate(self):
+                if platform.system() == "Windows":
+                    self.buildenv.save_bat("pkgenv.bat")
+                else:
+                    self.buildenv.save_sh("pkgenv.sh")
+                    os.chmod("pkgenv.sh", 0o777)
+
+        """)
     # Some scripts in a random system folders, path adding to the profile [env]
 
     compiler_bat = "@echo off\necho MYCOMPILER!!\necho MYPATH=%PATH%"
