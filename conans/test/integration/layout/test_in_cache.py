@@ -78,16 +78,6 @@ def test_cache_in_layout(conanfile):
     client.run("search lib/1.0@")
     assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out
 
-    # Install the package and check the build info
-    client.run("install lib/1.0@ -g txt")
-    binfopath = os.path.join(client.current_folder, "conanbuildinfo.txt")
-    content = load(binfopath).replace("\r\n", "\n")
-    assert "[includedirs]\n{}".format(os.path.join(pf, "include")
-                                      .replace("\\", "/")) in content
-    assert "[libdirs]\n{}".format(os.path.join(pf, "lib")
-                                  .replace("\\", "/")) in content
-
-
 def test_same_conanfile_local(conanfile):
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})

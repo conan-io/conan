@@ -84,7 +84,7 @@ class LibCConan(ConanFile):
                 name = "%s"
                 version = "1.0"
                 requires = %s
-                generators = "txt", "cmake"
+                generators = "cmake"
 
                 def package_info(self):
                     self.cpp_info.libs = ["%s", %s]
@@ -108,9 +108,6 @@ class LibCConan(ConanFile):
 
         expected_libs = ['SDL2_ttf', 'freeType', 'SDL2', 'rt', 'pthread', 'dl',
                          'BZip2', 'LibPNG', 'm', 'ZLib']
-        conanbuildinfo = self.client.load("conanbuildinfo.txt")
-        libs = os.linesep.join(expected_libs)
-        self.assertIn(libs, conanbuildinfo)
         conanbuildinfo = self.client.load("conanbuildinfo.cmake")
         libs = " ".join(expected_libs)
         self.assertIn(libs, conanbuildinfo)
