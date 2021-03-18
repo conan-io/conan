@@ -40,8 +40,8 @@ xcode
         # Install requirements
         client.run('install . --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
-                                 BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
-                                 BUILD_INFO_XCODE, CONANINFO, LOCKFILE]),
+                                 BUILD_INFO_VISUAL_STUDIO,
+                                 BUILD_INFO_XCODE, LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
         cmake = client.load(BUILD_INFO_CMAKE)

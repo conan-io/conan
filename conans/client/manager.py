@@ -37,7 +37,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     if generators is not False:
         generators = set(generators) if generators else set()
-        generators.add("txt")  # Add txt generator by default
 
     if profile_build:
         out.info("Configuration (profile_host):")
@@ -87,10 +86,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             app.generator_manager.write_generators(conanfile, install_folder, output)
             write_toolchain(conanfile, install_folder, output)
         if not isinstance(ref_or_path, ConanFileReference):
-            # Write conaninfo
-            content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
-            output.info("Generated %s" % CONANINFO)
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:

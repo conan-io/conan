@@ -766,20 +766,17 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def source(self, path, source_folder=None, info_folder=None, cwd=None):
+    def source(self, path, source_folder=None, cwd=None):
         self.app.load_remotes()
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(path, cwd, py=True)
         source_folder = _make_abs_path(source_folder, cwd)
-        info_folder = _make_abs_path(info_folder, cwd)
 
         mkdir(source_folder)
-        if not os.path.exists(info_folder):
-            raise ConanException("Specified info-folder doesn't exist")
 
         # only infos if exist
-        conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, info_folder)
+        conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path)
         conanfile.layout.set_base_source_folder(source_folder)
         conanfile.layout.set_base_build_folder(None)
         conanfile.layout.set_base_package_folder(None)

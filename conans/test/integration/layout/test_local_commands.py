@@ -70,7 +70,7 @@ def test_local_source():
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     # FIXME: This should change to "source ." when "conan source" computes the graph
-    client.run("source . -if=my_install")
+    client.run("source .")
     header = os.path.join(client.current_folder, "my_source", "downloaded.h")
     assert os.path.exists(header)
 
@@ -92,7 +92,7 @@ def test_local_source_change_base():
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
-    client.run("source . -if=common -sf=common")
+    client.run("source . -sf=common")
     header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
     assert os.path.exists(header)
 
@@ -130,7 +130,7 @@ def test_export_pkg():
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
-    client.run("source . -if=my_install")
+    client.run("source .")
     client.run("build . -if=my_install")
     client.run("export-pkg . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
@@ -181,7 +181,7 @@ def test_export_pkg_local():
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
-    client.run("source . -if=my_install")
+    client.run("source .")
     client.run("build .")
 
     client.run("export-pkg . lib/1.0@")

@@ -83,8 +83,6 @@ _PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to the current directory can also be specified")
-_INSTALL_FOLDER_HELP = ("Directory containing the conaninfo.txt and conanbuildinfo.txt files "
-                        "(from previous 'conan install'). Defaulted to --build-folder")
 _KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
                      "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
@@ -769,11 +767,6 @@ class Command(object):
         parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
-        parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                            help=_INSTALL_FOLDER_HELP + " Optional, source method will run without "
-                            "the information retrieved from the conaninfo.txt and "
-                            "conanbuildinfo.txt, only required when using conditional source() "
-                            "based on settings, options, env_info and user_info")
         args = parser.parse_args(*args)
 
         try:
@@ -789,7 +782,7 @@ class Command(object):
             pass
 
         self._warn_python_version()
-        return self._conan.source(args.path, args.source_folder, args.install_folder)
+        return self._conan.source(args.path, args.source_folder)
 
     def build(self, *args):
         """

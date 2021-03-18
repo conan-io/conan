@@ -52,7 +52,7 @@ class GraphManager(object):
         self._loader = loader
         self._binary_analyzer = binary_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder):
+    def load_consumer_conanfile(self, conanfile_path):
         """loads a conanfile for local flow: source
         """
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
@@ -76,8 +76,6 @@ class GraphManager(object):
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
-
-        load_deps_info(info_folder, conanfile, required=False)
 
         return conanfile
 

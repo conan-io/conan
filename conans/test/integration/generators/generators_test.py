@@ -45,7 +45,7 @@ ycm
         if platform.system() == "Windows":
             venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
-        self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
+        self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',

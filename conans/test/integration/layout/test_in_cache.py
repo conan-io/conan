@@ -99,7 +99,7 @@ def test_same_conanfile_local(conanfile):
     build_folder = os.path.join(client.current_folder, "my_build")
 
     client.run("install . lib/1.0@ -if=install")
-    client.run("source .  -if=install")
+    client.run("source .")
     assert "Source folder: {}".format(source_folder) in client.out
     assert os.path.exists(os.path.join(source_folder, "source.h"))
 

@@ -202,7 +202,6 @@ class Pkg(ConanFile):
             """)})
         client.run("install .")
         self.assertNotIn("Hello", client.out)
-        self.assertIn("conanfile.py: Generated conaninfo.txt", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
@@ -264,15 +263,7 @@ class Pkg(ConanFile):
 
             self.client.run("install . -o language=%d %s --build missing" % (lang, self.settings))
             self.assertIn("Configuration:[settings]", "".join(str(self.client.out).splitlines()))
-            info_path = os.path.join(self.client.current_folder, CONANINFO)
-            conan_info = ConanInfo.load_file(info_path)
-            self.assertEqual("arch=x86\n"
-                             "compiler=Visual Studio\n"
-                             "compiler.runtime=MD\n"
-                             "compiler.version=12\n"
-                             "os=Windows",
-                             conan_info.settings.dumps())
-            self.assertEqual("language=%s\nstatic=True" % lang, conan_info.options.dumps())
+
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
             hello0 = self.client.cache.package_layout(ref).package(PackageReference(ref, id0))
@@ -293,9 +284,7 @@ class Pkg(ConanFile):
 
         self.client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 "
                         "-o Hello0:language=1 %s --build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
+
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
         pref = PackageReference(ref, "8b964e421a5b7e48b7bc19b94782672be126be8b")
@@ -319,11 +308,6 @@ class Pkg(ConanFile):
 
         self.client.run("install . -o language=0 -o Hello1:language=1 -o Hello0:language=0 %s "
                         "--build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-
-        conan_info = ConanInfo.load_file(info_path)
-
-        self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         pref = PackageReference(ref, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26")
         hello0 = self.client.cache.package_layout(ref).package(pref)
@@ -355,9 +339,6 @@ class Pkg(ConanFile):
         self.client.save(files, clean_first=True)
 
         self.client.run("install . %s --build missing" % self.settings)
-        info_path = os.path.join(self.client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         pref = PackageReference(ref, "8b964e421a5b7e48b7bc19b94782672be126be8b")
         hello0 = self.client.cache.package_layout(ref).package(pref)
@@ -371,51 +352,6 @@ class Pkg(ConanFile):
         hello1_info = os.path.join(hello1, CONANINFO)
         hello1_conan_info = ConanInfo.load_file(hello1_info)
         self.assertEqual(0, hello1_conan_info.options.language)
-
-    def test_change_option_txt(self):
-        self._create("Hello0", "0.1")
-
-        # Do not adjust cpu_count, it is reusing a cache
-        client = TestClient(cache_folder=self.client.cache_folder, cpu_count=False)
-        files = {CONANFILE_TXT: """[requires]
-        Hello0/0.1@lasote/stable
-
-        [options]
-        Hello0:language=1
-        """}
-        client.save(files)
-
-        client.run("install conanfile.txt %s --build missing" % self.settings)
-        info_path = os.path.join(client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=1", conan_info.full_options.dumps())
-        self.assertIn("Hello0/0.1@lasote/stable:8b964e421a5b7e48b7bc19b94782672be126be8b",
-                      conan_info.full_requires.dumps())
-
-        files = {CONANFILE_TXT: """[requires]
-        Hello0/0.1@lasote/stable
-
-        [options]
-        Hello0:language=0
-        """}
-        client.save(files)
-        client.run("install . %s --build missing" % self.settings)
-
-        info_path = os.path.join(client.current_folder, CONANINFO)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        # For conan install options are not cached anymore
-        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
-
-        # it is necessary to clean the cached conaninfo
-        client.save(files, clean_first=True)
-        client.run("install ./conanfile.txt %s --build missing" % self.settings)
-        conan_info = ConanInfo.load_file(info_path)
-        self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
-        self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
-                      conan_info.full_requires.dumps())
 
     @pytest.mark.tool_compiler
     def test_cross_platform_msg(self):
@@ -442,14 +378,12 @@ class Pkg(ConanFile):
         client.run("install . --build=missing -s os=Windows -s os_build=Windows "
                    "--install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache", client.out)
+        self.assertIn("os=Windows", client.out)
+        self.assertNotIn("os=Macos", client.out)
         client.run("install . --build=missing -s os=Macos -s os_build=Macos "
                    "--install-folder=os_dir")
-        conaninfo = client.load("win_dir/conaninfo.txt")
-        self.assertIn("os=Windows", conaninfo)
-        self.assertNotIn("os=Macos", conaninfo)
-        conaninfo = client.load("os_dir/conaninfo.txt")
-        self.assertNotIn("os=Windows", conaninfo)
-        self.assertIn("os=Macos", conaninfo)
+        self.assertNotIn("os=Windows", client.out)
+        self.assertIn("os=Macos", client.out)
 
     def test_install_reference_not_conanbuildinfo(self):
         client = TestClient()

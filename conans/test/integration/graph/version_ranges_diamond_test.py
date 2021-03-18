@@ -2,6 +2,7 @@ import textwrap
 import unittest
 from collections import OrderedDict
 
+import pytest
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
@@ -175,10 +176,6 @@ class HelloReuseConan(ConanFile):
                           "'conanfile.py (Hello1/0.1)' "
                           "resolved to 'Hello0/%s@lasote/stable'" % solution,
                           self.client.out)
-            self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
-                          self.client.out)
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/%s@lasote/stable" % solution, content)
 
 
 class VersionRangesDiamondTest(unittest.TestCase):
@@ -218,11 +215,6 @@ class HelloReuseConan(ConanFile):
         self.client.run("install . --build missing")
         self.assertIn("Version range '>0.1,<0.3' required by 'conanfile.py (Hello1/0.1)' "
                       "resolved to 'Hello0/0.2@lasote/stable'", self.client.out)
-        self.assertIn("conanfile.py (Hello1/0.1): Generated conaninfo.txt",
-                      self.client.out)
-
-        content = self.client.load("conaninfo.txt")
-        self.assertIn("Hello0/0.2@lasote/stable", content)
 
     @parameterized.expand([(False, ), (True,)])
     def test_reuse(self, upload):
@@ -247,13 +239,6 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2@lasote/stable'", self.client.out)
             self.assertNotIn("Conflict", self.client.out)
-            self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
-                          self.client.out)
-
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/0.2@lasote/stable", content)
-            self.assertIn("Hello1/0.1@lasote/stable", content)
-            self.assertIn("Hello2/0.1@lasote/stable", content)
 
         check1()
 
@@ -274,13 +259,6 @@ class HelloReuseConan(ConanFile):
             self.assertIn("Version range '0.2' required by 'Hello2/0.1@lasote/stable' resolved "
                           "to 'Hello0/0.2.1@lasote/stable'", self.client.out)
             self.assertNotIn("Conflict", self.client.out)
-            self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
-                          self.client.out)
-
-            content = self.client.load("conaninfo.txt")
-            self.assertIn("Hello0/0.2.1@lasote/stable", content)
-            self.assertIn("Hello1/0.1@lasote/stable", content)
-            self.assertIn("Hello2/0.1@lasote/stable", content)
 
     def test_no_joint_compatibility_resolved(self):
         """Test to verify that conan is not resolving using joint-compatibility of the full graph

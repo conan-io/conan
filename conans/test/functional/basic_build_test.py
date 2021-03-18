@@ -47,10 +47,3 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
     client.run_command("%s %s" % (ld_path, command))
     msg = "Hello" if lang == 0 else "Hola"
     tester.assertIn("%s Hello0" % msg, client.out)
-    conan_info_path = os.path.join(client.current_folder, CONANINFO)
-    conan_info = ConanInfo.loads(load(conan_info_path))
-    tester.assertTrue(conan_info.full_options.language == lang)
-    if static:
-        tester.assertTrue(conan_info.full_options.static)
-    else:
-        tester.assertFalse(conan_info.full_options.static)

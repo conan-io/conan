@@ -42,36 +42,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-    def test_check_compiler_package_id(self):
-        # https://github.com/conan-io/conan/issues/6658
-        file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class ConanFileToolsTest(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "cmake"
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                def package_id(self):
-                    self.info.settings.compiler.version = "SomeVersion"
-                """)
-
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            project(conanzlib)
-            include(conanbuildinfo.cmake)
-            conan_basic_setup()
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": file_content,
-                     "CMakeLists.txt": cmakelists})
-
-        client.run('install .')
-        client.run_command('cmake .')
-        self.assertIn("Conan: Checking correct version:", client.out)
-
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
