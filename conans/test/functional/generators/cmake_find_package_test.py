@@ -124,6 +124,7 @@ class Consumer(ConanFile):
         cmakelists = """
 project(consumer)
 cmake_minimum_required(VERSION 3.1)
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 find_package(Test)
 message("Libraries to Link: ${Test_LIBS}")
 message("Version: ${Test_VERSION}")
@@ -173,6 +174,7 @@ add_library(fake)
 # fakes the IMPORTED targets used in the generated FindXXXX.cmake files
 add_library(CONAN_LIB::Hello0_helloHello0 ALIAS fake)
 
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 find_package(Hello0 REQUIRED)
 
 get_target_property(tmp Hello0::Hello0 INTERFACE_LINK_LIBRARIES)
@@ -204,6 +206,7 @@ message("Target libs: ${tmp}")
         cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(app)
+            set(CMAKE_MESSAGE_LOG_LEVEL DEBUG)
             find_package(PkgC)
         """)
 
@@ -241,6 +244,7 @@ set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 find_package(Hello0 REQUIRED)
 
 add_library(helloHello1 hello.cpp)
@@ -270,6 +274,7 @@ cmake_minimum_required(VERSION 2.8)
 message(${CMAKE_BINARY_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
 
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 find_package(Hello0 REQUIRED)
 
 add_library(helloHello1 hello.cpp)
@@ -309,6 +314,8 @@ set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR} ${CMAKE_MODULE_PATH})
+
+set(CMAKE_MESSAGE_LOG_LEVEL VERBOSE)
 find_package(Hello1 REQUIRED) # We don't need to find Hello0, it is transitive
 message("Version1: ${Hello1_VERSION}")
 

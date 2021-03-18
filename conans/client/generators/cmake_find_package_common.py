@@ -81,7 +81,7 @@ def find_transitive_dependencies(public_deps_filenames, find_modules):
             if(NOT {dep_filename}_FOUND)
                 find_dependency({dep_filename} REQUIRED)
             else()
-                message(STATUS "Dependency {dep_filename} already found")
+                message(DEBUG "Dependency {dep_filename} already found")
             endif()
             """)
     else:  # for cmake_find_package_multi generator
@@ -95,7 +95,7 @@ def find_transitive_dependencies(public_deps_filenames, find_modules):
                     find_dependency({dep_filename} REQUIRED NO_MODULE)
                 endif()
             else()
-                message(STATUS "Dependency {dep_filename} already found")
+                message(DEBUG "Dependency {dep_filename} already found")
             endif()
             """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
@@ -131,7 +131,7 @@ class CMakeFindPackageCommonMacros:
                 find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                              NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                 if(CONAN_FOUND_LIBRARY)
-                    conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+                    conan_message(VERBOSE "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                     list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
                     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
                         # Create a micro-target for each lib/a found
@@ -142,11 +142,11 @@ class CMakeFindPackageCommonMacros:
                             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
                             set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
                         else()
-                            conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
+                            conan_message(VERBOSE "Skipping already existing target: ${_LIB_NAME}")
                         endif()
                         list(APPEND _out_libraries_target ${_LIB_NAME})
                     endif()
-                    conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
+                    conan_message(VERBOSE "Found: ${CONAN_FOUND_LIBRARY}")
                 else()
                     conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
                     list(APPEND _out_libraries_target ${_LIBRARY_NAME})
