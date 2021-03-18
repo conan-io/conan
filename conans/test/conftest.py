@@ -31,6 +31,12 @@ tools_locations = {
             '3.16': '/Users/jenkins/cmake/cmake-3.16.9/bin',
             '3.17': '/Users/jenkins/cmake/cmake-3.17.5/bin',
             '3.19': '/Users/jenkins/cmake/cmake-3.19.7/bin'
+        },
+        'Linux': {
+            '3.15': '/usr/share/cmake-3.15.7/bin',
+            '3.16': '/usr/share/cmake-3.16.9/bin',
+            '3.17': '/usr/share/cmake-3.17.5/bin',
+            '3.19': '/usr/share/cmake-3.19.7/bin'
         }
     }
 }

@@ -8,7 +8,6 @@ from conans.test.conftest import tools_default_version
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() == "Linux", reason="Not in Linux yet")
 class TestToolsCustomVersions:
 
     @pytest.mark.tool_cmake
