@@ -2,7 +2,6 @@ import unittest
 
 from mock import Mock
 
-from conans.client.generators.text import TXTGenerator
 from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues, EnvInfo

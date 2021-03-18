@@ -28,7 +28,7 @@ from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
-from conans.paths import BUILD_INFO, CONANINFO, RUN_LOG_NAME
+from conans.paths import CONANINFO, RUN_LOG_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import clean_dirty, is_dirty, make_read_only, mkdir, rmdir, save, set_dirty
 from conans.util.log import logger

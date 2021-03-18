@@ -59,7 +59,7 @@ from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths import CONANINFO, get_conan_user_home
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
@@ -1448,8 +1448,3 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     if graph_info.profile_build is not None:
         graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
     return graph_info
-
-
-def existing_info_files(folder):
-    return os.path.exists(os.path.join(folder, CONANINFO)) and  \
-           os.path.exists(os.path.join(folder, BUILD_INFO))

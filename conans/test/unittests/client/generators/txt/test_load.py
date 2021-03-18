@@ -1,8 +1,6 @@
 import textwrap
 import unittest
 
-from conans.client.generators.text import TXTGenerator
-
 
 class LoadContentTestCase(unittest.TestCase):
 

@@ -4,8 +4,7 @@ import unittest
 
 import pytest
 
-from conans.client.generators.text import TXTGenerator
-from conans.paths import BUILD_INFO, BUILD_INFO_CMAKE, CONANFILE
+from conans.paths import BUILD_INFO_CMAKE, CONANFILE
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load

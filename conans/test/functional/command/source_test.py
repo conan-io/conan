@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.paths import BUILD_INFO, CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 

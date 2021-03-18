@@ -22,7 +22,6 @@ from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
-from .text import TXTGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualenv_python import VirtualEnvPythonGenerator
