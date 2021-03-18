@@ -4,12 +4,11 @@ import textwrap
 import pytest
 
 from conans.test.assets.sources import gen_function_cpp
-from conans.test.utils.tools import TestClient
 from conans.test.conftest import tools_default_version
+from conans.test.utils.tools import TestClient
 
 
-# TODO: add versions for all platforms
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only versions for Windows at the moment")
+@pytest.mark.skipif(platform.system() == "Linux", reason="Not in Linux yet")
 class TestToolsCustomVersions:
 
     @pytest.mark.tool_cmake
@@ -31,8 +30,16 @@ class TestToolsCustomVersions:
         client.run_command('cmake --version')
         assert "cmake version 3.17" in client.out
 
+    @pytest.mark.tool_cmake(version="3.19")
+    def test_custom_cmake_3_19(self):
+        client = TestClient()
+        client.run_command('cmake --version')
+        assert "cmake version 3.19" in client.out
+
     @pytest.mark.tool_mingw64
     @pytest.mark.tool_cmake(version="3.16")
+    @pytest.mark.skipif(platform.system() != "Windows",
+                        reason="Mingw test")
     def test_custom_cmake_mingw64(self):
         client = TestClient()
         client.run_command('cmake --version')

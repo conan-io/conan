@@ -23,7 +23,14 @@ tools_locations = {
         'Windows': {
             '3.15': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
             '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
-            '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin'
+            '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
+            '3.19': 'C:/cmake/cmake-3.19.7-win64-x64/bin'
+        },
+        'Darwin': {
+            '3.15': '/Users/jenkins/cmake/cmake-3.15.7/bin',
+            '3.16': '/Users/jenkins/cmake/cmake-3.16.9/bin',
+            '3.17': '/Users/jenkins/cmake/cmake-3.17.5/bin',
+            '3.19': '/Users/jenkins/cmake/cmake-3.19.7/bin'
         }
     }
 }
