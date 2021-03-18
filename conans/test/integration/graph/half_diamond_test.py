@@ -30,6 +30,14 @@ class HalfDiamondTest(unittest.TestCase):
         if export:
             self.client.run("export . lasote/stable")
 
+    def test_reuse(self):
+        self._export("Hello0")
+        self._export("Hello1", ["Hello0/0.1@lasote/stable"])
+        self._export("Hello2", ["Hello1/0.1@lasote/stable", "Hello0/0.1@lasote/stable"])
+        self._export("Hello3", ["Hello2/0.1@lasote/stable"], export=False)
+
+        self.client.run("install . --build missing")
+
     def test_check_duplicated_full_requires(self):
         self._export("Hello0")
         self._export("Hello1", ["Hello0/0.1@lasote/stable"])
