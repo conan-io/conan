@@ -89,7 +89,7 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        if generator_name == "CMakeDeps":
+        elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
         elif generator_name == "MakeToolchain":
@@ -196,4 +196,4 @@ def write_toolchain(conanfile, path, output):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
-        # TODO: Lets discuss what to do with the environment
+    # TODO: Lets discuss what to do with the environment

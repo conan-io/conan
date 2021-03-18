@@ -400,12 +400,12 @@ class WinTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_toolchain_win(self, compiler, version, runtime, cppstd):
         client = TestClient(path_with_spaces=False)
-        settings = {"compiler": compiler,
-                    "compiler.version": version,
-                    "compiler.cppstd": cppstd,
-                    "compiler.runtime": runtime,
-                    "build_type": "Release",
-                    "arch": "x86"}
+        settings = [("compiler", compiler),
+                    ("compiler.version", version),
+                    ("compiler.cppstd", cppstd),
+                    ("compiler.runtime", runtime),
+                    ("build_type", "Release"),
+                    ("arch", "x86")]
 
         profile = textwrap.dedent("""
             [settings]
@@ -416,7 +416,7 @@ class WinTest(unittest.TestCase):
             """)
         client.save({"myprofile": profile})
         # Build the profile according to the settings provided
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new hello/0.1 -m=v2_cmake")
         client.run("create . hello/0.1@ %s" % (settings, ))
@@ -448,15 +448,15 @@ class WinTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
         client = TestClient(path_with_spaces=False)
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
-                    "compiler.toolset": "v140",
-                    "compiler.runtime": "MDd",
-                    "build_type": "Debug",
-                    "arch": "x86_64"}
+        settings = [("compiler",  "Visual Studio"),
+                    ("compiler.version",  "15"),
+                    ("compiler.toolset",  "v140"),
+                    ("compiler.runtime",  "MDd"),
+                    ("build_type",  "Debug"),
+                    ("arch",  "x86_64")]
 
         # Build the profile according to the settings provided
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new hello/0.1 -s")
         client.run("create . hello/0.1@ %s" % (settings,))
@@ -485,10 +485,12 @@ class WinTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):
         client = TestClient(path_with_spaces=False)
-        settings = {"compiler": "Visual Studio",
-                    "compiler.version": "15",
-                    "compiler.cppstd": "17"}
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+
+        settings = [("compiler", "Visual Studio"),
+                    ("compiler.version", "15"),
+                    ("compiler.cppstd", "17")]
+
+        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
         client.run("new hello/0.1 -s")
         configs = [("Release", "x86", True), ("Release", "x86_64", True),
                    ("Debug", "x86", False), ("Debug", "x86_64", False)]
