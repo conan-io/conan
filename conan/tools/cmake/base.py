@@ -151,12 +151,7 @@ class CMakeToolchainBase(object):
         self.find_package_prefer_config = \
             conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
         if self.find_package_prefer_config is not None:
-            if isinstance(self.find_package_prefer_config, six.string_types):
-                self.find_package_prefer_config = self.find_package_prefer_config == "True"
-            elif isinstance(self.find_package_prefer_config, six.integer_types):
-                self.find_package_prefer_config = bool(self.find_package_prefer_config)
-            self.find_package_prefer_config = "ON" if self.find_package_prefer_config else "OFF"
-
+            self.find_package_prefer_config = "OFF" if self.find_package_prefer_config.lower() in ("false", "0", "off") else "ON"
     def _get_templates(self):
         return {
             'toolchain_macros': self._toolchain_macros_tpl,
