@@ -22,10 +22,10 @@ def client():
 def test_package_id(client):
     profile1 = textwrap.dedent("""\
         [conf]
-        tools.microsoft:msbuild_verbosity=Quiet""")
+        tools.microsoft.msbuild:verbosity=Quiet""")
     profile2 = textwrap.dedent("""\
         [conf]
-        tools.microsoft:msbuild_verbosity=Minimal""")
+        tools.microsoft.msbuild:verbosity=Minimal""")
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("create . pkg/0.1@ -pr=profile1")

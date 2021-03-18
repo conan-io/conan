@@ -12,7 +12,7 @@ def ninja_jobs_cmd_line_arg(conanfile, parallel):
                 cpu_count(output=conanfile.output)
     else:
         njobs = 1
-    return "-j".format(njobs)
+    return "-j{}".format(njobs)
 
 
 class Meson(object):

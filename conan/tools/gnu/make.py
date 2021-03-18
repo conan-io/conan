@@ -14,7 +14,7 @@ def make_jobs_cmd_line_arg(conanfile):
     njobs = conanfile.conf["tools.gnu.make"].jobs or \
             conanfile.conf["core.build"].processes or \
             cpu_count(output=conanfile.output)
-    return "-j".format(njobs)
+    return "-j{}".format(njobs)
 
 
 class MakeToolchain(object):
