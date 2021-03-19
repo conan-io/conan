@@ -1,6 +1,5 @@
 import platform
 import textwrap
-import unittest
 
 import pytest
 
@@ -13,7 +12,7 @@ from conans.test.utils.tools import TestClient
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 @pytest.fixture(scope="module")
-def create_greetings():
+def setup_client_with_greetings():
     """
     creates a multi-component package with 2 components "hello" and "bye
     """
@@ -49,6 +48,8 @@ def create_greetings():
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
                 elif self.options.components == "custom":
+                    self.cpp_info.filenames["cmake_find_package_multi"] = "MYG"
+                    self.cpp_info.filenames["cmake_find_package"] = "MYG"
                     self.cpp_info.names["cmake_find_package_multi"] = "MyGreetings"
                     self.cpp_info.components["hello"].names["cmake_find_package_multi"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package_multi"] = "MyBye"
@@ -233,8 +234,8 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
 
 
 @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-def test_standard_names(create_greetings, generator):
-    client = create_greetings
+def test_standard_names(setup_client_with_greetings, generator):
+    client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
@@ -284,8 +285,8 @@ def test_standard_names(create_greetings, generator):
 
 
 @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-def test_custom_names(create_greetings, generator):
-    client = create_greetings
+def test_custom_names(setup_client_with_greetings, generator):
+    client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
         self.cpp_info.names["cmake_find_package_multi"] = "MyChat"
@@ -301,7 +302,7 @@ def test_custom_names(create_greetings, generator):
         """)
 
     cmake_find = textwrap.dedent("""
-        find_package(MyGreetings COMPONENTS MyHello MyBye)
+        find_package(MYG COMPONENTS MyHello MyBye)
 
         add_library(sayhello sayhello.cpp)
         target_link_libraries(sayhello MyGreetings::MyHello)
@@ -323,8 +324,8 @@ def test_custom_names(create_greetings, generator):
 
 
 @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
-def test_no_components(create_greetings, generator):
-    client = create_greetings
+def test_no_components(setup_client_with_greetings, generator):
+    client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
         self.cpp_info.components["sayhello"].requires = ["greetings::greetings"]
@@ -356,11 +357,113 @@ def test_no_components(create_greetings, generator):
     create_chat(client, generator, "none", package_info, cmake_find, test_cmake_find)
 
 
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 @pytest.mark.slow
 @pytest.mark.tool_cmake
-class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
+def test_same_names(generator):
+    client = TestClient()
+    conanfile_greetings = textwrap.dedent("""
+        from conans import ConanFile, CMake
 
-    def test_component_not_found(self):
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "0.0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "cmake"
+            exports_sources = "src/*"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure(source_folder="src")
+                cmake.build()
+
+            def package(self):
+                self.copy("*.h", dst="include", src="src")
+                self.copy("*.lib", dst="lib", keep_path=False)
+                self.copy("*.a", dst="lib", keep_path=False)
+
+            def package_info(self):
+                self.cpp_info.components["global"].name = "hello"
+                self.cpp_info.components["global"].libs = ["hello"]
+        """)
+    hello_h = textwrap.dedent("""
+        #pragma once
+        void hello(std::string noun);
+        """)
+
+    hello_cpp = textwrap.dedent("""
+        #include <iostream>
+        #include <string>
+
+        #include "hello.h"
+
+        void hello(std::string noun) {
+            std::cout << "Hello " << noun << "!" << std::endl;
+        }
+        """)
+    cmakelists_greetings = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.0)
+        project(greetings CXX)
+
+        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        conan_basic_setup()
+
+        add_library(hello hello.cpp)
+        """)
+    test_package_greetings_conanfile = textwrap.dedent("""
+        import os
+        from conans import ConanFile, CMake
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "cmake", "{}"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def test(self):
+                os.chdir("bin")
+                self.run(".%sexample" % os.sep)
+        """.format(generator))
+    test_package_greetings_cpp = textwrap.dedent("""
+        #include <string>
+
+        #include "hello.h"
+
+        int main() {
+            hello("Moon");
+        }
+        """)
+    test_package_greetings_cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.0)
+        project(PackageTest CXX)
+
+        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        conan_basic_setup()
+
+        find_package(hello)
+
+        add_executable(example example.cpp)
+        target_link_libraries(example hello::hello)
+        """)
+    client.save({"conanfile.py": conanfile_greetings,
+                 "src/CMakeLists.txt": cmakelists_greetings,
+                 "src/hello.h": hello_h,
+                 "src/hello.cpp": hello_cpp,
+                 "test_package/conanfile.py": test_package_greetings_conanfile,
+                 "test_package/example.cpp": test_package_greetings_cpp,
+                 "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
+    client.run("create .")
+    assert "Hello Moon!" in client.out
+
+
+@pytest.mark.tool_cmake
+class TestComponentsCMakeGenerators:
+
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+    def test_component_not_found(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -384,11 +487,12 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . world/0.0.1@")
-        client.run("install world/0.0.1@ -g cmake_find_package_multi", assert_error=True)
-        self.assertIn("ERROR: Component 'greetings::non-existent' not found in 'greetings' "
-                      "package requirement", client.out)
+        client.run("install world/0.0.1@ -g {}".format(generator), assert_error=True)
+        assert ("ERROR: Component 'greetings::non-existent' not found in 'greetings' "
+                "package requirement" in client.out)
 
-    def test_component_not_found_cmake(self):
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+    def test_component_not_found_cmake(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -405,13 +509,13 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
             class ConsumerConan(ConanFile):
                 settings = "build_type"
-                generators = "cmake_find_package_multi"
+                generators = "{}"
                 requires = "greetings/0.0.1"
 
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-        """)
+        """.format(generator))
         cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.0)
             project(Consumer CXX)
@@ -422,121 +526,21 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .", assert_error=True)
-        self.assertIn("Conan: Component 'hello' found in package 'greetings'", client.out)
-        self.assertIn("Conan: Component 'non-existent' NOT found in package 'greetings'", client.out)
+        assert "Conan: Component 'hello' found in package 'greetings'" in client.out
+        assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
 
-    def test_same_names(self):
-        client = TestClient()
-        conanfile_greetings = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class HelloConan(ConanFile):
-                name = "hello"
-                version = "0.0.1"
-                settings = "os", "compiler", "build_type", "arch"
-                generators = "cmake"
-                exports_sources = "src/*"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure(source_folder="src")
-                    cmake.build()
-
-                def package(self):
-                    self.copy("*.h", dst="include", src="src")
-                    self.copy("*.lib", dst="lib", keep_path=False)
-                    self.copy("*.a", dst="lib", keep_path=False)
-
-                def package_info(self):
-                    self.cpp_info.components["global"].name = "hello"
-                    self.cpp_info.components["global"].libs = ["hello"]
-            """)
-        hello_h = textwrap.dedent("""
-            #pragma once
-            void hello(std::string noun);
-            """)
-
-        hello_cpp = textwrap.dedent("""
-            #include <iostream>
-            #include <string>
-
-            #include "hello.h"
-
-            void hello(std::string noun) {
-                std::cout << "Hello " << noun << "!" << std::endl;
-            }
-            """)
-        cmakelists_greetings = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(greetings CXX)
-
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
-
-            add_library(hello hello.cpp)
-            """)
-        test_package_greetings_conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, CMake
-
-            class HelloTestConan(ConanFile):
-                settings = "os", "compiler", "build_type", "arch"
-                generators = "cmake", "cmake_find_package_multi"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-
-                def test(self):
-                    os.chdir("bin")
-                    self.run(".%sexample" % os.sep)
-            """)
-        test_package_greetings_cpp = textwrap.dedent("""
-            #include <string>
-
-            #include "hello.h"
-
-            int main() {
-                hello("Moon");
-            }
-            """)
-        test_package_greetings_cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(PackageTest CXX)
-
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
-
-            find_package(hello)
-
-            add_executable(example example.cpp)
-            target_link_libraries(example hello::hello)
-            """)
-        client.save({"conanfile.py": conanfile_greetings,
-                     "src/CMakeLists.txt": cmakelists_greetings,
-                     "src/hello.h": hello_h,
-                     "src/hello.cpp": hello_cpp,
-                     "test_package/conanfile.py": test_package_greetings_conanfile,
-                     "test_package/example.cpp": test_package_greetings_cpp,
-                     "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
-        client.run("create .")
-        self.assertIn("Hello Moon!", client.out)
-
-    def test_component_not_found_same_name_as_pkg_require(self):
-        zlib = GenConanfile("zlib", "0.1").with_setting("build_type")\
-            .with_generator("cmake_find_package_multi")
-        mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type")\
-            .with_generator("cmake_find_package_multi")
-        final = GenConanfile("final", "0.1").with_setting("build_type")\
-            .with_generator("cmake_find_package_multi")\
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+    def test_component_not_found_same_name_as_pkg_require(self, generator):
+        zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator(generator)
+        mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator(generator)
+        final = GenConanfile("final", "0.1").with_setting("build_type").with_generator(generator)\
             .with_require(ConanFileReference("zlib", "0.1", None, None))\
             .with_require(ConanFileReference("mypkg", "0.1", None, None))\
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
         consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
-            .with_generator("cmake_find_package_multi")\
+            .with_generator(generator)\
             .with_requirement(ConanFileReference("final", "0.1", None, None))
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
@@ -544,104 +548,13 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
         client.run("create mypkg.py")
         client.run("create final.py")
         client.run("install consumer.py", assert_error=True)
-        self.assertIn("Component 'mypkg::zlib' not found in 'mypkg' package requirement", client.out)
+        assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
-    def test_filenames(self):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, tools
-
-            class HelloConan(ConanFile):
-                name = "hello"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def package(self):
-                    tools.save(os.path.join(self.package_folder, "lib", "hello.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "libhello.a"), "")
-
-                def package_info(self):
-                    self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"
-                    self.cpp_info.filenames["cmake_find_package_multi"] = "hello_1"
-                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "HELLO1"
-                    self.cpp_info.components["1"].libs = ["hello"]
-        """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create .")
-
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, tools
-
-            class HelloConan(ConanFile):
-                name = "hello2"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                requires = "hello/1.0"
-
-                def package(self):
-                    tools.save(os.path.join(self.package_folder, "lib", "hello2.lib"), "")
-                    tools.save(os.path.join(self.package_folder, "lib", "libhello2.a"), "")
-
-                def package_info(self):
-                    self.cpp_info.names["cmake_find_package_multi"] = "MYHELLO"
-                    self.cpp_info.filenames["cmake_find_package_multi"] = "hello_2"
-                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "HELLO2"
-                    self.cpp_info.components["1"].libs = ["hello2"]
-                    self.cpp_info.components["1"].requires = ["hello::1"]
-        """)
-        client.save({"conanfile.py": conanfile})
-        client.run("create .")
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                requires = "hello2/1.0"
-                generators = "cmake_find_package_multi"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-            """)
-        cmakelists = textwrap.dedent("""
-            project(consumer)
-            cmake_minimum_required(VERSION 3.1)
-            find_package(hello_2)
-            get_target_property(tmp MYHELLO::HELLO2 INTERFACE_LINK_LIBRARIES)
-            message("Target libs (hello2): ${tmp}")
-            get_target_property(tmp MYHELLO::HELLO1 INTERFACE_LINK_LIBRARIES)
-            message("Target libs (hello): ${tmp}")
-            """)
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        client.run("build .")
-
-        self.assertIn('Library hello2 found', client.out)
-        self.assertIn('Library hello found', client.out)
-
-        assert ("Target libs (hello2): "
-                "$<$<CONFIG:Debug>:;>;"
-                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO2_hello2RELEASE;MYHELLO::HELLO1;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
-
-        assert ("Target libs (hello): "
-                "$<$<CONFIG:Debug>:;>;"
-                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_HELLO1_helloRELEASE;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
-
-    def test_same_name_global_target_collision(self):
+    @pytest.mark.slow
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+    def test_same_name_global_target_collision(self, generator):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
-            import os
             from conans import ConanFile, CMake
 
             class Conan(ConanFile):
@@ -662,18 +575,20 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     self.copy("*.a", dst="lib", keep_path=False)
 
                 def package_info(self):
-                    self.cpp_info.names["cmake_find_package_multi"] = "nonstd"
-                    self.cpp_info.filenames["cmake_find_package_multi"] = "{name}"
-                    self.cpp_info.components["1"].names["cmake_find_package_multi"] = "{name}"
+                    self.cpp_info.names["{generator}"] = "nonstd"
+                    self.cpp_info.filenames["{generator}"] = "{name}"
+                    self.cpp_info.components["1"].names["{generator}"] = "{name}"
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         client = TestClient()
         for name in ["expected", "variant"]:
             client.run("new {name}/1.0 -s".format(name=name))
-            client.save({"conanfile.py": conanfile_tpl.format(name=name)})
+            client.save({"conanfile.py": conanfile_tpl.format(name=name, generator=generator)})
             client.run("create . {name}/1.0@".format(name=name))
         middle_cmakelists = textwrap.dedent("""
-            project(middle)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(middle CXX)
             cmake_minimum_required(VERSION 3.1)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -686,26 +601,16 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             target_link_libraries(middle nonstd::nonstd)
             """)
         middle_h = gen_function_h(name="middle")
-        middle_cpp = textwrap.dedent("""
-            #include "middle.h"
-            #include "expected.h"
-            #include "variant.h"
-
-            int middle() {
-                expected();
-                variant();
-                return 0;
-            }
-            """)
+        middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
+                                      calls=["expected", "variant"])
         middle_conanfile = textwrap.dedent("""
-            import os
             from conans import ConanFile, CMake
 
             class Conan(ConanFile):
                 name = "middle"
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
-                generators = "cmake", "cmake_find_package_multi"
+                generators = "cmake", "{}"
                 exports_sources = "src/*"
                 requires = "expected/1.0", "variant/1.0"
 
@@ -721,7 +626,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
 
                 def package_info(self):
                     self.cpp_info.libs = ["middle"]
-            """)
+            """.format(generator))
         client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
                      "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
         client.run("create . middle/1.0@")
@@ -732,7 +637,7 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             class Conan(ConanFile):
                 name = "consumer"
                 version = "1.0"
-                generators = "cmake_find_package_multi", "cmake"
+                generators = "{}", "cmake"
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "src/*"
                 requires = "middle/1.0"
@@ -742,9 +647,11 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
                     cmake.configure(source_folder="src")
                     cmake.build()
                     self.run(os.path.join("bin", "main"))
-            """)
+            """.format(generator))
         cmakelists = textwrap.dedent("""
-            project(consumer)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
 
             include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -758,26 +665,13 @@ class CMakeGeneratorsWithComponentsTest(unittest.TestCase):
             add_executable(main main.cpp)
             target_link_libraries(main middle::middle)
             """)
-        main_cpp = textwrap.dedent("""
-            #include "middle.h"
-
-            int main() {
-                middle();
-            }
-            """)
+        main_cpp = gen_function_cpp(name="main", includes=["middle"], calls=["middle"])
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
         client.run("create . consumer/1.0@")
-        self.assertIn('Library middle found', client.out)
-        self.assertIn('Library expected found', client.out)
-        self.assertIn('Library variant found', client.out)
-        assert ("Middle link libraries: "
-                "$<$<CONFIG:Debug>:;>;"
-                "$<$<CONFIG:Release>:CONAN_LIB::middle_middle_RELEASE;nonstd::nonstd;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
-        self.assertIn('expected/1.0: Hello World Release!', client.out)
-        self.assertIn('variant/1.0: Hello World Release!', client.out)
+
+        assert 'main: Release!' in client.out
+        assert 'middle: Release!' in client.out
+        assert 'expected/1.0: Hello World Release!' in client.out
+        assert 'variant/1.0: Hello World Release!' in client.out
