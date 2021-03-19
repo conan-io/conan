@@ -386,22 +386,12 @@ def test_same_names(generator):
                 self.cpp_info.components["global"].name = "hello"
                 self.cpp_info.components["global"].libs = ["hello"]
         """)
-    hello_h = textwrap.dedent("""
-        #pragma once
-        void hello(std::string noun);
-        """)
+    hello_h = gen_function_h(name="hello")
+    hello_cpp = gen_function_cpp(name="hello", includes=["hello"])
 
-    hello_cpp = textwrap.dedent("""
-        #include <iostream>
-        #include <string>
-
-        #include "hello.h"
-
-        void hello(std::string noun) {
-            std::cout << "Hello " << noun << "!" << std::endl;
-        }
-        """)
     cmakelists_greetings = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(greetings CXX)
 
@@ -427,16 +417,11 @@ def test_same_names(generator):
                 os.chdir("bin")
                 self.run(".%sexample" % os.sep)
         """.format(generator))
-    test_package_greetings_cpp = textwrap.dedent("""
-        #include <string>
+    test_package_greetings_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
-        #include "hello.h"
-
-        int main() {
-            hello("Moon");
-        }
-        """)
     test_package_greetings_cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(PackageTest CXX)
 
@@ -456,7 +441,7 @@ def test_same_names(generator):
                  "test_package/example.cpp": test_package_greetings_cpp,
                  "test_package/CMakeLists.txt": test_package_greetings_cmakelists})
     client.run("create .")
-    assert "Hello Moon!" in client.out
+    assert "hello: Release!" in client.out
 
 
 @pytest.mark.tool_cmake
@@ -517,6 +502,8 @@ class TestComponentsCMakeGenerators:
                     cmake.configure()
         """.format(generator))
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
             project(Consumer CXX)
 
