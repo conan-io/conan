@@ -296,10 +296,6 @@ def _render_template(text, name, version, package_name):
 
 
 def _get_files_from_template_dir(template_dir, name, version, package_name):
-    if (not os.path.isfile(os.path.join(template_dir, "conanfile.py"))
-            and not os.path.isfile(os.path.join(template_dir, "conanfile.txt"))):
-        raise ConanException("Template is missing a recipe file: {}".format(template_dir))
-
     files = []
     for d, _, fs in os.walk(template_dir):
         for f in fs:

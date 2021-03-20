@@ -17,6 +17,8 @@ def test_cpp_info_name_cmakedeps():
                                    "compiler": ["gcc"],
                                    "build_type": ["Release"],
                                    "arch": ["x86"]}), EnvValues())
+    conanfile.settings.build_type = "Release"
+    conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
     cpp_info.names["cmake_find_package_multi"] = "MySuperPkg1"
@@ -26,6 +28,7 @@ def test_cpp_info_name_cmakedeps():
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
+    assert "set(MySuperPkg1_INCLUDE_DIRS_RELEASE )" in files["ComplexFileName1-release-x86-data.cmake"]
 
     with pytest.raises(ConanException,
                        match="'mypkg' defines information for 'cmake_find_package_multi'"):
@@ -38,8 +41,10 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
-                                   "build_type": ["Release"],
-                                   "arch": ["x86"]}), EnvValues())
+                                   "build_type": ["Release", "Debug"],
+                                   "arch": ["x86", "x64"]}), EnvValues())
+    conanfile.settings.build_type = "Debug"
+    conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
     cpp_info.names["cmake_find_package_multi"] = "GlobakPkgName1"
@@ -50,6 +55,8 @@ def test_cpp_info_name_cmakedeps_components():
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
+    assert "set(GlobakPkgName1_INCLUDE_DIRS_DEBUG )" in files["ComplexFileName1-debug-x64-data.cmake"]
+    assert "set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG )" in files["ComplexFileName1-debug-x64-data.cmake"]
 
     with pytest.raises(ConanException,
                        match="'mypkg' defines information for 'cmake_find_package_multi'"):
