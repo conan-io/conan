@@ -5,7 +5,6 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -205,19 +204,64 @@ def test_transitive_order():
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
 
-    client.run("create gcc gcc/1.0@")
-    client.run("create openssl openssl/1.0@ -s os=Windows")
-    client.run("create openssl openssl/1.0@ -s os=Linux")
-    client.run("create cmake cmake/1.0@")
+    client.run("export gcc gcc/1.0@")
+    client.run("export openssl openssl/1.0@")
+    client.run("export cmake cmake/1.0@")
 
-    client.save({"conanfile.py": GenConanfile().with_requires("openssl/1.0")
-                .with_build_requires("cmake/1.0")}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux -g VirtualEnv")
-    ext = "bat" if platform.system() == "Windows" else "sh"
-    buildenv = client.load("conanbuildenv.{}".format(ext))
-    assert "MyOpenSSLWindowsValue MyCMakeBuildValue" in buildenv
-    assert "MyGCCValue" not in buildenv
-    runenv = client.load("conanrunenv.{}".format(ext))
-    assert "MyOpenSSLLinuxValue" in runenv
-    assert "MyCMake" not in runenv
-    assert "MyGCCValue" not in runenv
+    consumer = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import VirtualEnv
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            build_requires = "cmake/1.0", "gcc/1.0"
+            def generate(self):
+                env = VirtualEnv(self)
+                buildenv = env.build_environment()
+                self.output.info("BUILDENV: {}!!!".format(buildenv.value("MYVAR")))
+                runenv = env.run_environment()
+                self.output.info("RUNENV: {}!!!".format(runenv.value("MYVAR")))
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
+    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyCMakeBuildValue!!!" in client.out
+    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+
+
+def test_buildenv_from_requires():
+    openssl = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            def package_info(self):
+                self.buildenv_info.append("OpenSSL_ROOT", "MyOpenSSL{}Value".format(self.settings.os))
+        """)
+    poco = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            settings = "os"
+            def package_info(self):
+                self.buildenv_info.append("Poco_ROOT", "MyPoco{}Value".format(self.settings.os))
+        """)
+    client = TestClient()
+    client.save({"poco/conanfile.py": poco,
+                 "openssl/conanfile.py": openssl})
+
+    client.run("export openssl openssl/1.0@")
+    client.run("export poco poco/1.0@")
+
+    consumer = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import VirtualEnv
+        class Pkg(ConanFile):
+            requires = "poco/1.0"
+            def generate(self):
+                env = VirtualEnv(self)
+                buildenv = env.build_environment()
+                self.output.info("BUILDENV POCO: {}!!!".format(buildenv.value("Poco_ROOT")))
+                self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.value("OpenSSL_ROOT")))
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
+    assert "BUILDENV POCO: Poco_ROOT MyPocoLinuxValue!!!" in client.out
+    assert "BUILDENV OpenSSL: OpenSSL_ROOT MyOpenSSLLinuxValue!!!" in client.out

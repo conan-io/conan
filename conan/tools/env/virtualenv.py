@@ -18,11 +18,24 @@ class VirtualEnv:
         of build_requires defining information for consumers
         """
         build_env = Environment()
+        # First visit the direct build_requires
         for build_require in self._conanfile.dependencies.build_requires:
             for require in build_require.dependencies.requires:
                 build_env.compose(self._collect_transitive_runenv(require))
             if build_require.buildenv_info:
                 build_env.compose(build_require.buildenv_info)
+
+        # Requires in host context can also bring some direct buildenv_info
+        def _collect_transitive_buildenv(d):
+            r = Environment()
+            for child in d.dependencies.requires:
+                r.compose(_collect_transitive_buildenv(child))
+            # Then the explicit self
+            if d.buildenv_info:
+                r.compose(d.buildenv_info)
+            return r
+        for require in self._conanfile.dependencies.requires:
+            build_env.compose(_collect_transitive_buildenv(require))
 
         # The profile environment has precedence, applied last
         profile_env = self._conanfile.buildenv
