@@ -28,7 +28,7 @@ class BasicBuildTest(unittest.TestCase):
             return  # If is using sun-cc the gcc generator doesn't work
 
         for cmd, lang, static, pure_c in [("build .", 0, True, True),
-                                          ("build . -o language=1 -o static=False -g txt", 1,
+                                          ("build . -o language=1 -o static=False", 1,
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=False, lang=lang)
 
