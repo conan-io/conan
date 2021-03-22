@@ -501,6 +501,77 @@ class DefaultNameConan(ConanFile):
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.out)
 
+    def test_install_profile_absolute_path(self):
+        """ It does not matter where you are, if profile is an absolute path,
+            Conan MUST use it instead of default profile with same name.
+
+            conan install foo/0.1.0@user/testing -pr /tmp/profiles/default
+        """
+        project_folder = os.path.join(self.client.current_folder, "subfolder", "project")
+        extra_profiles_folder = os.path.join(self.client.current_folder, "subfolder", "profiles")
+        tools.mkdir(extra_profiles_folder)
+        tools.mkdir(project_folder)
+
+        files = cpp_hello_conan_files("foobar", "0.1.0", build=False)
+        self.client.save(files, project_folder)
+
+        profile_name = "baz"
+        create_profile(self.client.cache.profiles_path, profile_name, settings={}, env=[("SWORD", "ATLANTEAN")])
+        create_profile(extra_profiles_folder, profile_name, settings={}, env=[("BARBARIAN", "CONAN")])
+        expected_profile_path = os.path.abspath(os.path.join(extra_profiles_folder, profile_name))
+
+        with self.client.chdir("subfolder"):
+            self.client.run("create project user/testing -pr '{}'".format(expected_profile_path))
+        assert "BARBARIAN=CONAN" in self.client.out
+        assert "WORD=ATLANTEAN" not in self.client.out
+
+    def test_install_profile_relative_dot_current_folder(self):
+        """ It does not matter where you are, if profile is an relative path one level below,
+            Conan MUST use it instead of default profile with same name.
+
+            conan install foo/0.1.0@user/testing -pr ./profiles/default
+        """
+        project_folder = os.path.join(self.client.current_folder, "subfolder", "project")
+        extra_profiles_folder = os.path.join(self.client.current_folder, "subfolder", "profiles")
+        tools.mkdir(extra_profiles_folder)
+        tools.mkdir(project_folder)
+
+        files = cpp_hello_conan_files("foobar", "0.1.0", build=False)
+        self.client.save(files, project_folder)
+
+        profile_name = "baz"
+        create_profile(self.client.cache.profiles_path, profile_name, settings={}, env=[("SWORD", "ATLANTEAN")])
+        create_profile(extra_profiles_folder, profile_name, settings={}, env=[("BARBARIAN", "CONAN")])
+        expected_profile_path = "." + os.path.join(os.sep, "profiles", profile_name)
+
+        with self.client.chdir("subfolder"):
+            self.client.run("create project user/testing -pr '{}'".format(expected_profile_path))
+        assert "BARBARIAN=CONAN" in self.client.out
+        assert "WORD=ATLANTEAN" not in self.client.out
+
+    def test_install_profile_relative_dot_dot_current_folder(self):
+        """ It does not matter where you are, if profile is an relative path at same level,
+            Conan MUST use it instead of default profile with same name.
+
+            conan install foo/0.1.0@user/testing -pr ../profiles/default
+        """
+        project_folder = os.path.join(self.client.current_folder, "subfolder", "project")
+        extra_profiles_folder = os.path.join(self.client.current_folder, "subfolder", "profiles")
+        tools.mkdir(extra_profiles_folder)
+        tools.mkdir(project_folder)
+
+        files = cpp_hello_conan_files("foobar", "0.1.0", build=False)
+        self.client.save(files, project_folder)
+
+        profile_name = "baz"
+        create_profile(self.client.cache.profiles_path, profile_name, settings={}, env=[("SWORD", "ATLANTEAN")])
+        create_profile(extra_profiles_folder, profile_name, settings={}, env=[("BARBARIAN", "CONAN")])
+        expected_profile_path = ".." + os.path.join(os.sep, "profiles", profile_name)
+
+        with self.client.chdir(project_folder):
+            self.client.run("create . user/testing -pr '{}'".format(expected_profile_path))
+        assert "BARBARIAN=CONAN" in self.client.out
+        assert "WORD=ATLANTEAN" not in self.client.out
 
 class ProfileAggregationTest(unittest.TestCase):
 
