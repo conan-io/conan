@@ -164,13 +164,14 @@ class MSBuildDeps(object):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
-        exclude_code_analisys = False
-        if self.exclude_code_analysis:
-            for pattern in self.exclude_code_analysis:
-                if fnmatch.fnmatch(name, pattern):
-                    exclude_code_analisys = True
-                    break
-
+        exclude_code_analysis = False
+        if isinstance(self.exclude_code_analysis, list):
+              for pattern in self.exclude_code_analysis :
+                  if fnmatch.fnmatch(name, pattern):
+                      exclude_code_analysis = True
+                      break
+        else:
+             exclude_code_analysis = self.exclude_code_analysis
         fields = {
             'name': name,
             'root_folder': cpp_info.rootpath,
