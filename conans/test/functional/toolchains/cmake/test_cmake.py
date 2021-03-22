@@ -546,6 +546,7 @@ class TestMinGW:
     main_cpp = gen_function_cpp(name="main")
 
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.16")
     def test_mingw64(self):
         profile = textwrap.dedent("""
             [settings]
