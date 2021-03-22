@@ -89,13 +89,9 @@ class MSBuildDeps(object):
         # TODO: This is duplicated in write_generators() function, would need to be moved
         # to generators and called from there
         exclude_code_analysis = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
-        if exclude_code_analysis:
-            if isinstance(exclude_code_analysis, str):
-                self.exclude_code_analysis = exclude_code_analysis.split(";")
-        if self.exclude_code_analysis in [["True"], True]:
-            self.exclude_code_analysis = ["*"]
-        elif self.exclude_code_analysis in [["False"], False]:
-            self.exclude_code_analysis = None
+        if exclude_code_analysis is not None:
+                self.exclude_code_analysis = eval(exclude_code_analysis)
+                assert isinstance(self.exclude_code_analysis, (bool, list))
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:
