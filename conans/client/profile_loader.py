@@ -90,7 +90,9 @@ def get_profile_path(profile_name, default_folder, cwd, exists=True):
     if os.path.isabs(profile_name):
         return valid_path(profile_name)
 
-    if profile_name[:2] in ("./", ".\\"):  # local
+    # relative local profile path
+    if profile_name[:2] in ("./", ".\\") or \
+       profile_name[:3] in ("../", "..\\"):
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
         return valid_path(profile_path)
 
