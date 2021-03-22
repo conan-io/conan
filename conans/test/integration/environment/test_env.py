@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
@@ -173,3 +174,50 @@ def test_profile_buildenv():
     client.run_command(cmd)
     assert "MYCOMPILER2!!" in client.out
     assert "MYPATH2=" in client.out
+
+
+def test_transitive_order():
+    gcc = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyGCCValue")
+        """)
+    openssl = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            build_requires = "gcc/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
+        """)
+    cmake = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            build_requires = "gcc/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyCMakeRunValue")
+                self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
+        """)
+    client = TestClient()
+    client.save({"gcc/conanfile.py": gcc,
+                 "cmake/conanfile.py": cmake,
+                 "openssl/conanfile.py": openssl})
+
+    client.run("create gcc gcc/1.0@")
+    client.run("create openssl openssl/1.0@ -s os=Windows")
+    client.run("create openssl openssl/1.0@ -s os=Linux")
+    client.run("create cmake cmake/1.0@")
+
+    client.save({"conanfile.py": GenConanfile().with_requires("openssl/1.0")
+                .with_build_requires("cmake/1.0")}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:h os=Linux -g VirtualEnv")
+    ext = "bat" if platform.system() == "Windows" else "sh"
+    buildenv = client.load("conanbuildenv.{}".format(ext))
+    assert "MyOpenSSLWindowsValue MyCMakeBuildValue" in buildenv
+    assert "MyGCCValue" not in buildenv
+    runenv = client.load("conanrunenv.{}".format(ext))
+    assert "MyOpenSSLLinuxValue" in runenv
+    assert "MyCMake" not in runenv
+    assert "MyGCCValue" not in runenv
