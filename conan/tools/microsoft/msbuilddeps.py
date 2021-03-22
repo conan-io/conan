@@ -184,7 +184,7 @@ class MSBuildDeps(object):
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
-            'ca_exclude_dirs': '$(Conan%sIncludeDirectories)' % name if exclude_code_analisys else ''
+            'ca_exclude_dirs': '$(Conan{}IncludeDirectories)'.format(name) if exclude_code_analysis else ''
         }
         formatted_template = self._vars_conf_props.format(**fields)
         return formatted_template
