@@ -5,6 +5,8 @@ import unittest
 
 import pytest
 
+from parameterized import parameterized
+
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
@@ -607,3 +609,50 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertIn("conan_tool.props", deps)
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
+
+
+    @parameterized.expand([("True", True, True),
+                           ("*", True, True),
+                           ("pkga", True, False),
+                           ("pkgb", False, True),
+                           ("pkg*", True, True),
+                           ("pkga;pkgb", True, True),
+                           ("*a;*b", True, True),
+                           ("False", False, False),
+                           ])
+    def test_exclude_code_analysis(self, pattern, exclude_a, exclude_b):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkga/1.0@")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . pkgb/1.0@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, MSBuild
+            class HelloConan(ConanFile):
+                settings = "os", "build_type", "compiler", "arch"
+                requires = "pkgb/1.0@", "pkga/1.0"
+                generators = "msbuild"
+                def build(self):
+                    msbuild = MSBuild(self)
+                    msbuild.build("MyProject.sln")
+            """)
+        profile = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.microsoft.msbuilddeps:exclude_code_analysis = %s
+            """ % pattern)
+
+        client.save({"conanfile.py": conanfile,
+                     "profile": profile})
+        client.run("install . --profile profile")
+        depa = client.load("conan_pkga_release_x64.props")
+        depb = client.load("conan_pkgb_release_x64.props")
+
+        pattern = "$(ConanpkgaIncludeDirectories)" if exclude_a else ""
+        pattern = "<ConanpkgaCAExcludeDirectories>%s</ConanpkgaCAExcludeDirectories>" % pattern
+        self.assertIn(pattern, depa)
+
+        pattern = "$(ConanpkgbIncludeDirectories)" if exclude_b else ""
+        pattern = "<ConanpkgbCAExcludeDirectories>%s</ConanpkgbCAExcludeDirectories>" % pattern
+        self.assertIn(pattern, depb)

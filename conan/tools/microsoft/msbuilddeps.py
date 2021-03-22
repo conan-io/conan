@@ -1,3 +1,4 @@
+import fnmatch
 import os
 import textwrap
 from xml.dom import minidom
@@ -25,6 +26,7 @@ class MSBuildDeps(object):
             <Conan{name}BinaryDirectories>{bin_dirs}</Conan{name}BinaryDirectories>
             <Conan{name}Libraries>{libs}</Conan{name}Libraries>
             <Conan{name}SystemDeps>{system_libs}</Conan{name}SystemDeps>
+            <Conan{name}CAExcludeDirectories>{ca_exclude_dirs}</Conan{name}CAExcludeDirectories>
           </PropertyGroup>
         </Project>
         """)
@@ -42,6 +44,7 @@ class MSBuildDeps(object):
           <PropertyGroup>
             <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+            <CAExcludePath>$(Conan{name}CAExcludeDirectories);$(CAExcludePath)</CAExcludePath>
           </PropertyGroup>
           <ItemDefinitionGroup>
             <ClCompile>
@@ -74,6 +77,7 @@ class MSBuildDeps(object):
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # TODO: this is ugly, improve this
         self.output_path = os.getcwd()
+        self.exclude_code_analysis = None
 
     def generate(self):
         # TODO: Apply config from command line, something like
@@ -84,6 +88,14 @@ class MSBuildDeps(object):
         # config_filename
         # TODO: This is duplicated in write_generators() function, would need to be moved
         # to generators and called from there
+        exclude_code_analysis = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
+        if exclude_code_analysis:
+            if isinstance(exclude_code_analysis, str):
+                self.exclude_code_analysis = exclude_code_analysis.split(";")
+        if self.exclude_code_analysis in [["True"], True]:
+            self.exclude_code_analysis = ["*"]
+        elif self.exclude_code_analysis in [["False"], False]:
+            self.exclude_code_analysis = None
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:
@@ -152,6 +164,13 @@ class MSBuildDeps(object):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
+        exclude_code_analisys = False
+        if self.exclude_code_analysis:
+            for pattern in self.exclude_code_analysis:
+                if fnmatch.fnmatch(name, pattern):
+                    exclude_code_analisys = True
+                    break
+
         fields = {
             'name': name,
             'root_folder': cpp_info.rootpath,
@@ -164,7 +183,8 @@ class MSBuildDeps(object):
             'definitions': "".join("%s;" % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
-            'exe_flags': " ".join(cpp_info.exelinkflags)
+            'exe_flags': " ".join(cpp_info.exelinkflags),
+            'ca_exclude_dirs': '$(Conan%sIncludeDirectories)' % name if exclude_code_analisys else ''
         }
         formatted_template = self._vars_conf_props.format(**fields)
         return formatted_template
