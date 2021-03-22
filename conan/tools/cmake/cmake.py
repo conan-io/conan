@@ -11,6 +11,7 @@ from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
+from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 
 
@@ -133,7 +134,7 @@ class CMake(object):
         self._build(build_type=build_type, target="install")
 
     def test(self, build_type=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test:
+        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
             return
         if not target:
             target = "RUN_TESTS" if self._is_multiconfiguration else "test"
