@@ -1,6 +1,7 @@
 import mock
 import unittest
 
+from mock import Mock
 from parameterized import parameterized
 
 from conans.client import tools
@@ -12,7 +13,7 @@ from conans.test.utils.mocks import TestBufferConanOutput
 class DetectTest(unittest.TestCase):
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
-        result = detect_defaults_settings(output=TestBufferConanOutput(),
+        result = detect_defaults_settings(output=Mock(),
                                           profile_path=DEFAULT_PROFILE_NAME)
         result = dict(result)
         self.assertTrue("arch" not in result)
@@ -61,7 +62,7 @@ class DetectTest(unittest.TestCase):
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
                 mock.patch("conans.client.tools.oss.OSInfo.get_aix_conf", mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
-            result = detect_defaults_settings(output=TestBufferConanOutput(),
+            result = detect_defaults_settings(output=Mock(),
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual("AIX", result['os'])
@@ -80,7 +81,7 @@ class DetectTest(unittest.TestCase):
     ])
     def test_detect_arch(self, machine, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
-            result = detect_defaults_settings(output=TestBufferConanOutput(),
+            result = detect_defaults_settings(output=Mock(),
                                               profile_path=DEFAULT_PROFILE_NAME)
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])

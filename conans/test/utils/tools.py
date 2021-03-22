@@ -479,7 +479,7 @@ _copy_cache_folder.master = dict()  # temp_folder(create_dir=False)
 def redirect_output(target):
     original_stdout = sys.stdout
     original_stderr = sys.stderr
-    #TODO: change in 2.0
+    # TODO: change in 2.0
     # redirecting both of them to the same target for the moment
     # to assign to Testclient out
     sys.stdout = target
@@ -614,7 +614,7 @@ class TestClient(object):
         if cpu_count:
             replace_in_file(cache.conan_conf_path,
                             "# cpu_count = 1", "cpu_count = %s" % cpu_count,
-                            output=TestBufferConanOutput(), strict=not bool(cache_folder))
+                            output=Mock(), strict=not bool(cache_folder))
 
         if revisions_enabled is not None:
             self._set_revisions(revisions_enabled)

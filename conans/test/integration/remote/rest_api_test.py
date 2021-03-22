@@ -76,7 +76,7 @@ class RestApiTest(unittest.TestCase):
                 save(filename, "")
                 config = ConanClientConfigParser(filename)
                 requester = ConanRequester(config, requests)
-                client_factory = RestApiClientFactory(TestBufferConanOutput(), requester=requester,
+                client_factory = RestApiClientFactory(Mock(), requester=requester,
                                                       config=config)
                 localdb = LocalDBMock()
 
