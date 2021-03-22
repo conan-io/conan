@@ -42,22 +42,13 @@ class DiamondTest(unittest.TestCase):
         self.assertIn("INCLUDE [", self.client.out)
         output = str(self.client.out)
         self.assertIn("/data/Hello0/0.1/lasote/stable", output.replace("\\", "/"))
-        build_file = os.path.join(self.client.current_folder, BUILD_INFO)
-        content = load(build_file)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))
         self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
                       cmakebuildinfo)
         self.assertIn("set(CONAN_DEPENDENCIES Hello3 Hello1 Hello2 Hello0)", cmakebuildinfo)
-        deps_cpp_info, _, _, _ = TXTGenerator.loads(content)
-        self.assertEqual(len(deps_cpp_info.include_paths), 4)
-        for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):
-            self.assertEqual(len(deps_cpp_info[dep].include_paths), 1)
-            self.assertEqual(len(deps_cpp_info[dep].lib_paths), 1)
-            self.assertEqual(deps_cpp_info[dep].libs, ["hello%s" % dep])
         build_file = os.path.join(self.client.current_folder, BUILD_INFO_CMAKE)
         content = load(build_file)
         for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):
-            self.assertEqual(len(deps_cpp_info[dep].include_paths), 1)
             self.assertIn("set(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
             self.assertIn("set(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
 
@@ -81,7 +72,6 @@ class DiamondTest(unittest.TestCase):
         # Add some stuff to base project conanfile to test further the individual
         # flags in build_info (txt, cmake) files
         content = files3[CONANFILE]
-        content = content.replace("generators =", 'generators = "txt",')
         content = content.replace("def build(self):",
                                   "def build(self):\n"
                                   "        self.output.info('INCLUDE %s' "
@@ -120,7 +110,6 @@ class DiamondTest(unittest.TestCase):
         # Reuse in another client
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                              path_with_spaces=use_cmake)
-        files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
         client2.run("build .")
 

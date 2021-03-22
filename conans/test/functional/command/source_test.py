@@ -188,8 +188,7 @@ class ConanLib(ConanFile):
 '''
         # First, failing source()
         client = TestClient()
-        client.save({CONANFILE: conanfile,
-                     BUILD_INFO: ""})
+        client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
         self.assertIn("conanfile.py: Running source!", client.out)
