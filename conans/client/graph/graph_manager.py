@@ -1,5 +1,4 @@
 import fnmatch
-import os
 from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
@@ -10,9 +9,7 @@ from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, 
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
-from conans.model.graph_lock import GraphLock
 from conans.model.ref import ConanFileReference
-from conans.util.files import load
 
 
 class _RecipeBuildRequires(OrderedDict):
