@@ -157,7 +157,8 @@ class EnvValues(object):
         own_pairs = None
         str_ref = str(ConanFileReference(package_name, version, user, channel, validate=False))
         for pattern, v in self._data.items():
-            if pattern is not None and package_name == pattern or fnmatch.fnmatch(str_ref, pattern):
+            if pattern is not None and (package_name == pattern or fnmatch.fnmatch(str_ref,
+                                                                                   pattern)):
                 own_pairs = v
                 break
 
