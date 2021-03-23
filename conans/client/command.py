@@ -894,10 +894,6 @@ class Command(object):
     def imports(self, *args):
         """
         Calls your local conanfile.py or conanfile.txt 'imports' method.
-
-        It requires to have been previously installed and have a
-        conanbuildinfo.txt generated file in the --install-folder (defaulted to
-        the current directory).
         """
 
         parser = argparse.ArgumentParser(description=self.imports.__doc__,
