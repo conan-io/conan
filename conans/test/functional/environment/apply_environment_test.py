@@ -890,9 +890,18 @@ def test_env_per_package_patterns():
         """)
     profile = textwrap.dedent("""
         [env]
-        *user*:MYVAR=MyValue
+        *myuser*:MYVAR=MyValue
+        other:MYVAR=OtherValue
+        */mychannel:MYVAR=MyChannelValue
+        *:MYVAR=MyAllValue
         """)
     client.save({"conanfile.py": conanfile,
                  "profile": profile})
     client.run("create . pkg/0.1@myuser/channel -pr=profile")
     assert "pkg/0.1@myuser/channel: MYENV: MyValue!!!" in client.out
+    client.run("create . pkg/0.1@ -pr=profile")
+    assert "pkg/0.1: MYENV: MyAllValue!!!" in client.out
+    client.run("create . other/0.1@ -pr=profile")
+    assert "other/0.1: MYENV: OtherValue!!!" in client.out
+    client.run("create . pkg/0.1@user/mychannel -pr=profile")
+    assert "pkg/0.1@user/mychannel: MYENV: MyChannelValue!!!" in client.out
