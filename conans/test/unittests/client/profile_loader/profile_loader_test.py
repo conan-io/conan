@@ -342,7 +342,7 @@ def test_profile_dir():
     assert_path(profile)
 
 
-def test_include_order():
+def test_profile_include_order():
     tmp = temp_folder()
 
     save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
@@ -360,3 +360,76 @@ def test_include_order():
                          "PROFILE_DIR": tmp.replace('\\', '/')}
     assert profile.settings["os"] == "fromProfile2"
 
+
+def test_profile_load_absolute_path():
+    profile_name = "default"
+    default_profile_folder = temp_folder()
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+    current_profile_folder = temp_folder()
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(current_profile_path, current_profile_folder,
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder == variables["PROFILE_DIR"]
+
+
+def test_profile_load_relative_path_dot():
+    profile_name = "default"
+    default_profile_folder = temp_folder()
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+    current_profile_folder = temp_folder()
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+    relative_current_profile_path = "." + os.path.join(os.sep,
+                                                       os.path.basename(current_profile_folder),
+                                                       profile_name)
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(relative_current_profile_path,
+                                      os.path.dirname(current_profile_folder),
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder == variables["PROFILE_DIR"]
+
+
+def test_profile_load_relative_path_pardir():
+    profile_name = "default"
+    default_profile_folder = temp_folder()
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+
+    current_temp_folder = temp_folder()
+    current_profile_folder = os.path.join(current_temp_folder, "profiles")
+    current_running_folder = os.path.join(current_temp_folder, "current")
+    os.mkdir(current_profile_folder)
+    os.mkdir(current_running_folder)
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+    relative_current_profile_path = os.pardir + os.path.join(os.sep, "profiles", profile_name)
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(relative_current_profile_path,
+                                      current_running_folder,
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder == variables["PROFILE_DIR"]
