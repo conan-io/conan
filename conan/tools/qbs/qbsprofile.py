@@ -88,6 +88,7 @@ _runtime_library = {
     'MTd': 'static',
 }
 
+
 def _bool(b):
     return None if b is None else str(b).lower()
 
@@ -296,8 +297,8 @@ class QbsProfile(object):
             'sysroot': self._sysroot,
             'position_independent_code': self._position_independent_code,
             'cxx_language_version': self._cxx_language_version,
-            'target_platform': self._target_platform
-            'runtime_library': self._runtime_library
+            'target_platform': self._target_platform,
+            'runtime_library': self._runtime_library,
         }
         t = Template(self._template_toolchain)
         content = t.render(**context)
