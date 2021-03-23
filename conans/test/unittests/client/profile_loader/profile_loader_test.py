@@ -362,6 +362,12 @@ def test_profile_include_order():
 
 
 def test_profile_load_absolute_path():
+    """ When passing absolute path as profile file, it MUST be used.
+
+        read_profile(/abs/path/profile, /abs, /.conan/profiles)
+
+        /abs/path/profile MUST be consumed as target profile
+    """
     profile_name = "default"
     default_profile_folder = temp_folder()
     default_profile_path = os.path.join(default_profile_folder, profile_name)
@@ -383,6 +389,12 @@ def test_profile_load_absolute_path():
 
 
 def test_profile_load_relative_path_dot():
+    """ When passing relative ./path as profile file, it MUST be used
+
+        read_profile(./profiles/profile, /tmp, /.conan/profiles)
+
+        /tmp/profiles/profile MUST be consumed as target profile
+    """
     profile_name = "default"
     default_profile_folder = temp_folder()
     default_profile_path = os.path.join(default_profile_folder, profile_name)
@@ -408,6 +420,12 @@ def test_profile_load_relative_path_dot():
 
 
 def test_profile_load_relative_path_pardir():
+    """ When passing relative ../path as profile file, it MUST be used
+
+        read_profile(../profiles/profile, /tmp/current, /.conan/profiles)
+
+        /tmp/profiles/profile MUST be consumed as target profile
+    """
     profile_name = "default"
     default_profile_folder = temp_folder()
     default_profile_path = os.path.join(default_profile_folder, profile_name)
