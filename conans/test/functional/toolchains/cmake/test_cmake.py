@@ -272,6 +272,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -287,6 +288,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
@@ -528,51 +530,3 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows MinGW")
-class TestMinGW:
-    conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.cmake import CMake, CMakeToolchain
-            class App(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
-                generators = "cmake_find_package_multi"
-                exports_sources = "CMakeLists.txt", "main.cpp"
-
-                def generate(self):
-                    tc = CMakeToolchain(self)
-                    tc.generate()
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                    cmake.build()
-            """)
-    cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 2.8)
-        project(app)
-        add_executable(app main.cpp)
-        """)
-    main_cpp = gen_function_cpp(name="main")
-
-    @pytest.mark.tool_mingw64
-    @pytest.mark.tool_cmake(version="3.15")
-    def test_mingw64(self):
-        profile = textwrap.dedent("""
-            [settings]
-            os=Windows
-            arch=x86_64
-            build_type=Release
-            compiler=gcc
-            compiler.version=4.9
-            compiler.libcxx=libstdc++
-            compiler.cppstd=98
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": self.conanfile, "CMakeLists.txt": self.cmakelists,
-                     "main.cpp": self.main_cpp, "profile": profile})
-        client.run_command("cmake --version")
-        assert "cmake version 3.15" in client.out
-        client.run_command('cmake . -G "MinGW Makefiles" -DCMAKE_SH=CMAKE_SH-NOTFOUND')
-        # client.run("create . test/1.0@ --profile profile")

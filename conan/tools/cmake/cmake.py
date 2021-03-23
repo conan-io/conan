@@ -79,10 +79,12 @@ class CMake(object):
             self._conanfile.package_folder.replace("\\", "/"),
             source)
 
+        if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
+            arg_list += ' -DCMAKE_SH="CMAKE_SH-NOTFOUND"'
+
         generator = '-G "{}" '.format(self._generator) if self._generator else ""
         command = "%s %s%s" % (self._cmake_program, generator, arg_list)
 
-        is_windows_mingw = platform.system() == "Windows" and self._generator == "MinGW Makefiles"
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
             self._conanfile.run(command)
