@@ -489,7 +489,7 @@ class ConanAPIV1(object):
                                                        graph_info.profile_build, graph_info.graph_lock,
                                                        graph_info.root_ref, build, False, update,
                                                        remotes, recorder)
-
+        graph_lock = graph_info.graph_lock or GraphLock(deps_graph)
         print_graph(deps_graph, self.app.out)
 
         # Inject the generators before installing
@@ -503,7 +503,7 @@ class ConanAPIV1(object):
 
         installer = BinaryInstaller(self.app, recorder=recorder)
         installer.install(deps_graph, remotes, build, update, graph_info.profile_host,
-                          graph_info.profile_build, graph_lock=graph_info.graph_lock,
+                          graph_info.profile_build, graph_lock=graph_lock,
                           keep_build=False)
 
         install_folder = install_folder or cwd
