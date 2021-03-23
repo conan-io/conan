@@ -107,12 +107,10 @@ class MyPackage(ConanFile):
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install Hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try to do it again, now we have the package, so no build is done
         client.run("install Hello0/1.0@lasote/stable")
         self.assertNotIn("Building", client.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
         client.run("upload Hello0/1.0@lasote/stable --all")
@@ -128,14 +126,12 @@ class MyPackage(ConanFile):
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
         self.assertIn("Building", client.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try to do it again, now we have the package, but we build again
         client.run("install Hello0/1.0@lasote/stable")
         self.assertIn("Building", client.out)
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.out)
-        self.assertNotIn("Generator txt created conanbuildinfo.txt", client.out)
 
         # Try now to upload all packages, should crash because of the "always" build policy
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)

@@ -176,7 +176,6 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
         self.assertIn('Hello Hello0', client.out)
 
-        self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.out)
         self.assertNotIn("WARN: conanenv.txt file not found", client.out)
         self.assertIn('Hello Hello0', client.out)
         client.run("test test_package Hello0/0.1@lasote/stable -s Hello0:build_type=Debug "
