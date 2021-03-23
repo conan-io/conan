@@ -482,8 +482,10 @@ class ConanAPIV1(object):
         self.app.cache.editable_packages.override(workspace.get_editable_dict())
 
         recorder = ActionRecorder()
-        deps_graph = self.app.graph_manager.load_graph(workspace.root, None, graph_info, build,
-                                                       False, update, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(workspace.root, None, graph_info.profile_host,
+                                                       graph_info.profile_build, graph_info.graph_lock,
+                                                       graph_info.root_ref, build, False, update,
+                                                       remotes, recorder)
 
         print_graph(deps_graph, self.app.out)
 
@@ -669,7 +671,9 @@ class ConanAPIV1(object):
                                                 version=version, user=user, channel=channel)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, ["missing"],
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info.profile_host,
+                                                       graph_info.profile_build, graph_info.graph_lock,
+                                                       graph_info.root_ref, ["missing"],
                                                        check_updates, False, remotes, recorder)
         return deps_graph.build_order(build_order)
 
@@ -683,8 +687,10 @@ class ConanAPIV1(object):
                                                 version=version, user=user, channel=channel)
         recorder = ActionRecorder()
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build_modes,
-                                                       check_updates, False, remotes, recorder)
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info.profile_host,
+                                                       graph_info.profile_build, graph_info.graph_lock,
+                                                       graph_info.root_ref, build_modes, check_updates,
+                                                       False, remotes, recorder)
         nodes_to_build = deps_graph.nodes_to_build()
         return nodes_to_build, deps_graph.root.conanfile
 
@@ -700,7 +706,9 @@ class ConanAPIV1(object):
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info, build,
+        deps_graph = self.app.graph_manager.load_graph(reference, None, graph_info.profile_host,
+                                                       graph_info.profile_build, graph_info.graph_lock,
+                                                       graph_info.root_ref, build,
                                                        update, False, remotes, recorder)
         return deps_graph, deps_graph.root.conanfile
 
