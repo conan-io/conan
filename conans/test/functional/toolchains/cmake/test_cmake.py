@@ -272,6 +272,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -287,6 +288,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
