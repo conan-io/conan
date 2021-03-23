@@ -368,9 +368,10 @@ class ConanAPIV1(object):
                 build_modes = [ref.name]
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
-            graph_info.root = ConanFileReference(None, None, None, None, validate=False)
+            root_ref = ConanFileReference(None, None, None, None, validate=False)
             recorder.add_recipe_being_developed(ref)
-            create(self.app, ref, graph_info, remotes, update, build_modes, keep_build,
+            create(self.app, ref, graph_info.profile_host, graph_info.profile_build,
+                   graph_info.graph_lock, root_ref, remotes, update, build_modes, keep_build,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder)
 
             if lockfile_out:
@@ -529,9 +530,10 @@ class ConanAPIV1(object):
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                         remotes=remotes, graph_info=graph_info, build_modes=build,
-                         update=update, generators=generators, recorder=recorder,
-                         lockfile_node_id=lockfile_node_id)
+                         remotes=remotes, profile_host=graph_info.profile_host,
+                         profile_build=graph_info.profile_build, graph_lock=graph_info.graph_lock,
+                         root_ref=graph_info.root_ref, build_modes=build, update=update,
+                         generators=generators, recorder=recorder, lockfile_node_id=lockfile_node_id)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -569,7 +571,10 @@ class ConanAPIV1(object):
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
                          remotes=remotes,
-                         graph_info=graph_info,
+                         profile_host=graph_info.profile_host,
+                         profile_build=graph_info.profile_build,
+                         graph_lock=graph_info.graph_lock,
+                         root_ref=graph_info.root_ref,
                          build_modes=build,
                          update=update,
                          generators=generators,
@@ -747,7 +752,10 @@ class ConanAPIV1(object):
                                      ref_or_path=conanfile_path,
                                      install_folder=install_folder,
                                      remotes=remotes,
-                                     graph_info=graph_info,
+                                     profile_host=graph_info.profile_host,
+                                     profile_build=graph_info.profile_build,
+                                     graph_lock=graph_info.graph_lock,
+                                     root_ref=graph_info.root_ref,
                                      build_modes=build,
                                      update=update,
                                      generators=generators,
@@ -1445,7 +1453,7 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
-    profile_host.conf.rebase_conf_definition(cache.new_config)
-    if profile_build is not None:
-        profile_build.conf.rebase_conf_definition(cache.new_config)
+    phost.conf.rebase_conf_definition(cache.new_config)
+    if pbuild is not None:
+        pbuild.conf.rebase_conf_definition(cache.new_config)
     return GraphInfo(phost, pbuild, None, root_ref)
