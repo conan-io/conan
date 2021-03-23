@@ -456,7 +456,7 @@ class Command(object):
                             help='Generators to use')
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
-                                 'files. e.g., conaninfo/conanbuildinfo.txt')
+                                 'files.')
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
@@ -833,7 +833,7 @@ class Command(object):
 
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
-                                 'files. e.g., conaninfo/conanbuildinfo.txt')
+                                 'files.')
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
@@ -894,10 +894,6 @@ class Command(object):
     def imports(self, *args):
         """
         Calls your local conanfile.py or conanfile.txt 'imports' method.
-
-        It requires to have been previously installed and have a
-        conanbuildinfo.txt generated file in the --install-folder (defaulted to
-        the current directory).
         """
 
         parser = argparse.ArgumentParser(description=self.imports.__doc__,

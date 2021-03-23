@@ -59,7 +59,7 @@ from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.model.workspace import Workspace
-from conans.paths import BUILD_INFO, CONANINFO, get_conan_user_home
+from conans.paths import CONANINFO, get_conan_user_home
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
@@ -784,17 +784,15 @@ class ConanAPIV1(object):
         config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
     @api_method
-    def imports(self, conanfile_path, dest=None, info_folder=None, cwd=None, settings=None,
+    def imports(self, conanfile_path, dest=None, cwd=None, settings=None,
                 options=None, env=None, profile_names=None, profile_build=None, lockfile=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
-        :param info_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
         :param cwd: Current working directory
         :return: None
         """
         cwd = cwd or os.getcwd()
-        info_folder = _make_abs_path(info_folder, cwd)
         dest = _make_abs_path(dest, cwd)
         mkdir(dest)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
@@ -808,7 +806,7 @@ class ConanAPIV1(object):
             remotes = self.app.load_remotes(remote_name=None, update=False)
             deps_info = deps_install(app=self.app,
                                      ref_or_path=conanfile_path,
-                                     install_folder=info_folder,
+                                     install_folder=None,
                                      graph_info=graph_info,
                                      recorder=recorder,
                                      remotes=remotes)
@@ -1448,8 +1446,3 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     if graph_info.profile_build is not None:
         graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
     return graph_info
-
-
-def existing_info_files(folder):
-    return os.path.exists(os.path.join(folder, CONANINFO)) and  \
-           os.path.exists(os.path.join(folder, BUILD_INFO))

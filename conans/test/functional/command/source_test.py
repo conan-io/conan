@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from conans.paths import BUILD_INFO, CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import mkdir
 
@@ -188,8 +188,7 @@ class ConanLib(ConanFile):
 '''
         # First, failing source()
         client = TestClient()
-        client.save({CONANFILE: conanfile,
-                     BUILD_INFO: ""})
+        client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
         self.assertIn("conanfile.py: Running source!", client.out)

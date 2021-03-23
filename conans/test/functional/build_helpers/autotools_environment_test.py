@@ -85,7 +85,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     autot.configure(%s)
             """)
 
-        client.save({CONANFILE: conanfile % ("'txt'", "")})
+        client.save({CONANFILE: conanfile % ("'cmake'", "")})
         client.run("create . conan/testing")
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 

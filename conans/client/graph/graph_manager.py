@@ -3,7 +3,6 @@ import os
 from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
@@ -11,10 +10,8 @@ from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, 
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
-from conans.model.graph_info import GraphInfo
-from conans.model.graph_lock import GraphLock, GraphLockFile
+from conans.model.graph_lock import GraphLock
 from conans.model.ref import ConanFileReference
-from conans.paths import BUILD_INFO
 from conans.util.files import load
 
 
@@ -363,36 +360,3 @@ class GraphManager(object):
                     nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
                     msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
                 raise ConanException('\n'.join(msg_lines))
-
-
-def load_deps_info(current_path, conanfile, required):
-    def get_forbidden_access_object(field_name):
-        class InfoObjectNotDefined(object):
-            def __getitem__(self, item):
-                raise ConanException("self.%s not defined. If you need it for a "
-                                     "local command run 'conan install'" % field_name)
-
-            __getattr__ = __getitem__
-
-        return InfoObjectNotDefined()
-
-    if not current_path:
-        return
-    info_file_path = os.path.join(current_path, BUILD_INFO)
-    try:
-        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
-            TXTGenerator.loads(load(info_file_path), filter_empty=True)
-        conanfile.deps_cpp_info = deps_cpp_info
-        conanfile.deps_user_info = deps_user_info
-        conanfile.deps_env_info = deps_env_info
-        if user_info_build:
-            conanfile.user_info_build = user_info_build
-    except IOError:
-        if required:
-            raise ConanException("%s file not found in %s\nIt is required for this command\n"
-                                 "You can generate it using 'conan install'"
-                                 % (BUILD_INFO, current_path))
-        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
-        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
-    except ConanException:
-        raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))

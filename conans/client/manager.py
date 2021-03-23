@@ -1,20 +1,17 @@
 import os
 
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
+from conans.client.graph.graph import RECIPE_VIRTUAL
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
 from conans.client.output import Color
-from conans.client.source import retrieve_exports_sources
 from conans.client.generators import write_toolchain
 from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile
-from conans.paths import CONANINFO
-from conans.util.files import normalize, save
 
 
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,

@@ -22,7 +22,6 @@ from .premake import PremakeGenerator
 from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
-from .text import TXTGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualenv_python import VirtualEnvPythonGenerator
@@ -37,8 +36,7 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"txt": TXTGenerator,
-                            "gcc": GCCGenerator,
+        self._generators = {"gcc": GCCGenerator,
                             "compiler_args": CompilerArgsGenerator,
                             "cmake": CMakeGenerator,
                             "cmake_multi": CMakeMultiGenerator,
@@ -192,6 +190,7 @@ def write_toolchain(conanfile, path, output):
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
+        mkdir(path)
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()

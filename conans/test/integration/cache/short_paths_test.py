@@ -58,7 +58,7 @@ class TestConan(ConanFile):
         self.assertIn("BUILD: source_file.cpp", client.out)
         self.assertIn("BUILD: artifact", client.out)
         self.assertEqual(
-            sorted(["artifact", "conanbuildinfo.txt", "conaninfo.txt", "source_file.cpp"]),
+            sorted(["artifact", "conaninfo.txt", "source_file.cpp"]),
             sorted(os.listdir(build_folder)))
         self.assertIn("PACKAGE: source_file.cpp", client.out)
         self.assertIn("PACKAGE: artifact", client.out)

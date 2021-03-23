@@ -186,7 +186,7 @@ license: None
 author: None
 description: None
 topics: None
-generators: ['txt']
+generators: []
 exports: None
 exports_sources: None
 short_paths: False
@@ -273,7 +273,7 @@ default_options:
             author: None
             description: OpenSSL is an open source project that provides a robust, commercial-grade
             topics: None
-            generators: ['txt']
+            generators: []
             exports: None
             exports_sources: None
             short_paths: False

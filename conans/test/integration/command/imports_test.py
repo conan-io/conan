@@ -111,8 +111,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
-        self.client.run("imports .")  # Automatic conanbuildinfo.txt
-        self.assertNotIn("conanbuildinfo.txt file not found", self.client.out)
+        self.client.run("imports .")
 
     def test_install_manifest(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)

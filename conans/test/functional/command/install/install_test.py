@@ -391,7 +391,6 @@ class Pkg(ConanFile):
         client.run("create . conan/stable")
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
-        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
 
     def test_install_with_profile(self):
         # Test for https://github.com/conan-io/conan/pull/2043

@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conans.model.ref import PackageReference
-from conans.paths import BUILD_INFO, CONANFILE
+from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import mkdir
 

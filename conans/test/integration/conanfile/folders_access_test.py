@@ -138,7 +138,6 @@ class TestFoldersAccess(unittest.TestCase):
                           "local_command": True}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("build .", assert_error=True)
-        self.assertNotIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
 
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
                           "local_command": True}

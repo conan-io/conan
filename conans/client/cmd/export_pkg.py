@@ -3,7 +3,6 @@ import os
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
-from conans.client.graph.graph_manager import load_deps_info
 from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference

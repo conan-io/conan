@@ -4,7 +4,7 @@ import unittest
 
 from conans.model.graph_lock import LOCKFILE
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
+from conans.paths import (BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
 

@@ -53,15 +53,7 @@ class UserInfoTest(unittest.TestCase):
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . reuse/0.1@lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build -g txt')
-
-        # Assert generator TXT
-        txt_contents = client.load("conanbuildinfo.txt")
-        self.assertIn("[USER_LIB_A]%sVAR1=2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_B]%sVAR1=2%sVAR2=3" % (os.linesep, os.linesep), txt_contents)
-        self.assertIn("[USER_LIB_C]%sVAR1=2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_D]%svar1=2" % os.linesep, txt_contents)
-
+        client.run('install reuse/0.1@lasote/stable --build')
         # Now try local command with a consumer
         client.run('install . --build')
         client.run("build .")

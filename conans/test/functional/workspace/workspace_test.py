@@ -188,7 +188,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
         for sub in ("A", "B", "C"):
-            for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
+            for f in ("conanbuildinfo.cmake", "conaninfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])

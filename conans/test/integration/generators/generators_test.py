@@ -28,7 +28,6 @@ gcc
 qbs
 qmake
 scons
-txt
 virtualenv
 visual_studio
 visual_studio_legacy
@@ -47,7 +46,7 @@ ycm
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
-                                 'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
+                                 'SConscript_conan', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
                                  LOCKFILE] + venv_files),
