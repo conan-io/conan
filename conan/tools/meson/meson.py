@@ -13,9 +13,8 @@ def ninja_jobs_cmd_line_arg(conanfile):
 
 
 class Meson(object):
-    def __init__(self, conanfile, build_folder='build', parallel=True):
+    def __init__(self, conanfile, build_folder='build'):
         self._conanfile = conanfile
-        self._parallel = parallel
         self._build_folder = build_folder
 
     def _run(self, cmd):
