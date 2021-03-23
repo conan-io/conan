@@ -7,8 +7,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
 from conans.client.installer import BinaryInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.model.graph_info import GraphInfo
-from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.test_files import temp_folder

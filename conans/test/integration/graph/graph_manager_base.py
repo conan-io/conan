@@ -16,9 +16,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.model.graph_info import GraphInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager

@@ -22,7 +22,6 @@ from conans.model.build_info import CppInfo, DepCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
-from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.ref import PackageReference
