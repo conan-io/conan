@@ -6,6 +6,7 @@ import pytest
 
 from conan.tools.env.environment import environment_wrap_command
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.fixture()
@@ -61,6 +62,7 @@ def client():
                 self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
             """)
     client = TestClient()
+    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"cmake/conanfile.py": cmake,
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
@@ -123,6 +125,7 @@ def test_complete(client):
 
 def test_profile_buildenv():
     client = TestClient()
+    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     conanfile = textwrap.dedent("""\
         import os, platform
         from conans import ConanFile
@@ -233,7 +236,8 @@ def test_buildenv_from_requires():
         class Pkg(ConanFile):
             settings = "os"
             def package_info(self):
-                self.buildenv_info.append("OpenSSL_ROOT", "MyOpenSSL{}Value".format(self.settings.os))
+                self.buildenv_info.append("OpenSSL_ROOT",
+                                          "MyOpenSSL{}Value".format(self.settings.os))
         """)
     poco = textwrap.dedent(r"""
         from conans import ConanFile

@@ -20,8 +20,12 @@ class VirtualEnv:
         build_env = Environment()
         # First visit the direct build_requires
         for build_require in self._conanfile.dependencies.build_requires:
+            # Lower priority, the runenv of all transitive "requires" of the build requires
             for require in build_require.dependencies.requires:
                 build_env.compose(self._collect_transitive_runenv(require))
+            # Second, the implicit self information in build_require.cpp_info
+            build_env.compose(self._runenv_from_cpp_info(build_require.cpp_info))
+            # Finally, higher priority, explicit buildenv_info
             if build_require.buildenv_info:
                 build_env.compose(build_require.buildenv_info)
 
