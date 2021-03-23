@@ -56,7 +56,7 @@ def test_cmake_config(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
-    assert "/verbosity:Minimal" in str(client.out)
+    assert "/verbosity:Minimal" in client.out
 
 
 def test_cmake_config_error(client):
