@@ -3,6 +3,7 @@ import platform
 
 from conan.tools.cmake.base import CMakeToolchainBase
 from conan.tools.cmake.utils import get_generator, is_multi_configuration
+from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
     msbuild_max_cpu_count_cmd_line_arg
@@ -13,7 +14,6 @@ from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import mkdir
-from conan.tools.gnu.make import make_jobs_cmd_line_arg
 
 
 def _validate_recipe(conanfile):
@@ -30,13 +30,19 @@ def _cmake_cmd_line_args(conanfile, generator, parallel):
 
     # Arguments related to parallel
     if "MakeFiles" in generator and "NMake" not in generator and parallel:
-        args.append(make_jobs_cmd_line_arg(conanfile))
+        njobs = make_jobs_cmd_line_arg(conanfile)
+        if njobs:
+            args.append(njobs)
 
     if "Ninja" in generator and "NMake" not in generator:
-        args.append(ninja_jobs_cmd_line_arg(conanfile, parallel=parallel))
+        njobs = ninja_jobs_cmd_line_arg(conanfile)
+        if njobs:
+            args.append(njobs)
 
     if "Visual Studio" in generator and parallel:
-        args.append(msbuild_max_cpu_count_cmd_line_arg(conanfile))
+        max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(conanfile)
+        if max_cpu_count:
+            args.append(max_cpu_count)
 
     # Arguments for verbosity
     if "Visual Studio" in generator:
