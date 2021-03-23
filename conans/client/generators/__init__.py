@@ -190,6 +190,7 @@ def write_toolchain(conanfile, path, output):
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
+        mkdir(path)
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
