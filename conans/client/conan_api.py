@@ -1375,18 +1375,17 @@ class ConanAPIV1(object):
         phost.process_settings(self.app.cache)
         if pbuild:
             pbuild.process_settings(self.app.cache)
-        graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
-        graph_info.graph_lock = graph_lock
 
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
-        deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, graph_info, build, update,
+        deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, phost,
+                                                       pbuild, graph_lock, root_ref, build,
                                                        update, remotes, recorder)
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion
-        graph_lock = graph_info.graph_lock
+        graph_lock = graph_lock or GraphLock(deps_graph)
         # Pure graph_lock, no more graph_info mess
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
         if lockfile:
@@ -1406,23 +1405,22 @@ Conan = ConanAPIV1
 def get_graph_info(profile_host, profile_build, cwd, cache, output,
                    name=None, version=None, user=None, channel=None, lockfile=None):
 
+    root_ref = ConanFileReference(name, version, user, channel, validate=False)
+
     if lockfile:
-        graph_info = GraphInfo()
-        root_ref = ConanFileReference(name, version, user, channel, validate=False)
-        graph_info.root = root_ref
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile)
-        graph_info.profile_host = graph_lock_file.profile_host
-        graph_info.profile_build = graph_lock_file.profile_build
-        if graph_info.profile_host is None:
+        profile_host = graph_lock_file.profile_host
+        profile_build = graph_lock_file.profile_build
+        if profile_host is None:
             raise ConanException("Lockfiles with --base do not contain profile information, "
                                  "cannot be used. Create a full lockfile")
-        graph_info.profile_host.process_settings(cache, preprocess=False)
-        if graph_info.profile_build is not None:
-            graph_info.profile_build.process_settings(cache, preprocess=False)
-        graph_info.graph_lock = graph_lock_file.graph_lock
+        profile_host.process_settings(cache, preprocess=False)
+        if profile_build is not None:
+            profile_build.process_settings(cache, preprocess=False)
+        graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
-        return graph_info
+        return GraphInfo(profile_host, profile_build, graph_lock, root_ref)
 
     phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                               profile_host.env, cwd, cache)
@@ -1435,14 +1433,11 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     else:
         pbuild = None
 
-    root_ref = ConanFileReference(name, version, user, channel, validate=False)
-    graph_info = GraphInfo(profile_host=phost, profile_build=pbuild, root_ref=root_ref)
     # Preprocess settings and convert to real settings
-
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
-    graph_info.profile_host.conf.rebase_conf_definition(cache.new_config)
-    if graph_info.profile_build is not None:
-        graph_info.profile_build.conf.rebase_conf_definition(cache.new_config)
-    return graph_info
+    profile_host.conf.rebase_conf_definition(cache.new_config)
+    if profile_build is not None:
+        profile_build.conf.rebase_conf_definition(cache.new_config)
+    return GraphInfo(phost, pbuild, None, root_ref)
