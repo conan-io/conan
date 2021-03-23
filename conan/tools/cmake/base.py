@@ -95,6 +95,9 @@ class CMakeToolchainBase(object):
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            {%- if find_package_prefer_config %}
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
+            {%- endif %}
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
@@ -143,6 +146,8 @@ class CMakeToolchainBase(object):
         """)
 
     def __init__(self, conanfile, **kwargs):
+        import six
+
         self._conanfile = conanfile
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -153,6 +158,12 @@ class CMakeToolchainBase(object):
 
         self.build_type = None
 
+        self.find_package_prefer_config = \
+            conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if self.find_package_prefer_config is not None:
+            self.find_package_prefer_config = "OFF" if self.find_package_prefer_config.lower() in ("false", "0", "off") else "ON"
+        else:
+            self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
     def _get_templates(self):
         return {
             'toolchain_macros': self._toolchain_macros_tpl,
@@ -172,6 +183,7 @@ class CMakeToolchainBase(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
+            "find_package_prefer_config": self.find_package_prefer_config,
         }
         return ctxt_toolchain
 
