@@ -79,6 +79,14 @@ _target_platform = {
     'Arduino': 'none',
     'Neutrino': 'qnx',
 }
+_runtime_library = {
+    'static': 'static',
+    'dynamic': 'dynamic',
+    'MD': 'dynamic',
+    'MT': 'static',
+    'MDd': 'dynamic',
+    'MTd': 'static',
+}
 
 def _bool(b):
     return None if b is None else str(b).lower()
@@ -107,6 +115,8 @@ def _default_compiler_name(conanfile):
         if compiler == 'Visual Studio':
             if tools.msvs_toolset(conanfile) == 'ClangCL':
                 return 'clang-cl'
+            return 'cl'
+        if compiler == 'msvc':
             return 'cl'
         if compiler == 'clang':
             return 'clang-cl'
@@ -234,6 +244,9 @@ class QbsProfile(object):
                 {%- if cxx_language_version %}
                 cpp.cxxLanguageVersion: "{{ cxx_language_version }}"
                 {%- endif %}
+                {%- if runtime_library %}
+                cpp.runtimeLibrary: "{{ runtime_library }}"
+                {%- endif %}
 
                 /* package options */
                 {%- if position_independent_code %}
@@ -262,6 +275,8 @@ class QbsProfile(object):
             str(conanfile.settings.get_safe('compiler.cppstd')))
         self._target_platform = _target_platform.get(
             conanfile.settings.get_safe('os'))
+        self._runtime_library = _runtime_library.get(
+            conanfile.settings.get_safe('compiler.runtime'))
         self._sysroot = tools.get_env('SYSROOT')
         self._position_independent_code = _bool(
             conanfile.options.get_safe('fPIC'))
@@ -282,6 +297,7 @@ class QbsProfile(object):
             'position_independent_code': self._position_independent_code,
             'cxx_language_version': self._cxx_language_version,
             'target_platform': self._target_platform
+            'runtime_library': self._runtime_library
         }
         t = Template(self._template_toolchain)
         content = t.render(**context)

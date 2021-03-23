@@ -174,6 +174,22 @@ class QbsGenericTest(unittest.TestCase):
             self.assertEqual(qbs_toolchain._target_platform,
                              target_platform)
 
+    def test_convert_runtime_library(self):
+        conanfile = MockConanfileWithFolders(MockSettings({
+            'compiler': 'Visual Studio'}))
+
+        qbs_toolchain = qbs.QbsProfile(conanfile)
+        self.assertEqual(qbs_toolchain._runtime_library, None)
+
+        for runtime, runtime_library in qbs._runtime_library.items():
+            conanfile = MockConanfileWithFolders(MockSettings({
+                'compiler': 'Visual Studio',
+                'compiler.runtime': runtime}))
+
+            qbs_toolchain = qbs.QbsProfile(conanfile)
+            self.assertEqual(qbs_toolchain._runtime_library,
+                             runtime_library)
+
     def test_split_env_var_into_list(self):
         env_var_list = ['-p1', '-p2', '-p3_with_value=13',
                         '-p_with_space1="hello world"',
@@ -211,6 +227,8 @@ class QbsGenericTest(unittest.TestCase):
              'qbs_compiler': 'cl'},
             {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '15',
              'compiler.toolset': 'ClangCL', 'qbs_compiler': 'clang-cl'},
+            {'os': 'Windows', 'compiler': 'msvc', 'compiler.version': '19.0',
+             'qbs_compiler': 'cl'},
             {'os': 'Linux', 'compiler': 'gcc', 'compiler.version': '6', 'qbs_compiler': 'gcc'},
             {'os': 'Linux', 'compiler': 'clang', 'compiler.version': '3.9', 'qbs_compiler': 'clang'}
         ]
