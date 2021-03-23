@@ -9,7 +9,7 @@ from conans.model.ref import PackageReference
 
 
 def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder,
-               graph_info, force, remotes):
+               profile_host, profile_build, graph_lock, root_ref, force, remotes):
     ref = full_ref.copy_clear_rev()
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
@@ -21,9 +21,10 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     # to be downloaded from remotes
     # passing here the create_reference=ref argument is useful so the recipe is in "develop",
     # because the "package()" method is in develop=True already
-    deps_graph = graph_manager.load_graph(ref, ref, graph_info=graph_info, build_mode=[ref.name],
-                                          check_updates=False, update=False, remotes=remotes,
-                                          recorder=recorder, apply_build_requires=False)
+    deps_graph = graph_manager.load_graph(ref, ref, profile_host, profile_build, graph_lock,
+                                          root_ref, build_mode=[ref.name], check_updates=False,
+                                          update=False, remotes=remotes, recorder=recorder,
+                                          apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
