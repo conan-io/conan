@@ -320,8 +320,9 @@ class ConanAPIV1(object):
                                     self.app.cache, self.app.out, lockfile=lockfile)
         ref = ConanFileReference.loads(reference)
         recorder = ActionRecorder()
-        install_build_and_test(self.app, conanfile_path, ref, graph_info, remotes,
-                               update, build_modes=build_modes,
+        install_build_and_test(self.app, conanfile_path, ref, graph_info.profile_host,
+                               graph_info.profile_build, graph_info.graph_lock,
+                               graph_info.root_ref, remotes, update, build_modes=build_modes,
                                test_build_folder=test_build_folder, recorder=recorder)
 
     @api_method
@@ -430,7 +431,8 @@ class ConanAPIV1(object):
             recorder.add_recipe_being_developed(ref)
             export_pkg(self.app, recorder, new_ref, source_folder=source_folder,
                        build_folder=build_folder, package_folder=package_folder,
-                       graph_info=graph_info, force=force,
+                       profile_host=graph_info.profile_host, profile_build=graph_info.profile_build,
+                       graph_lock=graph_info.graph_lock, root_ref=graph_info.root_ref, force=force,
                        remotes=remotes)
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -823,7 +825,10 @@ class ConanAPIV1(object):
             deps_info = deps_install(app=self.app,
                                      ref_or_path=conanfile_path,
                                      install_folder=None,
-                                     graph_info=graph_info,
+                                     profile_host=graph_info.profile_host,
+                                     profile_build=graph_info.profile_build,
+                                     graph_lock=graph_info.graph_lock,
+                                     root_ref=graph_info.root_ref,
                                      recorder=recorder,
                                      remotes=remotes)
             conanfile = deps_info.root.conanfile
@@ -1396,7 +1401,7 @@ class ConanAPIV1(object):
         # FIXME: Using update as check_update?
         remotes = self.app.load_remotes(remote_name=remote_name, check_updates=update)
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, phost,
-                                                       pbuild, graph_lock, root_ref, build,
+                                                       pbuild, graph_lock, root_ref, build, update,
                                                        update, remotes, recorder)
         print_graph(deps_graph, self.app.out)
 
