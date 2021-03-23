@@ -84,7 +84,7 @@ class ProfileParser(object):
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
     def valid_path(_profile_path, _profile_name=None):
         if exists and not os.path.isfile(_profile_path):
-            raise ConanException("Profile not found: %s" % _profile_name or _profile_path)
+            raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
         return _profile_path
 
     if os.path.isabs(profile_name):
