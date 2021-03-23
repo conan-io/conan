@@ -5,7 +5,9 @@ import six
 from six import string_types
 
 from conan.tools.env import Environment
+from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
+from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
@@ -151,6 +153,16 @@ class ConanFile(object):
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_node = None  # access to container Node object, to access info, context, deps...
+        self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
+
+    @property
+    def context(self):
+        return self._conan_node.context
+
+    @property
+    def dependencies(self):
+        return ConanFileDependencies(self._conan_node)
 
     @property
     def buildenv(self):
@@ -313,7 +325,9 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+
+        command = environment_wrap_command(env, command)
 
         def _run():
             if not win_bash:
