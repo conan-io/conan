@@ -467,9 +467,6 @@ class BinaryInstaller(object):
                 write_toolchain(node.conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), node.conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
-                graph_info_node = GraphInfo(profile_host, root_ref=node.ref)
-                graph_info_node.options = node.conanfile.options.values
-                graph_info_node.graph_lock = graph_lock
                 graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
                 graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
                 # Build step might need DLLs, binaries as protoc to generate source files
