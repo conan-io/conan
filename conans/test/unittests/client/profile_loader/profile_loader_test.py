@@ -385,7 +385,7 @@ def test_profile_load_absolute_path():
     profile, variables = read_profile(current_profile_path, current_profile_folder,
                                       default_profile_folder)
     assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
-    assert current_profile_folder == variables["PROFILE_DIR"]
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
 
 
 def test_profile_load_relative_path_dot():
@@ -416,7 +416,7 @@ def test_profile_load_relative_path_dot():
                                       os.path.dirname(current_profile_folder),
                                       default_profile_folder)
     assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
-    assert current_profile_folder == variables["PROFILE_DIR"]
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
 
 
 def test_profile_load_relative_path_pardir():
@@ -450,4 +450,4 @@ def test_profile_load_relative_path_pardir():
                                       current_running_folder,
                                       default_profile_folder)
     assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
-    assert current_profile_folder == variables["PROFILE_DIR"]
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
