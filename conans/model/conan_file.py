@@ -245,8 +245,8 @@ class ConanFile(object):
         # the deps_env_info objects available
         tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
-
-        ret, multiple = tmp_env_values.env_dicts(self.name)
+        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
+                                                 self._conan_channel)
         ret.update(multiple)
         return ret
 
