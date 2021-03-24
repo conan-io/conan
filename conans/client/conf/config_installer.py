@@ -130,8 +130,6 @@ def _process_folder(config, folder, cache, output):
         folder = os.path.join(folder, config.source_folder)
     for root, dirs, files in walk(folder):
         dirs[:] = [d for d in dirs if d != ".git"]
-        if ".git" in root:
-            continue
         for f in files:
             _process_file(root, f, config, cache, output, folder)
 

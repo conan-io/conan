@@ -1,6 +1,9 @@
 import os
 
+from conan.tools.env import Environment
+from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
+from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.oss import OSInfo
@@ -134,8 +137,31 @@ class ConanFile(object):
         self._conan_requester = requester
 
         self.layout = Layout()
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
+        self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_node = None  # access to container Node object, to access info, context, deps...
+        self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
-    def initialize(self, settings, env):
+    @property
+    def context(self):
+        return self._conan_node.context
+
+    @property
+    def dependencies(self):
+        return ConanFileDependencies(self._conan_node)
+
+    @property
+    def buildenv(self):
+        # Lazy computation of the package buildenv based on the profileone
+        if not isinstance(self._conan_buildenv, Environment):
+            # TODO: missing user/channel
+            ref_str = "{}/{}".format(self.name, self.version)
+            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+        return self._conan_buildenv
+
+    def initialize(self, settings, env, buildenv=None):
+        self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
@@ -206,8 +232,8 @@ class ConanFile(object):
         # the deps_env_info objects available
         tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
-
-        ret, multiple = tmp_env_values.env_dicts(self.name)
+        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
+                                                 self._conan_channel)
         ret.update(multiple)
         return ret
 
@@ -286,7 +312,10 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+
+        command = environment_wrap_command(env, command)
+
         def _run():
             if not win_bash:
                 return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)

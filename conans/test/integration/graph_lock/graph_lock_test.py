@@ -69,6 +69,14 @@ class GraphLockErrorsTest(unittest.TestCase):
                    "--name=name --version=version")
         client.run("install consumer.py name/version@ --lockfile=output.lock")
 
+    @staticmethod
+    def test_error_no_filename():
+        # https://github.com/conan-io/conan/issues/8675
+        client = TestClient()
+        client.save({"consumer.txt": ""})
+        client.run("lock create .", assert_error=True)
+        assert "RROR: Path argument must include filename like 'conanfile.py'" in client.out
+
     def test_commands_cannot_create_lockfile(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})

@@ -1,6 +1,7 @@
 import textwrap
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
+import six
 from jinja2 import DictLoader, Environment
 
 from conans.util.files import save
@@ -17,16 +18,25 @@ class Variables(OrderedDict):
         try:
             return super(Variables, self).__getattribute__(config)
         except AttributeError:
-            return self._configuration_types.setdefault(config, dict())
+            return self._configuration_types.setdefault(config, OrderedDict())
 
     @property
     def configuration_types(self):
         # Reverse index for the configuration_types variables
-        ret = defaultdict(list)
+        ret = OrderedDict()
         for conf, definitions in self._configuration_types.items():
             for k, v in definitions.items():
-                ret[k].append((conf, v))
+                ret.setdefault(k, []).append((conf, v))
         return ret
+
+    def quote_preprocessor_strings(self):
+        for key, var in self.items():
+            if isinstance(var, six.string_types):
+                self[key] = '"{}"'.format(var)
+        for config, data in self._configuration_types.items():
+            for key, var in data.items():
+                if isinstance(var, six.string_types):
+                    data[key] = '"{}"'.format(var)
 
 
 class CMakeToolchainBase(object):
@@ -38,7 +48,7 @@ class CMakeToolchainBase(object):
                 {%- set genexpr = namespace(str='') %}
                 {%- for conf, value in values -%}
                     {%- set genexpr.str = genexpr.str +
-                                          '$<IF:$<CONFIG:' + conf + '>,"' + value|string + '",' %}
+                                          '$<IF:$<CONFIG:' + conf + '>,' + value|string + ',' %}
                     {%- if loop.last %}{% set genexpr.str = genexpr.str + '""' -%}{%- endif -%}
                 {%- endfor -%}
                 {% for i in range(values|count) %}{%- set genexpr.str = genexpr.str + '>' %}
@@ -85,6 +95,9 @@ class CMakeToolchainBase(object):
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            {%- if find_package_prefer_config %}
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
+            {%- endif %}
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
@@ -95,8 +108,8 @@ class CMakeToolchainBase(object):
         {% endblock %}
 
         {% if shared_libs -%}
-            message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
-            set(BUILD_SHARED_LIBS {{ shared_libs }})
+        message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
+        set(BUILD_SHARED_LIBS {{ shared_libs }})
         {%- endif %}
 
         {% if parallel -%}
@@ -125,7 +138,7 @@ class CMakeToolchainBase(object):
         # Preprocessor definitions
         {% for it, value in preprocessor_definitions.items() -%}
         # add_compile_definitions only works in cmake >= 3.12
-        add_definitions(-D{{ it }}="{{ value }}")
+        add_definitions(-D{{ it }}={{ value }})
         {%- endfor %}
         # Preprocessor definitions per configuration
         {{ toolchain_macros.iterate_configs(preprocessor_definitions_config,
@@ -143,6 +156,11 @@ class CMakeToolchainBase(object):
 
         self.build_type = None
 
+        self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
+        prefer_config = conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
+            self.find_package_prefer_config = "OFF"
+
     def _get_templates(self):
         return {
             'toolchain_macros': self._toolchain_macros_tpl,
@@ -152,6 +170,8 @@ class CMakeToolchainBase(object):
     def _get_template_context_data(self):
         """ Returns dict, the context for the '_template_toolchain'
         """
+        self.preprocessor_definitions.quote_preprocessor_strings()
+
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
@@ -160,6 +180,7 @@ class CMakeToolchainBase(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
+            "find_package_prefer_config": self.find_package_prefer_config,
         }
         return ctxt_toolchain
 

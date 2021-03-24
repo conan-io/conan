@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
@@ -842,3 +843,32 @@ class Hello2Conan(ConanFile):
         self.output.info("VAR2=>%s*" % os.environ.get("VAR2"))
         self.output.info("VAR3=>%s*" % os.environ.get("VAR3"))
 '''
+
+
+def test_env_per_package_patterns():
+    # https://github.com/conan-io/conan/issues/8657
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        import os
+        class Pkg(ConanFile):
+            def build(self):
+                self.output.info("MYENV: {}!!!".format(os.getenv("MYVAR")))
+        """)
+    profile = textwrap.dedent("""
+        [env]
+        *myuser*:MYVAR=MyValue
+        other:MYVAR=OtherValue
+        */mychannel:MYVAR=MyChannelValue
+        *:MYVAR=MyAllValue
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("create . pkg/0.1@myuser/channel -pr=profile")
+    assert "pkg/0.1@myuser/channel: MYENV: MyValue!!!" in client.out
+    client.run("create . pkg/0.1@ -pr=profile")
+    assert "pkg/0.1: MYENV: MyAllValue!!!" in client.out
+    client.run("create . other/0.1@ -pr=profile")
+    assert "other/0.1: MYENV: OtherValue!!!" in client.out
+    client.run("create . pkg/0.1@user/mychannel -pr=profile")
+    assert "pkg/0.1@user/mychannel: MYENV: MyChannelValue!!!" in client.out

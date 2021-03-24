@@ -590,7 +590,6 @@ class MyPkg(ConanFile):
         self.assertIn("Uploading conanmanifest.txt", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_upload_key_error(self):
         files = {"conanfile.py": GenConanfile("Hello0", "1.2.1")}
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})

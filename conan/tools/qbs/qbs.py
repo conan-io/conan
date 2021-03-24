@@ -85,8 +85,7 @@ class Qbs(object):
     def install(self):
         args = [
             '--no-build',
-            '--clean-install-root',
-            '--install-root', self._conanfile.install_folder,
+            '--install-root', self._conanfile.package_folder,
             '--file', self._project_file
         ]
 

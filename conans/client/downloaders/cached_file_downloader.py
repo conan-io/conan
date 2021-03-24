@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from conans.client.downloaders.file_downloader import check_checksum
 from conans.errors import ConanException
-from conans.util.files import mkdir
+from conans.util.files import mkdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import SimpleLock
 from conans.util.sha import sha256 as sha256_sum
 
@@ -43,9 +43,15 @@ class CachedFileDownloader(object):
 
         with self._lock(h):
             cached_path = os.path.join(self._cache_folder, h)
+            if is_dirty(cached_path):
+                if os.path.exists(cached_path):
+                    os.remove(cached_path)
+                clean_dirty(cached_path)
             if not os.path.exists(cached_path):
+                set_dirty(cached_path)
                 self._file_downloader.download(url=url, file_path=cached_path, md5=md5,
                                                sha1=sha1, sha256=sha256, **kwargs)
+                clean_dirty(cached_path)
             else:
                 # specific check for corrupted cached files, will raise, but do nothing more
                 # user can report it or "rm -rf cache_folder/path/to/file"

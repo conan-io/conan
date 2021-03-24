@@ -7,7 +7,7 @@ import pytest
 
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save
 
@@ -18,11 +18,9 @@ class JsonOutputTest(unittest.TestCase):
         self.servers = {"default": TestServer()}
         self.client = TestClient(servers=self.servers)
 
-    @pytest.mark.tool_compiler
     def test_simple_fields(self):
         # Result of a create
-        files = cpp_hello_conan_files("CC", "1.0", build=False)
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": GenConanfile("CC", "1.0")}, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json")
         my_json = json.loads(self.client.load("myfile.json"))
         self.assertFalse(my_json["error"])
@@ -89,12 +87,11 @@ class JsonOutputTest(unittest.TestCase):
         self.assertEqual(len(my_json["installed"]), 1)
         self.assertFalse(my_json["installed"][0]["recipe"]["downloaded"])
         self.assertEqual(my_json["installed"][0]["recipe"]["error"],
-                          {'type': 'missing', 'remote': None,
+                         {'type': 'missing', 'remote': None,
                           'description': "Unable to find 'CC/1.0@private_user/channel' in remotes"})
 
         # Missing binary package
-        files = cpp_hello_conan_files("CC", "1.0", build=False)
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": GenConanfile("CC", "1.0")}, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
         self.client.run("upload CC/1.0@private_user/channel -c")
         self.client.run("remove '*' -f")
@@ -113,46 +110,42 @@ class JsonOutputTest(unittest.TestCase):
                       my_json["installed"][0]["packages"][0]["error"]["description"])
 
         # Error building
-        files["conanfile.py"] = files["conanfile.py"].replace("def build2(self):",
-                                                              """
+        conanfile = str(GenConanfile("CC", "1.0")) + """
     def build(self):
         raise Exception("Build error!")
-        """)
-
-        self.client.save(files, clean_first=True)
+        """
+        self.client.save({"conanfile.py": conanfile}, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ", assert_error=True)
         my_json = json.loads(self.client.load("myfile.json"))
         self.assertTrue(my_json["error"])
         self.assertEqual(my_json["installed"][0]["packages"][0]["error"]["type"], "building")
         self.assertIsNone(my_json["installed"][0]["packages"][0]["error"]["remote"])
-        self.assertIn("CC/1.0@private_user/channel: Error in build() method, line 36",
+        self.assertIn("CC/1.0@private_user/channel: Error in build() method, line 6",
                       my_json["installed"][0]["packages"][0]["error"]["description"])
 
-    @pytest.mark.tool_compiler
     def test_json_generation(self):
 
-        files = cpp_hello_conan_files("CC", "1.0", build=False)
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": GenConanfile("CC", "1.0").
+                         with_option("static", [True, False]).with_default_option("static", True)},
+                         clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
 
         self.client.run('upload "*" -c --all')
 
-        files = cpp_hello_conan_files("BB", "1.0", build=False)
-        files["conanfile.py"] += """
+        conanfile = str(GenConanfile("BB", "1.0")) + """
     def configure(self):
         self.options["CC"].static = False
 
     def build_requirements(self):
         self.build_requires("CC/1.0@private_user/channel")
-
 """
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": conanfile}, clean_first=True)
         self.client.run("create . private_user/channel --build missing")
         self.client.run('upload "*" -c --all')
 
-        files = cpp_hello_conan_files("AA", "1.0",
-                                      deps=["BB/1.0@private_user/channel"], build=False)
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": GenConanfile("AA", "1.0").
+                         with_require("BB/1.0@private_user/channel")},
+                         clean_first=True)
         self.client.run("create . private_user/channel")
         self.client.run('upload "*" -c --all')
 
@@ -162,9 +155,8 @@ include(default)
 [build_requires]
 AA*: CC/1.0@private_user/channel
 """)
-        files = cpp_hello_conan_files("PROJECT", "1.0",
-                                      deps=["AA/1.0@private_user/channel"], build=False)
-        self.client.save(files, clean_first=True)
+        self.client.save({"conanfile.py": GenConanfile("PROJECT", "1.0").
+                         with_require("AA/1.0@private_user/channel")}, clean_first=True)
         self.client.run("install . --profile mybr --json=myfile.json --build AA --build BB")
         my_json = self.client.load("myfile.json")
         my_json = json.loads(my_json)
