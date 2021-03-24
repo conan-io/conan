@@ -159,7 +159,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
 
 def _clean_source_folder(folder):
     for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
+              CONANFILE+"o", CONAN_MANIFEST):
         try:
             os.remove(os.path.join(folder, f))
         except OSError:
