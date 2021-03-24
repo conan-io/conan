@@ -65,12 +65,9 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-
-        self._new_generators = ["CMakeGen", "CMakeToolchain", "CMakeDeps",
-                                "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv",
-                                "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -93,9 +90,6 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        elif generator_name == "CMakeGen":
-            from conan.tools.cmake import CMakeGen
-            return CMakeGen
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
@@ -123,9 +117,9 @@ class GeneratorManager(object):
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
-        elif generator_name == "QbsToolchain":
-            from conan.tools.qbs import QbsToolchain
-            return QbsToolchain
+        elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
+            from conan.tools.qbs.qbsprofile import QbsProfile
+            return QbsProfile
         elif generator_name == "VirtualEnv":
             from conan.tools.env.virtualenv import VirtualEnv
             return VirtualEnv
@@ -214,3 +208,10 @@ def write_toolchain(conanfile, path, output):
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
+
+    # tools.env.virtualenv:auto_use will be always True in Conan 2.0
+    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+        with chdir(path):
+            from conan.tools.env.virtualenv import VirtualEnv
+            env = VirtualEnv(conanfile)
+            env.generate()

@@ -1,5 +1,6 @@
 import os
 import re
+import textwrap
 import unittest
 
 from conans.model.graph_info import GRAPH_INFO_FILE
@@ -8,7 +9,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (BUILD_INFO, BUILD_INFO_CMAKE, BUILD_INFO_GCC, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, CONANFILE_TXT, CONANINFO)
 from conans.test.utils.tools import TestClient
-from conans.util.files import load
 
 
 class VSXCodeGeneratorsTest(unittest.TestCase):
@@ -16,35 +16,37 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
     def test_generators(self):
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-import os
-class Pkg(ConanFile):
-    def package(self):
-        os.makedirs(os.path.join(self.package_folder, "lib"))
-        os.makedirs(os.path.join(self.package_folder, "include"))
-    def package_info(self):
-        self.cpp_info.libs = ["hello"]
-        self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
-        self.cpp_info.cflags = ["-some_c_compiler_flag"]
-        self.cpp_info.system_libs = ["system_lib1"]
-"""})
+        client.save({"conanfile.py": textwrap.dedent("""
+            from conans import ConanFile
+            import os
+            class Pkg(ConanFile):
+                def package(self):
+                    os.makedirs(os.path.join(self.package_folder, "lib"))
+                    os.makedirs(os.path.join(self.package_folder, "include"))
+                def package_info(self):
+                    self.cpp_info.libs = ["hello"]
+                    self.cpp_info.cxxflags = ["-some_cxx_compiler_flag"]
+                    self.cpp_info.cflags = ["-some_c_compiler_flag"]
+                    self.cpp_info.system_libs = ["system_lib1"]
+            """)})
         client.run("export . Hello/0.1@lasote/stable")
-        conanfile_txt = '''[requires]
-Hello/0.1@lasote/stable # My req comment
-[generators]
-gcc # I need this generator for..
-cmake
-visual_studio
-xcode
-'''
+        conanfile_txt = textwrap.dedent('''
+            [requires]
+            Hello/0.1@lasote/stable # My req comment
+            [generators]
+            gcc # I need this generator for..
+            cmake
+            visual_studio
+            xcode
+            ''')
         client.save({"conanfile.txt": conanfile_txt}, clean_first=True)
 
         # Install requirements
         client.run('install . --build missing')
-        self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
-                                 BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
-                                 BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE, LOCKFILE]),
-                         sorted(os.listdir(client.current_folder)))
+        current_files = os.listdir(client.current_folder)
+        for f in [CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE, BUILD_INFO_VISUAL_STUDIO,
+                  BUILD_INFO, BUILD_INFO_XCODE, CONANINFO, GRAPH_INFO_FILE, LOCKFILE]:
+            assert f in current_files
 
         cmake = client.load(BUILD_INFO_CMAKE)
         gcc = client.load(BUILD_INFO_GCC)
@@ -68,7 +70,7 @@ xcode
         from xml.dom import minidom
         xmldoc = minidom.parse(os.path.join(client.current_folder, BUILD_INFO_VISUAL_STUDIO))
         definition_group = xmldoc.getElementsByTagName('ItemDefinitionGroup')[0]
-        compiler = definition_group.getElementsByTagName("ClCompile")[0]
+        _ = definition_group.getElementsByTagName("ClCompile")[0]
         linker = definition_group.getElementsByTagName("Link")[0]
 
         def element_content(node):

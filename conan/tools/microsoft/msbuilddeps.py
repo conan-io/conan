@@ -2,9 +2,11 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conans.client.tools import VALID_LIB_EXTENSIONS
+
 from conans.errors import ConanException
 from conans.util.files import load, save
+
+VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 class MSBuildDeps(object):
@@ -213,6 +215,7 @@ class MSBuildDeps(object):
         return content_multi
 
     def _content(self):
+        # We cannot use self._conanfile.warn(), because that fails for virtual conanfile
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
         if not self._conanfile.settings.get_safe("build_type"):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")

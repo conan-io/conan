@@ -137,8 +137,12 @@ def test_profile():
         mypkg*:MyVar2=MyValue2
         """)
 
+<<<<<<< HEAD
     profile_env = ProfileEnvironment()
     profile_env.loads(myprofile)
+=======
+    profile_env = ProfileEnvironment.loads(myprofile)
+>>>>>>> develop
     env = profile_env.get_env("")
     assert env.value("MyVar1") == "MyValue1"
     assert env.value("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
@@ -236,12 +240,17 @@ def test_env_files():
 
     with chdir(folder):
         if platform.system() == "Windows":
+<<<<<<< HEAD
             env.save_bat("test.bat", pathsep=":")
+=======
+            env.save_bat("test.bat", pathsep=":", generate_deactivate=True)
+>>>>>>> develop
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
             check(cmd)
             # FIXME: Powershell still not working
             # env.save_ps1("test.ps1", pathsep=":")
+<<<<<<< HEAD
             # print(load("test.ps1"))
             # cmd = r'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
             # check(cmd)
@@ -250,6 +259,18 @@ def test_env_files():
             save("display.sh", display_sh)
             os.chmod("display.sh", 0o777)
             cmd = 'bash -c ". test.sh && ./display.sh && . deactivate_test.sh && ./display.sh"'
+=======
+            # cmd = 'powershell.exe -ExecutionPolicy ./test.ps1; gci env:'
+            # shell = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # (stdout, stderr) = shell.communicate()
+            # stdout, stderr = decode_text(stdout), decode_text(stderr)
+            # check(cmd)
+        else:
+            env.save_sh("test.sh", generate_deactivate=True)
+            save("display.sh", display_sh)
+            os.chmod("display.sh", 0o777)
+            cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
+>>>>>>> develop
             check(cmd)
 
 
@@ -270,7 +291,11 @@ def test_windows_case_insensitive():
         """)
 
     with chdir(folder):
+<<<<<<< HEAD
         env.save_bat("test.bat")
+=======
+        env.save_bat("test.bat", generate_deactivate=True)
+>>>>>>> develop
         save("display.bat", display_bat)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

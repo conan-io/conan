@@ -22,7 +22,6 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
-from conans.unicode import get_cwd
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -260,7 +259,7 @@ class Command(object):
 
             json_output = json.dumps(result, default=dump_custom_types)
             if not os.path.isabs(args.json):
-                json_output_file = os.path.join(get_cwd(), args.json)
+                json_output_file = os.path.join(os.getcwd(), args.json)
             else:
                 json_output_file = args.json
             save(json_output_file, json_output)
@@ -356,7 +355,7 @@ class Command(object):
             # Now if parameter --test-folder=None (string None) we have to skip tests
             args.test_folder = False
 
-        cwd = get_cwd()
+        cwd = os.getcwd()
 
         info = None
         try:
@@ -482,7 +481,7 @@ class Command(object):
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
-        cwd = get_cwd()
+        cwd = os.getcwd()
 
         # We need @ otherwise it could be a path, so check strict
         path_is_reference = check_valid_ref(args.path_or_reference)
@@ -710,7 +709,7 @@ class Command(object):
                                                install_folder=args.install_folder)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(ret, json_arg, get_cwd())
+                self._outputer.json_build_order(ret, json_arg, os.getcwd())
             else:
                 self._outputer.build_order(ret)
 
@@ -728,7 +727,7 @@ class Command(object):
                                                        install_folder=args.install_folder)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_nodes_to_build(nodes, json_arg, get_cwd())
+                self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
             else:
                 self._outputer.nodes_to_build(nodes)
 
@@ -764,10 +763,10 @@ class Command(object):
                 else:
                     template = self._conan.app.cache.get_template(templates.INFO_GRAPH_DOT,
                                                                   user_overrides=True)
-                self._outputer.info_graph(args.graph, deps_graph, get_cwd(), template=template)
+                self._outputer.info_graph(args.graph, deps_graph, os.getcwd(), template=template)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_info(deps_graph, json_arg, get_cwd(), show_paths=args.paths)
+                self._outputer.json_info(deps_graph, json_arg, os.getcwd(), show_paths=args.paths)
 
             if not args.graph and not args.json:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)

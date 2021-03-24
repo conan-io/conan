@@ -252,7 +252,7 @@ class MSBuild(object):
         try:
             out = version_runner(command, shell=True)
             version_line = decode_text(out).split("\n")[-1]
-            prog = re.compile("(\d+\.){2,3}\d+")
+            prog = re.compile(r"(\d+\.){2,3}\d+")
             result = prog.match(version_line).group()
             return Version(result)
         except Exception as e:

@@ -752,3 +752,23 @@ class ConfigInstallSchedTest(unittest.TestCase):
             self.assertNotIn("Repo cloned!", self.client.out)
             # ... and updates the next schedule
             self.assertGreater(os.path.getmtime(self.client.cache.config_install_file), last_change)
+
+    def test_config_fails_git_folder(self):
+        # https://github.com/conan-io/conan/issues/8594
+        folder = os.path.join(temp_folder(), ".gitlab-conan", ".conan")
+        client = TestClient(cache_folder=folder)
+        with client.chdir(self.folder):
+            client.run_command('git init .')
+            client.run_command('git add .')
+            client.run_command('git config user.name myname')
+            client.run_command('git config user.email myname@mycompany.com')
+            client.run_command('git commit -m "mymsg"')
+        assert ".gitlab-conan" in client.cache_folder
+        assert os.path.basename(client.cache_folder) == ".conan"
+        conf = load(client.cache.conan_conf_path)
+        assert "config_install_interval = 5m" not in conf
+        client.run('config install "%s/.git" --type git' % self.folder)
+        conf = load(client.cache.conan_conf_path)
+        assert "config_install_interval = 5m" in conf
+        dirs = os.listdir(client.cache.cache_folder)
+        assert ".git" not in dirs

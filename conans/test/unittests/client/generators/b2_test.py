@@ -1,13 +1,14 @@
 import unittest
 
+from mock import Mock
+
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators.b2 import B2Generator
-from conans.model.build_info import CppInfo, DepsCppInfo
+from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class B2GeneratorTest(unittest.TestCase):
@@ -21,7 +22,7 @@ class B2GeneratorTest(unittest.TestCase):
         settings.build_type = "Release"
         settings.cppstd = "gnu17"
 
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.settings = settings
 
@@ -60,7 +61,7 @@ class B2GeneratorTest(unittest.TestCase):
             self.assertEqual(cv, content[ck])
 
     def test_b2_empty_settings(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         generator = B2Generator(conanfile)

@@ -2,11 +2,13 @@ import json
 import os
 import platform
 import stat
+import sys
 import textwrap
 import unittest
 
 import pytest
 import six
+from mock import patch
 from requests import ConnectionError
 
 from conans import DEFAULT_REVISION_V1
@@ -19,7 +21,6 @@ from conans.test.assets.cpp_test_files import cpp_hello_conan_files, cpp_hello_s
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
-from conans.test.utils.mocks import MockedUserIO, TestBufferConanOutput
 from conans.util.files import load, mkdir, save
 
 
@@ -264,21 +265,20 @@ class UploadTest(unittest.TestCase):
                       self.client.out)
 
     def test_check_upload_confirm_question(self):
-        user_io = MockedUserIO({"default": [("lasote", "mypass")]}, out=TestBufferConanOutput())
+        self.client.users = {"default": [("lasote", "mypass")]}
         files = cpp_hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
-
-        user_io.request_string = lambda _: "y"
-        self.client.run("upload Hello*", user_io=user_io)
+        with patch.object(sys.stdin, "readline", return_value="y"):
+            self.client.run("upload Hello*")
         self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.out)
 
         files = cpp_hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
         self.client.run("export . frodo/stable")
 
-        user_io.request_string = lambda _: "n"
-        self.client.run("upload Hello*", user_io=user_io)
+        with patch.object(sys.stdin, "readline", return_value="n"):
+            self.client.run("upload Hello*")
         self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.out)
 
     def test_upload_same_package_dont_compress(self):

@@ -19,12 +19,27 @@ class _PathSep:
     pass
 
 
-def environment_wrap_command(filename, cmd):
-    if filename.endswith(".bat"):
-        return "{} && {}".format(filename, cmd)
-    elif filename.endswith(".sh"):
-        return 'bash -c ". {} && {}"'.format(filename, cmd.replace('"', r'\"'))
-    raise Exception("Unsupported environment file type {}".format(filename))
+def environment_wrap_command(filename, cmd, cwd=None):
+    assert filename
+    filenames = [filename] if not isinstance(filename, list) else filename
+    bats, shs = [], []
+    for f in filenames:
+        full_path = os.path.join(cwd, f) if cwd else f
+        if os.path.isfile("{}.bat".format(full_path)):
+            bats.append("{}.bat".format(f))
+        elif os.path.isfile("{}.sh".format(full_path)):
+            shs.append("{}.sh".format(f))
+    if bats and shs:
+        raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
+
+    if bats:
+        command = " && ".join(bats)
+        return "{} && {}".format(command, cmd)
+    elif shs:
+        command = " && ".join(". ./{}".format(f) for f in shs)
+        return "{} && {}".format(command, cmd)
+    else:
+        return cmd
 
 
 class Environment:
@@ -32,6 +47,11 @@ class Environment:
         # TODO: Maybe we need to pass conanfile to get the [conf]
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
+
+    def __bool__(self):
+        return bool(self._values)
+
+    __nonzero__ = __bool__
 
     def __repr__(self):
         return repr(self._values)
@@ -97,7 +117,7 @@ class Environment:
         value = self._list_value(value, _PathSep)
         self._values[name] = value + [_PathSep] + [_EnvVarPlaceHolder]
 
-    def save_bat(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -131,7 +151,8 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_ps1(self, filename, generate_deactivate=True, pathsep=os.pathsep):
+    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -140,19 +161,18 @@ class Environment:
         result = [capture]
         for varname, varvalues in self._values.items():
             value = self._format_value(varname, varvalues, "$env:{name}", pathsep)
-            result.append('Write-Output "Error: whatever message {}"'.format(varname))
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename, pathsep=os.pathsep):
-        capture = textwrap.dedent("""\
+    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+        deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
             for v in {vars}
             do
-                value=${{!v}}
+                value=$(printenv $v)
                 if [ -n "$value" ]
                 then
                     echo export "$v=$value" >> deactivate_{filename}
@@ -162,6 +182,12 @@ class Environment:
             done
             echo Configuring environment variables
             """.format(filename=filename, vars=" ".join(self._values.keys())))
+
+        capture = textwrap.dedent("""\
+           {deactivate}
+           echo Configuring environment variables
+           """).format(deactivate=deactivate if generate_deactivate else "")
+
         result = [capture]
         for varname, varvalues in self._values.items():
             value = self._format_value(varname, varvalues, "${name}", pathsep)
@@ -214,7 +240,6 @@ class ProfileEnvironment:
         result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                env = self._environments[pattern]
                 result = result.compose(env)
         return result
 
@@ -229,7 +254,9 @@ class ProfileEnvironment:
             else:
                 self._environments[pattern] = environment
 
-    def loads(self, text):
+    @staticmethod
+    def loads(text):
+        result = ProfileEnvironment()
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
@@ -255,11 +282,12 @@ class ProfileEnvironment:
                         method = method + "_path"
                     getattr(env, method)(name, value)
 
-                existing = self._environments.get(pattern)
+                existing = result._environments.get(pattern)
                 if existing is None:
-                    self._environments[pattern] = env
+                    result._environments[pattern] = env
                 else:
-                    self._environments[pattern] = existing.compose(env)
+                    result._environments[pattern] = existing.compose(env)
                 break
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
+        return result

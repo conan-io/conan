@@ -1,14 +1,14 @@
 import json
 import os
+import textwrap
 import unittest
 
-import pytest
 
 from conans.client import tools
 from conans.client.runner import ConanRunner
 from conans.model.ref import ConanFileReference
 from conans.paths import RUN_LOG_NAME
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.mocks import TestBufferConanOutput
@@ -24,24 +24,24 @@ class ConanTraceTest(unittest.TestCase):
     def test_run_log_file_packaged(self):
         """Check if the log file is generated and packaged"""
 
-        base = '''
-from conans import ConanFile
+        base = textwrap.dedent("""
+            from conans import ConanFile
 
-class HelloConan(ConanFile):
-    name = "Hello0"
-    version = "0.1"
+            class HelloConan(ConanFile):
+                name = "Hello0"
+                version = "0.1"
 
-    def build(self):
-        self.run('echo "Simulating cmake..."')
+                def build(self):
+                    self.run('echo "Simulating cmake..."')
 
-    def package(self):
-        self.copy(pattern="%s", dst="", keep_path=False)
-    ''' % RUN_LOG_NAME
+                def package(self):
+                    self.copy(pattern="%s", dst="", keep_path=False)
+            """ % RUN_LOG_NAME)
 
         def _install_a_package(print_commands_to_output, generate_run_log_file):
-            output = TestBufferConanOutput()
+            out = TestBufferConanOutput()
             runner = ConanRunner(print_commands_to_output, generate_run_log_file,
-                                 log_run_to_output=True, output=output)
+                                 log_run_to_output=True, output=out)
 
             client = TestClient(servers=self.servers,
                                 users={"default": [("lasote", "mypass")]},
@@ -52,8 +52,8 @@ class HelloConan(ConanFile):
             package_dir = client.cache.package_layout(ref).packages()
             package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
-            output = "\n".join([str(output), str(client.out)])
-            return log_file_packaged_, output
+            out = "\n".join([str(out), str(client.out)])
+            return log_file_packaged_, out
 
         log_file_packaged, output = _install_a_package(False, True)
         self.assertIn("Packaged 1 '.log' file: conan_run.log", output)
@@ -73,7 +73,6 @@ class HelloConan(ConanFile):
         self.assertNotIn("Packaged 1 '.log' file: conan_run.log", output)
         self.assertFalse(os.path.exists(log_file_packaged))
 
-    @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_trace_actions(self):
         client = TestClient(servers=self.servers,
                             users={"default": [("lasote", "mypass")]})
@@ -81,8 +80,8 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-            files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-            client.save(files)
+            client.save({"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+                         "file.txt": "content"})
             client.run("user lasote -p mypass -r default")
             client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(ref))
@@ -95,11 +94,12 @@ class HelloConan(ConanFile):
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
         without_rest_api = [it for it in actions if "REST_API_CALL" not in it]
-        self.assertTrue(len(without_rest_api) == 11)
+        assert len(without_rest_api) == 11
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons
 
+        print(without_rest_api)
         self.assertEqual(json.loads(without_rest_api[0])["_action"], "COMMAND")
         self.assertEqual(json.loads(without_rest_api[0])["name"], "authenticate")
         self.assertEqual(json.loads(without_rest_api[2])["_action"], "COMMAND")

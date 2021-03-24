@@ -1,20 +1,49 @@
 import os
+import platform
 
 import pytest
 
 from conans.client.tools import vswhere, which
 from conans.errors import ConanException
 
-tool_locations = {
-    'msys2': os.getenv("CONAN_MSYS2_PATH", "C:/msys64/usr/bin"),
-    'cygwin': os.getenv("CONAN_CYGWIN_PATH", "C:/cygwin64/bin"),
-    'mingw32': os.getenv('CONAN_MINGW32_PATH', "C:/msys64/mingw32/bin"),
-    'mingw64': os.getenv('CONAN_MINGW64_PATH', "C:/msys64/mingw64/bin"),
+tools_default_version = {
+    'cmake': '3.15',
+    'msys2': 'default',
+    'cygwin': 'default',
+    'mingw32': 'default',
+    'mingw64': 'default'
 }
 
-tool_environments = {
-    'mingw32': {'MSYSTEM': 'MINGW32'},
-    'mingw64': {'MSYSTEM': 'MINGW64'}
+tools_locations = {
+    'msys2': {'Windows': {'default': os.getenv('CONAN_MSYS2_PATH', 'C:/msys64/usr/bin')}},
+    'cygwin': {'Windows': {'default': os.getenv('CONAN_CYGWIN_PATH', 'C:/cygwin64/bin')}},
+    'mingw32': {'Windows': {'default': os.getenv('CONAN_MINGW32_PATH', 'C:/msys64/mingw32/bin')}},
+    'mingw64': {'Windows': {'default': os.getenv('CONAN_MINGW64_PATH', 'C:/msys64/mingw64/bin')}},
+    'cmake': {
+        'Windows': {
+            '3.15': 'C:/cmake/cmake-3.15.7-win64-x64/bin',
+            '3.16': 'C:/cmake/cmake-3.16.9-win64-x64/bin',
+            '3.17': 'C:/cmake/cmake-3.17.5-win64-x64/bin',
+            '3.19': 'C:/cmake/cmake-3.19.7-win64-x64/bin'
+        },
+        'Darwin': {
+            '3.15': '/Users/jenkins/cmake/cmake-3.15.7/bin',
+            '3.16': '/Users/jenkins/cmake/cmake-3.16.9/bin',
+            '3.17': '/Users/jenkins/cmake/cmake-3.17.5/bin',
+            '3.19': '/Users/jenkins/cmake/cmake-3.19.7/bin'
+        },
+        'Linux': {
+            '3.15': '/usr/share/cmake-3.15.7/bin',
+            '3.16': '/usr/share/cmake-3.16.9/bin',
+            '3.17': '/usr/share/cmake-3.17.5/bin',
+            '3.19': '/usr/share/cmake-3.19.7/bin'
+        }
+    }
+}
+
+tools_environments = {
+    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
+    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}}
 }
 
 tools_available = [
@@ -41,7 +70,7 @@ try:
 except ConanException:
     tools_available.remove("visual_studio")
 
-if not any([x for x in ("gcc", "clang", "visual_sudio") if x in tools_available]):
+if not any([x for x in ("gcc", "clang", "visual_studio") if x in tools_available]):
     tools_available.remove("compiler")
 
 if not which("xcodebuild"):
@@ -67,23 +96,51 @@ if not which("conan"):
     tools_available.remove("conan")
 
 
+def _get_tool_path(locations, name, version, tool_platform):
+    path = None
+    try:
+        path = locations[name][tool_platform][version]
+    except KeyError as exc:
+        if version in str(exc):
+            raise ConanException(exc)
+    return path
+
+
+def _get_tool_environment(environments, name, tool_platform):
+    env = None
+    try:
+        env = environments[name][tool_platform]
+    except KeyError:
+        pass
+    return env
+
+
 @pytest.fixture(autouse=True)
 def add_tool(request):
-    add_tools = []
-    env_tools = dict()
+    tools_paths = []
+    tools_env_vars = dict()
     for mark in request.node.iter_markers():
         if mark.name.startswith("tool_"):
             tool_name = mark.name[5:]
-            if tool_name in tool_locations:
-                add_tools.append(tool_locations[tool_name])
-            if tool_name in tool_environments:
-                env_tools.update(tool_environments[tool_name])
-    if add_tools:
-        add_tools.append(os.environ["PATH"])
-        temp_env = {'PATH': os.pathsep.join(add_tools)}
+            version = mark.kwargs.get('version', None) or tools_default_version.get(tool_name)
+            if version:
+                try:
+                    tool_path = _get_tool_path(tools_locations, tool_name, version, platform.system())
+                    if tool_path:
+                        tools_paths.append(tool_path)
+                except ConanException:
+                    pytest.fail("Required {} version: '{}' is not available".format(tool_name, version))
+
+            tool_env = _get_tool_environment(tools_environments, tool_name, platform.system())
+            if tool_env:
+                tools_env_vars.update(tool_env)
+
+    if tools_paths:
+        tools_paths.append(os.environ["PATH"])
+        temp_env = {'PATH': os.pathsep.join(tools_paths)}
         old_environ = dict(os.environ)
         os.environ.update(temp_env)
-        os.environ.update(env_tools)
+        os.environ.update(tools_env_vars)
         yield
         os.environ.clear()
         os.environ.update(old_environ)
