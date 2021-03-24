@@ -3,8 +3,6 @@ import os
 import textwrap
 import unittest
 
-import pytest
-
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -77,7 +75,6 @@ class JsonOutputTest(unittest.TestCase):
         self.assertFalse(my_json["installed"][0]["packages"][0]["downloaded"])
         self.assertTrue(my_json["installed"][0]["packages"][0]["cpp_info"])
 
-    @pytest.mark.tool_compiler
     def test_errors(self):
 
         # Missing recipe
