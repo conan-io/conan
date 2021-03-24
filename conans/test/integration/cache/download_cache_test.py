@@ -6,13 +6,11 @@ from collections import Counter
 from threading import Thread
 
 from bottle import static_file, request
-import pytest
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.env_reader import get_env
 from conans.util.files import load, save, set_dirty
 
 
@@ -68,8 +66,8 @@ class DownloadCacheTest(unittest.TestCase):
         content = load(log_trace_file)
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
-    @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
-    def test_dirty_download(self):
+    @staticmethod
+    def test_dirty_download():
         # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()
@@ -165,8 +163,6 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                        reason="Hybrid test with both v1 and v2")
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
         client.run("config set general.revisions_enabled=False")
