@@ -627,10 +627,10 @@ endforeach()
             save(generator_file, content)
 
     def _data_filename(self, pkg_filename):
-        data_fname = "{}-".format(pkg_filename)
+        data_fname = "{}-{}".format(pkg_filename, self.configuration.lower())
         if self.arch:
-            data_fname += "{}-".format(self.arch)
-        data_fname += "{}-data.cmake".format(self.configuration)
+            data_fname += "-{}".format(self.arch)
+        data_fname += "-data.cmake"
         return data_fname
 
     @property

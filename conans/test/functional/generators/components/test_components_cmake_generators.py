@@ -50,9 +50,7 @@ def setup_client_with_greetings():
                 elif self.options.components == "custom":
                     self.cpp_info.filenames["cmake_find_package_multi"] = "MYG"
                     self.cpp_info.filenames["cmake_find_package"] = "MYG"
-                    self.cpp_info.filenames["CMakeDeps"] = "MYG"
                     self.cpp_info.names["cmake_find_package_multi"] = "MyGreetings"
-                    self.cpp_info.names["CMakeDeps"] = "MyGreetings"
                     self.cpp_info.names["cmake_find_package"] = "MyGreetings"
                     self.cpp_info.components["hello"].names["cmake_find_package_multi"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package_multi"] = "MyBye"
