@@ -117,7 +117,7 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
     assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
-    client.run("build .")
+    client.run("build . -s:b os=Windows -s:h os=Linux")
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
     assert "MYGTEST=Linux!!" in client.out
