@@ -11,11 +11,11 @@ from conans.client.tools import cross_building, get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.ref import ConanFileReference
-from conans.model.graph_lock import GraphLockFile
+from conans.model.graph_lock import GraphLockFile, GraphLock
 
 
-def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
-                 update=False, generators=None, no_imports=False,
+def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, graph_lock, root_ref,
+                 remotes=None, build_modes=None, update=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -29,8 +29,6 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     """
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
-    remote_manager, hook_manager = app.remote_manager, app.hook_manager
-    profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
 
     if generators is not False:
         generators = set(generators) if generators else set()
@@ -44,10 +42,11 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         out.info("Configuration:")
         out.writeln(profile_host.dumps())
 
-    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
-                                          False, update, remotes, recorder,
-                                          lockfile_node_id=lockfile_node_id)
-    graph_lock = graph_info.graph_lock  # After the graph is loaded it is defined
+    deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
+                                          graph_lock, root_ref, build_modes, False, update, remotes,
+                                          recorder, lockfile_node_id=lockfile_node_id)
+
+    graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:

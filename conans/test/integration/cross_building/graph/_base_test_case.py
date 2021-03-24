@@ -7,8 +7,6 @@ from conans.client.cache.remote_registry import Remotes
 from conans.client.graph.build_mode import BuildMode
 from conans.client.installer import BinaryInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.model.graph_info import GraphInfo
-from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.graph_manager_base import GraphManagerTest
 from conans.test.utils.test_files import temp_folder
@@ -193,14 +191,12 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
         """))
 
         ref = ConanFileReference(None, None, None, None, validate=False)
-        options = OptionsValues()
-        graph_info = GraphInfo(profile_host=profile_host, profile_build=profile_build,
-                               options=options, root_ref=ref)
         recorder = ActionRecorder()
         app = self._get_app()
-        deps_graph = app.graph_manager.load_graph(path, create_reference=None, graph_info=graph_info,
-                                                  build_mode=[], check_updates=False, update=False,
-                                                  remotes=Remotes(), recorder=recorder)
+        deps_graph = app.graph_manager.load_graph(path, None, profile_host,
+                                                  profile_build, None, ref, build_mode=[],
+                                                  check_updates=False, update=False, remotes=Remotes(),
+                                                  recorder=recorder)
 
         if install:
             build_mode = []  # Means build all

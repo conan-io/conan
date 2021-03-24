@@ -1,5 +1,4 @@
 import fnmatch
-import os
 from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
@@ -10,9 +9,7 @@ from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, 
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
-from conans.model.graph_lock import GraphLock
 from conans.model.ref import ConanFileReference
-from conans.util.files import load
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -76,13 +73,11 @@ class GraphManager(object):
 
         return conanfile
 
-    def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
+    def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
+                   root_ref, build_mode, check_updates, update,
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
-        profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
-        graph_lock, root_ref = graph_info.graph_lock, graph_info.root
-
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
@@ -90,16 +85,6 @@ class GraphManager(object):
                                          apply_build_requires=apply_build_requires)
         # Run some validations once the graph is built
         self._validate_graph_provides(deps_graph)
-
-        # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
-        graph_info.options = root_node.conanfile.options.values
-        if root_node.ref:
-            graph_info.root = root_node.ref
-
-        if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph)
-
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,

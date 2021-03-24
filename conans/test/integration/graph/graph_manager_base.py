@@ -16,9 +16,7 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.model.graph_info import GraphInfo
 from conans.model.manifest import FileTreeManifest
-from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
@@ -129,11 +127,10 @@ class GraphManagerTest(unittest.TestCase):
         remotes = Remotes()
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
-        options = OptionsValues()
-        graph_info = GraphInfo(profile, options=options, root_ref=ref)
         app = self._get_app()
-        deps_graph = app.graph_manager.load_graph(path, create_ref, graph_info, build_mode,
-                                                  check_updates, update, remotes, recorder)
+        deps_graph = app.graph_manager.load_graph(path, create_ref, profile, None, None, ref,
+                                                  build_mode, check_updates, update, remotes,
+                                                  recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
             build_mode = BuildMode(build_mode, app.out)
