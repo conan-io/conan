@@ -27,12 +27,8 @@ class ConanFileInterface:
 
     @property
     def context(self):
-<<<<<<< HEAD
-        return self._conanfile._conan_context
-=======
         return self._conanfile.context
 
     @property
     def dependencies(self):
         return self._conanfile.dependencies
->>>>>>> develop

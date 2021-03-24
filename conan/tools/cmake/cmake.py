@@ -3,7 +3,6 @@ import platform
 
 from conan.tools.cmake.base import CMakeToolchainBase
 from conan.tools.cmake.utils import get_generator, is_multi_configuration
-from conan.tools.env.environment import environment_wrap_command
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg
 from conans.client import tools
 from conans.client.build import join_arguments
@@ -117,12 +116,6 @@ class CMake(object):
 
         arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
         command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
-
-        # Need to activate the buildenv if existing
-        env_filename = "buildenv.bat" if platform.system() == "Windows" else "buildenv.sh"
-        if os.path.isfile(env_filename):
-            command = environment_wrap_command(env_filename, command)
-
         self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 

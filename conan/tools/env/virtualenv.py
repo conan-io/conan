@@ -1,7 +1,6 @@
 import platform
 
 from conan.tools.env import Environment
-
 from conans.client.graph.graph import CONTEXT_HOST
 
 

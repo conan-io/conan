@@ -67,7 +67,7 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain"]
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:

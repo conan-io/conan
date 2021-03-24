@@ -152,7 +152,6 @@ class Environment:
         save(filename, content)
 
     def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
-
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -182,12 +181,10 @@ class Environment:
             done
             echo Configuring environment variables
             """.format(filename=filename, vars=" ".join(self._values.keys())))
-
         capture = textwrap.dedent("""\
            {deactivate}
            echo Configuring environment variables
            """).format(deactivate=deactivate if generate_deactivate else "")
-
         result = [capture]
         for varname, varvalues in self._values.items():
             value = self._format_value(varname, varvalues, "${name}", pathsep)
