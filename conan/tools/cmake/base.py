@@ -146,8 +146,6 @@ class CMakeToolchainBase(object):
         """)
 
     def __init__(self, conanfile, **kwargs):
-        import six
-
         self._conanfile = conanfile
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
@@ -158,12 +156,11 @@ class CMakeToolchainBase(object):
 
         self.build_type = None
 
-        self.find_package_prefer_config = \
-            conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
-        if self.find_package_prefer_config is not None:
-            self.find_package_prefer_config = "OFF" if self.find_package_prefer_config.lower() in ("false", "0", "off") else "ON"
-        else:
-            self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
+        self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
+        prefer_config = conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
+            self.find_package_prefer_config = "OFF"
+
     def _get_templates(self):
         return {
             'toolchain_macros': self._toolchain_macros_tpl,
