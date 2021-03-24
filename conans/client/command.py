@@ -1886,7 +1886,8 @@ class Command(object):
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
-        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
+                                                        "like 'path/conanfile.py'")
         create_cmd.add_argument("--name", action=OnceArgument,
                                 help='Provide a package name if not specified in conanfile')
         create_cmd.add_argument("--version", action=OnceArgument,
