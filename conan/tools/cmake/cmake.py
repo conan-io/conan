@@ -29,12 +29,12 @@ def _cmake_cmd_line_args(conanfile, generator, parallel):
         return args
 
     # Arguments related to parallel
-    if "MakeFiles" in generator and "NMake" not in generator and parallel:
+    if "Makefiles" in generator and "NMake" not in generator and parallel:
         njobs = make_jobs_cmd_line_arg(conanfile)
         if njobs:
             args.append(njobs)
 
-    if "Ninja" in generator and "NMake" not in generator:
+    if "Ninja" in generator and "NMake" not in generator and parallel:
         njobs = ninja_jobs_cmd_line_arg(conanfile)
         if njobs:
             args.append(njobs)
