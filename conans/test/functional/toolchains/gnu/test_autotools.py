@@ -6,7 +6,7 @@ import time
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
+from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
@@ -26,18 +26,13 @@ def test_autotools():
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.tools.gnu import AutotoolsToolchain, Autotools, AutotoolsDeps
+        from conan.tools.gnu import Autotools
 
         class TestConan(ConanFile):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-
-            def generate(self):
-                deps = AutotoolsDeps(self)
-                deps.generate()
-                tc = AutotoolsToolchain(self)
-                tc.generate()
+            generators = "AutotoolsGen"
 
             def build(self):
                 self.run("aclocal")
@@ -46,7 +41,6 @@ def test_autotools():
                 autotools = Autotools(self)
                 autotools.configure()
                 autotools.make()
-                autotools.install()
         """)
 
     client.save({"conanfile.py": conanfile,
@@ -74,13 +68,7 @@ def build_windows_subsystem(profile, make_program):
     client.run("create . --profile=profile")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    makefile = textwrap.dedent("""\
-        app: main.o
-        	$(CXX) $(CFLAGS) $(LDFLAGS) -o app main.o $(LIBS)
-
-        main.o: main.cpp
-        	$(CXX) $(CFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o main.o main.cpp
-        """)
+    makefile = gen_makefile(apps=["app"])
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
@@ -96,7 +84,7 @@ def build_windows_subsystem(profile, make_program):
                 autotools = Autotools(self)
                 autotools.make()
         """)
-    client.save({"main.cpp": main,
+    client.save({"app.cpp": main,
                  "Makefile": makefile,
                  "conanfile.py": conanfile,
                  "profile": profile}, clean_first=True)
@@ -109,11 +97,11 @@ def build_windows_subsystem(profile, make_program):
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
     assert "hello/0.1: Hello World Release!" in client.out
 
-    client.save({"main.cpp": gen_function_cpp(name="main", msg="main2",
-                                              includes=["hello"], calls=["hello"])})
+    client.save({"app.cpp": gen_function_cpp(name="main", msg="main2",
+                                             includes=["hello"], calls=["hello"])})
     # Make sure it is newer
     t = time.time() + 1
-    touch(os.path.join(client.current_folder, "main.cpp"), (t, t))
+    touch(os.path.join(client.current_folder, "app.cpp"), (t, t))
 
     client.run("build .")
     client.run_command("app")

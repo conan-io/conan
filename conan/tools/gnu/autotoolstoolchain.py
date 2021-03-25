@@ -31,12 +31,12 @@ class AutotoolsToolchain:
         self.build_type_flags = build_type_flags(self._conanfile.settings)
 
     def _rpaths_link(self):
-        # TODO: Not used yet
-        lib_paths = self._conanfile.deps_cpp_info.lib_paths
-        compiler = _base_compiler(settings)
-        if compiler in GCC_LIKE:
-            return ['-Wl,-rpath,"%s"' % (x.replace("\\", "/"))
-                    for x in lib_paths if x]
+        # TODO: Not implemented yet
+        pass
+
+    # TODO: Apple: tools.apple_deployment_target_flag,
+    # TODO:  tools.XCRun(self._conanfile.settings).sdk_path
+    # TODO: "-arch", tools.to_apple_arch(self._arch)
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -107,5 +107,5 @@ class AutotoolsToolchain:
 
     def generate(self):
         env = self.environment()
-        env.save_sh("autotools.sh")
-        env.save_bat("autotools.bat")
+        env.save_sh("conanautotoolstoolchain.sh")
+        env.save_bat("conanautotoolstoolchain.bat")
