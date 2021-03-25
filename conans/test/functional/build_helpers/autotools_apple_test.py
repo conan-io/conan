@@ -12,7 +12,7 @@ from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() != "Darwin", "requires Xcode")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 class AutoToolsAppleTest(unittest.TestCase):
     makefile = gen_makefile(apps=["app"], libs=["hello"])
 
