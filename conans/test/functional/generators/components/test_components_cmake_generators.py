@@ -287,16 +287,16 @@ def test_standard_names(setup_client_with_greetings, generator):
             assert "bye: Release!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
+                                       "CMakeDeps"])
 def test_custom_names(setup_client_with_greetings, generator):
-    # NOTE: cpp_info.names is deprecated for CMakeDeps and doesn't work anymore so this test doesn't
-    #       include that generator
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
         self.cpp_info.names["cmake_find_package_multi"] = "MyChat"
         self.cpp_info.names["cmake_find_package"] = "MyChat"
-        self.cpp_info.names["CMakeDeps"] = "MyChat"
+        # NOTE: For the new CMakeDeps only filenames mean filename, it is not using the "names" field
+        self.cpp_info.filenames["CMakeDeps"] = "MyChat"
         self.cpp_info.components["sayhello"].names["cmake_find_package_multi"] = "MySay"
         self.cpp_info.components["sayhello"].names["cmake_find_package"] = "MySay"
         self.cpp_info.components["sayhello"].names["CMakeDeps"] = "MySay"
