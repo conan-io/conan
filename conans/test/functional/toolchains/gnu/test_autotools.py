@@ -103,9 +103,8 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command("buildenv.bat", make_program)
+    cmd = environment_wrap_command("conanbuildenv", make_program, cwd=client.current_folder)
     client.run_command(cmd)
-    print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None)
@@ -118,7 +117,6 @@ def build_windows_subsystem(profile, make_program):
     touch(os.path.join(client.current_folder, "main.cpp"), (t, t))
 
     client.run("build .")
-    print(client.out)
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)

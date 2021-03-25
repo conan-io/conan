@@ -24,7 +24,7 @@ class AutotoolsDeps:
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
-        for dep in self._conanfile.dependencies.all:
+        for dep in self._conanfile.dependencies.requires:
             if dep.context == CONTEXT_BUILD:
                 continue
             # environ_info is always "build"

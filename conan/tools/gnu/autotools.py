@@ -184,11 +184,8 @@ class Autotools(object):
         if make_program is None:
             make_program = "mingw32-make" if platform.system() == "Windows" else "make"
         # Need to activate the buildenv if existing
-        env_filename = "buildenv.bat" if platform.system() == "Windows" else "buildenv.sh"
         command = make_program
-        if os.path.isfile(env_filename):
-            command = environment_wrap_command(env_filename, make_program)
-        self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
+        self._conanfile.run(command)
 
     def install(self, args=""):
         if not self._conanfile.should_install:

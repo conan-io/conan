@@ -14,9 +14,9 @@ class AutotoolsGen:
         envtoolchain = self.toolchain.environment()
         envdeps = self.deps.environment()
         build_env = self.env.build_environment()
-        envdeps.compose(envtoolchain)
-        envdeps.compose(build_env)
-        return envdeps
+        build_env.compose(envtoolchain)
+        build_env.compose(envdeps)
+        return build_env
 
     def run_environment(self):
         run_env = self.env.run_environment()
@@ -28,8 +28,8 @@ class AutotoolsGen:
         # FIXME: Use settings, not platform Not always defined :(
         # os_ = self._conanfile.settings_build.get_safe("os")
         if platform.system() == "Windows":
-            build_env.save_bat("buildenv.bat")
-            run_env.save_bat("runenv.bat")
+            build_env.save_bat("conanbuildenv.bat")
+            run_env.save_bat("conanrunenv.bat")
         else:
-            build_env.save_sh("buildenv.sh")
-            run_env.save_sh("runenv.sh")
+            build_env.save_sh("conanbuildenv.sh")
+            run_env.save_sh("conanrunenv.sh")
