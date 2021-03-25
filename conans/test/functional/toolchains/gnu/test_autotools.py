@@ -72,7 +72,6 @@ def build_windows_subsystem(profile, make_program):
               os.path.join(client.current_folder, "test_package2"))
     client.save({"profile": profile})
     client.run("create . --profile=profile")
-    print(client.out)
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
     makefile = textwrap.dedent("""\
@@ -138,7 +137,6 @@ def test_autotoolsdeps_cygwin():
         build_type=Release
         """)
     out = build_windows_subsystem(gcc, make_program="make")
-    print(out)
     assert "__MSYS__" not in out
     assert "MINGW" not in out
     assert "main2 __CYGWIN__1" in out
@@ -157,7 +155,6 @@ def test_autotoolsdeps_mingw_msys():
         build_type=Release
         """)
     out = build_windows_subsystem(gcc, make_program="mingw32-make")
-    print(out)
     assert "__MSYS__" not in out
     assert "main2 __MINGW64__1" in out
 
@@ -176,7 +173,6 @@ def test_autotoolsdeps_msys():
         build_type=Release
         """)
     out = build_windows_subsystem(gcc, make_program="make")
-    print(out)
     # Msys2 is a rewrite of Msys, using Cygwin
     assert "MINGW" not in out
     assert "main2 __MSYS__1" in out

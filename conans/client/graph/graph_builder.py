@@ -205,6 +205,7 @@ class DepsGraphBuilder(object):
                                              remotes, profile_host, profile_build, graph_lock,
                                              context_switch=context_switch,
                                              populate_settings_target=populate_settings_target)
+
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
             new_node.transitive_closure[new_node.name] = new_node

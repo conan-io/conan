@@ -1,5 +1,4 @@
 from conan.tools.env import Environment
-from conans.client.graph.graph import CONTEXT_BUILD
 
 
 class AutotoolsDeps:
@@ -24,10 +23,7 @@ class AutotoolsDeps:
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
-        for dep in self._conanfile.dependencies.requires:
-            if dep.context == CONTEXT_BUILD:
-                continue
-            # environ_info is always "build"
+        def merge(dep):
             dep_cpp_info = dep.cpp_info
             self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
             self.include_paths = merge_lists(self.include_paths, dep_cpp_info.include_paths)
@@ -45,6 +41,24 @@ class AutotoolsDeps:
 
             if not self.sysroot:
                 self.sysroot = dep_cpp_info.sysroot
+
+        def _apply_transitive_runenv(next_requires):
+            # TODO: This visitor is same as VirtualEnv runenv_info one, extract
+            all_requires = []
+            while next_requires:
+                new_requires = []
+                for require in next_requires:
+                    # The explicit has more priority
+                    merge(require)
+                    all_requires.append(require)
+
+                    for transitive in require.dependencies.requires:
+                        # Avoid duplication/repetitions
+                        if transitive not in new_requires and transitive not in all_requires:
+                            new_requires.append(transitive)
+                next_requires = new_requires
+
+        _apply_transitive_runenv(self._conanfile.dependencies.requires)
 
     def environment(self):
         # cpp_flags
@@ -87,5 +101,5 @@ class AutotoolsDeps:
 
     def generate(self):
         env = self.environment()
-        env.save_sh("autotoolsdeps.sh")
-        env.save_bat("autotoolsdeps.bat")
+        env.save_sh("conanautotoolsdeps.sh")
+        env.save_bat("conanautotoolsdeps.bat")
