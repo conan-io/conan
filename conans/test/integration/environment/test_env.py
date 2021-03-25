@@ -123,6 +123,47 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
 
 
+def test_profile_included_multiple():
+    client = TestClient()
+    conanfile = textwrap.dedent("""\
+        import os, platform
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def generate(self):
+                buildenv = self.buildenv
+                self.output.info("MYVAR1: {}!!!".format(buildenv.value("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(buildenv.value("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(buildenv.value("MYVAR3")))
+        """)
+
+    myprofile = textwrap.dedent("""
+       [buildenv]
+       MYVAR1=MyVal1
+       MYVAR3+=MyVal3
+       """)
+    other_profile = textwrap.dedent("""
+       [buildenv]
+       MYVAR1=MyValOther1
+       MYVAR2=MyValOther2
+       MYVAR3=MyValOther3
+       """)
+    client.save({"conanfile.py": conanfile,
+                 "myprofile": myprofile,
+                 "myprofile_include": "include(other_profile)\n" + myprofile,
+                 "other_profile": other_profile})
+    # The reference profile has priority
+    client.run("install . -pr=myprofile_include")
+    assert "MYVAR1: MyVal1!!!" in client.out
+    assert "MYVAR2: MyValOther2!!!" in client.out
+    assert "MYVAR3: MyValOther3 MyVal3!!!" in client.out
+
+    # Equivalent to include is to put it first, then the last has priority
+    client.run("install . -pr=other_profile -pr=myprofile")
+    assert "MYVAR1: MyVal1!!!" in client.out
+    assert "MYVAR2: MyValOther2!!!" in client.out
+    assert "MYVAR3: MyValOther3 MyVal3!!!" in client.out
+
+
 def test_profile_buildenv():
     client = TestClient()
     save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
@@ -269,3 +310,75 @@ def test_buildenv_from_requires():
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
     assert "BUILDENV POCO: Poco_ROOT MyPocoLinuxValue!!!" in client.out
     assert "BUILDENV OpenSSL: OpenSSL_ROOT MyOpenSSLLinuxValue!!!" in client.out
+
+
+def test_diamond_repeated():
+    pkga = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.runenv_info.define("MYVAR1", "PkgAValue1")
+                self.runenv_info.append("MYVAR2", "PkgAValue2")
+                self.runenv_info.prepend("MYVAR3", "PkgAValue3")
+                self.runenv_info.prepend("MYVAR4", "PkgAValue4")
+        """)
+    pkgb = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "pkga/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR1", "PkgBValue1")
+                self.runenv_info.append("MYVAR2", "PkgBValue2")
+                self.runenv_info.prepend("MYVAR3", "PkgBValue3")
+                self.runenv_info.prepend("MYVAR4", "PkgBValue4")
+        """)
+    pkgc = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "pkga/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR1", "PkgCValue1")
+                self.runenv_info.append("MYVAR2", "PkgCValue2")
+                self.runenv_info.prepend("MYVAR3", "PkgCValue3")
+                self.runenv_info.prepend("MYVAR4", "PkgCValue4")
+        """)
+    pkgd = textwrap.dedent(r"""
+       from conans import ConanFile
+       class Pkg(ConanFile):
+           requires = "pkgb/1.0", "pkgc/1.0"
+           def package_info(self):
+               self.runenv_info.append("MYVAR1", "PkgDValue1")
+               self.runenv_info.append("MYVAR2", "PkgDValue2")
+               self.runenv_info.prepend("MYVAR3", "PkgDValue3")
+               self.runenv_info.define("MYVAR4", "PkgDValue4")
+       """)
+    pkge = textwrap.dedent(r"""
+       from conans import ConanFile
+       from conan.tools.env import VirtualEnv
+       class Pkg(ConanFile):
+           requires = "pkgd/1.0"
+           def generate(self):
+                env = VirtualEnv(self)
+                runenv = env.run_environment()
+                self.output.info("MYVAR1: {}!!!".format(runenv.value("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(runenv.value("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(runenv.value("MYVAR3")))
+                self.output.info("MYVAR4: {}!!!".format(runenv.value("MYVAR4")))
+       """)
+    client = TestClient()
+    client.save({"pkga/conanfile.py": pkga,
+                 "pkgb/conanfile.py": pkgb,
+                 "pkgc/conanfile.py": pkgc,
+                 "pkgd/conanfile.py": pkgd,
+                 "pkge/conanfile.py": pkge})
+
+    client.run("export pkga pkga/1.0@")
+    client.run("export pkgb pkgb/1.0@")
+    client.run("export pkgc pkgc/1.0@")
+    client.run("export pkgd pkgd/1.0@")
+
+    client.run("install pkge --build")
+    assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
+    assert "MYVAR2: MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
+    assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 MYVAR3!!!" in client.out
+    assert "MYVAR4: PkgDValue4!!!" in client.out
