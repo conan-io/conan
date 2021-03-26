@@ -221,7 +221,11 @@ class _CppInfo(object):
     def get_property(self, property_name, generator=None):
         generator = generator or "conan_default_generators_value"
         try:
-            return self._generator_properties.get(generator).get(property_name)
+            gen_dict = self._generator_properties.get(generator)
+            if gen_dict:
+               return gen_dict.get(property_name)
+            else:
+                return None
         except KeyError:
             return None
             # fall back in the default or throw an error ?
