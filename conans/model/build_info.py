@@ -104,6 +104,7 @@ class _CppInfo(object):
 
     def __init__(self):
         self._name = None
+        self._generator_properties = {}
         self.names = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
@@ -209,14 +210,34 @@ class _CppInfo(object):
     def name(self, value):
         self._name = value
 
-    def get_name(self, generator):
-        return self.names.get(generator, self._name)
+    def set_property(self, property_name, value, generator=None):
+        generator = generator or "conan_default_generators_value"
+        gen_dict = self._generator_properties.get(generator)
+        if gen_dict:
+            gen_dict.update({property_name: value})
+        else:
+            self._generator_properties.update({generator: {property_name: value}})
 
-    def get_filename(self, generator):
-        result = self.filenames.get(generator)
-        if result:
-            return result
-        return self.get_name(generator)
+    def get_property(self, property_name, generator=None):
+        generator = generator or "conan_default_generators_value"
+        try:
+            return self._generator_properties.get(generator).get(property_name)
+        except KeyError:
+            return None
+            # fall back in the default or throw an error ?
+            #return self._generator_properties.get("conan_default_generators_value").get(property_name)
+
+    def update_properties(self):
+        for generator, value in self.names.items():
+            self.set_property("name", value, generator=generator)
+        for generator, value in self.filenames.items():
+            self.set_property("filenames", value, generator=generator)
+
+    def get_name(self, generator=None):
+        return self.get_property("name", generator) or self._name
+
+    def get_filename(self, generator=None):
+        return self.get_property("filenames", generator) or self._name
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):

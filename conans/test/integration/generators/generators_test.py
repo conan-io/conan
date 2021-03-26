@@ -179,3 +179,57 @@ qmake
         client.run('install . -s os=Windows -s compiler="Visual Studio" -s compiler.version=15'
                    ' -s compiler.runtime=MD -g cmake')
         self.assertIn("conanfile.py: Generator 'msbuild' calling 'generate()'", client.out)
+
+    def test_misc(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "aws-checksums"
+                version = "1.0"
+
+                def build(self):
+                    pass
+
+                def package(self):
+                    pass
+
+                def package_info(self):
+                    self.cpp_info.filenames["cmake_find_package"] = "aws-checksums"
+                    # self.cpp_info.filenames["cmake_find_package_multi"] = "aws-checksums"
+                    # self.cpp_info.names["cmake_find_package"] = "AWS"
+                    # self.cpp_info.names["cmake_find_package_multi"] = "AWS"
+                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package"] = "aws-checksums"
+                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package_multi"] = "aws-checksums"
+                    # self.cpp_info.components["aws-checksums-lib"].libs = ["aws-checksums"]
+                    # self.cpp_info.set_property("names", "default_name_new")
+                    # self.cpp_info.set_property("filenames", "default_filenames_new")
+                    # #self.cpp_info.filenames["cmake_find_package"] = "cmake_find_package_old"
+                    # #self.cpp_info.names["cmake_find_package"] = "cmake_find_package_old"
+                    # self.cpp_info.components["jander"].set_property("names", "cmake_find_package_new")
+                    # self.cpp_info.components["jander"].names["cmake_find_package"] = "cmake_find_package_component_old"
+                """)
+        client.save({"conanfile.py": conanfile})
+        client.run('create .')
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake
+
+
+            class ConanPKG(ConanFile):
+                name = "conanpkg"
+                version = "1.0"
+                generators = "cmake_find_package"
+                requires = "aws-checksums/1.0"
+
+                def build(self):
+                    pass
+
+                def package(self):
+                    pass
+
+                def package_info(self):
+                    pass
+                """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run('create .')
