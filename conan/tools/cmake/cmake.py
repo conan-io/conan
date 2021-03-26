@@ -29,20 +29,21 @@ def _cmake_cmd_line_args(conanfile, generator, parallel):
         return args
 
     # Arguments related to parallel
-    if "Makefiles" in generator and "NMake" not in generator and parallel:
-        njobs = make_jobs_cmd_line_arg(conanfile)
-        if njobs:
-            args.append(njobs)
+    if parallel:
+        if "Makefiles" in generator and "NMake" not in generator:
+            njobs = make_jobs_cmd_line_arg(conanfile)
+            if njobs:
+                args.append(njobs)
 
-    if "Ninja" in generator and "NMake" not in generator and parallel:
-        njobs = ninja_jobs_cmd_line_arg(conanfile)
-        if njobs:
-            args.append(njobs)
+        if "Ninja" in generator and "NMake" not in generator:
+            njobs = ninja_jobs_cmd_line_arg(conanfile)
+            if njobs:
+                args.append(njobs)
 
-    if "Visual Studio" in generator and parallel:
-        max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(conanfile)
-        if max_cpu_count:
-            args.append(max_cpu_count)
+        if "Visual Studio" in generator:
+            max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(conanfile)
+            if max_cpu_count:
+                args.append(max_cpu_count)
 
     # Arguments for verbosity
     if "Visual Studio" in generator:
