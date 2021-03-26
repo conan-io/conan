@@ -398,6 +398,19 @@ class Pkg(ConanFile):
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
+    def test_existing_python_requires(self):
+        # https://github.com/conan-io/conan/issues/8702
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . test-python-requires/0.1@user/testing")
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    python_requires = 'test-python-requires/0.1@user/testing'"""})
+        client.run("create . Pkg/0.1@user/testing")
+        client.run("alias Pkg/0.1@user/testing Pkg/0.2@user/testing", assert_error=True)
+        self.assertIn("ERROR: Reference 'Pkg/0.1@user/testing' is already a package",
+                      client.out)
+
     def test_basic(self):
         test_server = TestServer()
         servers = {"default": test_server}
