@@ -21,3 +21,18 @@ class ConanFileDependencies:
     @property
     def direct_host_requires(self):
         return self.requires + [br for br in self.build_requires if br.context == CONTEXT_HOST]
+
+    @property
+    def host_requires(self):
+        result = []
+        next_requires = self.direct_host_requires
+        while next_requires:
+            new_requires = []
+            for require in next_requires:
+                if require not in new_requires and require not in result:
+                    result.append(require)
+                for transitive in require.dependencies.requires:
+                    if transitive not in new_requires:
+                        new_requires.append(transitive)
+            next_requires = new_requires
+        return result
