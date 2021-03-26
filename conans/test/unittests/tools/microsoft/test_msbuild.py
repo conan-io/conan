@@ -5,7 +5,7 @@ from conans.model.conf import ConfDefinition
 from conans.test.utils.mocks import ConanFileMock, MockSettings
 
 
-def test_meson_build():
+def test_msbuild_cpu_count():
     c = ConfDefinition()
     c.loads(textwrap.dedent("""\
         tools.microsoft.msbuild:max_cpu_count=23
