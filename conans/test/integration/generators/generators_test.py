@@ -196,12 +196,12 @@ qmake
 
                 def package_info(self):
                     self.cpp_info.filenames["cmake_find_package"] = "aws-checksums"
-                    # self.cpp_info.filenames["cmake_find_package_multi"] = "aws-checksums"
-                    # self.cpp_info.names["cmake_find_package"] = "AWS"
-                    # self.cpp_info.names["cmake_find_package_multi"] = "AWS"
-                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package"] = "aws-checksums"
-                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package_multi"] = "aws-checksums"
-                    # self.cpp_info.components["aws-checksums-lib"].libs = ["aws-checksums"]
+                    self.cpp_info.filenames["cmake_find_package_multi"] = "aws-checksums"
+                    self.cpp_info.names["cmake_find_package"] = "AWS"
+                    self.cpp_info.names["cmake_find_package_multi"] = "AWS"
+                    self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package"] = "component-aws-checksums"
+                    self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package_multi"] = "component-aws-checksums"
+                    self.cpp_info.components["aws-checksums-lib"].libs = ["component-aws-checksums"]
                     # self.cpp_info.set_property("names", "default_name_new")
                     # self.cpp_info.set_property("filenames", "default_filenames_new")
                     # #self.cpp_info.filenames["cmake_find_package"] = "cmake_find_package_old"
@@ -210,6 +210,7 @@ qmake
                     # self.cpp_info.components["jander"].names["cmake_find_package"] = "cmake_find_package_component_old"
                 """)
         client.save({"conanfile.py": conanfile})
+        client.cache_folder = "/private/var/folders/6s/l9c3n5696gvg7qm3v7ms78lc0000gq/T/tmp3sy3m2zqconans"
         client.run('create .')
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -231,5 +232,5 @@ qmake
                     pass
                 """)
         client.save({"conanfile.py": conanfile})
-
         client.run('create .')
+        print("sdadas")

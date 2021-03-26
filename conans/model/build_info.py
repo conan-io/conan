@@ -233,12 +233,12 @@ class _CppInfo(object):
 
     def update_properties(self):
         for generator, value in self.names.items():
-            self.set_property("name", value, generator=generator)
+            self.set_property("names", value, generator=generator)
         for generator, value in self.filenames.items():
             self.set_property("filenames", value, generator=generator)
 
     def get_name(self, generator=None):
-        return self.get_property("name", generator) or self._name
+        return self.get_property("names", generator) or self._name
 
     def get_filename(self, generator=None):
         return self.get_property("filenames", generator) or self._name
