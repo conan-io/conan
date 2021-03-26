@@ -134,7 +134,7 @@ class CMake(object):
         self._build(build_type=build_type, target="install")
 
     def test(self, build_type=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
+        if not self._conanfile.should_test:
             return
         if not target:
             target = "RUN_TESTS" if self._is_multiconfiguration else "test"
