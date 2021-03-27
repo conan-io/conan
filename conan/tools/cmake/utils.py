@@ -1,5 +1,6 @@
 import os
 
+from conan.tools._compilers import use_win_mingw
 from conans.errors import ConanException
 
 
@@ -48,18 +49,7 @@ def get_generator(conanfile):
         base = "Visual Studio %s" % _visuals
         return base
 
-    if hasattr(conanfile, 'settings_build'):
-        os_build = conanfile.settings_build.get_safe('os')
-    else:
-        os_build = conanfile.settings.get_safe('os_build')
-    if os_build is None:  # Assume is the same specified in host settings, not cross-building
-        os_build = conanfile.settings.get_safe("os")
-
-    if os_build == "Windows":
-        sub = conanfile.settings.get_safe("os.subsystem")
-        if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
-            return "Unix Makefiles"
-        else:
-            return "MinGW Makefiles"
+    if use_win_mingw(conanfile):
+        return "MinGW Makefiles"
 
     return "Unix Makefiles"

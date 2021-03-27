@@ -1,5 +1,7 @@
 import platform
 
+from conan.tools._compilers import use_win_mingw
+
 
 class Autotools(object):
 
@@ -53,7 +55,7 @@ class Autotools(object):
 
         make_program = self._conanfile.conf["tools.gnu"].make_program
         if make_program is None:
-            make_program = "mingw32-make" if platform.system() == "Windows" else "make"
+            make_program = "mingw32-make" if use_win_mingw(self._conanfile) else "make"
         # Need to activate the buildenv if existing
         command = make_program
         self._conanfile.run(command)

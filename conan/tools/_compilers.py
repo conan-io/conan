@@ -94,3 +94,21 @@ def build_type_flags(settings):
                      }.get(build_type, [])
             return flags
     return ""
+
+
+def use_win_mingw(conanfile):
+    if hasattr(conanfile, 'settings_build'):
+        os_build = conanfile.settings_build.get_safe('os')
+    else:
+        os_build = conanfile.settings.get_safe('os_build')
+    if os_build is None:  # Assume is the same specified in host settings, not cross-building
+        os_build = conanfile.settings.get_safe("os")
+
+    if os_build == "Windows":
+        compiler = conanfile.settings.get_safe("compiler")
+        sub = conanfile.settings.get_safe("os.subsystem")
+        if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
+            return False
+        else:
+            return True
+    return False
