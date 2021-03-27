@@ -267,7 +267,7 @@ class CMakeDeps(object):
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${{CMAKE_CURRENT_LIST_FILE}}" PATH)
-        file(GLOB DATA_FILES "${{_DIR}}/{filename}-*-*-data.cmake")
+        file(GLOB DATA_FILES "${{_DIR}}/{filename}-*-data.cmake")
 
         foreach(f ${{DATA_FILES}})
             include(${{f}})
@@ -419,7 +419,7 @@ endforeach()
 
         # Load the debug and release variables
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-        file(GLOB DATA_FILES "${_DIR}/{{ pkg_filename }}-*-*-data.cmake")
+        file(GLOB DATA_FILES "${_DIR}/{{ pkg_filename }}-*-data.cmake")
 
         foreach(f ${DATA_FILES})
             include(${f})
@@ -529,7 +529,7 @@ endforeach()
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.arch = str(self._conanfile.settings.arch)
+        self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
         self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # FIXME: Ugly way to define the output path
@@ -626,6 +626,13 @@ endforeach()
             generator_file = os.path.join(self.output_path, generator_file)
             save(generator_file, content)
 
+    def _data_filename(self, pkg_filename):
+        data_fname = "{}-{}".format(pkg_filename, self.configuration.lower())
+        if self.arch:
+            data_fname += "-{}".format(self.arch)
+        data_fname += "-data.cmake"
+        return data_fname
+
     @property
     def content(self):
         ret = {}
@@ -659,12 +666,11 @@ endforeach()
                 # If any config matches the build_type one, add it to the cpp_info
                 dep_cpp_info = extend(cpp_info, build_type.lower())
                 deps = DepsCppCmake(dep_cpp_info, self.name)
+
                 variables = {
-                    "{name}-{build_type}-{arch}-data.cmake".format(name=pkg_filename,
-                                                                   build_type=self.configuration.lower(),
-                                                                   arch=self.arch):
-                    variables_template.format(name=pkg_findname, deps=deps,
-                                              build_type_suffix=build_type_suffix)
+                   self._data_filename(pkg_filename):
+                       variables_template.format(name=pkg_findname, deps=deps,
+                                                 build_type_suffix=build_type_suffix)
                              }
                 dynamic_variables = {
                     "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
@@ -693,10 +699,10 @@ endforeach()
                                                              build_type_suffix=build_type_suffix,
                                                              deps_names=deps_names)
                 variables = {
-                    "{}-{}-{}-data.cmake".format(pkg_filename, build_type.lower(), self.arch):
-                    self.components_variables_tpl.render(
-                        pkg_name=pkg_findname, global_variables=global_variables,
-                        pkg_components=pkg_components, build_type=build_type, components=components)
+                    self._data_filename(pkg_filename):
+                        self.components_variables_tpl.render(
+                         pkg_name=pkg_findname, global_variables=global_variables,
+                         pkg_components=pkg_components, build_type=build_type, components=components)
                 }
                 ret.update(variables)
                 global_dynamic_variables = dynamic_variables_template.format(name=pkg_findname,

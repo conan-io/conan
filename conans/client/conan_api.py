@@ -1193,6 +1193,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_alias(self, reference, target_reference):
+        self.app.load_remotes()
+
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
 
