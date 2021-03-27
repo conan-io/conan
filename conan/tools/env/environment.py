@@ -198,6 +198,8 @@ class Environment:
 
     def compose(self, other):
         """
+        self has precedence, the "other" will add/append if possible and not conflicting, but
+        self mandates what to do
         :type other: Environment
         """
         for k, v in other._values.items():
@@ -206,12 +208,12 @@ class Environment:
                 self._values[k] = v
             else:
                 try:
-                    index = v.index(_EnvVarPlaceHolder)
-                except ValueError:  # The other doesn't have placeholder, overwrites
-                    self._values[k] = v
+                    index = existing.index(_EnvVarPlaceHolder)
+                except ValueError:  # It doesn't have placeholder
+                    pass
                 else:
-                    new_value = v[:]  # do a copy
-                    new_value[index:index + 1] = existing  # replace the placeholder
+                    new_value = existing[:]  # do a copy
+                    new_value[index:index + 1] = v  # replace the placeholder
                     # Trim front and back separators
                     val = new_value[0]
                     if isinstance(val, _Sep) or val is _PathSep:
@@ -233,11 +235,12 @@ class ProfileEnvironment:
     def get_env(self, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
+        the last one found in the profile file has top priority
         """
         result = Environment()
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                result = result.compose(env)
+                result = env.compose(result)
         return result
 
     def compose(self, other):
@@ -247,7 +250,7 @@ class ProfileEnvironment:
         for pattern, environment in other._environments.items():
             existing = self._environments.get(pattern)
             if existing is not None:
-                self._environments[pattern] = existing.compose(environment)
+                self._environments[pattern] = environment.compose(existing)
             else:
                 self._environments[pattern] = environment
 
@@ -283,7 +286,7 @@ class ProfileEnvironment:
                 if existing is None:
                     result._environments[pattern] = env
                 else:
-                    result._environments[pattern] = existing.compose(env)
+                    result._environments[pattern] = env.compose(existing)
                 break
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
