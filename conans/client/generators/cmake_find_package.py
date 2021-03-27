@@ -229,8 +229,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
     def content(self):
         ret = {}
         for pkg_name, cpp_info in self.deps_build_info.dependencies:
-            pkg_filename = self._get_property(cpp_info, "filenames", self.name)
-            pkg_findname = self._get_property(cpp_info, "names", self.name)
+            pkg_filename = self._get_name(cpp_info)
+            pkg_findname = self._get_filename(cpp_info)
             ret["Find%s.cmake" % pkg_filename] = self._find_for_dep(
                 pkg_name=pkg_name,
                 pkg_findname=pkg_findname,
