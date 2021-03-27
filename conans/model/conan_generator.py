@@ -93,7 +93,7 @@ class GeneratorComponentsMixin(object):
     def _get_components(self, pkg_name, cpp_info):
         ret = []
         for comp_name, comp in self.sorted_components(cpp_info).items():
-            comp_genname = self._get_name(cpp_info.components[comp_name])
+            comp_genname = self._get_property(cpp_info.components[comp_name], "names", self.name)
             comp_requires_gennames = []
             for require in comp.requires:
                 comp_requires_gennames.append(self._get_require_name(pkg_name, require))

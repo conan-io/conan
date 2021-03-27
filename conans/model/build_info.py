@@ -224,8 +224,8 @@ class _CppInfo(object):
             gen_dict = self._generator_properties.get(generator)
             if gen_dict:
                return gen_dict.get(property_name)
-            else:
-                return None
+            elif self._generator_properties.get("conan_default_generators_value"):
+               return self._generator_properties.get("conan_default_generators_value").get(property_name)
         except KeyError:
             return None
             # fall back in the default or throw an error ?
