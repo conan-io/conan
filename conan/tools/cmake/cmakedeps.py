@@ -436,13 +436,18 @@ endforeach()
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
                 list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
-                if(${_index} EQUAL -1)
-                    conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
-                else()
-                    conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
+                if(NOT ${_index} EQUAL -1)
+                    set({{ pkg_filename }}_${_FIND_COMPONENT}_FOUND TRUE)
+                    mark_as_advanced({{ pkg_filename }}_${_FIND_COMPONENT}_FOUND)
                 endif()
             endforeach()
         endif()
+
+        include(FindPackageHandleStandardArgs)
+        find_package_handle_standard_args({{ pkg_filename }} REQUIRED_VARS
+                                          {{ pkg_filename }}_VERSION VERSION_VAR {{ pkg_filename }}_VERSION
+                                          HANDLE_COMPONENTS)
+        mark_as_advanced({{ pkg_filename }}_FOUND {{ pkg_filename }}_VERSION)
         """))
 
     components_config_tpl = Template(textwrap.dedent("""\

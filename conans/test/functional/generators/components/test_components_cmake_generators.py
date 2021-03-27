@@ -520,13 +520,13 @@ class TestComponentsCMakeGenerators:
             project(Consumer CXX)
 
             find_package(greetings COMPONENTS hello)
-            find_package(greetings COMPONENTS non-existent)
+            find_package(greetings REQUIRED COMPONENTS non-existent)
             """)
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .", assert_error=True)
-        assert "Conan: Component 'hello' found in package 'greetings'" in client.out
-        assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
+        assert 'Found greetings: 0.0.1 (found version "0.0.1") found components: hello' in client.out
+        assert 'Could NOT find greetings (missing: non-existent) (found version "0.0.1")' in client.out
 
     @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
                                            "CMakeDeps"])
