@@ -1,4 +1,5 @@
 from conan.tools.env import Environment
+from conans.model.build_info import DepCppInfo
 
 
 class AutotoolsDeps:
@@ -24,7 +25,7 @@ class AutotoolsDeps:
             return [s for s in seq1 if s not in seq2] + seq2
 
         def merge(dep):
-            dep_cpp_info = dep.cpp_info
+            dep_cpp_info = DepCppInfo(dep.cpp_info)  # To deal with components
             self.system_libs = merge_lists(self.system_libs, dep_cpp_info.system_libs)
             self.include_paths = merge_lists(self.include_paths, dep_cpp_info.include_paths)
             self.lib_paths = merge_lists(self.lib_paths, dep_cpp_info.lib_paths)
