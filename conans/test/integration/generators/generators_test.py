@@ -182,57 +182,63 @@ qmake
 
     def test_misc(self):
         client = TestClient()
+        client.run("config install /Users/carlos/.conan/generators/gyp-generator.py -tf generators")
         client.cache_folder = "/private/var/folders/6s/l9c3n5696gvg7qm3v7ms78lc0000gq/T/tmp3sy3m2zqconans"
-        client.current_folder = "/private/var/folders/6s/l9c3n5696gvg7qm3v7ms78lc0000gq/T/tmpajknbs00conans"
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                name = "mylib"
-                version = "1.0"
-
-                def build(self):
-                    pass
-
-                def package(self):
-                    pass
-
-                def package_info(self):
-                    self.cpp_info.components["mylib-component"].set_property("names", "mylib-component-name")
-                    # self.cpp_info.filenames["cmake_find_package"] = "aws-checksums"
-                    # self.cpp_info.filenames["cmake_find_package_multi"] = "aws-checksums"
-                    # self.cpp_info.names["cmake_find_package"] = "AWS"
-                    # self.cpp_info.names["cmake_find_package_multi"] = "AWS"
-                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package"] = "component-aws-checksums"
-                    # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package_multi"] = "component-aws-checksums"
-                    # self.cpp_info.components["aws-checksums-lib"].libs = ["component-aws-checksums"]
-                    # # self.cpp_info.set_property("names", "default_name_new")
-                    # # self.cpp_info.set_property("filenames", "default_filenames_new")
-                    # # #self.cpp_info.filenames["cmake_find_package"] = "cmake_find_package_old"
-                    # # #self.cpp_info.names["cmake_find_package"] = "cmake_find_package_old"
-                    # # self.cpp_info.components["jander"].set_property("names", "cmake_find_package_new")
-                    # # self.cpp_info.components["jander"].names["cmake_find_package"] = "cmake_find_package_component_old"
-                """)
-        client.save({"conanfile.py": conanfile})
-        client.run('create .')
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-
-            class ConanPKG(ConanFile):
-                name = "conanpkg"
-                version = "1.0"
-                generators = "cmake_find_package"
-                requires = "mylib/1.0"
-
-                def build(self):
-                    pass
-
-                def package(self):
-                    pass
-
-                def package_info(self):
-                    pass
-                """)
-        client.save({"conanfile.py": conanfile})
-        client.run('install .')
-        print("sdadas")
+        client.current_folder = "/Users/carlos/Documents/developer/conan-develop/conan-center-index/recipes/chipmunk2d"
+        client.run('export all chipmunk2d/7.0.3@')
+        client.run('install all/test_package --build=missing')
+        #
+        # conanfile = textwrap.dedent("""
+        #     from conans import ConanFile
+        #     class Pkg(ConanFile):
+        #         name = "mylib"
+        #         version = "1.0"
+        #
+        #         def build(self):
+        #             pass
+        #
+        #         def package(self):
+        #             pass
+        #
+        #         def package_info(self):
+        #             #self.cpp_info.components["mylib-component"].set_property("names", "mylib-component-name")
+        #             self.cpp_info.set_property("names", "mylib-component-name")
+        #             # self.cpp_info.filenames["cmake_find_package"] = "aws-checksums"
+        #             # self.cpp_info.filenames["cmake_find_package_multi"] = "aws-checksums"
+        #             # self.cpp_info.names["cmake_find_package"] = "AWS"
+        #             # self.cpp_info.names["cmake_find_package_multi"] = "AWS"
+        #             # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package"] = "component-aws-checksums"
+        #             # self.cpp_info.components["aws-checksums-lib"].names["cmake_find_package_multi"] = "component-aws-checksums"
+        #             # self.cpp_info.components["aws-checksums-lib"].libs = ["component-aws-checksums"]
+        #             # # self.cpp_info.set_property("names", "default_name_new")
+        #             # # self.cpp_info.set_property("filenames", "default_filenames_new")
+        #             # # #self.cpp_info.filenames["cmake_find_package"] = "cmake_find_package_old"
+        #             # # #self.cpp_info.names["cmake_find_package"] = "cmake_find_package_old"
+        #             # # self.cpp_info.components["jander"].set_property("names", "cmake_find_package_new")
+        #             # # self.cpp_info.components["jander"].names["cmake_find_package"] = "cmake_find_package_component_old"
+        #         """)
+        # client.save({"conanfile.py": conanfile})
+        # client.run('export .')
+        # conanfile = textwrap.dedent("""
+        #     from conans import ConanFile, CMake
+        #
+        #
+        #     class ConanPKG(ConanFile):
+        #         name = "conanpkg"
+        #         version = "1.0"
+        #         generators = "cmake", "cmake_find_package", "node_gyp"
+        #         requires = "mylib/1.0"
+        #
+        #         def build(self):
+        #             pass
+        #
+        #         def package(self):
+        #             pass
+        #
+        #         def package_info(self):
+        #             pass
+        #         """)
+        # client.save({"conanfile.py": conanfile})
+        # client.run("config install /Users/carlos/.conan/generators/gyp-generator.py -tf generators")
+        # client.run('install .')
+        # print("sdadas")
