@@ -8,6 +8,27 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+def write_conanvcvars(conanfile):
+    """
+    write a conanvcvars.bat file with the good args from settings
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    cvars = None
+    if compiler == "intel":
+        cvars = intel_compilervars_command(conanfile)
+    elif compiler == "Visual Studio":
+        vs_version = conanfile.settings.get_safe("compiler.version")
+        vcvarsarch = vcvars_arch(conanfile)
+        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                               winsdk_version=None, vcvars_ver=None)
+    if cvars:
+        content = textwrap.dedent("""\
+            @echo off
+            {}
+            """.format(cvars))
+        save("conanvcvars.bat", content)
+
+
 class MSBuildToolchain(object):
 
     filename = "conantoolchain.props"
@@ -55,20 +76,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        self._write_vcvars()
-
-    def _write_vcvars(self):
-        if self.compiler == "intel":
-            cvars = intel_compilervars_command(self._conanfile)
-        else:
-            cvars = vcvars_command(self.visual_version, architecture=self.vcvars_arch,
-                                   platform_type=None, winsdk_version=None,
-                                   vcvars_ver=None)
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(cvars))
-        save("conanvcvars.bat", content)
+        write_conanvcvars(self._conanfile)
 
     @staticmethod
     def _msvs_toolset(settings):
