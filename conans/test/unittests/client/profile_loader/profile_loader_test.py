@@ -1,6 +1,8 @@
 import os
 import textwrap
-import pytest
+import unittest
+
+import six
 
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
@@ -20,352 +22,344 @@ def create_profile(folder, name, settings=None, package_settings=None, env=None,
     save(os.path.join(folder, name), content)
 
 
-def get_profile(folder, txt):
-    abs_profile_path = os.path.join(folder, "Myprofile.txt")
-    save(abs_profile_path, txt)
-    return read_profile(abs_profile_path, None, None)
+class ProfileParserTest(unittest.TestCase):
 
+    def test_parser(self):
+        txt = """
+include(a/path/to\profile.txt)
+VAR=2
+include(other/path/to/file.txt)
+OTHERVAR=thing
 
-def test_profile_parser():
-    txt = textwrap.dedent("""
-        include(a/path/to\profile.txt)
-        VAR=2
-        include(other/path/to/file.txt)
-        OTHERVAR=thing
-
-        [settings]
-        os=2
-        """)
-    a = ProfileParser(txt)
-    assert a.vars == {"VAR": "2", "OTHERVAR": "thing"}
-    assert a.includes == ["a/path/to\profile.txt", "other/path/to/file.txt"]
-    assert a.profile_text == textwrap.dedent("""[settings]
+[settings]
+os=2
+"""
+        a = ProfileParser(txt)
+        self.assertEqual(a.vars, {"VAR": "2", "OTHERVAR": "thing"})
+        self.assertEqual(a.includes, ["a/path/to\profile.txt", "other/path/to/file.txt"])
+        self.assertEqual(a.profile_text, """[settings]
 os=2""")
 
-    txt = ""
-    a = ProfileParser(txt)
-    assert a.vars == {}
-    assert a.includes == []
-    assert a.profile_text == ""
+        txt = ""
+        a = ProfileParser(txt)
+        self.assertEqual(a.vars, {})
+        self.assertEqual(a.includes, [])
+        self.assertEqual(a.profile_text, "")
 
-    txt = textwrap.dedent("""
-        include(a/path/to\profile.txt)
-        VAR=$REPLACE_VAR
-        include(other/path/to/$FILE)
-        OTHERVAR=thing
+        txt = """
+include(a/path/to\profile.txt)
+VAR=$REPLACE_VAR
+include(other/path/to/$FILE)
+OTHERVAR=thing
 
-        [settings]
-        os=$OTHERVAR
-        """)
-
-    a = ProfileParser(txt)
-    a.update_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
-    a.apply_vars()
-    assert a.vars == {"VAR": "22", "OTHERVAR": "thing",
-                      "REPLACE_VAR": "22", "FILE": "MyFile",}
-    assert [i for i in a.get_includes()] == ["a/path/to\profile.txt", "other/path/to/MyFile"]
-    assert a.profile_text == textwrap.dedent("""[settings]
+[settings]
+os=$OTHERVAR
+"""
+        a = ProfileParser(txt)
+        a.update_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
+        a.apply_vars()
+        self.assertEqual(a.vars, {"VAR": "22", "OTHERVAR": "thing",
+                                  "REPLACE_VAR": "22", "FILE": "MyFile",})
+        self.assertEqual([i for i in a.get_includes()],
+                         ["a/path/to\profile.txt", "other/path/to/MyFile"])
+        self.assertEqual(a.profile_text, """[settings]
 os=thing""")
 
-    txt = textwrap.dedent("""
-        includes(a/path/to\profile.txt)
-        """)
 
-    with pytest.raises(ConanException):
-        try:
-            ProfileParser(txt)
-        except Exception as error:
-            assert "Error while parsing line 1" in error.args[0]
-            raise
-
-
-def test_profile_loads():
-
-    tmp = temp_folder()
-
-    prof = textwrap.dedent("""
-        [env]
-        CXX_FLAGS="-DAAA=0"
-        [settings]
-    """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.env_dicts("") == ({'CXX_FLAGS': '-DAAA=0'}, {})
-
-    prof = textwrap.dedent("""
-        [env]
-        CXX_FLAGS="-DAAA=0"
-        MyPackage:VAR=1
-        MyPackage:OTHER=2
-        OtherPackage:ONE=ONE
-        [settings]
-    """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.env_dicts("") == ({'CXX_FLAGS': '-DAAA=0'}, {})
-    assert new_profile.env_values.env_dicts("MyPackage") == ({"OTHER": "2",
-                                                              "VAR": "1",
-                                                              "CXX_FLAGS": "-DAAA=0"}, {})
-
-    assert new_profile.env_values.env_dicts("OtherPackage") == ({'CXX_FLAGS': '-DAAA=0',
-                                                                 'ONE': 'ONE'}, {})
-
-    prof = textwrap.dedent("""
-            [env]
-            CXX_FLAGS='-DAAA=0'
-            [settings]
-        """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.env_dicts("") == ({'CXX_FLAGS': '-DAAA=0'}, {})
-
-    prof = textwrap.dedent("""
-            [env]
-            CXX_FLAGS=-DAAA=0
-            [settings]
-        """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.env_dicts("") == ({'CXX_FLAGS': '-DAAA=0'}, {})
-
-    prof = textwrap.dedent("""
-            [env]
-            CXX_FLAGS="-DAAA=0
-            [settings]
-        """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.env_dicts("") == ({'CXX_FLAGS': '"-DAAA=0'}, {})
-
-    prof = textwrap.dedent("""
-            [settings]
-            zlib:compiler=gcc
-            compiler=Visual Studio
-        """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.package_settings["zlib"] == {"compiler": "gcc"}
-    assert new_profile.settings["compiler"] == "Visual Studio"
+        txt = """
+includes(a/path/to\profile.txt)
+"""
+        with self.assertRaises(ConanException):
+            try:
+                ProfileParser(txt)
+            except Exception as error:
+                self.assertIn("Error while parsing line 1", error.args[0])
+                raise
 
 
-def test_profile_empty_env():
-    tmp = temp_folder()
-    profile, _ = get_profile(tmp, "")
-    assert isinstance(profile.env_values, EnvValues)
+class ProfileTest(unittest.TestCase):
 
+    def test_profile_loads(self):
 
-def test_profile_empty_env_settings():
-    tmp = temp_folder()
-    profile, _ = get_profile(tmp, "[settings]")
-    assert isinstance(profile.env_values, EnvValues)
+        tmp = temp_folder()
 
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0"
+    [settings]
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
-def test_profile_loads_win():
-    tmp = temp_folder()
-    prof = textwrap.dedent("""
-            [env]
-            QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
-            QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
-        """)
-    new_profile, _ = get_profile(tmp, prof)
-    assert new_profile.env_values.data[None]["QTPATH"] == "C:/QtCommercial/5.8/msvc2015_64/bin"
-    assert new_profile.env_values.data[None]["QTPATH2"] == "C:/QtCommercial2/5.8/msvc2015_64/bin"
-    assert "QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin" in new_profile.dumps()
-    assert "QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin" in new_profile.dumps()
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0"
+    MyPackage:VAR=1
+    MyPackage:OTHER=2
+    OtherPackage:ONE=ONE
+    [settings]
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEqual(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
+                                                                           "VAR": "1",
+                                                                           'CXX_FLAGS': '-DAAA=0'}, {}))
 
+        self.assertEqual(new_profile.env_values.env_dicts("OtherPackage"), ({'CXX_FLAGS': '-DAAA=0',
+                                                                              'ONE': 'ONE'}, {}))
 
-def test_profile_load_dump():
-    # Empty profile
-    tmp = temp_folder()
-    profile = Profile()
-    dumps = profile.dumps()
-    new_profile, _ = get_profile(tmp, dumps)
-    assert new_profile.settings == profile.settings
+        prof = '''[env]
+    CXX_FLAGS='-DAAA=0'
+    [settings]
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
-    # Settings
-    profile = Profile()
-    profile.settings["arch"] = "x86_64"
-    profile.settings["compiler"] = "Visual Studio"
-    profile.settings["compiler.version"] = "12"
+        prof = '''[env]
+    CXX_FLAGS=-DAAA=0
+    [settings]
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
-    profile.env_values.add("CXX", "path/to/my/compiler/g++")
-    profile.env_values.add("CC", "path/to/my/compiler/gcc")
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0
+    [settings]
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
 
-    profile.build_requires["*"] = ["android_toolchain/1.2.8@lasote/testing"]
-    profile.build_requires["zlib/*"] = ["cmake/1.0.2@lasote/stable",
-                                        "autotools/1.0.3@lasote/stable"]
+        prof = '''
+    [settings]
+    zlib:compiler=gcc
+    compiler=Visual Studio
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
 
-    dump = profile.dumps()
-    new_profile, _ = get_profile(tmp, dump)
-    assert new_profile.settings == profile.settings
-    assert new_profile.settings["arch"] == "x86_64"
-    assert new_profile.settings["compiler.version"] == "12"
-    assert new_profile.settings["compiler"] == "Visual Studio"
+    def test_empty_env(self):
+        tmp = temp_folder()
+        profile, _ = self._get_profile(tmp, "")
+        self.assertTrue(isinstance(profile.env_values, EnvValues))
 
-    assert new_profile.env_values.env_dicts("") == ({'CXX': 'path/to/my/compiler/g++',
-                                                     'CC': 'path/to/my/compiler/gcc'}, {})
+    def test_empty_env_settings(self):
+        tmp = temp_folder()
+        profile, _ = self._get_profile(tmp, "[settings]")
+        self.assertTrue(isinstance(profile.env_values, EnvValues))
 
-    assert new_profile.build_requires["zlib/*"] == \
-           [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
-            ConanFileReference.loads("autotools/1.0.3@lasote/stable")]
-    assert new_profile.build_requires["*"] == \
-           [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")]
+    def test_profile_loads_win(self):
+        tmp = temp_folder()
+        prof = '''[env]
+    QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
+    QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
+    '''
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
+                         "C:/QtCommercial/5.8/msvc2015_64/bin")
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
+                         "C:/QtCommercial2/5.8/msvc2015_64/bin")
+        self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
+        self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
 
+    def test_profile_load_dump(self):
+        # Empty profile
+        tmp = temp_folder()
+        profile = Profile()
+        dumps = profile.dumps()
+        new_profile, _ = self._get_profile(tmp, dumps)
+        self.assertEqual(new_profile.settings, profile.settings)
 
-def test_profile_vars():
-    tmp = temp_folder()
+        # Settings
+        profile = Profile()
+        profile.settings["arch"] = "x86_64"
+        profile.settings["compiler"] = "Visual Studio"
+        profile.settings["compiler.version"] = "12"
 
-    txt = textwrap.dedent("""
-            MY_MAGIC_VAR=The owls are not
+        profile.env_values.add("CXX", "path/to/my/compiler/g++")
+        profile.env_values.add("CC", "path/to/my/compiler/gcc")
 
-            [env]
-            MYVAR=$MY_MAGIC_VAR what they seem.
-        """)
-    profile, _ = get_profile(tmp, txt)
-    assert "The owls are not what they seem." == profile.env_values.data[None]["MYVAR"]
+        profile.build_requires["*"] = ["android_toolchain/1.2.8@lasote/testing"]
+        profile.build_requires["zlib/*"] = ["cmake/1.0.2@lasote/stable",
+                                            "autotools/1.0.3@lasote/stable"]
 
-    # Order in replacement, variable names (simplification of preprocessor)
-    txt = textwrap.dedent("""
-            P=Diane, the coffee at the Great Northern
-            P2=is delicious
+        dump = profile.dumps()
+        new_profile, _ = self._get_profile(tmp, dump)
+        self.assertEqual(new_profile.settings, profile.settings)
+        self.assertEqual(new_profile.settings["arch"], "x86_64")
+        self.assertEqual(new_profile.settings["compiler.version"], "12")
+        self.assertEqual(new_profile.settings["compiler"], "Visual Studio")
 
-            [env]
-            MYVAR=$P2
-        """)
-    profile, _ = get_profile(tmp, txt)
-    assert "Diane, the coffee at the Great Northern2" == profile.env_values.data[None]["MYVAR"]
+        self.assertEqual(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
+                                                                  'CC': 'path/to/my/compiler/gcc'}, {}))
 
-    # Variables without spaces
-    txt = textwrap.dedent("""
-            VARIABLE WITH SPACES=12
-            [env]
-            MYVAR=$VARIABLE WITH SPACES
-        """)
-    with pytest.raises(ConanException) as conan_error:
-        get_profile(tmp, txt)
-        assert "The names of the variables cannot contain spaces" in str(conan_error.value)
+        self.assertEqual(new_profile.build_requires["zlib/*"],
+                          [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
+                           ConanFileReference.loads("autotools/1.0.3@lasote/stable")])
+        self.assertEqual(new_profile.build_requires["*"],
+                          [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")])
 
-
-def test_profiles_includes():
-    tmp = temp_folder()
-
-    def save_profile(txt, name):
-        abs_profile_path = os.path.join(tmp, name)
+    def _get_profile(self, folder, txt):
+        abs_profile_path = os.path.join(folder, "Myprofile.txt")
         save(abs_profile_path, txt)
+        return read_profile(abs_profile_path, None, None)
 
-    os.mkdir(os.path.join(tmp, "subdir"))
+    def test_profile_vars(self):
+        tmp = temp_folder()
 
-    profile0 = textwrap.dedent("""
-            ROOTVAR=0
+        txt = '''
+        MY_MAGIC_VAR=The owls are not
 
+        [env]
+        MYVAR=$MY_MAGIC_VAR what they seem.
+        '''
+        profile, _ = self._get_profile(tmp, txt)
+        self.assertEqual("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
 
-            [build_requires]
-            one/1.$ROOTVAR@lasote/stable
-            two/1.2@lasote/stable
-        """)
-    save_profile(profile0, "subdir/profile0.txt")
+        # Order in replacement, variable names (simplification of preprocessor)
+        txt = '''
+                P=Diane, the coffee at the Great Northern
+                P2=is delicious
 
-    profile1 = textwrap.dedent("""
-            # Include in subdir, curdir
-            MYVAR=1
-            include(./profile0.txt)
+                [env]
+                MYVAR=$P2
+                '''
+        profile, _ = self._get_profile(tmp, txt)
+        self.assertEqual("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
 
-            [settings]
-            os=Windows
-            [options]
-            zlib:aoption=1
-            zlib:otheroption=1
-            [env]
-            package1:ENVY=$MYVAR
-        """)
+        # Variables without spaces
+        txt = '''
+VARIABLE WITH SPACES=12
+[env]
+MYVAR=$VARIABLE WITH SPACES
+                        '''
+        with six.assertRaisesRegex(self, ConanException, "The names of the variables cannot contain spaces"):
+            self._get_profile(tmp, txt)
 
-    save_profile(profile1, "subdir/profile1.txt")
+    def test_profiles_includes(self):
+        tmp = temp_folder()
 
-    profile2 = textwrap.dedent("""
-            #  Include in subdir
-            include(./subdir/profile1.txt)
-            [settings]
-            os=$MYVAR
-        """)
+        def save_profile(txt, name):
+            abs_profile_path = os.path.join(tmp, name)
+            save(abs_profile_path, txt)
 
-    save_profile(profile2, "profile2.txt")
-    profile3 = textwrap.dedent("""
-            OTHERVAR=34
+        os.mkdir(os.path.join(tmp, "subdir"))
 
-            [build_requires]
-            one/1.5@lasote/stable
-        """)
-
-    save_profile(profile3, "profile3.txt")
-
-    profile4 = textwrap.dedent("""
-            include(./profile2.txt)
-            include(./profile3.txt)
-
-            [env]
-            MYVAR=FromProfile3And$OTHERVAR
-
-            [options]
-            zlib:otheroption=12
-        """)
-
-    save_profile(profile4, "profile4.txt")
-
-    profile, variables = read_profile("./profile4.txt", tmp, None)
-
-    assert variables == {"MYVAR": "1",
-                         "OTHERVAR": "34",
-                         "PROFILE_DIR": tmp.replace('\\', '/'),
-                         "ROOTVAR": "0"}
-    assert "FromProfile3And34" == profile.env_values.data[None]["MYVAR"]
-    assert "1" == profile.env_values.data["package1"]["ENVY"]
-    assert profile.settings == {"os": "1"}
-    assert profile.options.as_list() == [('zlib:aoption', '1'), ('zlib:otheroption', '12')]
-    assert profile.build_requires == {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
-                                            ConanFileReference.loads("two/1.2@lasote/stable")]}
+        profile0 = """
+ROOTVAR=0
 
 
-def test_profile_dir():
-    tmp = temp_folder()
-    txt = textwrap.dedent("""
-            [env]
-            PYTHONPATH=$PROFILE_DIR/my_python_tools
-        """)
+[build_requires]
+  one/1.$ROOTVAR@lasote/stable
+two/1.2@lasote/stable
 
-    def assert_path(profile):
-        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"]
-        assert pythonpath == os.path.join(tmp, "my_python_tools").replace('\\', '/')
+"""
+        save_profile(profile0, "subdir/profile0.txt")
 
-    abs_profile_path = os.path.join(tmp, "Myprofile.txt")
-    save(abs_profile_path, txt)
-    profile, _ = read_profile(abs_profile_path, None, None)
-    assert_path(profile)
+        profile1 = """
+ # Include in subdir, curdir
+MYVAR=1
+include(./profile0.txt)
 
-    profile, _ = read_profile("./Myprofile.txt", tmp, None)
-    assert_path(profile)
+[settings]
+os=Windows
+[options]
+zlib:aoption=1
+zlib:otheroption=1
+[env]
+package1:ENVY=$MYVAR
+"""
 
-    profile, _ = read_profile("Myprofile.txt", None, tmp)
-    assert_path(profile)
+        save_profile(profile1, "subdir/profile1.txt")
+
+        profile2 = """
+#  Include in subdir
+include(./subdir/profile1.txt)
+[settings]
+os=$MYVAR
+"""
+
+        save_profile(profile2, "profile2.txt")
+        profile3 = """
+OTHERVAR=34
+
+[build_requires]
+one/1.5@lasote/stable
 
 
-def test_profile_include_order():
-    tmp = temp_folder()
+"""
+        save_profile(profile3, "profile3.txt")
 
-    save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
+        profile4 = """
+        include(./profile2.txt)
+        include(./profile3.txt)
 
-    profile2 = textwrap.dedent("""
+        [env]
+        MYVAR=FromProfile3And$OTHERVAR
+
+        [options]
+        zlib:otheroption=12
+
+        """
+
+        save_profile(profile4, "profile4.txt")
+
+        profile, variables = read_profile("./profile4.txt", tmp, None)
+
+        self.assertEqual(variables, {"MYVAR": "1",
+                                     "OTHERVAR": "34",
+                                     "PROFILE_DIR": tmp.replace('\\', '/'),
+                                     "ROOTVAR": "0"})
+        self.assertEqual("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
+        self.assertEqual("1", profile.env_values.data["package1"]["ENVY"])
+        self.assertEqual(profile.settings, {"os": "1"})
+        self.assertEqual(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
+        self.assertEqual(profile.build_requires, {"*": [ConanFileReference.loads("one/1.5@lasote/stable"),
+                                                        ConanFileReference.loads("two/1.2@lasote/stable"),
+                                                        ]})
+
+    def test_profile_dir(self):
+        tmp = temp_folder()
+        txt = '''
+[env]
+PYTHONPATH=$PROFILE_DIR/my_python_tools
+'''
+
+        def assert_path(profile):
+            pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"]
+            self.assertEqual(pythonpath, os.path.join(tmp, "my_python_tools").replace('\\', '/'))
+
+        abs_profile_path = os.path.join(tmp, "Myprofile.txt")
+        save(abs_profile_path, txt)
+        profile, _ = read_profile(abs_profile_path, None, None)
+        assert_path(profile)
+
+        profile, _ = read_profile("./Myprofile.txt", tmp, None)
+        assert_path(profile)
+
+        profile, _ = read_profile("Myprofile.txt", None, tmp)
+        assert_path(profile)
+
+    def test_include_order(self):
+        tmp = temp_folder()
+
+        save(os.path.join(tmp, "profile1.txt"), "MYVAR=fromProfile1")
+
+        profile2 = textwrap.dedent("""
             include(./profile1.txt)
             MYVAR=fromProfile2
             [settings]
             os=$MYVAR
-        """)
-    save(os.path.join(tmp, "profile2.txt"), profile2)
-    profile, variables = read_profile("./profile2.txt", tmp, None)
+            """)
+        save(os.path.join(tmp, "profile2.txt"), profile2)
+        profile, variables = read_profile("./profile2.txt", tmp, None)
 
-    assert variables == {"MYVAR": "fromProfile2",
-                         "PROFILE_DIR": tmp.replace('\\', '/')}
-    assert profile.settings["os"] == "fromProfile2"
+        self.assertEqual(variables, {"MYVAR": "fromProfile2",
+                                     "PROFILE_DIR": tmp.replace('\\', '/')})
+        self.assertEqual(profile.settings["os"], "fromProfile2")
 
 
 def test_profile_load_absolute_path():
     """ When passing absolute path as profile file, it MUST be used.
-
         read_profile(/abs/path/profile, /abs, /.conan/profiles)
-
         /abs/path/profile MUST be consumed as target profile
     """
     profile_name = "default"
@@ -390,9 +384,7 @@ def test_profile_load_absolute_path():
 
 def test_profile_load_relative_path_dot():
     """ When passing relative ./path as profile file, it MUST be used
-
         read_profile(./profiles/profile, /tmp, /.conan/profiles)
-
         /tmp/profiles/profile MUST be consumed as target profile
     """
     profile_name = "default"
@@ -421,9 +413,7 @@ def test_profile_load_relative_path_dot():
 
 def test_profile_load_relative_path_pardir():
     """ When passing relative ../path as profile file, it MUST be used
-
         read_profile(../profiles/profile, /tmp/current, /.conan/profiles)
-
         /tmp/profiles/profile MUST be consumed as target profile
     """
     profile_name = "default"
