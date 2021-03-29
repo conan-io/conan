@@ -34,7 +34,7 @@ def setup_client():
             def content(self):
                 info = []
                 for pkg_name, cpp_info in self.deps_build_info.dependencies:
-                    info.append("{}:{}".format(pkg_name, self._get_name(cpp_info)))
+                    info.append("{}:{}".format(pkg_name, cpp_info.get_generator_property("names", self.name)))
                     info.extend(self._get_components(pkg_name, cpp_info))
                 return os.linesep.join(info)
         """)
