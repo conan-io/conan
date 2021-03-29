@@ -172,11 +172,11 @@ class TXTGenerator(Generator):
                 generatornames = no_config_data.pop("generatornames", [])  # can be empty
                 for n in generatornames:
                     gen, value = n.split("=", 1)
-                    dep_cpp_info.names[gen] = value
+                    dep_cpp_info.set_generator_property("names", value, gen)
                 generatorfilenames = no_config_data.pop("generatorfilenames", [])  # can be empty
                 for n in generatorfilenames:
                     gen, value = n.split("=", 1)
-                    dep_cpp_info.filenames[gen] = value
+                    dep_cpp_info.set_generator_property("filenames", value, gen)
                 dep_cpp_info.sysroot = no_config_data.pop('sysroot', [""])[0]
                 _populate_cpp_info(dep_cpp_info, no_config_data, rootpath)
 
