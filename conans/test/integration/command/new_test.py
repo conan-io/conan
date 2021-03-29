@@ -29,6 +29,27 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn('version = "0.1"', conanfile)
         self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
 
+    def test_template_custom_definitions(self):
+        client = TestClient()
+        template1 = textwrap.dedent("""
+            class {{package_name}}Conan(ConanFile):
+                name = "{{name}}"
+                version = "{{version}}"
+                conan_version = "{{conan_version}}"
+                license = "{{license}}"
+                homepage = "{{homepage}}"
+        """)
+        save(os.path.join(client.cache_folder, "templates/mytemplate.py"), template1)
+        client.run("new hello/0.1 --template=mytemplate.py "
+                   "-d license=MIT -d homepage=http://example.com")
+        conanfile = client.load("conanfile.py")
+        self.assertIn("class HelloConan(ConanFile):", conanfile)
+        self.assertIn('name = "hello"', conanfile)
+        self.assertIn('version = "0.1"', conanfile)
+        self.assertIn('conan_version = "{}"'.format(client_version), conanfile)
+        self.assertIn('license = "MIT"', conanfile)
+        self.assertIn('homepage = "http://example.com"', conanfile)
+
     def test_template_dir(self):
         client = TestClient()
         template_dir = "templates/command/new/t_dir"
