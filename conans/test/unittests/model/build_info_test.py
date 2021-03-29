@@ -233,6 +233,7 @@ VAR2=23
         info = CppInfo("myname", folder)
         info.name = "MyName"
         info.names["my_generator"] = "MyNameForMyGenerator"
+        info.update_generator_properties()
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
