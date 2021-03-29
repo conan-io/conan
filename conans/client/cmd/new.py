@@ -349,8 +349,8 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         raise ConanException("'template' is incompatible with 'header', "
                              "'sources', 'pure-c' and 'bare'")
 
-    defines = defines or []
-    defines = dict((n, v) for n, v in (d.split('=') for d in defines))
+    defines = defines or dict()
+
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
                                                          package_name=package_name)}

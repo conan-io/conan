@@ -202,6 +202,10 @@ class Command(object):
         parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
+
+        defines = args.define or []
+        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
+
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
@@ -217,7 +221,7 @@ class Command(object):
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
                         template=args.template,
-                        defines=args.define)
+                        defines=defines)
 
     def inspect(self, *args):
         """
