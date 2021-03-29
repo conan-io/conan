@@ -3,6 +3,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from jinja2 import Template
 
 from conans.errors import ConanException
 from conans.model.build_info import DepCppInfo
@@ -27,7 +28,6 @@ class MSBuildDeps(object):
             <Conan{name}BinaryDirectories>{bin_dirs}</Conan{name}BinaryDirectories>
             <Conan{name}Libraries>{libs}</Conan{name}Libraries>
             <Conan{name}SystemDeps>{system_libs}</Conan{name}SystemDeps>
-            <Conan{name}CAExcludeDirectories>{ca_exclude_dirs}</Conan{name}CAExcludeDirectories>
           </PropertyGroup>
         </Project>
         """)
@@ -40,32 +40,34 @@ class MSBuildDeps(object):
           <ImportGroup Label="Configurations">
           </ImportGroup>
           <PropertyGroup>
-            <conan_{name}_props_imported>True</conan_{name}_props_imported>
+            <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
           </PropertyGroup>
           <PropertyGroup>
-            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{name}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
+            <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{{name}}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-            <CAExcludePath>$(Conan{name}CAExcludeDirectories);$(CAExcludePath)</CAExcludePath>
+            {% if ca_exclude -%}
+            <CAExcludePath>$(Conan{{name}}IncludeDirectories);$(CAExcludePath)</CAExcludePath>
+            {%- endif %}
           </PropertyGroup>
           <ItemDefinitionGroup>
             <ClCompile>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
-              <AdditionalOptions>$(Conan{name}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalOptions>$(Conan{{name}}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ClCompile>
             <Link>
-              <AdditionalLibraryDirectories>$(Conan{name}LibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-              <AdditionalDependencies>$(Conan{name}Libraries)%(AdditionalDependencies)</AdditionalDependencies>
-              <AdditionalDependencies>$(Conan{name}SystemDeps)%(AdditionalDependencies)</AdditionalDependencies>
-              <AdditionalOptions>$(Conan{name}LinkerFlags) %(AdditionalOptions)</AdditionalOptions>
+              <AdditionalLibraryDirectories>$(Conan{{name}}LibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+              <AdditionalDependencies>$(Conan{{name}}Libraries)%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalDependencies>$(Conan{{name}}SystemDeps)%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalOptions>$(Conan{{name}}LinkerFlags) %(AdditionalOptions)</AdditionalOptions>
             </Link>
             <Midl>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
             </Midl>
             <ResourceCompile>
-              <AdditionalIncludeDirectories>$(Conan{name}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-              <PreprocessorDefinitions>$(Conan{name}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
-              <AdditionalOptions>$(Conan{name}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
+              <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+              <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              <AdditionalOptions>$(Conan{{name}}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
         </Project>
@@ -78,7 +80,13 @@ class MSBuildDeps(object):
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # TODO: this is ugly, improve this
         self.output_path = os.getcwd()
+        # ca_exclude section
         self.exclude_code_analysis = None
+        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
+        if ca_exclude is not None:
+            # TODO: Accept single strings, not lists
+            self.exclude_code_analysis = eval(ca_exclude)
+            assert isinstance(self.exclude_code_analysis, (bool, list))
 
     def generate(self):
         # TODO: Apply config from command line, something like
@@ -89,10 +97,6 @@ class MSBuildDeps(object):
         # config_filename
         # TODO: This is duplicated in write_generators() function, would need to be moved
         # to generators and called from there
-        exclude_code_analysis = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
-        if exclude_code_analysis is not None:
-                self.exclude_code_analysis = eval(exclude_code_analysis)
-                assert isinstance(self.exclude_code_analysis, (bool, list))
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:
@@ -161,14 +165,6 @@ class MSBuildDeps(object):
             ext = os.path.splitext(libname)[1]
             return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
 
-        exclude_code_analysis = False
-        if isinstance(self.exclude_code_analysis, list):
-              for pattern in self.exclude_code_analysis :
-                  if fnmatch.fnmatch(name, pattern):
-                      exclude_code_analysis = True
-                      break
-        else:
-             exclude_code_analysis = self.exclude_code_analysis
         fields = {
             'name': name,
             'root_folder': cpp_info.rootpath,
@@ -182,7 +178,6 @@ class MSBuildDeps(object):
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
             'exe_flags': " ".join(cpp_info.exelinkflags),
-            'ca_exclude_dirs': '$(Conan{}IncludeDirectories)'.format(name) if exclude_code_analysis else ''
         }
         formatted_template = self._vars_conf_props.format(**fields)
         return formatted_template
@@ -195,7 +190,18 @@ class MSBuildDeps(object):
         else:
             content_multi = self._dep_props
 
-        content_multi = content_multi.format(name=dep_name)
+        # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
+        # Probably also the negation pattern, exclude all not @mycompany/*
+        ca_exclude = False
+        if isinstance(self.exclude_code_analysis, list):
+            for pattern in self.exclude_code_analysis:
+                if fnmatch.fnmatch(dep_name, pattern):
+                    ca_exclude = True
+                    break
+        else:
+            ca_exclude = self.exclude_code_analysis
+
+        content_multi = Template(content_multi).render(name=dep_name, ca_exclude=ca_exclude)
 
         # parse the multi_file and add new import statement if needed
         dom = minidom.parseString(content_multi)
@@ -245,7 +251,7 @@ class MSBuildDeps(object):
         direct_deps = self._conanfile.dependencies.direct_host_requires
         result[general_name] = self._deps_props(general_name, direct_deps)
         for dep in self._conanfile.dependencies.host_requires:
-            cpp_info = DepCppInfo(dep.cpp_info) # To account for automatic component aggregation
+            cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s%s.props" % (dep.name, conf_name)
             vars_conf_content = self._pkg_config_props(dep.name, cpp_info)

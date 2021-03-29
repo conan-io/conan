@@ -610,21 +610,19 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
 
-
     @parameterized.expand([("True", True, True),
-                           ("*", True, True),
-                           ("pkga", True, False),
-                           ("pkgb", False, True),
-                           ("pkg*", True, True),
-                           ("pkga;pkgb", True, True),
-                           ("*a;*b", True, True),
+                           ("['*']", True, True),
+                           ("['pkga']", True, False),
+                           ("['pkgb']", False, True),
+                           ("['pkg*']", True, True),
+                           ("['pkga', 'pkgb']", True, True),
+                           ("['*a', '*b']", True, True),
                            ("False", False, False),
                            ])
     def test_exclude_code_analysis(self, pattern, exclude_a, exclude_b):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkga/1.0@")
-        client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkgb/1.0@")
 
         conanfile = textwrap.dedent("""
@@ -646,13 +644,19 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "profile": profile})
         client.run("install . --profile profile")
-        depa = client.load("conan_pkga_release_x64.props")
-        depb = client.load("conan_pkgb_release_x64.props")
+        depa = client.load("conan_pkga.props")
+        depb = client.load("conan_pkgb.props")
 
-        pattern = "$(ConanpkgaIncludeDirectories)" if exclude_a else ""
-        pattern = "<ConanpkgaCAExcludeDirectories>%s</ConanpkgaCAExcludeDirectories>" % pattern
-        self.assertIn(pattern, depa)
+        if exclude_a:
+            inc = "$(ConanpkgaIncludeDirectories)"
+            ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
+            assert ca_exclude in depa
+        else:
+            assert "CAExcludePath" not in depa
 
-        pattern = "$(ConanpkgbIncludeDirectories)" if exclude_b else ""
-        pattern = "<ConanpkgbCAExcludeDirectories>%s</ConanpkgbCAExcludeDirectories>" % pattern
-        self.assertIn(pattern, depb)
+        if exclude_b:
+            inc = "$(ConanpkgbIncludeDirectories)"
+            ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
+            assert ca_exclude in depb
+        else:
+            assert "CAExcludePath" not in depb
