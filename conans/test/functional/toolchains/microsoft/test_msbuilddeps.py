@@ -610,14 +610,14 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
 
-    @parameterized.expand([("True", True, True),
-                           ("['*']", True, True),
+
+    @parameterized.expand([("['*']", True, True),
                            ("['pkga']", True, False),
                            ("['pkgb']", False, True),
                            ("['pkg*']", True, True),
                            ("['pkga', 'pkgb']", True, True),
                            ("['*a', '*b']", True, True),
-                           ("False", False, False),
+                           ("['nonexist']", False, False),
                            ])
     def test_exclude_code_analysis(self, pattern, exclude_a, exclude_b):
         client = TestClient()
@@ -628,6 +628,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conan.tools.microsoft import MSBuild
+
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "pkgb/1.0@", "pkga/1.0"
