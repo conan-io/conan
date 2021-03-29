@@ -1924,6 +1924,10 @@ class Command(object):
         update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
         update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
+        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
+                                                                 help='Clean modified flag')
+        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
@@ -1934,6 +1938,8 @@ class Command(object):
                 self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
             elif args.bundlecommand == "update":
                 self._conan.lock_bundle_update(args.bundle)
+            elif args.bundlecommand == "clean-modified":
+                self._conan.lock_bundle_clean_modified(args.bundle)
             elif args.bundlecommand == "build-order":
                 build_order = self._conan.lock_bundle_build_order(args.bundle)
                 self._out.writeln(build_order)
