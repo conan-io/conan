@@ -1166,6 +1166,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_alias(self, reference, target_reference):
+        self.app.load_remotes()
+
         ref = ConanFileReference.loads(reference)
         target_ref = ConanFileReference.loads(target_reference)
 
@@ -1380,6 +1382,9 @@ class ConanAPIV1(object):
 
         if path:
             ref_or_path = _make_abs_path(path, cwd)
+            if os.path.isdir(ref_or_path):
+                raise ConanException("Path argument must include filename "
+                                     "like 'conanfile.py' or 'path/conanfile.py'")
             if not os.path.isfile(ref_or_path):
                 raise ConanException("Conanfile does not exist in %s" % ref_or_path)
         else:  # reference

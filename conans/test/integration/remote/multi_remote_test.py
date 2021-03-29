@@ -1,4 +1,3 @@
-import textwrap
 import time
 import unittest
 from collections import OrderedDict
@@ -8,21 +7,16 @@ import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.env_reader import get_env
 
 
 class ExportsSourcesMissingTest(unittest.TestCase):
 
     def test_exports_sources_missing(self):
         client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports_sources = "*"
-            """)
-        client.save({"conanfile.py": conanfile,
+        client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
         client.run("create . pkg/0.1@user/testing")
         client.run("upload pkg/0.1@user/testing --all")
@@ -54,15 +48,12 @@ class ExportsSourcesMissingTest(unittest.TestCase):
                       client2.out)
 
 
-@pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
 class MultiRemotesTest(unittest.TestCase):
 
     def setUp(self):
-        default_server = TestServer()
-        local_server = TestServer()
         self.servers = OrderedDict()
-        self.servers["default"] = default_server
-        self.servers["local"] = local_server
+        self.servers["default"] = TestServer()
+        self.servers["local"] = TestServer()
 
     def test_list_ref_no_remote(self):
         client = TestClient(servers=self.servers)
@@ -78,13 +69,10 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: None", client.out)
 
     @staticmethod
-    def _create(client, number, version, deps=None, export=True, modifier=""):
-        files = cpp_hello_conan_files(number, version, deps, build=False)
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
+    def _create(client, number, version, modifier=""):
+        files = {CONANFILE: str(GenConanfile(number, version)) + modifier}
         client.save(files, clean_first=True)
-        if export:
-            client.run("export . lasote/stable")
+        client.run("export . lasote/stable")
 
     def test_conan_install_build_flag(self):
         """
@@ -205,8 +193,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users=self.users)
 
     def test_predefine_remote(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         self.client.run("export . lasote/stable")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote0")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote1")
@@ -221,8 +208,7 @@ class MultiRemoteTest(unittest.TestCase):
 
     def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(ref))
 
@@ -259,8 +245,7 @@ class MultiRemoteTest(unittest.TestCase):
         servers["s2"] = TestServer()
 
         client = TestClient(servers=servers, users=self.users)
-        files = cpp_hello_conan_files("MyLib", "0.1", build=False)
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("MyLib", "0.1")})
         client.run("create . lasote/testing")
         client.run("user lasote -p mypass -r s1")
         client.run("upload MyLib* -r s1 -c")
@@ -278,8 +263,7 @@ class MultiRemoteTest(unittest.TestCase):
     def test_install_from_remotes(self):
         for i in range(3):
             ref = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
-            files = cpp_hello_conan_files("Hello%d" % i, "0.1", build=False)
-            self.client.save(files)
+            self.client.save({"conanfile.py": GenConanfile("Hello%d" % i, "0.1")})
             self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(ref), i))
 
@@ -288,11 +272,9 @@ class MultiRemoteTest(unittest.TestCase):
 
         # Now install it in other machine from remote 0
         client2 = TestClient(servers=self.servers, users=self.users)
-        files = cpp_hello_conan_files("HelloX", "0.1", deps=["Hello0/0.1@lasote/stable",
-                                                             "Hello1/0.1@lasote/stable",
-                                                             "Hello2/0.1@lasote/stable"])
-        files["conanfile.py"] = files["conanfile.py"].replace("def build(", "def build2(")
-        client2.save(files)
+
+        refs = ["Hello0/0.1@lasote/stable", "Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"]
+        client2.save({"conanfile.py": GenConanfile("HelloX", "0.1").with_requires(*refs)})
         client2.run("install . --build=missing")
         self.assertIn("Hello0/0.1@lasote/stable from 'remote0'", client2.out)
         self.assertIn("Hello1/0.1@lasote/stable from 'remote1'", client2.out)
@@ -302,18 +284,14 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Remote: remote1=http://", client2.out)
         self.assertIn("Remote: remote2=http://", client2.out)
 
-    @pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
-                        reason="This test is not valid for revisions, where we keep iterating the remotes "
-                               "for searching a package for the same recipe revision")
+    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
+                        reason="This test is not valid for revisions, where we keep iterating the "
+                               "remotes for searching a package for the same recipe revision")
     def test_package_binary_remote(self):
         # https://github.com/conan-io/conan/issues/3882
-        conanfile = """from conans import ConanFile
-class ConanFileToolsTest(ConanFile):
-    pass
-"""
         # Upload recipe + package to remote1 and remote2
         reference = "Hello/0.1@lasote/stable"
-        self.client.save({"conanfile.py": conanfile})
+        self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . %s" % reference)
         self.client.run("upload %s -r=remote0 --all" % reference)
         self.client.run("upload %s -r=remote2 --all" % reference)
@@ -340,7 +318,7 @@ class ConanFileToolsTest(ConanFile):
 
         client2 = TestClient(servers=self.servers, users=self.users)
         time.sleep(1)  # Make sure timestamps increase
-        client2.save({"conanfile.py": conanfile + " # Comment"})
+        client2.save({"conanfile.py": str(GenConanfile()) + " # Comment"})
         client2.run("create . %s" % reference)
         client2.run("upload %s -r=remote2 --all" % reference)
 

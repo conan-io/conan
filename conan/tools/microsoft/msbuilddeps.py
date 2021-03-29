@@ -5,6 +5,7 @@ from xml.dom import minidom
 
 
 from conans.errors import ConanException
+from conans.model.build_info import DepCppInfo
 from conans.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
@@ -136,7 +137,7 @@ class MSBuildDeps(object):
         import_group = dom.getElementsByTagName('ImportGroup')[0]
         children = import_group.getElementsByTagName("Import")
         for dep in deps:
-            conf_props_name = "conan_%s.props" % dep
+            conf_props_name = "conan_%s.props" % dep.name
             for node in children:
                 if conf_props_name == node.getAttribute("Project"):
                     # the import statement already exists
@@ -144,7 +145,7 @@ class MSBuildDeps(object):
             else:
                 # create a new import statement
                 import_node = dom.createElement('Import')
-                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep
+                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep.name
                 import_node.setAttribute('Project', conf_props_name)
                 import_node.setAttribute('Condition', dep_imported)
                 # add it to the import group
@@ -241,17 +242,18 @@ class MSBuildDeps(object):
         conf_name = self._config_filename()
         condition = self._condition()
         # Include all direct build_requires for host context. This might change
-        direct_deps = self._conanfile.deps_cpp_info.direct_host_deps
+        direct_deps = self._conanfile.dependencies.direct_host_requires
         result[general_name] = self._deps_props(general_name, direct_deps)
-        for dep_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
+        for dep in self._conanfile.dependencies.host_requires:
+            cpp_info = DepCppInfo(dep.cpp_info) # To account for automatic component aggregation
             # One file per configuration, with just the variables
-            vars_props_name = "conan_%s%s.props" % (dep_name, conf_name)
-            vars_conf_content = self._pkg_config_props(dep_name, cpp_info)
+            vars_props_name = "conan_%s%s.props" % (dep.name, conf_name)
+            vars_conf_content = self._pkg_config_props(dep.name, cpp_info)
             result[vars_props_name] = vars_conf_content
 
             # The entry point for each package, it will have conditionals to the others
-            props_name = "conan_%s.props" % dep_name
-            dep_content = self._pkg_props(props_name, dep_name, vars_props_name, condition, cpp_info)
+            props_name = "conan_%s.props" % dep.name
+            dep_content = self._pkg_props(props_name, dep.name, vars_props_name, condition, cpp_info)
             result[props_name] = dep_content
 
         return result

@@ -272,6 +272,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -287,6 +288,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
@@ -528,3 +530,57 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
+
+
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class TestCMakeFindPackagePreferConfig:
+
+    def test_prefer_config(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            set(CMAKE_C_COMPILER_WORKS 1)
+            set(CMAKE_C_ABI_COMPILED 1)
+            cmake_minimum_required(VERSION 3.15)
+            project(my_project C)
+            find_package(Comandante REQUIRED)
+            """)
+
+        find = 'message(STATUS "using FindComandante.cmake")'
+        config = 'message(STATUS "using ComandanteConfig.cmake")'
+
+        profile = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.cmake.cmaketoolchain:find_package_prefer_config={}
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "FindComandante.cmake": find,
+                     "ComandanteConfig.cmake": config,
+                     "profile_true": profile.format(True),
+                     "profile_false": profile.format(False)})
+
+        client.run("install .")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_true")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_false")
+        client.run("build .")
+        assert "using FindComandante.cmake" in client.out

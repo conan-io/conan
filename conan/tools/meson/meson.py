@@ -2,7 +2,14 @@ import os
 
 from conan.tools.meson import MesonToolchain
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
-from conans.client.tools.oss import cross_building, cpu_count
+from conans.client.tools.oss import cross_building
+
+
+def ninja_jobs_cmd_line_arg(conanfile):
+    njobs = conanfile.conf["tools.ninja"].jobs or \
+            conanfile.conf["tools.build"].processes
+    if njobs:
+        return "-j{}".format(njobs)
 
 
 class Meson(object):
@@ -33,14 +40,17 @@ class Meson(object):
         if cross_building(self._conanfile):
             cmd += ' --cross-file "{}"'.format(MesonToolchain.cross_filename)
         else:
-            cmd += ' --native-file "{}"'. format(MesonToolchain.native_filename)
+            cmd += ' --native-file "{}"'.format(MesonToolchain.native_filename)
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
         self._run(cmd)
 
     def build(self, target=None):
-        cmd = 'meson compile -C "{}" -j {}'.format(self._build_dir, cpu_count())
+        cmd = 'meson compile -C "{}"'.format(self._build_dir)
+        njobs = ninja_jobs_cmd_line_arg(self._conanfile)
+        if njobs:
+            cmd += " {}".format(njobs)
         if target:
             cmd += " {}".format(target)
         self._run(cmd)
