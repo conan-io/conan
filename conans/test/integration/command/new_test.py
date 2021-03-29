@@ -386,3 +386,21 @@ class NewCommandTest(unittest.TestCase):
         self.assertIn("CMakeToolchain", conanfile)
         cmake = client.load("test_package/CMakeLists.txt")
         self.assertIn("find_package", cmake)
+
+    def test_new_reference(self):
+        client = TestClient()
+        # full reference
+        client.run("new MyPackage/1.3@myuser/testing --template=v2_cmake")
+        conanfile = client.load("conanfile.py")
+        self.assertIn('name = "MyPackage"', conanfile)
+        self.assertIn('version = "1.3"', conanfile)
+        # no username, no channel (with @)
+        client.run("new MyPackage/1.3@ --template=v2_cmake")
+        conanfile = client.load("conanfile.py")
+        self.assertIn('version = "1.3"', conanfile)
+        self.assertIn('name = "MyPackage"', conanfile)
+        # no username, no channel (without @)
+        client.run("new MyPackage/1.3 --template=v2_cmake")
+        conanfile = client.load("conanfile.py")
+        self.assertIn('name = "MyPackage"', conanfile)
+        self.assertIn('version = "1.3"', conanfile)
