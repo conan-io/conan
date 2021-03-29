@@ -6,7 +6,7 @@ from jinja2 import Template
 from conans import __version__ as client_version
 from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import load
 
 
@@ -323,12 +323,8 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
             template=None, cache=None, defines=None):
     try:
-        tokens = ref.split("@")
-        name, version = tokens[0].split("/")
-        if len(tokens) == 2:
-            user, channel = tokens[1].split("/")
-        else:
-            user, channel = "user", "channel"
+        name, version, user, channel, revision = get_reference_fields(ref, user_channel_input=False)
+        # convert "package_name" -> "PackageName"
         package_name = re.sub(r"(?:^|[\W_])(\w)", lambda x: x.group(1).upper(), name)
     except ValueError:
         raise ConanException("Bad parameter, please use full package name,"
