@@ -75,7 +75,8 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         tmp = temp_folder()
         cpp_info = CppInfo("pkg_reference_name", tmp)
         cpp_info.name = "PkgCMakeName"
-        cpp_info.set_generator_property("names", "MyCMakePathsPkgName", "cmake_paths")
+        cpp_info.names["cmake_paths"] = "MyCMakePathsPkgName"
+        cpp_info.update_generator_properties()
         conanfile.deps_cpp_info.add("pkg_reference_name", cpp_info)
         generator = CMakePathsGenerator(conanfile)
         self.assertIn('set(CONAN_MYCMAKEPATHSPKGNAME_ROOT', generator.content)
