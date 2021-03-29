@@ -71,10 +71,8 @@ class CMakeToolchainBase(object):
 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
-        if(CONAN_TOOLCHAIN_INCLUDED)
-          return()
-        endif()
-        set(CONAN_TOOLCHAIN_INCLUDED TRUE)
+        include_guard()
+
 
         {% block before_try_compile %}
             {# build_type (Release, Debug, etc) is only defined for single-config generators #}
