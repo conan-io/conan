@@ -479,6 +479,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         cpp_info.names["cmake_multi"] = "MyCMakeMultiName"
         cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName"
         cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName"
+        cpp_info.update_generator_properties()
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
@@ -488,6 +489,7 @@ class CMakeCppInfoNamesTest(unittest.TestCase):
         cpp_info.names["cmake_find_package"] = "MyCMakeFindPackageName2"
         cpp_info.names["cmake_find_package_multi"] = "MyCMakeFindPackageMultiName2"
         cpp_info.public_deps = ["my_pkg"]
+        cpp_info.update_generator_properties()
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def test_cmake(self):

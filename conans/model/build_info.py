@@ -233,11 +233,13 @@ class _CppInfo(object):
         for _, component in self.components.items():
             for generator, value in component.names.items():
                 component.set_generator_property("names", value, generator=generator)
+                component.set_generator_property("filenames", value, generator=generator)
             for generator, value in component.filenames.items():
                 component.set_generator_property("filenames", value, generator=generator)
 
         for generator, value in self.names.items():
             self.set_generator_property("names", value, generator=generator)
+            self.set_generator_property("filenames", value, generator=generator)
         for generator, value in self.filenames.items():
             self.set_generator_property("filenames", value, generator=generator)
 
