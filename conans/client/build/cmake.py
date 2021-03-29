@@ -20,6 +20,7 @@ from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.config_parser import get_bool_from_text
+from conans.util.env_reader import get_env
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
 
@@ -330,7 +331,7 @@ class CMake(object):
         self._build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test:
+        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"
