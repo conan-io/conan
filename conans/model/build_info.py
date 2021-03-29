@@ -232,6 +232,12 @@ class _CppInfo(object):
             #return self._generator_properties.get("conan_default_generators_value").get(property_name)
 
     def update_properties(self):
+        for _, component in self.components.items():
+            for generator, value in component.names.items():
+                component.set_property("names", value, generator=generator)
+            for generator, value in component.filenames.items():
+                component.set_property("filenames", value, generator=generator)
+
         for generator, value in self.names.items():
             self.set_property("names", value, generator=generator)
         for generator, value in self.filenames.items():
