@@ -14,40 +14,42 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 class MSBuildDeps(object):
 
-    _vars_conf_props = textwrap.dedent("""\
+    _vars_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup Label="ConanVariables">
-            <Conan{name}RootFolder>{root_folder}</Conan{name}RootFolder>
-            <Conan{name}CompilerFlags>{compiler_flags}</Conan{name}CompilerFlags>
-            <Conan{name}LinkerFlags>{linker_flags}</Conan{name}LinkerFlags>
-            <Conan{name}PreprocessorDefinitions>{definitions}</Conan{name}PreprocessorDefinitions>
-            <Conan{name}IncludeDirectories>{include_dirs}</Conan{name}IncludeDirectories>
-            <Conan{name}ResourceDirectories>{res_dirs}</Conan{name}ResourceDirectories>
-            <Conan{name}LibraryDirectories>{lib_dirs}</Conan{name}LibraryDirectories>
-            <Conan{name}BinaryDirectories>{bin_dirs}</Conan{name}BinaryDirectories>
-            <Conan{name}Libraries>{libs}</Conan{name}Libraries>
-            <Conan{name}SystemDeps>{system_libs}</Conan{name}SystemDeps>
+            <Conan{{name}}RootFolder>{{root_folder}}</Conan{{name}}RootFolder>
+            <Conan{{name}}CompilerFlags>{{compiler_flags}}</Conan{{name}}CompilerFlags>
+            <Conan{{name}}LinkerFlags>{{linker_flags}}</Conan{{name}}LinkerFlags>
+            <Conan{{name}}PreprocessorDefinitions>{{definitions}}</Conan{{name}}PreprocessorDefinitions>
+            <Conan{{name}}IncludeDirectories>{{include_dirs}}</Conan{{name}}IncludeDirectories>
+            <Conan{{name}}ResourceDirectories>{{res_dirs}}</Conan{{name}}ResourceDirectories>
+            <Conan{{name}}LibraryDirectories>{{lib_dirs}}</Conan{{name}}LibraryDirectories>
+            <Conan{{name}}BinaryDirectories>{{bin_dirs}}</Conan{{name}}BinaryDirectories>
+            <Conan{{name}}Libraries>{{libs}}</Conan{{name}}Libraries>
+            <Conan{{name}}SystemLibs>{{system_libs}}</Conan{{name}}SystemLibs>
+            <Conan{{name}}Dependencies>{{dependencies}}</Conan{{name}}Dependencies>
           </PropertyGroup>
         </Project>
         """)
 
-    _dep_props = textwrap.dedent("""\
+    _conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <ImportGroup Label="ConanDependencies">
+            {% for dep in deps %}
+            <Import Condition="'$(conan_{{dep}}_props_imported)' != 'True'" Project="conan_{{dep}}.props"/>
+            {% endfor %}
           </ImportGroup>
-          <ImportGroup Label="Configurations">
+          <ImportGroup Label="ConanPackageVariables">
+            <Import Project="{{vars_filename}}"/>
           </ImportGroup>
-          <PropertyGroup>
-            <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
-          </PropertyGroup>
           <PropertyGroup>
             <LocalDebuggerEnvironment>PATH=%PATH%;$(Conan{{name}}BinaryDirectories)$(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
             <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-            {% if ca_exclude -%}
+            {% if ca_exclude %}
             <CAExcludePath>$(Conan{{name}}IncludeDirectories);$(CAExcludePath)</CAExcludePath>
-            {%- endif %}
+            {% endif %}
           </PropertyGroup>
           <ItemDefinitionGroup>
             <ClCompile>
@@ -58,7 +60,7 @@ class MSBuildDeps(object):
             <Link>
               <AdditionalLibraryDirectories>$(Conan{{name}}LibraryDirectories)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
               <AdditionalDependencies>$(Conan{{name}}Libraries)%(AdditionalDependencies)</AdditionalDependencies>
-              <AdditionalDependencies>$(Conan{{name}}SystemDeps)%(AdditionalDependencies)</AdditionalDependencies>
+              <AdditionalDependencies>$(Conan{{name}}SystemLibs)%(AdditionalDependencies)</AdditionalDependencies>
               <AdditionalOptions>$(Conan{{name}}LinkerFlags) %(AdditionalOptions)</AdditionalOptions>
             </Link>
             <Midl>
@@ -70,6 +72,25 @@ class MSBuildDeps(object):
               <AdditionalOptions>$(Conan{{name}}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
+        </Project>
+        """)
+
+    _dep_props = textwrap.dedent("""\
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <ImportGroup Label="Configurations">
+          </ImportGroup>
+          <PropertyGroup>
+            <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
+          </PropertyGroup>
+        </Project>
+        """)
+
+    _all_props = textwrap.dedent("""\
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <ImportGroup Label="ConanDependencies">
+          </ImportGroup>
         </Project>
         """)
 
@@ -119,22 +140,89 @@ class MSBuildDeps(object):
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
-    def _deps_props(self, name_general, deps):
-        """ this is a .props file including all declared dependencies
+    def _vars_props_file(self, name, cpp_info, deps):
         """
-        # read the existing multi_filename or use the template if it doesn't exist
-        template = textwrap.dedent("""\
-            <?xml version="1.0" encoding="utf-8"?>
-            <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-                <ImportGroup Label="ConanDependencies" >
-                </ImportGroup>
-            </Project>
-            """)
+        content for conan_vars_poco_x86_release.props, containing the variables
+        """
+        # returns a .props file with the variables definition for one package for one configuration
+        def add_valid_ext(libname):
+            ext = os.path.splitext(libname)[1]
+            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
+
+        fields = {
+            'name': name,
+            'root_folder': cpp_info.rootpath,
+            'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
+            'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
+            'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
+            'lib_dirs': "".join("%s;" % p for p in cpp_info.lib_paths),
+            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
+            'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
+            'definitions': "".join("%s;" % d for d in cpp_info.defines),
+            'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
+            'linker_flags': " ".join(cpp_info.sharedlinkflags),
+            'exe_flags': " ".join(cpp_info.exelinkflags),
+            'dependencies': ";".join(deps)
+        }
+        formatted_template = Template(self._vars_props).render(**fields)
+        return formatted_template
+
+    def _conf_props_file(self, dep_name, vars_props_name, deps):
+        """
+        content for conan_poco_x86_release.props, containing the activation
+        """
+        # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
+        # Probably also the negation pattern, exclude all not @mycompany/*
+        ca_exclude = False
+        if isinstance(self.exclude_code_analysis, list):
+            for pattern in self.exclude_code_analysis:
+                if fnmatch.fnmatch(dep_name, pattern):
+                    ca_exclude = True
+                    break
+        else:
+            ca_exclude = self.exclude_code_analysis
+
+        template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
+        content_multi = template.render(name=dep_name, ca_exclude=ca_exclude,
+                                        vars_filename=vars_props_name, deps=deps)
+        return content_multi
+
+    def _dep_props_file(self, name, name_general, dep_props_filename, condition):
         multi_path = os.path.join(self.output_path, name_general)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
-            content_multi = template
+            content_multi = self._dep_props
+            content_multi = Template(content_multi).render({"name": name})
+
+        # parse the multi_file and add new import statement if needed
+        dom = minidom.parseString(content_multi)
+        import_vars = dom.getElementsByTagName('ImportGroup')[0]
+
+        # Current vars
+        children = import_vars.getElementsByTagName("Import")
+        for node in children:
+            if (dep_props_filename == node.getAttribute("Project") and
+                    condition == node.getAttribute("Condition")):
+                break  # the import statement already exists
+        else:  # create a new import statement
+            import_node = dom.createElement('Import')
+            import_node.setAttribute('Condition', condition)
+            import_node.setAttribute('Project', dep_props_filename)
+            import_vars.appendChild(import_node)
+
+        content_multi = dom.toprettyxml()
+        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
+        return content_multi
+
+    def _all_props_file(self, name_general, deps):
+        """ this is a .props file including all declared dependencies
+        """
+        multi_path = os.path.join(self.output_path, name_general)
+        if os.path.isfile(multi_path):
+            content_multi = load(multi_path)
+        else:
+            content_multi = self._all_props
 
         # parse the multi_file and add a new import statement if needed
         dom = minidom.parseString(content_multi)
@@ -159,85 +247,6 @@ class MSBuildDeps(object):
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 
-    def _pkg_config_props(self, name, cpp_info):
-        # returns a .props file with the variables definition for one package for one configuration
-        def add_valid_ext(libname):
-            ext = os.path.splitext(libname)[1]
-            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
-
-        fields = {
-            'name': name,
-            'root_folder': cpp_info.rootpath,
-            'bin_dirs': "".join("%s;" % p for p in cpp_info.bin_paths),
-            'res_dirs': "".join("%s;" % p for p in cpp_info.res_paths),
-            'include_dirs': "".join("%s;" % p for p in cpp_info.include_paths),
-            'lib_dirs': "".join("%s;" % p for p in cpp_info.lib_paths),
-            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
-            'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
-            'definitions': "".join("%s;" % d for d in cpp_info.defines),
-            'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags),
-            'exe_flags': " ".join(cpp_info.exelinkflags),
-        }
-        formatted_template = self._vars_conf_props.format(**fields)
-        return formatted_template
-
-    def _pkg_props(self, name_multi, dep_name, vars_props_name, condition, cpp_info):
-        # read the existing mult_filename or use the template if it doesn't exist
-        multi_path = os.path.join(self.output_path, name_multi)
-        if os.path.isfile(multi_path):
-            content_multi = load(multi_path)
-        else:
-            content_multi = self._dep_props
-
-        # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
-        # Probably also the negation pattern, exclude all not @mycompany/*
-        ca_exclude = False
-        if isinstance(self.exclude_code_analysis, list):
-            for pattern in self.exclude_code_analysis:
-                if fnmatch.fnmatch(dep_name, pattern):
-                    ca_exclude = True
-                    break
-        else:
-            ca_exclude = self.exclude_code_analysis
-
-        content_multi = Template(content_multi).render(name=dep_name, ca_exclude=ca_exclude)
-
-        # parse the multi_file and add new import statement if needed
-        dom = minidom.parseString(content_multi)
-        import_deps, import_vars = dom.getElementsByTagName('ImportGroup')
-
-        # Transitive Deps
-        children = import_deps.getElementsByTagName("Import")
-        for dep in cpp_info.public_deps:
-            dep_props_name = "conan_%s.props" % dep
-            dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep
-            for node in children:
-                if (dep_props_name == node.getAttribute("Project") and
-                        dep_imported == node.getAttribute("Condition")):
-                    break  # the import statement already exists
-            else:  # create a new import statement
-                import_node = dom.createElement('Import')
-                import_node.setAttribute('Condition', dep_imported)
-                import_node.setAttribute('Project', dep_props_name)
-                import_deps.appendChild(import_node)
-
-        # Current vars
-        children = import_vars.getElementsByTagName("Import")
-        for node in children:
-            if (vars_props_name == node.getAttribute("Project") and
-                    condition == node.getAttribute("Condition")):
-                break  # the import statement already exists
-        else:  # create a new import statement
-            import_node = dom.createElement('Import')
-            import_node.setAttribute('Condition', condition)
-            import_node.setAttribute('Project', vars_props_name)
-            import_vars.appendChild(import_node)
-
-        content_multi = dom.toprettyxml()
-        content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
-        return content_multi
-
     def _content(self):
         # We cannot use self._conanfile.warn(), because that fails for virtual conanfile
         print("*** The 'msbuild' generator is EXPERIMENTAL ***")
@@ -249,17 +258,19 @@ class MSBuildDeps(object):
         condition = self._condition()
         # Include all direct build_requires for host context. This might change
         direct_deps = self._conanfile.dependencies.direct_host_requires
-        result[general_name] = self._deps_props(general_name, direct_deps)
+        result[general_name] = self._all_props_file(general_name, direct_deps)
         for dep in self._conanfile.dependencies.host_requires:
             cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
+            public_deps = [d.name for d in dep.dependencies.direct_host_requires]
             # One file per configuration, with just the variables
-            vars_props_name = "conan_%s%s.props" % (dep.name, conf_name)
-            vars_conf_content = self._pkg_config_props(dep.name, cpp_info)
-            result[vars_props_name] = vars_conf_content
+            vars_props_name = "conan_%s_vars%s.props" % (dep.name, conf_name)
+            result[vars_props_name] = self._vars_props_file(dep.name, cpp_info, public_deps)
+            props_name = "conan_%s%s.props" % (dep.name, conf_name)
+            result[props_name] = self._conf_props_file(dep.name, vars_props_name, public_deps)
 
             # The entry point for each package, it will have conditionals to the others
-            props_name = "conan_%s.props" % dep.name
-            dep_content = self._pkg_props(props_name, dep.name, vars_props_name, condition, cpp_info)
-            result[props_name] = dep_content
+            dep_name = "conan_%s.props" % dep.name
+            dep_content = self._dep_props_file(dep.name, dep_name, props_name, condition)
+            result[dep_name] = dep_content
 
         return result
