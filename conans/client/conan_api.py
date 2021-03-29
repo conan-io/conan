@@ -250,7 +250,7 @@ class ConanAPIV1(object):
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None):
+            template=None, defines=None):
         from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or os.getcwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
@@ -265,7 +265,7 @@ class ConanAPIV1(object):
                         circleci_gcc_versions=circleci_gcc_versions,
                         circleci_clang_versions=circleci_clang_versions,
                         circleci_osx_versions=circleci_osx_versions,
-                        template=template, cache=self.app.cache)
+                        template=template, cache=self.app.cache, defines=defines)
 
         save_files(cwd, files)
         for f in sorted(files):

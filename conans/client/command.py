@@ -199,8 +199,13 @@ class Command(object):
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
                             help='Define URL of the repository to upload')
+        parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
+
+        defines = args.define or []
+        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
+
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
@@ -215,7 +220,8 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template)
+                        template=args.template,
+                        defines=defines)
 
     def inspect(self, *args):
         """
