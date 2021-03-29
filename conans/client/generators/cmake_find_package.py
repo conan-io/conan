@@ -223,7 +223,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
     @classmethod
     def _get_property(cls, obj, property_name, generator=None):
-        return obj.get_property(property_name, generator)
+        return obj.get_generator_property(property_name, generator)
 
     @property
     def content(self):
