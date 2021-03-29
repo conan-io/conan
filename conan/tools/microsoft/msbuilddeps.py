@@ -86,7 +86,9 @@ class MSBuildDeps(object):
         if ca_exclude is not None:
             # TODO: Accept single strings, not lists
             self.exclude_code_analysis = eval(ca_exclude)
-            assert isinstance(self.exclude_code_analysis, (bool, list))
+            if not isinstance(self.exclude_code_analysis, list):
+                raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
+                                     " list of package names patterns like ['pkga*']")
 
     def generate(self):
         # TODO: Apply config from command line, something like
