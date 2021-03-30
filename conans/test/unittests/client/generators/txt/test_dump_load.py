@@ -46,6 +46,7 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.cxxflags = ["-cxxflag_parent"]
         cpp_info.includedirs = ["mypkg1/include"]
         cpp_info.filter_empty = False
+        cpp_info.update_generator_properties()
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
@@ -53,6 +54,7 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.cxxflags = ["-cxxflag_dep"]
         cpp_info.filter_empty = False
+        cpp_info.update_generator_properties()
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         # Add env_info
