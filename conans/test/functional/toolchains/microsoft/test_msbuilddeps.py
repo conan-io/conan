@@ -455,7 +455,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install mypkg/0.1@ -g MSBuildDeps")
         self.assertIn("Generator 'MSBuildDeps' calling 'generate()'", client.out)
         # https://github.com/conan-io/conan/issues/8163
-        props = client.load("conan_mypkg_release_x64.props")  # default Release/x64
+        props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
         folder = props[props.find("<ConanmypkgRootFolder>")+len("<ConanmypkgRootFolder>")
                        :props.find("</ConanmypkgRootFolder>")]
         self.assertTrue(os.path.isfile(os.path.join(folder, "conaninfo.txt")))
@@ -610,6 +610,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
 
+
     @parameterized.expand([("['*']", True, True),
                            ("['pkga']", True, False),
                            ("['pkgb']", False, True),
@@ -625,7 +626,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkgb/1.0@")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuild
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuild
+
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "pkgb/1.0@", "pkga/1.0"
@@ -636,6 +639,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
             """)
         profile = textwrap.dedent("""
             include(default)
+            build_type=Release
+            arch=x86_64
             [conf]
             tools.microsoft.msbuilddeps:exclude_code_analysis = %s
             """ % pattern)
@@ -643,8 +648,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "profile": profile})
         client.run("install . --profile profile")
-        depa = client.load("conan_pkga.props")
-        depb = client.load("conan_pkgb.props")
+        depa = client.load("conan_pkga_release_x64.props")
+        depb = client.load("conan_pkgb_release_x64.props")
 
         if exclude_a:
             inc = "$(ConanpkgaIncludeDirectories)"
