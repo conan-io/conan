@@ -2,6 +2,8 @@ import os
 import re
 import textwrap
 
+from jinja2 import Template
+
 from conan.tools._compilers import architecture_flag
 from conans.client.tools import cpu_count
 from conans.util.files import load
@@ -52,131 +54,45 @@ def get_generator_platform(settings, generator):
     return None
 
 
-class CMakeGenericToolchain(CMakeToolchainBase):
-    _toolchain_tpl = textwrap.dedent("""
-        {% extends 'base_toolchain' %}
+class Block:
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
 
-        {% block before_try_compile %}
-            {{ super() }}
-            {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
-            {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
-            {% if compiler %}
-            set(CMAKE_C_COMPILER {{ compiler }})
-            set(CMAKE_CXX_COMPILER {{ compiler }})
-            {%- endif %}
-        {% endblock %}
+    def get_block(self):
+        context = self.context()
+        if not context:
+            return
+        return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
 
-        {% block main %}
-            {{ super() }}
+    def context(self):
+        raise NotImplementedError()
 
-            {% if fpic -%}
-                message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
-                set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-            {%- endif %}
+    @property
+    def template(self):
+        raise NotImplementedError()
 
-            {% if skip_rpath -%}
-                set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
-                # Policy CMP0068
-                # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
-                set(CMAKE_INSTALL_NAME_DIR "")
-            {% endif -%}
 
-            {% if architecture -%}
-                set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ architecture }}")
-                set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ architecture }}")
-                set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ architecture }}")
-                set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ architecture }}")
-            {%- endif %}
-
-            {% if set_libcxx -%}
-                set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
-            {%- endif %}
-            {% if glibcxx -%}
-                add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
-            {%- endif %}
-
-            {% if vs_runtimes %}
-            {% set genexpr = namespace(str='') %}
-            {%- for config, value in vs_runtimes.items() -%}
-                {%- set genexpr.str = genexpr.str +
-                                      '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
-            {%- endfor -%}
-            set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
-            {% endif %}
-        {% endblock %}
+class VSRuntimeBlock(Block):
+    template = textwrap.dedent("""
+        # Definition of VS runtime, defined from build_type, compiler.runtime, compiler.runtime_type
+        {% set genexpr = namespace(str='') %}
+        {% for config, value in vs_runtimes.items() %}
+            {% set genexpr.str = genexpr.str +
+                                  '$<$<CONFIG:' + config + '>:' + value|string + '>' %}
+        {% endfor %}
+        set(CMAKE_MSVC_RUNTIME_LIBRARY "{{ genexpr.str }}")
         """)
 
-    def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
-                 toolset=None, parallel=True):
-        super(CMakeGenericToolchain, self).__init__(conanfile)
-
-        self.fpic = self._deduce_fpic()
-        self.vs_runtimes = self._runtimes()
-        self.parallel = parallel
-
-        self.generator = generator or get_generator(self._conanfile)
-        self.generator_platform = (generator_platform or
-                                   get_generator_platform(self._conanfile.settings,
-                                                          self.generator))
-        self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
-        if (self.generator is not None and "Ninja" in self.generator
-                and "Visual" in self._conanfile.settings.compiler):
-            self.compiler = "cl"
-        else:
-            self.compiler = None  # compiler defined by default
-
-        try:
-            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
-        except ConanException:
-            self._build_shared_libs = None
-
-        self.set_libcxx, self.glibcxx = self._get_libcxx()
-
-        self.parallel = None
-        if parallel:
-            if self.generator and "Visual Studio" in self.generator:
-                self.parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
-
-        self.cppstd, self.cppstd_extensions = self._cppstd()
-
-        self.skip_rpath = True if self._conanfile.settings.get_safe("os") == "Macos" else False
-        self.architecture = self._get_architecture()
-
-        # TODO: I would want to have here the path to the compiler too
-        build_type = build_type or self._conanfile.settings.get_safe("build_type")
-        self.build_type = build_type if not is_multi_configuration(self.generator) else None
-
-    def _get_templates(self):
-        templates = super(CMakeGenericToolchain, self)._get_templates()
-        templates.update({
-            CMakeToolchainBase.filename: self._toolchain_tpl
-        })
-        return templates
-
-    def _deduce_fpic(self):
-        fpic = self._conanfile.options.get_safe("fPIC")
-        if fpic is None:
-            return None
-        os_ = self._conanfile.settings.get_safe("os")
-        if os_ and "Windows" in os_:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
-            return None
-        shared = self._conanfile.options.get_safe("shared")
-        if shared:
-            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
-                                        "for a shared library")
-            return None
-        return fpic
-
-    def _get_architecture(self):
-        # This should be factorized and make it toolchain-private
-        return architecture_flag(self._conanfile.settings)
-
-    def _runtimes(self):
+    def context(self):
         # Parsing existing toolchain file to get existing configured runtimes
+        settings = self._conanfile.settings
+        compiler = settings.get_safe("compiler")
+        if compiler not in ("Visual Studio", "msvc"):
+            return
+
         config_dict = {}
-        if os.path.exists(self.filename):
-            existing_include = load(self.filename)
+        if os.path.exists(CMakeToolchainBase.filename):
+            existing_include = load(CMakeToolchainBase.filename)
             msvc_runtime_value = re.search(r"set\(CMAKE_MSVC_RUNTIME_LIBRARY \"([^)]*)\"\)",
                                            existing_include)
             if msvc_runtime_value:
@@ -184,8 +100,6 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 matches = re.findall(r"\$<\$<CONFIG:([A-Za-z]*)>:([A-Za-z]*)>", capture)
                 config_dict = dict(matches)
 
-        settings = self._conanfile.settings
-        compiler = settings.get_safe("compiler")
         build_type = settings.get_safe("build_type")  # FIXME: change for configuration
         runtime = settings.get_safe("compiler.runtime")
         if compiler == "Visual Studio":
@@ -199,12 +113,47 @@ class CMakeGenericToolchain(CMakeToolchainBase):
             if runtime != "static":
                 rt += "DLL"
             config_dict[build_type] = rt
-        return config_dict
+        return {"vs_runtimes": config_dict}
 
-    def _get_libcxx(self):
+
+class FPicBlock(Block):
+    template = textwrap.dedent("""
+        {% if fpic %}
+        message(STATUS "Conan toolchain: Setting CMAKE_POSITION_INDEPENDENT_CODE=ON (options.fPIC)")
+        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+        {% endif %}
+        """)
+
+    def context(self):
+        fpic = self._conanfile.options.get_safe("fPIC")
+        if fpic is None:
+            return None
+        os_ = self._conanfile.settings.get_safe("os")
+        if os_ and "Windows" in os_:
+            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined for Windows")
+            return None
+        shared = self._conanfile.options.get_safe("shared")
+        if shared:
+            self._conanfile.output.warn("Toolchain: Ignoring fPIC option defined "
+                                        "for a shared library")
+            return None
+        return {"fpic": fpic}
+
+
+class GLibCXXBlock(Block):
+    template = textwrap.dedent("""
+        {% if set_libcxx %}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ set_libcxx }}")
+        {% endif %}
+        {% if glibcxx %}
+        add_definitions(-D_GLIBCXX_USE_CXX11_ABI={{ glibcxx }})
+        {% endif %}
+        """)
+
+    def context(self):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
-            return None, None
+            return None
         compiler = self._conanfile.settings.compiler
         lib = glib = None
         if compiler == "apple-clang":
@@ -229,7 +178,105 @@ class CMakeGenericToolchain(CMakeToolchainBase):
                 glib = "1"
             elif libcxx == "libstdc++":
                 glib = "0"
-        return lib, glib
+        return {"lib": lib, "glib": glib}
+
+
+class SkipRPath(Block):
+    template = textwrap.dedent("""
+        set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
+        # Policy CMP0068
+        # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
+        set(CMAKE_INSTALL_NAME_DIR "")
+        """)
+
+    def context(self):
+        if self._conanfile.settings.get_safe("os") != "Macos":
+            return
+        return {"skip_rpath": True}
+
+
+class ArchitectureBlock(Block):
+    template = textwrap.dedent("""
+        {% if arch_flag %}
+        set(CONAN_CXX_FLAGS "${CONAN_CXX_FLAGS} {{ arch_flag }}")
+        set(CONAN_C_FLAGS "${CONAN_C_FLAGS} {{ arch_flag }}")
+        set(CONAN_SHARED_LINKER_FLAGS "${CONAN_SHARED_LINKER_FLAGS} {{ arch_flag }}")
+        set(CONAN_EXE_LINKER_FLAGS "${CONAN_EXE_LINKER_FLAGS} {{ arch_flag }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        arch_flag = architecture_flag(self._conanfile.settings)
+        if not arch_flag:
+            return
+        return {"arch_flag": arch_flag}
+
+
+class CMakeGenericToolchain(CMakeToolchainBase):
+    _toolchain_tpl = textwrap.dedent("""
+        {% extends 'base_toolchain' %}
+
+        {% block before_try_compile %}
+        {{ super() }}
+        {% if generator_platform %}set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE){% endif %}
+        {% if toolset %}set(CMAKE_GENERATOR_TOOLSET "{{ toolset }}" CACHE STRING "" FORCE){% endif %}
+        {% if compiler %}
+        set(CMAKE_C_COMPILER {{ compiler }})
+        set(CMAKE_CXX_COMPILER {{ compiler }})
+        {%- endif %}
+        {% endblock %}
+
+        {% block main %}
+            {{ super() }}
+
+            {% for conan_block in conan_main_blocks %}
+            {{ conan_block }}
+            {% endfor %}
+        {% endblock %}
+        """)
+
+    def __init__(self, conanfile, generator=None, generator_platform=None, build_type=None,
+                 toolset=None, parallel=True):
+        super(CMakeGenericToolchain, self).__init__(conanfile)
+
+        self.conan_main_blocks = [FPicBlock, SkipRPath, GLibCXXBlock, ArchitectureBlock,
+                                  VSRuntimeBlock]
+
+        self.parallel = parallel
+
+        self.generator = generator or get_generator(self._conanfile)
+        self.generator_platform = (generator_platform or
+                                   get_generator_platform(self._conanfile.settings,
+                                                          self.generator))
+        self.toolset = toolset or get_toolset(self._conanfile.settings, self.generator)
+        if (self.generator is not None and "Ninja" in self.generator
+                and "Visual" in self._conanfile.settings.compiler):
+            self.compiler = "cl"
+        else:
+            self.compiler = None  # compiler defined by default
+
+        try:
+            self._build_shared_libs = "ON" if self._conanfile.options.shared else "OFF"
+        except ConanException:
+            self._build_shared_libs = None
+
+        self.parallel = None
+        if parallel:
+            if self.generator and "Visual Studio" in self.generator:
+                self.parallel = "/MP%s" % cpu_count(output=self._conanfile.output)
+
+        self.cppstd, self.cppstd_extensions = self._cppstd()
+
+        # TODO: I would want to have here the path to the compiler too
+        build_type = build_type or self._conanfile.settings.get_safe("build_type")
+        self.build_type = build_type if not is_multi_configuration(self.generator) else None
+
+    def _get_templates(self):
+        templates = super(CMakeGenericToolchain, self)._get_templates()
+        templates.update({
+            CMakeToolchainBase.filename: self._toolchain_tpl
+        })
+        return templates
 
     def _cppstd(self):
         cppstd = cppstd_extensions = None
@@ -244,20 +291,21 @@ class CMakeGenericToolchain(CMakeToolchainBase):
         return cppstd, cppstd_extensions
 
     def _get_template_context_data(self):
+        conan_main_blocks = []
+        for b in self.conan_main_blocks:
+            block = b(self._conanfile).get_block()
+            if block:
+                conan_main_blocks.append(block)
+
         ctxt_toolchain = super(CMakeGenericToolchain, self)._get_template_context_data()
         ctxt_toolchain.update({
             "generator_platform": self.generator_platform,
             "toolset": self.toolset,
-            "fpic": self.fpic,
-            "skip_rpath": self.skip_rpath,
-            "set_libcxx": self.set_libcxx,
-            "glibcxx": self.glibcxx,
             "parallel": self.parallel,
             "cppstd": self.cppstd,
             "cppstd_extensions": self.cppstd_extensions,
             "shared_libs": self._build_shared_libs,
-            "architecture": self.architecture,
             "compiler": self.compiler,
-            'vs_runtimes': self.vs_runtimes
+            "conan_main_blocks": conan_main_blocks
         })
         return ctxt_toolchain
