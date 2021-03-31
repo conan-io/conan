@@ -234,12 +234,16 @@ class _CppInfo(object):
                 component.set_property("filenames", value, generator=generator)
             for generator, value in component.filenames.items():
                 component.set_property("filenames", value, generator=generator)
+            for generator, value in component.build_modules.items():
+                component.set_property("build_modules", value, generator=generator)
 
         for generator, value in self.names.items():
             self.set_property("names", value, generator=generator)
             self.set_property("filenames", value, generator=generator)
         for generator, value in self.filenames.items():
             self.set_property("filenames", value, generator=generator)
+        for generator, value in self.build_modules.items():
+            self.set_property("build_modules", value, generator=generator)
 
     def get_name(self, generator=None):
         return self.get_property("names", generator) or self._name

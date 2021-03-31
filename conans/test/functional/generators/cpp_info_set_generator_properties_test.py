@@ -41,8 +41,12 @@ def setup_client():
     client.save({"custom_generator.py": custom_generator})
     client.run("config install custom_generator.py -tf generators")
 
+    build_module = textwrap.dedent("""
+        message("I am a build module")
+        """)
     client.save({"consumer.py": GenConanfile("consumer", "1.0").with_requires("mypkg/1.0").
-                with_generator("custom_generator").with_generator("cmake_find_package")})
+                with_generator("custom_generator").with_generator("cmake_find_package"),
+                "mypkg_bm.cmake": build_module})
     return client
 
 
@@ -55,16 +59,20 @@ def test_same_results_components(setup_client):
         class MyPkg(ConanFile):
             name = "mypkg"
             version = "1.0"
+            exports_sources = ["mypkg_bm.cmake"]
+            def package(self):
+                self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.components["mycomponent"].set_property("names", "mycomponent-name")
+                self.cpp_info.components["mycomponent"].set_property("build_modules",
+                                                                    [os.path.join("lib",
+                                                                    "mypkg_bm.cmake")])
         """)
 
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
-
     client.run("install consumer.py --build missing")
-
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mycomponent:mycomponent-name" in custom_gen_file.read()
 
@@ -77,13 +85,18 @@ def test_same_results_components(setup_client):
         class MyPkg(ConanFile):
             name = "mypkg"
             version = "1.0"
+            exports_sources = ["mypkg_bm.cmake"]
+            def package(self):
+                self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.components["mycomponent"].names["cmake_find_package"] = "mycomponent-name"
                 self.cpp_info.components["mycomponent"].names["custom_generator"] = "mycomponent-name"
+                self.cpp_info.components["mycomponent"].build_modules["cmake_find_package"].append(os.path.join("lib",
+                                                                             "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
-    client.run("create mypkg.py")
+    client.run("export mypkg.py")
     client.run("install consumer.py")
 
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
