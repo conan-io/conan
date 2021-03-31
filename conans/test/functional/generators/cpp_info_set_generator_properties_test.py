@@ -65,9 +65,10 @@ def test_same_results_components(setup_client):
             def package_info(self):
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.components["mycomponent"].set_property("names", "mycomponent-name")
+                self.cpp_info.components["mycomponent"].set_property("names", "mycomponent-name","custom_generator")
                 self.cpp_info.components["mycomponent"].set_property("build_modules",
                                                                     [os.path.join("lib",
-                                                                    "mypkg_bm.cmake")])
+                                                                    "mypkg_bm.cmake")], "cmake_find_package")
         """)
 
     client.save({"mypkg.py": mypkg})
@@ -93,7 +94,7 @@ def test_same_results_components(setup_client):
                 self.cpp_info.components["mycomponent"].names["cmake_find_package"] = "mycomponent-name"
                 self.cpp_info.components["mycomponent"].names["custom_generator"] = "mycomponent-name"
                 self.cpp_info.components["mycomponent"].build_modules["cmake_find_package"].append(os.path.join("lib",
-                                                                             "mypkg_bm.cmake"))
+                                                                      "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
@@ -117,8 +118,13 @@ def test_same_results_without_components(setup_client):
         class MyPkg(ConanFile):
             name = "mypkg"
             version = "1.0"
+            exports_sources = ["mypkg_bm.cmake"]
+            def package(self):
+                self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
                 self.cpp_info.set_property("names", "mypkg-name")
+                self.cpp_info.set_property("build_modules",[os.path.join("lib",
+                                                            "mypkg_bm.cmake")], "cmake_find_package")
         """)
 
     client.save({"mypkg.py": mypkg})
@@ -138,9 +144,13 @@ def test_same_results_without_components(setup_client):
         class MyPkg(ConanFile):
             name = "mypkg"
             version = "1.0"
+            exports_sources = ["mypkg_bm.cmake"]
+            def package(self):
+                self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
                 self.cpp_info.names["cmake_find_package"] = "mypkg-name"
                 self.cpp_info.names["custom_generator"] = "mypkg-name"
+                self.cpp_info.build_modules["cmake_find_package"].append(os.path.join("lib", "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
     client.run("create mypkg.py")
