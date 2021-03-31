@@ -235,8 +235,9 @@ class DepsCppCmake(object):
         # Issue: #1251
         self.cxxflags_list = join_flags(";", cpp_info.cxxflags)
         self.cflags_list = join_flags(";", cpp_info.cflags)
-        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
-        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+        self.sharedlinkflags_list = join_flags(";", ["-{}".format(f)
+                                                     for f in cpp_info.sharedlinkflags])
+        self.exelinkflags_list = join_flags(";", ["-{}".format(f) for f in cpp_info.exelinkflags])
 
         self.rootpath = join_paths([cpp_info.rootpath])
         self.build_modules_paths = join_paths(cpp_info.build_modules_paths.get(generator_name, []))
