@@ -9,7 +9,6 @@ from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools import environment_append, save, load
 from conans.model.settings import Settings
-from conans.test.utils.deprecation import catch_deprecation_warning
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 
@@ -114,8 +113,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
     def test_value_default(self):
         # Explicit value (equals to default) passed to setting 'cppstd'
         cppstd = _make_cppstd_default(self.compiler, self.compiler_version)
-        with catch_deprecation_warning(self):
-            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
+        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: gnu14", output)
         self.assertIn(">>>> compiler.cppstd: None", output)
@@ -123,8 +121,7 @@ class SettingsCppStdTests(DefaultCppTestCase):
 
     def test_value_non_default(self):
         # Explicit value (not the default) passed to setting 'cppstd'
-        with catch_deprecation_warning(self):
-            id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
+        id_with, output = self._get_id(with_cppstd=True, settings_values={"cppstd": "14"})
         self.assertIn(">>>> settings: ['compiler', 'cppstd', 'os']", output)
         self.assertIn(">>>> cppstd: 14", output)
         self.assertIn(">>>> compiler.cppstd: None", output)
@@ -178,8 +175,7 @@ class SettingsCompareCppStdApproaches(DefaultCppTestCase):
 
     def test_cppstd_non_defaults(self):
         cppstd_value = "14"  # Not the default
-        with catch_deprecation_warning(self):
-            id_with_old, _ = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd_value})
+        id_with_old, _ = self._get_id(with_cppstd=True, settings_values={"cppstd": cppstd_value})
         id_with_new, _ = self._get_id(with_cppstd=False,
                                       settings_values={'compiler.cppstd': cppstd_value})
 

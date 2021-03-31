@@ -194,9 +194,9 @@ class InfoTest(unittest.TestCase):
                     Hello1/0.1@lasote/stable""")
 
         expected_output = expected_output % (
-            "\n    Revision: 63865a1afa3a2666b2f75cbc7745e8a4"
+            "\n    Revision: d6727bc577b5c6bd8ac7261eff98be93"
             "\n    Package revision: None",
-            "\n    Revision: b2600f68000fa492234c0452214e0bbc"
+            "\n    Revision: 7c5e142433a3ee0acaeffb4454a6d42f"
             "\n    Package revision: None",) \
             if self.client.cache.config.revisions_enabled else expected_output % ("", "")
 

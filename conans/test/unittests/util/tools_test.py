@@ -388,7 +388,7 @@ class HelloConan(ConanFile):
         with patch.object(OSInfo, "bash_path", return_value='bash'):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin",
                                       env={"PATH": "/other/path", "MYVAR": "34"})
-            self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+            self.assertIn('^&^& PATH=\\^"/other/path:/path/to/somewhere:$PATH\\^" '
                           '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile._conan_runner.command)
 
     def test_download_retries_errors(self):
@@ -855,8 +855,6 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile.package_folder = None
         result = conanfile.collect_libs()
         self.assertEqual([], result)
-        self.assertIn("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                      conanfile.output)
 
         # Default behavior
         conanfile.package_folder = temp_folder()

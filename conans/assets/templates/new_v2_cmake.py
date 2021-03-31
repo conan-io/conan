@@ -45,32 +45,22 @@ class {package_name}Conan(ConanFile):
 test_conanfile_v2 = """import os
 
 from conans import ConanFile, tools
-from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
+from conan.tools.cmake import CMake
 
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-
-    def generate(self):
-        deps = CMakeDeps(self)
-        deps.generate()
-        tc = CMakeToolchain(self)
-        tc.generate()
+    generators = "CMakeDeps", "CMakeToolchain", "VirtualEnv"
+    apply_env = False
 
     def build(self):
         cmake = CMake(self)
         cmake.configure()
         cmake.build()
 
-    def imports(self):
-        self.copy("*.dll", dst="bin", src="bin")
-        self.copy("*.dylib*", dst="bin", src="lib")
-        self.copy('*.so*', dst='bin', src='lib')
-
     def test(self):
         if not tools.cross_building(self):
-            os.chdir("bin")
-            self.run(".%sexample" % os.sep)
+            self.run(os.path.sep.join([".", "bin", "example"]), env="conanrunenv")
 """
 
 
@@ -84,7 +74,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${{CMAKE_RUNTIME_OUTPUT_DIRECT
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${{CMAKE_RUNTIME_OUTPUT_DIRECTORY}})
 
-find_package({name})
+find_package({name} CONFIG REQUIRED)
 
 add_executable(example example.cpp)
 target_link_libraries(example {name}::{name})

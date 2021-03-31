@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
@@ -270,3 +271,4 @@ class MesonToolchain(object):
             self._write_cross_file()
         else:
             self._write_native_file()
+        write_conanvcvars(self._conanfile)

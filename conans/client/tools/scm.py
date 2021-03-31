@@ -109,9 +109,11 @@ class SCMBase(object):
             return url
 
         scp_regex = re.compile("^(?P<user>[a-zA-Z0-9_]+)@(?P<domain>[a-zA-Z0-9._-]+):(?P<url>.*)$")
-        url_user_pass_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\w+):(?P<password>\w+)@(?P<url>.*)$")
-        url_user_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<user>\w+)@(?P<url>.*)$")
-        url_basic_regex = re.compile("^(?P<scheme>file|http|https|git|ssh):\/\/(?P<url>.*)$")
+        url_user_pass_regex = re.compile(
+            r"^(?P<scheme>file|http|https|git|ssh)://(?P<user>\w+):(?P<password>\w+)@(?P<url>.*)$")
+        url_user_regex = re.compile(
+            r"^(?P<scheme>file|http|https|git|ssh)://(?P<user>\w+)@(?P<url>.*)$")
+        url_basic_regex = re.compile(r"^(?P<scheme>file|http|https|git|ssh)://(?P<url>.*)$")
 
         url_patterns = [
             (scp_regex, self._handle_scp_pattern),

@@ -379,7 +379,8 @@ class CMakeDefinitionsBuilder(object):
         if "cmake_find_package" in self._conanfile.generators:
             definitions["CMAKE_MODULE_PATH"] = install_folder
 
-        if "cmake_find_package_multi" in self._conanfile.generators:
+        if ("cmake_find_package_multi" in self._conanfile.generators
+                or "CMakeDeps" in self._conanfile.generators):
             # The cmake_find_package_multi only works with targets and generates XXXConfig.cmake
             # that require the prefix path and the module path
             definitions["CMAKE_PREFIX_PATH"] = install_folder

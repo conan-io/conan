@@ -2,7 +2,6 @@ import json
 import os
 
 from conans.errors import ConanException
-from conans.model.graph_lock import GraphLockFile, LOCKFILE
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.util.files import load, save
