@@ -227,7 +227,7 @@ class _CppInfo(object):
             gen_dict = self._generator_properties.get("conan_default_generators_value")
             return gen_dict.get(property_name) if gen_dict else None
 
-    def update_generator_properties(self):
+    def translate_cpp_info_generator_properties(self):
         for _, component in self.components.items():
             for generator, value in component.names.items():
                 component.set_generator_property("names", value, generator=generator)
