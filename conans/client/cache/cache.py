@@ -25,6 +25,7 @@ from conans.paths.package_layouts.package_editable_layout import PackageEditable
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove
 from conans.util.locks import Lock
 
+CONAN_GLOBAL_CONF = '/etc/conan/'
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
@@ -33,6 +34,7 @@ PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
+GLOBAL_CONF = "global.conf"
 
 
 def _is_case_insensitive_os():
@@ -113,9 +115,17 @@ class ClientCache(object):
             return PackageCacheLayout(base_folder=base_folder, ref=ref,
                                       short_paths=short_paths, no_lock=self._no_locks())
 
+    def _conan_conf_get(self, item):
+        """Use system-global config item if available, otherwise load from cache location"""
+        etc_location = os.path.join(CONAN_GLOBAL_CONF, item)
+        if os.path.exists(etc_location):
+            return etc_location
+        else:
+            return os.path.join(self.cache_folder, item)
+
     @property
     def remotes_path(self):
-        return os.path.join(self.cache_folder, REMOTES)
+        return self._conan_conf_get(REMOTES)
 
     @property
     def registry(self):
@@ -128,7 +138,7 @@ class ClientCache(object):
 
     @property
     def artifacts_properties_path(self):
-        return os.path.join(self.cache_folder, ARTIFACTS_PROPERTIES_FILE)
+        return self._conan_conf_get(ARTIFACTS_PROPERTIES_FILE)
 
     def read_artifacts_properties(self):
         ret = {}
@@ -158,7 +168,7 @@ class ClientCache(object):
 
     @property
     def new_config_path(self):
-        return os.path.join(self.cache_folder, "global.conf")
+        return self._conan_conf_get(GLOBAL_CONF)
 
     @property
     def new_config(self):
@@ -180,19 +190,19 @@ class ClientCache(object):
 
     @property
     def conan_conf_path(self):
-        return os.path.join(self.cache_folder, CONAN_CONF)
+        return self._conan_conf_get(CONAN_CONF)
 
     @property
     def profiles_path(self):
-        return os.path.join(self.cache_folder, PROFILES_FOLDER)
+        return self._conan_conf_get(PROFILES_FOLDER)
 
     @property
     def settings_path(self):
-        return os.path.join(self.cache_folder, CONAN_SETTINGS)
+        return self._conan_conf_get(CONAN_SETTINGS)
 
     @property
     def generators_path(self):
-        return os.path.join(self.cache_folder, GENERATORS_FOLDER)
+        return self._conan_conf_get(GENERATORS_FOLDER)
 
     @property
     def default_profile_path(self):
@@ -206,7 +216,7 @@ class ClientCache(object):
         """
         :return: Hooks folder in client cache
         """
-        return os.path.join(self.cache_folder, HOOKS_FOLDER)
+        return self._conan_conf_get(HOOKS_FOLDER)
 
     @property
     def default_profile(self):
