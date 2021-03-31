@@ -220,14 +220,12 @@ class _CppInfo(object):
 
     def get_generator_property(self, property_name, generator=None):
         generator = generator or "conan_default_generators_value"
-        try:
-            gen_dict = self._generator_properties.get(generator)
-            if gen_dict:
-                return gen_dict.get(property_name)
-            elif self._generator_properties.get("conan_default_generators_value"):
-                return self._generator_properties.get("conan_default_generators_value").get(property_name)
-        except KeyError:
-            return None
+        gen_dict = self._generator_properties.get(generator)
+        if gen_dict:
+            return gen_dict.get(property_name)
+        else:
+            gen_dict = self._generator_properties.get("conan_default_generators_value")
+            return gen_dict.get(property_name) if gen_dict else None
 
     def update_generator_properties(self):
         for _, component in self.components.items():
