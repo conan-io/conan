@@ -1,40 +1,31 @@
 from conan.tools.microsoft.visual import vcvars_command
 
 
-def check_vs_runtime(artifact, client, vs_version, build_type, static, architecture="amd64"):
-    executable = artifact.endswith(".exe")
+def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64"):
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
     normalized_path = artifact.replace("/", "\\")
 
-    if executable or not static:
+    static = artifact.endswith(".a") or artifact.endswith(".lib")
+    if not static:
         cmd = ('%s && dumpbin /nologo /dependents "%s"' % (vcvars, normalized_path))
         client.run_command(cmd)
         if static:
-            assert "KERNEL32.dll" in client.out, "Error:{}".format(client.out)
-            assert "MSVC" not in client.out, "Error:{}".format(client.out)
-            assert "VCRUNTIME" not in client.out, "Error:{}".format(client.out)
+            assert "KERNEL32.dll" in client.out
+            assert "MSVC" not in client.out
+            assert "VCRUNTIME" not in client.out
         else:
             if vs_version == "15":
-                if build_type == "Debug":
-                    assert "MSVCP140D.dll" in client.out, "Error:{}".format(client.out)
-                    assert "VCRUNTIME140D.dll" in client.out, "Error:{}".format(client.out)
-                else:
-                    assert "MSVCP140.dll" in client.out, "Error:{}".format(client.out)
-                    assert "VCRUNTIME140.dll" in client.out, "Error:{}".format(client.out)
+                debug = "D" if build_type == "Debug" else ""
+                assert "MSVCP140{}.dll".format(debug) in client.out
+                assert "VCRUNTIME140{}.dll".format(debug) in client.out
             else:
                 raise NotImplementedError()
-
-    if not executable:
-        if static:
-            client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
-            if build_type == "Debug":
-                assert "RuntimeLibrary=MDd_DynamicDebug" in client.out, "Error:{}".format(client.out)
-            else:
-                assert "RuntimeLibrary=MD_DynamicRelease" in client.out, "Error:{}".format(client.out)
-
-        client.run_command('{} && DUMPBIN /NOLOGO /HEADERS "{}"'.format(vcvars, artifact))
-        if architecture == "amd64":
-            assert "machine (x64)" in client.out, "Error:{}".format(client.out)
+    else:  # A static library cannot be checked the same
+        client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
+        if build_type == "Debug":
+            assert "RuntimeLibrary=MDd_DynamicDebug" in client.out
+        else:
+            assert "RuntimeLibrary=MD_DynamicRelease" in client.out
 
 
 def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,

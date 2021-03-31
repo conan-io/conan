@@ -4,6 +4,7 @@ from collections import OrderedDict
 import six
 from jinja2 import DictLoader, Environment
 
+from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.util.files import save
 
 
@@ -191,3 +192,5 @@ class CMakeToolchainBase(object):
         t = env.get_template(self.filename)
         content = t.render(**ctxt_toolchain)
         save(self.filename, content)
+        if "Ninja" in self.generator:
+            write_conanvcvars(self._conanfile)
