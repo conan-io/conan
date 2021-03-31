@@ -34,7 +34,7 @@ def setup_client():
             def content(self):
                 info = []
                 for pkg_name, cpp_info in self.deps_build_info.dependencies:
-                    info.append("{}:{}".format(pkg_name, cpp_info.get_generator_property("names", self.name)))
+                    info.append("{}:{}".format(pkg_name, cpp_info.get_property("names", self.name)))
                     info.extend(self._get_components(pkg_name, cpp_info))
                 return os.linesep.join(info)
         """)
@@ -57,7 +57,7 @@ def test_same_results_components(setup_client):
             version = "1.0"
             def package_info(self):
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
-                self.cpp_info.components["mycomponent"].set_generator_property("names", "mycomponent-name")
+                self.cpp_info.components["mycomponent"].set_property("names", "mycomponent-name")
         """)
 
     client.save({"mypkg.py": mypkg})
@@ -105,7 +105,7 @@ def test_same_results_without_components(setup_client):
             name = "mypkg"
             version = "1.0"
             def package_info(self):
-                self.cpp_info.set_generator_property("names", "mypkg-name")
+                self.cpp_info.set_property("names", "mypkg-name")
         """)
 
     client.save({"mypkg.py": mypkg})

@@ -210,7 +210,7 @@ class _CppInfo(object):
     def name(self, value):
         self._name = value
 
-    def set_generator_property(self, property_name, value, generator=None):
+    def set_property(self, property_name, value, generator=None):
         generator = generator or "conan_default_generators_value"
         gen_dict = self._generator_properties.get(generator)
         if gen_dict:
@@ -218,7 +218,7 @@ class _CppInfo(object):
         else:
             self._generator_properties.update({generator: {property_name: value}})
 
-    def get_generator_property(self, property_name, generator=None):
+    def get_property(self, property_name, generator=None):
         generator = generator or "conan_default_generators_value"
         gen_dict = self._generator_properties.get(generator)
         if gen_dict:
@@ -230,22 +230,22 @@ class _CppInfo(object):
     def translate_cpp_info_generator_properties(self):
         for _, component in self.components.items():
             for generator, value in component.names.items():
-                component.set_generator_property("names", value, generator=generator)
-                component.set_generator_property("filenames", value, generator=generator)
+                component.set_property("names", value, generator=generator)
+                component.set_property("filenames", value, generator=generator)
             for generator, value in component.filenames.items():
-                component.set_generator_property("filenames", value, generator=generator)
+                component.set_property("filenames", value, generator=generator)
 
         for generator, value in self.names.items():
-            self.set_generator_property("names", value, generator=generator)
-            self.set_generator_property("filenames", value, generator=generator)
+            self.set_property("names", value, generator=generator)
+            self.set_property("filenames", value, generator=generator)
         for generator, value in self.filenames.items():
-            self.set_generator_property("filenames", value, generator=generator)
+            self.set_property("filenames", value, generator=generator)
 
     def get_name(self, generator=None):
-        return self.get_generator_property("names", generator) or self._name
+        return self.get_property("names", generator) or self._name
 
     def get_filename(self, generator=None):
-        return self.get_generator_property("filenames", generator) or self._name
+        return self.get_property("filenames", generator) or self._name
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
