@@ -30,6 +30,7 @@ def extend(cpp_info, config):
         result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
         result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
         result.build_modules = merge_dicts(cpp_info.build_modules, config_info.build_modules)
+        result.translate_cpp_info_generator_properties()
         return result
     return cpp_info
 
