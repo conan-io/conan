@@ -417,14 +417,17 @@ def test_profile_load_relative_path_pardir():
         /tmp/profiles/profile MUST be consumed as target profile
     """
     profile_name = "default"
-    default_profile_folder = temp_folder()
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
+    os.mkdir(default_profile_folder)
     default_profile_path = os.path.join(default_profile_folder, profile_name)
 
     current_temp_folder = temp_folder()
     current_profile_folder = os.path.join(current_temp_folder, "profiles")
     current_running_folder = os.path.join(current_temp_folder, "current")
+
     os.mkdir(current_profile_folder)
     os.mkdir(current_running_folder)
+
     current_profile_path = os.path.join(current_profile_folder, profile_name)
     default_profile_content = textwrap.dedent("""
             [env]
