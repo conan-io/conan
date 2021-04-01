@@ -67,8 +67,8 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         set({{ pkg_name }}_COMPONENTS {{ pkg_components }})
 
-        if({{ pkg_name }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
+        if({{ pkg_filename }}_FIND_COMPONENTS)
+            foreach(_FIND_COMPONENT {{ '${'+pkg_filename+'_FIND_COMPONENTS}' }})
                 list(FIND {{ pkg_name }}_COMPONENTS "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
                 if(NOT ${_index} EQUAL -1)
                     set({{ pkg_filename }}_${_FIND_COMPONENT}_FOUND TRUE)
