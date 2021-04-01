@@ -363,7 +363,7 @@ def test_profile_load_absolute_path():
         /abs/path/profile MUST be consumed as target profile
     """
     profile_name = "default"
-    default_profile_folder = temp_folder()
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
     default_profile_path = os.path.join(default_profile_folder, profile_name)
     current_profile_folder = temp_folder()
     current_profile_path = os.path.join(current_profile_folder, profile_name)
@@ -388,7 +388,7 @@ def test_profile_load_relative_path_dot():
         /tmp/profiles/profile MUST be consumed as target profile
     """
     profile_name = "default"
-    default_profile_folder = temp_folder()
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
     default_profile_path = os.path.join(default_profile_folder, profile_name)
     current_profile_folder = temp_folder()
     current_profile_path = os.path.join(current_profile_folder, profile_name)
