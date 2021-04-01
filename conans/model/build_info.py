@@ -223,6 +223,11 @@ class _CppInfo(object):
             return gen_dict.get(property_name) if gen_dict else None
 
     def translate_cpp_info_generator_properties(self):
+        if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+            conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
+                           "{the_list}' instead".format(the_list=self.build_modules))
+            self.build_modules = BuildModulesDict.from_list(self.build_modules)
+        
         if isinstance(self, CppInfo):
             for _, component in self.components.items():
                 for generator, value in component.names.items():
