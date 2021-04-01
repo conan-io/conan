@@ -178,7 +178,7 @@ class GLibCXXBlock(Block):
                 glib = "1"
             elif libcxx == "libstdc++":
                 glib = "0"
-        return {"lib": lib, "glib": glib}
+        return {"lib": lib, "glibcxx": glib}
 
 
 class SkipRPath(Block):
