@@ -562,6 +562,7 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.build_modules["cmake_multi"] = ["my-module.cmake"]
         cpp_info.build_modules["cmake_find_package"] = ["my-module.cmake"]
         cpp_info.build_modules["cmake_find_package_multi"] = ["my-module.cmake"]
+        cpp_info.translate_cpp_info_generator_properties()
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
         ref = ConanFileReference.loads("my_pkg2/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, "dummy_root_folder2")
@@ -572,10 +573,12 @@ class CMakeBuildModulesTest(unittest.TestCase):
         cpp_info.build_modules["cmake_find_package"] = ["other-mod.cmake", "not-a-cmake-module.pc"]
         cpp_info.build_modules["cmake_find_package_multi"] = ["other-mod.cmake",
                                                               "not-a-cmake-module.pc"]
+        cpp_info.translate_cpp_info_generator_properties()
         cpp_info.release.build_modules["cmake"] = ["release-mod.cmake"]
         cpp_info.release.build_modules["cmake_multi"] = ["release-mod.cmake"]
         cpp_info.release.build_modules["cmake_find_package"] = ["release-mod.cmake"]
         cpp_info.release.build_modules["cmake_find_package_multi"] = ["release-mod.cmake"]
+        cpp_info.release.translate_cpp_info_generator_properties()
         self.conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
     def test_cmake(self):
