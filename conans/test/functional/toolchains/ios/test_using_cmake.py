@@ -4,7 +4,6 @@ import unittest
 
 import pytest
 
-from conan.tools.cmake.base import CMakeToolchainBase
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
@@ -31,7 +30,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
                 def _configure_cmake(self):
                     if not self._cmake:
-                        self._cmake = CMake(self, generator={generator}, parallel=False)
+                        self._cmake = CMake(self, generator={generator})
                         self._cmake.configure()
                     return self._cmake
 
