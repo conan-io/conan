@@ -368,6 +368,9 @@ class IOSSystemBlock(Block):
                     'tvOS': 'appletvos'}.get(str(os_), None)
 
     def context(self):
+        os_ = self._conanfile.settings.get_safe("os")
+        if os_ != 'iOS':
+            return
         host_architecture = self._get_architecture()
         host_os = self._conanfile.settings.get_safe("os")
         host_os_version = self._conanfile.settings.get_safe("os.version")
