@@ -369,7 +369,7 @@ class IOSSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if os_ != 'iOS':
+        if os_ not in ('iOS', "watchOS", "tvOS"):
             return
         host_architecture = self._get_architecture()
         host_os = self._conanfile.settings.get_safe("os")
