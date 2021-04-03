@@ -202,3 +202,38 @@ class PkgConfigConan(ConanFile):
         pc = client.load("pkg.pc")
         self.assertNotIn("libdir=${prefix}/lib", pc)
         self.assertNotIn("includedir=${prefix}/include", pc)
+
+    def test_custom_content(self):
+        # https://github.com/conan-io/conan/issues/7661
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
+            import textwrap
+
+            class PkgConfigConan(ConanFile):
+                def package(self):
+                    save(os.path.join(self.package_folder, "include" ,"file"), "")
+                    save(os.path.join(self.package_folder, "lib" ,"file"), "")
+
+                def package_info(self):
+                    custom_content = textwrap.dedent(\"""
+                            datadir=${prefix}/share
+                            schemasdir=${datadir}/mylib/schemas
+                            bindir=${prefix}/bin
+                        \""")
+                    self.cpp_info.set_property("custom_content", custom_content, "pkg_config")
+                    self.cpp_info.includedirs = ["include"]
+                    self.cpp_info.libdirs = ["lib"]
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@")
+        client.run("install pkg/0.1@ -g pkg_config")
+
+        pc_content = client.load("pkg.pc")
+        self.assertIn("libdir=${prefix}/lib", pc_content)
+        self.assertIn("datadir=${prefix}/share", pc_content)
+        self.assertIn("schemasdir=${datadir}/mylib/schemas", pc_content)
+        self.assertIn("bindir=${prefix}/bin", pc_content)
+        self.assertIn("Name: pkg", pc_content)
