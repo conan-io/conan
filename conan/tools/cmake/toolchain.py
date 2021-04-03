@@ -520,7 +520,7 @@ class CMakeToolchain(object):
             self.find_package_prefer_config = "OFF"
 
         self.conan_pre_blocks = [GenericSystemBlock, AndroidBlock, IOSSystemBlock]
-        self.conan_main_blocks = [FPicBlock, SkipRPath, GLibCXXBlock, ArchitectureBlock,
+        self.conan_main_blocks = [FPicBlock, SkipRPath, ArchitectureBlock, GLibCXXBlock,
                                   VSRuntimeBlock, CppStdBlock, SharedLibBock, ParallelBlock]
 
     def _context(self):
