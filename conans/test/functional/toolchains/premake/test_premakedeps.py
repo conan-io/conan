@@ -3,7 +3,6 @@ import textwrap
 import unittest
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
@@ -31,11 +30,13 @@ workspace("ConanPremakeDemo")
             optimize "On"
 """
 
+
 @pytest.mark.tool_premake
 class PremakeGeneratorTest(unittest.TestCase):
 
     def test_premake_generator(self):
         client = TestClient()
+        # TODO: replace with more modern GenConanfile and others
         files = cpp_hello_conan_files("Hello0", "1.0")
         client.save(files)
         client.run("create . ")

@@ -3,13 +3,13 @@ import textwrap
 
 from conans.errors import ConanException
 from conans.model.build_info import DepCppInfo
-from conans.util.files import load, save
+from conans.util.files import save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
 class PremakeDeps(object):
-    
+
     _vars_conf_props = textwrap.dedent("""\
        {lua_module}.conan_includedirs{name} = {{{include_dirs}}}
        {lua_module}.conan_libdirs{name} = {{{lib_dirs}}}
@@ -41,7 +41,7 @@ class PremakeDeps(object):
             defines{{{lua_module}.conan_defines}}
             bindirs{{{lua_module}.conan_bindirs}}
         end
-        
+
         return {lua_module}
         """)
 
@@ -55,8 +55,6 @@ class PremakeDeps(object):
         if self.configuration is None:
             raise ConanException("PremakeDeps.configuration is None, it should have a value")
 
-        self._lua_module = "conan_{config}".format(config=str(self.configuration).lower())
-
         generator_files = self._content()
         for generator_file, content in generator_files.items():
             generator_file = os.path.join(self.output_path, generator_file)
@@ -67,16 +65,18 @@ class PremakeDeps(object):
             (base, ext) = os.path.splitext(libname)
             return libname if ext == 'framework' else base
 
+        lua_module = "conan_{config}".format(config=str(self.configuration).lower())
+
         fields = {
             'name': name,
-            'lua_module': self._lua_module,
+            'lua_module': lua_module,
             'root_folder': cpp_info.rootpath,
             'bin_dirs': ";".join('"%s"' % p for p in cpp_info.bin_paths),
-            #'res_dirs': ";".join('"%s"' % p for p in cpp_info.res_paths),
             'include_dirs': ";".join('"%s"' % p for p in cpp_info.include_paths),
             'lib_dirs': ";".join('"%s"' % p for p in cpp_info.lib_paths),
             'libs': ";".join('"%s"' % add_valid_ext(lib) for lib in cpp_info.libs),
-            'system_libs': ";".join('"%s"' % add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs),
+            'system_libs': ";".join('"%s"' % add_valid_ext(sys_dep)
+                                    for sys_dep in cpp_info.system_libs),
             'definitions': ";".join('"%s"' % d for d in cpp_info.defines),
             'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
             'linker_flags': " ".join(cpp_info.sharedlinkflags),
@@ -86,16 +86,15 @@ class PremakeDeps(object):
         return formatted_template
 
     def _content(self):
-        
-        deps = []
-        deps.append(self._pkg_props("", self._conanfile.deps_cpp_info))
+        deps = [self._pkg_props("", self._conanfile.deps_cpp_info)]
 
         for dep in self._conanfile.dependencies.host_requires:
             cpp_info = DepCppInfo(dep.cpp_info)
             deps.append(self._pkg_props("_{}".format(dep.name), cpp_info))
 
+        lua_module = "conan_{config}".format(config=str(self.configuration).lower())
         fields = {
-            'lua_module': self._lua_module,
+            'lua_module': lua_module,
             'build_type': self.configuration,
             'arch': self.arch,
             'deps': "\n".join(deps),
@@ -103,7 +102,7 @@ class PremakeDeps(object):
 
         filename = str(self.configuration).lower()
         formatted_template = self._vars_luafile.format(**fields)
-        
+
         return {
             "conanbuildinfo_{}.premake.lua".format(filename): formatted_template
         }
