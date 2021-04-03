@@ -365,6 +365,9 @@ class SystemPackageToolTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8737
         os_info = OSInfo()
         os_info.is_linux = True
+        os_info.is_solaris = False
+        os_info.is_macos = False
+        os_info.is_windows = False
         os_info.distro = "opensuse"
         runner = RunnerMock()
         with mock.patch("conans.client.tools.oss.which", return_value=True):
