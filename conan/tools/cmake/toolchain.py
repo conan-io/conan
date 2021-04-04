@@ -85,7 +85,7 @@ class Block:
 
     def get_block(self):
         context = self.context()
-        if not context:
+        if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
 
@@ -282,7 +282,7 @@ class ParallelBlock(Block):
             return {"parallel": max_cpu_count}
 
 
-class AndroidBlock(Block):
+class AndroidSystemBlock(Block):
     # TODO: fPIC, fPIE
     # TODO: RPATH, cross-compiling to Android?
     # TODO: libcxx, only libc++ https://developer.android.com/ndk/guides/cpp-support
@@ -455,6 +455,33 @@ class GenericSystemBlock(Block):
                 "build_type": build_type}
 
 
+class ToolchainBlocks:
+    def __init__(self, conanfile, toolchain, items=None):
+        self._blocks = OrderedDict()
+        self._conanfile = conanfile
+        self._toolchain = toolchain
+        if items:
+            for name, block in items:
+                self._blocks[name] = block(conanfile, toolchain)
+
+    def remove(self, name):
+        del self._blocks[name]
+
+    def __setitem__(self, name, block_type):
+        self._blocks[name] = block_type(self._conanfile, self._toolchain)
+
+    def __getitem__(self, name):
+        return self._blocks[name]
+
+    def process_blocks(self):
+        result = []
+        for b in self._blocks.values():
+            block = b.get_block()
+            if block:
+                result.append(block)
+        return result
+
+
 class CMakeToolchain(object):
     filename = "conan_toolchain.cmake"
 
@@ -528,40 +555,46 @@ class CMakeToolchain(object):
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
-        self.conan_pre_blocks = [GenericSystemBlock, AndroidBlock, IOSSystemBlock]
-        self.conan_main_blocks = [FindConfigFiles, FPicBlock, SkipRPath, ArchitectureBlock,
-                                  GLibCXXBlock, VSRuntimeBlock, CppStdBlock, SharedLibBock,
-                                  ParallelBlock]
+        self.pre_blocks = ToolchainBlocks(self._conanfile, self,
+                                          [("generic_system", GenericSystemBlock),
+                                           ("android_system", AndroidSystemBlock),
+                                           ("ios_system", IOSSystemBlock)])
+
+        self.main_blocks = ToolchainBlocks(self._conanfile, self,
+                                           [("find_paths", FindConfigFiles),
+                                            ("fpic", FPicBlock),
+                                            ("rpath", SkipRPath),
+                                            ("arch_flags", ArchitectureBlock),
+                                            ("libcxx", GLibCXXBlock),
+                                            ("vs_runtime", VSRuntimeBlock),
+                                            ("cppstd", CppStdBlock),
+                                            ("shared", SharedLibBock),
+                                            ("parallel", ParallelBlock)])
 
     def _context(self):
-        """ Returns dict, the context for the '_template_toolchain'
+        """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
 
-        def process_blocks(blocks):
-            result = []
-            for b in blocks:
-                block = b(self._conanfile, self).get_block()
-                if block:
-                    result.append(block)
-            return result
-
-        conan_main_blocks = process_blocks(self.conan_main_blocks)
-        conan_pre_blocks = process_blocks(self.conan_pre_blocks)
+        pre_blocks = self.pre_blocks.process_blocks()
+        main_blocks = self.main_blocks.process_blocks()
 
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "conan_main_blocks": conan_main_blocks,
-            "conan_pre_blocks": conan_pre_blocks
+            "conan_pre_blocks": pre_blocks,
+            "conan_main_blocks": main_blocks,
         }
 
         return ctxt_toolchain
 
-    def generate(self):
-        # Prepare templates to be loaded
+    @property
+    def content(self):
         context = self._context()
         content = Template(self._template, trim_blocks=True, lstrip_blocks=True).render(**context)
-        save(self.filename, content)
+        return content
+
+    def generate(self):
+        save(self.filename, self.content)
