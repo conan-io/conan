@@ -9,7 +9,6 @@ from jinja2 import Template
 from conan.tools._compilers import architecture_flag
 from conan.tools.cmake.utils import is_multi_configuration, get_generator
 from conans.errors import ConanException
-from conans.tools import which
 from conans.util.files import load, save
 
 
@@ -289,11 +288,11 @@ class AndroidBlock(Block):
     # TODO: libcxx, only libc++ https://developer.android.com/ndk/guides/cpp-support
 
     template = textwrap.dedent("""
-        set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
-        set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
-        set(CMAKE_ANDROID_ARCH_ABI {{ CMAKE_ANDROID_ARCH_ABI }})
-        set(CMAKE_ANDROID_STL_TYPE {{ CMAKE_ANDROID_STL_TYPE }})
-        set(CMAKE_ANDROID_NDK {{ CMAKE_ANDROID_NDK }})
+        # New toolchain things
+        set(ANDROID_PLATFORM {{ CMAKE_SYSTEM_VERSION }})
+        set(ANDROID_STL {{ CMAKE_ANDROID_STL_TYPE }})
+        set(ANDROID_ABI {{ CMAKE_ANDROID_ARCH_ABI }})
+        include({{ CMAKE_ANDROID_NDK }}/build/cmake/android.toolchain.cmake)
         """)
 
     def context(self):
@@ -310,15 +309,12 @@ class AndroidBlock(Block):
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
 
         # TODO: Do not use envvar! This has to be provided by the user somehow
-        android_ndk = os.getenv("CONAN_CMAKE_ANDROID_NDK")
+        android_ndk = self._conanfile.conf["tools.android"].ndk_path
         if not android_ndk:
-            android_ndk = which('ndk-build')
-            android_ndk = os.path.dirname(android_ndk) if android_ndk else None
-        if not android_ndk:
-            raise ConanException('Cannot find ANDROID_NDK (ndk-build) in the PATH')
+            raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
+        android_ndk = android_ndk.replace("\\", "/")
 
         ctxt_toolchain = {
-            'CMAKE_SYSTEM_NAME': 'Android',
             'CMAKE_SYSTEM_VERSION': self._conanfile.settings.os.api_level,
             'CMAKE_ANDROID_ARCH_ABI': android_abi,
             'CMAKE_ANDROID_STL_TYPE': libcxx_str,
@@ -388,6 +384,40 @@ class IOSSystemBlock(Block):
         return ctxt_toolchain
 
 
+class FindConfigFiles(Block):
+    template = textwrap.dedent("""
+        {% if find_package_prefer_config %}
+        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
+        {% endif %}
+        # To support the cmake_find_package generators
+        {% if cmake_module_path %}
+        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        {% endif %}
+        {% if cmake_prefix_path %}
+        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        {% endif %}
+        {% if android_prefix_path %}
+        set(CMAKE_FIND_ROOT_PATH ${CMAKE_BINARY_DIR} ${CMAKE_FIND_ROOT_PATH})
+        {% endif %}
+        """)
+
+    def context(self):
+        # To find the generated cmake_find_package finders
+        # TODO: Change this for parameterized output location of CMakeDeps
+        cmake_prefix_path = "${CMAKE_BINARY_DIR}"
+        cmake_module_path = "${CMAKE_BINARY_DIR}"
+        find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
+        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
+            find_package_prefer_config = "OFF"
+
+        android_prefix = True if self._conanfile.settings.get_safe("os") == "Android" else False
+        return {"find_package_prefer_config": find_package_prefer_config,
+                "cmake_prefix_path": cmake_prefix_path,
+                "cmake_module_path": cmake_module_path,
+                "android_prefix_path": android_prefix}
+
+
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
         {% if generator_platform %}
@@ -455,6 +485,8 @@ class CMakeToolchain(object):
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
         include_guard()
 
+        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
+
         {% for conan_block in conan_pre_blocks %}
         {{ conan_block }}
         {% endfor %}
@@ -464,21 +496,6 @@ class CMakeToolchain(object):
             message(STATUS "Running toolchain IN_TRY_COMPILE")
             return()
         endif()
-
-        message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
-
-        # We are going to adjust automagically many things as requested by Conan
-        set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-        {% if find_package_prefer_config %}
-        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
-        {% endif %}
-        # To support the cmake_find_package generators
-        {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
-        {% endif %}
-        {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
-        {% endif %}
 
         {% for conan_block in conan_main_blocks %}
         {{ conan_block }}
@@ -511,17 +528,10 @@ class CMakeToolchain(object):
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
-        # To find the generated cmake_find_package finders
-        self.cmake_prefix_path = "${CMAKE_BINARY_DIR}"
-        self.cmake_module_path = "${CMAKE_BINARY_DIR}"
-        self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
-        prefer_config = conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
-        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
-            self.find_package_prefer_config = "OFF"
-
         self.conan_pre_blocks = [GenericSystemBlock, AndroidBlock, IOSSystemBlock]
-        self.conan_main_blocks = [FPicBlock, SkipRPath, ArchitectureBlock, GLibCXXBlock,
-                                  VSRuntimeBlock, CppStdBlock, SharedLibBock, ParallelBlock]
+        self.conan_main_blocks = [FindConfigFiles, FPicBlock, SkipRPath, ArchitectureBlock,
+                                  GLibCXXBlock, VSRuntimeBlock, CppStdBlock, SharedLibBock,
+                                  ParallelBlock]
 
     def _context(self):
         """ Returns dict, the context for the '_template_toolchain'
@@ -544,9 +554,6 @@ class CMakeToolchain(object):
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "cmake_prefix_path": self.cmake_prefix_path,
-            "cmake_module_path": self.cmake_module_path,
-            "find_package_prefer_config": self.find_package_prefer_config,
             "conan_main_blocks": conan_main_blocks,
             "conan_pre_blocks": conan_pre_blocks
         }
