@@ -83,5 +83,5 @@ def test_cmake_deps_links_flags():
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     data_cmake = files["mypkg-release-x86-data.cmake"]
-    assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -/NODEFAULTLIB;-/OTHERFLAG)" in data_cmake
-    assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -/OPT:NOICF)" in data_cmake
+    assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -NODEFAULTLIB;-OTHERFLAG)" in data_cmake
+    assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
