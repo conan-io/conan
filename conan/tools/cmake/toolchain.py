@@ -78,7 +78,7 @@ class Variables(OrderedDict):
                     data[key] = '"{}"'.format(var)
 
 
-class Block:
+class Block(object):
     def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
         self._toolchain = toolchain
