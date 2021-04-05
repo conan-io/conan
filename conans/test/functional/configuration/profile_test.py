@@ -635,3 +635,13 @@ class ProfileAggregationTest(unittest.TestCase):
                              compiler.runtime=MD
                              compiler.version=15
                              os=Windows"""), self.client.out)
+
+
+def test_profile_from_cache_path():
+    # https://github.com/conan-io/conan/pull/8685
+    client = TestClient()
+    path = os.path.join(client.cache.profiles_path, "android/profile1")
+    save(path, "[settings]\nos=Android")
+    client.save({"conanfile.txt": ""})
+    client.run("install . -pr=android/profile1")
+    assert "os=Android" in client.out
