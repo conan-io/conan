@@ -237,3 +237,24 @@ class PkgConfigConan(ConanFile):
         self.assertIn("schemasdir=${datadir}/mylib/schemas", pc_content)
         self.assertIn("bindir=${prefix}/bin", pc_content)
         self.assertIn("Name: pkg", pc_content)
+
+    def test_custom_content(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
+            import textwrap
+
+            class PkgConfigConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.components["mycomponent"].set_property("custom_content",
+                                                                         "componentdir=${prefix}/mydir",
+                                                                         "pkg_config")
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . pkg/0.1@")
+        client.run("install pkg/0.1@ -g pkg_config")
+
+        pc_content = client.load("mycomponent.pc")
+        self.assertIn("componentdir=${prefix}/mydir", pc_content)
