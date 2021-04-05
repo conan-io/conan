@@ -65,6 +65,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges

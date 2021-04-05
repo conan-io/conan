@@ -161,3 +161,18 @@ class LockBundle(object):
                     graph_lock_conf.save(lockfile)
 
         save(bundle_path, bundle.dumps())
+
+    @staticmethod
+    def clean_modified(bundle_path, revisions_enabled):
+        bundle = LockBundle()
+        bundle.loads(load(bundle_path))
+        for node in bundle._nodes.values():
+            for pkg in node["packages"]:
+                pkg["modified"] = None
+
+                for lockfile, nodes_ids in pkg["lockfiles"].items():
+                    graph_lock_conf = GraphLockFile.load(lockfile, revisions_enabled)
+                    graph_lock_conf.graph_lock.clean_modified()
+                    graph_lock_conf.save(lockfile)
+
+        save(bundle_path, bundle.dumps())

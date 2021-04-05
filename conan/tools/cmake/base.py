@@ -71,10 +71,8 @@ class CMakeToolchainBase(object):
 
         # Avoid including toolchain file several times (bad if appending to variables like
         #   CMAKE_CXX_FLAGS. See https://github.com/android/ndk/issues/323
-        if(CONAN_TOOLCHAIN_INCLUDED)
-          return()
-        endif()
-        set(CONAN_TOOLCHAIN_INCLUDED TRUE)
+        include_guard()
+
 
         {% block before_try_compile %}
             {# build_type (Release, Debug, etc) is only defined for single-config generators #}
@@ -95,6 +93,9 @@ class CMakeToolchainBase(object):
             # We are going to adjust automagically many things as requested by Conan
             #   these are the things done by 'conan_basic_setup()'
             set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+            {%- if find_package_prefer_config %}
+            set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
+            {%- endif %}
             # To support the cmake_find_package generators
             {% if cmake_module_path -%}
             set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
@@ -153,6 +154,11 @@ class CMakeToolchainBase(object):
 
         self.build_type = None
 
+        self.find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
+        prefer_config = conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
+            self.find_package_prefer_config = "OFF"
+
     def _get_templates(self):
         return {
             'toolchain_macros': self._toolchain_macros_tpl,
@@ -172,6 +178,7 @@ class CMakeToolchainBase(object):
             "cmake_prefix_path": self.cmake_prefix_path,
             "cmake_module_path": self.cmake_module_path,
             "build_type": self.build_type,
+            "find_package_prefer_config": self.find_package_prefer_config,
         }
         return ctxt_toolchain
 
