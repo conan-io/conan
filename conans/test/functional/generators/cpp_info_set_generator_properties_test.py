@@ -45,9 +45,18 @@ def setup_client():
         message("I am a build module")
         """)
     client.save({"consumer.py": GenConanfile("consumer", "1.0").with_requires("mypkg/1.0").
-                with_generator("custom_generator").with_generator("cmake_find_package"),
+                with_generator("custom_generator").with_generator("cmake_find_package")#with_generator("cmake_find_package_multi").
+                .with_generator("pkg_config"),
                 "mypkg_bm.cmake": build_module})
     return client
+
+
+def get_files_contents(folder, filenames):
+    ret = []
+    for filename in filenames:
+        with open(os.path.join(folder, filename)) as properties_package_file:
+            ret.append(properties_package_file.read())
+    return ret
 
 
 @pytest.mark.tool_cmake
@@ -63,22 +72,22 @@ def test_same_results_components(setup_client):
             def package(self):
                 self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "MyFileName")
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
                 self.cpp_info.components["mycomponent"].set_property("cmake_target_name", "mycomponent-name")
+                self.cpp_info.components["mycomponent"].set_property("cmake_build_modules", [os.path.join("lib", "mypkg_bm.cmake")])
                 self.cpp_info.components["mycomponent"].set_property("custom_name", "mycomponent-name", "custom_generator")
-                self.cpp_info.components["mycomponent"].set_property("cmake_build_modules",
-                                                                    [os.path.join("lib",
-                                                                    "mypkg_bm.cmake")], "cmake_find_package")
         """)
 
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
     client.run("install consumer.py --build missing")
+
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mycomponent:mycomponent-name" in custom_gen_file.read()
 
-    with open(os.path.join(client.current_folder, "Findmypkg.cmake")) as properties_package_file:
-        properties_find_package_content = properties_package_file.read()
+    files_to_compare = ["FindMyFileName.cmake", "mypkg.pc", "mycomponent.pc"]
+    new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
     mypkg = textwrap.dedent("""
         import os
@@ -91,18 +100,20 @@ def test_same_results_components(setup_client):
                 self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
                 self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
+                self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
+                self.cpp_info.filenames["cmake_find_package_multi"] = "MyFileName"
                 self.cpp_info.components["mycomponent"].names["cmake_find_package"] = "mycomponent-name"
-                self.cpp_info.components["mycomponent"].build_modules["cmake_find_package"].append(os.path.join("lib",
-                                                                      "mypkg_bm.cmake"))
+                self.cpp_info.components["mycomponent"].names["cmake_find_package_multi"] = "mycomponent-name"
+                self.cpp_info.components["mycomponent"].build_modules.append(os.path.join("lib", "mypkg_bm.cmake"))
+                self.cpp_info.components["mycomponent"].build_modules["cmake_find_package_multi"].append(os.path.join("lib", "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
     client.run("install consumer.py")
 
-    with open(os.path.join(client.current_folder, "Findmypkg.cmake")) as find_package_file:
-        normal_find_package_content = find_package_file.read()
+    old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
-    assert properties_find_package_content == normal_find_package_content
+    assert new_approach_contents == old_approach_contents
 
 
 @pytest.mark.tool_cmake
@@ -118,9 +129,10 @@ def test_same_results_without_components(setup_client):
             def package(self):
                 self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "MyFileName")
                 self.cpp_info.set_property("cmake_target_name", "mypkg-name")
                 self.cpp_info.set_property("cmake_build_modules",[os.path.join("lib",
-                                                                 "mypkg_bm.cmake")], "cmake_find_package")
+                                                                 "mypkg_bm.cmake")])
                 self.cpp_info.set_property("custom_name", "mypkg-name", "custom_generator")
         """)
 
@@ -132,8 +144,8 @@ def test_same_results_without_components(setup_client):
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mypkg:mypkg-name" in custom_gen_file.read()
 
-    with open(os.path.join(client.current_folder, "Findmypkg.cmake")) as properties_package_file:
-        properties_find_package_content = properties_package_file.read()
+    files_to_compare = ["FindMyFileName.cmake", "mypkg.pc"]
+    new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
     mypkg = textwrap.dedent("""
         import os
@@ -145,15 +157,17 @@ def test_same_results_without_components(setup_client):
             def package(self):
                 self.copy("mypkg_bm.cmake", dst="lib")
             def package_info(self):
+                self.cpp_info.filenames["cmake_find_package"] = "MyFileName"
+                self.cpp_info.filenames["cmake_find_package_multi"] = "MyFileName"
                 self.cpp_info.names["cmake_find_package"] = "mypkg-name"
+                self.cpp_info.names["cmake_find_package_multi"] = "mypkg-name"
                 self.cpp_info.names["custom_generator"] = "mypkg-name"
-                self.cpp_info.build_modules["cmake_find_package"].append(os.path.join("lib", "mypkg_bm.cmake"))
+                self.cpp_info.build_modules.append(os.path.join("lib", "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
     client.run("create mypkg.py")
     client.run("install consumer.py")
 
-    with open(os.path.join(client.current_folder, "Findmypkg.cmake")) as find_package_file:
-        normal_find_package_content = find_package_file.read()
+    old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
-    assert properties_find_package_content == normal_find_package_content
+    assert new_approach_contents == old_approach_contents

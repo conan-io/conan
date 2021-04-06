@@ -226,9 +226,14 @@ class _CppInfo(object):
         if generator:
             values_dict = self._generator_properties.get(generator)
             return values_dict if values_dict else {}
-        ret_dict = {}
+        default_values_dict = self._generator_properties.get("conan_default_generators_value")
+        default_build_modules_value = default_values_dict.get("cmake_build_modules") if default_values_dict else None
+        ret_dict = {"cmake_find_package": default_build_modules_value,
+                    "cmake_find_package_multi": default_build_modules_value,
+                    "cmake": default_build_modules_value,
+                    "cmake_multi": default_build_modules_value} if default_build_modules_value else {}
         for generator, values in self._generator_properties.items():
-            if values.get("cmake_build_modules"):
+            if values.get("cmake_build_modules") and generator !="conan_default_generators_value":
                 ret_dict[generator] = values.get("cmake_build_modules")
         return ret_dict if ret_dict else self.build_modules
 
