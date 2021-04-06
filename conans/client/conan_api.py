@@ -1362,9 +1362,9 @@ class ConanAPIV1(object):
                      generators=None, install_folder=None, cwd=None,
                      lockfile_out=None, recipes=None):
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
-        graph_info = get_graph_info(None, None, cwd, None,
+        graph_info = get_graph_info(None, None, cwd,
                                     self.app.cache, self.app.out, lockfile=lockfile)
-
+        phost, pbuild, graph_lock, root_ref = graph_info
         if not generators:  # We don't want the default txt
             generators = False
 
@@ -1373,25 +1373,27 @@ class ConanAPIV1(object):
         mkdir(install_folder)
         remotes = self.app.load_remotes(remote_name=remote_name)
         recorder = ActionRecorder()
-        graph_lock = graph_info.graph_lock
         root_id = graph_lock.root_node_id()
         reference = graph_lock.nodes[root_id].ref
         if recipes:
             graph = self.app.graph_manager.load_graph(reference, create_reference=None,
-                                                      graph_info=graph_info, build_mode=None,
+                                                      profile_host=phost, profile_build=pbuild,
+                                                      graph_lock=graph_lock,
+                                                      root_ref=root_ref,
+                                                      build_mode=None,
                                                       check_updates=False, update=None,
                                                       remotes=remotes, recorder=recorder,
                                                       lockfile_node_id=root_id)
             print_graph(graph, self.app.out)
         else:
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                         remotes=remotes, graph_info=graph_info, build_modes=build,
+                         profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
+                         root_ref=root_ref, remotes=remotes, build_modes=build,
                          generators=generators, recorder=recorder, lockfile_node_id=root_id)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
-            graph_lock_file = GraphLockFile(graph_info.profile_host, graph_info.profile_build,
-                                            graph_info.graph_lock)
+            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
             graph_lock_file.save(lockfile_out)
 
     @api_method
