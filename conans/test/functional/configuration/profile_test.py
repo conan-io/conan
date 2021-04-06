@@ -681,10 +681,10 @@ def test_profile_from_temp_absolute_path():
         conan install . -pr=/tmp/profiles/default
         /tmp/profiles/default MUST be consumed as target profile
     """
-    profile_path = os.path.abspath(os.path.join("profiles", "default"))
-    recipe_path = os.path.abspath(os.path.join("current", "conanfile.txt"))
     client = TestClient()
-    client.save({profile_path: "[settings]\nos=AIX",
-                 recipe_path: ""})
-    client.run("install {} -pr={}".format(recipe_path, profile_path))
+    client.save({"profiles/default": "[settings]\nos=AIX",
+                 "current/conanfile.txt": ""})
+    profile_path = os.path.join(client.current_folder, "profiles", "default")
+    recipe_path = os.path.join(client.current_folder, "current", "conanfile.txt")
+    client.run('install "{}" -pr="{}"'.format(recipe_path, profile_path))
     assert "os=AIX" in client.out
