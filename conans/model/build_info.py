@@ -151,12 +151,11 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            build_modules = self.get_build_modules()
-            if isinstance(build_modules, list):  # FIXME: This should be just a plain dict
+            if isinstance(self.get_build_modules(), list):  # FIXME: This should be just a plain dict
                 conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                               "{the_list}' instead".format(the_list=build_modules))
-                self.build_modules = BuildModulesDict.from_list(build_modules)
-            tmp = dict_to_abs_paths(BuildModulesDict(build_modules), self.rootpath)
+                               "{the_list}' instead".format(the_list=self.get_build_modules()))
+                self.build_modules = BuildModulesDict.from_list(self.get_build_modules())
+            tmp = dict_to_abs_paths(BuildModulesDict(self.get_build_modules()), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
 
