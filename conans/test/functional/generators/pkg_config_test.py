@@ -238,7 +238,7 @@ class PkgConfigConan(ConanFile):
         self.assertIn("bindir=${prefix}/bin", pc_content)
         self.assertIn("Name: pkg", pc_content)
 
-    def test_custom_content(self):
+    def test_custom_content_components(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
