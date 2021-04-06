@@ -638,10 +638,57 @@ class ProfileAggregationTest(unittest.TestCase):
 
 
 def test_profile_from_cache_path():
-    # https://github.com/conan-io/conan/pull/8685
+    """ When passing relative folder/profile as profile file, it MUST be used
+        conan install . -pr=profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+        https://github.com/conan-io/conan/pull/8685
+    """
     client = TestClient()
-    path = os.path.join(client.cache.profiles_path, "android/profile1")
+    path = os.path.join(client.cache.profiles_path, "android", "profile1")
     save(path, "[settings]\nos=Android")
     client.save({"conanfile.txt": ""})
     client.run("install . -pr=android/profile1")
     assert "os=Android" in client.out
+
+
+def test_profile_from_relative_pardir():
+    """ When passing relative ../path as profile file, it MUST be used
+        conan install . -pr=../profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    folder = temp_folder(False)
+    client = TestClient()
+    client.save({os.path.join(folder, "profiles", "default"): "[settings]\nos=AIX",
+                 os.path.join(folder, "current", "conanfile.txt"): ""})
+    with client.chdir(os.path.join(folder, "current")):
+        client.run("install . -pr=../profiles/default")
+    assert "os=AIX" in client.out
+
+
+def test_profile_from_relative_dotdir():
+    """ When passing relative ./path as profile file, it MUST be used
+        conan install . -pr=./profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    folder = temp_folder(False)
+    client = TestClient()
+    client.save({os.path.join(folder, "profiles", "default"): "[settings]\nos=AIX",
+                 os.path.join(folder, "current", "conanfile.txt"): ""})
+    with client.chdir(folder):
+        client.run("install ./current -pr=./profiles/default")
+    assert "os=AIX" in client.out
+
+
+def test_profile_from_temp_absolute_path():
+    """ When passing absolute path as profile file, it MUST be used
+        conan install . -pr=/tmp/profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    folder = temp_folder(False)
+    profile_path = os.path.join(folder, "profiles", "default")
+    recipe_path = os.path.join(folder, "current", "conanfile.txt")
+    client = TestClient()
+    client.save({profile_path: "[settings]\nos=AIX",
+                 recipe_path: ""})
+    client.run("install {} -pr={}".format(recipe_path, profile_path))
+    assert "os=AIX" in client.out
