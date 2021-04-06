@@ -371,7 +371,7 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.distro = "opensuse"
         runner = RunnerMock()
         with mock.patch("conans.client.tools.oss.which", return_value=True):
-            with mock.patch("conans.client.tools.oss.check_output_runner", return_value="Linux"):
+            with mock.patch("conans.client.tools.oss.check_output_runner", return_value="zypper"):
                 with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
                     os_info.linux_distro = "opensuse"
                     spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
