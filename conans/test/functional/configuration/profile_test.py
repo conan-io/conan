@@ -656,11 +656,10 @@ def test_profile_from_relative_pardir():
         conan install . -pr=../profiles/default
         /tmp/profiles/default MUST be consumed as target profile
     """
-    folder = temp_folder(False)
     client = TestClient()
-    client.save({os.path.join(folder, "profiles", "default"): "[settings]\nos=AIX",
-                 os.path.join(folder, "current", "conanfile.txt"): ""})
-    with client.chdir(os.path.join(folder, "current")):
+    client.save({"profiles/default": "[settings]\nos=AIX",
+                 "current/conanfile.txt": ""})
+    with client.chdir("current"):
         client.run("install . -pr=../profiles/default")
     assert "os=AIX" in client.out
 
@@ -670,12 +669,10 @@ def test_profile_from_relative_dotdir():
         conan install . -pr=./profiles/default
         /tmp/profiles/default MUST be consumed as target profile
     """
-    folder = temp_folder(False)
     client = TestClient()
-    client.save({os.path.join(folder, "profiles", "default"): "[settings]\nos=AIX",
-                 os.path.join(folder, "current", "conanfile.txt"): ""})
-    with client.chdir(folder):
-        client.run("install ./current -pr=./profiles/default")
+    client.save({os.path.join("profiles", "default"): "[settings]\nos=AIX",
+                 os.path.join("current", "conanfile.txt"): ""})
+    client.run("install ./current -pr=./profiles/default")
     assert "os=AIX" in client.out
 
 
@@ -684,9 +681,8 @@ def test_profile_from_temp_absolute_path():
         conan install . -pr=/tmp/profiles/default
         /tmp/profiles/default MUST be consumed as target profile
     """
-    folder = temp_folder(False)
-    profile_path = os.path.join(folder, "profiles", "default")
-    recipe_path = os.path.join(folder, "current", "conanfile.txt")
+    profile_path = os.path.abspath(os.path.join("profiles", "default"))
+    recipe_path = os.path.abspath(os.path.join("current", "conanfile.txt"))
     client = TestClient()
     client.save({profile_path: "[settings]\nos=AIX",
                  recipe_path: ""})
