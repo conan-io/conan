@@ -216,7 +216,7 @@ class _CppInfo(object):
         return self.get_property(property_name, generator) or self.names.get(generator, self._name)
 
     def get_filename(self, generator):
-        property_name = "cmake_file_name" if "cmake" in generator else "pkg_config_name"
+        property_name = "cmake_file_name" if "cmake" in generator else "pkg_config_file_name"
         result = self.get_property(property_name, generator) or self.filenames.get(generator)
         if result:
             return result
