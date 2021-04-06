@@ -22,36 +22,12 @@ class ConanFileInterface:
         return not self.__eq__(other)
 
     @property
-    def name(self):
-        return self._conanfile.name
-
-    @property
-    def version(self):
-        return self._conanfile.version
-
-    @property
-    def user(self):
-        return self._conanfile.user
-
-    @property
-    def channel(self):
-        return self._conanfile.channel
-
-    @property
-    def recipe_revision(self):
-        return self._conanfile.recipe_revision
-
-    @property
     def ref(self):
         return self._conanfile.ref
 
     @property
-    def package_id(self):
-        return self._conanfile.package_id
-
-    @property
-    def package_revision(self):
-        return self._conanfile.package_revision
+    def pref(self):
+        return self._conanfile.pref
 
     @property
     def buildenv_info(self):

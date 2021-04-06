@@ -165,6 +165,14 @@ class ConanFile(object):
         return ConanFileDependencies(self._conan_node)
 
     @property
+    def ref(self):
+        return self._conan_node.ref
+
+    @property
+    def pref(self):
+        return self._conan_node.pref
+
+    @property
     def buildenv(self):
         # Lazy computation of the package buildenv based on the profileone
         if not isinstance(self._conan_buildenv, Environment):
