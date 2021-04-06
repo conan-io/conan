@@ -1,3 +1,5 @@
+import os
+
 from conans.errors import ConanException
 
 
@@ -33,9 +35,8 @@ class MSBuild(object):
         self.platform = msvc_arch
 
     def command(self, sln):
-        install_folder = self._conanfile.install_folder
-        cmd = ('%s/conanvcvars.bat && msbuild "%s" /p:Configuration=%s /p:Platform=%s'
-               % (install_folder, sln, self.build_type, self.platform))
+        cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
+               % (sln, self.build_type, self.platform))
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
         if verbosity:
@@ -49,7 +50,8 @@ class MSBuild(object):
 
     def build(self, sln):
         cmd = self.command(sln)
-        self._conanfile.run(cmd)
+        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
 
     @staticmethod
     def get_version(_):
