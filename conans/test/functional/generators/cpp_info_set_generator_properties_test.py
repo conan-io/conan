@@ -45,8 +45,9 @@ def setup_client():
         message("I am a build module")
         """)
     client.save({"consumer.py": GenConanfile("consumer", "1.0").with_requires("mypkg/1.0").
-                with_generator("custom_generator").with_generator("cmake_find_package")#with_generator("cmake_find_package_multi").
-                .with_generator("pkg_config"),
+                with_generator("custom_generator").with_generator("cmake_find_package").
+                with_generator("cmake_find_package_multi").with_generator("pkg_config").
+                with_setting("build_type"),
                 "mypkg_bm.cmake": build_module})
     return client
 
@@ -59,13 +60,13 @@ def get_files_contents(folder, filenames):
     return ret
 
 
-@pytest.mark.tool_cmake
 def test_same_results_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
         import os
         from conans import ConanFile, CMake, tools
         class MyPkg(ConanFile):
+            settings = "build_type"
             name = "mypkg"
             version = "1.0"
             exports_sources = ["mypkg_bm.cmake"]
@@ -93,6 +94,7 @@ def test_same_results_components(setup_client):
         import os
         from conans import ConanFile, CMake, tools
         class MyPkg(ConanFile):
+            settings = "build_type"
             name = "mypkg"
             version = "1.0"
             exports_sources = ["mypkg_bm.cmake"]
@@ -116,13 +118,13 @@ def test_same_results_components(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
-@pytest.mark.tool_cmake
 def test_same_results_without_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
         import os
         from conans import ConanFile, CMake, tools
         class MyPkg(ConanFile):
+            settings = "build_type"
             name = "mypkg"
             version = "1.0"
             exports_sources = ["mypkg_bm.cmake"]
@@ -151,6 +153,7 @@ def test_same_results_without_components(setup_client):
         import os
         from conans import ConanFile, CMake, tools
         class MyPkg(ConanFile):
+            settings = "build_type"
             name = "mypkg"
             version = "1.0"
             exports_sources = ["mypkg_bm.cmake"]
@@ -171,3 +174,25 @@ def test_same_results_without_components(setup_client):
     old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
+
+
+def test_pkg_config_names(setup_client):
+    client = setup_client
+    mypkg = textwrap.dedent("""
+        import os
+        from conans import ConanFile, CMake, tools
+        class MyPkg(ConanFile):
+            settings = "build_type"
+            name = "mypkg"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].libs = ["mycomponent-lib"]
+                self.cpp_info.components["mycomponent"].set_property("pkg_config_name", "mypkg-config-name")
+        """)
+
+    client.save({"mypkg.py": mypkg})
+    client.run("export mypkg.py")
+    client.run("install consumer.py --build missing")
+
+    with open(os.path.join(client.current_folder, "mypkg-config-name.pc")) as gen_file:
+        assert "mypkg-config-name" in gen_file.read()
