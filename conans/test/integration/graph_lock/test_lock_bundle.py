@@ -226,8 +226,6 @@ def test_build_requires():
 def test_build_requires_error():
     # https://github.com/conan-io/conan/issues/8577
     client = TestClient()
-    # TODO: This is hardcoded
-    client.run("config set general.revisions_enabled=1")
     client.save({"tool/conanfile.py": GenConanfile().with_settings("os"),
                  "pkga/conanfile.py": GenConanfile().with_settings("os"),
                  "app1/conanfile.py": GenConanfile().with_settings("os").with_requires("pkga/0.1"),

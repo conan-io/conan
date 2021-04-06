@@ -1420,8 +1420,7 @@ class ConanAPIV1(object):
     def lock_bundle_clean_modified(self, lock_bundle_path, cwd=None):
         cwd = cwd or os.getcwd()
         lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
-        revisions_enabled = self.app.cache.config.revisions_enabled
-        LockBundle.clean_modified(lock_bundle_path, revisions_enabled)
+        LockBundle.clean_modified(lock_bundle_path)
 
     @api_method
     def lock_create(self, path, lockfile_out,
