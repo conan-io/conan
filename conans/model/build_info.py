@@ -210,7 +210,7 @@ class _CppInfo(object):
     def name(self, value):
         self._name = value
 
-    def get_name(self, generator=None):
+    def get_name(self, generator):
         return self.names.get(generator, self._name)
 
     def get_filename(self, generator):
@@ -235,16 +235,6 @@ class _CppInfo(object):
         else:
             gen_dict = self._generator_properties.get("conan_default_generators_value")
             return gen_dict.get(property_name) if gen_dict else None
-
-    def get_build_modules(self, generator=None):
-        if generator:
-            values_dict = self._generator_properties.get(generator)
-            return values_dict if values_dict else {}
-        ret_dict = {}
-        for generator, values in self._generator_properties.items():
-            if values.get("build_modules"):
-                ret_dict[generator] = values.get("build_modules")
-        return ret_dict
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
