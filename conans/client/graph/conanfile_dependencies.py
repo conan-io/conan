@@ -1,9 +1,13 @@
-from conans.client.graph.graph import CONTEXT_HOST
 from conans.errors import ConanException
 from conans.model.conanfile_interface import ConanFileInterface
 
 
 class DependencyOrderedSet:
+    """ class to give a ["mydep"] access to dependencies, because recipes many times just
+    want to access by dependency name, like:
+    self.dependencies.requires["openssl"].version
+    self.dependencies.build_requires["cmake"].ref
+    """
     def __init__(self, deps=None):
         self._deps = deps or []
 
@@ -20,20 +24,6 @@ class DependencyOrderedSet:
         if len(result) == 0:
             raise ConanException("No dependency found")
         return result[0]
-
-    def expand(self, add_transitive):
-        result = []
-        next_requires = self._deps
-        while next_requires:
-            new_requires = []
-            for require in next_requires:
-                if require not in new_requires and require not in result:
-                    result.append(require)
-                for transitive in add_transitive(require):
-                    if transitive not in new_requires:
-                        new_requires.append(transitive)
-            next_requires = new_requires
-        return DependencyOrderedSet(result)
 
 
 class ConanFileDependencies:
@@ -74,4 +64,15 @@ class ConanFileDependencies:
         """
         :return: list of direct_host_requires plus all the transitive regular requires of those
         """
-        return self.host_requires.expand(lambda x: x.dependencies.requires)
+        result = []
+        next_requires = self.host_requires
+        while next_requires:
+            new_requires = []
+            for require in next_requires:
+                if require not in new_requires and require not in result:
+                    result.append(require)
+                for transitive in require.dependencies.requires:
+                    if transitive not in new_requires:
+                        new_requires.append(transitive)
+            next_requires = new_requires
+        return DependencyOrderedSet(result)
