@@ -4,7 +4,6 @@ import textwrap
 from jinja2 import Template
 
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, merge_dicts
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import save
 
@@ -157,34 +156,6 @@ def find_transitive_dependencies(public_deps_filenames):
     for dep_filename in public_deps_filenames:
         lines.append(find.format(dep_filename=dep_filename))
     return "\n".join(lines)
-
-
-# FIXME: Can we remove the config (multi-config package_info with .debug .release)?
-def extend(cpp_info, config):
-    """ adds the specific config configuration to the common one
-    """
-    config_info = cpp_info.configs.get(config)
-    if config_info:
-        def add_lists(seq1, seq2):
-            return seq1 + [s for s in seq2 if s not in seq1]
-
-        result = CppInfo(str(config_info), config_info.rootpath)
-        result.filter_empty = cpp_info.filter_empty
-        result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
-        result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
-        result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
-        result.resdirs = add_lists(cpp_info.resdirs, config_info.resdirs)
-        result.builddirs = add_lists(cpp_info.builddirs, config_info.builddirs)
-        result.libs = cpp_info.libs + config_info.libs
-        result.defines = cpp_info.defines + config_info.defines
-        result.cflags = cpp_info.cflags + config_info.cflags
-        result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
-        result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
-        result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
-        result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
-        result.build_modules = merge_dicts(cpp_info.build_modules, config_info.build_modules)
-        return result
-    return cpp_info
 
 
 class DepsCppCmake(object):
@@ -663,9 +634,7 @@ endforeach()
             config_version = self.config_version_template.format(version=pkg_version)
             ret[self._config_version_filename(pkg_filename)] = config_version
             if not cpp_info.components:
-                # If any config matches the build_type one, add it to the cpp_info
-                dep_cpp_info = extend(cpp_info, build_type.lower())
-                deps = DepsCppCmake(dep_cpp_info, self.name)
+                deps = DepsCppCmake(cpp_info, self.name)
 
                 variables = {
                    self._data_filename(pkg_filename):
@@ -689,7 +658,6 @@ endforeach()
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
                     filename=pkg_filename, name=pkg_findname)
             else:
-                cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
