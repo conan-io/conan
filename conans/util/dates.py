@@ -31,14 +31,18 @@ def timestamp_to_str(timestamp):
 
 
 def timedelta_from_text(interval):
-    match = re.search(r"(\d+)([mhd])", interval)
+    match = re.search(r"(\d+)([smhdw])", interval)
     try:
         value, unit = match.group(1), match.group(2)
-        if unit == 'm':
+        if unit == 's':
+            return datetime.timedelta(seconds=float(value))
+        elif unit == 'm':
             return datetime.timedelta(minutes=float(value))
         elif unit == 'h':
             return datetime.timedelta(hours=float(value))
-        else:
+        elif unit == 'd':
             return datetime.timedelta(days=float(value))
+        elif unit == 'w':
+            return datetime.timedelta(weeks=float(value))
     except Exception:
         raise ConanException("Incorrect time interval definition: %s" % interval)
