@@ -25,6 +25,7 @@ class GenConanfile(object):
         self._default_options = {}
         self._provides = []
         self._deprecated = None
+        self._package_lines = []
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
@@ -142,6 +143,11 @@ class GenConanfile(object):
             self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
+        return self
+
+    def with_package(self, *lines):
+        for line in lines:
+            self._package_lines.append(line)
         return self
 
     def with_build_msg(self, msg):
@@ -287,6 +293,7 @@ class GenConanfile(object):
     @property
     def _package_method(self):
         lines = []
+        lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
             lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
