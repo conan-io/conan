@@ -82,12 +82,14 @@ def test_same_results_components(setup_client):
 
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
-    client.run("install consumer.py --build missing")
+    client.run("install consumer.py --build missing -s build_type=Release")
 
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mycomponent:mycomponent-name" in custom_gen_file.read()
 
-    files_to_compare = ["FindMyFileName.cmake", "mypkg.pc", "mycomponent.pc"]
+    files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
+                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc",
+                        "mycomponent.pc"]
     new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
     mypkg = textwrap.dedent("""
@@ -107,11 +109,10 @@ def test_same_results_components(setup_client):
                 self.cpp_info.components["mycomponent"].names["cmake_find_package"] = "mycomponent-name"
                 self.cpp_info.components["mycomponent"].names["cmake_find_package_multi"] = "mycomponent-name"
                 self.cpp_info.components["mycomponent"].build_modules.append(os.path.join("lib", "mypkg_bm.cmake"))
-                self.cpp_info.components["mycomponent"].build_modules["cmake_find_package_multi"].append(os.path.join("lib", "mypkg_bm.cmake"))
         """)
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
-    client.run("install consumer.py")
+    client.run("install consumer.py -s build_type=Release")
 
     old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
@@ -141,12 +142,13 @@ def test_same_results_without_components(setup_client):
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
 
-    client.run("install consumer.py --build missing")
+    client.run("install consumer.py --build missing -s build_type=Release")
 
     with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
         assert "mypkg:mypkg-name" in custom_gen_file.read()
 
-    files_to_compare = ["FindMyFileName.cmake", "mypkg.pc"]
+    files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
+                        "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc"]
     new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
     mypkg = textwrap.dedent("""
@@ -169,7 +171,7 @@ def test_same_results_without_components(setup_client):
         """)
     client.save({"mypkg.py": mypkg})
     client.run("create mypkg.py")
-    client.run("install consumer.py")
+    client.run("install consumer.py -s build_type=Release")
 
     old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
 
