@@ -179,7 +179,7 @@ class ConanFileMock(ConanFile):
         self._conan_user = None
         self._conan_channel = None
 
-    def run(self, command, win_bash=False, subsystem=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False
         assert subsystem is None
         self.command = command

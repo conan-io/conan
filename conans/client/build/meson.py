@@ -12,6 +12,7 @@ from conans.errors import ConanException
 from conans.model.build_info import DEFAULT_BIN, DEFAULT_INCLUDE, DEFAULT_LIB
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text, get_abs_path, mkdir
 from conans.util.runners import version_runner
 
@@ -225,7 +226,7 @@ class Meson(object):
         self._run_ninja_targets(args=args, build_dir=build_dir, targets=["install"])
 
     def test(self, args=None, build_dir=None, targets=None):
-        if not self._conanfile.should_test:
+        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
             return
         if not targets:
             targets = ["test"]
@@ -237,7 +238,7 @@ class Meson(object):
         self._run_meson_command(subcommand='install', args=args, build_dir=build_dir)
 
     def meson_test(self, args=None, build_dir=None):
-        if not self._conanfile.should_test:
+        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
             return
         self._run_meson_command(subcommand='test', args=args, build_dir=build_dir)
 
