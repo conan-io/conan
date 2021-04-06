@@ -5,12 +5,10 @@ from collections import OrderedDict
 from conans.errors import ConanException
 from conans.model.build_info import DefaultOrderedDict
 
-DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
+_DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
                   "frameworkdirs"]
-FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
+_FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
                    "sharedlinkflags", "exelinkflags"]
-PATTERN_VAR_NAMES = ["include_patterns", "lib_patterns", "bin_patterns", "src_patterns",
-                     "build_patterns", "res_patterns", "framework_patterns"]
 
 
 class _BaseNewCppInfo(object):
@@ -54,7 +52,7 @@ class _BaseNewCppInfo(object):
         return self.names.get(generator)
 
     def to_absolute_paths(self, root_folder):
-        for name in DIRS_VAR_NAMES:
+        for name in _DIRS_VAR_NAMES:
             setattr(self, name, [os.path.join(root_folder, c) for c in getattr(self, name)])
 
         self.build_modules = {k: [os.path.join(root_folder, e) for e in v]
@@ -74,14 +72,14 @@ class NewCppInfo(_BaseNewCppInfo):
     @staticmethod
     def from_old_cppinfo(old):
         ret = NewCppInfo()
-        for varname in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             setattr(ret, varname, getattr(old, varname))
         ret.filenames = copy.copy(old.filenames)
         ret.names = copy.copy(old.names)
 
         # COMPONENTS
         for cname, c in old.components.items():
-            for varname in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 setattr(ret.components[cname], varname, getattr(c, varname))
             ret.components[cname].requires = c.requires
             ret.components[cname].names = c.names
@@ -110,12 +108,12 @@ class NewCppInfo(_BaseNewCppInfo):
             cnames.reverse()  # More dependant first
 
             # Clean global values
-            for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 setattr(self, n, [])
 
             for name in cnames:
                 component = components[name]
-                for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+                for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                     dest = getattr(self, n)
                     dest += [i for i in getattr(component, n) if i not in dest]
                 self.requires.extend(component.requires)
@@ -130,7 +128,7 @@ class NewCppInfo(_BaseNewCppInfo):
         if self.components  or other.components:
             raise ConanException("Cannot aggregate two cppinfo objects with components. "
                                  "Do cpp_info.aggregate_components() first")
-        for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+        for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             dest = getattr(self, n)
             dest += [i for i in getattr(other, n) if i not in dest]
 

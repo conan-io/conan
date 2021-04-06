@@ -36,4 +36,3 @@ class ConanFileDependencies:
                         new_requires.append(transitive)
             next_requires = new_requires
         return result
-

@@ -2,7 +2,7 @@ import pytest
 
 from conans.errors import ConanException
 from conans.model.build_info import CppInfo
-from conans.model.new_build_info import NewCppInfo, DIRS_VAR_NAMES, FIELD_VAR_NAMES
+from conans.model.new_build_info import NewCppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
 
 
 def test_components_order():
@@ -129,14 +129,14 @@ def test_cpp_info_merge_with_components():
 
 def test_cpp_info_merge_aggregating_components_first():
     cppinfo = NewCppInfo()
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(cppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
         setattr(cppinfo.components["foo2"], n, ["var2_{}_1".format(n), "var2_{}_2".format(n)])
 
     cppinfo.components["foo"].requires = ["foo2"]  # Deterministic order
 
     other = NewCppInfo()
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(other.components["boo"], n, ["jar_{}_1".format(n), "jar_{}_2".format(n)])
         setattr(other.components["boo2"], n, ["jar2_{}_1".format(n), "jar2_{}_2".format(n)])
 
@@ -147,7 +147,7 @@ def test_cpp_info_merge_aggregating_components_first():
 
     cppinfo.merge(other)
 
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n),
                                        "var2_{}_1".format(n), "var2_{}_2".format(n),
                                        "jar_{}_1".format(n), "jar_{}_2".format(n),
@@ -156,7 +156,7 @@ def test_cpp_info_merge_aggregating_components_first():
 
 def test_from_old_cppinfo_components():
     oldcppinfo = CppInfo("ref", "/root/")
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
         setattr(oldcppinfo.components["foo2"], n, ["var2_{}_1".format(n), "var2_{}_2".format(n)])
 
@@ -167,7 +167,7 @@ def test_from_old_cppinfo_components():
 
     assert isinstance(cppinfo, NewCppInfo)
 
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo.components["foo"], n) == ["var_{}_1".format(n),
                                                          "var_{}_2".format(n)]
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
@@ -179,12 +179,12 @@ def test_from_old_cppinfo_components():
 
 def test_from_old_cppinfo_no_components():
     oldcppinfo = CppInfo("ref", "/root/")
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo, n, ["var_{}_1".format(n), "var_{}_2".format(n)])
 
     cppinfo = NewCppInfo.from_old_cppinfo(oldcppinfo)
 
     assert isinstance(cppinfo, NewCppInfo)
 
-    for n in DIRS_VAR_NAMES + FIELD_VAR_NAMES:
+    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]

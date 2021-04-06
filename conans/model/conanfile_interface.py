@@ -1,6 +1,3 @@
-from conans.model.new_build_info import NewCppInfo
-
-
 class ConanFileInterface:
     """ this is just a protective wrapper to give consumers
     a limited view of conanfile dependencies, "read" only,
