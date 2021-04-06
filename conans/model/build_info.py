@@ -222,7 +222,8 @@ class _CppInfo(object):
         if result:
             return result
         return self.get_name(generator)
-
+    
+    # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self, generator=None):
         if generator:
             values_dict = self._generator_properties.get(generator)
