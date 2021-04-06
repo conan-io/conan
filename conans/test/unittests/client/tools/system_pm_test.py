@@ -368,15 +368,13 @@ class SystemPackageToolTest(unittest.TestCase):
         os_info.is_solaris = False
         os_info.is_macos = False
         os_info.is_windows = False
-        os_info.distro = "opensuse"
+        os_info.linux_distro = "opensuse"
         runner = RunnerMock()
-        with mock.patch("conans.client.tools.oss.which", return_value=True):
-            with mock.patch("conans.client.tools.oss.check_output_runner", return_value="zypper"):
-                with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
-                    os_info.linux_distro = "opensuse"
-                    spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
-                    spt.update()
-                    self.assertEqual(runner.command_called, "zypper --non-interactive ref")
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+            spt.update()
+            self.assertEqual(runner.command_called, "zypper --non-interactive ref")
 
     def test_system_package_tool_try_multiple(self):
         packages = ["a_package", "another_package", "yet_another_package"]
