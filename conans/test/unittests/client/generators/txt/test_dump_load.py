@@ -25,6 +25,7 @@ class DumpLoadTestCase(unittest.TestCase):
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
         content = TXTGenerator(conanfile).content
         parsed_deps_cpp_info, _, _, _ = TXTGenerator.loads(content, filter_empty=False)
+
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
         self.assertEqual(parsed_cpp_info.get_name("txt"), "txt_name")
         self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "SpecialName")
