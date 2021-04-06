@@ -20,14 +20,12 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.names["txt"] = "txt_name"
         cpp_info.names["cmake_find_package"] = "SpecialName"
         cpp_info.filenames["cmake_find_package"] = "SpecialFileName"
-        cpp_info.translate_cpp_info_generator_properties()
         conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
         conanfile.deps_cpp_info.add("pkg_name", DepCppInfo(cpp_info))
         content = TXTGenerator(conanfile).content
         parsed_deps_cpp_info, _, _, _ = TXTGenerator.loads(content, filter_empty=False)
         parsed_cpp_info = parsed_deps_cpp_info["pkg_name"]
-        parsed_cpp_info.translate_cpp_info_generator_properties()
         self.assertEqual(parsed_cpp_info.get_name("txt"), "txt_name")
         self.assertEqual(parsed_cpp_info.get_name("cmake_find_package"), "SpecialName")
         self.assertEqual(parsed_cpp_info.get_filename("cmake_find_package"), "SpecialFileName")
@@ -46,7 +44,6 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.cxxflags = ["-cxxflag_parent"]
         cpp_info.includedirs = ["mypkg1/include"]
         cpp_info.filter_empty = False
-        cpp_info.translate_cpp_info_generator_properties()
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
@@ -54,7 +51,6 @@ class DumpLoadTestCase(unittest.TestCase):
         cpp_info.defines = ["MYDEFINE2"]
         cpp_info.cxxflags = ["-cxxflag_dep"]
         cpp_info.filter_empty = False
-        cpp_info.translate_cpp_info_generator_properties()
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
 
         # Add env_info

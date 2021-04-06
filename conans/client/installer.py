@@ -637,7 +637,6 @@ class BinaryInstaller(object):
                                 conanfile.name, conanfile.requires)
                         except ConanException as e:
                             raise ConanException("%s package_info(): %s" % (str(conanfile), e))
-                        conanfile.cpp_info.translate_cpp_info_generator_properties()
                         conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)
                     self._hook_manager.execute("post_package_info", conanfile=conanfile,
                                                reference=ref)

@@ -481,7 +481,6 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-        self.translate_cpp_info_generator_properties()
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
 

@@ -233,7 +233,6 @@ VAR2=23
         info = CppInfo("myname", folder)
         info.name = "MyName"
         info.names["my_generator"] = "MyNameForMyGenerator"
-        info.translate_cpp_info_generator_properties()
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         self.assertIn("MyName", deps_cpp_info["myname"].get_name("my_undefined_generator"))
@@ -245,9 +244,7 @@ VAR2=23
         info.build_modules.append("old.cmake")  # Test old behavior with .cmake build modules
         info.build_modules.extend(["other_old.cmake", "file.pc"])  # .pc not considered
         info.build_modules["generator"].append("my_module.cmake")
-        info.translate_cpp_info_generator_properties()
         info.debug.build_modules["other_gen"] = ["mod-release.cmake"]
-        info.debug.translate_cpp_info_generator_properties()
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:
@@ -263,7 +260,6 @@ VAR2=23
         folder = temp_folder()
         info = CppInfo("myname", folder)
         info.build_modules = ["old.cmake"]  # Test old behavior with .cmake build modules as list
-        info.translate_cpp_info_generator_properties()
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("myname", DepCppInfo(info))
         for gen in ["cmake", "cmake_multi", "cmake_find_package", "cmake_find_package_multi"]:

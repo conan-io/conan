@@ -185,7 +185,6 @@ class TXTGenerator(Generator):
                     cpp_info_config = getattr(dep_cpp_info, config)
                     _populate_cpp_info(cpp_info_config, config_data, rootpath)
 
-                dep_cpp_info.translate_cpp_info_generator_properties()
                 # Add to the dependecy list
                 deps_cpp_info.add(dep, DepCppInfo(dep_cpp_info))
 
