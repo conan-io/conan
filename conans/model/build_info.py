@@ -151,11 +151,12 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
+            build_modules = self.get_build_modules()
+            if isinstance(build_modules, list):  # FIXME: This should be just a plain dict
                 conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                               "{the_list}' instead".format(the_list=self.build_modules))
-                self.build_modules = BuildModulesDict.from_list(self.build_modules)
-            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
+                               "{the_list}' instead".format(the_list=build_modules))
+                self.build_modules = BuildModulesDict.from_list(build_modules)
+            tmp = dict_to_abs_paths(BuildModulesDict(build_modules), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
 
@@ -211,13 +212,25 @@ class _CppInfo(object):
         self._name = value
 
     def get_name(self, generator):
-        return self.names.get(generator, self._name)
+        property_name = "cmake_target_name" if "cmake" in generator else "pkg_config_name"
+        return self.get_property(property_name, generator) or self.names.get(generator, self._name)
 
     def get_filename(self, generator):
-        result = self.filenames.get(generator)
+        property_name = "cmake_file_name" if "cmake" in generator else "pkg_config_name"
+        result = self.get_property(property_name, generator) or self.filenames.get(generator)
         if result:
             return result
         return self.get_name(generator)
+
+    def get_build_modules(self, generator=None):
+        if generator:
+            values_dict = self._generator_properties.get(generator)
+            return values_dict if values_dict else {}
+        ret_dict = {}
+        for generator, values in self._generator_properties.items():
+            if values.get("cmake_build_modules"):
+                ret_dict[generator] = values.get("cmake_build_modules")
+        return ret_dict if ret_dict else self.build_modules
 
     def set_property(self, property_name, value, generator=None):
         generator = generator or "conan_default_generators_value"
@@ -372,7 +385,7 @@ class CppInfo(_CppInfo):
              self.cxxflags or
              self.sharedlinkflags or
              self.exelinkflags or
-             self.build_modules or
+             self.get_build_modules() or
              self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
@@ -445,7 +458,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.get_build_modules(), dep_cpp_info.build_modules_paths)
         self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
@@ -460,7 +473,7 @@ class _BaseDepsCppInfo(_CppInfo):
 
     @property
     def build_modules_paths(self):
-        return self.build_modules
+        return self.get_build_modules()
 
     @property
     def include_paths(self):
