@@ -1,3 +1,4 @@
+from conans.model.new_build_info import NewCppInfo
 
 
 class ConanFileInterface:
@@ -22,8 +23,16 @@ class ConanFileInterface:
         return not self.__eq__(other)
 
     @property
+    def package_folder(self):
+        return self._conanfile.package_folder
+
+    @property
     def name(self):
         return self._conanfile.name
+
+    @property
+    def version(self):
+        return self._conanfile.version
 
     @property
     def buildenv_info(self):

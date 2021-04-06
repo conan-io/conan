@@ -23,15 +23,22 @@ def test_cpp_info_name_cmakedeps():
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
     cpp_info.names["cmake_find_package_multi"] = "MySuperPkg1"
     cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
-    conanfile.deps_cpp_info.add("mypkg", cpp_info)
+    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.name = "OriginalDepName"
+    conanfile_dep.version = "1.0"
+    conanfile_dep.package_folder = "/path/to/folder_dep"
+    ConanFile.dependencies = Mock()
+    conanfile.dependencies.host_requires = [conanfile_dep]
+    conanfile.dependencies.direct_host_requires = [conanfile_dep]
 
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
-    assert "set(MySuperPkg1_INCLUDE_DIRS_RELEASE )" in files["ComplexFileName1-release-x86-data.cmake"]
+    assert 'set(MySuperPkg1_INCLUDE_DIRS_RELEASE "/path/to/folder_dep/include")' in files["ComplexFileName1-release-x86-data.cmake"]
 
     with pytest.raises(ConanException,
-                       match="'mypkg' defines information for 'cmake_find_package_multi'"):
+                       match="'OriginalDepName' defines information for 'cmake_find_package_multi'"):
         with environment_append({CONAN_V2_MODE_ENVVAR: "1"}):
             _ = cmakedeps.content
 
@@ -50,15 +57,25 @@ def test_cpp_info_name_cmakedeps_components():
     cpp_info.names["cmake_find_package_multi"] = "GlobakPkgName1"
     cpp_info.components["mycomp"].names["cmake_find_package_multi"] = "MySuperPkg1"
     cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
-    conanfile.deps_cpp_info.add("mypkg", DepCppInfo(cpp_info))
+
+    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep.name = "OriginalDepName"
+    conanfile_dep.version = "1.0"
+    conanfile_dep.package_folder = "/path/to/folder_dep"
+    ConanFile.dependencies = Mock()
+    conanfile.dependencies.host_requires = [conanfile_dep]
+    conanfile.dependencies.direct_host_requires = [conanfile_dep]
 
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
-    assert "set(GlobakPkgName1_INCLUDE_DIRS_DEBUG )" in files["ComplexFileName1-debug-x64-data.cmake"]
-    assert "set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG )" in files["ComplexFileName1-debug-x64-data.cmake"]
+    assert 'set(GlobakPkgName1_INCLUDE_DIRS_DEBUG "/path/to/folder_dep/include")' \
+           in files["ComplexFileName1-debug-x64-data.cmake"]
+    assert 'set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG "/path/to/folder_dep/include")' \
+           in files["ComplexFileName1-debug-x64-data.cmake"]
 
     with pytest.raises(ConanException,
-                       match="'mypkg' defines information for 'cmake_find_package_multi'"):
+                       match="'OriginalDepName' defines information for 'cmake_find_package_multi'"):
         with environment_append({CONAN_V2_MODE_ENVVAR: "1"}):
             _ = cmakedeps.content
