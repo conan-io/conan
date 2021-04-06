@@ -11,6 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.toolchain
@@ -187,6 +188,8 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
+        save(self.client.cache.new_config_path,
+             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
