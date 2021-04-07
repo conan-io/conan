@@ -39,15 +39,6 @@ class _NewComponent(object):
         self.sysroot = ""
         self.requires = []
 
-        # ##### PATTERNS
-        self.include_patterns = []
-        self.lib_patterns = []
-        self.bin_patterns = []
-        self.src_patterns = []
-        self.build_patterns = []
-        self.res_patterns = []
-        self.framework_patterns = []
-
     def get_name(self, generator):
         return self.names.get(generator)
 
