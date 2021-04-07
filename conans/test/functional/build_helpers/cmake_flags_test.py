@@ -8,7 +8,7 @@ import pytest
 
 from parameterized.parameterized import parameterized
 
-from conans.client.build.cmake import CMakeBuildHelper
+from conans.client.build.cmake import CMake
 from conans.model.version import Version
 from conans.test.utils.tools import TestClient
 
@@ -378,6 +378,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
 
+    @pytest.mark.tool_mingw64
     def test_standard_20_as_cxx_flag(self):
         # CMake (1-Jun-2018) do not support the 20 flag in CMAKE_CXX_STANDARD var
         conanfile = """
@@ -408,7 +409,7 @@ conan_set_std()
 
         def conan_set_std_branch():
             # Replicate logic from cmake_common definition of 'macro(conan_set_std)'
-            cmake_version = CMakeBuildHelper.get_version()
+            cmake_version = CMake.get_version()
             return cmake_version < Version("3.12")
 
         client.run("create . user/channel -s cppstd=gnu20 -s compiler=gcc "

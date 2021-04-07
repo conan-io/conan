@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict, defaultdict
 
+from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.conf import ConfDefinition
 from conans.model.env_info import EnvValues, unquote
@@ -137,7 +138,7 @@ def _load_profile(text, profile_path, default_folder):
         for include in profile_parser.get_includes():
             # Recursion !!
             profile, included_vars = read_profile(include, cwd, default_folder)
-            inherited_profile.update(profile)
+            inherited_profile.compose(profile)
             profile_parser.update_vars(included_vars)
 
         # Apply the automatic PROFILE_DIR variable
@@ -149,7 +150,8 @@ def _load_profile(text, profile_path, default_folder):
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "options", "conf"])
+                           allowed_fields=["build_requires", "settings", "env", "options", "conf",
+                                           "buildenv"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -224,6 +226,10 @@ def _apply_inner_profile(doc, base_profile):
         new_prof.loads(doc.conf, profile=True)
         base_profile.conf.update_conf_definition(new_prof)
 
+    if doc.buildenv:
+        buildenv = ProfileEnvironment.loads(doc.buildenv)
+        base_profile.buildenv.compose(buildenv)
+
 
 def profile_from_args(profiles, settings, options, env, cwd, cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
@@ -237,12 +243,12 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
         result = Profile()
         for p in profiles:
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
-            result.update(tmp)
+            result.compose(tmp)
 
     args_profile = _profile_parse_args(settings, options, env)
 
     if result:
-        result.update(args_profile)
+        result.compose(args_profile)
     else:
         result = args_profile
     return result

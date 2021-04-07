@@ -22,13 +22,13 @@ def client():
 def test_package_id(client):
     profile1 = textwrap.dedent("""\
         [conf]
-        tools.microsoft:msbuild_verbosity=Quiet""")
+        tools.microsoft.msbuild:verbosity=Quiet""")
     profile2 = textwrap.dedent("""\
         [conf]
-        tools.microsoft:msbuild_verbosity=Minimal""")
+        tools.microsoft.msbuild:verbosity=Minimal""")
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("create . pkg/0.1@ -pr=profile1")
-    assert "pkg/0.1:b40df771e875672867408f9edf54bec0c2c361a7 - Build" in client.out
+    assert "pkg/0.1:b85ef030da903577bd87d1c92c0524c9c96212b5 - Build" in client.out
     client.run("create . pkg/0.1@ -pr=profile2")
-    assert "pkg/0.1:017c055fc7833bf6a7836211a26727533237071d - Build" in client.out
+    assert "pkg/0.1:7d2f1590113db99bcd08a4ebd4c841cc0a2e7020 - Build" in client.out

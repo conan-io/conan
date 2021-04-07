@@ -324,7 +324,7 @@ class HelloConan(ConanFile):
 
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-    @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
+    @mock.patch("conans.client.build.msbuild.MSBuild.get_version")
     def test_binary_logging_not_supported(self, mock_get_version):
         mock_get_version.return_value = Version("14")
 

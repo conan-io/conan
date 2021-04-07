@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp
@@ -277,21 +276,19 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             self.assertNotIn("-- Library %s not found in package, might be system one" %
                              library_name, client.out)
             if build_type == "Release":
-                target_libs = "$<$<CONFIG:Debug>:;>;" \
-                              "$<$<CONFIG:MinSizeRel>:;>;" \
-                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
-                              "$<$<CONFIG:Release>:lib1;sys1;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>"
+                target_libs = ("$<$<CONFIG:Debug>:;>;"
+                               "$<$<CONFIG:Release>:lib1;sys1;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                               "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             else:
-                target_libs = "$<$<CONFIG:Debug>:lib1;sys1d;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;" \
-                              "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;" \
-                              "$<$<CONFIG:MinSizeRel>:;>;" \
-                              "$<$<CONFIG:RelWithDebInfo>:;>;" \
-                              "$<$<CONFIG:Release>:;>"
+                target_libs = ("$<$<CONFIG:Debug>:lib1;sys1d;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                               "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                               "$<$<CONFIG:Release>:;>;"
+                               "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
             self.assertIn("Target libs: %s" % target_libs, client.out)
 
     def test_cpp_info_name(self):
@@ -337,111 +334,21 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         client.run("install .")
         client.run("build .")
-        self.assertIn("Target libs (hello2): "
-                      "$<$<CONFIG:Debug>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
-                      client.out)
-        self.assertIn("Target libs (hello): "
-                      "$<$<CONFIG:Debug>:;>;"
-                      "$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;"
-                      "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>",
-                      client.out)
+        assert ("Target libs (hello2): "
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO2_hello2_RELEASE;MYHELLO::MYHELLO;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
-    def test_no_version_file(self):
-        client = TestClient()
-        client.run("new hello/1.1 -s")
-        client.run("create .")
-
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.1)
-            project(consumer)
-            find_package(hello 1.0 REQUIRED)
-            message(STATUS "hello found: ${{hello_FOUND}}")
-            """)
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                settings = "build_type"
-                requires = "hello/1.1"
-                generators = "cmake_find_package_multi"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-            """)
-
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        os.unlink(os.path.join(client.current_folder, "hello-config-version.cmake"))
-        exit_code = client.run("build .", assert_error=True)
-        self.assertNotEqual(0, exit_code)
-
-    @parameterized.expand([
-        ("hello", "1.0", "", False, True),
-        ("Hello", "1.0", "", False, True),
-        ("HELLO", "1.0", "", False, True),
-        ("hello", "1.1", "", False, True),
-        ("hello", "1.2", "", False, False),
-        ("hello", "1.0", "EXACT", False, False),
-        ("hello", "1.1", "EXACT", False, True),
-        ("hello", "1.2", "EXACT", False, False),
-        ("hello", "0.1", "", False, False),
-        ("hello", "2.0", "", False, False),
-        ("hello", "1.0", "REQUIRED", False, True),
-        ("hello", "1.1", "REQUIRED", False, True),
-        ("hello", "1.2", "REQUIRED", True, False),
-        ("hello", "1.0", "EXACT REQUIRED", True, False),
-        ("hello", "1.1", "EXACT REQUIRED", False, True),
-        ("hello", "1.2", "EXACT REQUIRED", True, False),
-        ("hello", "0.1", "REQUIRED", True, False),
-        ("hello", "2.0", "REQUIRED", True, False)
-    ])
-    def test_version(self, name, version, params, cmake_fails, package_found):
-        client = TestClient()
-        client.run("new hello/1.1 -s")
-        client.run("create .")
-
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.1)
-            project(consumer)
-            find_package({name} {version} {params})
-            message(STATUS "hello found: ${{{name}_FOUND}}")
-            """).format(name=name, version=version, params=params)
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-
-            class Conan(ConanFile):
-                settings = "build_type"
-                requires = "hello/1.1"
-                generators = "cmake_find_package_multi"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-            """)
-
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        exit_code = client.run("build .", assert_error=cmake_fails)
-        if cmake_fails:
-            self.assertNotEqual(exit_code, 0)
-        elif package_found:
-            self.assertIn("hello found: 1", client.out)
-        else:
-            self.assertIn("hello found: 0", client.out)
+        assert ("Target libs (hello): "
+                "$<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:CONAN_LIB::MYHELLO_hello_RELEASE;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
     def test_cpp_info_config(self):
         conanfile = textwrap.dedent("""
@@ -523,9 +430,12 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
         t.run("create . --build missing -s build_type=Release")
 
-        self.assertIn("component libs: $<$<CONFIG:Debug>:;>;$<$<CONFIG:MinSizeRel>:;>;"
-                      "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:Release>:system_lib_component;",
-                      t.out)
+        assert ("component libs: $<$<CONFIG:Debug>:;>;"
+                "$<$<CONFIG:Release>:system_lib_component;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
+                "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
+                "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in t.out
 
 
 @pytest.mark.tool_cmake

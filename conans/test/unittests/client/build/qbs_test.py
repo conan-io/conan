@@ -99,7 +99,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.profile))
 
         build_helper.build(products=['app1', 'app2', 'lib'])
         self.assertEqual(
@@ -107,7 +107,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --products app1,app2,lib --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.profile))
 
     def test_build_all(self):
         conanfile = MockConanfile(
@@ -123,7 +123,7 @@ class QbsTest(unittest.TestCase):
             ('qbs build --no-install --build-directory %s '
              '--file %s --all-products --jobs %s profile:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile))
+                build_helper.jobs, build_helper.profile))
 
     @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
     def test_build_with_custom_configuration(self):
@@ -148,7 +148,7 @@ class QbsTest(unittest.TestCase):
              '--file %s --jobs %s profile:%s '
              'config:%s %s:%s %s:%s %s:%s %s:%s') % (
                 conanfile.build_folder, build_helper._project_file,
-                build_helper.jobs, build_helper.use_toolchain_profile,
+                build_helper.jobs, build_helper.profile,
                 config_name,
                 'product.App.boolProperty',
                 'true',
@@ -158,3 +158,42 @@ class QbsTest(unittest.TestCase):
                 config_values['product.App.stringProperty'],
                 'product.App.stringListProperty',
                 config_values['product.App.stringListProperty']))
+
+    def test_install(self):
+        conanfile = MockConanfile(
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
+            runner=RunnerMock())
+        conanfile.source_folder = '.'
+        conanfile.package_folder = 'pkg'
+        build_helper = qbs.Qbs(conanfile)
+
+        build_helper.install()
+        self.assertEqual(
+            conanfile.runner.command_called,
+            ('qbs install --no-build --install-root %s '
+             '--file %s') % (
+                conanfile.package_folder, build_helper._project_file))
+
+    def test_install_with_custom_configuration(self):
+        conanfile = MockConanfile(
+            MockSettings({'os': 'Linux', 'compiler': 'gcc'}),
+            runner=RunnerMock())
+        conanfile.source_folder = '.'
+        conanfile.package_folder = 'pkg'
+        build_helper = qbs.Qbs(conanfile)
+        config_name = 'debug'
+        config_values = {
+            'product.App.boolProperty': True,
+            'product.App.intProperty': 1337,
+            'product.App.stringProperty': 'Hello World',
+            'product.App.stringListProperty': ['Hello', 'World']
+        }
+        build_helper.add_configuration(config_name, config_values)
+
+        build_helper.install()
+        self.assertEqual(
+            conanfile.runner.command_called,
+            ('qbs install --no-build --install-root %s '
+             '--file %s config:%s') % (
+                conanfile.package_folder, build_helper._project_file,
+                config_name))

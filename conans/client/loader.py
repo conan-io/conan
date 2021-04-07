@@ -23,7 +23,8 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None):
+    def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None,
+                 requester=None):
         self._runner = runner
         self._generator_manager = generator_manager
         self._output = output
@@ -31,6 +32,7 @@ class ConanFileLoader(object):
         self._python_requires = python_requires
         sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
+        self._requester = requester
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
                    display=""):
@@ -46,6 +48,7 @@ class ConanFileLoader(object):
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
             conanfile = cached[0](self._output, self._runner, display, user, channel)
+            conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
                     conanfile.init()
@@ -83,6 +86,7 @@ class ConanFileLoader(object):
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
             result = conanfile(self._output, self._runner, display, user, channel)
+            result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
                     result.init()
@@ -190,7 +194,7 @@ class ConanFileLoader(object):
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
 
-        conanfile.initialize(tmp_settings, profile.env_values)
+        conanfile.initialize(tmp_settings, profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
@@ -259,7 +263,7 @@ class ConanFileLoader(object):
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
-        conanfile.initialize(Settings(), profile.env_values)
+        conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
@@ -299,7 +303,7 @@ class ConanFileLoader(object):
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(profile_host.processed_settings.copy(),
-                             profile_host.env_values)
+                             profile_host.env_values, profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
