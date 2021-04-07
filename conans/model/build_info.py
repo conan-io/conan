@@ -213,7 +213,11 @@ class _CppInfo(object):
     # TODO: Deprecate for 2.0. Only cmake and pkg_config generators should access this.
     #  Use get_property for 2.0
     def get_name(self, generator):
-        property_name = "cmake_target_name" if "cmake" in generator else "pkg_config_name"
+        property_name = None
+        if "cmake" in generator:
+            property_name = "cmake_target_name"
+        elif "pkg_config" in generator:
+            property_name = "pkg_config_name"
         return self.get_property(property_name, generator) or self.names.get(generator, self._name)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
