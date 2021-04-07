@@ -3,6 +3,7 @@ import unittest
 
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
 
 
 class SourceTest(unittest.TestCase):
@@ -15,6 +16,7 @@ import os
 class TestexportConan(ConanFile):
     exports = "mypython.py"
     exports_sources = "patch.patch"
+
     def source(self):
         save("hello/hello.h", "my hello header!")
         patch = os.path.join(self.source_folder, "patch.patch")
@@ -99,9 +101,11 @@ class ConanLib(ConanFile):
         conanfile = '''
 import os
 from conans import ConanFile
+
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
+
     def source(self):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
@@ -122,8 +126,6 @@ from conans import ConanFile
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
-    def source(self):
-        pass
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -135,6 +137,7 @@ class ConanLib(ConanFile):
         conanfile = '''
 from conans import ConanFile
 class ConanLib(ConanFile):
+
     def source(self):
         pass
 '''
@@ -144,6 +147,7 @@ class ConanLib(ConanFile):
         with self.assertRaisesRegex(Exception, "Command failed"):
             client.run("source . --source-folder sf --source-folder sf")
         with self.assertRaisesRegex(Exception, "Command failed"):
+
             client.run("source conanfile.py --source-folder sf --install-folder if "
                        "--install-folder rr")
 

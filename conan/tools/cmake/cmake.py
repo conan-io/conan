@@ -1,7 +1,7 @@
 import os
 import platform
 
-from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.utils import get_generator, is_multi_configuration
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
@@ -91,7 +91,7 @@ class CMake(object):
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            CMakeToolchainBase.filename,
+            CMakeToolchain.filename,
             self._conanfile.package_folder.replace("\\", "/"),
             source)
 

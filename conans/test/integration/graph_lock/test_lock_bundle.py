@@ -107,6 +107,14 @@ def test_basic():
     lock2 = client.load("app2_linux.lock")
     assert '"modified": true' not in lock2
 
+    client.run("lock bundle clean-modified lock1.bundle")
+    bundle = client.load("lock1.bundle")
+    assert '"modified": true' not in bundle
+    lock1 = client.load("app1_windows.lock")
+    assert '"modified": true' not in lock1
+    lock2 = client.load("app2_linux.lock")
+    assert '"modified": true' not in lock2
+
 
 def test_build_requires():
     client = TestClient()

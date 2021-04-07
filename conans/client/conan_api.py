@@ -1365,6 +1365,7 @@ class ConanAPIV1(object):
         graph_info = get_graph_info(None, None, cwd,
                                     self.app.cache, self.app.out, lockfile=lockfile)
         phost, pbuild, graph_lock, root_ref = graph_info
+
         if not generators:  # We don't want the default txt
             generators = False
 

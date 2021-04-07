@@ -1,7 +1,7 @@
 import textwrap
 import unittest
 
-from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake import CMakeToolchain
 from conans.client.tools import which
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
@@ -67,5 +67,5 @@ class AndroidToolchainTestCase(unittest.TestCase):
 
         # Build locally
         self.t.run('install . library/version@ --profile:host=profile_host --profile:build=default')
-        self.t.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
+        self.t.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
         self.t.run_command('cmake --build .')

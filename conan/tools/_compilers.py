@@ -10,6 +10,9 @@ def architecture_flag(settings):
     if not compiler or not arch:
         return ""
 
+    if the_os == "Android":
+        return ""
+
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(the_os) == 'Macos' and str(subsystem) == 'catalyst' and str(arch) == 'x86_64':
             # FIXME: This might be conflicting with Autotools --target cli arg
