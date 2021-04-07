@@ -275,6 +275,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
                                    profile_build, graph_lock)
 
+        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
         for node in graph.nodes:
