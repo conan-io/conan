@@ -225,33 +225,30 @@ class _CppInfo(object):
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
-        default_values_dict = self._generator_properties.get("conan_default_generators_value")
+        default_values_dict = self._generator_properties.get(None)
         default_build_modules_value = default_values_dict.get("cmake_build_modules") if default_values_dict else None
         ret_dict = {"cmake_find_package": default_build_modules_value,
                     "cmake_find_package_multi": default_build_modules_value,
                     "cmake": default_build_modules_value,
                     "cmake_multi": default_build_modules_value} if default_build_modules_value else {}
         for generator, values in self._generator_properties.items():
-            if values.get("cmake_build_modules") and generator != "conan_default_generators_value":
+            if generator and values.get("cmake_build_modules"):
                 ret_dict[generator] = values.get("cmake_build_modules")
         return ret_dict if ret_dict else self.build_modules
 
     def set_property(self, property_name, value, generator=None):
-        generator = generator or "conan_default_generators_value"
-        gen_dict = self._generator_properties.get(generator)
-        if gen_dict:
-            gen_dict.update({property_name: value})
-        else:
-            self._generator_properties.update({generator: {property_name: value}})
+        self._generator_properties.setdefault(generator, {})[property_name] = value
 
     def get_property(self, property_name, generator=None):
-        generator = generator or "conan_default_generators_value"
-        gen_dict = self._generator_properties.get(generator)
-        if gen_dict and gen_dict.get(property_name):
-            return gen_dict.get(property_name)
-        else:
-            gen_dict = self._generator_properties.get("conan_default_generators_value")
-            return gen_dict.get(property_name) if gen_dict else None
+        if generator:
+            try:
+                return self._generator_properties[generator][property_name]
+            except KeyError:
+                pass
+        try:
+            return self._generator_properties[None][property_name]
+        except KeyError:
+            pass
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
