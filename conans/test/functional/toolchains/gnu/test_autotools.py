@@ -103,7 +103,7 @@ def build_windows_subsystem(profile, make_program):
     t = time.time() + 1
     touch(os.path.join(client.current_folder, "app.cpp"), (t, t))
 
-    client.run("build .")
+    client.run("build . --profile=profile")
     client.run_command("app")
     # TODO: fill compiler version when ready
     check_exe_run(client.out, "main2", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
