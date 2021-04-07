@@ -78,16 +78,16 @@ def test_component_aggregation():
     ret.to_absolute_paths("/root/folder")
 
     assert cppinfo.components["c1"].includedirs == ["includedir_c1"]
-    assert ret.components["c1"].includedirs == ["/root/folder/includedir_c1"]
+    assert norm(ret.components["c1"].includedirs) == ["/root/folder/includedir_c1"]
 
-    assert ret.build_modules == {"foo": ["/root/folder/var1", "/root/folder/var2",
-                                         "/root/folder/var3"]}
-    assert ret.includedirs == ["/root/folder/includedir"]
-    assert ret.libdirs == ["/root/folder/libdir"]
-    assert ret.srcdirs == ["/root/folder/srcdir"]
-    assert ret.bindirs == ["/root/folder/bindir"]
-    assert ret.builddirs == ["/root/folder/builddir"]
-    assert ret.frameworkdirs == ["/root/folder/frameworkdir"]
+    assert norm(ret.build_modules["foo"]) == ["/root/folder/var1", "/root/folder/var2",
+                                              "/root/folder/var3"]
+    assert norm(ret.includedirs) == ["/root/folder/includedir"]
+    assert norm(ret.libdirs) == ["/root/folder/libdir"]
+    assert norm(ret.srcdirs) == ["/root/folder/srcdir"]
+    assert norm(ret.bindirs) == ["/root/folder/bindir"]
+    assert norm(ret.builddirs) == ["/root/folder/builddir"]
+    assert norm(ret.frameworkdirs) == ["/root/folder/frameworkdir"]
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
@@ -105,12 +105,17 @@ def test_component_aggregation():
 
     ret.to_absolute_paths("/root/folder")
 
-    assert ret.includedirs == ["/root/folder/includedir_c2", "/root/folder/includedir_c1"]
-    assert ret.libdirs == ["/root/folder/libdir_c2", "/root/folder/libdir_c1"]
-    assert ret.srcdirs == ["/root/folder/srcdir_c2", "/root/folder/srcdir_c1"]
-    assert ret.bindirs == ["/root/folder/bindir_c2", "/root/folder/bindir_c1"]
-    assert ret.builddirs == ["/root/folder/builddir_c2", "/root/folder/builddir_c1"]
-    assert ret.frameworkdirs == ["/root/folder/frameworkdir_c2", "/root/folder/frameworkdir_c1"]
+    assert norm(ret.includedirs) == ["/root/folder/includedir_c2", "/root/folder/includedir_c1"]
+    assert norm(ret.libdirs) == ["/root/folder/libdir_c2", "/root/folder/libdir_c1"]
+    assert norm(ret.srcdirs) == ["/root/folder/srcdir_c2", "/root/folder/srcdir_c1"]
+    assert norm(ret.bindirs) == ["/root/folder/bindir_c2", "/root/folder/bindir_c1"]
+    assert norm(ret.builddirs) == ["/root/folder/builddir_c2", "/root/folder/builddir_c1"]
+    assert norm(ret.frameworkdirs) == ["/root/folder/frameworkdir_c2",
+                                       "/root/folder/frameworkdir_c1"]
+
+
+def norm(paths):
+    return [d.replace("\\", "/") for d in paths]
 
 
 def test_cpp_info_merge_with_components():
