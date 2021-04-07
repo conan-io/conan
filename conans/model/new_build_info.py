@@ -6,12 +6,12 @@ from conans.errors import ConanException
 from conans.model.build_info import DefaultOrderedDict
 
 _DIRS_VAR_NAMES = ["includedirs", "srcdirs", "libdirs", "resdirs", "bindirs", "builddirs",
-                  "frameworkdirs"]
+                   "frameworkdirs"]
 _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "cxxflags",
-                   "sharedlinkflags", "exelinkflags"]
+                    "sharedlinkflags", "exelinkflags"]
 
 
-class _BaseNewCppInfo(object):
+class _NewComponent(object):
 
     def __init__(self):
         self.names = {}
@@ -51,23 +51,32 @@ class _BaseNewCppInfo(object):
     def get_name(self, generator):
         return self.names.get(generator)
 
-    def to_absolute_paths(self, root_folder):
-        for name in _DIRS_VAR_NAMES:
-            setattr(self, name, [os.path.join(root_folder, c) for c in getattr(self, name)])
-
-        self.build_modules = {k: [os.path.join(root_folder, e) for e in v]
-                                  for k, v in self.build_modules.items()}
+    @property
+    def required_component_names(self):
+        """ Names of the required components of the same package (not scoped with ::)"""
+        return [r for r in self.requires if "::" not in r]
 
 
-class NewCppInfo(_BaseNewCppInfo):
+class NewCppInfo(object):
 
     def __init__(self):
         super(NewCppInfo, self).__init__()
-        # name of filename to create for various generators.
-        # To be used in find package where the filename and the name are not
-        # the same
+        self.components = DefaultOrderedDict(lambda: _NewComponent())
+        self.components[None] = _NewComponent()  # Main package is a component with None key
         self.filenames = {}
-        self.components = DefaultOrderedDict(lambda: NewComponent())
+
+    def __getattr__(self, attr):
+        return getattr(self.components[None], attr)
+
+    def __setattr__(self, attr, value):
+        if attr in ["components", "filenames"]:
+            super(NewCppInfo, self).__setattr__(attr, value)
+        else:
+            setattr(self.components[None], attr, value)
+
+    @property
+    def has_components(self):
+        return len(self.components) > 1
 
     @staticmethod
     def from_old_cppinfo(old):
@@ -92,8 +101,10 @@ class NewCppInfo(_BaseNewCppInfo):
         """
         processed = []  # Names of the components ordered
         # FIXME: Cache the sort
-        while len(self.components) > len(processed):
+        while (len(self.components) - 1) > len(processed):
             for name, c in self.components.items():
+                if name is None:
+                    continue
                 req_processed = [n for n in c.required_component_names if n not in processed]
                 if not req_processed and name not in processed:
                     processed.append(name)
@@ -102,71 +113,58 @@ class NewCppInfo(_BaseNewCppInfo):
 
     def aggregate_components(self):
         """Aggregates all the components as global values"""
-        if self.components:
+        if self.has_components:
             components = self.get_sorted_components()
             cnames = list(components.keys())
             cnames.reverse()  # More dependant first
 
             # Clean global values
             for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                setattr(self, n, [])
+                setattr(self.components[None], n, [])
 
             for name in cnames:
                 component = components[name]
                 for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                    dest = getattr(self, n)
+                    dest = getattr(self.components[None], n)
                     dest += [i for i in getattr(component, n) if i not in dest]
-                self.requires.extend(component.requires)
+                self.components[None].requires.extend(component.requires)
             # FIXME: What to do about sysroot?
-        self.components = DefaultOrderedDict(lambda: NewComponent())
+        # Leave only the aggregated value
+        main_value = self.components[None]
+        self.components = DefaultOrderedDict(lambda: _NewComponent())
+        self.components[None] = main_value
 
     def merge(self, other):
         # TODO: Still not used, to be used by global generators
         # If we are merging isolated cppinfo objects is because the generator is "global"
         # (dirs and flags in link order in a single list) so first call
         # cpp_info.aggregate_components()
-        if self.components  or other.components:
+        if self.has_components or other.has_components:
             raise ConanException("Cannot aggregate two cppinfo objects with components. "
                                  "Do cpp_info.aggregate_components() first")
         for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            dest = getattr(self, n)
+            dest = getattr(self.components[None], n)
             dest += [i for i in getattr(other, n) if i not in dest]
 
     def get_filename(self, generator):
-        return self.filenames.get(generator) or self.get_name(generator)
+        return self.filenames.get(generator) or \
+               self.components[None].get_name(generator)
 
     def copy(self):
-        ret = copy.copy(self)
-        ret.components = DefaultOrderedDict(lambda: NewComponent())
+        ret = NewCppInfo()
+        ret.filenames = copy.copy(self.filenames)
+        ret.components = DefaultOrderedDict(lambda: _NewComponent())
         for comp_name in self.components:
             ret.components[comp_name] = copy.copy(self.components[comp_name])
         return ret
-
-    def to_absolute_paths(self, root_folder):
-        super(NewCppInfo, self).to_absolute_paths(root_folder)
-        for comp in self.components.values():
-            comp.to_absolute_paths(root_folder)
 
     @property
     def required_components(self):
         """Returns a list of tuples with (require, component_name) required by the package
         If the require is internal (to another component), the require will be None"""
         # FIXME: Cache the value
-        ret = [r.split("::") for r in self.requires if "::" in r]
-        ret.extend([(None, r) for r in self.requires if "::" not in r and r not in ret])
+        ret = []
         for comp in self.components.values():
             ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
             ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
-
-
-class NewComponent(_BaseNewCppInfo):
-
-    def __init__(self):
-        super(NewComponent, self).__init__()
-        self.requires = []
-
-    @property
-    def required_component_names(self):
-        """ Names of the required components of the same package (not scoped with ::)"""
-        return [r for r in self.requires if "::" not in r]

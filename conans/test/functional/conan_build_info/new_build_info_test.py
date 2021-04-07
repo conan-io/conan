@@ -74,21 +74,6 @@ def test_component_aggregation():
     assert ret.cxxflags == ["cxxflags_c1", "cxxflags_c2"]
     assert ret.defines == ["defines_c1", "defines_c2"]
 
-    ret = cppinfo.copy()
-    ret.to_absolute_paths("/root/folder")
-
-    assert cppinfo.components["c1"].includedirs == ["includedir_c1"]
-    assert norm(ret.components["c1"].includedirs) == ["/root/folder/includedir_c1"]
-
-    assert norm(ret.build_modules["foo"]) == ["/root/folder/var1", "/root/folder/var2",
-                                              "/root/folder/var3"]
-    assert norm(ret.includedirs) == ["/root/folder/includedir"]
-    assert norm(ret.libdirs) == ["/root/folder/libdir"]
-    assert norm(ret.srcdirs) == ["/root/folder/srcdir"]
-    assert norm(ret.bindirs) == ["/root/folder/bindir"]
-    assert norm(ret.builddirs) == ["/root/folder/builddir"]
-    assert norm(ret.frameworkdirs) == ["/root/folder/frameworkdir"]
-
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
     cppinfo.components["c2"].requires = ["c1"]
@@ -102,16 +87,6 @@ def test_component_aggregation():
     assert ret.bindirs == ["bindir_c2", "bindir_c1"]
     assert ret.builddirs == ["builddir_c2", "builddir_c1"]
     assert ret.frameworkdirs == ["frameworkdir_c2", "frameworkdir_c1"]
-
-    ret.to_absolute_paths("/root/folder")
-
-    assert norm(ret.includedirs) == ["/root/folder/includedir_c2", "/root/folder/includedir_c1"]
-    assert norm(ret.libdirs) == ["/root/folder/libdir_c2", "/root/folder/libdir_c1"]
-    assert norm(ret.srcdirs) == ["/root/folder/srcdir_c2", "/root/folder/srcdir_c1"]
-    assert norm(ret.bindirs) == ["/root/folder/bindir_c2", "/root/folder/bindir_c1"]
-    assert norm(ret.builddirs) == ["/root/folder/builddir_c2", "/root/folder/builddir_c1"]
-    assert norm(ret.frameworkdirs) == ["/root/folder/frameworkdir_c2",
-                                       "/root/folder/frameworkdir_c1"]
 
 
 def norm(paths):

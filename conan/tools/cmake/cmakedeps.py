@@ -77,6 +77,7 @@ conan_package_library_targets = textwrap.dedent("""
 
 
 variables_template = """
+set({name}_PACKAGE_FOLDER "{package_folder}")
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
 set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
@@ -159,14 +160,17 @@ def find_transitive_dependencies(public_deps_filenames):
 
 
 class DepsCppCmake(object):
-    def __init__(self, cpp_info, generator_name):
+
+    def __init__(self, cpp_info, package_name, generator_name):
+
         def join_paths(paths):
             """
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-            return "\n\t\t\t".join('"%s"'
-                                   % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+            return "\n\t\t\t".join('"${%s_PACKAGE_FOLDER}/%s"' %
+                                   (package_name,
+                                    p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                    for p in paths)
 
         def join_flags(separator, values):
@@ -319,7 +323,7 @@ endforeach()
         {%- for comp_name, comp in components %}
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
-
+        set({{ pkg_name }}_PACKAGE_FOLDER "{{ package_folder }}")
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
         set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
@@ -505,14 +509,14 @@ endforeach()
         # FIXME: Ugly way to define the output path
         self.output_path = os.getcwd()
 
-    def _get_components(self, computed_names, pkg_name, cpp_info):
+    def _get_components(self, computed_names, req, cpp_info):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
         sorted_comps = cpp_info.get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
-            comp_genname = computed_names[pkg_name].components[comp_name]
-            deps_cpp_cmake = DepsCppCmake(comp, self.name)
+            comp_genname = computed_names[req.name].components[comp_name]
+            deps_cpp_cmake = DepsCppCmake(comp, computed_names[req.name].name, self.name)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -520,8 +524,8 @@ endforeach()
                     public_comp_deps.append("{}::{}".format(computed_names[pkg].name,
                                                             computed_names[pkg].components[cmp]))
                 else:  # Points to a component of same package
-                    public_comp_deps.append("{}::{}".format(computed_names[pkg_name].name,
-                                                            computed_names[pkg_name].components[require]))
+                    public_comp_deps.append("{}::{}".format(computed_names[req.name].name,
+                                                            computed_names[req.name].components[require]))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
             ret.append((comp_genname, deps_cpp_cmake))
         ret.reverse()
@@ -566,13 +570,12 @@ endforeach()
             dep_target_names = ';'.join(dep_target_names)
             config_version = self.config_version_template.format(version=req.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
-            abs_cppinfo = cpp_info.copy()
-            abs_cppinfo.to_absolute_paths(req.package_folder)
-            if not cpp_info.components:
-                deps = DepsCppCmake(abs_cppinfo, self.name)
+            if not cpp_info.has_components:
+                deps = DepsCppCmake(cpp_info, pkg_target_name, self.name)
                 variables = {
                    self._data_filename(pkg_filename):
                        variables_template.format(name=pkg_target_name, deps=deps,
+                                                 package_folder=req.package_folder,
                                                  build_type_suffix=build_type_suffix)
                              }
                 dynamic_variables = {
@@ -592,19 +595,21 @@ endforeach()
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
                     filename=pkg_filename, name=pkg_target_name)
             else:
-                components = self._get_components(computed_names, req.name, abs_cppinfo)
+                components = self._get_components(computed_names, req, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_cppinfo = abs_cppinfo.copy()
+                global_cppinfo = cpp_info.copy()
                 global_cppinfo.aggregate_components()
-                deps = DepsCppCmake(global_cppinfo, self.name)
+                deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
                 global_variables = variables_template.format(name=pkg_target_name, deps=deps,
+                                                             package_folder=req.package_folder,
                                                              build_type_suffix=build_type_suffix,
                                                              deps_names=dep_target_names)
                 variables = {
                     self._data_filename(pkg_filename):
                         self.components_variables_tpl.render(
+                         package_folder=req.package_folder,
                          pkg_name=pkg_target_name, global_variables=global_variables,
                          pkg_components=pkg_components, build_type=build_type, components=components)
                 }
@@ -723,8 +728,7 @@ endforeach()
         pkg_public_deps_filenames = []
 
         # Get a list of dependencies target names and file names
-        if cpp_info.required_components:  # Declared cppinfo.requires or \
-            # cppinfo.components[].requires
+        if cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
             for dep_name, component_name in cpp_info.required_components:
                 if dep_name:  # External dep
                     filename = computed_names[dep_name].filename
