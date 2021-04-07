@@ -1,4 +1,5 @@
 import time
+from collections import OrderedDict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD
@@ -8,6 +9,30 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements, Requirement
 from conans.util.log import logger
+
+
+class _RecipeBuildRequires(OrderedDict):
+    def __init__(self, conanfile, default_context):
+        super(_RecipeBuildRequires, self).__init__()
+        build_requires = getattr(conanfile, "build_requires", [])
+        if not isinstance(build_requires, (list, tuple)):
+            build_requires = [build_requires]
+        self._default_context = default_context
+        for build_require in build_requires:
+            self.add(build_require, context=self._default_context)
+
+    def add(self, build_require, context):
+        if not isinstance(build_require, ConanFileReference):
+            build_require = ConanFileReference.loads(build_require)
+        self[(build_require.name, context)] = build_require
+
+    def __call__(self, build_require, force_host_context=False):
+        context = CONTEXT_HOST if force_host_context else self._default_context
+        self.add(build_require, context)
+
+    def __str__(self):
+        items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
+        return ", ".join(items)
 
 
 class DepsGraphBuilder(object):
@@ -128,6 +153,20 @@ class DepsGraphBuilder(object):
             self._expand_require(require, node, graph, check_updates, update, remotes, profile_host,
                                  profile_build, new_reqs, new_options, graph_lock,
                                  context_switch=False)
+
+        # Now expand the build_requires
+        def _get_recipe_build_requires(conanfile, defaultcontext):
+            conanfile.build_requires = _RecipeBuildRequires(conanfile, defaultcontext)
+            if hasattr(conanfile, "build_requirements"):
+                with get_env_context_manager(conanfile):
+                    with conanfile_exception_formatter(str(conanfile), "build_requirements"):
+                        conanfile.build_requirements()
+
+            return conanfile.build_requires
+
+        default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
+        package_build_requires = _get_recipe_build_requires(node.conanfile, default_context)
+        str_ref = str(node.ref)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:

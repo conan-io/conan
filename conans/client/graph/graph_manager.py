@@ -1,5 +1,5 @@
 import fnmatch
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.build_mode import BuildMode
@@ -7,33 +7,8 @@ from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
     BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-
-
-class _RecipeBuildRequires(OrderedDict):
-    def __init__(self, conanfile, default_context):
-        super(_RecipeBuildRequires, self).__init__()
-        build_requires = getattr(conanfile, "build_requires", [])
-        if not isinstance(build_requires, (list, tuple)):
-            build_requires = [build_requires]
-        self._default_context = default_context
-        for build_require in build_requires:
-            self.add(build_require, context=self._default_context)
-
-    def add(self, build_require, context):
-        if not isinstance(build_require, ConanFileReference):
-            build_require = ConanFileReference.loads(build_require)
-        self[(build_require.name, context)] = build_require
-
-    def __call__(self, build_require, force_host_context=False):
-        context = CONTEXT_HOST if force_host_context else self._default_context
-        self.add(build_require, context)
-
-    def __str__(self):
-        items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
-        return ", ".join(items)
 
 
 class GraphManager(object):
@@ -216,16 +191,6 @@ class GraphManager(object):
         build_mode.report_matches()
         return deps_graph
 
-    @staticmethod
-    def _get_recipe_build_requires(conanfile, default_context):
-        conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
-        if hasattr(conanfile, "build_requirements"):
-            with get_env_context_manager(conanfile):
-                with conanfile_exception_formatter(str(conanfile), "build_requirements"):
-                    conanfile.build_requirements()
-
-        return conanfile.build_requires
-
     def _recurse_build_requires(self, graph, builder, check_updates,
                                 update, build_mode, remotes, profile_build_requires, recorder,
                                 profile_host, profile_build, graph_lock, apply_build_requires=True,
@@ -309,11 +274,6 @@ class GraphManager(object):
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
                                    profile_build, graph_lock)
-
-        self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
-                                     remotes, profile_host_build_requires, recorder, profile_host,
-                                     profile_build, graph_lock,
-                                     apply_build_requires=apply_build_requires)
 
         # Sort of closures, for linking order
         inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
