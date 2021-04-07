@@ -26,8 +26,8 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
     @param generators: List of generators from command line. If False, no generator will be
     written
     @param no_imports: Install specified packages but avoid running imports
-
     """
+
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
 
     if generators is not False:

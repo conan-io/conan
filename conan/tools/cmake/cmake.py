@@ -13,6 +13,7 @@ from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
 from conans.util.conan_v2_mode import conan_v2_error
+from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 
 

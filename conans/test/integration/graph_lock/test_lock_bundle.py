@@ -99,6 +99,14 @@ def test_basic():
     assert nodes["3"].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
     assert nodes["3"].prev == "49a476d1af8fd693e5a5858c0a1e7813"
 
+    client.run("lock bundle clean-modified lock1.bundle")
+    bundle = client.load("lock1.bundle")
+    assert '"modified": true' not in bundle
+    lock1 = client.load("app1_windows.lock")
+    assert '"modified": true' not in lock1
+    lock2 = client.load("app2_linux.lock")
+    assert '"modified": true' not in lock2
+
 
 def test_build_requires():
     client = TestClient()
@@ -218,8 +226,6 @@ def test_build_requires():
 def test_build_requires_error():
     # https://github.com/conan-io/conan/issues/8577
     client = TestClient()
-    # TODO: This is hardcoded
-    client.run("config set general.revisions_enabled=1")
     client.save({"tool/conanfile.py": GenConanfile().with_settings("os"),
                  "pkga/conanfile.py": GenConanfile().with_settings("os"),
                  "app1/conanfile.py": GenConanfile().with_settings("os").with_requires("pkga/0.1"),

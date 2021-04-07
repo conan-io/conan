@@ -10,7 +10,6 @@ from parameterized import parameterized
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONAN_MANIFEST
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import load, save
 
@@ -229,7 +228,10 @@ class ExportTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.files = cpp_hello_conan_files("Hello0", "0.1")
+        self.files = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+                      "main.cpp": "MyMain",
+                      "CMakeLists.txt": "MyCmake",
+                      "executable": "myexe"}
         self.ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         self.client.save(self.files)
         self.client.run("export . lasote/stable")
@@ -246,18 +248,15 @@ class ExportTest(unittest.TestCase):
         for name in list(self.files.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
-        expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
-                         'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
-                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
+        expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
+                         'conanfile.py': '73eb512b9f02ac18278823a217cfff79',
+                         'executable': 'db299d5f0d82f113fad627a21f175e59',
+                         'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_case_sensitive(self):
-        self.files = cpp_hello_conan_files("hello0", "0.1")
         self.ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
-        self.client.save(self.files)
+        self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
         self.client.run("export . lasote/stable", assert_error=True)
         self.assertIn("ERROR: Cannot export package with same name but different case",
                       self.client.out)
@@ -267,8 +266,7 @@ class ExportTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
         ref = ConanFileReference.loads('openssl/2.0.1@lasote/stable')
         reg_path = self.client.cache.package_layout(ref).export()
-        self.assertEqual(sorted(os.listdir(reg_path)),
-                         [CONANFILE, CONAN_MANIFEST])
+        self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
 
         content = """
 from conans import ConanFile
@@ -280,8 +278,7 @@ class OpenSSLConan(ConanFile):
 """
         self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
-        self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
+        self.assertEqual(sorted(os.listdir(reg_path)), ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
 
         # Now exports being a list instead a tuple
         content = """
@@ -295,14 +292,17 @@ class OpenSSLConan(ConanFile):
         self.client.save({CONANFILE: content})
         self.client.run("export . lasote/stable")
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
+                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST])
 
     def test_export_the_same_code(self):
         file_list = self._create_packages_and_builds()
         # Export the same conans
         # Do not adjust cpu_count, it is reusing a cache
         client2 = TestClient(self.client.cache_folder, cpu_count=False)
-        files2 = cpp_hello_conan_files("Hello0", "0.1")
+        files2 = {"conanfile.py": GenConanfile("Hello0", "0.1").with_exports("*"),
+                  "main.cpp": "MyMain",
+                  "CMakeLists.txt": "MyCmake",
+                  "executable": "myexe"}
         client2.save(files2)
         client2.run("export . lasote/stable")
         reg_path2 = client2.cache.package_layout(self.ref).export()
@@ -320,12 +320,10 @@ class OpenSSLConan(ConanFile):
         for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path2, name)))
 
-        expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
-                         'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': '1ad1f4b995ae7ffdb00d53ff49e1366f',
-                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
+        expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
+                         'conanfile.py': '73eb512b9f02ac18278823a217cfff79',
+                         'executable': 'db299d5f0d82f113fad627a21f175e59',
+                         'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, digest2.file_sums)
 
         for f in file_list:
@@ -337,8 +335,12 @@ class OpenSSLConan(ConanFile):
 
         # Do not adjust cpu_count, it is reusing a cache
         client2 = TestClient(self.client.cache_folder, cpu_count=False)
-        files2 = cpp_hello_conan_files("Hello0", "0.1")
-        files2[CONANFILE] = "# insert comment\n %s" % files2[CONANFILE]
+        files2 = {"conanfile.py": "# insert comment\n" +
+                                  str(GenConanfile("Hello0", "0.1").with_exports("*")),
+                  "main.cpp": "MyMain",
+                  "CMakeLists.txt": "MyCmake",
+                  "executable": "myexe"}
+
         client2.save(files2)
         client2.run("export . lasote/stable")
 
@@ -354,12 +356,10 @@ class OpenSSLConan(ConanFile):
         for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path3, name)))
 
-        expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
-                         'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '10d907c160c360b28f6991397a5aa9b4',
-                         'conanfile.py': 'e309305959502e16f8a57439bb6a4107',
-                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': 'd0a6868b5df17a6ae6e61ebddb0c9eb3'}
+        expected_sums = {'CMakeLists.txt': '3cf710785270c7e98a30d4a90ea66492',
+                         'conanfile.py': 'dd0b69a21ef8b37ed93fce4d5a470ba0',
+                         'executable': 'db299d5f0d82f113fad627a21f175e59',
+                         'main.cpp': 'd9c03c934a4b3b1670775c17c26f39e9'}
         self.assertEqual(expected_sums, digest3.file_sums)
 
         # for f in file_list:
@@ -389,7 +389,7 @@ class ExportMetadataTest(unittest.TestCase):
 
         class Lib(ConanFile):
             revision_mode = "{revision_mode}"
-    """)
+        """)
 
     summary_hash = "bfe8b4a6a2a74966c0c4e0b34705004a"
 
@@ -402,17 +402,6 @@ class ExportMetadataTest(unittest.TestCase):
 
         meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
         self.assertEqual(meta.recipe.revision, self.summary_hash)
-
-    @pytest.mark.tool_git
-    def test_revision_mode_scm(self):
-        t = TestClient()
-        commit = t.init_git_repo({'conanfile.py': self.conanfile.format(revision_mode="scm")})
-
-        ref = ConanFileReference.loads("name/version@user/channel")
-        t.run("export . {}".format(ref))
-
-        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
-        self.assertEqual(meta.recipe.revision, commit)
 
     def test_revision_mode_invalid(self):
         conanfile = self.conanfile.format(revision_mode="auto")
