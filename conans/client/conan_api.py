@@ -242,7 +242,7 @@ class ConanAPIV1(object):
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None,
             circleci_gcc_versions=None, circleci_clang_versions=None, circleci_osx_versions=None,
-            template=None):
+            template=None, defines=None):
         from conans.client.cmd.new import cmd_new
         cwd = os.path.abspath(cwd or os.getcwd())
         files = cmd_new(name, header=header, pure_c=pure_c, test=test,
@@ -257,7 +257,7 @@ class ConanAPIV1(object):
                         circleci_gcc_versions=circleci_gcc_versions,
                         circleci_clang_versions=circleci_clang_versions,
                         circleci_osx_versions=circleci_osx_versions,
-                        template=template, cache=self.app.cache)
+                        template=template, cache=self.app.cache, defines=defines)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -1358,6 +1358,46 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile)
 
     @api_method
+    def lock_install(self, lockfile, remote_name=None, build=None,
+                     generators=None, install_folder=None, cwd=None,
+                     lockfile_out=None, recipes=None):
+        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+        graph_info = get_graph_info(None, None, cwd,
+                                    self.app.cache, self.app.out, lockfile=lockfile)
+        phost, pbuild, graph_lock, root_ref = graph_info
+
+        if not generators:  # We don't want the default txt
+            generators = False
+
+        install_folder = _make_abs_path(install_folder, cwd)
+
+        mkdir(install_folder)
+        remotes = self.app.load_remotes(remote_name=remote_name)
+        recorder = ActionRecorder()
+        root_id = graph_lock.root_node_id()
+        reference = graph_lock.nodes[root_id].ref
+        if recipes:
+            graph = self.app.graph_manager.load_graph(reference, create_reference=None,
+                                                      profile_host=phost, profile_build=pbuild,
+                                                      graph_lock=graph_lock,
+                                                      root_ref=root_ref,
+                                                      build_mode=None,
+                                                      check_updates=False, update=None,
+                                                      remotes=remotes, recorder=recorder,
+                                                      lockfile_node_id=root_id)
+            print_graph(graph, self.app.out)
+        else:
+            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                         profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
+                         root_ref=root_ref, remotes=remotes, build_modes=build,
+                         generators=generators, recorder=recorder, lockfile_node_id=root_id)
+
+        if lockfile_out:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
+            graph_lock_file.save(lockfile_out)
+
+    @api_method
     def lock_bundle_create(self, lockfiles, lockfile_out, cwd=None):
         cwd = cwd or os.getcwd()
         result = LockBundle.create(lockfiles, cwd)
@@ -1378,6 +1418,12 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
         lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
         LockBundle.update_bundle(lock_bundle_path)
+
+    @api_method
+    def lock_bundle_clean_modified(self, lock_bundle_path, cwd=None):
+        cwd = cwd or os.getcwd()
+        lock_bundle_path = _make_abs_path(lock_bundle_path, cwd)
+        LockBundle.clean_modified(lock_bundle_path)
 
     @api_method
     def lock_create(self, path, lockfile_out,

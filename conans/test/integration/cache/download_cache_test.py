@@ -165,7 +165,6 @@ class DownloadCacheTest(unittest.TestCase):
 
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
-        client.run("config set general.revisions_enabled=False")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -181,7 +180,6 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         client2 = TestClient(servers=client.servers)
-        client2.run("config set general.revisions_enabled=True")
         cache_folder = temp_folder()
         client2.run('config set storage.download_cache="%s"' % cache_folder)
         client2.run("install mypkg/0.1@user/testing")

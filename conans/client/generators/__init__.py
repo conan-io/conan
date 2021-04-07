@@ -65,7 +65,7 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv"]
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -94,6 +94,15 @@ class GeneratorManager(object):
         elif generator_name == "MakeToolchain":
             from conan.tools.gnu import MakeToolchain
             return MakeToolchain
+        elif generator_name == "AutotoolsDeps":
+            from conan.tools.gnu import AutotoolsDeps
+            return AutotoolsDeps
+        elif generator_name == "AutotoolsToolchain":
+            from conan.tools.gnu import AutotoolsToolchain
+            return AutotoolsToolchain
+        elif generator_name == "AutotoolsGen":
+            from conan.tools.gnu import AutotoolsGen
+            return AutotoolsGen
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain

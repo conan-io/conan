@@ -77,6 +77,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         channel = None
 
     ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    conanfile.display_name = str(ref)
+    conanfile.output.scope = conanfile.display_name
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:

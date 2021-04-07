@@ -183,6 +183,15 @@ class CMakeTest(unittest.TestCase):
                          CMakeTest.scape(". --target test -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
 
+    def test_conan_run_tests(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_test = True
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        with tools.environment_append({"CONAN_RUN_TESTS": "0"}):
+            cmake.test()
+            self.assertIsNone(conanfile.command)
+
     def test_cmake_generator(self):
         conanfile = ConanFileMock()
         conanfile.settings = Settings()
