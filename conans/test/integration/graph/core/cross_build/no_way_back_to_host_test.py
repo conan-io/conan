@@ -3,7 +3,7 @@ import textwrap
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.integration.cross_building.graph._base_test_case import CrossBuildingBaseTestCase
+from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
 
 
 class NoWayBackToHost(CrossBuildingBaseTestCase):
@@ -21,22 +21,22 @@ class NoWayBackToHost(CrossBuildingBaseTestCase):
             version = "testing"
 
             settings = "os"
-            
+
             def build_requirements(self):
                 # From the perspective of this package, the "host" context is the same one
                 #  as the one where `build_tool` is being built.
-                self.build_requires("host_tool/testing@user/channel", force_host_context=True) 
+                self.build_requires("host_tool/testing@user/channel", force_host_context=True)
 
             def build(self):
                 self.output.info(">> settings.os:".format(self.settings.os))
-                
+
             def package_info(self):
                 build_tool_str = "build_tool-host" if self.settings.os == "Host" else "build_tool-build"
 
                 self.cpp_info.includedirs = [build_tool_str, ]
                 self.cpp_info.libdirs = [build_tool_str, ]
                 self.cpp_info.bindirs = [build_tool_str, ]
-                
+
                 self.env_info.PATH.append(build_tool_str)
                 self.env_info.OTHERVAR = build_tool_str
     """)
