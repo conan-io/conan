@@ -716,16 +716,19 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def config_install_interval(self):
+        item = "general.config_install_interval"
         try:
-            interval = self.get_item("general.config_install_interval")
+            interval = self.get_item(item)
         except ConanException:
             return None
 
         try:
             return timedelta_from_text(interval)
         except Exception:
-            raise ConanException("Incorrect definition of general.config_install_interval: %s"
-                                 % interval)
+            self.rm_item(item)
+            raise ConanException("Incorrect definition of general.config_install_interval: {}. "
+                                 "Removing it from conan.conf to avoid possible loop error."
+                                 .format(interval))
 
     @property
     def required_conan_version(self):
