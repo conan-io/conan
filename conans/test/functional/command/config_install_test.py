@@ -7,6 +7,7 @@ import unittest
 
 import pytest
 from mock import patch
+from parameterized import parameterized
 
 from conans.client.cache.remote_registry import Remote
 from conans.client.conf import ConanClientConfigParser
@@ -635,6 +636,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.folder = temp_folder(path_with_spaces=False)
         save_files(self.folder, {"conan.conf": conanconf_interval})
         self.client = TestClient()
+        self.client.save({"conanfile.txt": ""})
 
     def test_config_install_sched_file(self):
         """ Config install can be executed without restriction
@@ -683,14 +685,17 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.client.run('config get general.config_install_interval', assert_error=True)
         self.assertIn("config_install_interval defined, but no config_install file", self.client.out)
 
-    def test_invalid_time_interval(self):
-        """ config_install_interval only accepts minutes, hours or days
+    @parameterized.expand([("1y",), ("2015t",), ("42",)])
+    def test_invalid_time_interval(self, internal):
+        """ config_install_interval only accepts seconds, minutes, hours, days and weeks.
         """
-        self.client.run('config set general.config_install_interval=1s')
+        self.client.run('config set general.config_install_interval={}'.format(internal))
         # Any conan invocation will fire the configuration error
         self.client.run('install .', assert_error=True)
-        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: 1s",
+        self.assertIn("ERROR: Incorrect definition of general.config_install_interval: {}. "
+                      "Removing it from conan.conf to avoid possible loop error.".format(internal),
                       self.client.out)
+        self.client.run('install .')
 
     @pytest.mark.tool_git
     def test_config_install_remove_git_repo(self):
