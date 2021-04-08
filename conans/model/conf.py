@@ -151,7 +151,10 @@ class ConfDefinition(object):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            left, value = line.split("=", 1)
+            try:
+                left, value = line.split("=", 1)
+            except Exception:
+                raise ConanException("Error while parsing conf value '{}'".format(line))
             value = value.strip()
             tokens = left.strip().split(":", 2)
             if len(tokens) == 3:
