@@ -1,4 +1,5 @@
 import os
+import sys
 import textwrap
 import unittest
 
@@ -90,9 +91,16 @@ sources:
     @pytest.mark.local_bottle
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
-        md5_value = "2ef49b5a102db1abb775eaf1922d5662"
-        sha1_value = "18dbea2d9a97bb9e9948604a41976bba5b5940bf"
-        sha256_value = "9619013c1f7b83cca4bf3f336f8b4525a23d5463e0768599fe5339e02dd0a338"
+        if sys.version_info.major == 3 and sys.version_info.minor == 9:
+            # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
+            # https://github.com/conan-io/conan/issues/8020
+            md5_value = "7ebdc5ed79b7b72f3a6010da3671ae05"
+            sha1_value = "862c1b58de1dfadaad3206b453b4de731c1751af"
+            sha256_value = "25200fc2bd7f430358cd7a7c5ce4a84396e8ec68a1e9d8880994b1236f214972"
+        else:
+            md5_value = "2ef49b5a102db1abb775eaf1922d5662"
+            sha1_value = "18dbea2d9a97bb9e9948604a41976bba5b5940bf"
+            sha256_value = "9619013c1f7b83cca4bf3f336f8b4525a23d5463e0768599fe5339e02dd0a338"
         self.assertEqual(md5_value, md5sum(tgz_path))
         self.assertEqual(sha1_value, sha1sum(tgz_path))
         self.assertEqual(sha256_value, sha256sum(tgz_path))
