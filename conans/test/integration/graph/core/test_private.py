@@ -1,4 +1,3 @@
-import six
 from parameterized import parameterized
 
 from conans.errors import ConanException
@@ -70,7 +69,7 @@ class PrivateGraphTest(GraphManagerTest):
                                                    .with_require(liba_ref))
         self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
                                                    .with_require(liba_ref2))
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in libc/0.1@user/testing:\n"
                                    "    'libc/0.1@user/testing' requires 'liba/0.2@user/testing' "
                                    "while 'libb/0.1@user/testing' requires 'liba/0.1@user/testing'."
@@ -90,7 +89,7 @@ class PrivateGraphTest(GraphManagerTest):
                                                    .with_require(lib_ref, private=True))
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_require(tool_ref, private=True))
-        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+        with self.assertRaisesRegex(ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing'"
                                                          " requires 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
@@ -109,7 +108,7 @@ class PrivateGraphTest(GraphManagerTest):
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
                                                       .with_require(grass01_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in cheetah/0.1:\n"
             "    'cheetah/0.1' requires 'grass/0.2@user/testing' while 'gazelle/0.1@user/testing'"
             " requires 'grass/0.1@user/testing'.\n"

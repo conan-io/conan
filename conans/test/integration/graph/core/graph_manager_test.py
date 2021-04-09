@@ -1,5 +1,3 @@
-import six
-
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
 from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -201,7 +199,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 
-        with six.assertRaisesRegex(self, ConanException, "Conflict in libc/0.1:\n"
+        with self.assertRaisesRegex(ConanException, "Conflict in libc/0.1:\n"
             "    'libc/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
             "    To fix this conflict you need to override the package 'liba' in your root "
             "package."):
@@ -216,13 +214,13 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
+        with self.assertRaisesRegex(ConanException,
+                                    "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
             self.build_consumer(consumer)
 
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
+        with self.assertRaisesRegex(ConanException,
+                                    "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
             self.build_consumer(consumer)

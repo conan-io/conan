@@ -1,4 +1,3 @@
-import six
 from parameterized import parameterized
 
 from conans.errors import ConanException
@@ -66,7 +65,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
                                                   .with_build_requires(tool_ref))
 
-        with six.assertRaisesRegex(self, ConanException, "Loop detected in context host:"
+        with self.assertRaisesRegex(ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing' requires"
                                                          " 'lib/0.1@user/testing'"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
@@ -127,7 +126,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
                                                   .with_require(zlib_ref)
                                                   .with_build_requires(gtest_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in gtest/0.1@user/testing:\n"
                                    "    'gtest/0.1@user/testing' requires 'zlib/0.2@user/testing' "
                                    "while 'lib/0.1@user/testing' requires 'zlib/0.1@user/testing'."
@@ -227,7 +226,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
                                                   .with_require(zlib_ref)
                                                   .with_build_requires(gtest_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "tried to change zlib/0.1@user/testing option shared to True"):
             self.build_graph(GenConanfile().with_name("app").with_version("0.1")
                                            .with_require(lib_ref))
@@ -364,7 +363,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
                                                       .with_require(grass01_ref))
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Conflict in cheetah/0.1:\n"
                                    "    'cheetah/0.1' requires 'grass/0.2@user/testing' while "
                                    "'gazelle/0.1@user/testing' requires 'grass/0.1@user/testing'.\n"
