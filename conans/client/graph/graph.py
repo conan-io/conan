@@ -261,20 +261,6 @@ class DepsGraph(object):
             for node in level:
                 yield node
 
-    def _inverse_closure(self, references):
-        closure = set()
-        current = [n for n in self.nodes if str(n.ref) in references or "ALL" in references]
-        closure.update(current)
-        while current:
-            new_current = set()
-            for n in current:
-                closure.add(n)
-                new_neighs = n.inverse_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
-            current = new_current
-        return closure
-
     def nodes_to_build(self):
         ret = []
         for node in self.ordered_iterate():
