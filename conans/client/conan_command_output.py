@@ -51,22 +51,6 @@ class CommandOutputer(object):
             pref = PackageReference.loads(package_reference)
             self._output.info("%s: %s" % (pref.full_str(), remote_name))
 
-    def build_order(self, info):
-        groups = [[ref.copy_clear_rev() for ref in group] for group in info]
-        msg = ", ".join(str(s) for s in groups)
-        self._output.info(msg)
-
-    def json_build_order(self, info, json_output, cwd):
-        data = {"groups": [[repr(ref.copy_clear_rev()) for ref in group] for group in info]}
-        json_str = json.dumps(data)
-        if json_output is True:  # To the output
-            self._output.write(json_str)
-        else:  # Path to a file
-            cwd = os.path.abspath(cwd or os.getcwd())
-            if not os.path.isabs(json_output):
-                json_output = os.path.join(cwd, json_output)
-            save(json_output, json_str)
-
     def json_output(self, info, json_output, cwd):
         cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):

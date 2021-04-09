@@ -688,23 +688,6 @@ class ConanAPIV1(object):
         return ref, profile_host, profile_build, graph_lock, root_ref
 
     @api_method
-    def info_build_order(self, reference, settings=None, options=None, env=None,
-                         profile_names=None, remote_name=None, build_order=None, check_updates=None,
-                         profile_build=None,name=None, version=None, user=None, channel=None):
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
-                                   env=env)
-        reference, profile_host, profile_build, graph_lock, root_ref = \
-            self._info_args(reference, profile_host, profile_build, name=name,
-                            version=version, user=user, channel=channel)
-        recorder = ActionRecorder()
-        remotes = self.app.load_remotes(remote_name=remote_name, check_updates=check_updates)
-        deps_graph = self.app.graph_manager.load_graph(reference, None, profile_host,
-                                                       profile_build, graph_lock,
-                                                       root_ref, ["missing"],
-                                                       check_updates, False, remotes, recorder)
-        return deps_graph.build_order(build_order)
-
-    @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_names=None, remote_name=None, check_updates=None,
                             profile_build=None, name=None, version=None, user=None, channel=None):

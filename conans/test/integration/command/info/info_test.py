@@ -276,80 +276,6 @@ class InfoTest(unittest.TestCase):
         self.assertEqual(content[1]["url"], "myurl")
         self.assertEqual(content[1]["required_by"][0], "conanfile.py (LibD/0.1)")
 
-    def test_build_order(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info conanfile.py -bo=Hello1/0.1@lasote/stable")
-        self.assertIn("[Hello1/0.1@lasote/stable]", self.client.out)
-
-        self.client.run("info ./ -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n", self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable "
-                        "--json=file.json")
-        self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                         self.client.load("file.json"))
-
-        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
-        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
-                      self.client.out)
-
-        self.client.run("info Hello1/0.1@lasote/stable --build-order=Hello0/0.1@lasote/stable "
-                        "--graph=index.html", assert_error=True)
-        self.assertIn("--build-order cannot be used together with --graph", self.client.out)
-
-    def test_diamond_build_order(self):
-        self.client = TestClient()
-        self._create("LibA", "0.1")
-        self._create("LibE", "0.1")
-        self._create("LibF", "0.1")
-
-        self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
-        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
-
-        self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
-                     export=False)
-
-        self.client.run("info . -bo=LibA/0.1@lasote/stable")
-        self.assertIn("[LibA/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=LibB/0.1@lasote/stable")
-        self.assertIn("[LibB/0.1@lasote/stable]", self.client.out)
-        self.client.run("info . -bo=LibE/0.1@lasote/stable")
-        self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=LibF/0.1@lasote/stable")
-        self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
-                      self.client.out)
-        self.client.run("info . -bo=Dev1/0.1@lasote/stable")
-        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
-        self.client.run("info . -bo=LibG/0.1@lasote/stable")
-        self.assertEqual("WARN: Usage of `--build-order` argument is deprecated and can return wrong"
-                         " results. Use `conan lock build-order ...` instead.\n\n", self.client.out)
-
-        self.client.run("info . --build-order=ALL")
-        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-
-        self.client.run("info . --build-order=ALL")
-        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
-                      "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
-                      self.client.out)
-
 
 class InfoTest2(unittest.TestCase):
 
@@ -438,45 +364,6 @@ class InfoTest2(unittest.TestCase):
 
         client.run("info ./subfolder")
         self.assertIn("conanfile.py (Pkg/0.1)", client.out)
-
-        client.run("info ./subfolder --build-order Pkg/0.1@lasote/testing --json=jsonfile.txt")
-        path = os.path.join(client.current_folder, "jsonfile.txt")
-        self.assertTrue(os.path.exists(path))
-
-    def test_build_order_build_requires(self):
-        # https://github.com/conan-io/conan/issues/3267
-        client = TestClient()
-        conanfile = str(GenConanfile())
-        client.save({"conanfile.py": conanfile})
-        client.run("create . tool/0.1@user/channel")
-        client.run("create . dep/0.1@user/channel")
-        conanfile = conanfile + 'requires = "dep/0.1@user/channel"'
-        client.save({"conanfile.py": conanfile})
-        client.run("export . Pkg/0.1@user/channel")
-        client.run("export . Pkg2/0.1@user/channel")
-        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel",
-                     "myprofile": "[build_requires]\ntool/0.1@user/channel"}, clean_first=True)
-        client.run("info . -pr=myprofile -bo=tool/0.1@user/channel")
-        self.assertIn("[tool/0.1@user/channel], [Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
-                      client.out)
-
-    def test_build_order_privates(self):
-        # https://github.com/conan-io/conan/issues/3267
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . tool/0.1@user/channel")
-        client.save({"conanfile.py": GenConanfile().with_require("tool/0.1@user/channel")})
-        client.run("create . dep/0.1@user/channel")
-        client.save({"conanfile.py": GenConanfile().with_require("dep/0.1@user/channel",
-                                                                 private=True)})
-        client.run("export . Pkg/0.1@user/channel")
-        client.run("export . Pkg2/0.1@user/channel")
-        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/channel\nPkg2/0.1@user/channel"},
-                    clean_first=True)
-        client.run("info . -bo=tool/0.1@user/channel")
-        self.assertIn("[tool/0.1@user/channel], [dep/0.1@user/channel], "
-                      "[Pkg/0.1@user/channel, Pkg2/0.1@user/channel]",
-                      client.out)
 
     def test_wrong_path_parameter(self):
         client = TestClient()

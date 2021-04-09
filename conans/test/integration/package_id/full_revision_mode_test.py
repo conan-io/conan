@@ -52,14 +52,10 @@ class FullRevisionModeTest(unittest.TestCase):
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
         clientc.run("install . user/testing --build=libb")
-        clientc.run("info . --build-order=ALL")
 
         clienta.run("create . liba/0.1@user/testing")
         clientc.run("install . user/testing", assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for 'libb/0.1@user/testing'", clientc.out)
-
-        clienta.run("create . liba/0.1@user/testing")
-        clientc.run("info . --build-order=ALL")
 
     def test_binary_id_recomputation_after_build(self):
         clienta = TestClient()
