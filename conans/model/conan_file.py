@@ -42,22 +42,6 @@ def create_options(conanfile):
         raise ConanException("Error while initializing options. %s" % str(e))
 
 
-def create_requirements(conanfile):
-    try:
-        # Actual requirements of this package
-        if not hasattr(conanfile, "requires"):
-            return Requirements()
-        else:
-            if not conanfile.requires:
-                return Requirements()
-            if isinstance(conanfile.requires, (tuple, list)):
-                return Requirements(*conanfile.requires)
-            else:
-                return Requirements(conanfile.requires, )
-    except Exception as e:
-        raise ConanException("Error while initializing requirements. %s" % str(e))
-
-
 def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
@@ -142,6 +126,7 @@ class ConanFile(object):
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
+        self.requires = Requirements(getattr(self, "requires", None))
 
     @property
     def context(self):
@@ -166,7 +151,6 @@ class ConanFile(object):
             self.generators = [self.generators]
         # User defined options
         self.options = create_options(self)
-        self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
         conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"

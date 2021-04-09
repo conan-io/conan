@@ -155,17 +155,3 @@ class GraphManagerTest(unittest.TestCase):
         for d in dependents:
             self.assertIn(d, dependants)
 
-        # The recipe requires is resolved to the reference WITH revision!
-        self.assertEqual(len(deps), len(conanfile.requires))
-        for dep in deps:
-            self.assertEqual(conanfile.requires[dep.name].ref, dep.ref)
-
-        self.assertEqual(closure, list(node.public_closure))
-        libs = []
-        envs = []
-        for n in closure:
-            libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
-            envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertListEqual(list(conanfile.deps_cpp_info.libs), libs)
-        env = {"MYENV": envs} if envs else {}
-        self.assertEqual(conanfile.deps_env_info.vars, env)

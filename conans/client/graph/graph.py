@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
+from conans.model.requires import Requirement
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -27,9 +28,37 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
-class _TransitivePackages(OrderedDict):
-    # {relation: Node}
-    pass
+class _PackageRelation:
+    def __init__(self, ref):
+        self.ref = ref
+
+    def transform_downstream(self, node):
+        assert node
+        return _PackageRelation(self.ref)
+
+    def __hash__(self):
+        return hash(self.ref)
+
+    def __eq__(self, other):
+        return self.ref == other.ref
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class _TransitivePackages:
+    def __init__(self):
+        # The PackageRelation hash function is the key here
+        self._relations = OrderedDict()  # {require: Node}
+
+    def get(self, relation):
+        return self._relations.get(relation)
+
+    def set(self, relation, node):
+        self._relations[relation] = node
+
+    def items(self):
+        return self._relations.items()
 
 
 class Node(object):
@@ -54,16 +83,51 @@ class Node(object):
         # real graph model
         self.transitive_deps = _TransitivePackages()
         self.dependencies = []  # Ordered Edges
-        self.dependants = set()  # Edges
+        self.dependants = []  # Edges
+
+    def propagate_downstream(self, relation, node):
+        if not isinstance(relation, _PackageRelation):
+            assert isinstance(relation, Requirement)
+            relation = _PackageRelation(relation.ref)
+
+        self.transitive_deps.set(relation, node)
+        # Check if need to propagate downstream
+        downstream_relation = relation.transform_downstream(self)
+        if downstream_relation is None:
+            return
+
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        d = self.dependants[0]
+        source_node = d.src
+        return source_node.propagate_downstream(downstream_relation, node)
+
+    def closing_loop(self, relation, node):
+        # Check if need to propagate downstream
+        downstream_relation = relation.transform_downstream(self)
+        if downstream_relation is None:
+            return
+
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        d = self.dependants[0]
+        source_node = d.src
+        return source_node.propagate_downstream(downstream_relation, node)
 
     def check_downstream_exists(self, relation):
+        if not isinstance(relation, _PackageRelation):
+            assert isinstance(relation, Requirement)
+            relation = _PackageRelation(relation.ref)
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(relation)
         if prev:
             return prev
 
         # Check if need to propagate downstream
-        if not relation.propagate_downstream(self):
+        downstream_relation = relation.transform_downstream(self)
+        if downstream_relation is None:
             return
 
         # Then propagate downstream
@@ -73,9 +137,9 @@ class Node(object):
         if not self.dependants:
             return
         assert len(self.dependants) == 1
-        d =
-
-
+        d = self.dependants[0]
+        source_node = d.src
+        return source_node.check_downstream_exists(downstream_relation)
 
     @property
     def package_id(self):
@@ -100,7 +164,7 @@ class Node(object):
             if edge not in self.dependencies:
                 self.dependencies.append(edge)
         else:
-            self.dependants.add(edge)
+            self.dependants.append(edge)
 
     def neighbors(self):
         return [edge.dst for edge in self.dependencies]
@@ -110,17 +174,6 @@ class Node(object):
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
-
-    def __eq__(self, other):
-        return (self.ref == other.ref and
-                self.conanfile == other.conanfile and
-                self.context == other.context)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.ref, self.conanfile, self.context))
 
     def __repr__(self):
         return repr(self.conanfile)
@@ -132,30 +185,22 @@ class Edge(object):
         self.dst = dst
         self.require = require
 
-    def __eq__(self, other):
-        return self.src == self.src and self.dst == other.dst
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash((self.src, self.dst))
-
 
 class DepsGraph(object):
     def __init__(self, initial_node_id=None):
-        self.nodes = set()
-        self.root = None
+        self.nodes = []
         self.aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
+
+    @property
+    def root(self):
+        return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
         if node.id is None:
             self._node_counter += 1
             node.id = str(self._node_counter)
-        if not self.nodes:
-            self.root = node
-        self.nodes.add(node)
+        self.nodes.append(node)
 
     def add_edge(self, src, dst, require):
         assert src in self.nodes and dst in self.nodes

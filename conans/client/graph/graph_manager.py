@@ -59,7 +59,7 @@ class GraphManager(object):
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
         # Run some validations once the graph is built
-        self._validate_graph_provides(deps_graph)
+        #TODO: self._validate_graph_provides(deps_graph)
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
@@ -275,13 +275,7 @@ class GraphManager(object):
         graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
                                    profile_build, graph_lock)
 
-        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
-        # Sort of closures, for linking order
-        inverse_levels = {n: i for i, level in enumerate(graph.inverse_levels()) for n in level}
-        for node in graph.nodes:
-            node.public_closure.pop(node.name, context=node.context)
-            # List sort is stable, will keep the original order of closure, but prioritize levels
-            node.public_closure.sort(key_fn=lambda n: inverse_levels[n])
+        #TODO self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
 
         return graph
 
