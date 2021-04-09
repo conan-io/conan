@@ -91,7 +91,7 @@ sources:
     @pytest.mark.local_bottle
     def test_conan_data_as_source(self):
         tgz_path = tgz_with_contents({"foo.txt": "foo"})
-        if sys.version_info.major == 3 and sys.version_info.minor == 9:
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9:
             # Python 3.9 changed the tar algorithm. Conan tgz will have different checksums
             # https://github.com/conan-io/conan/issues/8020
             md5_value = "7ebdc5ed79b7b72f3a6010da3671ae05"
