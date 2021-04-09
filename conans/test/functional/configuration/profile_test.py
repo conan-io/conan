@@ -571,18 +571,12 @@ class ProfileAggregationTest(unittest.TestCase):
         self.assertIn("arch: x86", self.client.out)
 
     def test_info(self):
-
         # The latest declared profile has priority
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("info . --profile profile1 --profile profile2")
         self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
-
-        # Build order
-        self.client.run("info . --profile profile1 --profile profile2 "
-                        "--build-order lib/1.0@user/channel")
-        self.assertIn("[lib/1.0@user/channel]", self.client.out)
 
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
