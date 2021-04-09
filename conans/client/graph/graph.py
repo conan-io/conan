@@ -27,36 +27,9 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
-class _NodeOrderedDict(object):
-
-    def __init__(self):
-        self._nodes = OrderedDict()
-
-    @staticmethod
-    def _key(node):
-        return node.name, node.context
-
-    def add(self, node):
-        key = self._key(node)
-        self._nodes[key] = node
-
-    def get(self, name, context):
-        return self._nodes.get((name, context))
-
-    def pop(self, name, context):
-        return self._nodes.pop((name, context))
-
-    def sort(self, key_fn):
-        sorted_nodes = sorted(self._nodes.items(), key=lambda n: key_fn(n[1]))
-        self._nodes = OrderedDict(sorted_nodes)
-
-    def assign(self, other):
-        assert isinstance(other, _NodeOrderedDict), "Unexpected type: {}".format(type(other))
-        self._nodes = other._nodes.copy()
-
-    def __iter__(self):
-        for _, item in self._nodes.items():
-            yield item
+class _TransitivePackages(OrderedDict):
+    # {relation: Node}
+    pass
 
 
 class Node(object):
@@ -67,8 +40,7 @@ class Node(object):
         self.prev = None
         conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
-        self.dependencies = []  # Ordered Edges
-        self.dependants = set()  # Edges
+
         self.binary = None
         self.recipe = recipe
         self.remote = None
@@ -76,28 +48,32 @@ class Node(object):
         self.revision_pinned = False  # The revision has been specified by the user
         self.context = context
 
-        # A subset of the graph that will conflict by package name
-        self._public_deps = _NodeOrderedDict()  # {ref.name: Node}
-        # all the public deps only in the closure of this node
-        # The dependencies that will be part of deps_cpp_info, can't conflict
-        self._public_closure = _NodeOrderedDict()  # {ref.name: Node}
-        # The dependencies of this node that will be propagated to consumers when they depend
-        # on this node. It includes regular (not private and not build requires) dependencies
-        self._transitive_closure = OrderedDict()
-        self.inverse_closure = set()  # set of nodes that have this one in their public
-        self._ancestors = _NodeOrderedDict()  # set{ref.name}
-        self._id = None  # Unique ID (uuid at the moment) of a node in the graph
+        self.id = None  # Unique ID (uuid at the moment) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
-        self.id_direct_prefs = None
-        self.id_indirect_prefs = None
 
-    @property
-    def id(self):
-        return self._id
+        # real graph model
+        self.transitive_deps = _TransitivePackages()
+        self.dependencies = []  # Ordered Edges
+        self.dependants = set()  # Edges
 
-    @id.setter
-    def id(self, id_):
-        self._id = id_
+    def check_downstream_exists(self, relation):
+        # First do a check against the current node dependencies
+        prev = self.transitive_deps.get(relation)
+        if prev:
+            return prev
+
+        # Check if need to propagate downstream
+        if not relation.propagate_downstream(self):
+            return
+
+        # Then propagate downstream
+        # TODO: Implement an optimization where the requires is checked against a graph global
+        # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
+        # at any given time
+        assert len(self.dependants) in (0, 1)
+        for d in self.dependants:
+
+
 
     @property
     def package_id(self):
@@ -117,22 +93,6 @@ class Node(object):
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PackageReference(self.ref, self.package_id, self.prev)
 
-    @property
-    def public_deps(self):
-        return self._public_deps
-
-    @property
-    def public_closure(self):
-        return self._public_closure
-
-    @property
-    def transitive_closure(self):
-        return self._transitive_closure
-
-    @property
-    def ancestors(self):
-        return self._ancestors
-
     def add_edge(self, edge):
         if edge.src == self:
             if edge not in self.dependencies:
@@ -145,13 +105,6 @@ class Node(object):
 
     def private_neighbors(self):
         return [edge.dst for edge in self.dependencies if edge.private]
-
-    def connect_closure(self, other_node):
-        # When 2 nodes of the graph become connected, their closures information has
-        # has to remain consistent. This method manages this.
-        self.public_closure.add(other_node)
-        self.public_deps.add(other_node)
-        other_node.inverse_closure.add(self)
 
     def inverse_neighbors(self):
         return [edge.src for edge in self.dependants]
@@ -169,45 +122,6 @@ class Node(object):
 
     def __repr__(self):
         return repr(self.conanfile)
-
-    def __cmp__(self, other):
-        if other is None:
-            return -1
-        elif self.ref is None:
-            return 0 if other.ref is None else -1
-        elif other.ref is None:
-            return 1
-
-        if self.ref == other.ref:
-            return 0
-
-        # Cannot compare None with str
-        if self.ref.revision is None and other.ref.revision is not None:
-            return 1
-
-        if self.ref.revision is not None and other.ref.revision is None:
-            return -1
-
-        if self.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-            return 1
-        if other.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-            return -1
-        if self.ref < other.ref:
-            return -1
-
-        return 1
-
-    def __gt__(self, other):
-        return self.__cmp__(other) == 1
-
-    def __lt__(self, other):
-        return self.__cmp__(other) == -1
-
-    def __le__(self, other):
-        return self.__cmp__(other) in [0, -1]
-
-    def __ge__(self, other):
-        return self.__cmp__(other) in [0, 1]
 
 
 class Edge(object):
