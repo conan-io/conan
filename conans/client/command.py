@@ -645,10 +645,6 @@ class Command(object):
         parser.add_argument("--channel", action=OnceArgument, help='Provide a channel')
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
-        parser.add_argument("-bo", "--build-order",
-                            help="given a modified reference, return an ordered list to build (CI)."
-                                 " [DEPRECATED: use 'conan lock build-order ...' instead]",
-                            nargs=1, action=Extender)
         parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
@@ -677,32 +673,8 @@ class Command(object):
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build)
 
-        if args.build_order:
-            self._out.warn("Usage of `--build-order` argument is deprecated and can return"
-                           " wrong results. Use `conan lock build-order ...` instead.")
-
-        if args.build_order and args.graph:
-            raise ArgumentError(None, "--build-order cannot be used together with --graph")
-
-        # BUILD ORDER ONLY
-        if args.build_order:
-            ret = self._conan.info_build_order(args.path_or_reference,
-                                               settings=args.settings_host,
-                                               options=args.options_host,
-                                               env=args.env_host,
-                                               profile_names=args.profile_host,
-                                               profile_build=profile_build,
-                                               remote_name=args.remote,
-                                               build_order=args.build_order,
-                                               check_updates=args.update)
-            if args.json:
-                json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(ret, json_arg, os.getcwd())
-            else:
-                self._outputer.build_order(ret)
-
         # INSTALL SIMULATION, NODES TO INSTALL
-        elif args.build is not None:
+        if args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.path_or_reference,
                                                        build_modes=args.build,
                                                        settings=args.settings_host,
@@ -717,7 +689,6 @@ class Command(object):
                 self._outputer.json_nodes_to_build(nodes, json_arg, os.getcwd())
             else:
                 self._outputer.nodes_to_build(nodes)
-
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
             data = self._conan.info(args.path_or_reference,
