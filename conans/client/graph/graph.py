@@ -70,8 +70,10 @@ class Node(object):
         # TODO: Implement an optimization where the requires is checked against a graph global
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
-        assert len(self.dependants) in (0, 1)
-        for d in self.dependants:
+        if not self.dependants:
+            return
+        assert len(self.dependants) == 1
+        d =
 
 
 
@@ -129,14 +131,6 @@ class Edge(object):
         self.src = src
         self.dst = dst
         self.require = require
-
-    @property
-    def private(self):
-        return self.require.private
-
-    @property
-    def build_require(self):
-        return self.require.build_require
 
     def __eq__(self, other):
         return self.src == self.src and self.dst == other.dst
