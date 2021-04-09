@@ -15,12 +15,14 @@ class BuildRequiresGraphTest(GraphManagerTest):
         tool_ref = ConanFileReference.loads("tool/0.1@user/testing")
         self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1"))
         if build_require == "recipe":
-            deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                                        .with_build_requires(tool_ref))
+            profile_build_requires = None
+            conanfile = GenConanfile("app", "0.1").with_build_requires(tool_ref)
         else:
             profile_build_requires = {"*": [ConanFileReference.loads("tool/0.1@user/testing")]}
-            deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1"),
-                                          profile_build_requires=profile_build_requires)
+            conanfile = GenConanfile().with_name("app").with_version("0.1")
+
+        deps_graph = self.build_graph(conanfile, profile_build_requires=profile_build_requires,
+                                      install=False)
 
         # Build requires always apply to the consumer
         self.assertEqual(2, len(deps_graph.nodes))

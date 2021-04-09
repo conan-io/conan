@@ -1,3 +1,4 @@
+import fnmatch
 import time
 from collections import OrderedDict
 
@@ -161,12 +162,60 @@ class DepsGraphBuilder(object):
                 with get_env_context_manager(conanfile):
                     with conanfile_exception_formatter(str(conanfile), "build_requirements"):
                         conanfile.build_requirements()
-
             return conanfile.build_requires
 
         default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
         package_build_requires = _get_recipe_build_requires(node.conanfile, default_context)
         str_ref = str(node.ref)
+
+        print("PACKAEG BILD RUEQUIRES ", package_build_requires)
+
+        # The declared build_requires in recipe can be overriden by profile ones
+        if node.context == CONTEXT_HOST:
+            profile_build_requires = profile_host.build_requires
+        else:
+            assert node.context == CONTEXT_BUILD
+            profile_build_requires = profile_build.build_requires
+
+        print("PROFILE BUILD RQUIRES ", profile_build_requires)
+        for pattern, build_requires in profile_build_requires.items():
+            if fnmatch.fnmatch(str_ref, pattern):
+                for build_require in build_requires:
+                    br_key = (build_require.name, default_context)
+                    package_build_requires[br_key] = build_require
+
+        node.conanfile.build_requires_options.clear_unscoped_options()
+        new_options = node.conanfile.build_requires_options._reqs_options
+        new_reqs = Requirements()
+
+        conanfile = node.conanfile
+        scope = conanfile.display_name
+
+        build_requires = []
+        for ref, context in build_requires_refs:
+            r = Requirement(ref)
+            r.build_require = True
+            r.build_require_context = context
+            build_requires.append(r)
+
+        if graph_lock:
+            graph_lock.pre_lock_node(node)
+            # TODO: Add info about context?
+            graph_lock.lock_node(node, build_requires, build_requires=True)
+
+        self._resolve_ranges(graph, build_requires, scope, update, remotes)
+
+        for br in build_requires:
+            context_switch = bool(br.build_require_context == CONTEXT_BUILD)
+            populate_settings_target = context_switch  # Avoid 'settings_target' for BR-host
+            self._expand_require(br, node, graph, check_updates, update,
+                                 remotes, profile_host, profile_build, new_reqs, new_options,
+                                 graph_lock, context_switch=context_switch,
+                                 populate_settings_target=populate_settings_target)
+
+        new_nodes = set(n for n in graph.nodes if n.package_id is None)
+        # This is to make sure that build_requires have precedence over the normal requires
+        node.public_closure.sort(key_fn=lambda x: x not in new_nodes)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
