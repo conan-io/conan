@@ -84,10 +84,11 @@ class DepsGraphBuilder(object):
         dep_graph.add_node(root_node)
 
         # enter recursive computation
-        t1 = time.time()
-        self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
-                          update, remotes, profile_host, profile_build, graph_lock)
-        logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
+        try:
+            self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
+                              update, remotes, profile_host, profile_build, graph_lock)
+        except ConanGraphException as e:  # Conflict, loop closure
+            pass
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,

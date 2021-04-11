@@ -68,13 +68,12 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst
 
-        # No Revision??? Because of consumer?
+        # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb, libc], closure=[libb, libc, liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-'''
     def test_consecutive_diamonds(self):
         # app -> libe0.1 -> libd0.1 -> libb0.1 -> liba0.1
         #    \-> libf0.1 ->/    \-> libc0.1 ->/
@@ -86,7 +85,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libf/0.1", ["libd/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libe/0.1", "libf/0.1"])
 
-        deps_graph = self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer, install=False)
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
@@ -120,7 +119,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1", "libd/0.1"])
 
-        deps_graph = self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer, install=False)
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -146,7 +145,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1", "libd/0.1"])
 
-        deps_graph = self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer, install=False)
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -171,7 +170,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["libc/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libd/0.1", "libc/0.1", "libb/0.1"])
 
-        deps_graph = self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer, install=False)
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -198,8 +197,8 @@ class TransitiveGraphTest(GraphManagerTest):
             "    'libc/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
             "    To fix this conflict you need to override the package 'liba' in your root "
             "package."):
-            self.build_consumer(consumer)
-
+            self.build_consumer(consumer, install=False)
+    '''
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|

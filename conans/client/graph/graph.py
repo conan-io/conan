@@ -37,10 +37,10 @@ class _PackageRelation:
         return _PackageRelation(self.ref)
 
     def __hash__(self):
-        return hash(self.ref)
+        return hash(self.ref.name)
 
     def __eq__(self, other):
-        return self.ref == other.ref
+        return self.ref.name == other.ref.name
 
     def __ne__(self, other):
         return not self.__eq__(other)
