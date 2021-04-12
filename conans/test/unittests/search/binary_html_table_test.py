@@ -7,7 +7,6 @@ class RowResultTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         data = {'id': '1234',
-                'outdated': True,
                 'extra': 'never used',
                 'settings': {'os': 'Windows'},
                 'options': {'opt.key1': 23},
@@ -19,13 +18,12 @@ class RowResultTestCase(unittest.TestCase):
         self.assertEqual(self.row_result.reference, "name/version@user/testing")
         self.assertEqual(self.row_result.recipe, "name/version@user/testing")
         self.assertEqual(self.row_result.package_id, "1234")
-        self.assertEqual(self.row_result.outdated, True)
 
     def test_row(self):
         headers = Headers(settings=['os', 'os.api'], options=['opt.key1'], requires=True,
-                          keys=['remote', 'reference', 'outdated', 'package_id'])
+                          keys=['remote', 'reference', 'package_id'])
         row = list(self.row_result.row(headers))
-        self.assertEqual(row, ['remote', 'name/version@user/testing', True, '1234',  # Keys
+        self.assertEqual(row, ['remote', 'name/version@user/testing', '1234',  # Keys
                                'Windows', None,  # Settings
                                23,  # Options
                                'pkg1/version, pkg2/version@user/channel'  # Requires
@@ -39,7 +37,7 @@ class HeadersTestCase(unittest.TestCase):
                     'compiler.libcxx', 'os.api', ]
         options = ['opt.key1', 'opt2']
         requires = True
-        keys = ['remote', 'reference', 'outdated', 'package_id']
+        keys = ['remote', 'reference', 'package_id']
         cls.headers = Headers(settings, options, requires, keys)
 
     def test_settings_ordering(self):
@@ -50,7 +48,7 @@ class HeadersTestCase(unittest.TestCase):
         row = self.headers.row(n_rows=1)
         # Order: keys, settings, options and requires
         self.assertEqual(row, [
-            'remote', 'reference', 'outdated', 'package_id',
+            'remote', 'reference', 'package_id',
             'os', 'os.api', 'compiler', 'compiler.libcxx', 'compiler.version', 'build_type', 'other',
             'opt.key1', 'opt2',
             'requires'])
@@ -59,7 +57,7 @@ class HeadersTestCase(unittest.TestCase):
         row = self.headers.row(n_rows=2)
         self.assertEqual(row, [
             # Keys
-            ('remote', ['']), ('reference', ['']), ('outdated', ['']), ('package_id', ['']),
+            ('remote', ['']), ('reference', ['']), ('package_id', ['']),
             # Settings
             ('os', ['', 'api']), ('compiler', ['', 'libcxx', 'version']), ('build_type', ['']),
             ('other', ['']),

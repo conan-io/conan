@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-import six
-
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.env_reader import get_env
@@ -99,7 +97,7 @@ class Requirements(OrderedDict):
     def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
-        assert isinstance(reference, six.string_types)
+        assert isinstance(reference, str)
         ref = ConanFileReference.loads(reference)
         self.add_ref(ref, private, override)
 

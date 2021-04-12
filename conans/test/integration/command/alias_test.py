@@ -5,6 +5,7 @@ import unittest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -398,6 +399,19 @@ class Pkg(ConanFile):
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("alias Hello/0.X@lasote/channel Hello/0.3@lasote/channel")
 
+    def test_existing_python_requires(self):
+        # https://github.com/conan-io/conan/issues/8702
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . test-python-requires/0.1@user/testing")
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    python_requires = 'test-python-requires/0.1@user/testing'"""})
+        client.run("create . Pkg/0.1@user/testing")
+        client.run("alias Pkg/0.1@user/testing Pkg/0.2@user/testing", assert_error=True)
+        self.assertIn("ERROR: Reference 'Pkg/0.1@user/testing' is already a package",
+                      client.out)
+
     def test_basic(self):
         test_server = TestServer()
         servers = {"default": test_server}
@@ -422,7 +436,13 @@ class Pkg(ConanFile):
 
         self.assertIn("Hello/0.1@lasote/channel from local", client.out)
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
-        conaninfo = client.load("conaninfo.txt")
+
+        ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
+        pkg_folder = client.cache.package_layout(ref).packages()
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
+
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
 

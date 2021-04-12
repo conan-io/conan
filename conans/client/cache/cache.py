@@ -22,7 +22,6 @@ from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.unicode import get_cwd
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove
 from conans.util.locks import Lock
 
@@ -212,7 +211,7 @@ class ClientCache(object):
     @property
     def default_profile(self):
         self.initialize_default_profile()
-        default_profile, _ = read_profile(self.default_profile_path, get_cwd(), self.profiles_path)
+        default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
 
         # Mix profile settings with environment
         mixed_settings = _mix_settings_with_env(default_profile.settings)

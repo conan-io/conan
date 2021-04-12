@@ -9,6 +9,7 @@
     elsewhere (mainly in conans.util or conans.client.tools) and ready to be used without
     the currification.
 """
+import sys
 
 import requests
 

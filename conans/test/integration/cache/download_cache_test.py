@@ -6,13 +6,12 @@ from collections import Counter
 from threading import Thread
 
 from bottle import static_file, request
-import pytest
 
 from conans.client.downloaders.cached_file_downloader import CachedFileDownloader
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, StoppableThreadBottle
-from conans.util.env_reader import get_env
-from conans.util.files import load, save
+from conans.util.files import load, save, set_dirty
 
 
 class DownloadCacheTest(unittest.TestCase):
@@ -67,34 +66,27 @@ class DownloadCacheTest(unittest.TestCase):
         content = load(log_trace_file)
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-    def test_corrupted_cache(self):
-        # This test only works without revisions, because v1 has md5 file checksums, but v2 nop
+    @staticmethod
+    def test_dirty_download():
+        # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class Pkg(ConanFile):
-                exports = "*"
-                def package(self):
-                    self.copy("*")
-            """)
-        client.save({"conanfile.py": conanfile,
-                     "header.h": "header"})
-        client.run("create . mypkg/0.1@user/testing")
-        client.run("upload * --all --confirm")
         cache_folder = temp_folder()
         client.run('config set storage.download_cache="%s"' % cache_folder)
+        client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
+        client.run("create . pkg/0.1@")
+        client.run("upload * --all -c")
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing")
+        client.run("install pkg/0.1@")
         for f in os.listdir(cache_folder):
-            f = os.path.join(cache_folder, f)
-            if not os.path.isfile(f):
-                continue
-            save(f, load(f) + "a")
+            # damage the file
+            path = os.path.join(cache_folder, f)
+            if os.path.isfile(path):
+                save(path, "broken!")
+                set_dirty(path)
+
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing", assert_error=True)
-        self.assertIn("ERROR: md5 signature failed", client.out)
-        self.assertIn("Cached downloaded file corrupted", client.out)
+        client.run("install pkg/0.1@")
+        assert "pkg/0.1: Downloaded package" in client.out
 
     def test_user_downloads_cached(self):
         http_server = StoppableThreadBottle()
@@ -126,7 +118,8 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ConanException: md5 signature failed for", client.out)
         self.assertIn("Provided signature: kk", client.out)
         self.assertIn("Computed signature: 9893532233caff98cd083a116b013c0b", client.out)
-        self.assertEqual(1, len(os.listdir(cache_folder)))  # Nothing was cached
+        # There are 2 things in the cache, the "locks" folder and the .dirty file because failure
+        self.assertEqual(2, len(os.listdir(cache_folder)))  # Nothing was cached
 
         # This is the right checksum
         conanfile = textwrap.dedent("""
@@ -148,7 +141,8 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertEqual("some query", client.load("myfile2.txt"))
 
         # 2 files cached, plus "locks" folder = 3
-        self.assertEqual(3, len(os.listdir(cache_folder)))
+        # "locks" folder + 2 files cached + .dirty file from previous failure
+        self.assertEqual(4, len(os.listdir(cache_folder)))
 
         # remove remote file
         os.remove(file_path)
@@ -169,10 +163,8 @@ class DownloadCacheTest(unittest.TestCase):
         self.assertIn("ERROR: conanfile.py: Error in source() method, line 7", client.out)
         self.assertIn("Not found: http://localhost", client.out)
 
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="Hybrid test with both v1 and v2")
     def test_revision0_v2_skip(self):
         client = TestClient(default_server_user=True)
-        client.run("config set general.revisions_enabled=False")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -188,7 +180,6 @@ class DownloadCacheTest(unittest.TestCase):
         client.run("upload * --all --confirm")
 
         client2 = TestClient(servers=client.servers)
-        client2.run("config set general.revisions_enabled=True")
         cache_folder = temp_folder()
         client2.run('config set storage.download_cache="%s"' % cache_folder)
         client2.run("install mypkg/0.1@user/testing")

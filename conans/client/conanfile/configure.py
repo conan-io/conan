@@ -8,7 +8,7 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
     """ Run all the config-related functions for the given conanfile object """
 
     # Avoid extra time manipulating the sys.path for python
-    with get_env_context_manager(conanfile, without_python=True):
+    with get_env_context_manager(conanfile):
         if hasattr(conanfile, "config"):
             conan_v2_error("config() has been deprecated. Use config_options() and configure()")
             with conanfile_exception_formatter(str(conanfile), "config"):
@@ -32,9 +32,8 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
 
         if conanfile.deprecated:
-            from six import string_types
             message = "Recipe '%s' is deprecated" % conanfile.display_name
-            if isinstance(conanfile.deprecated, string_types):
+            if isinstance(conanfile.deprecated, str):
                 message += " in favor of '%s'" % conanfile.deprecated
             message += ". Please, consider changing your requirements."
             conanfile.output.warn(message)

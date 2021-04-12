@@ -4,7 +4,7 @@ import textwrap
 from jinja2 import Template
 
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, merge_dicts
+from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import save
 
 COMPONENT_SCOPE = "::"
@@ -38,43 +38,37 @@ apple_frameworks_macro = textwrap.dedent("""
 conan_package_library_targets = textwrap.dedent("""
    function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target build_type package_name)
        unset(_CONAN_ACTUAL_TARGETS CACHE)
-       unset(_CONAN_FOUND_SYSTEM_LIBS CACHE)
+
        foreach(_LIBRARY_NAME ${libraries})
            find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
            if(CONAN_FOUND_LIBRARY)
                conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
-               if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
+
+               # Create a micro-target for each lib/a found
+               set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
+               if(NOT TARGET ${_LIB_NAME})
                    # Create a micro-target for each lib/a found
-                   set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
-                   if(NOT TARGET ${_LIB_NAME})
-                       # Create a micro-target for each lib/a found
-                       add_library(${_LIB_NAME} UNKNOWN IMPORTED)
-                       set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-                       set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
-                   else()
-                       conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
-                   endif()
-                   list(APPEND _out_libraries_target ${_LIB_NAME})
+                   add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+                   set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+                   set(_CONAN_ACTUAL_TARGETS ${_CONAN_ACTUAL_TARGETS} ${_LIB_NAME})
+               else()
+                   conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
                endif()
+               list(APPEND _out_libraries_target ${_LIB_NAME})
                conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
            else()
-               conan_message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
-               list(APPEND _out_libraries_target ${_LIBRARY_NAME})
-               list(APPEND _out_libraries ${_LIBRARY_NAME})
-               set(_CONAN_FOUND_SYSTEM_LIBS "${_CONAN_FOUND_SYSTEM_LIBS};${_LIBRARY_NAME}")
+               conan_message(ERROR "Library ${_LIBRARY_NAME} not found in package")
            endif()
            unset(CONAN_FOUND_LIBRARY CACHE)
        endforeach()
 
-       if(NOT ${CMAKE_VERSION} VERSION_LESS "3.0")
-           # Add all dependencies to all targets
-           string(REPLACE " " ";" deps_list "${deps}")
-           foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
-               set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${_CONAN_FOUND_SYSTEM_LIBS};${deps_list}")
-           endforeach()
-       endif()
+       # Add all dependencies to all targets
+       string(REPLACE " " ";" deps_list "${deps}")
+       foreach(_CONAN_ACTUAL_TARGET ${_CONAN_ACTUAL_TARGETS})
+           set_property(TARGET ${_CONAN_ACTUAL_TARGET} PROPERTY INTERFACE_LINK_LIBRARIES "${deps_list}")
+       endforeach()
 
        set(${out_libraries} ${_out_libraries} PARENT_SCOPE)
        set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
@@ -82,59 +76,52 @@ conan_package_library_targets = textwrap.dedent("""
    """)
 
 
-target_template = """
+variables_template = """
 set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
-set({name}_INCLUDE_DIR{build_type_suffix} {deps.include_path})
-set({name}_INCLUDES{build_type_suffix} {deps.include_paths})
 set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
-set({name}_LINKER_FLAGS{build_type_suffix}_LIST
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{deps.sharedlinkflags_list}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{deps.sharedlinkflags_list}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{deps.exelinkflags_list}>"
-)
+set({name}_SHARED_LINK_FLAGS{build_type_suffix} {deps.sharedlinkflags_list})
+set({name}_EXE_LINK_FLAGS{build_type_suffix} {deps.exelinkflags_list})
 set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
-set({name}_COMPILE_OPTIONS{build_type_suffix}_LIST "{deps.cxxflags_list}" "{deps.cflags_list}")
-set({name}_COMPILE_OPTIONS_C{build_type_suffix} "{deps.cflags_list}")
-set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} "{deps.cxxflags_list}")
-set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
-set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
-set({name}_LIBS{build_type_suffix} "") # Same as {name}_LIBRARIES
+set({name}_COMPILE_OPTIONS_C{build_type_suffix} {deps.cflags_list})
+set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} {deps.cxxflags_list})
+set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
+set({name}_LIBS{build_type_suffix} {deps.libs})
 set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
 set({name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
 set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
-set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
 set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
+set({name}_BUILD_DIRS{build_type_suffix} {deps.build_paths})
+# Missing the dependencies information here
+"""
 
+
+dynamic_variables_template = """
+
+set({name}_COMPILE_OPTIONS{build_type_suffix}
+        "$<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX{build_type_suffix}}}>"
+        "$<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C{build_type_suffix}}}>")
+
+set({name}_LINKER_FLAGS{build_type_suffix}
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{build_type_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{build_type_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{{name}_EXE_LINK_FLAGS{build_type_suffix}}}>")
+
+set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
 conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}" "${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
-
-mark_as_advanced({name}_INCLUDE_DIRS{build_type_suffix}
-                 {name}_INCLUDE_DIR{build_type_suffix}
-                 {name}_INCLUDES{build_type_suffix}
-                 {name}_DEFINITIONS{build_type_suffix}
-                 {name}_LINKER_FLAGS{build_type_suffix}_LIST
-                 {name}_COMPILE_DEFINITIONS{build_type_suffix}
-                 {name}_COMPILE_OPTIONS{build_type_suffix}_LIST
-                 {name}_LIBRARIES{build_type_suffix}
-                 {name}_LIBS{build_type_suffix}
-                 {name}_LIBRARIES_TARGETS{build_type_suffix})
-
-# Find the real .lib/.a and add them to {name}_LIBS and {name}_LIBRARY_LIST
-set({name}_LIBRARY_LIST{build_type_suffix} {deps.libs})
-set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
 
 # Gather all the libraries that should be linked to the targets (do not touch existing variables):
 set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
 
-conan_package_library_targets("${{{name}_LIBRARY_LIST{build_type_suffix}}}"  # libraries
-                              "${{{name}_LIB_DIRS{build_type_suffix}}}"      # package_libdir
+set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
+set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
+conan_package_library_targets("${{{name}_LIBS{build_type_suffix}}}"           # libraries
+                              "${{{name}_LIB_DIRS{build_type_suffix}}}"       # package_libdir
                               "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
-                              {name}_LIBRARIES{build_type_suffix}            # out_libraries
-                              {name}_LIBRARIES_TARGETS{build_type_suffix}    # out_libraries_targets
-                              "{build_type_suffix}"                          # build_type
-                              "{name}")                                      # package_name
-
-set({name}_LIBS{build_type_suffix} ${{{name}_LIBRARIES{build_type_suffix}}})
+                              {name}_LIBRARIES{build_type_suffix}             # out_libraries
+                              {name}_LIBRARIES_TARGETS{build_type_suffix}     # out_libraries_targets
+                              "{build_type_suffix}"                           # build_type
+                              "{name}")                                       # package_name
 
 foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
     list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_FRAMEWORK}})
@@ -150,8 +137,10 @@ endforeach()
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "${{{name}_LIBRARIES_TARGETS{build_type_suffix}}};{deps_names}")
 set({name}_LIBRARIES{build_type_suffix} "${{{name}_LIBRARIES{build_type_suffix}}};{deps_names}")
 
-set(CMAKE_MODULE_PATH {deps.build_paths} ${{CMAKE_MODULE_PATH}})
-set(CMAKE_PREFIX_PATH {deps.build_paths} ${{CMAKE_PREFIX_PATH}})
+
+# FIXME: What is the result of this for multi-config? All configs adding themselves to path?
+set(CMAKE_MODULE_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_PREFIX_PATH}})
 """
 
 
@@ -160,47 +149,13 @@ def find_transitive_dependencies(public_deps_filenames):
     # https://github.com/conan-io/conan/issues/5040
     find = textwrap.dedent("""
         if(NOT {dep_filename}_FOUND)
-            if(${{CMAKE_VERSION}} VERSION_LESS "3.9.0")
-                find_package({dep_filename} REQUIRED NO_MODULE)
-            else()
-                find_dependency({dep_filename} REQUIRED NO_MODULE)
-            endif()
-        else()
-            message(STATUS "Dependency {dep_filename} already found")
+            find_dependency({dep_filename} REQUIRED NO_MODULE)
         endif()
         """)
     lines = ["", "# Library dependencies", "include(CMakeFindDependencyMacro)"]
     for dep_filename in public_deps_filenames:
         lines.append(find.format(dep_filename=dep_filename))
     return "\n".join(lines)
-
-
-# FIXME: Can we remove the config (multi-config package_info with .debug .release)?
-def extend(cpp_info, config):
-    """ adds the specific config configuration to the common one
-    """
-    config_info = cpp_info.configs.get(config)
-    if config_info:
-        def add_lists(seq1, seq2):
-            return seq1 + [s for s in seq2 if s not in seq1]
-
-        result = CppInfo(str(config_info), config_info.rootpath)
-        result.filter_empty = cpp_info.filter_empty
-        result.includedirs = add_lists(cpp_info.includedirs, config_info.includedirs)
-        result.libdirs = add_lists(cpp_info.libdirs, config_info.libdirs)
-        result.bindirs = add_lists(cpp_info.bindirs, config_info.bindirs)
-        result.resdirs = add_lists(cpp_info.resdirs, config_info.resdirs)
-        result.builddirs = add_lists(cpp_info.builddirs, config_info.builddirs)
-        result.libs = cpp_info.libs + config_info.libs
-        result.defines = cpp_info.defines + config_info.defines
-        result.cflags = cpp_info.cflags + config_info.cflags
-        result.cxxflags = cpp_info.cxxflags + config_info.cxxflags
-        result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
-        result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
-        result.system_libs = add_lists(cpp_info.system_libs, config_info.system_libs)
-        result.build_modules = merge_dicts(cpp_info.build_modules, config_info.build_modules)
-        return result
-    return cpp_info
 
 
 class DepsCppCmake(object):
@@ -246,11 +201,6 @@ class DepsCppCmake(object):
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
 
-        self.cxxflags = join_flags(" ", cpp_info.cxxflags)
-        self.cflags = join_flags(" ", cpp_info.cflags)
-        self.sharedlinkflags = join_flags(" ", cpp_info.sharedlinkflags)
-        self.exelinkflags = join_flags(" ", cpp_info.exelinkflags)
-
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
         # Issue: #1251
@@ -269,9 +219,9 @@ class CMakeDeps(object):
     config_template = textwrap.dedent("""
         include(${{CMAKE_CURRENT_LIST_DIR}}/cmakedeps_macros.cmake)
 
-        # Requires CMake > 3.0
-        if(${{CMAKE_VERSION}} VERSION_LESS "3.0")
-            message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
+        # Requires CMake > 3.15
+        if(${{CMAKE_VERSION}} VERSION_LESS "3.15")
+            message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
         include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
@@ -288,8 +238,13 @@ class CMakeDeps(object):
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${{CMAKE_CURRENT_LIST_FILE}}" PATH)
-        file(GLOB CONFIG_FILES "${{_DIR}}/{filename}Target-*.cmake")
+        file(GLOB DATA_FILES "${{_DIR}}/{filename}-*-data.cmake")
 
+        foreach(f ${{DATA_FILES}})
+            include(${{f}})
+        endforeach()
+
+        file(GLOB CONFIG_FILES "${{_DIR}}/{filename}Target-*.cmake")
         foreach(f ${{CONFIG_FILES}})
             include(${{f}})
         endforeach()
@@ -302,7 +257,7 @@ set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
              {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
-                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}_LIST}>
+                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}}>
              {%- endfor %})
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
@@ -317,7 +272,7 @@ set_property(TARGET {{name}}::{{name}}
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
              {%- for config in configs %}
-             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}_LIST}>
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}}>
              {%- endfor %})
     """)
 
@@ -355,15 +310,11 @@ endforeach()
         endif()
         """)
 
-    components_target_build_type_tpl = Template(textwrap.dedent("""\
-        ########## MACROS ###########################################################################
-        #############################################################################################
-        include(${{CMAKE_CURRENT_LIST_DIR}}/cmakedeps_macros.cmake)
-
+    components_variables_tpl = Template(textwrap.dedent("""\
         ########### VARIABLES #######################################################################
         #############################################################################################
 
-        {{ global_target_variables }}
+        {{ global_variables }}
         set({{ pkg_name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
 
         {%- for comp_name, comp in components %}
@@ -371,8 +322,6 @@ endforeach()
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
 
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIR_{{ build_type }} {{ comp.include_path }})
-        set({{ pkg_name }}_{{ comp_name }}_INCLUDES_{{ build_type }} {{ comp.include_paths }})
         set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
@@ -385,11 +334,25 @@ endforeach()
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ build_type }} {{ comp.frameworks }})
         set({{ pkg_name }}_{{ comp_name }}_BUILD_MODULES_PATHS_{{ build_type }} {{ comp.build_modules_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES_{{ build_type }} {{ comp.public_deps }})
-        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_LIST_{{ build_type }}
+        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_{{ build_type }}
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
         )
+        {%- endfor %}
+    """))
+
+    components_dynamic_variables_tpl = Template(textwrap.dedent("""\
+        ########## MACROS ###########################################################################
+        #############################################################################################
+        include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
+
+        ########### VARIABLES #######################################################################
+        #############################################################################################
+
+        {{ global_dynamic_variables }}
+
+        {%- for comp_name, comp in components %}
 
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
@@ -425,6 +388,14 @@ endforeach()
             add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
         endif()
 
+        # Load the debug and release variables
+        get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+        file(GLOB DATA_FILES "${_DIR}/{{ pkg_filename }}-*-data.cmake")
+
+        foreach(f ${DATA_FILES})
+            include(${f})
+        endforeach()
+
         # Load the debug and release library finders
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
         file(GLOB CONFIG_FILES "${_DIR}/{{ pkg_filename }}Target-*.cmake")
@@ -448,9 +419,9 @@ endforeach()
     components_config_tpl = Template(textwrap.dedent("""\
         ########## MACROS ###########################################################################
         #############################################################################################
-        # Requires CMake > 3.0
-        if(${CMAKE_VERSION} VERSION_LESS "3.0")
-            message(FATAL_ERROR "The 'cmake_find_package_multi' generator only works with CMake > 3.0")
+        # Requires CMake > 3.15
+        if(${CMAKE_VERSION} VERSION_LESS "3.15")
+            message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
         include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_filename }}Targets.cmake)
@@ -463,13 +434,7 @@ endforeach()
         {%- for public_dep in pkg_public_deps %}
 
         if(NOT {{ public_dep }}_FOUND)
-            if(${CMAKE_VERSION} VERSION_LESS "3.9.0")
-                find_package({{ public_dep }} REQUIRED NO_MODULE)
-            else()
-                find_dependency({{ public_dep }} REQUIRED NO_MODULE)
-            endif()
-        else()
-            message(STATUS "Dependency {{ public_dep }} already found")
+            find_dependency({{ public_dep }} REQUIRED NO_MODULE)
         endif()
 
         {%- endfor %}
@@ -487,7 +452,7 @@ endforeach()
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
-                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS_LIST', config)}}>
+                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config)}}>
                      {%- endfor %})
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      {%- for config in configs %}
@@ -535,7 +500,7 @@ endforeach()
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-
+        self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
         self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # FIXME: Ugly way to define the output path
@@ -560,12 +525,40 @@ endforeach()
         for pkg_require in cpp_info.requires:
             _check_component_in_requirements(pkg_require)
 
+    def _get_name(self, cpp_info, pkg_name):
+        # FIXME: This is a workaround to be able to use existing recipes that declare
+        # FIXME: cpp_info.names["cmake_find_package_multi"] = "xxxxx"
+        name = cpp_info.names.get(self.name)
+        if name is not None:
+            return name
+        find_name = cpp_info.names.get("cmake_find_package_multi")
+        if find_name is not None:
+            # Not displaying a warning, too noisy as this is called many times
+            conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
+                           "but not 'CMakeDeps'".format(pkg_name))
+            return find_name
+        return cpp_info._name
+
+    def _get_filename(self, cpp_info, pkg_name):
+        # FIXME: This is a workaround to be able to use existing recipes that declare
+        # FIXME: cpp_info.filenames["cmake_find_package_multi"] = "xxxxx"
+        name = cpp_info.filenames.get(self.name)
+        if name is not None:
+            return name
+        find_name = cpp_info.filenames.get("cmake_find_package_multi")
+        if find_name is not None:
+            # Not displaying a warning, too noisy as this is called many times
+            conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
+                           "but not 'CMakeDeps'".format(pkg_name))
+            return find_name
+        return cpp_info._name
+
     def _get_require_name(self, pkg_name, req):
         pkg, cmp = req.split(COMPONENT_SCOPE) if COMPONENT_SCOPE in req else (pkg_name, req)
         pkg_cpp_info = self._conanfile.deps_cpp_info[pkg]
-        pkg_name = pkg_cpp_info.get_name(self.name)
+        pkg_name = self._get_name(pkg_cpp_info, pkg_name)
         if cmp in pkg_cpp_info.components:
-            cmp_name = pkg_cpp_info.components[cmp].get_name(self.name)
+            cmp_name = self._get_name(pkg_cpp_info.components[cmp], pkg_name)
         else:
             cmp_name = pkg_name
         return pkg_name, cmp_name
@@ -575,7 +568,7 @@ endforeach()
         sorted_comps = cpp_info._get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
-            comp_genname = cpp_info.components[comp_name].get_name(self.name)
+            comp_genname = self._get_name(cpp_info.components[comp_name], pkg_name)
             comp_requires_gennames = []
             for require in comp.requires:
                 comp_requires_gennames.append(self._get_require_name(pkg_name, require))
@@ -604,6 +597,13 @@ endforeach()
             generator_file = os.path.join(self.output_path, generator_file)
             save(generator_file, content)
 
+    def _data_filename(self, pkg_filename):
+        data_fname = "{}-{}".format(pkg_filename, self.configuration.lower())
+        if self.arch:
+            data_fname += "-{}".format(self.arch)
+        data_fname += "-data.cmake"
+        return data_fname
+
     @property
     def content(self):
         ret = {}
@@ -617,8 +617,8 @@ endforeach()
 
         for pkg_name, cpp_info in self._conanfile.deps_cpp_info.dependencies:
             self._validate_components(cpp_info)
-            pkg_filename = cpp_info.get_filename(self.name)
-            pkg_findname = cpp_info.get_name(self.name)
+            pkg_filename = self._get_filename(cpp_info, pkg_name)
+            pkg_findname = self._get_name(cpp_info, pkg_name)
             pkg_version = cpp_info.version
 
             public_deps = self.get_public_deps(cpp_info)
@@ -628,11 +628,27 @@ endforeach()
                 if name not in deps_names:
                     deps_names.append(name)
             deps_names = ';'.join(deps_names)
-            pkg_public_deps_filenames = [self._conanfile.deps_cpp_info[it[0]].get_filename(self.name)
+            pkg_public_deps_filenames = [self._get_filename(self._conanfile.deps_cpp_info[it[0]],
+                                                            pkg_name)
                                          for it in public_deps]
             config_version = self.config_version_template.format(version=pkg_version)
             ret[self._config_version_filename(pkg_filename)] = config_version
             if not cpp_info.components:
+                deps = DepsCppCmake(cpp_info, self.name)
+
+                variables = {
+                   self._data_filename(pkg_filename):
+                       variables_template.format(name=pkg_findname, deps=deps,
+                                                 build_type_suffix=build_type_suffix)
+                             }
+                dynamic_variables = {
+                    "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
+                    dynamic_variables_template.format(name=pkg_findname,
+                                                      build_type_suffix=build_type_suffix,
+                                                      deps_names=deps_names)
+                }
+                ret.update(variables)
+                ret.update(dynamic_variables)
                 ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_findname,
@@ -641,32 +657,32 @@ endforeach()
                 )
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
                     filename=pkg_filename, name=pkg_findname)
-
-                # If any config matches the build_type one, add it to the cpp_info
-                dep_cpp_info = extend(cpp_info, build_type.lower())
-                deps = DepsCppCmake(dep_cpp_info, self.name)
-                find_lib = target_template.format(name=pkg_findname, deps=deps,
-                                                  build_type_suffix=build_type_suffix,
-                                                  deps_names=deps_names)
-                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = find_lib
             else:
-                cpp_info = extend(cpp_info, build_type.lower())
                 pkg_info = DepsCppCmake(cpp_info, self.name)
                 components = self._get_components(pkg_name, cpp_info)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_findname, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_target_variables = target_template.format(name=pkg_findname, deps=pkg_info,
-                                                                 build_type_suffix=build_type_suffix,
-                                                                 deps_names=deps_names)
-                variables = self.components_target_build_type_tpl.render(
-                    pkg_name=pkg_findname,
-                    global_target_variables=global_target_variables,
-                    pkg_components=pkg_components,
-                    build_type=build_type,
-                    components=components
-                )
-                ret["{}Target-{}.cmake".format(pkg_filename, build_type.lower())] = variables
+                global_variables = variables_template.format(name=pkg_findname, deps=pkg_info,
+                                                             build_type_suffix=build_type_suffix,
+                                                             deps_names=deps_names)
+                variables = {
+                    self._data_filename(pkg_filename):
+                        self.components_variables_tpl.render(
+                         pkg_name=pkg_findname, global_variables=global_variables,
+                         pkg_components=pkg_components, build_type=build_type, components=components)
+                }
+                ret.update(variables)
+                global_dynamic_variables = dynamic_variables_template.format(name=pkg_findname,
+                                                                             build_type_suffix=build_type_suffix,
+                                                                             deps_names=deps_names)
+                dynamic_variables = {
+                    "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
+                    self.components_dynamic_variables_tpl.render(
+                        pkg_name=pkg_findname, global_dynamic_variables=global_dynamic_variables,
+                        pkg_components=pkg_components, build_type=build_type, components=components)
+                }
+                ret.update(dynamic_variables)
                 targets = self.components_targets_tpl.render(
                     pkg_name=pkg_findname,
                     pkg_filename=pkg_filename,

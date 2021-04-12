@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conans.model.info import ConanInfo
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.settings import bad_value_msg, undefined_value
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
@@ -12,6 +12,13 @@ from conans.util.files import load, save
 
 
 class SettingsTest(unittest.TestCase):
+
+    def _get_conaninfo(self, reference, client):
+        ref = ConanFileReference.loads(reference)
+        pkg_folder = client.cache.package_layout(ref).packages()
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):
         settings = """os:
@@ -202,14 +209,15 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=Windows --build missing")
+        client.run("create . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+        conan_info = self._get_conaninfo("Say/0.1@", client)
         self.assertEqual(conan_info.settings.os, "Windows")
 
-        client.run("install . -s os=Linux --build missing")
+        client.run("remove Say/0.1 -f")
+        client.run("create . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+        conan_info = self._get_conaninfo("Say/0.1@", client)
         self.assertEqual(conan_info.settings.os, "Linux")
 
     def test_settings_as_a_list_conanfile(self):
@@ -224,8 +232,8 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=Windows --build missing")
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+        client.run("create . -s os=Windows --build missing")
+        conan_info = self._get_conaninfo("Say/0.1@", client)
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
@@ -242,8 +250,8 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=Windows --build missing")
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+        client.run("create . -s os=Windows --build missing")
+        conan_info = self._get_conaninfo("Say/0.1@", client)
         self.assertEqual(conan_info.settings.os,  "Windows")
         self.assertEqual(conan_info.settings.fields, ["arch", "os"])
 
@@ -315,7 +323,7 @@ class SayConan(ConanFile):
 """
         client = TestClient()
         client.save({CONANFILE: content})
-        client.run("install . -s os=ChromeOS --build missing", assert_error=True)
+        client.run("create . -s os=ChromeOS --build missing", assert_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['AIX', 'Android', 'Arduino', 'Emscripten', 'FreeBSD', 'Linux', 'Macos', 'Neutrino',
                                      'SunOS', 'Windows', 'WindowsCE', 'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
@@ -327,7 +335,7 @@ class SayConan(ConanFile):
                                 "Windows:%s    ChromeOS:%s" % (os.linesep, os.linesep))
 
         save(client.cache.settings_path, config)
-        client.run("install . -s os=ChromeOS --build missing")
+        client.run("create . -s os=ChromeOS --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
 
         # Settings is None
@@ -340,9 +348,10 @@ class SayConan(ConanFile):
     settings = None
 """
         client.save({CONANFILE: content})
-        client.run("install . --build missing")
+        client.run("remove Say/0.1@ -f")
+        client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+        conan_info = self._get_conaninfo("Say/0.1@", client)
         self.assertEqual(conan_info.settings.dumps(), "")
 
         # Settings is {}
@@ -355,7 +364,10 @@ class SayConan(ConanFile):
     settings = {}
 """
         client.save({CONANFILE: content})
-        client.run("install . --build missing")
+        client.run("remove Say/0.1@ -f")
+        client.run("create . --build missing")
         self.assertIn('Generated conaninfo.txt', client.out)
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
+
+        conan_info = self._get_conaninfo("Say/0.1@", client)
+
         self.assertEqual(conan_info.settings.dumps(), "")

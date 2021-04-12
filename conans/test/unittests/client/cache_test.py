@@ -3,7 +3,7 @@
 import os
 import unittest
 
-from six import StringIO
+from io import StringIO
 
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput

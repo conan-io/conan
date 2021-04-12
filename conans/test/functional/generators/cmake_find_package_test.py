@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-import six
 
 from conans.client.tools import replace_in_file
 from conans.model.ref import ConanFileReference, PackageReference
@@ -422,18 +421,14 @@ message("Target libs: ${tmp}")
         self.assertIn('Found Test: 0.1 (found version "0.1")', client.out)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Frameworks: Foundation", client.out)
-        six.assertRegex(self, str(client.out),
+        self.assertRegex(str(client.out),
                         r"Frameworks found: [^\s]*/System/Library/Frameworks/Foundation.framework")
-        six.assertRegex(self, str(client.out),
+        self.assertRegex(str(client.out),
                         r"Target libs: [^\s]*/System/Library/Frameworks/Foundation.framework;;")
 
         self.assertNotIn("Foundation.framework not found in package, might be system one",
                          client.out)
-        if six.PY2:
-            self.assertNotRegexpMatches(str(client.out),
-                                        r"Libraries to link: .*Foundation\.framework")
-        else:
-            self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
+        self.assertNotRegex(str(client.out), r"Libraries to link: .*Foundation\.framework")
 
     def test_build_modules(self):
         conanfile = textwrap.dedent("""

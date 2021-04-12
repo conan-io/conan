@@ -19,14 +19,14 @@ class SearchRecorderTest(unittest.TestCase):
     def test_sequential(self):
         self.search_recorder.add_recipe("remote1", _ref("fake/0.1@user/channel"))
         self.search_recorder.add_package("remote1", _ref("fake/0.1@user/channel"), "fake_package_id",
-                                         "fake_options", "fake_settings", "fake_requires", False)
+                                         "fake_options", "fake_settings", "fake_requires")
         self.search_recorder.add_recipe("remote2", _ref("fakefake/0.1@user/channel"))
         self.search_recorder.add_package("remote2", _ref("fakefake/0.1@user/channel"),
                                          "fakefake_package_id1", "fakefake_options1",
-                                         "fakefake_settings1", "fakefake_requires1", False)
+                                         "fakefake_settings1", "fakefake_requires1")
         self.search_recorder.add_package("remote2", _ref("fakefake/0.1@user/channel"),
                                          "fakefake_package_id2", "fakefake_options2",
-                                         "fakefake_settings2", "fakefake_requires2", False)
+                                         "fakefake_settings2", "fakefake_requires2")
         info = self.search_recorder.get_info()
         expected_result = {
                                "error": False,
@@ -43,8 +43,7 @@ class SearchRecorderTest(unittest.TestCase):
                                                         "id": "fake_package_id",
                                                         "options": "fake_options",
                                                         "settings": "fake_settings",
-                                                        "requires": "fake_requires",
-                                                        "outdated": False
+                                                        "requires": "fake_requires"
                                                     }
                                                 ]
                                             }
@@ -62,15 +61,13 @@ class SearchRecorderTest(unittest.TestCase):
                                                        "id": "fakefake_package_id1",
                                                        "options": "fakefake_options1",
                                                        "settings": "fakefake_settings1",
-                                                       "requires": "fakefake_requires1",
-                                                       "outdated": False
+                                                       "requires": "fakefake_requires1"
                                                    },
                                                    {
                                                        "id": "fakefake_package_id2",
                                                        "options": "fakefake_options2",
                                                        "settings": "fakefake_settings2",
-                                                       "requires": "fakefake_requires2",
-                                                       "outdated": False
+                                                       "requires": "fakefake_requires2"
                                                    }
                                                ]
                                            }
@@ -86,13 +83,13 @@ class SearchRecorderTest(unittest.TestCase):
         self.search_recorder.add_recipe("my_remote3", _ref("fake3/0.1@user/channel"))
         self.search_recorder.add_package("my_remote1", _ref("fake1/0.1@user/channel"),
                                          "fake1_package_id1", "fake1_options1", "fake1_settings1",
-                                         "fake1_requires1", False)
+                                         "fake1_requires1")
         self.search_recorder.add_package("my_remote2", _ref("fake2/0.1@user/channel"),
                                          "fake2_package_id1", "fake2_options1", "fake2_settings1",
-                                         "fake2_requires1", False)
+                                         "fake2_requires1")
         self.search_recorder.add_package("my_remote2", _ref("fake2/0.1@user/channel"),
                                          "fake2_package_id2", "fake2_options2", "fake2_settings2",
-                                         "fake2_requires2", False)
+                                         "fake2_requires2")
         info = self.search_recorder.get_info()
         expected_result = {
                             "error": False,
@@ -109,8 +106,7 @@ class SearchRecorderTest(unittest.TestCase):
                                                     "id": "fake1_package_id1",
                                                     "options": "fake1_options1",
                                                     "settings": "fake1_settings1",
-                                                    "requires": "fake1_requires1",
-                                                    "outdated": False
+                                                    "requires": "fake1_requires1"
                                                 }
                                             ]
                                         }
@@ -128,15 +124,13 @@ class SearchRecorderTest(unittest.TestCase):
                                                     "id": "fake2_package_id1",
                                                     "options": "fake2_options1",
                                                     "settings": "fake2_settings1",
-                                                    "requires": "fake2_requires1",
-                                                    "outdated": False
+                                                    "requires": "fake2_requires1"
                                                 },
                                                 {
                                                     "id": "fake2_package_id2",
                                                     "options": "fake2_options2",
                                                     "settings": "fake2_settings2",
-                                                    "requires": "fake2_requires2",
-                                                    "outdated": False
+                                                    "requires": "fake2_requires2"
                                                 }
                                             ]
                                         }

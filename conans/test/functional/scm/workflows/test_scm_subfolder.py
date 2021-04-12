@@ -38,9 +38,16 @@ class SVNConanfileInRepoRootTest(SCMSubfolder, SVNLocalRepoTestCase):
 
     extra_header = textwrap.dedent("""\
         def get_remote_url():
-            here = os.path.dirname(__file__)
-            svn = tools.SVN(os.path.join(here, "%s"))
-            return svn.get_remote_url()
+            from conans.errors import ConanException
+            try:
+                here = os.path.dirname(__file__)
+                svn = tools.SVN(os.path.join(here, "%s"))
+                return svn.get_remote_url()
+            except ConanException as e:
+                # CONAN 2.0: we no longer modify recipe in cache, so exported conanfile still contains
+                # "get_svn_remote", which will raise during the load of the conanfile, long before we
+                # have a chance to load updated SCM data from the conandata.yml
+                return "sicario"
         """ % SCMSubfolder.path_from_conanfile_to_root)
 
     conanfile = SCMSubfolder.conanfile_base.format(extra_header=extra_header,

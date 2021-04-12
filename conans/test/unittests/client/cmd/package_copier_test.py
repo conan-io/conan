@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import unittest
@@ -127,11 +128,20 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.package_layout(ref).export()
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
-        save(paths.package_layout(ref).package_metadata(), PackageMetadata().dumps())
+        metadata = PackageMetadata()
+        metadata.recipe.revision = "myreciperev"
+        save(paths.package_layout(ref).package_metadata(), metadata.dumps())
         mkdir(paths.package_layout(ref).export_sources())
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
         pref = PackageReference(ref, package_id)
+        metadata_path = paths.package_layout(ref).package_metadata()
+        with open(metadata_path) as f:
+            data = json.load(f)
+            metadata = PackageMetadata.loads(json.dumps(data))
+            metadata.packages[package_id].revision = "mypackagerev"
+            metadata.packages[package_id].recipe_revision = "myreciperev"
+        save(metadata_path, metadata.dumps())
         package1_dir = paths.package_layout(ref).package(pref)
         mkdir(package1_dir)
         save(os.path.join(package1_dir, "package.lib"), content)

@@ -112,7 +112,8 @@ class Pkg(ConanFile):
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable:wrong", assert_error=True)
-        self.assertIn("ERROR: Binary package not found: 'pkg/0.1@lasote/stable:wrong'",
+        self.assertIn("ERROR: Binary package not found: "
+                      "'pkg/0.1@lasote/stable#f3367e0e7d170aa12abccb175fee5f97:wrong'",
                       client.out)
 
     def test_download_pattern(self):

@@ -1,6 +1,8 @@
 import json
 import unittest
 
+from mock import Mock
+
 from conans.client.generators.json_generator import JsonGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -8,13 +10,12 @@ from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.user_info import UserInfo, DepsUserInfo
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class JsonTest(unittest.TestCase):
 
     def test_variables_setup(self):
-        conanfile = ConanFile(TestBufferConanOutput(), None)
+        conanfile = ConanFile(Mock(), None)
         conanfile.initialize(Settings({}), EnvValues())
 
         # Add some cpp_info for dependencies

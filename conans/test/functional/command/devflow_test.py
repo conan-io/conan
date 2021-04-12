@@ -56,13 +56,10 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ../recipe")
         client.run("build ../recipe")
-        client.current_folder = package_folder
-        client.run("package ../recipe --build-folder=../build --package-folder='%s'" %
-                   package_folder)
-        self._assert_pkg(package_folder)
+
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.cache.package_layout(ref).packages()
@@ -80,12 +77,9 @@ class DevInSourceFlowTest(unittest.TestCase):
 
         client.run("install .")
         client.run("build .")
-        client.current_folder = package_folder
-        client.run("package .. --build-folder=.. --package-folder='%s' " % package_folder)
-        self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s' -if=." % package_folder)
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.cache.package_layout(ref).packages()
@@ -105,13 +99,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = build_folder
         client.run("install ..")
         client.run("build ..")
-        client.current_folder = package_folder
-        client.run("package ../.. --build-folder=../")
-        self._assert_pkg(package_folder)
-        rmdir(package_folder)  # IMPORTANT: Symptom that package + package_folder is not fitting
-        # well now. (To discuss)
-        # But I think now you choose you way to develop, local or cache, if you use conan export-pkg
-        # you are done, if you use package() you need the "conan project" feature
+
         client.current_folder = build_folder
         client.run("export-pkg .. Pkg/0.1@lasote/testing --source-folder=.. ")
 
@@ -171,12 +159,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("source ../recipe")
         client.current_folder = build_folder
         client.run("build ../recipe --source-folder=../src")
-        client.current_folder = package_folder
-        client.run("package ../../recipe --source-folder=../../src --build-folder=../")
-        self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build/package")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build -sf=../src")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.cache.package_layout(ref).packages()
@@ -194,12 +179,10 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("install .")
         client.run("source .")
         client.run("build . ")
-        client.current_folder = package_folder
-        client.run("package .. --build-folder=.. --package-folder='%s'" % package_folder)
-        self._assert_pkg(package_folder)
+
         client.current_folder = repo_folder
         client.run("export . lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=.")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.cache.package_layout(ref).packages()
@@ -220,10 +203,6 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("install ..")
         client.run("source ..")
         client.run("build .. --source-folder=.")
-        client.current_folder = package_folder
-        client.run("package ../.. --build-folder=../")
-        self._assert_pkg(package_folder)
-        rmdir(package_folder)
         client.current_folder = repo_folder
 
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")

@@ -1,7 +1,6 @@
 
 import fnmatch
 
-import six
 import yaml
 
 from conans.errors import ConanException
@@ -111,7 +110,7 @@ class PackageOptionValues(object):
         return sorted(list(self._dict.items()))
 
     def add(self, option_text):
-        assert isinstance(option_text, six.string_types)
+        assert isinstance(option_text, str)
         name, value = option_text.split("=")
         self._dict[name.strip()] = PackageOptionValue(value.strip())
 
@@ -190,7 +189,7 @@ class OptionsValues(object):
         # handle list of tuples (name, value)
         for (k, v) in values:
             k = k.strip()
-            v = v.strip() if isinstance(v, six.string_types) else v
+            v = v.strip() if isinstance(v, str) else v
             tokens = k.split(":")
             if len(tokens) == 2:
                 package, option = tokens

@@ -4,7 +4,6 @@ import os
 import platform
 import shutil
 import subprocess
-import sys
 from distutils import dir_util
 
 from conans import __version__
@@ -89,7 +88,6 @@ def pyinstall(source_folder):
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
-    conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
     hidden = ("--hidden-import=glob --hidden-import=conan.tools.microsoft "
               "--hidden-import=conan.tools.gnu --hidden-import=conan.tools.cmake "
               "--hidden-import=conan.tools.meson")
@@ -114,26 +112,16 @@ def pyinstall(source_folder):
                     % (command, source_folder, conan_server_path, win_ver),
                     cwd=pyinstaller_path, shell=True)
 
-    subprocess.call('%s -y -p "%s" --console "%s" -n conan_build_info %s'
-                    % (command, source_folder, conan_build_info_path, win_ver),
-                    cwd=pyinstaller_path, shell=True)
-
     conan_bin = os.path.join(pyinstaller_path, 'dist', 'conan')
     conan_server_folder = os.path.join(pyinstaller_path, 'dist', 'conan_server')
 
-    conan_build_info_folder = os.path.join(pyinstaller_path, 'dist', 'conan_build_info')
     dir_util.copy_tree(conan_server_folder, conan_bin)
-    dir_util.copy_tree(conan_build_info_folder, conan_bin)
     _run_bin(pyinstaller_path)
 
     return os.path.abspath(os.path.join(pyinstaller_path, 'dist', 'conan'))
 
 
 if __name__ == "__main__":
-    if sys.version_info.major == 3 and sys.version_info.minor >= 8:
-        print("pyinstaller does not yet support python 3.8, "
-              "see: https://github.com/pyinstaller/pyinstaller/issues/4311", file=sys.stderr)
-        exit(1)
     src_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
     output_folder = pyinstall(src_folder)
     print("\n**************Conan binaries created!******************\n"

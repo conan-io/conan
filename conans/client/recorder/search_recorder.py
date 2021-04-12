@@ -10,11 +10,11 @@ class _SearchRecipe(namedtuple("SearchRecipe", "ref")):
 
 
 class _SearchPackage(namedtuple("SearchPackage",
-                                "package_id, options, settings, requires, outdated")):
+                                "package_id, options, settings, requires")):
 
     def to_dict(self):
         return {"id": self.package_id, "options": self.options, "settings": self.settings,
-                "requires": self.requires, "outdated": self.outdated}
+                "requires": self.requires}
 
 
 class SearchRecorder(object):
@@ -31,8 +31,8 @@ class SearchRecorder(object):
             self._info[remote_name] = OrderedDict()
         self._info[remote_name][repr(ref)] = {"recipe": recipe, "packages": []}
 
-    def add_package(self, remote_name, ref, package_id, options, settings, requires, outdated):
-        sp = _SearchPackage(package_id, options, settings, requires, outdated)
+    def add_package(self, remote_name, ref, package_id, options, settings, requires):
+        sp = _SearchPackage(package_id, options, settings, requires)
         self._info[remote_name][repr(ref)]["packages"].append(sp)
 
     def get_info(self):

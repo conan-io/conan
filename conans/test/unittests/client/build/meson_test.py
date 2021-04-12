@@ -3,12 +3,10 @@ import shutil
 import unittest
 from parameterized.parameterized import parameterized
 
-import six
-
 from conans.client.build import defs_to_string
 from conans.client.build.meson import Meson
 from conans.client.conf import get_default_settings_yml
-from conans.client.tools import args_to_string
+from conans.client.tools import args_to_string, environment_append
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.test.utils.mocks import MockDepsCppInfo, ConanFileMock
@@ -50,6 +48,15 @@ class MesonTest(unittest.TestCase):
         self.assertIsNone(conan_file.command)
         meson.meson_install()
         self.assertIsNone(conan_file.command)
+
+    def test_conan_run_tests(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.should_test = True
+        meson = Meson(conan_file)
+        with environment_append({"CONAN_RUN_TESTS": "0"}):
+            meson.test()
+            self.assertIsNone(conan_file.command)
 
     def test_folders(self):
         settings = Settings.loads(get_default_settings_yml())
@@ -144,7 +151,7 @@ class MesonTest(unittest.TestCase):
         self._check_commands(cmd_expected, conan_file.command)
 
         # Raise mixing
-        with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
+        with self.assertRaisesRegex(ConanException, "Use 'build_folder'/'source_folder'"):
             meson.configure(source_folder="source", build_dir="build")
 
         meson.test()

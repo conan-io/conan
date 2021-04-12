@@ -9,11 +9,9 @@ class BuildMode(object):
                    => ["hello/0.1@foo/bar"] if user wrote "--build hello/0.1@foo/bar"
                    => False if user wrote "never"
                    => True if user wrote "missing"
-                   => "outdated" if user wrote "--build outdated"
     """
     def __init__(self, params, output):
         self._out = output
-        self.outdated = False
         self.missing = False
         self.never = False
         self.cascade = False
@@ -28,9 +26,7 @@ class BuildMode(object):
             self.all = True
         else:
             for param in params:
-                if param == "outdated":
-                    self.outdated = True
-                elif param == "missing":
+                if param == "missing":
                     self.missing = True
                 elif param == "never":
                     self.never = True
@@ -42,7 +38,7 @@ class BuildMode(object):
                     clean_pattern = clean_pattern.replace("@#", "#")
                     self.patterns.append(clean_pattern)
 
-            if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
+            if self.never and (self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
@@ -73,7 +69,7 @@ class BuildMode(object):
         return False
 
     def allowed(self, conan_file):
-        if self.missing or self.outdated:
+        if self.missing:
             return True
         if conan_file.build_policy_missing:
             conan_file.output.info("Building package from source as defined by "

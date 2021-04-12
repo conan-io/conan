@@ -4,7 +4,6 @@ import unittest
 from textwrap import dedent
 
 import pytest
-import six
 import time
 
 from parameterized.parameterized import parameterized
@@ -100,7 +99,7 @@ class WorkspaceTest(unittest.TestCase):
         path = os.path.join(folder, "conanws.yml")
         project = "root: Hellob/0.1@lasote/stable"
         save(path, project)
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Root Hellob/0.1@lasote/stable is not defined as editable"):
             Workspace(path, None)
 
@@ -113,7 +112,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
@@ -126,7 +125,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Workspace unrecognized fields: {'random': 'something'}"):
             Workspace(path, None)
 
@@ -137,7 +136,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Workspace editable HelloB/0.1@lasote/stable "
                                    "does not define path"):
             Workspace(path, None)
@@ -150,7 +149,7 @@ class WorkspaceTest(unittest.TestCase):
             """)
         save(path, project)
 
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "Workspace editable HelloB/0.1@lasote/stable "
                                    "does not define path"):
             Workspace(path, None)
@@ -189,7 +188,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
         for sub in ("A", "B", "C"):
-            for f in ("conanbuildinfo.cmake", "conaninfo.txt", "conanbuildinfo.txt"):
+            for f in ("conanbuildinfo.cmake", "conaninfo.txt"):
                 self.assertTrue(os.path.exists(os.path.join(client.current_folder, sub, f)))
 
     @parameterized.expand([("csv",), ("list",), (("abbreviated_list"))])
@@ -325,6 +324,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("HelloD/0.1@lasote/stable from user folder - Editable", client.out)
 
     @pytest.mark.tool_cmake
+    @pytest.mark.xfail(reason="Check how new local build command affects workspaces")
     def test_simple_build(self):
         client = TestClient()
 
@@ -398,6 +398,7 @@ class WorkspaceTest(unittest.TestCase):
         self.assertIn("Hello World A Debug!", client.out)
 
     @pytest.mark.tool_cmake
+    @pytest.mark.xfail(reason="Check how new local build command affects workspaces")
     def test_simple_out_of_source_build(self):
         client = TestClient()
 

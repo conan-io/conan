@@ -1,9 +1,6 @@
-import ast
 import os
 import shutil
-import sys
 
-import six
 import yaml
 
 from conans.client.file_copier import FileCopier
@@ -16,14 +13,12 @@ from conans.model.ref import ConanFileReference
 from conans.model.scm import SCM, get_scm_data
 from conans.paths import CONANFILE, DATA_YML
 from conans.search.search import search_recipes, search_packages
-from conans.util.files import is_dirty, load, rmdir, save, set_dirty, remove, mkdir, \
+from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
     merge_directories, clean_dirty
 from conans.util.log import logger
 
-isPY38 = bool(sys.version_info.major == 3 and sys.version_info.minor == 8)
 
-
-def export_alias(package_layout, target_ref, output, revisions_enabled):
+def export_alias(package_layout, target_ref, output):
     revision_mode = "hash"
     conanfile = """
 from conans import ConanFile
@@ -38,7 +33,7 @@ class AliasConanfile(ConanFile):
     manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(package_layout=package_layout, revisions_enabled=revisions_enabled,
+    _update_revision_in_metadata(package_layout=package_layout,
                                  output=output, path=None, manifest=manifest,
                                  revision_mode=revision_mode)
 
@@ -63,8 +58,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                        conanfile.py
     """
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
-    revisions_enabled = app.config.revisions_enabled
-    scm_to_conandata = app.config.scm_to_conandata
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
     # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
@@ -84,6 +77,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         channel = None
 
     ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    conanfile.display_name = str(ref)
+    conanfile.output.scope = conanfile.display_name
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:
@@ -135,7 +130,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
                                                               os.path.dirname(conanfile_path),
                                                               package_layout, output,
-                                                              ignore_dirty, scm_to_conandata)
+                                                              ignore_dirty)
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
@@ -165,7 +160,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     # Compute the revision for the recipe
     revision = _update_revision_in_metadata(package_layout=package_layout,
-                                            revisions_enabled=revisions_enabled,
                                             output=output,
                                             path=os.path.dirname(conanfile_path),
                                             manifest=manifest,
@@ -188,18 +182,16 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             output.warn(str(e))
             set_dirty(source_folder)
 
-    # When revisions enabled, remove the packages not matching the revision
-    if revisions_enabled:
-        packages = search_packages(package_layout, query=None)
-        metadata = package_layout.load_metadata()
-        recipe_revision = metadata.recipe.revision
-        to_remove = [pid for pid in packages if
-                     metadata.packages.get(pid) and
-                     metadata.packages.get(pid).recipe_revision != recipe_revision]
-        if to_remove:
-            output.info("Removing the local binary packages from different recipe revisions")
-            remover = DiskRemover()
-            remover.remove_packages(package_layout, ids_filter=to_remove)
+    packages = search_packages(package_layout, query=None)
+    metadata = package_layout.load_metadata()
+    recipe_revision = metadata.recipe.revision
+    to_remove = [pid for pid in packages if
+                 metadata.packages.get(pid) and
+                 metadata.packages.get(pid).recipe_revision != recipe_revision]
+    if to_remove:
+        output.info("Removing the local binary packages from different recipe revisions")
+        remover = DiskRemover()
+        remover.remove_packages(package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
@@ -229,8 +221,7 @@ def _check_settings_for_warnings(conanfile, output):
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty,
-                             scm_to_conandata):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -244,7 +235,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
 
     if not captured:
         # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
+        _replace_scm_data_in_recipe(package_layout, scm_data)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -276,111 +267,25 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata)
+    _replace_scm_data_in_recipe(package_layout, scm_data)
 
     return scm_data, local_src_path
 
 
-def _replace_scm_data_in_recipe(package_layout, scm_data, scm_to_conandata):
-    if scm_to_conandata:
-        conandata_path = os.path.join(package_layout.export(), DATA_YML)
-        conandata_yml = {}
-        if os.path.exists(conandata_path):
-            conandata_yml = yaml.safe_load(load(conandata_path))
-            conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
-            if '.conan' in conandata_yml:
-                raise ConanException("Field '.conan' inside '{}' file is reserved to "
-                                     "Conan usage.".format(DATA_YML))
-        scm_data_copied = scm_data.as_dict()
-        scm_data_copied.pop('username', None)
-        scm_data_copied.pop('password', None)
-        conandata_yml['.conan'] = {'scm': scm_data_copied}
-
-        save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
-    else:
-        _replace_scm_data_in_conanfile(package_layout.conanfile(), scm_data)
-
-
-def _replace_scm_data_in_conanfile(conanfile_path, scm_data):
-    # FIXME: Remove in Conan 2.0, it will use conandata.yml as the only way
-    # Parsing and replacing the SCM field
-    content = load(conanfile_path)
-    headers = []
-
-    if six.PY2:
-        # Workaround for https://bugs.python.org/issue22221
-        lines_without_headers = []
-        lines = content.splitlines(True)
-        for line in lines:
-            if not lines_without_headers and line.startswith("#"):
-                headers.append(line)
-            else:
-                lines_without_headers.append(line)
-        content = ''.join(lines_without_headers)
-
-    lines = content.splitlines(True)
-    tree = ast.parse(content)
-    to_replace = []
-    comments = []
-    class_line = None
-    tab_size = 4
-    for i_body, item in enumerate(tree.body):
-        if isinstance(item, ast.ClassDef):
-            statements = item.body
-            class_line = item.lineno
-            for i, stmt in enumerate(item.body):
-                if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
-                    line = lines[stmt.lineno - 1]
-                    tab_size = len(line) - len(line.lstrip())
-                    if isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == "scm":
-                        try:
-                            if i + 1 == len(statements):  # Last statement in my ClassDef
-                                if i_body + 1 == len(tree.body):  # Last statement over all
-                                    next_line = len(lines)
-                                else:
-                                    next_line = tree.body[i_body + 1].lineno - 1
-                            else:
-                                # Next statement can be a comment or anything else
-                                next_statement = statements[i + 1]
-                                if isPY38 and isinstance(next_statement, ast.Expr):
-                                    # Python 3.8 properly parses multiline comments with start
-                                    # and end lines, here we preserve the same (wrong)
-                                    # implementation of previous releases
-                                    next_line = next_statement.end_lineno - 1
-                                else:
-                                    next_line = next_statement.lineno - 1
-                                next_line_content = lines[next_line].strip()
-                                if (next_line_content.endswith('"""') or
-                                    next_line_content.endswith("'''")):
-                                    next_line += 1
-                        except IndexError:
-                            next_line = stmt.lineno
-                        replace = [line for line in lines[(stmt.lineno - 1):next_line]]
-                        to_replace.append("".join(replace).lstrip())
-                        comments = [line.strip('\n') for line in replace
-                                    if line.strip().startswith("#") or not line.strip()]
-                        break
-
-    if len(to_replace) > 1:
-        raise ConanException("The conanfile.py defines more than one class level 'scm' attribute")
-
-    new_text = "scm = " + ",\n          ".join(str(scm_data).split(",")) + "\n"
-
-    if len(to_replace) == 0:
-        # SCM exists, but not found in the conanfile, probably inherited from superclass
-        # FIXME: This will inject the lines only the latest class declared in the conanfile
-        tmp = lines[0:class_line]
-        tmp.append("{}{}".format(" " * tab_size, new_text))
-        tmp.extend(lines[class_line:])
-        content = ''.join(tmp)
-    else:
-        if comments:
-            new_text += '\n'.join(comments) + "\n"
-        content = content.replace(to_replace[0], new_text)
-        content = content if not headers else ''.join(headers) + content
-
-    remove(conanfile_path)
-    save(conanfile_path, content)
+def _replace_scm_data_in_recipe(package_layout, scm_data):
+    conandata_path = os.path.join(package_layout.export(), DATA_YML)
+    conandata_yml = {}
+    if os.path.exists(conandata_path):
+        conandata_yml = yaml.safe_load(load(conandata_path))
+        conandata_yml = conandata_yml or {}  # In case the conandata is a blank file
+        if '.conan' in conandata_yml:
+            raise ConanException("Field '.conan' inside '{}' file is reserved to "
+                                 "Conan usage.".format(DATA_YML))
+    scm_data_copied = scm_data.as_dict()
+    scm_data_copied.pop('username', None)
+    scm_data_copied.pop('password', None)
+    conandata_yml['.conan'] = {'scm': scm_data_copied}
+    save(conandata_path, yaml.safe_dump(conandata_yml, default_flow_style=False))
 
 
 def _detect_scm_revision(path):
@@ -395,7 +300,7 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, revisions_enabled, output, path, manifest,
+def _update_revision_in_metadata(package_layout, output, path, manifest,
                                  revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
@@ -403,9 +308,8 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
         revision = manifest.summary_hash
-        if revisions_enabled:
-            output.info("Using the exported files summary hash as the recipe"
-                        " revision: {} ".format(revision))
+        output.info("Using the exported files summary hash as the recipe"
+                    " revision: {} ".format(revision))
     else:
         try:
             rev_detected, repo_type, is_pristine = _detect_scm_revision(path)
@@ -416,10 +320,9 @@ def _update_revision_in_metadata(package_layout, revisions_enabled, output, path
 
         revision = rev_detected
 
-        if revisions_enabled:
-            output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
-            if not is_pristine:
-                output.warn("Repo status is not pristine: there might be modified files")
+        output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
+        if not is_pristine:
+            output.warn("Repo status is not pristine: there might be modified files")
 
     with package_layout.update_metadata() as metadata:
         metadata.recipe.revision = revision

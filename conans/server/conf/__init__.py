@@ -6,9 +6,7 @@ import os
 import random
 import string
 from datetime import timedelta
-
-import six
-from six.moves.configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError
 
 from conans.client import tools
 from conans.errors import ConanException
@@ -67,10 +65,7 @@ class ConanServerConfigParser(ConfigParser):
             if not self._loaded:
                 self._loaded = True
                 # To avoid encoding problems we use our tools.load
-                if six.PY3:
-                    self.read_string(tools.load(self.config_filename))
-                else:
-                    self.read(self.config_filename)
+                self.read_string(tools.load(self.config_filename))
 
             if varname:
                 section = dict(self.items(section))

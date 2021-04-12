@@ -3,7 +3,7 @@ import os
 import textwrap
 
 from jinja2 import Template
-from six.moves.configparser import ConfigParser, NoSectionError
+from configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
@@ -189,7 +189,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
     # cacert_path                         # environment CONAN_CACERT_PATH
-    # scm_to_conandata                    # environment CONAN_SCM_TO_CONANDATA
 
     # config_install_interval = 1h
     # required_conan_version = >=1.26
@@ -214,10 +213,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     #   hostname.to.be.proxied.com = http://user:pass@10.10.1.10:3128
     # You can skip the proxy for the matching (fnmatch) urls (comma-separated)
     # no_proxy_match = *bintray.com*, https://myserver.*
-
-    [hooks]    # environment CONAN_HOOKS
-    attribute_checker
-
     """))
 
 
@@ -427,16 +422,6 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Specify a numeric parameter for 'request_timeout'")
 
     @property
-    def revisions_enabled(self):
-        try:
-            revisions_enabled = get_env("CONAN_REVISIONS_ENABLED")
-            if revisions_enabled is None:
-                revisions_enabled = self.get_item("general.revisions_enabled")
-            return revisions_enabled.lower() in ("1", "true")
-        except ConanException:
-            return False
-
-    @property
     def parallel_download(self):
         try:
             parallel = self.get_item("general.parallel_download")
@@ -455,16 +440,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return download_cache
         except ConanException:
             return None
-
-    @property
-    def scm_to_conandata(self):
-        try:
-            scm_to_conandata = get_env("CONAN_SCM_TO_CONANDATA")
-            if scm_to_conandata is None:
-                scm_to_conandata = self.get_item("general.scm_to_conandata")
-            return scm_to_conandata.lower() in ("1", "true")
-        except ConanException:
-            return False
 
     @property
     def default_package_id_mode(self):
@@ -716,16 +691,19 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def config_install_interval(self):
+        item = "general.config_install_interval"
         try:
-            interval = self.get_item("general.config_install_interval")
+            interval = self.get_item(item)
         except ConanException:
             return None
 
         try:
             return timedelta_from_text(interval)
         except Exception:
-            raise ConanException("Incorrect definition of general.config_install_interval: %s"
-                                 % interval)
+            self.rm_item(item)
+            raise ConanException("Incorrect definition of general.config_install_interval: {}. "
+                                 "Removing it from conan.conf to avoid possible loop error."
+                                 .format(interval))
 
     @property
     def required_conan_version(self):

@@ -65,6 +65,7 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
+        conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
         self.dependencies = []  # Ordered Edges
         self.dependants = set()  # Edges
@@ -131,16 +132,6 @@ class Node(object):
     @property
     def ancestors(self):
         return self._ancestors
-
-    def partial_copy(self):
-        # Used for collapse_graph
-        result = Node(self.ref, self.conanfile, self.context, self.recipe, self.path)
-        result.dependants = set()
-        result.dependencies = []
-        result.binary = self.binary
-        result.remote = self.remote
-        result.binary_remote = self.binary_remote
-        return result
 
     def add_edge(self, edge):
         if edge.src == self:
@@ -269,68 +260,6 @@ class DepsGraph(object):
         for level in ordered:
             for node in level:
                 yield node
-
-    def _inverse_closure(self, references):
-        closure = set()
-        current = [n for n in self.nodes if str(n.ref) in references or "ALL" in references]
-        closure.update(current)
-        while current:
-            new_current = set()
-            for n in current:
-                closure.add(n)
-                new_neighs = n.inverse_neighbors()
-                to_add = set(new_neighs).difference(current)
-                new_current.update(to_add)
-            current = new_current
-        return closure
-
-    def collapse_graph(self):
-        """Computes and return a new graph, that doesn't have duplicated nodes with the same
-        PackageReference. This is the case for build_requires and private requirements
-        """
-        result = DepsGraph()
-        result.add_node(self.root.partial_copy())
-        unique_nodes = {}  # {PackageReference: Node (result, unique)}
-        nodes_map = {self.root: result.root}  # {Origin Node: Result Node}
-        # Add the nodes, without repetition. THe "node.partial_copy()" copies the nodes
-        # without Edges
-        for node in self.nodes:
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            pref = PackageReference(node.ref, node.package_id)
-            if pref not in unique_nodes:
-                result_node = node.partial_copy()
-                result.add_node(result_node)
-                unique_nodes[pref] = result_node
-            else:
-                result_node = unique_nodes[pref]
-            nodes_map[node] = result_node
-
-        # Compute the new edges of the graph
-        for node in self.nodes:
-            result_node = nodes_map[node]
-            for dep in node.dependencies:
-                src = result_node
-                dst = nodes_map[dep.dst]
-                result.add_edge(src, dst, dep.require)
-            for dep in node.dependants:
-                src = nodes_map[dep.src]
-                dst = result_node
-                result.add_edge(src, dst, dep.require)
-
-        return result
-
-    def build_order(self, references):
-        new_graph = self.collapse_graph()
-        levels = new_graph.inverse_levels()
-        closure = new_graph._inverse_closure(references)
-        result = []
-        for level in reversed(levels):
-            new_level = [n.ref for n in level
-                         if (n in closure and n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL))]
-            if new_level:
-                result.append(new_level)
-        return result
 
     def nodes_to_build(self):
         ret = []

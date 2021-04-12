@@ -37,8 +37,6 @@ class HalfDiamondTest(unittest.TestCase):
         self._export("Hello3", ["Hello2/0.1@lasote/stable"], export=False)
 
         self.client.run("install . --build missing")
-        self.assertIn("conanfile.py (Hello3/0.1): Generated conaninfo.txt",
-                      self.client.out)
 
     def test_check_duplicated_full_requires(self):
         self._export("Hello0")
@@ -46,8 +44,14 @@ class HalfDiamondTest(unittest.TestCase):
         self._export("Hello2", ["Hello1/0.1@lasote/stable", "Hello0/0.1@lasote/stable"],
                      export=False)
 
-        self.client.run("install . --build missing")
-        self.assertIn("conanfile.py (Hello2/0.1): Generated conaninfo.txt",
+        self.client.run("create . --build missing")
+        self.assertIn("Hello2/0.1: Generated conaninfo.txt",
                       self.client.out)
-        conaninfo = self.client.load("conaninfo.txt")
+
+        ref = ConanFileReference.loads("Hello2/0.1@")
+        pkg_folder = self.client.cache.package_layout(ref).packages()
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = self.client.load(os.path.join(pkg_folder, "conaninfo.txt"))
+
         self.assertEqual(1, conaninfo.count("Hello0/0.1@lasote/stable"))

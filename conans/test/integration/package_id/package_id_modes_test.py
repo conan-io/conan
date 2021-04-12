@@ -60,4 +60,4 @@ def test_package_revision_mode():
     client.run("create app")
 
     assert "liba/0.1.1:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
-    assert "libb/0.1:f2431acdad185a6626b90ee1dffb06445f887cbb - Cache" in client.out
+    assert "libb/0.1:e80084b60ad1238447223d0caf03386b68e2a1ed - Cache" in client.out

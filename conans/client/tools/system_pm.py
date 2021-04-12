@@ -1,6 +1,5 @@
 import os
 import sys
-import six
 
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo, cross_building, get_cross_building_settings
@@ -145,7 +144,7 @@ class SystemPackageTool(object):
         :param arch_names: Package suffix/prefix name used by installer tool e.g. {"x86_64": "amd64"}
         :return: None
         """
-        packages = [packages] if isinstance(packages, six.string_types) else list(packages)
+        packages = [packages] if isinstance(packages, str) else list(packages)
         # only one (first) variant will be installed
         list_variants = list(filter(lambda x: isinstance(x, (tuple, list)), packages))
         # all packages will be installed

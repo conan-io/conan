@@ -111,6 +111,8 @@ def detected_architecture():
         return "s390x"
     elif "s390" in machine:
         return "s390"
+    elif "sun4v" in machine:
+        return "sparc"
     elif "e2k" in machine:
         return OSInfo.get_e2k_architecture()
 
@@ -202,7 +204,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
                                                        "redhat", "rhel", "xenserver", "amazon",
-                                                       "oracle")
+                                                       "oracle", "amzn")
 
     @property
     def with_dnf(self):

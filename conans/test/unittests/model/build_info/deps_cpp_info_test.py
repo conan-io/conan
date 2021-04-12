@@ -1,7 +1,5 @@
 import unittest
 
-import six
-
 from conans.model.build_info import DepsCppInfo, CppInfo, DepCppInfo
 
 
@@ -32,8 +30,8 @@ class DepsCppInfoTestCase(unittest.TestCase):
         self.assertIsInstance(info_for_package.exelinkflags, list)
         self.assertIsInstance(info_for_package.frameworks, list)
         self.assertIsInstance(info_for_package.frameworkdirs, list)
-        self.assertIsInstance(info_for_package.rootpath, six.string_types)
-        self.assertIsInstance(info_for_package.name, six.string_types)
+        self.assertIsInstance(info_for_package.rootpath, str)
+        self.assertIsInstance(info_for_package.name, str)
         self.assertIsInstance(info_for_package.system_libs, list)
         self.assertIsInstance(info_for_package.build_modules, dict)
         self.assertIsInstance(info_for_package.components, dict)
@@ -46,6 +44,6 @@ class DepsCppInfoTestCase(unittest.TestCase):
         self.assertIsInstance(info_for_package.res_paths, list)
         self.assertIsInstance(info_for_package.framework_paths, list)
         self.assertIsInstance(info_for_package.build_modules_paths, dict)
-        self.assertIsInstance(info_for_package.get_name("generator"), six.string_types)
-        self.assertIsInstance(info_for_package.version, six.string_types)
+        self.assertIsInstance(info_for_package.get_name("generator"), str)
+        self.assertIsInstance(info_for_package.version, str)
         self.assertIsInstance(info_for_package.components, dict)

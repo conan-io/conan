@@ -4,7 +4,6 @@ import textwrap
 import unittest
 
 import pytest
-import six
 import mock
 from parameterized import parameterized
 
@@ -27,7 +26,7 @@ class MSBuildTest(unittest.TestCase):
 
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
-    @pytest.mark.skipif(platform.system() != "Windows" or six.PY2, reason="Requires MSBuild")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
     def test_build_vs_project(self):
         conan_build_vs = """
 from conans import ConanFile, MSBuild
@@ -324,7 +323,7 @@ class HelloConan(ConanFile):
 
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-    @mock.patch("conans.client.build.msbuild.MSBuildHelper.get_version")
+    @mock.patch("conans.client.build.msbuild.MSBuild.get_version")
     def test_binary_logging_not_supported(self, mock_get_version):
         mock_get_version.return_value = Version("14")
 
@@ -350,7 +349,7 @@ class HelloConan(ConanFile):
                                  "arch": "x86_64",
                                  "compiler.runtime": "MDd"})
         version = MSBuild.get_version(settings)
-        six.assertRegex(self, version, r"(\d+\.){2,3}\d+")
+        self.assertRegex(version, r"(\d+\.){2,3}\d+")
         self.assertGreater(version, "15.1")
 
     @pytest.mark.tool_visual_studio

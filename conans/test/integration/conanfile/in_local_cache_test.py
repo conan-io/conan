@@ -13,7 +13,7 @@ class AConan(ConanFile):
 
     def build(self):
         self.output.warn("build() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
-        
+
     def package(self):
         self.output.warn("package() IN LOCAL CACHE=> %s" % str(self.in_local_cache))
 
@@ -39,8 +39,6 @@ class InLocalCacheTest(unittest.TestCase):
         pack_folder = os.path.join(client.current_folder, "package")
         os.mkdir(pack_folder)
         client.current_folder = pack_folder
-        client.run("package .. --build-folder ..")
-        self.assertIn("package() IN LOCAL CACHE=> False", client.out)
 
         # Confirm that we have the flag depending on the recipe too
         client = TestClient()

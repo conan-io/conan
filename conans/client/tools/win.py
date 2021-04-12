@@ -12,7 +12,6 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.oss import OSInfo, detected_architecture, get_build_os_arch
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.unicode import get_cwd
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.env_reader import get_env
 from conans.util.fallbacks import default_output
@@ -42,7 +41,7 @@ def _visual_compiler_cygwin(output, version):
 
 
 def _system_registry_key(key, subkey, query):
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     try:
         hkey = winreg.OpenKey(key, subkey)
     except (OSError, WindowsError):  # Raised by OpenKey/Ex if the function fails (py3, py2)
@@ -58,7 +57,7 @@ def _system_registry_key(key, subkey, query):
 
 
 def is_win64():
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     return _system_registry_key(winreg.HKEY_LOCAL_MACHINE,
                                 r"SOFTWARE\Microsoft\Windows\CurrentVersion",
                                 "ProgramFilesDir (x86)") is not None
@@ -80,7 +79,7 @@ def _visual_compiler(output, version):
 
     version = "%s.0" % version
 
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     if is_win64():
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
@@ -181,8 +180,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     conan_v2_error("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
-    from conans.client.build.msbuild import MSBuildHelper
-    tmp = MSBuildHelper(settings)
+    from conans.client.build.msbuild import MSBuild
+    tmp = MSBuild(settings)
     output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
     tmp._output = output
 
@@ -344,7 +343,7 @@ def vs_comntools(compiler_version):
 def find_windows_10_sdk():
     """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
     # uses the same method as VCVarsQueryRegistry.bat
-    from six.moves import winreg  # @UnresolvedImport
+    import winreg
     hives = [
         (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Wow6432Node'),
         (winreg.HKEY_CURRENT_USER, r'SOFTWARE\Wow6432Node'),
@@ -614,18 +613,25 @@ def unix_path(path, path_flavor=None):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
 
     path_flavor = path_flavor or OSInfo.detect_windows_subsystem() or MSYS2
+    if path.startswith('\\\\?\\'):
+        path = path[4:]
     path = path.replace(":/", ":\\")
+    append_prefix = re.match(r'[a-z]:\\', path, re.IGNORECASE)
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
     path = pattern.sub('/\\1/', path).replace('\\', '/')
-    if path_flavor in (MSYS, MSYS2):
-        return path.lower()
-    elif path_flavor == CYGWIN:
-        return '/cygdrive' + path.lower()
-    elif path_flavor == WSL:
-        return '/mnt' + path[0:2].lower() + path[2:]
-    elif path_flavor == SFU:
-        path = path.lower()
-        return '/dev/fs' + path[0] + path[1:].capitalize()
+
+    if append_prefix:
+        if path_flavor in (MSYS, MSYS2):
+            return path.lower()
+        elif path_flavor == CYGWIN:
+            return '/cygdrive' + path.lower()
+        elif path_flavor == WSL:
+            return '/mnt' + path[0:2].lower() + path[2:]
+        elif path_flavor == SFU:
+            path = path.lower()
+            return '/dev/fs' + path[0] + path[1:].capitalize()
+    else:
+        return path if path_flavor == WSL else path.lower()
     return None
 
 
@@ -635,7 +641,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         It requires to have MSYS2, CYGWIN, or WSL
     """
     env = env or {}
-    if platform.system() != "Windows":
+    if not OSInfo().is_windows:
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or OSInfo.detect_windows_subsystem()
 
@@ -686,14 +692,18 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
-            cwd = os.path.join(get_cwd(), cwd)
+            cwd = os.path.join(os.getcwd(), cwd)
 
-        curdir = unix_path(cwd or get_cwd(), path_flavor=subsystem)
+        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = OSInfo.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
         login = "--login" if with_login else ""
-        wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        if platform.system() == "Windows":
+            # cmd.exe shell
+            wincmd = '%s %s -c %s' % (bash_path, login, escape_windows_cmd(to_run))
+        else:
+            wincmd = '%s %s -c %s' % (bash_path, login, to_run)
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
 
         # If is there any other env var that we know it contains paths, convert it to unix_path

@@ -32,10 +32,6 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile.replace("pass", "requires='PkgA/0.1@user/channel'")})
         client.run("install . -g=cmake")
         self.assertIn("PkgC/0.1@user/channel:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = client.load("conanbuildinfo.txt")
-        self.assertIn("[libs];PkgA;PkgC", ";".join(conanbuildinfo.splitlines()))
-        self.assertIn("PkgC/0.1/user/channel/package", conanbuildinfo)
-        self.assertIn("[includedirs_PkgC]", conanbuildinfo)
         conanbuildinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS PkgA PkgC ${CONAN_LIBS})", conanbuildinfo)
         client.run("info . --graph=file.html")
@@ -335,9 +331,6 @@ class PrivateDepsTest(unittest.TestCase):
         client.run_command(command)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0'],
                          str(client.out).splitlines()[-3:])
-
-        conan_info = ConanInfo.loads(client.load(CONANINFO))
-        self.assertEqual("language=0\nstatic=True", conan_info.options.dumps())
 
         # Try to upload and reuse the binaries
         client.run("upload Hello1/0.1@lasote/stable --all")

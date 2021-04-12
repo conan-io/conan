@@ -1,13 +1,9 @@
 from abc import ABCMeta, abstractproperty
 
-import six
-
 from conans.errors import ConanException
 from conans.model.build_info import COMPONENT_SCOPE
 
-
-@six.add_metaclass(ABCMeta)
-class Generator(object):
+class Generator(object, metaclass=ABCMeta):
     name = None
 
     def __init__(self, conanfile):

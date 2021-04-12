@@ -1,7 +1,4 @@
-import sys
 import unittest
-
-import six
 
 from conans.errors import ConanException
 from conans.model.options import Options, OptionsValues, PackageOptionValues, PackageOptions, \
@@ -38,7 +35,7 @@ class OptionsTest(unittest.TestCase):
         """
         package_options = PackageOptions.loads("""{
         path: ANY}""")
-        with six.assertRaisesRegex(self, ConanException, option_undefined_msg("path")):
+        with self.assertRaisesRegex(ConanException, option_undefined_msg("path")):
             package_options.validate()
         package_options.path = "Something"
         package_options.validate()
@@ -63,7 +60,7 @@ class OptionsTest(unittest.TestCase):
                                             ("static", "True")])
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
                                             ("static", "True")])
-        with six.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                      "'5' is not a valid 'options.optimized' value"):
             self.sut.optimized = 5
 
@@ -117,7 +114,7 @@ class OptionsTest(unittest.TestCase):
                     "Hello1": hello1_values}
         down_ref = ConanFileReference.loads("Hello2/0.1@diego/testing")
 
-        with six.assertRaisesRegex(self, ConanException, "Hello2/0.1@diego/testing tried to change "
+        with self.assertRaisesRegex(ConanException, "Hello2/0.1@diego/testing tried to change "
                                      "Hello1/0.1@diego/testing option optimized to 2"):
             self.sut.propagate_upstream(options2, down_ref, own_ref)
 
@@ -345,24 +342,22 @@ class OptionsValuesTest(unittest.TestCase):
                          "2442d43f1d558621069a15ff5968535f818939b5")
 
     def test_loads_exceptions(self):
-        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
-            else "need more than 1 value to unpack"
-        with six.assertRaisesRegex(self, ValueError, emsg):
+        emsg = "not enough values to unpack"
+        with self.assertRaisesRegex(ValueError, emsg):
             OptionsValues.loads("a=2\nconfig\nb=3")
 
-        with six.assertRaisesRegex(self, ValueError, emsg):
+        with self.assertRaisesRegex(ValueError, emsg):
             OptionsValues.loads("config\na=2\ncommit\nb=3")
 
     def test_exceptions_empty_value(self):
-        emsg = "not enough values to unpack" if six.PY3 and sys.version_info.minor > 4 \
-            else "need more than 1 value to unpack"
-        with six.assertRaisesRegex(self, ValueError, emsg):
+        emsg = "not enough values to unpack"
+        with self.assertRaisesRegex(ValueError, emsg):
             OptionsValues("a=2\nconfig\nb=3")
 
-        with six.assertRaisesRegex(self, ValueError, emsg):
+        with self.assertRaisesRegex(ValueError, emsg):
             OptionsValues(("a=2", "config"))
 
-        with six.assertRaisesRegex(self, ValueError, emsg):
+        with self.assertRaisesRegex(ValueError, emsg):
             OptionsValues([('a', 2), ('config', ), ])
 
     def test_exceptions_repeated_value(self):

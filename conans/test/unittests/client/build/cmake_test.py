@@ -6,7 +6,6 @@ import sys
 import unittest
 
 import mock
-import six
 from parameterized.parameterized import parameterized
 import pytest
 
@@ -183,6 +182,15 @@ class CMakeTest(unittest.TestCase):
         self.assertNotIn("cmake --build %s" %
                          CMakeTest.scape(". --target test -- -j%i" %
                                          cpu_count(output=conanfile.output)), conanfile.command)
+
+    def test_conan_run_tests(self):
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.should_test = True
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        with tools.environment_append({"CONAN_RUN_TESTS": "0"}):
+            cmake.test()
+            self.assertIsNone(conanfile.command)
 
     def test_cmake_generator(self):
         conanfile = ConanFileMock()
@@ -578,7 +586,7 @@ class CMakeTest(unittest.TestCase):
                                                                         flags=flags_in_local_cache)))
 
             # Raise mixing
-            with six.assertRaisesRegex(self, ConanException, "Use 'build_folder'/'source_folder'"):
+            with self.assertRaisesRegex(ConanException, "Use 'build_folder'/'source_folder'"):
                 cmake = CMake(conanfile)
                 cmake.configure(source_folder="source", build_dir="build")
 

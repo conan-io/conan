@@ -2,9 +2,7 @@ import os
 import sys
 from collections import Counter, defaultdict, namedtuple
 
-
-import six
-from six import StringIO
+from io import StringIO
 
 from conans import ConanFile, Options
 from conans.client.output import ConanOutput
@@ -139,7 +137,6 @@ class MockConanfile(ConanFile):
 
         self.package_folder = None
 
-
     def run(self, *args, **kwargs):
         if self.runner:
             kwargs["output"] = None
@@ -177,8 +174,10 @@ class ConanFileMock(ConanFile):
         self.layout.set_base_source_folder(".")
         self.layout.set_base_build_folder(".")
         self.layout.set_base_install_folder("myinstallfolder")
+        self._conan_user = None
+        self._conan_channel = None
 
-    def run(self, command, win_bash=False, subsystem=None):
+    def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False
         assert subsystem is None
         self.command = command
@@ -199,10 +198,7 @@ class TestBufferConanOutput(ConanOutput):
 
     def __repr__(self):
         # FIXME: I'm sure there is a better approach. Look at six docs.
-        if six.PY2:
-            return str(self._stream.getvalue().encode("ascii", "ignore"))
-        else:
-            return self._stream.getvalue()
+        return self._stream.getvalue()
 
     def __str__(self, *args, **kwargs):
         return self.__repr__()
@@ -217,10 +213,10 @@ class TestBufferConanOutput(ConanOutput):
         return value in self.__repr__()
 
 
-# cli2.0
 class RedirectedTestOutput(StringIO):
     def __init__(self):
-        super(RedirectedTestOutput, self).__init__()
+        # Chage to super() for Py3
+        StringIO.__init__(self)
 
     def __repr__(self):
         return self.getvalue()

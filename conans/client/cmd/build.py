@@ -8,24 +8,14 @@ from conans.util.files import mkdir
 from conans.util.log import logger
 
 
-def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-              test=False, should_configure=True, should_build=True, should_install=True,
+def cmd_build(app, conanfile_path, conan_file, source_folder, build_folder, package_folder,
+              install_folder, test=False, should_configure=True, should_build=True, should_install=True,
               should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
     logger.debug("BUILD: folder '%s'" % build_folder)
     logger.debug("BUILD: Conanfile at '%s'" % conanfile_path)
-
-    try:
-        conan_file = app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
-                                                               deps_info_required=True, test=test)
-    except NotFoundException:
-        # TODO: Auto generate conanfile from requirements file
-        raise ConanException("'%s' file is needed for build.\n"
-                             "Create a '%s' and move manually the "
-                             "requirements and generators from '%s' file"
-                             % (CONANFILE, CONANFILE, CONANFILE_TXT))
 
     if test:
         try:
@@ -39,12 +29,16 @@ def cmd_build(app, conanfile_path, source_folder, build_folder, package_folder, 
     conan_file.should_test = should_test
 
     try:
-        mkdir(build_folder)
-        os.chdir(build_folder)
-        conan_file.build_folder = build_folder
-        conan_file.source_folder = source_folder
-        conan_file.package_folder = package_folder
-        conan_file.install_folder = install_folder
+        # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
+        #  Only base_path and conanfile_path will remain
+        conan_file.layout.set_base_build_folder(build_folder)
+        conan_file.layout.set_base_source_folder(source_folder)
+        conan_file.layout.set_base_package_folder(package_folder)
+        conan_file.layout.set_base_install_folder(install_folder)
+
+        mkdir(conan_file.build_folder)
+        os.chdir(conan_file.build_folder)
+
         run_build_method(conan_file, app.hook_manager, conanfile_path=conanfile_path)
         if test:
             with get_env_context_manager(conan_file):

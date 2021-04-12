@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 import unittest
 
@@ -34,8 +35,7 @@ class BasicTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
-                generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain", "MakeToolchain",
-                              "MSBuildToolchain")
+                generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain", "MakeToolchain")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -44,16 +44,30 @@ class BasicTest(unittest.TestCase):
         self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MakeToolchain' calling 'generate()'", client.out)
-        self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'CMakeDeps' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
-        toolchain = client.load("conantoolchain.props")
-        self.assertIn("<?xml version", toolchain)
         toolchain = client.load("conan_toolchain.mak")
         self.assertIn("# Conan generated toolchain file", toolchain)
         toolchain = client.load("conan_meson_native.ini")
         self.assertIn("[project options]", toolchain)
+
+    @pytest.mark.tool_visual_studio
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+    def test_declarative_msbuildtoolchain(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "compiler", "arch", "build_type"
+                generators = ("MSBuildToolchain", )
+            """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install .")
+
+        self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
+        toolchain = client.load("conantoolchain.props")
+        self.assertIn("<?xml version", toolchain)
 
     def test_error_missing_settings(self):
         conanfile = textwrap.dedent("""
@@ -93,8 +107,7 @@ class BasicTest(unittest.TestCase):
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("install .")
-        client.run("build .", assert_error=True)  # No CMakeLists.txt
+        client.run("build .", assert_error=True) # No CMakeLists.txt
         self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
         self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
 
@@ -121,6 +134,8 @@ class BasicTest(unittest.TestCase):
         client.run("install .", assert_error=True)
         self.assertIn("The 'toolchain' attribute or method has been deprecated", client.out)
 
+    @pytest.mark.tool_visual_studio
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
     def test_toolchain_windows(self):
         client = TestClient()
         conanfile = textwrap.dedent("""

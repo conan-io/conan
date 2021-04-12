@@ -32,10 +32,7 @@ class Pkg(ConanFile):
 PkgB/0.1@user/testing
 PkgA/0.1@user/testing"""
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install . -g txt -g cmake")
-        text = client.load("conanbuildinfo.txt")
-        txt = ";".join(text.splitlines())
-        self.assertIn("[libs];LibB;LibA", txt)
+        client.run("install . -g cmake")
         cmake = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS LibB LibA ${CONAN_LIBS})", cmake)
 

@@ -4,7 +4,6 @@ import os
 import textwrap
 import unittest
 
-import six
 from mock import patch
 
 from conans.client.hook_manager import HookManager
@@ -24,7 +23,7 @@ class PostExportTestCase(unittest.TestCase):
         ref = ConanFileReference.loads("name/version@user/channel")
         conanfile = textwrap.dedent("""\
             from conans import ConanFile
-            
+
             class MyLib(ConanFile):
                 pass
         """)
@@ -35,7 +34,7 @@ class PostExportTestCase(unittest.TestCase):
 
         def mocked_post_export(*args, **kwargs):
             # There shouldn't be a digest yet
-            with six.assertRaisesRegex(self, IOError, "No such file or directory"):
+            with self.assertRaisesRegex(IOError, "No such file or directory"):
                 FileTreeManifest.load(package_layout.export())
             self.assertFalse(os.path.exists(os.path.join(package_layout.export(), CONAN_MANIFEST)))
 

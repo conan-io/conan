@@ -3,35 +3,21 @@ import platform
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.client.tools.apple import to_apple_arch
+from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient
 
 
-@unittest.skipUnless(platform.system() == "Darwin", "requires Xcode")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 class AutoToolsAppleTest(unittest.TestCase):
-    makefile = textwrap.dedent("""
-        .PHONY: all
-        all: libhello.a app
-
-        app: main.o libhello.a
-        	$(CXX) $(CFLAGS) -o app main.o -lhello -L.
-
-        libhello.a: hello.o
-        	$(AR) rcs libhello.a hello.o
-
-        main.o: main.cpp
-        	$(CXX) $(CFLAGS) -c -o main.o main.cpp
-
-        hello.o: hello.cpp
-        	$(CXX) $(CFLAGS) -c -o hello.o hello.cpp
-        """)
+    makefile = gen_makefile(apps=["app"], libs=["hello"])
 
     conanfile_py = textwrap.dedent("""
         from conans import ConanFile, tools, AutoToolsBuildEnvironment
-
 
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
@@ -74,12 +60,11 @@ class AutoToolsAppleTest(unittest.TestCase):
         self.t.save({"Makefile": self.makefile,
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
-                     "main.cpp": main_cpp,
+                     "app.cpp": main_cpp,
                      "conanfile.py": self.conanfile_py,
                      "profile": profile})
 
-        self.t.run("install . --profile:host=profile")
-        self.t.run("build .")
+        self.t.run("build . --profile:host=profile")
 
         libhello = os.path.join(self.t.current_folder, "libhello.a")
         app = os.path.join(self.t.current_folder, "app")
@@ -126,12 +111,11 @@ class AutoToolsAppleTest(unittest.TestCase):
         self.t.save({"Makefile": self.makefile,
                      "hello.h": hello_h,
                      "hello.cpp": hello_cpp,
-                     "main.cpp": main_cpp,
+                     "app.cpp": main_cpp,
                      "conanfile.py": self.conanfile_py,
                      "profile": profile})
 
-        self.t.run("install . --profile:host=profile")
-        self.t.run("build .")
+        self.t.run("build . --profile:host=profile")
 
         libhello = os.path.join(self.t.current_folder, "libhello.a")
         app = os.path.join(self.t.current_folder, "app")

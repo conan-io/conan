@@ -3,8 +3,7 @@ import os
 import platform
 import unittest
 import zipfile
-
-import six
+from io import StringIO
 
 from conans.client import tools
 from conans.client.output import ConanOutput
@@ -16,7 +15,7 @@ from conans.util.files import load, save
 class OutputTest(unittest.TestCase):
 
     def test_simple_output(self):
-        stream = six.StringIO()
+        stream = StringIO()
         output = ConanOutput(stream)
         output.rewrite_line("This is a very long line that has to be truncated somewhere, "
                             "because it is so long it doesn't fit in the output terminal")
@@ -54,11 +53,11 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "output_dir")
-        new_out = six.StringIO()
+        new_out = StringIO()
         tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()
-        six.assertRegex(self, output, "Unzipping [\d]+B")
+        self.assertRegex(output, "Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
 
@@ -77,7 +76,7 @@ class PkgConan(ConanFile):
         zipf.close()
 
         output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
-        new_out = six.StringIO()
+        new_out = StringIO()
         tools.unzip(zip_path, output_dir, output=ConanOutput(new_out))
 
         output = new_out.getvalue()

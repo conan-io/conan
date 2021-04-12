@@ -205,7 +205,7 @@ class AutoToolsBuildEnvironment(object):
                 self._conanfile.run(command, win_bash=self._win_bash, subsystem=self.subsystem)
 
     def _configure_help_output(self, configure_path):
-        from six import StringIO  # Python 2 and 3 compatible
+        from io import StringIO
         mybuf = StringIO()
         try:
             self._conanfile.run("%s/configure --help" % configure_path, win_bash=self._win_bash,
@@ -357,10 +357,13 @@ class AutoToolsBuildEnvironment(object):
                                                                                 self._os_subsystem,
                                                                                 self._arch))
             if "-isysroot" not in concat and platform.system() == "Darwin":
-                tmp_compilation_flags.extend(["-isysroot",
-                                              tools.XCRun(self._conanfile.settings).sdk_path])
+                isysroot = tools.XCRun(self._conanfile.settings).sdk_path
+                if isysroot:
+                    tmp_compilation_flags.extend(["-isysroot", isysroot])
             if "-arch" not in concat and self._arch:
-                tmp_compilation_flags.extend(["-arch", tools.to_apple_arch(self._arch)])
+                apple_arch = tools.to_apple_arch(self._arch)
+                if apple_arch:
+                    tmp_compilation_flags.extend(["-arch", apple_arch])
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags

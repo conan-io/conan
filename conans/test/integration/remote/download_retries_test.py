@@ -2,7 +2,7 @@ import unittest
 
 from conans import REVISIONS
 from conans.paths import CONANFILE
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, TestRequester
 
 
 class DownloadRetriesTest(unittest.TestCase):
@@ -48,19 +48,13 @@ class MyConanfile(ConanFile):
             def content(self):
                 if not self.ok:
                     raise Exception("Bad boy")
-                else:
-                    return b'{"conanfile.py": "path/to/fake/file"}'
 
             text = content
 
-        class BuggyRequester(object):
-
-            def __init__(self, *args, **kwargs):
-                pass
-
+        class BuggyRequester(TestRequester):
             def get(self, *args, **kwargs):
-                if "path/to/fake/file" not in args[0]:
-                    return Response(True, 200)
+                if "files/conanfile.py" not in args[0]:
+                    return super(BuggyRequester, self).get(*args, **kwargs)
                 else:
                     return Response(False, 200)
 

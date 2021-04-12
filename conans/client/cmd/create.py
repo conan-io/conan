@@ -26,14 +26,14 @@ def _get_test_conanfile_path(tf, conanfile_path):
                                  % tf)
 
 
-def create(app, ref, graph_info, remotes, update, build_modes,
-           manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
+def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
+           keep_build, test_build_folder,
            test_folder, conanfile_path, recorder):
     assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
-        if graph_info.graph_lock:
+        if graph_lock:
             # If we have a lockfile, then we are first going to make sure the lockfile is used
             # correctly to build the package in the cache, and only later will try to run
             # test_package
@@ -43,23 +43,23 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                          ref_or_path=ref,
                          create_reference=ref,
                          install_folder=None,  # Not output anything
-                         manifest_folder=manifest_folder,
-                         manifest_verify=manifest_verify,
-                         manifest_interactive=manifest_interactive,
                          remotes=remotes,
-                         graph_info=graph_info,
+                         profile_host=profile_host,
+                         profile_build=profile_build,
+                         graph_lock=graph_lock,
+                         root_ref=root_ref,
                          build_modes=build_modes,
                          update=update,
                          keep_build=keep_build,
                          recorder=recorder)
             out.info("Executing test_package %s" % repr(ref))
             try:
-                graph_info.graph_lock.relax()
+                graph_lock.relax()
                 # FIXME: It needs to clear the cache, otherwise it fails
                 app.binaries_analyzer._evaluated = {}
                 # FIXME: Forcing now not building test dependencies, binaries should be there
-                install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes,
-                                       update, build_modes=None,
+                install_build_and_test(app, test_conanfile_path, ref, profile_host, profile_build,
+                                       graph_lock, root_ref, remotes, update, build_modes=None,
                                        test_build_folder=test_build_folder, recorder=recorder)
             except Exception as e:
                 raise ConanException("Something failed while testing '%s' test_package after "
@@ -67,11 +67,9 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                                      % (str(ref), str(e)))
 
         else:
-            install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes, update,
+            install_build_and_test(app, test_conanfile_path, ref, profile_host, profile_build,
+                                   graph_lock, root_ref, remotes, update,
                                    build_modes=build_modes,
-                                   manifest_folder=manifest_folder,
-                                   manifest_verify=manifest_verify,
-                                   manifest_interactive=manifest_interactive,
                                    keep_build=keep_build,
                                    test_build_folder=test_build_folder,
                                    recorder=recorder)
@@ -80,11 +78,11 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                      ref_or_path=ref,
                      create_reference=ref,
                      install_folder=None,  # Not output anything
-                     manifest_folder=manifest_folder,
-                     manifest_verify=manifest_verify,
-                     manifest_interactive=manifest_interactive,
                      remotes=remotes,
-                     graph_info=graph_info,
+                     profile_host=profile_host,
+                     profile_build=profile_build,
+                     graph_lock=graph_lock,
+                     root_ref=root_ref,
                      build_modes=build_modes,
                      update=update,
                      keep_build=keep_build,

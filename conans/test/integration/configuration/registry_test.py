@@ -30,33 +30,6 @@ class RegistryTest(unittest.TestCase):
         self.assertEqual(list(registry.load_remotes().values()),
                          [("conan.io", "https://server.conan.io", True, False)])
 
-    def test_to_json_migration(self):
-        cache_folder = temp_folder()
-        f = os.path.join(cache_folder, "registry.txt")
-        save(f, """conan.io https://server.conan.io True
-
-lib/1.0@conan/stable conan.io
-other/1.0@lasote/testing conan.io
-""")
-        client = TestClient(cache_folder=cache_folder, servers=False)
-        version_file = os.path.join(client.cache_folder, CONAN_VERSION)
-        save(version_file, "1.12.0")
-        client.run("remote list")
-        self.assertIn("conan.io: https://server.conan.io", client.out)
-        registry = client.cache.registry
-        self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan.io", "https://server.conan.io", True, False)])
-        ref1 = ConanFileReference.loads('lib/1.0@conan/stable')
-        ref2 = ConanFileReference.loads('other/1.0@lasote/testing')
-        expected = {ref1: 'conan.io', ref2: 'conan.io'}
-
-        self.assertEqual(registry.refs_list, expected)
-
-        m = client.cache.package_layout(ref1).load_metadata()
-        self.assertEqual(m.recipe.remote, "conan.io")
-        m = client.cache.package_layout(ref2).load_metadata()
-        self.assertEqual(m.recipe.remote, "conan.io")
-
     def test_add_remove_update(self):
         f = os.path.join(temp_folder(), "aux_file")
         Remotes().save(f)

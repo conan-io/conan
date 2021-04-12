@@ -4,7 +4,6 @@ import re
 import textwrap
 import unittest
 
-from conans.model.graph_info import GRAPH_INFO_FILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
 
@@ -29,7 +28,6 @@ gcc
 qbs
 qmake
 scons
-txt
 virtualenv
 visual_studio
 visual_studio_legacy
@@ -46,12 +44,12 @@ ycm
         if platform.system() == "Windows":
             venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
-        self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
+        self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
-                                 'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
+                                 'SConscript_conan', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 GRAPH_INFO_FILE, LOCKFILE] + venv_files),
+                                 LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):

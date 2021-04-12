@@ -8,9 +8,7 @@ import unittest
 from collections import OrderedDict
 
 from mock import patch
-import pytest
 
-from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
@@ -18,7 +16,6 @@ from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
-from conans.util.env_reader import get_env
 from conans.util.files import list_folder_subdirs, load
 from conans.util.files import save
 from conans import __version__ as client_version
@@ -61,8 +58,6 @@ conan_vars1c = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@myuser/testing:33333
-[recipe_hash]
-  d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars1d = '''
@@ -204,9 +199,10 @@ class SearchTest(unittest.TestCase):
 
         def create_metadata(folder, pids):
             metadata = PackageMetadata()
-            metadata.recipe.revision = DEFAULT_REVISION_V1
+            metadata.recipe.revision = "myreciperev"
             for pid in pids:
-                metadata.packages[pid].revision = DEFAULT_REVISION_V1
+                metadata.packages[pid].revision = "mypackagerev"
+                metadata.packages[pid].recipe_revision = "myreciperev"
             save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
 
         create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
@@ -391,20 +387,19 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         html = ''.join([line.strip() for line in self.client.load("table.html").splitlines()])
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
                       "<td>libstdc++11</td>"
                       "<td>4.5</td>", html)
         self.assertIn("<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
                       "<td></td>"
                       "<td>8.1</td>", html)
-        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> JFrog LTD. <a>https://conan.io</a>"
+        self.assertIn("Conan <b>v{}</b> <script>document.write(new Date().getFullYear())</script> "
+                      "JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version), html)
 
     def test_search_html_table_all(self):
@@ -418,11 +413,9 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.assertIn("<h1>Hello/1.4.10@myuser/testing</h1>", html)
         self.assertIn("<th>remote</th>"
-                      "<th>package_id</th>"
-                      "<th>outdated</th>", html)
+                      "<th>package_id</th>", html)
         self.assertIn("<td>local</td>"
                       "<td>LinuxPackageSHA</td>"
-                      "<td>False</td>"
                       "<td>Linux</td>"
                       "<td>x86</td>"
                       "<td>gcc</td>"
@@ -430,7 +423,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                       "<td>4.5</td>", html)
         self.assertIn("<td>search_able</td>"
                       "<td>WindowsPackageSHA</td>"
-                      "<td>True</td>"
                       "<td>Windows</td>"
                       "<td>x64</td>"
                       "<td>Visual Studio</td>"
@@ -471,7 +463,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("Outdated from recipe: False", self.client.out)
         self.assertIn("LinuxPackageSHA", self.client.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -488,7 +479,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
         self.client.run('search Hello/1.4.10@myuser/testing '
                         '-q "compiler=gcc AND compiler.libcxx=libstdc++11" -r all')
-        self.assertEqual(str(self.client.out).count("Outdated from recipe: False"), 2)
         self.assertEqual(str(self.client.out).count("LinuxPackageSHA"), 2)
         self.assertNotIn("PlatformIndependantSHA", self.client.out)
         self.assertNotIn("WindowsPackageSHA", self.client.out)
@@ -613,7 +603,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
 
     def _copy_to_server(self, cache, server_store):
         subdirs = list_folder_subdirs(basedir=cache.store, level=4)
-        refs = [ConanFileReference(*folder.split("/"), revision=DEFAULT_REVISION_V1)
+        refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
             origin_path = cache.package_layout(ref).export()
@@ -624,7 +614,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
-                pref = PackageReference(ref, package, DEFAULT_REVISION_V1)
+                pref = PackageReference(ref, package, "mypackagerev")
                 origin_path = cache.package_layout(ref).package(pref)
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
@@ -718,7 +708,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("LinuxPackageSHA", self.client.out)
 
         self.client.run('search Hello/1.4.10@myuser/testing -q "arch=x86"')
-        # One package will be outdated from recipe and another don't
         self.assertEqual("""Existing packages for recipe Hello/1.4.10@myuser/testing:
 
     Package_ID: LinuxPackageSHA
@@ -734,7 +723,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@myuser/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        Outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -744,7 +732,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
             compiler: gcc
             compiler.libcxx: libstdc++
             compiler.version: 4.3
-        Outdated from recipe: True
 
 """, self.client.out)
 
@@ -961,8 +948,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -973,8 +959,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -988,8 +973,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1027,8 +1011,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1039,8 +1022,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1054,8 +1036,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1093,8 +1074,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1105,8 +1085,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1120,8 +1099,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1147,8 +1125,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': False
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 },
                                 {
                                     'id': 'PlatformIndependantSHA',
@@ -1159,8 +1136,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                         'compiler': 'gcc',
                                         'compiler.libcxx': 'libstdc++',
                                         'compiler.version': '4.3'},
-                                    'requires': [],
-                                    'outdated': True
+                                    'requires': []
                                 },
                                 {
                                     'id': 'WindowsPackageSHA',
@@ -1174,8 +1150,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                                     'requires': [
                                         'Hello2/0.1@lasote/stable:11111',
                                         'HelloInfo1/0.45@myuser/testing:33333',
-                                        'OpenSSL/2.10@lasote/testing:2222'],
-                                    'outdated': True
+                                        'OpenSSL/2.10@lasote/testing:2222']
                                 }
                             ]
                         }
@@ -1266,44 +1241,6 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
-@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False), reason="No sense with revs")
-class SearchOutdatedTest(unittest.TestCase):
-    def test_search_outdated(self):
-        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-        conanfile = """from conans import ConanFile
-class Test(ConanFile):
-    name = "Test"
-    version = "0.1"
-    settings = "os"
-    """
-        client.save({"conanfile.py": conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
-        client.save({"conanfile.py": "# comment\n%s" % conanfile})
-        client.run("export . lasote/testing")
-        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
-        client.run("upload * --all --confirm")
-        for remote in ("", "-r=default"):
-            client.run("search Test/0.1@lasote/testing %s" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertIn("os: Linux", client.out)
-            client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
-            self.assertIn("os: Windows", client.out)
-            self.assertNotIn("os: Linux", client.out)
-
-    def test_exception_client_without_revs(self):
-        client = TestClient()
-        client.run("search whatever --revisions")
-        self.assertIn("There are no packages matching the 'whatever' pattern", client.out)
-
-        client.run("search lib/0.1@user/testing --revisions", assert_error=True)
-        self.assertIn("ERROR: The client doesn't have the revisions feature enabled", client.out)
-
-
-@pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False),
-                    reason="set TESTING_REVISIONS_ENABLED=1")
 class SearchRevisionsTest(unittest.TestCase):
 
     def test_search_recipe_revisions(self):
@@ -1400,7 +1337,7 @@ class Test(ConanFile):
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run("upload lib/1.0@user/testing -c --all")  # For later remote test
         first_rrev = "bd761686d5c57b31f4cd85fd0329751f"
-        first_prev = "e928490f2e24da2ab391f0b289dd73c1"
+        first_prev = "cf924fbb5ed463b8bb960cf3a4ad4f3a"
         full_ref = "lib/1.0@user/testing#{rrev}:%s" % NO_SETTINGS_PACKAGE_ID
 
         # LOCAL CACHE CHECKS
@@ -1430,19 +1367,15 @@ class Test(ConanFile):
         self.assertIn("a94417fca6b55779c3b158f2ff50c40a", client.out)
 
         second_rrev = "a94417fca6b55779c3b158f2ff50c40a"
-        second_prev = "b520ef8bf841bad7639cea8d3c7d7fa1"
         client.run("search %s --revisions" % full_ref.format(rrev=second_rrev))
 
         # REMOTE CHECKS
         client.run("search %s -r default --revisions" % full_ref.format(rrev=first_rrev))
-
         self.assertIn("{} ({})".format(first_prev, time_str), client.out)
-        self.assertNotIn(second_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         client.run("search %s -r default --revisions" % full_ref.format(rrev=second_rrev))
-        self.assertNotIn(first_prev, client.out)
-        self.assertIn(second_prev, client.out)
+        self.assertIn(first_prev, client.out)
         self.assertNotIn("(No time)", client.out)
 
         json_path = os.path.join(client.current_folder, "search.json")
@@ -1516,14 +1449,6 @@ class Test(ConanFile):
         self.assertIn("ERROR: Binary package not found: "
                       "'lib/1.0@conan/stable#bd761686d5c57b31f4cd85fd0329751f:"
                       "234234234234234234'", client.out)
-
-    def test_search_revision_fail_if_v1_server(self):
-        # V1 server
-        test_server = TestServer(users={"conan": "password"}, server_capabilities=[])
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("conan", "password")]})
-        client.run("search missing/1.0@conan/stable --revisions -r default", assert_error=True)
-        self.assertIn("ERROR: The remote doesn't support revisions", client.out)
 
     def test_invalid_references(self):
         client = TestClient()

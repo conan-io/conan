@@ -292,24 +292,6 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_installed_folder(mode)
         self._check_package_folder(mode)
 
-        # Manifests must work too!
-        self.client.run("install Hello/0.1@lasote/testing --manifests")
-        self.assertFalse(os.path.exists(self.source_folder))
-        # The manifests retrieve the normal state, as it retrieves sources
-        self._check_export_folder(mode)
-        self._check_package_folder(mode)
-        self._check_manifest(mode)
-
-        # lets try to verify
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.assertFalse(os.path.exists(self.export_folder))
-        self.client.run("install Hello/0.1@lasote/testing --verify")
-        self.assertFalse(os.path.exists(self.source_folder))
-        # The manifests retrieve the normal state, as it retrieves sources
-        self._check_export_folder(mode)
-        self._check_package_folder(mode)
-        self._check_manifest(mode)
-
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
     def test_export_upload(self, mode):
@@ -331,13 +313,6 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_folder(mode)
         self._check_source_folder(mode)
         self._check_package_folder(mode)
-
-        # Manifests must work too!
-        self.client.run("install Hello/0.1@lasote/testing --manifests")
-        # The manifests retrieve the normal state, as it retrieves sources
-        self._check_export_folder(mode)
-        self._check_package_folder(mode)
-        self._check_manifest(mode)
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])

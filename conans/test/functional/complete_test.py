@@ -114,16 +114,14 @@ class CompleteFlowTest(unittest.TestCase):
         client3 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
-        client3.run('install .')
         client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
         client3.run_command(command)
         self.assertIn("Hello Hello1", client3.out)
         self.assertIn("Hello Hello0", client3.out)
 
-        client3.run('install . -o language=1 --build missing')
+        client3.run('build . -o language=1 --build missing')
         time.sleep(1)
-        client3.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
         client3.run_command(command)

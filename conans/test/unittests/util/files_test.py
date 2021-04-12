@@ -2,8 +2,6 @@ import os
 import unittest
 from time import sleep
 
-import six
-
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, to_file_bytes, walk
 
@@ -41,7 +39,5 @@ class SaveTestCase(unittest.TestCase):
         folder = temp_folder()
         filepath = os.path.join(folder, badfilename)
         save(to_file_bytes(filepath), "contents")
-        if six.PY2:
-            folder = unicode(folder)
         a_file = [f[0] for _, _, f in walk(folder)][0]
         self.assertTrue(a_file.endswith("badfile.txt"))

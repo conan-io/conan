@@ -72,10 +72,6 @@ class BuildRequiresTest(unittest.TestCase):
                       t.out)
         self.assertIn("catch/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                       t.out)
-        conanbuildinfo = t.load("conanbuildinfo.txt")
-        self.assertIn('MYENV=["myenvcatch0.1env"]', conanbuildinfo)
-        self.assertIn('[libs_catch]', conanbuildinfo)
-        self.assertIn("mylibcatch0.1lib", conanbuildinfo)
 
     def test_build_requires_diamond(self):
         libA_ref = ConanFileReference.loads("libA/0.1@user/testing")
@@ -154,8 +150,6 @@ Boost/1.0@user/channel
 
         self.assertIn("""Build requirements
     Boost/1.0@user/channel""", client.out)
-        conanbuildinfo = client.load("conanbuildinfo.txt")
-        self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
 
     def test_dependents(self):
         client = TestClient()
@@ -212,10 +206,9 @@ class App(ConanFile):
         client.run("create . mingw/0.1@myuser/stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
-        client.run("install . -pr=myprofile")
+        client.run("build . -pr=myprofile")
         self.assertIn("conanfile.py (consumer/None): Applying build-requirement: "
                       "mingw/0.1@myuser/stable", client.out)
-        client.run("build .")
         self.assertIn("conanfile.py (consumer/None): APP PATH FOR BUILD mymingwpath",
                       client.out)
 

@@ -418,9 +418,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:15c77f209e7dca571ffe63b19a04a634654e4211 - Build",
+        self.assertIn("consumer/0.1@user/stable:a17117b3926488291b8cb2df78e31f93e4c4ab4d - Build",
                       client.out)
-        self.assertIn("consumer/0.1@user/stable: Package '15c77f209e7dca571ffe63b19a04a634654e4211'"
+        self.assertIn("consumer/0.1@user/stable: Package 'a17117b3926488291b8cb2df78e31f93e4c4ab4d'"
                       " created", client.out)
 
         # Create package with gcc 4.9
@@ -436,9 +436,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e - Build",
+        self.assertIn("consumer/0.1@user/stable:8dceb9cb5a9e262338e2a23e84894811b95a077d - Build",
                       client.out)
-        self.assertIn("consumer/0.1@user/stable: Package 'fca9e94084ed6fe0ca149dc9c2d54c0f336f0d7e'"
+        self.assertIn("consumer/0.1@user/stable: Package '8dceb9cb5a9e262338e2a23e84894811b95a077d'"
                       " created", client.out)
 
     def test_build_missing(self):

@@ -25,6 +25,7 @@ class GenConanfile(object):
         self._default_options = {}
         self._provides = []
         self._deprecated = None
+        self._package_lines = []
         self._package_files = {}
         self._package_files_env = {}
         self._package_files_link = {}
@@ -40,6 +41,7 @@ class GenConanfile(object):
         self._test_lines = []
         self._short_path = None
         self._exports_sources = []
+        self._exports = []
 
     def with_short_paths(self, value):
         self._short_path = value
@@ -76,6 +78,11 @@ class GenConanfile(object):
     def with_exports_sources(self, *exports):
         for export in exports:
             self._exports_sources.append(export)
+        return self
+
+    def with_exports(self, *exports):
+        for export in exports:
+            self._exports.append(export)
         return self
 
     def with_require(self, ref, private=False, override=False):
@@ -136,6 +143,11 @@ class GenConanfile(object):
             self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
+        return self
+
+    def with_package(self, *lines):
+        for line in lines:
+            self._package_lines.append(line)
         return self
 
     def with_build_msg(self, msg):
@@ -281,6 +293,7 @@ class GenConanfile(object):
     @property
     def _package_method(self):
         lines = []
+        lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
             lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
@@ -371,6 +384,9 @@ class GenConanfile(object):
         if self._exports_sources:
             line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
             ret.append("    exports_sources = {}".format(line))
+        if self._exports:
+            line = ", ".join('"{}"'.format(e) for e in self._exports)
+            ret.append("    exports = {}".format(line))
         if self._generators_line:
             ret.append("    {}".format(self._generators_line))
         if self._requires_line:
@@ -401,6 +417,6 @@ class GenConanfile(object):
             ret.append("    {}".format(self._package_id_method))
         if self._test_method:
             ret.append("    {}".format(self._test_method))
-        if len(ret) == 2:
+        if ret[-1] == "class HelloConan(ConanFile):":
             ret.append("    pass")
         return "\n".join(ret)

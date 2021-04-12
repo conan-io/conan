@@ -4,13 +4,12 @@ import unittest
 from mock import Mock
 
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.cpp_test_files import cpp_hello_source_files
 from conans.test.utils.tools import TestClient, create_profile
-from conans.test.utils.mocks import TestBufferConanOutput
+
 
 myconan1 = """
 from conans import ConanFile
@@ -78,11 +77,15 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, Mock())
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
-        run_package_method(conanfile, None, build_folder, build_folder, package_folder,
-                           install_folder, Mock(), conanfile_path, ref, copy_info=True)
+        conanfile.layout.set_base_build_folder(build_folder)
+        conanfile.layout.set_base_source_folder(build_folder)
+        conanfile.layout.set_base_package_folder(package_folder)
+        conanfile.layout.set_base_install_folder(install_folder)
+
+        run_package_method(conanfile, None, Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

@@ -23,14 +23,13 @@ from conans.util.files import load
 
 class ConanFileLoader(object):
 
-    def __init__(self, runner, output, python_requires, generator_manager=None, pyreq_loader=None):
+    def __init__(self, runner, output, generator_manager=None, pyreq_loader=None, requester=None):
         self._runner = runner
         self._generator_manager = generator_manager
         self._output = output
         self._pyreq_loader = pyreq_loader
-        self._python_requires = python_requires
-        sys.modules["conans"].python_requires = python_requires
         self._cached_conanfile_classes = {}
+        self._requester = requester
 
     def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
                    display=""):
@@ -45,21 +44,15 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            conanfile = cached[0](self._output, self._runner, display, user, channel,
+                                  self._requester)
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
                     conanfile.init()
             return conanfile, cached[2]
 
-        if lock_python_requires is not None:
-            self._python_requires.locked_versions = {r.name: r for r in lock_python_requires}
         try:
-            self._python_requires.valid = True
-            module, conanfile = parse_conanfile(conanfile_path, self._python_requires,
-                                                self._generator_manager)
-            self._python_requires.valid = False
-
-            self._python_requires.locked_versions = None
+            module, conanfile = parse_conanfile(conanfile_path, self._generator_manager)
 
             # This is the new py_requires feature, to supersede the old python_requires
             if self._pyreq_loader:
@@ -82,7 +75,7 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display, user, channel)
+            result = conanfile(self._output, self._runner, display, user, channel, self._requester)
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
                     result.init()
@@ -190,7 +183,7 @@ class ConanFileLoader(object):
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
 
-        conanfile.initialize(tmp_settings, profile.env_values)
+        conanfile.initialize(tmp_settings, profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
@@ -259,7 +252,7 @@ class ConanFileLoader(object):
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
-        conanfile.initialize(Settings(), profile.env_values)
+        conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
@@ -299,7 +292,7 @@ class ConanFileLoader(object):
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
         conanfile.initialize(profile_host.processed_settings.copy(),
-                             profile_host.env_values)
+                             profile_host.env_values, profile_host.buildenv)
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
@@ -346,28 +339,13 @@ def _parse_module(conanfile_module, module_id, generator_manager):
     return result
 
 
-def parse_conanfile(conanfile_path, python_requires, generator_manager):
-    with python_requires.capture_requires() as py_requires:
-        module, filename = _parse_conanfile(conanfile_path)
-        try:
-            conanfile = _parse_module(module, filename, generator_manager)
-
-            # Check for duplicates
-            # TODO: move it into PythonRequires
-            py_reqs = {}
-            for it in py_requires:
-                if it.ref.name in py_reqs:
-                    dupes = [str(it.ref), str(py_reqs[it.ref.name].ref)]
-                    raise ConanException("Same python_requires with different versions not allowed"
-                                         " for a conanfile. Found '{}'".format("', '".join(dupes)))
-                py_reqs[it.ref.name] = it
-
-            # Make them available to the conanfile itself
-            if py_reqs:
-                conanfile.python_requires = py_reqs
-            return module, conanfile
-        except Exception as e:  # re-raise with file name
-            raise ConanException("%s: %s" % (conanfile_path, str(e)))
+def parse_conanfile(conanfile_path, generator_manager):
+    module, filename = _parse_conanfile(conanfile_path)
+    try:
+        conanfile = _parse_module(module, filename, generator_manager)
+        return module, conanfile
+    except Exception as e:  # re-raise with file name
+        raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
 
 def _parse_conanfile(conan_file_path):

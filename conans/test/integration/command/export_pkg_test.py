@@ -1,17 +1,13 @@
 import json
 import os
-import platform
 import textwrap
 import unittest
 from textwrap import dedent
 
-from parameterized import parameterized
-import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
-from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, is_dirty
 
 
@@ -108,7 +104,7 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
-        self.assertIn("conaninfo.txt: f395060da1ffdeb934be8b62e4bd8a3a", manifest)
+        self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):
@@ -185,112 +181,6 @@ class HelloPythonConan(ConanFile):
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertIn("MYCUSTOMVAR=MYCUSTOMVALUE", conaninfo)
 
-    def test_options_install(self):
-        # https://github.com/conan-io/conan/issues/2242
-        conanfile = """from conans import ConanFile
-class HelloPythonConan(ConanFile):
-    name = "Hello"
-    options = { "optionOne": [True, False, 123] }
-    default_options = "optionOne=True"
-"""
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("install .")
-        client.run("export-pkg . Hello/0.1@lasote/stable")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        client.run("install . -o optionOne=False")
-        client.run("export-pkg . Hello/0.1@lasote/stable")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        client.run("install . -o Hello:optionOne=123")
-        client.run("export-pkg . Hello/0.1@lasote/stable")
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("optionOne: True", client.out)
-        self.assertIn("optionOne: False", client.out)
-        self.assertIn("optionOne: 123", client.out)
-
-    @parameterized.expand([(False, ), (True, )])
-    @pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
-                        reason="This test exports several RREVS assuming that the "
-                                "packages will be preserved and they will be removed")
-    def test_basic(self, short_paths):
-        client = TestClient()
-        conanfile = """
-from conans import ConanFile
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    settings = "os"
-
-    def package(self):
-        self.copy("*")
-"""
-        if short_paths:
-            conanfile += "    short_paths = True"
-        client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
-        client.save({"include/header.h": "//Windows header"})
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        win_pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.cache.package_layout(win_pref.ref,
-                                                     short_paths=short_paths).package(win_pref)
-        if short_paths and platform.system() == "Windows":
-            cache_pkg_folder = client.cache.package_layout(win_pref.ref, False).package(win_pref)
-            self.assertEqual(load(os.path.join(cache_pkg_folder, ".conan_link")), package_folder)
-        else:
-            self.assertEqual(client.cache.package_layout(win_pref.ref).package(win_pref),
-                             package_folder)
-        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header")
-        self._consume(client, ". -s os=Windows")
-        self.assertIn("Hello/0.1@lasote/stable:3475bd55b91ae904ac96fde0f106a136ab951a5e",
-                      client.out)
-
-        # Now repeat
-        client.save({CONANFILE: conanfile,
-                     "include/header.h": "//Windows header2"}, clean_first=True)
-        # Without force it fails
-        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows",
-                         assert_error=True)
-        self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.out)
-        self.assertTrue(err)
-        # With force works
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
-        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header2")
-
-        # Now use --install-folder
-        client.save({CONANFILE: conanfile,
-                     "include/header.h": "//Windows header3"}, clean_first=True)
-        # Without force it fails
-        client.run("install . --install-folder=inst -s os=Windows")
-        err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", assert_error=True)
-        self.assertTrue(err)
-        self.assertIn("Package already exists. Please use --force, -f to overwrite it",
-                      client.out)
-        # With force works
-        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
-        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
-                      " created", client.out)
-        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header3")
-
-        # we can specify settings too
-        client.save({"include/header.h": "//Windows header4"})
-        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f -s os=Windows")
-        self.assertIn("Hello/0.1@lasote/stable: Package '3475bd55b91ae904ac96fde0f106a136ab951a5e'"
-                      " created", client.out)
-        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
-                         "//Windows header4")
-
-        # Try to specify a install folder with no files
-        client.run("export-pkg . Hello/0.1@lasote/stable -if fake", assert_error=True)
-        self.assertIn("ERROR: Failed to load graphinfo file in install-folder", client.out)
-
     def _consume(self, client, install_args):
         consumer = """
 from conans import ConanFile
@@ -320,10 +210,6 @@ class TestConan(ConanFile):
         cmakeinfo = client.load("conanbuildinfo.cmake")
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
-
-        # ensure the recipe hash is computed and added
-        client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("Outdated from recipe: False", client.out)
 
     def test_build_folders(self):
         client = TestClient()
@@ -499,8 +385,7 @@ class TestConan(ConanFile):
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
             tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
-            if self.client.cache.config.revisions_enabled:
-                self.assertIsNotNone(tmp.revision)
+            self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "mypackage/0.1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
@@ -549,8 +434,7 @@ class MyConan(ConanFile):
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
             tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
-            if self.client.cache.config.revisions_enabled:
-                self.assertIsNotNone(tmp.revision)
+            self.assertIsNotNone(tmp.revision)
             self.assertEqual(str(tmp), "pkg2/1.0@danimtb/testing")
             self.assertFalse(output["installed"][0]["recipe"]["dependency"])
             self.assertTrue(output["installed"][0]["recipe"]["exported"])
@@ -561,8 +445,7 @@ class MyConan(ConanFile):
                                  "5825778de2dc9312952d865df314547576f129b3")
                 self.assertTrue(output["installed"][0]["packages"][0]["exported"])
                 tmp = ConanFileReference.loads(output["installed"][1]["recipe"]["id"])
-                if self.client.cache.config.revisions_enabled:
-                    self.assertIsNotNone(tmp.revision)
+                self.assertIsNotNone(tmp.revision)
                 self.assertEqual(str(tmp), "pkg1/1.0@danimtb/testing")
                 self.assertTrue(output["installed"][1]["recipe"]["dependency"])
 

@@ -42,36 +42,6 @@ class CMakeGeneratorTest(unittest.TestCase):
         client.run('build .')
         self.assertIn("WARN: Disabled conan compiler checks", client.out)
 
-    @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-    def test_check_compiler_package_id(self):
-        # https://github.com/conan-io/conan/issues/6658
-        file_content = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class ConanFileToolsTest(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = "cmake"
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-                def package_id(self):
-                    self.info.settings.compiler.version = "SomeVersion"
-                """)
-
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 2.8)
-            project(conanzlib)
-            include(conanbuildinfo.cmake)
-            conan_basic_setup()
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": file_content,
-                     "CMakeLists.txt": cmakelists})
-
-        client.run('install .')
-        client.run_command('cmake .')
-        self.assertIn("Conan: Checking correct version:", client.out)
-
     @pytest.mark.slow
     @pytest.mark.tool_visual_studio
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
@@ -110,9 +80,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         cmakelists_path = os.path.join(client.current_folder, "src", "CMakeLists.txt")
 
         # Test output works as expected
-        client.run("install .")
-        # No need to do a full create, the build --configure is good
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertIn("Conan: Using cmake global configuration", client.out)
         self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertIn("Conan: Adjusting language standard", client.out)
@@ -122,7 +90,7 @@ class CMakeGeneratorTest(unittest.TestCase):
                         "conan_basic_setup()",
                         "set(CONAN_CMAKE_SILENT_OUTPUT True)\nconan_basic_setup()",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake global configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
@@ -130,7 +98,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # Use TARGETS
         replace_in_file(cmakelists_path, "conan_basic_setup()", "conan_basic_setup(TARGETS)",
                         output=client.out)
-        client.run("build . --configure")
+        client.run("build . --should_configure")
         self.assertNotIn("Conan: Using cmake targets configuration", client.out)
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
         self.assertNotIn("Conan: Adjusting language standard", client.out)
@@ -429,9 +397,9 @@ class CMakeGeneratorTest(unittest.TestCase):
                         self.assertIn("comp compile options: one;two;three;four", client.out)
                     else:
                         self.assertIn("$<$<CONFIG:Debug>:;>;"
-                                      "$<$<CONFIG:MinSizeRel>:;>;"
+                                      "$<$<CONFIG:Release>:;one;two;three;four>;"
                                       "$<$<CONFIG:RelWithDebInfo>:;>;"
-                                      "$<$<CONFIG:Release>:;one;two;three;four>"
+                                      "$<$<CONFIG:MinSizeRel>:;>"
                                       , client.out)
             else:
                 generate_files({"cflags": ["one", "two"], "cxxflags": ["three", "four"]},

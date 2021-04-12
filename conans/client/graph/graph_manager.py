@@ -1,9 +1,7 @@
 import fnmatch
-import os
 from collections import OrderedDict, defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.generators.text import TXTGenerator
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
@@ -11,11 +9,7 @@ from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, 
 from conans.client.graph.graph_builder import DepsGraphBuilder
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
-from conans.model.graph_info import GraphInfo
-from conans.model.graph_lock import GraphLock, GraphLockFile
 from conans.model.ref import ConanFileReference
-from conans.paths import BUILD_INFO
-from conans.util.files import load
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -52,38 +46,17 @@ class GraphManager(object):
         self._loader = loader
         self._binary_analyzer = binary_analyzer
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder,
-                                deps_info_required=False, test=False):
-        """loads a conanfile for local flow: source, imports, package, build
+    def load_consumer_conanfile(self, conanfile_path):
+        """loads a conanfile for local flow: source
         """
-        try:
-            graph_info = GraphInfo.load(info_folder)
-            lock_path = os.path.join(info_folder, "conan.lock")
-            graph_lock_file = GraphLockFile.load(lock_path, self._cache.config.revisions_enabled)
-            graph_lock = graph_lock_file.graph_lock
-            self._output.info("Using lockfile: '{}/conan.lock'".format(info_folder))
-            profile_host = graph_lock_file.profile_host
-            profile_build = graph_lock_file.profile_build
-            self._output.info("Using cached profile from lockfile")
-        except IOError:  # Only if file is missing
-            graph_lock = None
-            # This is very dirty, should be removed for Conan 2.0 (source() method only)
-            profile_host = self._cache.default_profile
-            profile_host.process_settings(self._cache)
-            profile_build = None
-            name, version, user, channel = None, None, None, None
-        else:
-            name, version, user, channel, _ = graph_info.root
-            profile_host.process_settings(self._cache, preprocess=False)
-            # This is the hack of recovering the options from the graph_info
-            profile_host.options.update(graph_info.options)
-            if profile_build:
-                profile_build.process_settings(self._cache, preprocess=False)
+        # This is very dirty, should be removed for Conan 2.0 (source() method only)
+        profile_host = self._cache.default_profile
+        profile_host.process_settings(self._cache)
+        profile_build = None
+        name, version, user, channel = None, None, None, None
+
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
-            if graph_lock and not test:  # Only lock python requires if it is not test_package
-                node_id = graph_lock.get_consumer(graph_info.root)
-                lock_python_requires = graph_lock.python_requires(node_id)
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
@@ -94,57 +67,50 @@ class GraphManager(object):
                 conanfile.settings_build = profile_build.processed_settings.copy()
                 conanfile.settings_target = None
 
-            if test:
-                conanfile.display_name = "%s (test package)" % str(test)
-                conanfile.output.scope = conanfile.display_name
-
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
 
-        load_deps_info(info_folder, conanfile, required=deps_info_required)
-
         return conanfile
 
-    def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
+    def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
+                   root_ref, build_mode, check_updates, update,
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
-        root_node = self._load_root_node(reference, create_reference, graph_info, lockfile_node_id)
-        deps_graph = self._resolve_graph(root_node, graph_info, build_mode, check_updates, update,
-                                         remotes, recorder,
+        root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
+                                         root_ref, lockfile_node_id)
+        deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
+                                         build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
-
         # Run some validations once the graph is built
         self._validate_graph_provides(deps_graph)
-
         return deps_graph
 
-    def _load_root_node(self, reference, create_reference, graph_info, lockfile_node_id):
+    def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
+                        lockfile_node_id):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
         """
-        profile = graph_info.profile_host
-        graph_lock = graph_info.graph_lock
-        profile.dev_reference = create_reference  # Make sure the created one has develop=True
+        profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
         if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, profile, scope_options=False)
+            conanfile = self._loader.load_virtual(reference, profile_host, scope_options=False)
             # Locking in workspaces not implemented yet
             return Node(ref=None, context=CONTEXT_HOST, conanfile=conanfile, recipe=RECIPE_VIRTUAL)
 
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
-            return self._load_root_direct_reference(reference, graph_lock, profile, lockfile_node_id)
+            return self._load_root_direct_reference(reference, graph_lock, profile_host,
+                                                    lockfile_node_id)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
-            return self._load_root_test_package(path, create_reference, graph_lock, profile)
+            return self._load_root_test_package(path, create_reference, graph_lock, profile_host)
 
         # It is a path to conanfile.py or conanfile.txt
-        root_node, ref = self._load_root_consumer(path, graph_lock, profile, graph_info.root)
-        graph_info.root = ref  # To store it for later calls
+        root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref)
         return root_node
 
     def _load_root_consumer(self, path, graph_lock, profile, ref):
@@ -190,17 +156,13 @@ class GraphManager(object):
             node_id = graph_lock.get_consumer(root_node.ref)
             root_node.id = node_id
 
-        return root_node, ref
+        return root_node
 
     def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
         """
-        if not self._cache.config.revisions_enabled and reference.revision is not None:
-            raise ConanException("Revisions not enabled in the client, specify a "
-                                 "reference without revision")
-
         conanfile = self._loader.load_virtual([reference], profile)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         if graph_lock:  # Find the Node ID in the lock of current root
@@ -232,27 +194,16 @@ class GraphManager(object):
             graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
-    def _resolve_graph(self, root_node, graph_info, build_mode, check_updates,
-                       update, remotes, recorder, apply_build_requires=True):
+    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
+                       check_updates, update, remotes, recorder, apply_build_requires=True):
         build_mode = BuildMode(build_mode, self._output)
-        profile_host = graph_info.profile_host
-        graph_lock = graph_info.graph_lock
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
                                       recorder=recorder,
                                       profile_host=profile_host,
-                                      profile_build=graph_info.profile_build,
+                                      profile_build=profile_build,
                                       apply_build_requires=apply_build_requires,
                                       graph_lock=graph_lock)
-
-        # THIS IS NECESSARY to store dependencies options in profile, for consumer
-        # FIXME: This is a hack. Might dissapear if graph for local commands is always recomputed
-        graph_info.options = root_node.conanfile.options.values
-        if root_node.ref:
-            graph_info.root = root_node.ref
-
-        if graph_info.graph_lock is None:
-            graph_info.graph_lock = GraphLock(deps_graph, self._cache.config.revisions_enabled)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -394,36 +345,3 @@ class GraphManager(object):
                     nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
                     msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
                 raise ConanException('\n'.join(msg_lines))
-
-
-def load_deps_info(current_path, conanfile, required):
-    def get_forbidden_access_object(field_name):
-        class InfoObjectNotDefined(object):
-            def __getitem__(self, item):
-                raise ConanException("self.%s not defined. If you need it for a "
-                                     "local command run 'conan install'" % field_name)
-
-            __getattr__ = __getitem__
-
-        return InfoObjectNotDefined()
-
-    if not current_path:
-        return
-    info_file_path = os.path.join(current_path, BUILD_INFO)
-    try:
-        deps_cpp_info, deps_user_info, deps_env_info, user_info_build = \
-            TXTGenerator.loads(load(info_file_path), filter_empty=True)
-        conanfile.deps_cpp_info = deps_cpp_info
-        conanfile.deps_user_info = deps_user_info
-        conanfile.deps_env_info = deps_env_info
-        if user_info_build:
-            conanfile.user_info_build = user_info_build
-    except IOError:
-        if required:
-            raise ConanException("%s file not found in %s\nIt is required for this command\n"
-                                 "You can generate it using 'conan install'"
-                                 % (BUILD_INFO, current_path))
-        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
-        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
-    except ConanException:
-        raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))

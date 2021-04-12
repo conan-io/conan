@@ -1,5 +1,3 @@
-import six
-
 from conans.client.cache.cache import ClientCache
 from semver import satisfies
 from conans import __version__ as client_version
@@ -32,6 +30,4 @@ def check_required_conan_version(cache_folder, out):
 
     required_range_new = cache.new_config["core"].required_conan_version
     if required_range_new:
-        if six.PY2 and not isinstance(required_range_new, str):
-            required_range_new = required_range_new.encode()
         validate_conan_version(required_range_new)

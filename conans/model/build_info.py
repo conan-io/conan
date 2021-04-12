@@ -232,17 +232,34 @@ class _CppInfo(object):
 
 class Component(_CppInfo):
 
-    def __init__(self, rootpath, version):
+    def __init__(self, rootpath, version, default_values):
         super(Component, self).__init__()
         self.rootpath = rootpath
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append(DEFAULT_BUILD)
-        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
+        if default_values.includedir is not None:
+            self.includedirs.append(default_values.includedir)
+        if default_values.libdir is not None:
+            self.libdirs.append(default_values.libdir)
+        if default_values.bindir is not None:
+            self.bindirs.append(default_values.bindir)
+        if default_values.resdir is not None:
+            self.resdirs.append(default_values.resdir)
+        if default_values.builddir is not None:
+            self.builddirs.append(default_values.builddir)
+        if default_values.frameworkdir is not None:
+            self.frameworkdirs.append(default_values.frameworkdir)
         self.requires = []
         self.version = version
+
+
+class CppInfoDefaultValues(object):
+
+    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
+        self.includedir = includedir
+        self.libdir = libdir
+        self.bindir = bindir
+        self.resdir = resdir
+        self.builddir = builddir
+        self.frameworkdir = frameworkdir
 
 
 class CppInfo(_CppInfo):
@@ -252,18 +269,29 @@ class CppInfo(_CppInfo):
     Defined in user CONANFILE, directories are relative at user definition time
     """
 
-    def __init__(self, ref_name, root_folder):
+    def __init__(self, ref_name, root_folder, default_values=None):
         super(CppInfo, self).__init__()
         self._ref_name = ref_name
         self._name = ref_name
         self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.builddirs.append(DEFAULT_BUILD)
-        self.frameworkdirs.append(DEFAULT_FRAMEWORK)
-        self.components = DefaultOrderedDict(lambda: Component(self.rootpath, self.version))
+        self._default_values = default_values or CppInfoDefaultValues(DEFAULT_INCLUDE, DEFAULT_LIB,
+                                                                      DEFAULT_BIN, DEFAULT_RES,
+                                                                      DEFAULT_BUILD,
+                                                                      DEFAULT_FRAMEWORK)
+        if self._default_values.includedir is not None:
+            self.includedirs.append(self._default_values.includedir)
+        if self._default_values.libdir is not None:
+            self.libdirs.append(self._default_values.libdir)
+        if self._default_values.bindir is not None:
+            self.bindirs.append(self._default_values.bindir)
+        if self._default_values.resdir is not None:
+            self.resdirs.append(self._default_values.resdir)
+        if self._default_values.builddir is not None:
+            self.builddirs.append(self._default_values.builddir)
+        if self._default_values.frameworkdir is not None:
+            self.frameworkdirs.append(self._default_values.frameworkdir)
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath,
+                                                               self.version, self._default_values))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self._configs = {}
@@ -296,12 +324,12 @@ class CppInfo(_CppInfo):
             result.filter_empty = self.filter_empty
             result.rootpath = self.rootpath
             result.sysroot = self.sysroot
-            result.includedirs.append(DEFAULT_INCLUDE)
-            result.libdirs.append(DEFAULT_LIB)
-            result.bindirs.append(DEFAULT_BIN)
-            result.resdirs.append(DEFAULT_RES)
-            result.builddirs.append(DEFAULT_BUILD)
-            result.frameworkdirs.append(DEFAULT_FRAMEWORK)
+            result.includedirs.append(self._default_values.includedir)
+            result.libdirs.append(self._default_values.libdir)
+            result.bindirs.append(self._default_values.bindir)
+            result.resdirs.append(self._default_values.resdir)
+            result.builddirs.append(self._default_values.builddir)
+            result.frameworkdirs.append(self._default_values.frameworkdir)
             return result
 
         return self._configs.setdefault(config, _get_cpp_info())
@@ -312,12 +340,12 @@ class CppInfo(_CppInfo):
 
         # Raise if mixing components
         if self.components and \
-            (self.includedirs != [DEFAULT_INCLUDE] or
-             self.libdirs != [DEFAULT_LIB] or
-             self.bindirs != [DEFAULT_BIN] or
-             self.resdirs != [DEFAULT_RES] or
-             self.builddirs != [DEFAULT_BUILD] or
-             self.frameworkdirs != [DEFAULT_FRAMEWORK] or
+            (self.includedirs != [self._default_values.includedir] or
+             self.libdirs != [self._default_values.libdir] or
+             self.bindirs != [self._default_values.bindir] or
+             self.resdirs != [self._default_values.resdir] or
+             self.builddirs != [self._default_values.builddir] or
+             self.frameworkdirs != [self._default_values.frameworkdir] or
              self.libs or
              self.system_libs or
              self.frameworks or

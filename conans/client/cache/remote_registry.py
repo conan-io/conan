@@ -3,7 +3,7 @@ import json
 import os
 import stat
 from collections import OrderedDict, namedtuple
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value

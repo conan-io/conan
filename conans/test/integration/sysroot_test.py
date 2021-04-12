@@ -37,8 +37,4 @@ class Pkg(ConanFile):
         self.assertIn("Pkg/0.1@user/testing: PKG SYSROOT: HelloSysRoot", client.out)
         self.assertIn("Pkg/0.1@user/testing (test package): Test SYSROOT: HelloSysRoot", client.out)
 
-        # Install conanfile and check conaninfo.txt
         client.run("install .")
-        bili = client.load("conanbuildinfo.txt")
-        self.assertIn(os.linesep.join(["[sysroot_sysroot]", "HelloSysRoot"]), bili)
-        self.assertIn(os.linesep.join(["[sysroot]", "HelloSysRoot"]), bili)

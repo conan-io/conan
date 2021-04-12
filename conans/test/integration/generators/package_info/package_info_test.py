@@ -500,9 +500,8 @@ class HelloConan(ConanFile):
         client.run("create . pkg/1.0@")
         self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
         self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
-        client.run("install . pkg/1.0@")
+        client.run("build . --name=pkg --version=1.0")
         self.assertIn("Generator cmake_find_package created FindGtesT.cmake", client.out)
-        client.run("build .")
         self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
         self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
 

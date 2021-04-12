@@ -2,8 +2,6 @@ import getpass
 import os
 import sys
 
-from six.moves import input as raw_input
-
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 
@@ -32,7 +30,7 @@ class UserIO(object):
 
     def raw_input(self):
         self._raise_if_non_interactive()
-        return raw_input()
+        return input()
 
     def get_pass(self):
         self._raise_if_non_interactive()

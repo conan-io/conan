@@ -5,7 +5,7 @@ from conans.errors import ConanException, PackageNotFoundException, RecipeNotFou
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.search.search import filter_outdated, search_packages, search_recipes
+from conans.search.search import search_packages, search_recipes
 from conans.util.log import logger
 
 
@@ -127,7 +127,7 @@ class ConanRemover(object):
             remover.remove(package_layout, output=self._user_io.out)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
-               force=False, packages_query=None, outdated=False):
+               force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
         @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
@@ -156,9 +156,6 @@ class ConanRemover(object):
         if remote_name:
             remote = self._remotes[remote_name]
             if input_ref:
-                if not self._cache.config.revisions_enabled and input_ref.revision:
-                    raise ConanException("Revisions not enabled in the client, cannot remove "
-                                         "revisions in the server")
                 refs = [input_ref]
             else:
                 refs = self._remote_manager.search_recipes(remote, pattern)
@@ -168,8 +165,7 @@ class ConanRemover(object):
                 if self._cache.installed_as_editable(input_ref):
                     raise ConanException(self._message_removing_editable(input_ref))
                 if not self._cache.package_layout(input_ref).recipe_exists():
-                    raise RecipeNotFoundException(input_ref,
-                                                  print_rev=self._cache.config.revisions_enabled)
+                    raise RecipeNotFoundException(input_ref)
                 refs.append(input_ref)
             else:
                 refs = search_recipes(self._cache, pattern)
@@ -187,19 +183,12 @@ class ConanRemover(object):
             assert isinstance(ref, ConanFileReference)
             package_layout = self._cache.package_layout(ref)
             package_ids = package_ids_filter
-            if packages_query or outdated:
+            if packages_query:
                 # search packages
                 if remote_name:
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
                     packages = search_packages(package_layout, packages_query)
-                if outdated:
-                    if remote_name:
-                        manifest, ref = self._remote_manager.get_recipe_manifest(ref, remote)
-                        recipe_hash = manifest.summary_hash
-                    else:
-                        recipe_hash = package_layout.recipe_manifest().summary_hash
-                    packages = filter_outdated(packages, recipe_hash)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:

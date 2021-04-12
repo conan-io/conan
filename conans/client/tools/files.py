@@ -8,12 +8,10 @@ import sys
 from contextlib import contextmanager
 from fnmatch import fnmatch
 
-import six
 from patch_ng import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.unicode import get_cwd
 from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
@@ -24,7 +22,7 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 @contextmanager
 def chdir(newdir):
-    old_path = get_cwd()
+    old_path = os.getcwd()
     os.chdir(newdir)
     try:
         yield
@@ -84,12 +82,10 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         save(target_name, file_content)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        if six.PY2:
-            raise ConanException("XZ format not supported in Python 2. Use Python 3 instead")
         return untargz(filename, destination, pattern, strip_root)
 
     import zipfile
-    full_path = os.path.normpath(os.path.join(get_cwd(), destination))
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):

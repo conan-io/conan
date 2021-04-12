@@ -3,14 +3,13 @@ import os
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
-from conans.client.graph.graph_manager import load_deps_info
 from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 
 
-def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder, install_folder,
-               graph_info, force, remotes):
+def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_folder,
+               profile_host, profile_build, graph_lock, root_ref, force, remotes):
     ref = full_ref.copy_clear_rev()
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
@@ -22,9 +21,10 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     # to be downloaded from remotes
     # passing here the create_reference=ref argument is useful so the recipe is in "develop",
     # because the "package()" method is in develop=True already
-    deps_graph = graph_manager.load_graph(ref, ref, graph_info=graph_info, build_mode=[ref.name],
-                                          check_updates=False, update=False, remotes=remotes,
-                                          recorder=recorder, apply_build_requires=False)
+    deps_graph = graph_manager.load_graph(ref, ref, profile_host, profile_build, graph_lock,
+                                          root_ref, build_mode=[ref.name], check_updates=False,
+                                          update=False, remotes=remotes, recorder=recorder,
+                                          apply_build_requires=False)
     # this is a bit tricky, but works. The root (virtual), has only 1 neighbor,
     # which is the exported pkg
     nodes = deps_graph.root.neighbors()
@@ -37,9 +37,7 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
         add_env_conaninfo(conanfile, subtree_libnames)
 
     _init_conanfile_infos()
-    from conans.client.conan_api import existing_info_files
-    if install_folder and existing_info_files(install_folder):
-        load_deps_info(install_folder, conanfile, required=True)
+
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
@@ -51,17 +49,17 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     layout.package_remove(pref)
 
     dest_package_folder = layout.package(pref)
-    recipe_hash = layout.recipe_manifest().summary_hash
-    conanfile.info.recipe_hash = recipe_hash
     conanfile.develop = True
+    conanfile.layout.set_base_build_folder(build_folder)
+    conanfile.layout.set_base_source_folder(source_folder)
+    conanfile.layout.set_base_package_folder(dest_package_folder)
+
     with layout.set_dirty_context_manager(pref):
         if package_folder:
-            prev = packager.export_pkg(conanfile, package_id, package_folder, dest_package_folder,
-                                       hook_manager, conan_file_path, ref)
+            prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
+                                       conan_file_path, ref)
         else:
-            prev = run_package_method(conanfile, package_id, source_folder, build_folder,
-                                      dest_package_folder, install_folder, hook_manager,
-                                      conan_file_path, ref)
+            prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     packager.update_package_metadata(prev, layout, package_id, full_ref.revision)
     pref = PackageReference(pref.ref, pref.id, prev)

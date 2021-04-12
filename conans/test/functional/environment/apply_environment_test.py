@@ -1,14 +1,14 @@
 import os
 import platform
+import textwrap
 import unittest
 
 import pytest
 
 from conans.client import tools
-from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import BUILD_INFO, CONANFILE, CONANINFO
+from conans.paths import CONANFILE, CONANINFO
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -439,8 +439,8 @@ class HelloConan(ConanFile):
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', environment_contents)
         else:
-            self.assertIn('var2="value3":"value2"${var2+:$var2}', environment_contents)
-            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 ${CPPFLAGS+ $CPPFLAGS}"',
+            self.assertIn('var2="value3":"value2"${var2:+:$var2}', environment_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1${CPPFLAGS:+ $CPPFLAGS}"',
                           environment_contents)
         self.assertIn("Another value", environment_contents)
         if platform.system() == "Windows":
@@ -484,27 +484,17 @@ class Hello2Conan(ConanFile):
         files = dict()
         files["conanfile.py"] = reuse
         client.save(files)
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertIn("VAR1=>99", client.out)
 
         # Now specify a different value in command Line, but conaninfo already exists
         # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
-        client.run("install . -e VAR1=100 --build missing")
-        client.run("build .")
-        self.assertIn("VAR1=>100", client.out)
-
-        # Remove conaninfo
-        os.remove(os.path.join(client.current_folder, CONANINFO))
-        client.run("install . -e VAR1=100 --build missing")
-        client.run("build .")
+        client.run("build . -e VAR1=100 --build missing")
         self.assertIn("VAR1=>100", client.out)
 
         # Now from a profile
-        os.remove(os.path.join(client.current_folder, CONANINFO))
         client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
-        client.run("install . --profile ./myprofile --build missing")
-        client.run("build .")
+        client.run("build . --profile ./myprofile --build missing")
         self.assertIn("VAR1=>102", client.out)
 
     def test_complex_deps_propagation(self):
@@ -515,8 +505,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B1", "B2"], {})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertIn("VAR1=>800*", client.out)
         self.assertIn("VAR2=>24*", client.out)
         self.assertIn("VAR3=>22*", client.out)
@@ -535,8 +524,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {"VAR3": "45"}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.out)
         self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.out)
         self.assertInSep("VAR3=>45*", client.out)
@@ -547,8 +535,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {"VAR3": "23"}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing")
-        client.run("build .")
+        client.run("build . --build missing")
         self.assertInSep("VAR1=>700:800:900*", client.out)
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertInSep("VAR3=>23*", client.out)
@@ -559,8 +546,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {"VAR3": "23"}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
-        client.run("build .")
+        client.run("build . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
         self.assertInSep("VAR1=>override:700:800:900", client.out)
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertIn("VAR3=>SIMPLE*", client.out)
@@ -573,8 +559,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing -e LIB_A:VAR3=override")
-        client.run("build .")
+        client.run("build . --build missing -e LIB_A:VAR3=override")
         self.assertInSep("VAR1=>700:800:900", client.out)
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertIn("VAR3=>-23*", client.out)
@@ -587,7 +572,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing -e VAR3=override")
+        client.run("build . --build missing -e VAR3=override")
         self.assertIn("Building LIB_A, VAR1:None", client.out)
         self.assertIn("Building LIB_A, VAR2:None", client.out)
         self.assertIn("Building LIB_A, VAR3:override", client.out)
@@ -600,7 +585,6 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.out)
         self.assertIn("Building LIB_C, VAR3:override", client.out)
 
-        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.out)
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertInSep("VAR3=>override*", client.out)
@@ -613,7 +597,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {"VAR3": "bestvalue"}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing -e LIB_B:VAR3=override")
+        client.run("build . --build missing -e LIB_B:VAR3=override")
         self.assertIn("Building LIB_A, VAR1:None", client.out)
         self.assertIn("Building LIB_A, VAR2:None", client.out)
         self.assertIn("Building LIB_A, VAR3:None", client.out)
@@ -626,7 +610,6 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.out)
         self.assertIn("Building LIB_C, VAR3:-23", client.out)
 
-        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.out)
         self.assertInSep("VAR2=>24:23*", client.out)
         self.assertInSep("VAR3=>bestvalue*", client.out)
@@ -666,16 +649,9 @@ virtualenv
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install .")
-        info = client.load("conanbuildinfo.txt")
-        info = info.replace("\r\n", "\n")
-        self.assertIn("""
-[ENV_libA]
-PATH=["path_from_A"]
-[ENV_libB]
-PATH=["path_from_B"]""", info)
         if platform.system() != "Windows":
             activate = client.load("environment.sh.env")
-            self.assertIn('PATH="path_from_A":"path_from_B"${PATH+:$PATH}', activate)
+            self.assertIn('PATH="path_from_A":"path_from_B"${PATH:+:$PATH}', activate)
         else:
             activate = client.load("environment.bat.env")
             self.assertIn('PATH=path_from_A;path_from_B;%PATH%', activate)
@@ -814,14 +790,6 @@ class LibConan(ConanFile):
         self.assertEqual(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
                                                                {'VAR3': ['newappend']}))
 
-        # Now check the info for the project
-        info = ConanInfo.loads(client.load(CONANINFO))
-        self.assertEqual(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
-                                                                 {'VAR3': ['newappend']}))
-
-        _, _, buildinfo, _ = TXTGenerator.loads(client.load(BUILD_INFO))
-        self.assertEqual(buildinfo["LIB_A"].VAR1, ["900"])
-
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
 import os
@@ -875,3 +843,32 @@ class Hello2Conan(ConanFile):
         self.output.info("VAR2=>%s*" % os.environ.get("VAR2"))
         self.output.info("VAR3=>%s*" % os.environ.get("VAR3"))
 '''
+
+
+def test_env_per_package_patterns():
+    # https://github.com/conan-io/conan/issues/8657
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        import os
+        class Pkg(ConanFile):
+            def build(self):
+                self.output.info("MYENV: {}!!!".format(os.getenv("MYVAR")))
+        """)
+    profile = textwrap.dedent("""
+        [env]
+        *myuser*:MYVAR=MyValue
+        other:MYVAR=OtherValue
+        */mychannel:MYVAR=MyChannelValue
+        *:MYVAR=MyAllValue
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("create . pkg/0.1@myuser/channel -pr=profile")
+    assert "pkg/0.1@myuser/channel: MYENV: MyValue!!!" in client.out
+    client.run("create . pkg/0.1@ -pr=profile")
+    assert "pkg/0.1: MYENV: MyAllValue!!!" in client.out
+    client.run("create . other/0.1@ -pr=profile")
+    assert "other/0.1: MYENV: OtherValue!!!" in client.out
+    client.run("create . pkg/0.1@user/mychannel -pr=profile")
+    assert "pkg/0.1@user/mychannel: MYENV: MyChannelValue!!!" in client.out

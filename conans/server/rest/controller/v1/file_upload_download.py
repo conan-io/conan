@@ -1,7 +1,6 @@
 import os
 from unicodedata import normalize
 
-import six
 from bottle import FileUpload, cached_property, request, static_file
 
 from conans.server.rest.bottle_routes import BottleRoutes
@@ -53,9 +52,6 @@ class ConanFileUpload(FileUpload):
             or dashes are removed. The filename is limited to 255 characters.
         """
         fname = self.raw_filename
-        if six.PY2:
-            if not isinstance(fname, unicode):
-                fname = fname.decode('utf8', 'ignore')
         fname = normalize('NFKD', fname).encode('ASCII', 'ignore').decode('ASCII')
         fname = os.path.basename(fname.replace('\\', os.path.sep))
         # fname = re.sub(r'[^a-zA-Z0-9-_.\s]', '', fname).strip()

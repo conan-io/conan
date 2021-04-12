@@ -1,8 +1,6 @@
 import json
 from collections import defaultdict
 
-from conans import DEFAULT_REVISION_V1
-
 
 class _RecipeMetadata(object):
 
@@ -45,7 +43,8 @@ class _BinaryPackageMetadata(object):
 
     @revision.setter
     def revision(self, r):
-        self._revision = DEFAULT_REVISION_V1 if r is None else r
+        assert r is not None
+        self._revision = r
 
     @property
     def recipe_revision(self):
@@ -53,7 +52,7 @@ class _BinaryPackageMetadata(object):
 
     @recipe_revision.setter
     def recipe_revision(self, r):
-        self._recipe_revision = DEFAULT_REVISION_V1 if r is None else r
+        self._recipe_revision = r
 
     def to_dict(self):
         ret = {"revision": self.revision,

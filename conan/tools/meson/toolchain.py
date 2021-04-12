@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
@@ -76,18 +77,17 @@ class MesonToolchain(object):
     @staticmethod
     def _to_meson_value(value):
         # https://mesonbuild.com/Machine-files.html#data-types
-        import six
 
         try:
             from collections.abc import Iterable
         except ImportError:
             from collections import Iterable
 
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             return "'%s'" % value
         elif isinstance(value, bool):
             return 'true' if value else "false"
-        elif isinstance(value, six.integer_types):
+        elif isinstance(value, int):
             return value
         elif isinstance(value, Iterable):
             return '[%s]' % ', '.join([str(MesonToolchain._to_meson_value(v)) for v in value])
@@ -270,3 +270,4 @@ class MesonToolchain(object):
             self._write_cross_file()
         else:
             self._write_native_file()
+        write_conanvcvars(self._conanfile)

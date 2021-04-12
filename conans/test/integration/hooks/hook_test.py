@@ -173,18 +173,6 @@ def pre_export(output, conanfile_path, reference, **kwargs):
 
 class HookTest(unittest.TestCase):
 
-    def test_default_hook(self):
-        client = TestClient()
-        self.assertTrue(client.cache.hooks_path.endswith("hooks"))
-        client.save({"conanfile.py": conanfile_basic})
-        client.run("export . danimtb/testing")
-        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
-                      "WARN: Conanfile doesn't have 'url'", client.out)
-        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
-                      "WARN: Conanfile doesn't have 'description'", client.out)
-        self.assertIn("[HOOK - attribute_checker.py] pre_export(): "
-                      "WARN: Conanfile doesn't have 'license'", client.out)
-
     def test_complete_hook(self):
         server = TestServer([], users={"danimtb": "pass"})
         client = TestClient(servers={"default": server}, users={"default": [("danimtb", "pass")]})
@@ -201,9 +189,6 @@ class HookTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self._check_build(conanfile_path, client.out)
-
-        client.run("package .")
-        self._check_package(conanfile_path, client.out)
 
         client.run("export . danimtb/testing")
         self._check_export(conanfile_path, conanfile_cache_path, client.out)

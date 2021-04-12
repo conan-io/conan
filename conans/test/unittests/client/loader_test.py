@@ -3,7 +3,6 @@ import textwrap
 import unittest
 
 from conans import Settings
-from conans.client.graph.python_requires import ConanPythonRequire
 from conans.client.loader import ConanFileLoader
 from conans.model.env_info import EnvValues
 from conans.model.profile import Profile
@@ -21,7 +20,7 @@ class LoadConanfileTxtTest(unittest.TestCase):
         self.profile.processed_settings = settings
 
         output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, output, ConanPythonRequire(None, None))
+        self.loader = ConanFileLoader(None, output)
 
     def test_env(self):
         env_values = EnvValues()

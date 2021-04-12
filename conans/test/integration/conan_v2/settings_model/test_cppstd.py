@@ -1,7 +1,5 @@
 import textwrap
 
-import six
-
 from conans.client import settings_preprocessor
 from conans.client.conf import get_default_settings_yml
 from conans.errors import ConanV2Exception
@@ -32,9 +30,8 @@ class SettingsCppstdTestCase(ConanV2ModeTestCase):
         # First level setting 'cppstd' is no longer supported
         settings = Settings.loads(get_default_settings_yml())
         settings.cppstd = "11"
-        with six.assertRaisesRegex(self, ConanV2Exception, "Setting 'cppstd' is deprecated"):
-                settings_preprocessor.preprocess(settings=settings)
-
+        with self.assertRaisesRegex(ConanV2Exception, "Setting 'cppstd' is deprecated"):
+            settings_preprocessor.preprocess(settings=settings)
 
     def test_search(self):
         # First level setting 'cppstd' is no longer supported

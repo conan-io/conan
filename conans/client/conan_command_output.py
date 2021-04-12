@@ -9,7 +9,6 @@ from conans.client.installer import build_id
 from conans.client.printer import Printer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.search.binary_html_table import html_binary_graph
-from conans.unicode import get_cwd
 from conans.util.dates import iso8601_to_str
 from conans.util.files import save
 from conans import __version__ as client_version
@@ -52,24 +51,8 @@ class CommandOutputer(object):
             pref = PackageReference.loads(package_reference)
             self._output.info("%s: %s" % (pref.full_str(), remote_name))
 
-    def build_order(self, info):
-        groups = [[ref.copy_clear_rev() for ref in group] for group in info]
-        msg = ", ".join(str(s) for s in groups)
-        self._output.info(msg)
-
-    def json_build_order(self, info, json_output, cwd):
-        data = {"groups": [[repr(ref.copy_clear_rev()) for ref in group] for group in info]}
-        json_str = json.dumps(data)
-        if json_output is True:  # To the output
-            self._output.write(json_str)
-        else:  # Path to a file
-            cwd = os.path.abspath(cwd or get_cwd())
-            if not os.path.isabs(json_output):
-                json_output = os.path.join(cwd, json_output)
-            save(json_output, json_str)
-
     def json_output(self, info, json_output, cwd):
-        cwd = os.path.abspath(cwd or get_cwd())
+        cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):
             json_output = os.path.join(cwd, json_output)
 
@@ -216,8 +199,7 @@ class CommandOutputer(object):
     def info(self, deps_graph, only, package_filter, show_paths):
         data = self._grab_info_data(deps_graph, grab_paths=show_paths)
         Printer(self._output).print_info(data, only,  package_filter=package_filter,
-                                         show_paths=show_paths,
-                                         show_revisions=self._cache.config.revisions_enabled)
+                                         show_paths=show_paths)
 
     def info_graph(self, graph_filename, deps_graph, cwd, template):
         graph = Grapher(deps_graph)
@@ -248,13 +230,12 @@ class CommandOutputer(object):
         printer.print_search_recipes(search_info, pattern, raw, all_remotes_search)
 
     def print_search_packages(self, search_info, reference, packages_query, table, raw,
-                              template, outdated=False):
+                              template):
         if table:
             html_binary_graph(search_info, reference, table, template)
         else:
             printer = Printer(self._output)
-            printer.print_search_packages(search_info, reference, packages_query, raw,
-                                          outdated=outdated)
+            printer.print_search_packages(search_info, reference, packages_query, raw)
 
     def print_revisions(self, reference, revisions, raw, remote_name=None):
         remote_test = " at remote '%s'" % remote_name if remote_name else ""

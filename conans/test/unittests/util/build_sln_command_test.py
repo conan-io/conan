@@ -5,7 +5,8 @@ import os
 import unittest
 import warnings
 
-from six import StringIO
+from io import StringIO
+
 
 from conans.client import tools
 from conans.client.output import ConanOutput

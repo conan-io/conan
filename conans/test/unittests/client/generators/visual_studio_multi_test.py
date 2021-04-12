@@ -1,8 +1,7 @@
 import os
-import platform
 import unittest
 
-import pytest
+from mock import Mock
 from parameterized import parameterized
 
 from conans.client.conf import get_default_settings_yml
@@ -13,7 +12,6 @@ from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 
 
@@ -30,7 +28,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             settings.compiler.runtime = "MD"
             if use_toolset:
                 settings.compiler.toolset = "v110"
-            conanfile = ConanFile(TestBufferConanOutput(), None)
+            conanfile = ConanFile(Mock(), None)
             conanfile.initialize(Settings({}), EnvValues())
 
             ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
@@ -92,7 +90,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
         def validate_additional_dependencies(libname, additional_dep):
             tempdir = temp_folder()
             with chdir(tempdir):
-                conanfile = ConanFile(TestBufferConanOutput(), None)
+                conanfile = ConanFile(Mock(), None)
                 conanfile.initialize(Settings({}), EnvValues())
 
                 ref = ConanFileReference.loads("MyPkg/0.1@user/testing")

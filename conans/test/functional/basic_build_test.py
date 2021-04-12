@@ -16,8 +16,8 @@ class BasicBuildTest(unittest.TestCase):
 
     @pytest.mark.tool_cmake
     def test_build_cmake(self):
-        for cmd, lang, static, pure_c in [("install .", 0, True, True),
-                                          ("install . -o language=1 -o static=False", 1,
+        for cmd, lang, static, pure_c in [("build .", 0, True, True),
+                                          ("build . -o language=1 -o static=False", 1,
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=True, lang=lang)
 
@@ -27,8 +27,8 @@ class BasicBuildTest(unittest.TestCase):
         if platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work
 
-        for cmd, lang, static, pure_c in [("install .", 0, True, True),
-                                          ("install . -o language=1 -o static=False -g txt", 1,
+        for cmd, lang, static, pure_c in [("build .", 0, True, True),
+                                          ("build . -o language=1 -o static=False", 1,
                                            False, False)]:
             build(self, cmd, static, pure_c, use_cmake=False, lang=lang)
 
@@ -39,7 +39,6 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
 
     client.save(files)
     client.run(cmd)
-    client.run('build .')
     ld_path = ("LD_LIBRARY_PATH=`pwd`"
                if not static and not platform.system() == "Windows" else "")
     if platform.system() == "Darwin":
@@ -48,10 +47,3 @@ def build(tester, cmd, static, pure_c, use_cmake, lang):
     client.run_command("%s %s" % (ld_path, command))
     msg = "Hello" if lang == 0 else "Hola"
     tester.assertIn("%s Hello0" % msg, client.out)
-    conan_info_path = os.path.join(client.current_folder, CONANINFO)
-    conan_info = ConanInfo.loads(load(conan_info_path))
-    tester.assertTrue(conan_info.full_options.language == lang)
-    if static:
-        tester.assertTrue(conan_info.full_options.static)
-    else:
-        tester.assertFalse(conan_info.full_options.static)
