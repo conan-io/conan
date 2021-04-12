@@ -355,3 +355,92 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
         self.assertEqual(variables, {"MYVAR": "fromProfile2",
                                      "PROFILE_DIR": tmp.replace('\\', '/')})
         self.assertEqual(profile.settings["os"], "fromProfile2")
+
+
+def test_profile_load_absolute_path():
+    """ When passing absolute path as profile file, it MUST be used.
+        read_profile(/abs/path/profile, /abs, /.conan/profiles)
+        /abs/path/profile MUST be consumed as target profile
+    """
+    profile_name = "default"
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+    current_profile_folder = temp_folder()
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(current_profile_path, current_profile_folder,
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+
+
+def test_profile_load_relative_path_dot():
+    """ When passing relative ./path as profile file, it MUST be used
+        read_profile(./profiles/profile, /tmp, /.conan/profiles)
+        /tmp/profiles/profile MUST be consumed as target profile
+    """
+    profile_name = "default"
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+    current_profile_folder = temp_folder()
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+    relative_current_profile_path = "." + os.path.join(os.sep,
+                                                       os.path.basename(current_profile_folder),
+                                                       profile_name)
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(relative_current_profile_path,
+                                      os.path.dirname(current_profile_folder),
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]
+
+
+def test_profile_load_relative_path_pardir():
+    """ When passing relative ../path as profile file, it MUST be used
+        read_profile(../profiles/profile, /tmp/current, /.conan/profiles)
+        /tmp/profiles/profile MUST be consumed as target profile
+    """
+    profile_name = "default"
+    default_profile_folder = os.path.join(temp_folder(), "profiles")
+    os.mkdir(default_profile_folder)
+    default_profile_path = os.path.join(default_profile_folder, profile_name)
+
+    current_temp_folder = temp_folder()
+    current_profile_folder = os.path.join(current_temp_folder, "profiles")
+    current_running_folder = os.path.join(current_temp_folder, "current")
+
+    os.mkdir(current_profile_folder)
+    os.mkdir(current_running_folder)
+
+    current_profile_path = os.path.join(current_profile_folder, profile_name)
+    default_profile_content = textwrap.dedent("""
+            [env]
+            BORSCHT=BEET SOUP
+        """)
+    current_profile_content = default_profile_content.replace("BEET", "RUSSIAN")
+    relative_current_profile_path = os.pardir + os.path.join(os.sep, "profiles", profile_name)
+
+    save(default_profile_path, default_profile_content)
+    save(current_profile_path, current_profile_content)
+
+    profile, variables = read_profile(relative_current_profile_path,
+                                      current_running_folder,
+                                      default_profile_folder)
+    assert ({"BORSCHT": "RUSSIAN SOUP"}, {}) == profile.env_values.env_dicts("")
+    assert current_profile_folder.replace("\\", "/") == variables["PROFILE_DIR"]

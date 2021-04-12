@@ -11,6 +11,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.toolchain
@@ -36,8 +37,11 @@ class Base(unittest.TestCase):
                 tc.variables.debug["MYVAR2_CONFIG"] = "MYVAR2_DEBUG"
                 tc.variables.release["MYVAR2_CONFIG"] = "MYVAR2_RELEASE"
                 tc.preprocessor_definitions["MYDEFINE"] = "MYDEF_VALUE"
+                tc.preprocessor_definitions["MYDEFINEINT"] = 42
                 tc.preprocessor_definitions.debug["MYDEFINE_CONFIG"] = "MYDEF_DEBUG"
                 tc.preprocessor_definitions.release["MYDEFINE_CONFIG"] = "MYDEF_RELEASE"
+                tc.preprocessor_definitions.debug["MYDEFINEINT_CONFIG"] = 421
+                tc.preprocessor_definitions.release["MYDEFINEINT_CONFIG"] = 422
                 tc.generate()
 
             def build(self):
@@ -48,7 +52,8 @@ class Base(unittest.TestCase):
 
     lib_h = gen_function_h(name="app")
     lib_cpp = gen_function_cpp(name="app", msg="App", includes=["hello"], calls=["hello"],
-                               preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE", "MYDEFINE_CONFIG"])
+                               preprocessor=["MYVAR", "MYVAR_CONFIG", "MYDEFINE", "MYDEFINE_CONFIG",
+                                             "MYDEFINEINT", "MYDEFINEINT_CONFIG"])
     main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
@@ -83,7 +88,7 @@ class Base(unittest.TestCase):
         add_library(app_lib app_lib.cpp)
         target_link_libraries(app_lib PRIVATE hello::hello)
         target_compile_definitions(app_lib PRIVATE MYVAR="${MYVAR}")
-        target_compile_definitions(app_lib PRIVATE MYVAR_CONFIG=${MYVAR_CONFIG})
+        target_compile_definitions(app_lib PRIVATE MYVAR_CONFIG="${MYVAR_CONFIG}")
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE app_lib)
         """)
@@ -130,7 +135,9 @@ class Base(unittest.TestCase):
     def _modify_code(self):
         lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
                                    calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
-                                                                  "MYDEFINE", "MYDEFINE_CONFIG"])
+                                                                  "MYDEFINE", "MYDEFINE_CONFIG",
+                                                                  "MYDEFINEINT",
+                                                                  "MYDEFINEINT_CONFIG"])
         self.client.save({"app_lib.cpp": lib_cpp})
 
         content = self.client.load("CMakeLists.txt")
@@ -158,6 +165,9 @@ class Base(unittest.TestCase):
         self.assertIn("MYVAR_CONFIG: MYVAR_%s" % build_type.upper(), self.client.out)
         self.assertIn("MYDEFINE: MYDEF_VALUE", self.client.out)
         self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
+        self.assertIn("MYDEFINEINT: 42", self.client.out)
+        self.assertIn("MYDEFINEINT_CONFIG: {}".format(421 if build_type == "Debug" else 422),
+                      self.client.out)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -178,6 +188,8 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
+        save(self.client.cache.new_config_path,
+             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
@@ -236,6 +248,7 @@ class WinTest(Base):
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_RELEASE"
+
                        })
         self._run_app("Debug", bin_folder=True)
         check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
@@ -262,6 +275,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -277,6 +291,7 @@ class WinTest(Base):
         self.assertIn("The C compiler identification is GNU", self.client.out)
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
                       '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
@@ -336,9 +351,10 @@ class LinuxTest(Base):
         pic_str = "" if shared else "ON"
         arch_str = "-m32" if arch == "x86" else "-m64"
         cxx11_abi_str = "1" if libcxx == "libstdc++11" else "0"
-        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";'\
-                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",'\
-                  '$<IF:$<CONFIG:release>,"MYDEF_RELEASE","">>' % cxx11_abi_str
+        defines = '_GLIBCXX_USE_CXX11_ABI=%s;MYDEFINE="MYDEF_VALUE";MYDEFINEINT=42;'\
+                  'MYDEFINE_CONFIG=$<IF:$<CONFIG:debug>,"MYDEF_DEBUG",$<IF:$<CONFIG:release>,'\
+                  '"MYDEF_RELEASE","">>;MYDEFINEINT_CONFIG=$<IF:$<CONFIG:debug>,421,'\
+                  '$<IF:$<CONFIG:release>,422,"">>' % cxx11_abi_str
         vals = {"CMAKE_CXX_STANDARD": "14",
                 "CMAKE_CXX_EXTENSIONS": extensions_str,
                 "CMAKE_BUILD_TYPE": build_type,
@@ -517,3 +533,57 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
+
+
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class TestCMakeFindPackagePreferConfig:
+
+    def test_prefer_config(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            set(CMAKE_C_COMPILER_WORKS 1)
+            set(CMAKE_C_ABI_COMPILED 1)
+            cmake_minimum_required(VERSION 3.15)
+            project(my_project C)
+            find_package(Comandante REQUIRED)
+            """)
+
+        find = 'message(STATUS "using FindComandante.cmake")'
+        config = 'message(STATUS "using ComandanteConfig.cmake")'
+
+        profile = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.cmake.cmaketoolchain:find_package_prefer_config={}
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "FindComandante.cmake": find,
+                     "ComandanteConfig.cmake": config,
+                     "profile_true": profile.format(True),
+                     "profile_false": profile.format(False)})
+
+        client.run("install .")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_true")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_false")
+        client.run("build .")
+        assert "using FindComandante.cmake" in client.out

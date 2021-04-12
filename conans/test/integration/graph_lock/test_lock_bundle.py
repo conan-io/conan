@@ -58,9 +58,9 @@ def test_basic():
     for level in order:
         for ref in level:
             # Now get the package_id, lockfile
-            pkg_ids = bundle[ref]["package_id"]
-            for pkg_id, lockfile_info in pkg_ids.items():
-                lockfiles = lockfile_info["lockfiles"]
+            packages = bundle[ref]["packages"]
+            for pkg in packages:
+                lockfiles = pkg["lockfiles"]
                 lockfile = next(iter(sorted(lockfiles)))
 
                 client.run("install {ref} --build={ref} --lockfile={lockfile} "
@@ -102,6 +102,14 @@ def test_basic():
     assert nodes["3"].ref.full_str() == "pkga/0.1#f096d7d54098b7ad7012f9435d9c33f3"
     assert nodes["3"].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
     assert nodes["3"].prev == "9e99cfd92d0d7df79d687b01512ce844"
+
+    client.run("lock bundle clean-modified lock1.bundle")
+    bundle = client.load("lock1.bundle")
+    assert '"modified": true' not in bundle
+    lock1 = client.load("app1_windows.lock")
+    assert '"modified": true' not in lock1
+    lock2 = client.load("app2_linux.lock")
+    assert '"modified": true' not in lock2
 
 
 def test_build_requires():
@@ -166,9 +174,9 @@ def test_build_requires():
     for level in order:
         for ref in level:
             # Now get the package_id, lockfile
-            pkg_ids = bundle[ref]["package_id"]
-            for pkg_id, lockfile_info in pkg_ids.items():
-                lockfiles = lockfile_info["lockfiles"]
+            packages = bundle[ref]["packages"]
+            for pkg in packages:
+                lockfiles = pkg["lockfiles"]
                 lockfile = next(iter(sorted(lockfiles)))
 
                 client.run("install {ref} --build={ref} --lockfile={lockfile} "
@@ -222,3 +230,35 @@ def test_build_requires():
         assert nodes[n].ref.full_str() == "tool/0.1#f096d7d54098b7ad7012f9435d9c33f3"
         assert nodes[n].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
         assert nodes[n].prev == "9e99cfd92d0d7df79d687b01512ce844"
+
+
+def test_build_requires_error():
+    # https://github.com/conan-io/conan/issues/8577
+    client = TestClient()
+    # TODO: This is hardcoded
+    client.run("config set general.revisions_enabled=1")
+    client.save({"tool/conanfile.py": GenConanfile().with_settings("os"),
+                 "pkga/conanfile.py": GenConanfile().with_settings("os"),
+                 "app1/conanfile.py": GenConanfile().with_settings("os").with_requires("pkga/0.1"),
+                 "profile": "[build_requires]\ntool/0.1"})
+    client.run("create tool tool/0.1@ -s os=Windows")
+    client.run("create tool tool/0.1@ -s os=Linux")
+    client.run("export pkga pkga/0.1@")
+    client.run("export app1 app1/0.1@")
+
+    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Windows "
+               "--lockfile-out=app1_windows.lock --build=missing")
+    assert "tool/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache" in client.out
+    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Linux "
+               "--lockfile-out=app1_linux.lock --build=missing")
+    assert "tool/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache" in client.out
+
+    client.run("lock bundle create app1_windows.lock app1_linux.lock --bundle-out=lock1.bundle")
+    client.run("lock bundle build-order lock1.bundle --json=bo.json")
+    order = client.load("bo.json")
+    print(order)
+    order = json.loads(order)
+    assert order == [
+        ["pkga/0.1@#f096d7d54098b7ad7012f9435d9c33f3"],
+        ["app1/0.1@#5af607abc205b47375f485a98abc3b38"]
+    ]

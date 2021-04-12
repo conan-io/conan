@@ -66,7 +66,8 @@ class GeneratorManager(object):
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
-                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild"]
+                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -89,12 +90,21 @@ class GeneratorManager(object):
         if generator_name == "CMakeToolchain":
             from conan.tools.cmake import CMakeToolchain
             return CMakeToolchain
-        if generator_name == "CMakeDeps":
+        elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
         elif generator_name == "MakeToolchain":
             from conan.tools.gnu import MakeToolchain
             return MakeToolchain
+        elif generator_name == "AutotoolsDeps":
+            from conan.tools.gnu import AutotoolsDeps
+            return AutotoolsDeps
+        elif generator_name == "AutotoolsToolchain":
+            from conan.tools.gnu import AutotoolsToolchain
+            return AutotoolsToolchain
+        elif generator_name == "AutotoolsGen":
+            from conan.tools.gnu import AutotoolsGen
+            return AutotoolsGen
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain
@@ -110,6 +120,9 @@ class GeneratorManager(object):
         elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
+        elif generator_name == "VirtualEnv":
+            from conan.tools.env.virtualenv import VirtualEnv
+            return VirtualEnv
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -196,4 +209,9 @@ def write_toolchain(conanfile, path, output):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
-        # TODO: Lets discuss what to do with the environment
+    # tools.env.virtualenv:auto_use will be always True in Conan 2.0
+    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+        with chdir(path):
+            from conan.tools.env.virtualenv import VirtualEnv
+            env = VirtualEnv(conanfile)
+            env.generate()

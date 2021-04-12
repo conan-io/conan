@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+from mock import Mock
+
 from conans.client.generators import PremakeGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
@@ -10,7 +12,6 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
-from conans.test.utils.mocks import TestBufferConanOutput
 
 
 class PremakeGeneratorTest(unittest.TestCase):
@@ -79,7 +80,7 @@ class PremakeGeneratorTest(unittest.TestCase):
         save(os.path.join(self.tmp_folder1, "bin1", "file.bin"), "")
         save(os.path.join(self.tmp_folder2, "bin2", "file.bin"), "")
 
-        self.conanfile = ConanFile(TestBufferConanOutput(), None)
+        self.conanfile = ConanFile(Mock(), None)
         self.conanfile.initialize(Settings({}), EnvValues())
         ref = ConanFileReference.loads("MyPkg1/0.1@lasote/stables")
         cpp_info = CppInfo(ref.name, self.tmp_folder1)
