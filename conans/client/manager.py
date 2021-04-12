@@ -21,8 +21,7 @@ from conans.util.files import normalize, save
 def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
                  update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
-                 is_build_require=False):
+                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -57,8 +56,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, graph_info, build_modes,
                                           False, update, remotes, recorder,
-                                          lockfile_node_id=lockfile_node_id,
-                                          is_build_require=is_build_require)
+                                          lockfile_node_id=lockfile_node_id)
     graph_lock = graph_info.graph_lock  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
@@ -118,8 +116,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile, conanfile.output)
 
-        if not is_build_require and not create_reference and isinstance(ref_or_path,
-                                                                        ConanFileReference):
+        if not create_reference and isinstance(ref_or_path, ConanFileReference):
             # The conanfile loaded is a virtual one. The one w deploy is the first level one
             neighbours = deps_graph.root.neighbors()
             deploy_conanfile = neighbours[0].conanfile

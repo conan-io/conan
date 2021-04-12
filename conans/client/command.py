@@ -473,8 +473,6 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
-        parser.add_argument("--build-require", action='store_true', default=False,
-                            help='The provided reference is a build-require')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
@@ -535,8 +533,7 @@ class Command(object):
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
-                                                     lockfile_node_id=args.lockfile_node_id,
-                                                     is_build_require=args.build_require)
+                                                     lockfile_node_id=args.lockfile_node_id)
 
         except ConanException as exc:
             info = exc.info

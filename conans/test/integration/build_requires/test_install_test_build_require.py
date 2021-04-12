@@ -90,34 +90,3 @@ def test_build_require_test_package(client):
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
         assert "MYCMAKE={}!!".format(system) in client.out
         assert "MYOPENSSL={}!!".format(system) in client.out
-
-
-def test_build_require_conanfile_text(client):
-    client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
-    client.run("install . -g virtualenv")
-    cmd = ". ./activate.sh && mycmake.sh" if platform.system() != "Windows" else \
-        "activate.bat && mycmake.bat"
-    client.run_command(cmd)
-    system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-    assert "MYCMAKE={}!!".format(system) in client.out
-    assert "MYOPENSSL={}!!".format(system) in client.out
-
-
-def test_build_require_command_line_no_context(client):
-    client.run("install mycmake/1.0@  -g virtualenv")
-    cmd = ". ./activate.sh && mycmake.sh" if platform.system() != "Windows" else \
-        "activate.bat && mycmake.bat"
-    client.run_command(cmd)
-    system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-    assert "MYCMAKE={}!!".format(system) in client.out
-    assert "MYOPENSSL={}!!".format(system) in client.out
-
-
-def test_build_require_command_line_build_context(client):
-    client.run("install mycmake/1.0@ --build-require -g virtualenv -pr:b=default")
-    cmd = ". ./activate.sh && mycmake.sh" if platform.system() != "Windows" else \
-        "activate.bat && mycmake.bat"
-    client.run_command(cmd)
-    system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-    assert "MYCMAKE={}!!".format(system) in client.out
-    assert "MYOPENSSL={}!!".format(system) in client.out

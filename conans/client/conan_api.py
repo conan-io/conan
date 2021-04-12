@@ -531,7 +531,7 @@ class ConanAPIV1(object):
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
-                          lockfile_node_id=None, is_build_require=False):
+                          lockfile_node_id=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         recorder = ActionRecorder()
@@ -557,8 +557,7 @@ class ConanAPIV1(object):
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
                          generators=generators, recorder=recorder,
-                         lockfile_node_id=lockfile_node_id,
-                         is_build_require=is_build_require)
+                         lockfile_node_id=lockfile_node_id)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
