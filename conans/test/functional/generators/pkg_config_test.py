@@ -222,7 +222,7 @@ class PkgConfigConan(ConanFile):
                             schemasdir=${datadir}/mylib/schemas
                             bindir=${prefix}/bin
                         \""")
-                    self.cpp_info.set_property("custom_content", custom_content, "pkg_config")
+                    self.cpp_info.set_property("pkg_config_custom_content", custom_content)
                     self.cpp_info.includedirs = ["include"]
                     self.cpp_info.libdirs = ["lib"]
             """)
@@ -247,9 +247,8 @@ class PkgConfigConan(ConanFile):
 
             class PkgConfigConan(ConanFile):
                 def package_info(self):
-                    self.cpp_info.components["mycomponent"].set_property("custom_content",
-                                                                         "componentdir=${prefix}/mydir",
-                                                                         "pkg_config")
+                    self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
+                                                                         "componentdir=${prefix}/mydir")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})

@@ -81,9 +81,9 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
-        custom_content = cpp_info.get_property("custom_content", self.name)
-        if custom_content:
-            lines.append(custom_content)
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content", self.name)
+        if pkg_config_custom_content:
+            lines.append(pkg_config_custom_content)
 
         lines.append("")
         lines.append("Name: %s" % name)
