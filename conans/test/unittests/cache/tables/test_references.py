@@ -19,15 +19,6 @@ def sqlite3_database():
             yield conn
 
 
-def dump(conn, table):
-    print("****")
-    from io import StringIO
-    output = StringIO()
-    table.dump(conn, output)
-    print(output.getvalue())
-    print("****")
-
-
 def test_save_and_retrieve(sqlite3_database):
     table = References()
     table.create_table(sqlite3_database)
