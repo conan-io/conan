@@ -6,7 +6,6 @@ from io import StringIO
 
 import fasteners
 
-from conan.locks.backend import LockBackend
 from conan.locks.exceptions import AlreadyLockedException
 
 log = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ class RWLock(object):
         self._interprocess_lock.release_write_lock()
 
 
-class LockBackendFasteners(LockBackend):
+class LockBackendFasteners(object):
     _threading_locks_guard = threading.Lock()
     _threading_locks = {}
 

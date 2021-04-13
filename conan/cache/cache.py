@@ -1,7 +1,7 @@
 from io import StringIO
 from typing import Tuple, Iterator
 
-from model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 class Cache:

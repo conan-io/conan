@@ -4,8 +4,8 @@ from collections import namedtuple
 from typing import Tuple, Iterator
 
 from conan.cache._tables.base_table import BaseTable
+from conans.errors import ConanException
 from conans.model.ref import PackageReference, ConanFileReference
-from errors import ConanException
 from .references import References
 
 
@@ -91,7 +91,7 @@ class Packages(BaseTable):
         return self._as_ref(conn, self.row_type(*row))
 
     def filter(self, conn: sqlite3.Cursor, ref: ConanFileReference,
-               only_latest_prev: bool) -> Iterator[PackageReference]:
+               only_latest_prev: bool = False) -> Iterator[PackageReference]:
         """ Returns all the packages for a given reference """
         ref_pk = self.references.pk(conn, ref)
         if only_latest_prev:

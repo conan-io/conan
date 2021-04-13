@@ -5,7 +5,7 @@ from typing import Optional
 
 from conan.cache._tables.base_table import BaseTable
 from conans.model.ref import ConanFileReference, PackageReference
-from errors import ConanException
+from conans.errors import ConanException
 from .packages import Packages
 from .references import References
 

@@ -3,7 +3,7 @@ from collections import namedtuple
 from io import StringIO
 from typing import Tuple, List, Optional
 
-from errors import ConanException
+from conans.errors import ConanException
 
 
 class BaseTable:

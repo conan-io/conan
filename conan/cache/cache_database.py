@@ -1,12 +1,14 @@
 import sqlite3
+from contextlib import contextmanager
 from io import StringIO
 from typing import Tuple, Iterator
 
-from conan.utils.sqlite3 import Sqlite3MemoryMixin, Sqlite3FilesystemMixin
 from conans.model.ref import ConanFileReference, PackageReference
 from ._tables.folders import Folders, ConanFolders
 from ._tables.packages import Packages
 from ._tables.references import References
+
+CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
 
 
 class CacheDatabase:
@@ -14,6 +16,21 @@ class CacheDatabase:
     _references = References()
     _packages = Packages()
     _folders = Folders()
+
+    timeout = CONNECTION_TIMEOUT_SECONDS
+
+    def __init__(self, filename: str):
+        self._filename = filename
+
+    @contextmanager
+    def connect(self):
+        conn = sqlite3.connect(self._filename, isolation_level=None, timeout=self.timeout)
+        try:
+            conn.execute('begin EXCLUSIVE')
+            yield conn.cursor()
+            conn.execute("commit")
+        finally:
+            conn.close()
 
     def initialize(self, if_not_exists=True):
         with self.connect() as conn:
@@ -140,11 +157,3 @@ class CacheDatabase:
                 self._packages.save(conn, pref)
                 self._folders.save_pref(conn, pref, path, folder)
                 return path, True
-
-
-class CacheDatabaseSqlite3Memory(CacheDatabase, Sqlite3MemoryMixin):
-    pass
-
-
-class CacheDatabaseSqlite3Filesystem(CacheDatabase, Sqlite3FilesystemMixin):
-    pass

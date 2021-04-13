@@ -159,9 +159,3 @@ def pytest_runtest_setup(item):
     for mark in item.iter_markers():
         if mark.name.startswith("tool_"):
             tool_check(mark)
-
-
-pytest_plugins = [
-    "conans.test.fixtures.locks",
-    "conans.test.fixtures.cache",
-]

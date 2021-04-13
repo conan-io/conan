@@ -1,32 +1,14 @@
 from contextlib import contextmanager
 from io import StringIO
 
-from conan.locks.backend import LockBackend
 from conan.locks.backend_fasteners import LockBackendFasteners
-from conan.locks.backend_sqlite3 import LockBackendSqlite3Memory, LockBackendSqlite3Filesystem
 from conan.locks.exceptions import AlreadyLockedException
 
 
 class LocksManager:
 
-    def __init__(self, backend: LockBackend):
-        self._backend = backend
-
-    @staticmethod
-    def create(backend_id: str, **backend_kwargs):
-        if backend_id == 'sqlite3':
-            backend = LockBackendSqlite3Filesystem(**backend_kwargs)
-            backend.create_table(if_not_exists=True)
-            return LocksManager(backend)
-        elif backend_id == 'memory':
-            backend = LockBackendSqlite3Memory(**backend_kwargs)
-            backend.create_table(if_not_exists=True)
-            return LocksManager(backend)
-        elif backend_id == 'fasteners':
-            backend = LockBackendFasteners(**backend_kwargs)
-            return LocksManager(backend)
-        else:
-            raise NotImplementedError(f'Backend {backend_id} for locks is not implemented')
+    def __init__(self, locks_directory: str):
+        self._backend = LockBackendFasteners(locks_directory)
 
     def dump(self, output: StringIO):
         self._backend.dump(output)

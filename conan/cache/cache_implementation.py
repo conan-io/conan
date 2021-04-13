@@ -8,8 +8,7 @@ from typing import Optional, Union, Tuple, Iterator
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.cache import Cache
-from conan.cache.cache_database import CacheDatabase, CacheDatabaseSqlite3Filesystem, \
-    CacheDatabaseSqlite3Memory
+from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
@@ -18,24 +17,11 @@ from ._tables.folders import ConanFolders
 
 class CacheImplementation(Cache):
 
-    def __init__(self, base_folder: str, db: CacheDatabase,
-                 locks_manager: LocksManager):
+    def __init__(self, base_folder: str, db_filename: str, locks_manager: LocksManager):
         self._base_folder = os.path.realpath(base_folder)
         self._locks_manager = locks_manager
-        self.db = db
-
-    @classmethod
-    def create(cls, backend_id: str, base_folder: str, locks_manager: LocksManager, **backend):
-        if backend_id == 'sqlite3':
-            backend = CacheDatabaseSqlite3Filesystem(**backend)
-            backend.initialize(if_not_exists=True)
-            return cls(base_folder, backend, locks_manager)
-        elif backend_id == 'memory':
-            backend = CacheDatabaseSqlite3Memory(**backend)
-            backend.initialize(if_not_exists=True)
-            return cls(base_folder, backend, locks_manager)
-        else:
-            raise NotImplementedError(f'Backend {backend_id} for cache is not implemented')
+        self.db = CacheDatabase(filename=db_filename)
+        self.db.initialize(if_not_exists=True)
 
     def dump(self, output: StringIO):
         """ Maybe just for debugging purposes """
