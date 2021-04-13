@@ -7,7 +7,6 @@ import pytest
 from conan.cache._tables.packages import Packages
 from conan.cache._tables.references import References
 from conan.cache.cache_implementation import CacheImplementation
-from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
 
@@ -16,9 +15,8 @@ from conans.test import CONAN_TEST_FOLDER
 def cache_implementation() -> CacheImplementation:
     with tempfile.TemporaryDirectory(suffix='conans', dir=CONAN_TEST_FOLDER) as tmpdirname:
         locks_directory = os.path.join(tmpdirname, '.locks')
-        locks_manager = LocksManager(locks_directory=locks_directory)
         db_filename = os.path.join(tmpdirname, 'cache.sqlite3')
-        cache = CacheImplementation(tmpdirname, db_filename, locks_manager)
+        cache = CacheImplementation(tmpdirname, db_filename, locks_directory)
         yield cache
 
 

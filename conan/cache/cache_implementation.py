@@ -17,9 +17,9 @@ from ._tables.folders import ConanFolders
 
 class CacheImplementation(Cache):
 
-    def __init__(self, base_folder: str, db_filename: str, locks_manager: LocksManager):
+    def __init__(self, base_folder: str, db_filename: str, locks_directory: str):
         self._base_folder = os.path.realpath(base_folder)
-        self._locks_manager = locks_manager
+        self._locks_manager = LocksManager(locks_directory=locks_directory)
         self.db = CacheDatabase(filename=db_filename)
         self.db.initialize(if_not_exists=True)
 
