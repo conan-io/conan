@@ -2,7 +2,6 @@ import os
 from contextlib import contextmanager, ExitStack
 
 from conan.cache._tables.packages import Packages
-from conan.cache.cache_folder import CacheFolder
 from conan.cache.cache_implementation import CacheImplementation
 from conan.cache.exceptions import ReadOnlyCache
 from conan.cache.package_layout import PackageLayout
@@ -77,15 +76,11 @@ class RecipeLayout(LockableMixin):
             return os.path.join(self._cache.base_folder, self._base_folder)
 
     def export(self):
-        export_directory = lambda: os.path.join(self.base_directory, 'export')
-        return CacheFolder(export_directory, False, manager=self._manager, resource=self._resource)
+        return os.path.join(self.base_directory, 'export')
 
     def export_sources(self):
-        export_sources_directory = lambda: os.path.join(self.base_directory, 'export_sources')
-        return CacheFolder(export_sources_directory, False, manager=self._manager,
-                           resource=self._resource)
+        return os.path.join(self.base_directory, 'export_sources')
 
     def source(self):
-        source_directory = lambda: os.path.join(self.base_directory, 'source')
-        return CacheFolder(source_directory, False, manager=self._manager, resource=self._resource)
+        return os.path.join(self.base_directory, 'source')
 

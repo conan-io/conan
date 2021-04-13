@@ -2,7 +2,6 @@ import os
 import uuid
 
 from conan.cache.cache_implementation import CacheImplementation
-from conan.cache.cache_folder import CacheFolder
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
 from ._tables.folders import ConanFolders
@@ -49,8 +48,7 @@ class PackageLayout(LockableMixin):
                     self._pref, str(uuid.uuid4()), ConanFolders.PKG_BUILD)
                 return os.path.join(self._cache.base_folder, build_folder)
 
-        build_directory = lambda: get_build_directory()
-        return CacheFolder(build_directory, False, manager=self._manager, resource=self._resource)
+        return get_build_directory()
 
     def package(self):
         """ We want this folder to be deterministic, although the final location is not known
@@ -61,5 +59,4 @@ class PackageLayout(LockableMixin):
             with self.lock(blocking=False):
                 return os.path.join(self._cache.base_folder, self._package_folder)
 
-        package_directory = lambda: get_package_directory()
-        return CacheFolder(package_directory, True, manager=self._manager, resource=self._resource)
+        return get_package_directory()
