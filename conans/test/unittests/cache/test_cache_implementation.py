@@ -173,3 +173,65 @@ def test_create_workflow(cache_implementation: CacheImplementation):
     # Data and information is moved to the new (and final location)
     assert str(build_folder) == str(package1_layout.build())  # Build folder is not moved
     assert not is_random_folder(cache_folder, package1_layout.package())
+
+
+def test_concurrent_package(cache_implementation: CacheImplementation):
+    # When two jobs are generating the same packageID and it happens that both compute the same prev
+    ref = ConanFileReference.loads('name/version#rrev')
+    recipe_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    pref = PackageReference.loads(f'{ref.full_str()}:123456789')
+    p1_layout = recipe_layout.get_package_layout(pref)
+    with p1_layout.lock(blocking=True, wait=True):
+        # P1 is building the package and P2 starts to do the same
+        p2_layout = recipe_layout.get_package_layout(pref)
+        with p2_layout.lock(blocking=True, wait=False):
+            pass
+
+        # P2 finishes before, both compute the same package revision
+        pref = pref.copy_with_revs(pref.ref.revision, '5555555555')
+        p2_layout.assign_prev(pref, move_contents=True)
+
+    # When P1 tries to claim the same revision...
+    with pytest.raises(Packages.AlreadyExist) as excinfo:
+        p1_layout.assign_prev(pref)
+    assert "Package 'name/version#rrev:123456789#5555555555' already exists" == str(excinfo.value)
+
+
+def test_concurrent_read_write_recipe(cache_implementation: CacheImplementation):
+    # For whatever the reason, two concurrent jobs want to read and write the recipe
+    ref = ConanFileReference.loads('name/version#1111111111')
+    r1_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    r2_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    r3_layout, _ = cache_implementation.get_or_create_reference_layout(ref)
+    with r1_layout.lock(blocking=False, wait=False):
+        with r2_layout.lock(blocking=False, wait=False):
+            assert str(r1_layout.export()) == str(r2_layout.export())
+            # But r3 cannot take ownership
+            with pytest.raises(Exception) as excinfo:
+                with r3_layout.lock(blocking=True, wait=False):
+                    pass
+            assert "Resource 'name/version#1111111111' is already blocked" == str(excinfo.value)
+
+
+def test_concurrent_write_recipe_package(cache_implementation: CacheImplementation):
+    # A job is creating a package while another ones tries to modify the recipe
+    pref = PackageReference.loads('name/version#11111111:123456789')
+    recipe_layout, _ = cache_implementation.get_or_create_reference_layout(pref.ref)
+    package_layout = recipe_layout.get_package_layout(pref)
+
+    with package_layout.lock(blocking=True, wait=True):
+        # We can read the recipe
+        with recipe_layout.lock(blocking=False, wait=False):
+            pass
+
+        # But we cannot write
+        with pytest.raises(Exception) as excinfo:
+            with recipe_layout.lock(blocking=True, wait=False):
+                pass
+        pattern = rf"Resource '{pref.full_str()}#[0-9a-f\-]+' is already blocked"
+        assert re.match(pattern, str(excinfo.value))
+
+    # And the other way around, we can read the recipe and create a package meanwhile
+    with recipe_layout.lock(blocking=False, wait=True):
+        with package_layout.lock(blocking=True, wait=False):
+            pass

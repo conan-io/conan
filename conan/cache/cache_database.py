@@ -105,13 +105,13 @@ class CacheDatabase:
     """
 
     def list_package_references(self, ref: ConanFileReference,
-                                only_latest_prev: bool) -> Iterator[PackageReference]:
+                                only_latest_prev: bool = False) -> Iterator[PackageReference]:
         with self.connect() as conn:
             for it in self._packages.filter(conn, ref, only_latest_prev):
                 yield it
 
     def search_package_references(self, ref: ConanFileReference, package_id: str,
-                                  only_latest_prev: bool) -> Iterator[PackageReference]:
+                                  only_latest_prev: bool = False) -> Iterator[PackageReference]:
         with self.connect() as conn:
             for it in self._packages.search(conn, ref, package_id, only_latest_prev):
                 yield it
