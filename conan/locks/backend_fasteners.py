@@ -59,7 +59,7 @@ class RWLock(object):
         self._interprocess_lock.release_write_lock()
 
 
-class LockBackendFasteners(object):
+class FastenersLock(object):
     _threading_locks_guard = threading.Lock()
     _threading_locks = {}
 

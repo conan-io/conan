@@ -1,24 +1,24 @@
 from contextlib import contextmanager
 from io import StringIO
 
-from conan.locks.backend_fasteners import LockBackendFasteners
+from conan.locks.backend_fasteners import FastenersLock
 from conan.locks.exceptions import AlreadyLockedException
 
 
 class LocksManager:
 
     def __init__(self, locks_directory: str):
-        self._backend = LockBackendFasteners(locks_directory)
+        self._locks = FastenersLock(locks_directory)
 
     def dump(self, output: StringIO):
-        self._backend.dump(output)
+        self._locks.dump(output)
 
     @contextmanager
     def lock(self, resource: str, blocking: bool, wait: bool):
         lock_acquired = False
         while not lock_acquired:
             try:
-                with self._backend.lock(resource, blocking):
+                with self._locks.lock(resource, blocking):
                     yield
             except AlreadyLockedException:
                 if not wait:
