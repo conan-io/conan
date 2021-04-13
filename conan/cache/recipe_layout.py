@@ -1,9 +1,7 @@
 import os
 from contextlib import contextmanager, ExitStack
 
-from conan.cache._tables.packages import Packages
 from conan.cache.cache_implementation import CacheImplementation
-from conan.cache.exceptions import ReadOnlyCache
 from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import ConanFileReference
@@ -83,4 +81,3 @@ class RecipeLayout(LockableMixin):
 
     def source(self):
         return os.path.join(self.base_directory, 'source')
-
