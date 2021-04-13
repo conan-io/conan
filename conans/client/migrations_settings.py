@@ -2061,5 +2061,6 @@ settings_1_34_0 = settings_1_33_1
 settings_1_34_1 = settings_1_34_0
 
 settings_1_35_0 = settings_1_34_1
+settings_1_35_1 = settings_1_35_0
 
-settings_1_36_0 = settings_1_35_0
+settings_1_36_0 = settings_1_35_1

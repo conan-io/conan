@@ -610,6 +610,25 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
 
+    def test_install_transitive_build_requires(self):
+        # https://github.com/conan-io/conan/issues/8170
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . dep/1.0@")
+        client.run("export . tool_build/1.0@")
+        client.run("export . tool_test/1.0@")
+        conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
+            with_build_requirement("tool_test/1.0", force_host_context=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/1.0@")
+
+        client.save({"conanfile.py": GenConanfile().
+                    with_settings("os", "compiler", "arch", "build_type").
+                    with_requires("pkg/1.0")}, clean_first=True)
+        client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default --build=missing")
+        pkg = client.load("conan_pkg_release_x64.props")
+        assert "conan_dep.props" in pkg
+        assert "tool" not in pkg
 
     @parameterized.expand([("['*']", True, True),
                            ("['pkga']", True, False),
