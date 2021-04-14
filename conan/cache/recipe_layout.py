@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager, ExitStack
 
-from conan.cache.cache_implementation import CacheImplementation
+from conan.cache.cache_implementation import Cache
 from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import ConanFileReference
@@ -10,7 +10,7 @@ from conans.model.ref import PackageReference
 
 class RecipeLayout(LockableMixin):
 
-    def __init__(self, ref: ConanFileReference, cache: CacheImplementation, base_folder: str,
+    def __init__(self, ref: ConanFileReference, cache: Cache, base_folder: str,
                  locked=True,
                  **kwargs):
         self._ref = ref
