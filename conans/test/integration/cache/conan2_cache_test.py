@@ -6,4 +6,4 @@ class TestCache:
     def test_conan_export(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("conan export .")
+        client.run("export .")
