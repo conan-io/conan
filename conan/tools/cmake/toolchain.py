@@ -12,7 +12,7 @@ from conans.errors import ConanException
 from conans.util.files import load, save
 
 
-def get_toolset(settings, generator):
+def _get_toolset(settings, generator):
     compiler = settings.get_safe("compiler")
     compiler_base = settings.get_safe("compiler.base")
     if compiler == "Visual Studio":
@@ -25,6 +25,13 @@ def get_toolset(settings, generator):
             compiler_version = compiler_version if "." in compiler_version else \
                 "%s.0" % compiler_version
             return "Intel C++ Compiler " + compiler_version
+    elif compiler == "msvc":
+        compiler_version = str(settings.compiler.version)
+        version_components = compiler_version.split(".")
+        if len(version_components) >= 2:  # there is a 19.XX
+            minor = version_components[1]
+            if len(minor) >= 2:  # It is a full one, like 19.28, not generic 19.2
+                return "version=14.{}".format(minor)
     return None
 
 
@@ -439,7 +446,7 @@ class GenericSystemBlock(Block):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator or get_generator(self._conanfile)
         generator_platform = get_generator_platform(self._conanfile.settings, generator)
-        toolset = get_toolset(self._conanfile.settings, generator)
+        toolset = _get_toolset(self._conanfile.settings, generator)
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
                 and "Visual" in self._conanfile.settings.compiler):
