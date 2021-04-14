@@ -70,6 +70,10 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             if cxx11_abi is not None:
                 assert "{} _GLIBCXX_USE_CXX11_ABI {}".format(name, cxx11_abi) in output
 
+        elif compiler == "apple-clang":
+            # TODO: apple-clang requires checks too
+            pass
+
         if definitions:
             for k, v in definitions.items():
                 assert "{}: {}".format(k, v) in output

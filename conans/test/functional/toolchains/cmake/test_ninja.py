@@ -3,7 +3,7 @@ import platform
 import os
 import pytest
 
-from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake import CMakeToolchain
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
@@ -58,20 +58,16 @@ def test_locally_build_linux(build_type, shared, client):
     client.run('install . -s os=Linux -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
     client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchainBase.filename))
-    ninja_build_file = open(os.path.join(client.current_folder, 'build.ninja'), 'r').read()
-    assert "CONFIGURATION = {}".format(build_type) in ninja_build_file
+                       .format(CMakeToolchain.filename))
 
     client.run_command('ninja')
     if shared:
-        assert "Linking CXX shared library libhello.so" in client.out
-        client.run_command("objdump -f libhello.so")
-        assert "architecture: i386:x86-64" in client.out
-        assert "DYNAMIC" in client.out
+        assert "Linking CXX shared library libmylibrary.so" in client.out
     else:
-        assert "Linking CXX static library libhello.a" in client.out
-        client.run_command("objdump -f libhello.a")
-        assert "architecture: i386:x86-64" in client.out
+        assert "Linking CXX static library libmylibrary.a" in client.out
+
+    client.run_command("./myapp")
+    check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
@@ -121,7 +117,6 @@ def test_locally_build_gcc(build_type, shared, client):
     assert libname in client.out
 
     client.run_command("myapp.exe")
-    print(client.out)
     # TODO: Need full gcc version check
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
@@ -133,16 +128,14 @@ def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))
     client.run_command('cmake . -G"Ninja" -DCMAKE_TOOLCHAIN_FILE={}'
-                       .format(CMakeToolchainBase.filename))
-    ninja_build_file = open(os.path.join(client.current_folder, 'build.ninja'), 'r').read()
-    assert "CONFIGURATION = {}".format(build_type) in ninja_build_file
+                       .format(CMakeToolchain.filename))
 
     client.run_command('ninja')
     if shared:
-        assert "Linking CXX shared library libhello.dylib" in client.out
-        client.run_command("lipo -info libhello.dylib")
-        assert "Non-fat file: libhello.dylib is architecture: x86_64" in client.out
+        assert "Linking CXX shared library libmylibrary.dylib" in client.out
     else:
-        assert "Linking CXX static library libhello.a" in client.out
-        client.run_command("lipo -info libhello.a")
-        assert "Non-fat file: libhello.a is architecture: x86_64" in client.out
+        assert "Linking CXX static library libmylibrary.a" in client.out
+
+    client.run_command("./myapp")
+    check_exe_run(client.out, ["main", "hello"], "apple-clang", None, build_type, "x86_64",
+                  cppstd=None)

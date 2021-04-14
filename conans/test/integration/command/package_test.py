@@ -1,11 +1,10 @@
 import os
 import unittest
 
-import pytest
 from parameterized import parameterized
 
-from conans.client import tools
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
@@ -30,21 +29,15 @@ class Pkg(ConanFile):
         client.run("package .")
         self.assertIn("Test_param: hello-world!", client.out)
 
-    @pytest.mark.tool_compiler
     def test_package_with_destination(self):
         client = TestClient()
 
         def prepare_for_package(the_client):
-            the_client.save({"src/header.h": "contents"}, clean_first=True)
-            the_client.run("new lib/1.0 -s")
-
-            # don't need build method
-            tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                                  "def build",
-                                  "def skip_build",
-                                  output=the_client.out)
-            the_client.run("install . --install-folder build")
+            the_client.save({"conanfile.py": GenConanfile().with_exports("*.h").
+                            with_package("self.copy('*')"),
+                             "src/header.h": "contents"}, clean_first=True)
             mkdir(os.path.join(client.current_folder, "build2"))
+            the_client.run("install . --install-folder build")
 
         # In current dir subdir
         prepare_for_package(client)
