@@ -129,6 +129,7 @@ class DataCache:
         for it in self.db.search_package_references(ref, package_id, only_latest_prev):
             yield it
 
+    # TODO: Should get_or_create_package_layout if not prev?
     def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
         """ Returns the layout for a package. The recipe revision and the package revision are a
             requirement, only packages with rrev and prev are stored in the database.

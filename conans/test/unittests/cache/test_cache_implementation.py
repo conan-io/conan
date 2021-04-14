@@ -117,18 +117,6 @@ def test_create_workflow(cache: DataCache):
     assert is_random_folder(cache_folder, str(ref_layout.export()))
     assert is_random_folder(cache_folder, str(ref_layout.export_sources()))
 
-    # Without assigning the revision, there are many things we cannot do:
-    with pytest.raises(AssertionError) as excinfo:
-        pref = PackageReference.loads('name/version@user/channel:123456')
-        ref_layout.get_package_layout(pref)
-    assert "Before requesting a package, assign the rrev using 'assign_rrev'" == str(excinfo.value)
-
-    # Of course the reference must match
-    with pytest.raises(AssertionError) as excinfo:
-        pref = PackageReference.loads('other/version@user/channel:123456')
-        ref_layout.get_package_layout(pref)
-    assert "Only for the same reference" == str(excinfo.value)
-
     # 2. Once we know the revision, we update information for the 'recipe_layout'
     rrev = '123456789'
     ref = ref.copy_with_rev(revision=rrev)
@@ -143,22 +131,15 @@ def test_create_workflow(cache: DataCache):
     assert str(ref_layout.export()) == str(ref_layout2.export())
     assert str(ref_layout.export_sources()) == str(ref_layout2.export_sources())
 
-    # 3. We can retrieve layouts for packages
-    # Revision must match
-    with pytest.raises(AssertionError) as excinfo:
-        pref = PackageReference.loads(f'{str(ref)}#otherrrev:123456')
-        ref_layout.get_package_layout(pref)
-    assert "Ensure revision is the same" == str(excinfo.value)
-
     pref = PackageReference.loads(f'{ref.full_str()}:99999999')
-    package1_layout = ref_layout.get_package_layout(pref)
+    package1_layout, _ = cache.get_or_create_package_layout(pref)
     build_folder = package1_layout.build()
     assert is_random_folder(cache_folder, build_folder)
     package_folder = package1_layout.package()
     assert is_random_folder(cache_folder, package_folder)
 
     # Other package will have other random directories (also for the same packageID)
-    package2_layout = ref_layout.get_package_layout(pref)
+    package2_layout, _ = cache.get_or_create_package_layout(pref)
     build2_folder = package2_layout.build()
     package2_folder = package2_layout.package()
     assert is_random_folder(cache_folder, build2_folder)
@@ -180,10 +161,10 @@ def test_concurrent_package(cache: DataCache):
     ref = ConanFileReference.loads('name/version#rrev')
     recipe_layout, _ = cache.get_or_create_reference_layout(ref)
     pref = PackageReference.loads(f'{ref.full_str()}:123456789')
-    p1_layout = recipe_layout.get_package_layout(pref)
+    p1_layout, _ = cache.get_or_create_package_layout(pref)
     with p1_layout.lock(blocking=True, wait=True):
         # P1 is building the package and P2 starts to do the same
-        p2_layout = recipe_layout.get_package_layout(pref)
+        p2_layout, _ = cache.get_or_create_package_layout(pref)
         with p2_layout.lock(blocking=True, wait=False):
             pass
 
@@ -217,7 +198,7 @@ def test_concurrent_write_recipe_package(cache: DataCache):
     # A job is creating a package while another ones tries to modify the recipe
     pref = PackageReference.loads('name/version#11111111:123456789')
     recipe_layout, _ = cache.get_or_create_reference_layout(pref.ref)
-    package_layout = recipe_layout.get_package_layout(pref)
+    package_layout, _ = cache.get_or_create_package_layout(pref)
 
     with package_layout.lock(blocking=True, wait=True):
         # We can read the recipe
