@@ -14,7 +14,7 @@ from conans.util import files
 from .db.folders import ConanFolders
 
 
-class Cache:
+class DataCache:
 
     def __init__(self, base_folder: str, db_filename: str, locks_directory: str):
         self._base_folder = os.path.realpath(base_folder)
