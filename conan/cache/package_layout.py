@@ -4,7 +4,7 @@ import uuid
 from conan.cache.cache_implementation import CacheImplementation
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
-from ._tables.folders import ConanFolders
+from .db.folders import ConanFolders
 
 
 class PackageLayout(LockableMixin):

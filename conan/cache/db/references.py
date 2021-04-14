@@ -3,12 +3,12 @@ import time
 from collections import namedtuple
 from typing import Tuple, List, Iterator
 
-from conan.cache._tables.base_table import BaseTable
+from conan.cache.db.table import BaseDbTable
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 
 
-class References(BaseTable):
+class ReferencesDbTable(BaseDbTable):
     table_name = 'conan_references'
     columns_description = [('reference', str),
                            ('name', str),
@@ -70,7 +70,7 @@ class References(BaseTable):
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
-            raise References.DoesNotExist(f"No entry for reference '{ref.full_str()}'")
+            raise ReferencesDbTable.DoesNotExist(f"No entry for reference '{ref.full_str()}'")
         return row[0]
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:

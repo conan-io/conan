@@ -3,20 +3,20 @@ import time
 from collections import namedtuple
 from typing import Tuple, Iterator
 
-from conan.cache._tables.base_table import BaseTable
+from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanException
 from conans.model.ref import PackageReference, ConanFileReference
-from .references import References
+from .references import ReferencesDbTable
 
 
-class Packages(BaseTable):
+class PackagesDbTable(BaseDbTable):
     table_name = 'conan_packages'
     columns_description = [('reference_pk', int),
                            ('package_id', str),
                            ('prev', str),
                            ('prev_order', int)]
     unique_together = ('reference_pk', 'package_id', 'prev')  # TODO: Add unittest
-    references: References = None
+    references: ReferencesDbTable = None
 
     class DoesNotExist(ConanException):
         pass
@@ -27,7 +27,7 @@ class Packages(BaseTable):
     class AlreadyExist(ConanException):
         pass
 
-    def create_table(self, conn: sqlite3.Cursor, references: References, if_not_exists: bool = True):
+    def create_table(self, conn: sqlite3.Cursor, references: ReferencesDbTable, if_not_exists: bool = True):
         super().create_table(conn, if_not_exists)
         self.references = references
 
@@ -80,7 +80,7 @@ class Packages(BaseTable):
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
-            raise Packages.DoesNotExist(f"No entry for package '{pref.full_str()}'")
+            raise PackagesDbTable.DoesNotExist(f"No entry for package '{pref.full_str()}'")
         return row[0]
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> PackageReference:

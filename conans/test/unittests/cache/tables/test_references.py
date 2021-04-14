@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from conan.cache._tables.references import References
+from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
 from conans.model.ref import ConanFileReference
 from conans.test import CONAN_TEST_FOLDER
@@ -20,7 +20,7 @@ def sqlite3_database():
 
 
 def test_save_and_retrieve(sqlite3_database):
-    table = References()
+    table = ReferencesDbTable()
     table.create_table(sqlite3_database)
 
     reference = 'name/version@user/channel#123456789'
@@ -36,7 +36,7 @@ def test_save_and_retrieve(sqlite3_database):
 
 
 def test_filter(sqlite3_database):
-    table = References()
+    table = ReferencesDbTable()
     table.create_table(sqlite3_database)
 
     ref1 = ConanFileReference.loads('name/v1@user/channel#123456789')
@@ -57,7 +57,7 @@ def test_filter(sqlite3_database):
 
 
 def test_versions(sqlite3_database):
-    table = References()
+    table = ReferencesDbTable()
     table.create_table(sqlite3_database)
 
     ref1 = ConanFileReference.loads('name/v1@user/channel#123456789')
@@ -75,7 +75,7 @@ def test_versions(sqlite3_database):
 
 
 def test_latest_rrev(sqlite3_database):
-    table = References()
+    table = ReferencesDbTable()
     table.create_table(sqlite3_database)
 
     ref2 = ConanFileReference.loads('name/v1@user/channel#222222222')

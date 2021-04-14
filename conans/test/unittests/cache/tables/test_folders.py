@@ -4,9 +4,9 @@ import time
 
 import pytest
 
-from conan.cache._tables.folders import Folders, ConanFolders
-from conan.cache._tables.packages import Packages
-from conan.cache._tables.references import References
+from conan.cache.db.folders import Folders, ConanFolders
+from conan.cache.db.packages import PackagesDbTable
+from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
@@ -22,9 +22,9 @@ def sqlite3_database():
 
 
 def test_save_and_retrieve_ref(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    packages_table = Packages()
+    packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
     table = Folders()
     table.create_table(sqlite3_database, references_table, packages_table, True)
@@ -44,9 +44,9 @@ def test_save_and_retrieve_ref(sqlite3_database):
 
 
 def test_save_and_retrieve_pref(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    packages_table = Packages()
+    packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
     table = Folders()
     table.create_table(sqlite3_database, references_table, packages_table, True)
@@ -66,9 +66,9 @@ def test_save_and_retrieve_pref(sqlite3_database):
 
 
 def test_lru_ref(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    packages_table = Packages()
+    packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
     table = Folders()
     table.create_table(sqlite3_database, references_table, packages_table, True)
@@ -94,9 +94,9 @@ def test_lru_ref(sqlite3_database):
 
 
 def test_lru_pref(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    packages_table = Packages()
+    packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
     table = Folders()
     table.create_table(sqlite3_database, references_table, packages_table, True)

@@ -12,7 +12,7 @@ from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
-from ._tables.folders import ConanFolders
+from .db.folders import ConanFolders
 
 
 class CacheImplementation(Cache):

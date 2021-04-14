@@ -4,17 +4,17 @@ from io import StringIO
 from typing import Tuple, Iterator
 
 from conans.model.ref import ConanFileReference, PackageReference
-from ._tables.folders import Folders, ConanFolders
-from ._tables.packages import Packages
-from ._tables.references import References
+from .db.folders import Folders, ConanFolders
+from .db.packages import PackagesDbTable
+from .db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
 
 
 class CacheDatabase:
     """ Abstracts the operations with the database and ensures they run sequentially """
-    _references = References()
-    _packages = Packages()
+    _references = ReferencesDbTable()
+    _packages = PackagesDbTable()
     _folders = Folders()
 
     timeout = CONNECTION_TIMEOUT_SECONDS
@@ -40,10 +40,10 @@ class CacheDatabase:
 
     def dump(self, output: StringIO):
         with self.connect() as conn:
-            output.write(f"\nReferences (table '{self._references.table_name}'):\n")
+            output.write(f"\nReferencesDbTable (table '{self._references.table_name}'):\n")
             self._references.dump(conn, output)
 
-            output.write(f"\nPackages (table '{self._packages.table_name}'):\n")
+            output.write(f"\nPackagesDbTable (table '{self._packages.table_name}'):\n")
             self._packages.dump(conn, output)
 
             output.write(f"\nFolders (table '{self._folders.table_name}'):\n")
@@ -77,7 +77,7 @@ class CacheDatabase:
             try:
                 self._references.update(conn, ref_pk, new_ref)
             except sqlite3.IntegrityError:
-                raise References.AlreadyExist(f"Reference '{new_ref.full_str()}' already exists")
+                raise ReferencesDbTable.AlreadyExist(f"Reference '{new_ref.full_str()}' already exists")
 
     def update_reference_directory(self, ref: ConanFileReference, path: str):
         with self.connect() as conn:
@@ -95,7 +95,7 @@ class CacheDatabase:
         with self.connect() as conn:
             try:
                 return self._folders.get_path_ref(conn, ref), False
-            except References.DoesNotExist:
+            except ReferencesDbTable.DoesNotExist:
                 self._references.save(conn, ref)
                 self._folders.save_ref(conn, ref, path)
                 return path, True
@@ -123,7 +123,7 @@ class CacheDatabase:
             try:
                 self._packages.update(conn, pref_pk, new_pref)
             except sqlite3.IntegrityError:
-                raise Packages.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
+                raise PackagesDbTable.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
 
     def update_package_reference_directory(self, pref: PackageReference, path: str,
                                            folder: ConanFolders):
@@ -153,7 +153,7 @@ class CacheDatabase:
         with self.connect() as conn:
             try:
                 return self._folders.get_path_pref(conn, pref, folder), False
-            except Packages.DoesNotExist:
+            except PackagesDbTable.DoesNotExist:
                 self._packages.save(conn, pref)
                 self._folders.save_pref(conn, pref, path, folder)
                 return path, True

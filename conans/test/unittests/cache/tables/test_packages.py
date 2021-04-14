@@ -4,8 +4,8 @@ import time
 
 import pytest
 
-from conan.cache._tables.packages import Packages
-from conan.cache._tables.references import References
+from conan.cache.db.packages import PackagesDbTable
+from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
@@ -21,9 +21,9 @@ def sqlite3_database():
 
 
 def test_save_and_retrieve(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    table = Packages()
+    table = PackagesDbTable()
     table.create_table(sqlite3_database, references_table, True)
 
     package_reference = 'name/version@user/channel#123456789:11111111111#987654321'
@@ -40,9 +40,9 @@ def test_save_and_retrieve(sqlite3_database):
 
 
 def test_filter(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    table = Packages()
+    table = PackagesDbTable()
     table.create_table(sqlite3_database, references_table, True)
 
     ref1 = ConanFileReference.loads('name/v1@user/channel#123456789')
@@ -65,9 +65,9 @@ def test_filter(sqlite3_database):
 
 
 def test_latest_prev(sqlite3_database):
-    references_table = References()
+    references_table = ReferencesDbTable()
     references_table.create_table(sqlite3_database)
-    table = Packages()
+    table = PackagesDbTable()
     table.create_table(sqlite3_database, references_table, True)
 
     ref = ConanFileReference.loads('name/v1@user/channel#222222222')

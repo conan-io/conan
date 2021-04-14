@@ -38,7 +38,7 @@ class Cache:
     def get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
         """ Returns the layout for a reference. The recipe revision is a requirement, only references
             with rrev are stored in the database. If it doesn't exists, it will raise
-            References.DoesNotExist exception.
+            ReferencesDbTable.DoesNotExist exception.
         """
         assert ref.revision, "Ask for a reference layout only if the rrev is known"
         return self._get_reference_layout(ref)

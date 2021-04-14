@@ -4,8 +4,8 @@ import tempfile
 
 import pytest
 
-from conan.cache._tables.packages import Packages
-from conan.cache._tables.references import References
+from conan.cache.db.packages import PackagesDbTable
+from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_implementation import CacheImplementation
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test import CONAN_TEST_FOLDER
@@ -44,7 +44,7 @@ class TestFolders:
         # By default the cache will assign deterministics folders
         ref = ConanFileReference.loads('name/version@user/channel#1111111111')
 
-        with pytest.raises(References.DoesNotExist) as excinfo:
+        with pytest.raises(ReferencesDbTable.DoesNotExist) as excinfo:
             _ = cache_implementation.get_reference_layout(ref)
         assert "No entry for reference 'name/version@user/channel#1111111111'" == str(excinfo.value)
 
@@ -84,7 +84,7 @@ class TestFolders:
         pref = PackageReference.loads('name/version@user/channel#1111111111:123456789#999999999')
         cache_implementation.get_or_create_reference_layout(pref.ref)
 
-        with pytest.raises(Packages.DoesNotExist) as excinfo:
+        with pytest.raises(PackagesDbTable.DoesNotExist) as excinfo:
             _ = cache_implementation.get_package_layout(pref)
         assert "No entry for package 'name/version@user/channel#1111111111:123456789#999999999'" == str(
             excinfo.value)
@@ -192,7 +192,7 @@ def test_concurrent_package(cache_implementation: CacheImplementation):
         p2_layout.assign_prev(pref, move_contents=True)
 
     # When P1 tries to claim the same revision...
-    with pytest.raises(Packages.AlreadyExist) as excinfo:
+    with pytest.raises(PackagesDbTable.AlreadyExist) as excinfo:
         p1_layout.assign_prev(pref)
     assert "Package 'name/version#rrev:123456789#5555555555' already exists" == str(excinfo.value)
 
