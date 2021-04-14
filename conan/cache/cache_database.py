@@ -4,7 +4,7 @@ from io import StringIO
 from typing import Tuple, Iterator
 
 from conans.model.ref import ConanFileReference, PackageReference
-from .db.folders import Folders, ConanFolders
+from .db.folders import FoldersDbTable, ConanFolders
 from .db.packages import PackagesDbTable
 from .db.references import ReferencesDbTable
 
@@ -15,7 +15,7 @@ class CacheDatabase:
     """ Abstracts the operations with the database and ensures they run sequentially """
     _references = ReferencesDbTable()
     _packages = PackagesDbTable()
-    _folders = Folders()
+    _folders = FoldersDbTable()
 
     timeout = CONNECTION_TIMEOUT_SECONDS
 
@@ -140,7 +140,7 @@ class CacheDatabase:
         with self.connect() as conn:
             try:
                 return self._folders.get_path_pref(conn, pref, folder)
-            except Folders.DoesNotExist:
+            except FoldersDbTable.DoesNotExist:
                 self._folders.save_pref(conn, pref, path, folder)
                 return path
 

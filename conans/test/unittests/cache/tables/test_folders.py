@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from conan.cache.db.folders import Folders, ConanFolders
+from conan.cache.db.folders import FoldersDbTable, ConanFolders
 from conan.cache.db.packages import PackagesDbTable
 from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
@@ -26,7 +26,7 @@ def test_save_and_retrieve_ref(sqlite3_database):
     references_table.create_table(sqlite3_database)
     packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
-    table = Folders()
+    table = FoldersDbTable()
     table.create_table(sqlite3_database, references_table, packages_table, True)
 
     ref1 = ConanFileReference.loads('name/version@user/channel#111111')
@@ -48,7 +48,7 @@ def test_save_and_retrieve_pref(sqlite3_database):
     references_table.create_table(sqlite3_database)
     packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
-    table = Folders()
+    table = FoldersDbTable()
     table.create_table(sqlite3_database, references_table, packages_table, True)
 
     pref1 = PackageReference.loads('name/version@user/channel#111111:123456789#9999')
@@ -70,7 +70,7 @@ def test_lru_ref(sqlite3_database):
     references_table.create_table(sqlite3_database)
     packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
-    table = Folders()
+    table = FoldersDbTable()
     table.create_table(sqlite3_database, references_table, packages_table, True)
 
     ref1 = ConanFileReference.loads('name/version@user/channel#111111')
@@ -98,7 +98,7 @@ def test_lru_pref(sqlite3_database):
     references_table.create_table(sqlite3_database)
     packages_table = PackagesDbTable()
     packages_table.create_table(sqlite3_database, references_table, True)
-    table = Folders()
+    table = FoldersDbTable()
     table.create_table(sqlite3_database, references_table, packages_table, True)
 
     pref1 = PackageReference.loads('name/version@user/channel#111111:123456789#9999')

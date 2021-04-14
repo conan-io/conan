@@ -17,7 +17,7 @@ class ConanFolders(Enum):
     PKG_PACKAGE = 2
 
 
-class Folders(BaseDbTable):
+class FoldersDbTable(BaseDbTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
@@ -114,7 +114,7 @@ class Folders(BaseDbTable):
         r = conn.execute(query, [ref_pk, ])
         row = r.fetchone()
         if not row:
-            raise Folders.DoesNotExist(f"No entry folder for reference '{ref.full_str()}'")
+            raise FoldersDbTable.DoesNotExist(f"No entry folder for reference '{ref.full_str()}'")
         self._touch(conn, row[0])  # Update LRU timestamp (only the reference)
         return row[1]
 
@@ -138,7 +138,7 @@ class Folders(BaseDbTable):
         r = conn.execute(query, [ref_pk, pref_pk, folder.value, ])
         row = r.fetchone()
         if not row:
-            raise Folders.DoesNotExist(f"No entry folder for package reference '{pref.full_str()}'")
+            raise FoldersDbTable.DoesNotExist(f"No entry folder for package reference '{pref.full_str()}'")
         # Update LRU timestamp (the package and the reference)
         self._touch(conn, row[0])
         self.touch_ref(conn, pref.ref)

@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from conan.cache.cache_implementation import Cache
+from conan.cache.cache import Cache
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
 from .db.folders import ConanFolders

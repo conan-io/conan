@@ -1,7 +1,7 @@
 import os
 from contextlib import contextmanager, ExitStack
 
-from conan.cache.cache_implementation import Cache
+from conan.cache.cache import Cache
 from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import ConanFileReference
