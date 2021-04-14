@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 from io import StringIO
 
-from conan.locks.backend_fasteners import FastenersLock
+from conan.locks.lock_fasteners import FastenersLock
 from conan.locks.exceptions import AlreadyLockedException
 
 
