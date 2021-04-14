@@ -600,5 +600,5 @@ class CMakeToolchain(object):
     def generate(self):
         save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
-        if "Visual" not in self.generator:
+        if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
