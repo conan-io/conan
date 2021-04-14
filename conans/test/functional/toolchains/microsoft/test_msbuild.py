@@ -443,7 +443,9 @@ class WinTest(unittest.TestCase):
         check_exe_run(client.out, "main", "msvc", compiler_version, "Release", "x86", cppstd,
                       {"DEFINITIONS_BOTH": "True",
                        "DEFINITIONS_CONFIG": "Release"})
-        check_vs_runtime("Release/MyApp.exe", client, "15", build_type="Release")
+        static_runtime = True if runtime == "static" or "MT" in runtime else False
+        check_vs_runtime("Release/MyApp.exe", client, "15", build_type="Release",
+                         static_runtime=static_runtime)
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):

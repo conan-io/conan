@@ -1,6 +1,5 @@
 import textwrap
 import platform
-import os
 import pytest
 
 from conan.tools.cmake import CMakeToolchain
@@ -17,10 +16,8 @@ def client():
         from conan.tools.cmake import CMake, CMakeToolchain
 
         class Library(ConanFile):
-            name = 'hello'
-            version = '1.0'
             settings = 'os', 'arch', 'compiler', 'build_type'
-            exports_sources = 'hello.h', 'hello.cpp', 'CMakeLists.txt'
+            exports_sources = 'hello.h', '*.cpp', 'CMakeLists.txt'
             options = {'shared': [True, False]}
             default_options = {'shared': False}
 
@@ -93,6 +90,9 @@ def test_locally_build_msvc(build_type, shared, client):
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
     check_vs_runtime("myapp.exe", client, msvc_version, build_type, architecture="amd64")
     check_vs_runtime(libname, client, msvc_version, build_type, architecture="amd64")
+
+    # TODO: This functionality is missing
+    # client.run("create . hello/0.1@")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")

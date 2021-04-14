@@ -258,8 +258,11 @@ class WinTest(Base):
                        "MYDEFINE_CONFIG": "MYDEF_DEBUG"
                        })
 
-        check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release")
-        check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug")
+        static_runtime = True if runtime == "static" or "MT" in runtime else False
+        check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
+                         static_runtime=static_runtime)
+        check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug",
+                         static_runtime=static_runtime)
 
         self._modify_code()
         time.sleep(1)

@@ -1,15 +1,15 @@
 from conan.tools.microsoft.visual import vcvars_command
 
 
-def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64"):
+def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64",
+                     static_runtime=False):
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
     normalized_path = artifact.replace("/", "\\")
-
     static = artifact.endswith(".a") or artifact.endswith(".lib")
     if not static:
         cmd = ('%s && dumpbin /nologo /dependents "%s"' % (vcvars, normalized_path))
         client.run_command(cmd)
-        if static:
+        if static_runtime:
             assert "KERNEL32.dll" in client.out
             assert "MSVC" not in client.out
             assert "VCRUNTIME" not in client.out
