@@ -91,6 +91,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+    reference_layout = cache.ref_layout(ref)
     if not export:
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
@@ -102,7 +103,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     _check_settings_for_warnings(conanfile, output)
 
     hook_manager.execute("pre_export", conanfile=conanfile, conanfile_path=conanfile_path,
-                         reference=package_layout.ref)
+                         reference=ref)
     logger.debug("EXPORT: %s" % conanfile_path)
 
     output.highlight("Exporting package recipe")
@@ -116,6 +117,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         except IOError:
             previous_manifest = None
 
+        # now we don't have to remove all these folders
+        # if the revision is the same, the contents should
+        # be the same (what about file permissions?)
         package_layout.export_remove()
         export_folder = package_layout.export()
         export_src_folder = package_layout.export_sources()

@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
+from conan.cache.cache import DataCache
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -22,7 +23,7 @@ from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.util.files import list_folder_subdirs, load, normalize, save, remove
+from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
 CONAN_CONF = 'conan.conf'
@@ -83,6 +84,17 @@ class ClientCache(object):
         self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
         # Just call it to make it raise in case of short_paths misconfiguration
         _ = self.config.short_paths_home
+
+        mkdir(self._store_folder)
+        locks_directory = os.path.join(self._store_folder, '.locks')
+        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+        self._data_cache = DataCache(self._store_folder, db_filename, locks_directory)
+
+    def ref_layout(self, ref):
+        return self._data_cache.get_or_create_reference_layout(ref)
+
+    def pkg_layout(self, ref):
+        return self._data_cache.get_or_create_reference_layout(ref)
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
