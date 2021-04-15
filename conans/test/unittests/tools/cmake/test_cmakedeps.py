@@ -34,7 +34,8 @@ def test_cpp_info_name_cmakedeps():
     cmakedeps = CMakeDeps(conanfile)
     files = cmakedeps.content
     assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
-    assert 'set(MySuperPkg1_INCLUDE_DIRS_RELEASE "${MySuperPkg1_PACKAGE_FOLDER}/include")' in files["ComplexFileName1-release-x86-data.cmake"]
+    assert 'set(MySuperPkg1_INCLUDE_DIRS_RELEASE "${MySuperPkg1_PACKAGE_FOLDER}/include")' \
+           in files["ComplexFileName1-release-x86-data.cmake"]
 
 
 def test_cpp_info_name_cmakedeps_components():
@@ -67,7 +68,8 @@ def test_cpp_info_name_cmakedeps_components():
     assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
     assert 'set(GlobakPkgName1_INCLUDE_DIRS_DEBUG "${GlobakPkgName1_PACKAGE_FOLDER}/include")' \
            in files["ComplexFileName1-debug-x64-data.cmake"]
-    assert 'set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG "${GlobakPkgName1_PACKAGE_FOLDER}/include")' \
+    assert 'set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
+           '"${GlobakPkgName1_PACKAGE_FOLDER}/include")' \
            in files["ComplexFileName1-debug-x64-data.cmake"]
 
 
