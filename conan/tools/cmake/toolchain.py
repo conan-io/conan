@@ -446,6 +446,8 @@ class GenericSystemBlock(Block):
                 if len(minor) >= 2:  # It is a full one, like 19.28, not generic 19.2
                     # The equivalent of compiler 19.26 is toolset 14.26
                     return "version=14.{}".format(minor)
+                else:
+                    return "v14{}".format(minor)
         return None
 
     def context(self):

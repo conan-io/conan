@@ -116,11 +116,7 @@ class CMake(object):
         bt = build_type or self._conanfile.settings.get_safe("build_type")
         if not bt:
             raise ConanException("build_type setting should be defined.")
-
-        if bt and is_multi:
-            build_config = "--config %s" % bt
-        else:
-            build_config = ""
+        build_config = "--config {}".format(bt) if bt and is_multi else ""
 
         args = []
         if target is not None:
