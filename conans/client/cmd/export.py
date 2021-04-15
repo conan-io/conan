@@ -88,7 +88,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                        ref.user, ref.channel, python_requires)
 
     check_casing_conflict(cache=cache, ref=ref)
-    package_layout_ = cache.package_layout(ref, short_paths=conanfile.short_paths)
     reference_layout = cache.ref_layout(ref)
 
     # TODO: cache2.0: check this part
@@ -150,7 +149,11 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                              manifest=manifest,
                              revision_mode=conanfile.revision_mode)
 
+    ref = ref.copy_with_rev(revision=revision)
+    reference_layout.assign_rrev(ref, move_contents=True)
+
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
+    # TODO: cache2.0: check this part
     source_folder = reference_layout.source()
     if os.path.exists(source_folder):
         try:
@@ -167,18 +170,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             output.warn(str(e))
             set_dirty(source_folder)
 
-    packages = search_packages(package_layout, query=None)
-    metadata = package_layout.load_metadata()
-    recipe_revision = metadata.recipe.revision
-    to_remove = [pid for pid in packages if
-                 metadata.packages.get(pid) and
-                 metadata.packages.get(pid).recipe_revision != recipe_revision]
-    if to_remove:
-        output.info("Removing the local binary packages from different recipe revisions")
-        remover = DiskRemover()
-        remover.remove_packages(remove_package_layout, ids_filter=to_remove)
-
-    ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
     if graph_lock:
         graph_lock.update_exported_ref(node_id, ref)
