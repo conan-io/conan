@@ -118,8 +118,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
             previous_manifest = None
 
         # now we don't have to remove all these folders
-        # if the revision is the same, the contents should
-        # be the same (what about file permissions?)
+        # we are generating a new random folder and putting
+        # everything there, this will be adressed later
+        # when we calculate the rrev
         package_layout.export_remove()
         export_folder = package_layout.export()
         export_src_folder = package_layout.export_sources()
