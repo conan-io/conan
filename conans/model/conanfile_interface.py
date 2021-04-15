@@ -25,8 +25,12 @@ class ConanFileInterface:
         return self._conanfile.package_folder
 
     @property
-    def name(self):
-        return self._conanfile.name
+    def ref(self):
+        return self._conanfile.ref
+
+    @property
+    def pref(self):
+        return self._conanfile.pref
 
     @property
     def version(self):

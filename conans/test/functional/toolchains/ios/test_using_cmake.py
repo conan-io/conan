@@ -4,7 +4,7 @@ import unittest
 
 import pytest
 
-from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake import CMakeToolchain
 from conans.test.utils.tools import TestClient
 from ._utils import create_library
 
@@ -31,7 +31,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
                 def _configure_cmake(self):
                     if not self._cmake:
-                        self._cmake = CMake(self, generator={generator}, parallel=False)
+                        self._cmake = CMake(self, generator={generator})
                         self._cmake.configure()
                     return self._cmake
 
@@ -75,7 +75,7 @@ class ToolchainiOSTestCase(unittest.TestCase):
 
         # Build locally
         self.t.run('install . --profile:host=ios_profile --profile:build=default')
-        self.t.run_command('cmake . -G"Xcode" -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
+        self.t.run_command('cmake . -G"Xcode" -DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
         self.t.run_command('cmake --build . --config Release')
         self.t.run_command("lipo -info Release-iphoneos/libhello.a")
         self.assertIn("Non-fat file: Release-iphoneos/libhello.a is architecture: arm64", self.t.out)

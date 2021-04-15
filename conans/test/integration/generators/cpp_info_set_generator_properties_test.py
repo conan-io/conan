@@ -14,8 +14,8 @@ def setup_client():
         from conans.model import Generator
         from conans import ConanFile
         from conans.model.conan_generator import GeneratorComponentsMixin
-        import textwrap
         import os
+
 
         class custom_generator(GeneratorComponentsMixin, Generator):
             name = "custom_generator"
@@ -23,8 +23,8 @@ def setup_client():
             def filename(self):
                 return "my-generator.txt"
 
-            def _get_components_custom_names(self, pkg_name, cpp_info):
-                ret=[]
+            def _get_components_custom_names(self, cpp_info):
+                ret = []
                 for comp_name, comp in self.sorted_components(cpp_info).items():
                     comp_genname = comp.get_property("custom_name", generator=self.name)
                     ret.append("{}:{}".format(comp.name, comp_genname))
@@ -35,7 +35,7 @@ def setup_client():
                 info = []
                 for pkg_name, cpp_info in self.deps_build_info.dependencies:
                     info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name", self.name)))
-                    info.extend(self._get_components_custom_names(pkg_name, cpp_info))
+                    info.extend(self._get_components_custom_names(cpp_info))
                 return os.linesep.join(info)
         """)
     client.save({"custom_generator.py": custom_generator})
@@ -57,12 +57,8 @@ def setup_client():
     return client
 
 
-def get_files_contents(folder, filenames):
-    ret = []
-    for filename in filenames:
-        with open(os.path.join(folder, filename)) as properties_package_file:
-            ret.append(properties_package_file.read())
-    return ret
+def get_files_contents(client, filenames):
+    return [client.load(f) for f in filenames]
 
 
 def test_same_results_components(setup_client):
@@ -89,17 +85,17 @@ def test_same_results_components(setup_client):
     client.run("export mypkg.py")
     client.run("install consumer.py --build missing -s build_type=Release")
 
-    with open(os.path.join(client.current_folder, "my-generator.txt")) as custom_gen_file:
-        assert "mycomponent:mycomponent-name" in custom_gen_file.read()
+    my_generator = client.load("my-generator.txt")
+    assert "mycomponent:mycomponent-name" in my_generator
 
     files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
                         "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc",
                         "mycomponent.pc"]
-    new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    new_approach_contents = get_files_contents(client, files_to_compare)
 
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
@@ -119,7 +115,7 @@ def test_same_results_components(setup_client):
     client.run("export mypkg.py")
     client.run("install consumer.py -s build_type=Release")
 
-    old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    old_approach_contents = get_files_contents(client, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
 
@@ -128,7 +124,7 @@ def test_same_results_without_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
@@ -154,11 +150,11 @@ def test_same_results_without_components(setup_client):
 
     files_to_compare = ["FindMyFileName.cmake", "MyFileNameConfig.cmake", "MyFileNameTargets.cmake",
                         "MyFileNameTarget-release.cmake", "MyFileNameConfigVersion.cmake", "mypkg.pc"]
-    new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    new_approach_contents = get_files_contents(client, files_to_compare)
 
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
@@ -178,7 +174,7 @@ def test_same_results_without_components(setup_client):
     client.run("create mypkg.py")
     client.run("install consumer.py -s build_type=Release")
 
-    old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    old_approach_contents = get_files_contents(client, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
 
@@ -187,7 +183,7 @@ def test_same_results_specific_generators(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
@@ -214,11 +210,11 @@ def test_same_results_specific_generators(setup_client):
 
     files_to_compare = ["FindMyFileName.cmake", "MyFileNameMultiConfig.cmake", "MyFileNameMultiTargets.cmake",
                         "MyFileNameMultiTarget-release.cmake", "MyFileNameMultiConfigVersion.cmake"]
-    new_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    new_approach_contents = get_files_contents(client, files_to_compare)
 
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
@@ -239,7 +235,7 @@ def test_same_results_specific_generators(setup_client):
     client.run("create mypkg.py")
     client.run("install consumer.py -s build_type=Release")
 
-    old_approach_contents = get_files_contents(client.current_folder, files_to_compare)
+    old_approach_contents = get_files_contents(client, files_to_compare)
 
     assert new_approach_contents == old_approach_contents
 
@@ -248,7 +244,7 @@ def test_pkg_config_names(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake, tools
+        from conans import ConanFile
         class MyPkg(ConanFile):
             settings = "build_type"
             name = "mypkg"
