@@ -12,6 +12,10 @@ def write_conanvcvars(conanfile):
     """
     write a conanvcvars.bat file with the good args from settings
     """
+    os_ = conanfile.settings.get_safe("os")
+    if os_ != "Windows":
+        return
+
     compiler = conanfile.settings.get_safe("compiler")
     cvars = None
     if compiler == "intel":
