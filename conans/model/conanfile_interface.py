@@ -33,10 +33,6 @@ class ConanFileInterface:
         return self._conanfile.pref
 
     @property
-    def version(self):
-        return self._conanfile.version
-
-    @property
     def buildenv_info(self):
         return self._conanfile.buildenv_info
 

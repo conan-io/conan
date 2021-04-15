@@ -595,7 +595,7 @@ endforeach()
             _ret = self.get_target_names_and_filenames(req, host_requires)
             dep_target_names, pkg_public_deps_filenames = _ret
             dep_target_names = ';'.join(dep_target_names)
-            config_version = self.config_version_template.format(version=req.version)
+            config_version = self.config_version_template.format(version=req.ref.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
             if not req.cpp_info.has_components:
                 deps = DepsCppCmake(req.cpp_info, pkg_target_name, self.name)
@@ -616,7 +616,7 @@ endforeach()
                 ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_target_name,
-                    version=req.version,
+                    version=req.ref.version,
                     public_deps_names=pkg_public_deps_filenames
                 )
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
