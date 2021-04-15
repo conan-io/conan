@@ -49,7 +49,7 @@ class CachedFileDownloader(object):
                     os.remove(cached_path)
                 clean_dirty(cached_path)
             
-            for atempt in range(3):
+            for attempt in range(3):
                 if not os.path.exists(cached_path):
                     set_dirty(cached_path)
                     self._file_downloader.download(url=url, file_path=cached_path, md5=md5,
@@ -57,12 +57,12 @@ class CachedFileDownloader(object):
                     clean_dirty(cached_path)
                 else:
                     # specific check for corrupted cached files, will log an error
-                    # and raise after the third failed download atempt
+                    # and raise after the third failed download attempt
                     try:
                         check_checksum(cached_path, md5, sha1, sha256)
                         break
                     except ConanException as e:
-                        if atempt == 2:
+                        if attempt == 2:
                             raise ConanException("%s\nCached downloaded file corrupted: %s"
                                                 % (str(e), cached_path))
                         else:
