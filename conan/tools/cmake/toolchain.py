@@ -6,11 +6,14 @@ from collections import OrderedDict
 import six
 from jinja2 import Template
 
-from conan.tools._compilers import architecture_flag
-from conan.tools.cmake.utils import is_multi_configuration, get_generator
-from conan.tools.microsoft.toolchain import write_conanvcvars
+from conan.tools._compilers import architecture_flag, use_win_mingw
+from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.microsoft.toolchain import write_conanvcvars, vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
+
+
+CONAN_CMAKE_GENERATOR_FILE = "conan_cmake_generator.txt"
 
 
 def get_generator_platform(settings, generator):
@@ -447,7 +450,7 @@ class GenericSystemBlock(Block):
 
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
-        generator = self._toolchain.generator or get_generator(self._conanfile)
+        generator = self._toolchain.generator
         generator_platform = get_generator_platform(self._conanfile.settings, generator)
         toolset = self._get_toolset(generator)
         # TODO: Check if really necessary now that conanvcvars is used
@@ -561,7 +564,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
-        self.generator = generator
+        self.generator = generator or self._get_generator()
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
@@ -611,3 +614,41 @@ class CMakeToolchain(object):
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
+        if self.generator is not None:
+            save(CONAN_CMAKE_GENERATOR_FILE, self.generator)
+
+    def _get_generator(self):
+        # Returns the name of the generator to be used by CMake
+        conanfile = self._conanfile
+
+        compiler = conanfile.settings.get_safe("compiler")
+        compiler_version = conanfile.settings.get_safe("compiler.version")
+
+        cmake_years = {'8': '8 2005',
+                       '9': '9 2008',
+                       '10': '10 2010',
+                       '11': '11 2012',
+                       '12': '12 2013',
+                       '14': '14 2015',
+                       '15': '15 2017',
+                       '16': '16 2019'}
+
+        if compiler == "msvc":
+            if compiler_version is None:
+                raise ConanException("compiler.version must be defined")
+            vs_version = vs_ide_version(self._conanfile)
+            return "Visual Studio %s" % cmake_years[vs_version]
+
+        compiler_base = conanfile.settings.get_safe("compiler.base")
+        compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
+
+        if compiler == "Visual Studio" or compiler_base == "Visual Studio":
+            version = compiler_base_version or compiler_version
+            major_version = version.split('.', 1)[0]
+            base = "Visual Studio %s" % cmake_years[major_version]
+            return base
+
+        if use_win_mingw(conanfile):
+            return "MinGW Makefiles"
+
+        return "Unix Makefiles"
