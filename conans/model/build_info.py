@@ -152,10 +152,12 @@ class _CppInfo(object):
     @property
     def build_modules_paths(self):
         if self._build_modules_paths is None:
-            if isinstance(self.get_build_modules(), list):  # FIXME: This should be just a plain dict
+            if isinstance(self.build_modules, list):  # FIXME: This should be just a plain dict
                 conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
-                               "{the_list}' instead".format(the_list=self.get_build_modules()))
-                self.build_modules = BuildModulesDict.from_list(self.get_build_modules())
+                               "{the_list}' instead".format(the_list=self.build_modules))
+                self.build_modules = BuildModulesDict.from_list(self.build_modules)
+                # Invalidate necessary, get_build_modules used raise_incorrect_components_definition
+                self._build_modules = None
             tmp = dict_to_abs_paths(BuildModulesDict(self.get_build_modules()), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
@@ -230,25 +232,24 @@ class _CppInfo(object):
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
-        if self._build_modules:
-            return self._build_modules
-        else:
-            default_build_modules_value = None
+        if self._build_modules is None:  # Not cached yet
             try:
                 default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
             except KeyError:
-                pass
-
-            ret_dict = {"cmake_find_package": default_build_modules_value,
-                        "cmake_find_package_multi": default_build_modules_value,
-                        "cmake": default_build_modules_value,
-                        "cmake_multi": default_build_modules_value} if default_build_modules_value else {}
+                ret_dict = {}
+            else:
+                ret_dict = {"cmake_find_package": default_build_modules_value,
+                            "cmake_find_package_multi": default_build_modules_value,
+                            "cmake": default_build_modules_value,
+                            "cmake_multi": default_build_modules_value}
 
             for generator, values in self._generator_properties.items():
-                if generator and values.get("cmake_build_modules"):
-                    ret_dict[generator] = values.get("cmake_build_modules")
+                if generator:
+                    v = values.get("cmake_build_modules")
+                    if v:
+                        ret_dict[generator] = v
             self._build_modules = ret_dict if ret_dict else self.build_modules
-            return self._build_modules
+        return self._build_modules
 
     def set_property(self, property_name, value, generator=None):
         self._generator_properties.setdefault(generator, {})[property_name] = value
@@ -473,7 +474,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.frameworkdirs = merge_lists(self.frameworkdirs, dep_cpp_info.framework_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
         self.frameworks = merge_lists(self.frameworks, dep_cpp_info.frameworks)
-        self.build_modules = merge_dicts(self.get_build_modules(), dep_cpp_info.build_modules_paths)
+        self.build_modules = merge_dicts(self.build_modules, dep_cpp_info.build_modules_paths)
         self.requires = merge_lists(self.requires, dep_cpp_info.requires)
         self.rootpaths.append(dep_cpp_info.rootpath)
 
@@ -488,7 +489,7 @@ class _BaseDepsCppInfo(_CppInfo):
 
     @property
     def build_modules_paths(self):
-        return self.get_build_modules()
+        return self.build_modules
 
     @property
     def include_paths(self):
