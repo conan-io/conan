@@ -24,7 +24,7 @@ class Base(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
-            generators = "cmake_find_package_multi"
+            generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
 
@@ -440,6 +440,28 @@ class AppleTest(Base):
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.parametrize("compiler, version",
+                         [("Visual Studio", "15", ),
+                        ("Visual Studio", "Release", "MD", "15", "17", "x86_64", "", False),
+                       ("msvc", "Debug", "static", "19.1", "14", "x86", None, True),
+                       ("msvc", "Release", "dynamic", "19.1", "17", "x86_64", None, False)]
+                      )
+def test_vs_toolset(self, compiler, build_type, runtime, version, cppstd, arch, toolset,):
+    settings = {"compiler": compiler,
+                "compiler.version": version,
+                "compiler.toolset": toolset,
+                "compiler.runtime": runtime,
+                "compiler.cppstd": cppstd,
+                "arch": arch,
+                "build_type": build_type,
+                }
+    save(self.client.cache.new_config_path,
+         "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
+    install_out = self._run_build(settings,)
+    self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
 
 @pytest.mark.toolchain
