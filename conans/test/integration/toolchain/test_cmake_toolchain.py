@@ -37,4 +37,3 @@ def test_toolchain_win(compiler, version, runtime):
         assert line.format(minor) in toolchain
     else:
         assert "CMAKE_GENERATOR_TOOLSET" not in toolchain
-
