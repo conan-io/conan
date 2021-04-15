@@ -81,6 +81,10 @@ class PkgConfigGenerator(GeneratorComponentsMixin, Generator):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content", self.name)
+        if pkg_config_custom_content:
+            lines.append(pkg_config_custom_content)
+
         lines.append("")
         lines.append("Name: %s" % name)
         description = cpp_info.description or "Conan package: %s" % name
