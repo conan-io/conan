@@ -40,7 +40,7 @@ tools_locations = {
             '3.19': '/usr/share/cmake-3.19.7/bin'
         }
     },
-    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2/ninja.exe'}}
+    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}}
 }
 
 tools_environments = {
@@ -90,8 +90,6 @@ if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
 if not which("meson"):
     tools_available.remove("meson")
-if not which("ninja"):
-    tools_available.remove("ninja")
 if not which("pkg-config"):
     tools_available.remove("pkg_config")
 if not which("premake"):
