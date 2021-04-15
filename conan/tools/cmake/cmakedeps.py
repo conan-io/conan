@@ -556,14 +556,14 @@ endforeach()
         return data_fname
 
     def get_name(self, req):
-        return req.cpp_info.get_property("cmake_target_name", self.name) or req.name
+        return req.cpp_info.get_property("cmake_target_name", self.name) or req.ref.name
 
     def get_filename(self, req):
-        return req.cpp_info.get_property("cmake_file_name", self.name) or req.name
+        return req.cpp_info.get_property("cmake_file_name", self.name) or req.ref.name
 
     def get_component_name(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
-            if req.name == comp_name:  # foo::foo might be referencing the root cppinfo
+            if req.ref.name == comp_name:  # foo::foo might be referencing the root cppinfo
                 return self.get_name(req)
             raise KeyError(comp_name)
         return req.cpp_info.components[comp_name].get_property("cmake_target_name",
@@ -580,7 +580,8 @@ endforeach()
             conan_package_library_targets,
         ])
 
-        host_requires = {r.name: r for r in self._conanfile.dependencies.host_requires}
+        host_requires = {r.ref.name: r for r in
+                         self._conanfile.dependencies.transitive_host_requires}
         # FIXME: convert to NewCppInfo into the conanfile_interface.py
         #  "cpp_info" getter for all the new generators
         for req in host_requires.values():
@@ -718,7 +719,7 @@ endforeach()
                     if filename not in pkg_public_deps_filenames:
                         pkg_public_deps_filenames.append(filename)
                 else:  # Internal dep (no another component)
-                    dep_name = req.name
+                    dep_name = req.ref.name
                 _name = self.get_name(requires[dep_name])
                 try:
                     _cname = self.get_component_name(requires[dep_name], component_name)
@@ -727,10 +728,10 @@ endforeach()
                                          "package requirement".format(name=dep_name,
                                                                       cname=component_name))
                 dep_target_names.append("{}::{}".format(_name, _cname))
-        elif req.dependencies.direct_host_requires:
+        elif req.dependencies.host_requires:
             # Regular external "conanfile.requires" declared, not cpp_info requires
             dep_target_names = ["{p}::{p}".format(p=self.get_name(req))
-                                for req in req.dependencies.direct_host_requires]
+                                for req in req.dependencies.host_requires]
             pkg_public_deps_filenames = [self.get_filename(req)
-                                         for req in req.dependencies.direct_host_requires]
+                                         for req in req.dependencies.host_requires]
         return dep_target_names, pkg_public_deps_filenames
