@@ -128,6 +128,7 @@ class _CppInfo(object):
         self.sysroot = ""
         self.requires = []
         self._build_modules_paths = None
+        self._build_modules = None
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
@@ -229,21 +230,25 @@ class _CppInfo(object):
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
-        default_build_modules_value = None
-        try:
-            default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
-        except KeyError:
-            pass
+        if self._build_modules:
+            return self._build_modules
+        else:
+            default_build_modules_value = None
+            try:
+                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
+            except KeyError:
+                pass
 
-        ret_dict = {"cmake_find_package": default_build_modules_value,
-                    "cmake_find_package_multi": default_build_modules_value,
-                    "cmake": default_build_modules_value,
-                    "cmake_multi": default_build_modules_value} if default_build_modules_value else {}
+            ret_dict = {"cmake_find_package": default_build_modules_value,
+                        "cmake_find_package_multi": default_build_modules_value,
+                        "cmake": default_build_modules_value,
+                        "cmake_multi": default_build_modules_value} if default_build_modules_value else {}
 
-        for generator, values in self._generator_properties.items():
-            if generator and values.get("cmake_build_modules"):
-                ret_dict[generator] = values.get("cmake_build_modules")
-        return ret_dict if ret_dict else self.build_modules
+            for generator, values in self._generator_properties.items():
+                if generator and values.get("cmake_build_modules"):
+                    ret_dict[generator] = values.get("cmake_build_modules")
+            self._build_modules = ret_dict if ret_dict else self.build_modules
+            return self._build_modules
 
     def set_property(self, property_name, value, generator=None):
         self._generator_properties.setdefault(generator, {})[property_name] = value
