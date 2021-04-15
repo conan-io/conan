@@ -16,6 +16,8 @@ def client():
         from conan.tools.cmake import CMake, CMakeToolchain
 
         class Library(ConanFile):
+            name = "hello"
+            version = "1.0"
             settings = 'os', 'arch', 'compiler', 'build_type'
             exports_sources = 'hello.h', '*.cpp', 'CMakeLists.txt'
             options = {'shared': [True, False]}
@@ -49,6 +51,7 @@ def client():
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool_compiler
+@pytest.mark.tool_ninja
 def test_locally_build_linux(build_type, shared, client):
     """ Ninja build must proceed using default profile and cmake build (Linux)
     """
@@ -70,6 +73,7 @@ def test_locally_build_linux(build_type, shared, client):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool_compiler
+@pytest.mark.tool_ninja
 def test_locally_build_msvc(build_type, shared, client):
     """ Ninja build must proceed using default profile and cmake build (Windows Release)
     """
@@ -97,8 +101,9 @@ def test_locally_build_msvc(build_type, shared, client):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
-@pytest.mark.tool_compiler
 @pytest.mark.tool_mingw64
+@pytest.mark.tool_compiler
+@pytest.mark.tool_ninja
 def test_locally_build_gcc(build_type, shared, client):
     """ Ninja build must proceed using default profile and cmake build (Windows Release)
     """
@@ -124,6 +129,7 @@ def test_locally_build_gcc(build_type, shared, client):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires apple-clang")
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool_compiler
+@pytest.mark.tool_ninja
 def test_locally_build_macos(build_type, shared, client):
     client.run('install . -s os=Macos -s arch=x86_64 -s build_type={} -o hello:shared={}'
                .format(build_type, shared))

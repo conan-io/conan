@@ -50,7 +50,7 @@ tools_available = [
     'cmake',
     'gcc', 'clang', 'visual_studio', 'xcode',
     'msys2', 'cygwin', 'mingw32', 'mingw64',
-    'autotools', 'pkg_config', 'premake', 'meson',
+    'autotools', 'pkg_config', 'premake', 'meson', 'ninja',
     'file',
     'git', 'svn',
     'compiler',
@@ -88,6 +88,8 @@ if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
 if not which("meson"):
     tools_available.remove("meson")
+if not which("ninja"):
+    tools_available.remove("ninja")
 if not which("pkg-config"):
     tools_available.remove("pkg_config")
 if not which("premake"):
