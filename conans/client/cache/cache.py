@@ -91,10 +91,10 @@ class ClientCache(object):
         self._data_cache = DataCache(self._store_folder, db_filename, locks_directory)
 
     def ref_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ref)
+        return self._data_cache.get_or_create_reference_layout(ref)[0]
 
     def pkg_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ref)
+        return self._data_cache.get_or_create_reference_layout(ref)[0]
 
     def all_refs(self):
         subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)

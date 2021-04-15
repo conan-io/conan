@@ -2,10 +2,12 @@ import os
 from contextlib import contextmanager, ExitStack
 
 from conan.cache.cache import DataCache
-from conan.cache.package_layout import PackageLayout
 from conan.locks.lockable_mixin import LockableMixin
+from conans.errors import RecipeNotFoundException
+from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
-from conans.model.ref import PackageReference
+from conans.paths import PACKAGE_METADATA, CONANFILE, SCM_SRC_FOLDER
+from conans.util.files import load
 
 
 class RecipeLayout(LockableMixin):
@@ -64,6 +66,22 @@ class RecipeLayout(LockableMixin):
     def source(self):
         return os.path.join(self.base_directory, 'source')
 
-    # TODO: Temporary: Probably will not use metadata in the future
+    # TODO: cache2.0: Do we want this method?
+    def conanfile(self):
+        return os.path.join(self.export(), CONANFILE)
+
+    # TODO: cache2.0: Do we want this method?
+    def scm_sources(self):
+        return os.path.join(self.base_directory, SCM_SRC_FOLDER)
+
+    # TODO: Remove: Probably will not use metadata in the future
     def metadata(self):
-        return os.path.join(self.base_directory, 'metadata.json')
+        return os.path.join(self.base_directory, PACKAGE_METADATA)
+
+    # TODO: Remove: Probably will not use metadata in the future
+    def load_metadata(self):
+        try:
+            text = load(self.metadata())
+        except IOError:
+            raise RecipeNotFoundException(self._ref)
+        return PackageMetadata.loads(text)

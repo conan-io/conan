@@ -33,9 +33,7 @@ class AliasConanfile(ConanFile):
     manifest.save(folder=package_layout.export())
 
     # Create the metadata for the alias
-    _update_revision_in_metadata(package_layout=package_layout,
-                                 output=output, path=None, manifest=manifest,
-                                 revision_mode=revision_mode)
+    calc_revision(output=output, path=None, manifest=manifest, revision_mode=revision_mode)
 
 
 def check_casing_conflict(cache, ref):
@@ -90,8 +88,10 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                        ref.user, ref.channel, python_requires)
 
     check_casing_conflict(cache=cache, ref=ref)
-    package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
+    package_layout_ = cache.package_layout(ref, short_paths=conanfile.short_paths)
     reference_layout = cache.ref_layout(ref)
+
+    # TODO: cache2.0: check this part
     if not export:
         metadata = package_layout.load_metadata()
         recipe_revision = metadata.recipe.revision
@@ -109,76 +109,56 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     output.highlight("Exporting package recipe")
     output = conanfile.output
 
-    # Copy sources to target folders
-    with package_layout.conanfile_write_lock(output=output):
-        # Get previous manifest
-        try:
-            previous_manifest = package_layout.recipe_manifest()
-        except IOError:
-            previous_manifest = None
+    export_folder = reference_layout.export()
+    export_src_folder = reference_layout.export_sources()
+    # TODO: cache2.0 move this creation to other place
+    mkdir(export_folder)
+    mkdir(export_src_folder)
+    origin_folder = os.path.dirname(conanfile_path)
+    export_recipe(conanfile, origin_folder, export_folder)
+    export_source(conanfile, origin_folder, export_src_folder)
+    shutil.copy2(conanfile_path, reference_layout.conanfile())
 
-        # now we don't have to remove all these folders
-        # we are generating a new random folder and putting
-        # everything there, this will be adressed later
-        # when we calculate the rrev
-        package_layout.export_remove()
-        export_folder = package_layout.export()
-        export_src_folder = package_layout.export_sources()
-        mkdir(export_folder)
-        mkdir(export_src_folder)
-        origin_folder = os.path.dirname(conanfile_path)
-        export_recipe(conanfile, origin_folder, export_folder)
-        export_source(conanfile, origin_folder, export_src_folder)
-        shutil.copy2(conanfile_path, package_layout.conanfile())
+    # Calculate the "auto" values and replace in conanfile.py
+    scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
+                                                          os.path.dirname(conanfile_path),
+                                                          reference_layout, output,
+                                                          ignore_dirty)
+    # Clear previous scm_folder
+    modified_recipe = False
+    scm_sources_folder = reference_layout.scm_sources()
+    if local_src_folder:
+        # Copy the local scm folder to scm_sources in the cache
+        mkdir(scm_sources_folder)
+        _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
+        # https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
+        # It will cause the source folder to be removed (needed because the recipe still has
+        # the "auto" with uncommitted changes)
+        modified_recipe = True
 
-        # Calculate the "auto" values and replace in conanfile.py
-        scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
-                                                              os.path.dirname(conanfile_path),
-                                                              package_layout, output,
-                                                              ignore_dirty)
-        # Clear previous scm_folder
-        modified_recipe = False
-        scm_sources_folder = package_layout.scm_sources()
-        if local_src_folder and not keep_source:
-            # Copy the local scm folder to scm_sources in the cache
-            mkdir(scm_sources_folder)
-            _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
-            # https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
-            # It will cause the source folder to be removed (needed because the recipe still has
-            # the "auto" with uncommitted changes)
-            modified_recipe = True
+    # Execute post-export hook before computing the digest
+    hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
+                         conanfile_path=reference_layout.conanfile())
 
-        # Execute post-export hook before computing the digest
-        hook_manager.execute("post_export", conanfile=conanfile, reference=package_layout.ref,
-                             conanfile_path=package_layout.conanfile())
-
-        # Compute the new digest
-        manifest = FileTreeManifest.create(export_folder, export_src_folder)
-        modified_recipe |= not previous_manifest or previous_manifest != manifest
-        if modified_recipe:
-            output.success('A new %s version was exported' % CONANFILE)
-            output.info('Folder: %s' % export_folder)
-        else:
-            output.info("The stored package has not changed")
-            manifest = previous_manifest  # Use the old one, keep old timestamp
-        manifest.save(export_folder)
+    # Compute the new digest
+    manifest = FileTreeManifest.create(export_folder, export_src_folder)
+    manifest.save(export_folder)
 
     # Compute the revision for the recipe
-    revision = _update_revision_in_metadata(package_layout=package_layout,
-                                            output=output,
-                                            path=os.path.dirname(conanfile_path),
-                                            manifest=manifest,
-                                            revision_mode=conanfile.revision_mode)
+    revision = calc_revision(output=output,
+                             path=os.path.dirname(conanfile_path),
+                             manifest=manifest,
+                             revision_mode=conanfile.revision_mode)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
-    source_folder = package_layout.source()
+    source_folder = reference_layout.source()
     if os.path.exists(source_folder):
         try:
             if is_dirty(source_folder):
                 output.info("Source folder is corrupted, forcing removal")
                 rmdir(source_folder)
                 clean_dirty(source_folder)
-            elif modified_recipe and not keep_source:
+            elif modified_recipe:
                 output.info("Package recipe modified in export, forcing source folder removal")
                 output.info("Use the --keep-source, -k option to skip it")
                 rmdir(source_folder)
@@ -196,7 +176,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
     if to_remove:
         output.info("Removing the local binary packages from different recipe revisions")
         remover = DiskRemover()
-        remover.remove_packages(package_layout, ids_filter=to_remove)
+        remover.remove_packages(remove_package_layout, ids_filter=to_remove)
 
     ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
@@ -226,7 +206,7 @@ def _check_settings_for_warnings(conanfile, output):
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, ignore_dirty):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, reference_layout, output, ignore_dirty):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -240,7 +220,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
 
     if not captured:
         # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_recipe(package_layout, scm_data)
+        _replace_scm_data_in_recipe(reference_layout, scm_data)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -272,13 +252,13 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, package_layout, output, i
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_recipe(package_layout, scm_data)
+    _replace_scm_data_in_recipe(reference_layout, scm_data)
 
     return scm_data, local_src_path
 
 
-def _replace_scm_data_in_recipe(package_layout, scm_data):
-    conandata_path = os.path.join(package_layout.export(), DATA_YML)
+def _replace_scm_data_in_recipe(reference_layout, scm_data):
+    conandata_path = os.path.join(reference_layout.export(), DATA_YML)
     conandata_yml = {}
     if os.path.exists(conandata_path):
         conandata_yml = yaml.safe_load(load(conandata_path))
@@ -305,8 +285,7 @@ def _detect_scm_revision(path):
     return repo_obj.get_revision(), repo_type, repo_obj.is_pristine()
 
 
-def _update_revision_in_metadata(package_layout, output, path, manifest,
-                                 revision_mode):
+def calc_revision(output, path, manifest, revision_mode):
     if revision_mode not in ["scm", "hash"]:
         raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
 
@@ -328,9 +307,6 @@ def _update_revision_in_metadata(package_layout, output, path, manifest,
         output.info("Using %s commit as the recipe revision: %s" % (repo_type, revision))
         if not is_pristine:
             output.warn("Repo status is not pristine: there might be modified files")
-
-    with package_layout.update_metadata() as metadata:
-        metadata.recipe.revision = revision
 
     return revision
 
