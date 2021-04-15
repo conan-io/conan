@@ -8,6 +8,7 @@ class ConanFileInterface:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
+        self._cpp_info = conanfile.cpp_info
 
     def __eq__(self, other):
         """
@@ -41,7 +42,7 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
-        return self._conanfile.cpp_info
+        return self._cpp_info
 
     @property
     def settings(self):

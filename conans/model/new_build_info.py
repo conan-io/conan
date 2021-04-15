@@ -13,8 +13,9 @@ _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "c
 class _NewComponent(object):
 
     def __init__(self):
-        self.names = {}
-        self.build_modules = {}
+
+        # ###### PROPERTIES
+        self._generator_properties = {}
 
         # ###### DIRECTORIES
         self.includedirs = []  # Ordered list of include paths
@@ -38,13 +39,24 @@ class _NewComponent(object):
         self.sysroot = ""
         self.requires = []
 
-    def get_name(self, generator):
-        return self.names.get(generator)
-
     @property
     def required_component_names(self):
         """ Names of the required components of the same package (not scoped with ::)"""
         return [r for r in self.requires if "::" not in r]
+
+    def set_property(self, property_name, value, generator=None):
+        self._generator_properties.setdefault(generator, {})[property_name] = value
+
+    def get_property(self, property_name, generator=None):
+        if generator:
+            try:
+                return self._generator_properties[generator][property_name]
+            except KeyError:
+                pass
+        try:
+            return self._generator_properties[None][property_name]
+        except KeyError:
+            pass
 
 
 class NewCppInfo(object):
@@ -53,13 +65,12 @@ class NewCppInfo(object):
         super(NewCppInfo, self).__init__()
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         self.components[None] = _NewComponent()  # Main package is a component with None key
-        self.filenames = {}
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
 
     def __setattr__(self, attr, value):
-        if attr in ["components", "filenames"]:
+        if attr in ["components"]:
             super(NewCppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
@@ -73,15 +84,15 @@ class NewCppInfo(object):
         ret = NewCppInfo()
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             setattr(ret, varname, getattr(old, varname))
-        ret.filenames = copy.copy(old.filenames)
-        ret.names = copy.copy(old.names)
+
+        ret._generator_properties = copy.copy(old._generator_properties)
 
         # COMPONENTS
         for cname, c in old.components.items():
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 setattr(ret.components[cname], varname, getattr(c, varname))
-            ret.components[cname].requires = c.requires
-            ret.components[cname].names = c.names
+            ret.components[cname].requires = copy.copy(c.requires)
+            ret.components[cname]._generator_properties = copy.copy(c._generator_properties)
         return ret
 
     def get_sorted_components(self):
@@ -118,6 +129,8 @@ class NewCppInfo(object):
                     dest = getattr(self.components[None], n)
                     dest += [i for i in getattr(component, n) if i not in dest]
                 self.components[None].requires.extend(component.requires)
+                # The generator properties are not aggregated, should be defined in the root
+                # cpp info if needed
             # FIXME: What to do about sysroot?
         # Leave only the aggregated value
         main_value = self.components[None]
@@ -136,13 +149,9 @@ class NewCppInfo(object):
             dest = getattr(self.components[None], n)
             dest += [i for i in getattr(other, n) if i not in dest]
 
-    def get_filename(self, generator):
-        return self.filenames.get(generator) or \
-               self.components[None].get_name(generator)
-
     def copy(self):
         ret = NewCppInfo()
-        ret.filenames = copy.copy(self.filenames)
+        ret._generator_properties = copy.copy(self._generator_properties)
         ret.components = DefaultOrderedDict(lambda: _NewComponent())
         for comp_name in self.components:
             ret.components[comp_name] = copy.copy(self.components[comp_name])

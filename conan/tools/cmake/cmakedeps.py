@@ -1,12 +1,10 @@
 import os
 import textwrap
-from collections import namedtuple
 
 from jinja2 import Template
 
 from conans.errors import ConanException
 from conans.model.new_build_info import NewCppInfo
-from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.files import save
 
 conan_message = textwrap.dedent("""
@@ -213,7 +211,8 @@ class DepsCppCmake(object):
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
-        self.build_modules_paths = join_paths(cpp_info.build_modules.get(generator_name, []))
+        build_modules = cpp_info.get_property("cmake_build_modules", generator_name) or []
+        self.build_modules_paths = join_paths(build_modules)
 
 
 class CMakeDeps(object):
@@ -509,23 +508,24 @@ endforeach()
         # FIXME: Ugly way to define the output path
         self.output_path = os.getcwd()
 
-    def _get_components(self, computed_names, req, cpp_info):
+    def _get_components(self, req, requires):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
-        sorted_comps = cpp_info.get_sorted_components()
+        sorted_comps = req.cpp_info.get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
-            comp_genname = computed_names[req.name].components[comp_name]
-            deps_cpp_cmake = DepsCppCmake(comp, computed_names[req.name].name, self.name)
+            comp_genname = self.get_component_name(req, comp_name)
+            deps_cpp_cmake = DepsCppCmake(comp, self.get_name(req), self.name)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp = require.split("::")
-                    public_comp_deps.append("{}::{}".format(computed_names[pkg].name,
-                                                            computed_names[pkg].components[cmp]))
+                    public_comp_deps.append("{}::{}".format(
+                        self.get_name(requires[pkg]),
+                        self.get_component_name(requires[pkg], cmp)))
                 else:  # Points to a component of same package
-                    public_comp_deps.append("{}::{}".format(computed_names[req.name].name,
-                                                            computed_names[req.name].components[require]))
+                    public_comp_deps.append("{}::{}".format(self.get_name(req),
+                                                            self.get_component_name(req, require)))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
             ret.append((comp_genname, deps_cpp_cmake))
         ret.reverse()
@@ -544,6 +544,20 @@ endforeach()
         data_fname += "-data.cmake"
         return data_fname
 
+    def get_name(self, req):
+        return req.cpp_info.get_property("cmake_target_name", self.name) or req.name
+
+    def get_filename(self, req):
+        return req.cpp_info.get_property("cmake_file_name", self.name) or req.name
+
+    def get_component_name(self, req, comp_name):
+        if comp_name not in req.cpp_info.components:
+            if req.name == comp_name:  # foo::foo might be referencing the root cppinfo
+                return self.get_name(req)
+            raise KeyError(comp_name)
+        return req.cpp_info.components[comp_name].get_property("cmake_target_name",
+                                                               self.name) or comp_name
+
     @property
     def content(self):
         ret = {}
@@ -555,23 +569,24 @@ endforeach()
             conan_package_library_targets,
         ])
 
-        host_requires = self._conanfile.dependencies.host_requires
-        computed_names = self.get_computed_names(host_requires)
-        # Iterate all the transitive requires
-        for req in host_requires:
-            # TODO: convert to NewCppInfo into the conanfile_interface.py
-            #  "cpp_info" getter for all the new generators
-            cpp_info = NewCppInfo.from_old_cppinfo(req.cpp_info)
-            pkg_filename = computed_names[req.name].filename
-            pkg_target_name = computed_names[req.name].name
+        host_requires = {r.name: r for r in self._conanfile.dependencies.host_requires}
+        # FIXME: convert to NewCppInfo into the conanfile_interface.py
+        #  "cpp_info" getter for all the new generators
+        for req in host_requires.values():
+            req._cpp_info = NewCppInfo.from_old_cppinfo(req._conanfile.cpp_info)
 
-            _ret = self.get_target_names_and_filenames(req, cpp_info, computed_names)
+        # Iterate all the transitive requires
+        for req in host_requires.values():
+            pkg_filename = self.get_filename(req)
+            pkg_target_name = self.get_name(req)
+
+            _ret = self.get_target_names_and_filenames(req, host_requires)
             dep_target_names, pkg_public_deps_filenames = _ret
             dep_target_names = ';'.join(dep_target_names)
             config_version = self.config_version_template.format(version=req.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
-            if not cpp_info.has_components:
-                deps = DepsCppCmake(cpp_info, pkg_target_name, self.name)
+            if not req.cpp_info.has_components:
+                deps = DepsCppCmake(req.cpp_info, pkg_target_name, self.name)
                 variables = {
                    self._data_filename(pkg_filename):
                        variables_template.format(name=pkg_target_name, deps=deps,
@@ -595,11 +610,11 @@ endforeach()
                 ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
                     filename=pkg_filename, name=pkg_target_name)
             else:
-                components = self._get_components(computed_names, req, cpp_info)
+                components = self._get_components(req, host_requires)
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_cppinfo = cpp_info.copy()
+                global_cppinfo = req.cpp_info.copy()
                 global_cppinfo.aggregate_components()
                 deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
                 global_variables = variables_template.format(name=pkg_target_name, deps=deps,
@@ -675,50 +690,7 @@ endforeach()
                                           find_dependencies_block=find_dependencies_block)
         return tmp
 
-    def get_computed_names(self, requires):
-        """Convert the package and components names according to the cpp_info.names information
-        and cpp_info.filenames"""
-        _PackageNames = namedtuple("_PackageNames", ["name", "filename", "components"])
-
-        def _get_real_name(cpp_info, default_name):
-            _name = cpp_info.names.get(self.name)
-            if _name is not None:
-                return _name
-            find_name = cpp_info.names.get("cmake_find_package_multi")
-            if find_name is not None:
-                # Not displaying a warning, too noisy as this is called many times
-                conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
-                               "but not 'CMakeDeps'".format(default_name))
-                return find_name
-            return default_name
-
-        def _get_real_filename(cpp_info, default_name):
-            _filename = cpp_info.filenames.get(self.name)
-            if _filename is not None:
-                return _filename
-            find_name = cpp_info.filenames.get("cmake_find_package_multi")
-            if find_name is not None:
-                # Not displaying a warning, too noisy as this is called many times
-                conan_v2_error("'{}' defines information for 'cmake_find_package_multi', "
-                               "but not 'CMakeDeps'".format(default_name))
-                return find_name
-            return default_name
-
-        ret = {}
-        for req in requires:
-            name = _get_real_name(req.cpp_info, req.name)
-            filename = _get_real_filename(req.cpp_info, req.name)
-            components = {}
-            for comp_name, comp in req.cpp_info.components.items():
-                components[comp_name] = _get_real_name(comp, comp_name)
-            if req.name not in components:
-                # Default component (no component) => package name
-                components[req.name] = name
-            ret[req.name] = _PackageNames(name, filename, components)
-        return ret
-
-    @staticmethod
-    def get_target_names_and_filenames(req, cpp_info, computed_names):
+    def get_target_names_and_filenames(self, req, requires):
         """
         Return 2 list:
           - [{foo}::{bar}, ] of the required
@@ -728,17 +700,17 @@ endforeach()
         pkg_public_deps_filenames = []
 
         # Get a list of dependencies target names and file names
-        if cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
-            for dep_name, component_name in cpp_info.required_components:
+        if req.cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
+            for dep_name, component_name in req.cpp_info.required_components:
                 if dep_name:  # External dep
-                    filename = computed_names[dep_name].filename
+                    filename = self.get_filename(requires[dep_name])
                     if filename not in pkg_public_deps_filenames:
                         pkg_public_deps_filenames.append(filename)
                 else:  # Internal dep (no another component)
                     dep_name = req.name
-                _name = computed_names[dep_name].name
+                _name = self.get_name(requires[dep_name])
                 try:
-                    _cname = computed_names[dep_name].components[component_name]
+                    _cname = self.get_component_name(requires[dep_name], component_name)
                 except KeyError:
                     raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                          "package requirement".format(name=dep_name,
@@ -746,8 +718,8 @@ endforeach()
                 dep_target_names.append("{}::{}".format(_name, _cname))
         elif req.dependencies.direct_host_requires:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            dep_target_names = ["{p}::{p}".format(p=computed_names[req.name].name)
+            dep_target_names = ["{p}::{p}".format(p=self.get_name(req))
                                 for req in req.dependencies.direct_host_requires]
-            pkg_public_deps_filenames = [computed_names[req.name].filename
-                                        for req in req.dependencies.direct_host_requires]
+            pkg_public_deps_filenames = [self.get_filename(req)
+                                         for req in req.dependencies.direct_host_requires]
         return dep_target_names, pkg_public_deps_filenames

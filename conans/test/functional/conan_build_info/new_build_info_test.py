@@ -15,26 +15,21 @@ def test_components_order():
     assert sorted_c == ["c2", "c3", "c4", "c1"]
 
 
-def test_names_filenames():
+def test_generator_properties_copy():
     cppinfo = NewCppInfo()
-    cppinfo.names["generator1"] = "name1"
-    cppinfo.names["generator2"] = "name2"
-    cppinfo.filenames["generator1"] = "name_file"
+    cppinfo.set_property("foo", "foo_value", "generator1")
+    cppinfo.set_property("foo", "var_value", "generator2")
+    cppinfo.set_property("foo2", "foo2_value", "generator1")
 
-    assert cppinfo.get_name("generator1") == "name1"
-    assert cppinfo.get_filename("generator1") == "name_file"
-    assert cppinfo.get_filename("generator2") == "name2"
+    copied = cppinfo.copy()
 
-    assert cppinfo.get_filename("missing") is None
-    assert cppinfo.get_name("missing") is None
+    assert copied.get_property("foo") is None
+    assert copied.get_property("foo", "generator1") == "foo_value"
+    assert copied.get_property("foo", "generator2") == "var_value"
 
 
 def test_component_aggregation():
     cppinfo = NewCppInfo()
-    cppinfo.build_modules["foo"] = ["var1" ,"var2", "var3"]
-    cppinfo.names["generator1"] = "name1"
-    cppinfo.names["generator2"] = "name2"
-    cppinfo.filenames["generator1"] = "name_file"
 
     cppinfo.includedirs = ["includedir"]
     cppinfo.libdirs = ["libdir"]
@@ -140,6 +135,7 @@ def test_from_old_cppinfo_components():
         setattr(oldcppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
         setattr(oldcppinfo.components["foo2"], n, ["var2_{}_1".format(n), "var2_{}_2".format(n)])
 
+    # The names and filenames are not copied to the new model
     oldcppinfo.components["foo"].names["Gen"] = ["MyName"]
     oldcppinfo.filenames["Gen"] = ["Myfilename"]
 
@@ -152,9 +148,6 @@ def test_from_old_cppinfo_components():
                                                          "var_{}_2".format(n)]
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
                                                           "var2_{}_2".format(n)]
-
-    assert cppinfo.components["foo"].names["Gen"] == ["MyName"]
-    assert cppinfo.filenames["Gen"] == ["Myfilename"]
 
 
 def test_from_old_cppinfo_no_components():
