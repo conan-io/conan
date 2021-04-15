@@ -142,7 +142,7 @@ def test_locally_build_macos(build_type, shared, client):
     else:
         assert "Linking CXX static library libmylibrary.a" in client.out
 
-    command_str = 'DYLD_LIBRARY_PATH="%s" myapp' % client.current_folder
+    command_str = 'DYLD_LIBRARY_PATH="%s" ./myapp' % client.current_folder
     client.run_command(command_str)
     check_exe_run(client.out, ["main", "hello"], "apple-clang", None, build_type, "x86_64",
                   cppstd=None)
