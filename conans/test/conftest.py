@@ -11,7 +11,8 @@ tools_default_version = {
     'msys2': 'default',
     'cygwin': 'default',
     'mingw32': 'default',
-    'mingw64': 'default'
+    'mingw64': 'default',
+    'ninja': '1.10.2'
 }
 
 tools_locations = {
@@ -38,7 +39,8 @@ tools_locations = {
             '3.17': '/usr/share/cmake-3.17.5/bin',
             '3.19': '/usr/share/cmake-3.19.7/bin'
         }
-    }
+    },
+    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2/ninja.exe'}}
 }
 
 tools_environments = {
