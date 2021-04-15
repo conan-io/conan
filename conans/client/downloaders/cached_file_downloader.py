@@ -55,6 +55,7 @@ class CachedFileDownloader(object):
                     self._file_downloader.download(url=url, file_path=cached_path, md5=md5,
                                                 sha1=sha1, sha256=sha256, **kwargs)
                     clean_dirty(cached_path)
+                    break
                 else:
                     # specific check for corrupted cached files, will log an error
                     # and raise after the third failed download attempt
