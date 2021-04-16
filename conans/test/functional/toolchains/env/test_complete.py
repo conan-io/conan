@@ -158,5 +158,8 @@ def test_complete():
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first
 
+    print("FIRST: {}".format(first))
+    print("LAST: {}".format(last))
+
     assert "myapp: Debug!" in last
     assert "myopenssl/1.0: Hello World Debug!" in last
