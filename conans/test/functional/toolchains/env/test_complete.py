@@ -69,11 +69,7 @@ def test_complete():
     client = TestClient()
     client.run("new myopenssl/1.0 -m=v2_cmake")
     client.run("create . -o myopenssl:shared=True")
-    assert "myopenssl/1.0: Hello World Release!" in client.out
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
-    assert "myopenssl/1.0: Hello World Debug!" in client.out
-    print("OUTPUT MYOPENSSL DEBUG:")
-    print(client.out)
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
@@ -116,7 +112,6 @@ def test_complete():
     client.run("create . mycmake/1.0@")
 
     mylib = textwrap.dedent(r"""
-        from conans import tools
         from conans import ConanFile
         import os
         from conan.tools.cmake import CMake
@@ -138,8 +133,6 @@ def test_complete():
                     self.run(os.sep.join([".", str(self.settings.build_type), "myapp"]),
                              env="conanrunenv")
                 else:
-                    environment = tools.load("conanrunenv.sh")
-                    self.output.info("!!!!!!!!!!!!!!!!ENVIRONMENT SCRIPT:\n{}\n\n".format(environment))
                     self.run(os.sep.join([".", "myapp"]), env="conanrunenv")
             """)
 
@@ -164,9 +157,6 @@ def test_complete():
     first, last = str(client.out).split("RUNNING MYAPP")
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first
-    print("----------------------------\nOUTPUT:{}\n---------------".format(str(client.out)))
-    print("FIRST: {}".format(first))
-    print("LAST: {}".format(last))
 
     assert "myapp: Debug!" in last
     assert "myopenssl/1.0: Hello World Debug!" in last
