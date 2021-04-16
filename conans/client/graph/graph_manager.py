@@ -172,13 +172,15 @@ class GraphManager(object):
     def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
                        check_updates, update, remotes, recorder, apply_build_requires=True):
         build_mode = BuildMode(build_mode, self._output)
-        deps_graph = self._load_graph(root_node, check_updates, update,
-                                      build_mode=build_mode, remotes=remotes,
-                                      recorder=recorder,
-                                      profile_host=profile_host,
-                                      profile_build=profile_build,
-                                      apply_build_requires=apply_build_requires,
-                                      graph_lock=graph_lock)
+
+        assert isinstance(build_mode, BuildMode)
+        profile_host_build_requires = profile_host.build_requires
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
+                                   recorder)
+        deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
+                                   profile_build, graph_lock)
+
+        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -265,20 +267,6 @@ class GraphManager(object):
                 graph_lock.check_locked_build_requires(node, package_build_requires,
                                                        new_profile_build_requires)
 
-    def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
-                    recorder, profile_host, profile_build, apply_build_requires,
-                    graph_lock):
-        assert isinstance(build_mode, BuildMode)
-        profile_host_build_requires = profile_host.build_requires
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   recorder)
-        graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                   profile_build, graph_lock)
-
-        #TODO self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
-
-        return graph
-
     @staticmethod
     def _validate_graph_provides(deps_graph):
         # Check that two different nodes are not providing the same (ODR violation)
@@ -300,3 +288,37 @@ class GraphManager(object):
                     nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
                     msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
                 raise ConanException('\n'.join(msg_lines))
+
+    @staticmethod
+    def _propagate_options(node):
+        # TODO: USE
+        # as this is the graph model
+        conanfile = node.conanfile
+        neighbors = node.neighbors()
+        transitive_reqs = set()  # of PackageReference, avoid duplicates
+        for neighbor in neighbors:
+            ref, nconan = neighbor.ref, neighbor.conanfile
+            transitive_reqs.add(neighbor.pref)
+            transitive_reqs.update(nconan.info.requires.refs())
+
+            conanfile.options.propagate_downstream(ref, nconan.info.full_options)
+            # Update the requirements to contain the full revision. Later in lockfiles
+            conanfile.requires[ref.name].ref = ref
+
+        # There might be options that are not upstream, backup them, might be for build-requires
+        conanfile.build_requires_options = conanfile.options.values
+        conanfile.options.clear_unused(transitive_reqs)
+        conanfile.options.freeze()
+
+
+        self._propagate_options(node)
+
+        # Make sure that locked options match
+        if (node.graph_lock_node is not None and
+            node.graph_lock_node.options is not None and
+            node.conanfile.options.values != node.graph_lock_node.options):
+            raise ConanException("{}: Locked options do not match computed options\n"
+                                 "Locked options:\n{}\n"
+                                 "Computed options:\n{}".format(node.ref,
+                                                                node.graph_lock_node.options,
+                                                                node.conanfile.options.values))

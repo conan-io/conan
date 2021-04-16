@@ -244,27 +244,6 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     @staticmethod
-    def _propagate_options(node):
-        # TODO: This has to be moved to the graph computation, not here in the BinaryAnalyzer
-        # as this is the graph model
-        conanfile = node.conanfile
-        neighbors = node.neighbors()
-        transitive_reqs = set()  # of PackageReference, avoid duplicates
-        for neighbor in neighbors:
-            ref, nconan = neighbor.ref, neighbor.conanfile
-            transitive_reqs.add(neighbor.pref)
-            transitive_reqs.update(nconan.info.requires.refs())
-
-            conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-            # Update the requirements to contain the full revision. Later in lockfiles
-            conanfile.requires[ref.name].ref = ref
-
-        # There might be options that are not upstream, backup them, might be for build-requires
-        conanfile.build_requires_options = conanfile.options.values
-        conanfile.options.clear_unused(transitive_reqs)
-        conanfile.options.freeze()
-
-    @staticmethod
     def package_id_transitive_reqs(node):
         """
         accumulate the direct and transitive requirements prefs necessary to compute the
@@ -344,17 +323,6 @@ class GraphBinariesAnalyzer(object):
         default_package_id_mode = self._cache.config.default_package_id_mode
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
-            self._propagate_options(node)
-
-            # Make sure that locked options match
-            if (node.graph_lock_node is not None and
-                    node.graph_lock_node.options is not None and
-                    node.conanfile.options.values != node.graph_lock_node.options):
-                raise ConanException("{}: Locked options do not match computed options\n"
-                                     "Locked options:\n{}\n"
-                                     "Computed options:\n{}".format(node.ref,
-                                                                    node.graph_lock_node.options,
-                                                                    node.conanfile.options.values))
 
             self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
