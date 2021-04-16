@@ -37,7 +37,8 @@ class AutoToolsAppleTest(unittest.TestCase):
                            ("armv8", "iOS", "10.0"),
                            ("armv7", "iOS", "10.0"),
                            ("x86", "iOS", "10.0"),
-                           ("x86_64", "iOS", "10.0")
+                           ("x86_64", "iOS", "10.0"),
+                           ("armv8", "Macos", "10.14")  # M1
                            ])
     def test_makefile_arch(self, arch, os_, os_version):
         self.arch = arch
