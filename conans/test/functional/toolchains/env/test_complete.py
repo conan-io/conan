@@ -72,6 +72,8 @@ def test_complete():
     assert "myopenssl/1.0: Hello World Release!" in client.out
     client.run("create . -o myopenssl:shared=True -s build_type=Debug")
     assert "myopenssl/1.0: Hello World Debug!" in client.out
+    print("OUTPUT MYOPENSSL DEBUG:")
+    print(client.out)
 
     mycmake_main = gen_function_cpp(name="main", msg="mycmake",
                                     includes=["myopenssl"], calls=["myopenssl"])
