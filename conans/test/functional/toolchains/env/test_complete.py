@@ -112,6 +112,7 @@ def test_complete():
     client.run("create . mycmake/1.0@")
 
     mylib = textwrap.dedent(r"""
+        from conans import tools
         from conans import ConanFile
         import os
         from conan.tools.cmake import CMake
@@ -133,6 +134,8 @@ def test_complete():
                     self.run(os.sep.join([".", str(self.settings.build_type), "myapp"]),
                              env="conanrunenv")
                 else:
+                    environment = tools.load("conanrunenv.sh")
+                    self.output.info("!!!!!!!!!!!!!!!!ENVIRONMENT SCRIPT:\n{}\n\n".format(environment))
                     self.run(os.sep.join([".", "myapp"]), env="conanrunenv")
             """)
 
@@ -157,7 +160,7 @@ def test_complete():
     first, last = str(client.out).split("RUNNING MYAPP")
     assert "mycmake: Release!" in first
     assert "myopenssl/1.0: Hello World Release!" in first
-
+    print("----------------------------\nOUTPUT:{}\n---------------".format(str(client.out)))
     print("FIRST: {}".format(first))
     print("LAST: {}".format(last))
 
