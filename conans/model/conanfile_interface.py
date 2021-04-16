@@ -22,8 +22,12 @@ class ConanFileInterface:
         return not self.__eq__(other)
 
     @property
-    def name(self):
-        return self._conanfile.name
+    def ref(self):
+        return self._conanfile.ref
+
+    @property
+    def pref(self):
+        return self._conanfile.pref
 
     @property
     def buildenv_info(self):

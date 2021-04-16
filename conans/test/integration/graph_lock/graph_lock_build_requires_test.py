@@ -215,3 +215,29 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
 
         client.run("create . pkg/1.0@ --lockfile=conan.lock", assert_error=True)
         self.assertIn("ERROR: 'pkg/1.0' locked requirement 'dep_recipe/1.0' not found", client.out)
+
+    @staticmethod
+    def test_test_package_build_require():
+        # https://github.com/conan-io/conan/issues/8744
+        client = TestClient()
+        # create build_requires tools
+        client.save({"cmake/conanfile.py": GenConanfile(),
+                     "pkg/conanfile.py":
+                         GenConanfile().with_build_requires("cmake/[>=1.0]"),
+                     "pkg/test_package/conanfile.py":
+                         GenConanfile().with_build_requires("cmake/[>=1.0]").with_test("pass"),
+                     "consumer/conanfile.py":
+                         GenConanfile().with_requires("pkg/[>=1.0]"),
+                     })
+
+        client.run("export cmake cmake/1.0@")
+        client.run("export pkg pkg/1.0@")
+
+        client.run("lock create consumer/conanfile.py --build --lockfile-out=conan.lock")
+        lock_json = json.loads(client.load("conan.lock"))
+        node = lock_json["graph_lock"]["nodes"]["0"]
+        assert node.get("ref") is None
+        assert "conanfile.py" in node.get("path")
+
+        client.run("create pkg/conanfile.py pkg/1.0@  --build=missing --lockfile=conan.lock")
+        assert "pkg/1.0 (test package): Applying build-requirement: cmake/1.0" in client.out
