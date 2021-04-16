@@ -322,3 +322,12 @@ class GraphManager(object):
                                  "Computed options:\n{}".format(node.ref,
                                                                 node.graph_lock_node.options,
                                                                 node.conanfile.options.values))
+
+    """
+        if hasattr(conanfile, "validate") and callable(conanfile.validate):
+        with conanfile_exception_formatter(str(conanfile), "validate"):
+            try:
+                conanfile.validate()
+            except ConanInvalidConfiguration as e:
+                conanfile.info.invalid = str(e)
+    """
