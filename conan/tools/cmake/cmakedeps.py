@@ -597,12 +597,13 @@ endforeach()
             dep_target_names = ';'.join(dep_target_names)
             config_version = self.config_version_template.format(version=req.ref.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
+            pfolder = req.package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
             if not req.cpp_info.has_components:
                 deps = DepsCppCmake(req.cpp_info, pkg_target_name, self.name)
                 variables = {
                    self._data_filename(pkg_filename):
                        variables_template.format(name=pkg_target_name, deps=deps,
-                                                 package_folder=req.package_folder,
+                                                 package_folder=pfolder,
                                                  build_type_suffix=build_type_suffix)
                              }
                 dynamic_variables = {
@@ -630,13 +631,13 @@ endforeach()
                 global_cppinfo.aggregate_components()
                 deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
                 global_variables = variables_template.format(name=pkg_target_name, deps=deps,
-                                                             package_folder=req.package_folder,
+                                                             package_folder=pfolder,
                                                              build_type_suffix=build_type_suffix,
                                                              deps_names=dep_target_names)
                 variables = {
                     self._data_filename(pkg_filename):
                         self.components_variables_tpl.render(
-                         package_folder=req.package_folder,
+                         package_folder=pfolder,
                          pkg_name=pkg_target_name, global_variables=global_variables,
                          pkg_components=pkg_components, build_type=build_type, components=components)
                 }
