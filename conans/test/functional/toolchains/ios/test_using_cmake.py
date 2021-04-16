@@ -19,7 +19,6 @@ class ToolchainiOSTestCase(unittest.TestCase):
             from conans import ConanFile
             from conan.tools.cmake import CMake, CMakeToolchain
 
-
             class Library(ConanFile):
                 name = 'hello'
                 version = '1.0'
@@ -27,26 +26,19 @@ class ToolchainiOSTestCase(unittest.TestCase):
                 exports_sources = 'hello.h', 'hello.cpp', 'CMakeLists.txt'
                 options = {{'shared': [True, False]}}
                 default_options = {{'shared': False}}
-                _cmake = None
-
-                def _configure_cmake(self):
-                    if not self._cmake:
-                        self._cmake = CMake(self, generator={generator})
-                        self._cmake.configure()
-                    return self._cmake
 
                 def generate(self):
-                    tc = CMakeToolchain(self)
+                    tc = CMakeToolchain(self, generator={generator})
                     tc.generate()
 
                 def build(self):
-                    cmake = self._configure_cmake()
+                    cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
                     self.run("lipo -info Release-iphoneos/libhello.a")
 
                 def package(self):
-                    cmake = self._configure_cmake()
+                    cmake = CMake(self)
                     cmake.install()
             """)
 
