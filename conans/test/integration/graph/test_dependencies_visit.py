@@ -22,4 +22,4 @@ def test_dependencies_visit():
     assert "DefRef: dep/0.1#f3367e0e7d170aa12abccb175fee5f97!!!" in client.out
     assert "DefPRef: dep/0.1#f3367e0e7d170aa12abccb175fee5f97:"\
            "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#"\
-           "83c38d3b4e5f1b8450434436eec31b00!!!" in client.out
+           "cf924fbb5ed463b8bb960cf3a4ad4f3a!!!" in client.out

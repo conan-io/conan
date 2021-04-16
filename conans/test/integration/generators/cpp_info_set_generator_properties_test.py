@@ -113,7 +113,7 @@ def test_same_results_components(setup_client):
         """)
     client.save({"mypkg.py": mypkg})
     client.run("export mypkg.py")
-    client.run("install consumer.py -s build_type=Release")
+    client.run("install consumer.py --build=missing -s build_type=Release")
 
     old_approach_contents = get_files_contents(client, files_to_compare)
 
