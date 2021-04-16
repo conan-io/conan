@@ -84,11 +84,10 @@ class DepsGraphBuilder(object):
         dep_graph.add_node(root_node)
 
         # enter recursive computation
-        try:
-            self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
-                              update, remotes, profile_host, profile_build, graph_lock)
-        except ConanGraphException as e:  # Conflict, loop closure
-            pass
+
+        self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
+                          update, remotes, profile_host, profile_build, graph_lock)
+
         return dep_graph
 
     def extend_build_requires(self, graph, node, build_requires_refs, check_updates, update,
@@ -148,9 +147,11 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires:
             # TODO: if require.override:
             #     continue
-            self._expand_require(require, node, graph, check_updates, update, remotes, profile_host,
-                                 profile_build, new_reqs, new_options, graph_lock,
-                                 context_switch=False)
+            conflict = self._expand_require(require, node, graph, check_updates, update, remotes,
+                                            profile_host, profile_build, new_reqs, new_options,
+                                            graph_lock, context_switch=False)
+            if conflict:
+                return True
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -206,9 +207,10 @@ class DepsGraphBuilder(object):
         name = require.ref.name  # TODO: allow bootstrapping, use references instead of names
 
         # If the requirement is found in the node public dependencies, it is a diamond
+        print("EXPANDING ", require.ref)
         previous = node.check_downstream_exists(require)
 
-        if not previous:
+        if previous is None:
             # new node, must be added and expanded (node -> new_node)
             new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile_host, profile_build, graph_lock,
@@ -218,25 +220,36 @@ class DepsGraphBuilder(object):
             node.propagate_downstream(require, new_node)
 
             # RECURSION, keep expanding (depth-first) the new node
-            self._expand_node(new_node, graph, new_reqs, node.ref, new_options, check_updates,
-                              update, remotes, profile_host, profile_build, graph_lock)
+            return self._expand_node(new_node, graph, new_reqs, node.ref, new_options, check_updates,
+                                     update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
+            previous, base_previous = previous
+            loop = previous == base_previous
             # self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            conflict = self._conflicting_references(previous, require.ref, node.ref)
+            conflict = loop or self._conflicting_references(previous, require.ref, node.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
-                self._resolve_recipe(node, graph, require, check_updates,
-                                     update, remotes, profile_host, graph_lock)
+                result = self._resolve_recipe(node, graph, require, check_updates,
+                                              update, remotes, profile_host, graph_lock)
+                _, dep_conanfile, recipe_status, _, _ = result
                 # Maybe it was an ALIAS, so we can check conflict again
-                conflict = self._conflicting_references(previous, require.ref, node.ref)
+                conflict = loop or self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
-                    raise ConanException(conflict)
+                    conflict_node = Node(require.ref, dep_conanfile, context=context)
+                    conflict_node.recipe = recipe_status
+                    conflict_node.conflict = previous
+                    previous.conflict = conflict_node
+                    graph.add_node(conflict_node)
+                    graph.add_edge(node, conflict_node, require)
+                    graph.conflict = True
+                    return True
 
             graph.add_edge(node, previous, require)
 
             node.propagate_downstream(require, previous)
             for prev_relation, prev_node in previous.transitive_deps.items():
-                node.closing_loop(prev_relation, prev_node)
+                # TODO: possibly optimize in a bulk propagate
+                node.propagate_downstream_existing(prev_relation, prev_node)
 
             """# Recursion is only necessary if the inputs conflict with the current "previous"
             # configuration of upstream versions and options
@@ -268,23 +281,6 @@ class DepsGraphBuilder(object):
                                      "    Different revisions of %s has been requested"
                                      % (consumer_ref, new_ref))
             return True
-        return False
-
-    def _recurse(self, closure, new_reqs, new_options, context):
-        """ For a given closure, if some requirements or options coming from downstream
-        is incompatible with the current closure, then it is necessary to recurse
-        then, incompatibilities will be raised as usually"""
-        for req in new_reqs.values():
-            n = closure.get(req.ref.name, context=context)
-            if n and self._conflicting_references(n, req.ref):
-                return True
-        for pkg_name, options_values in new_options.items():
-            n = closure.get(pkg_name, context=context)
-            if n:
-                options = n.conanfile.options
-                for option, value in options_values.items():
-                    if getattr(options, option) != value:
-                        return True
         return False
 
     @staticmethod

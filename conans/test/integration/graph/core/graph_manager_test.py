@@ -1,5 +1,4 @@
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
-from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
@@ -192,13 +191,27 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libc/0.1", ["liba/0.2"])
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer, install=False)
 
-        with self.assertRaisesRegex(ConanException, "Conflict in libc/0.1:\n"
-            "    'libc/0.1' requires 'liba/0.2' while 'libb/0.1' requires 'liba/0.1'.\n"
-            "    To fix this conflict you need to override the package 'liba' in your root "
-            "package."):
-            self.build_consumer(consumer, install=False)
-    '''
+        assert deps_graph.conflict is True
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        # TODO: Conflicted without revision
+        self._check_node(liba2, "liba/0.2", dependents=[libc])
+
+        assert liba1.conflict == liba2
+        assert liba2.conflict == liba1
+
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|
@@ -208,10 +221,28 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
-        with self.assertRaisesRegex(ConanException,
-                                    "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
-            self.build_consumer(consumer)
+        deps_graph = self.build_consumer(consumer, install=False)
+        assert deps_graph.conflict is True
 
+        self.assertEqual(5, len(deps_graph.nodes))
+
+        app = deps_graph.root
+        libc = app.dependencies[0].dst
+        libb = libc.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+        libc2 = liba.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", deps=[libc2], dependents=[libb])
+        # TODO: Conflicted without revision
+        self._check_node(libc2, "libc/0.1", dependents=[liba])
+
+        assert libc.conflict == libc2
+        assert libc2.conflict == libc
+
+    '''
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])

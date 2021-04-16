@@ -84,6 +84,7 @@ class Node(object):
         self.transitive_deps = _TransitivePackages()
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
+        self.conflict = None
 
     def propagate_downstream(self, relation, node):
         if not isinstance(relation, _PackageRelation):
@@ -91,19 +92,9 @@ class Node(object):
             relation = _PackageRelation(relation.ref)
 
         self.transitive_deps.set(relation, node)
-        # Check if need to propagate downstream
-        downstream_relation = relation.transform_downstream(self)
-        if downstream_relation is None:
-            return
+        return self.propagate_downstream_existing(relation, node)
 
-        if not self.dependants:
-            return
-        assert len(self.dependants) == 1
-        d = self.dependants[0]
-        source_node = d.src
-        return source_node.propagate_downstream(downstream_relation, node)
-
-    def closing_loop(self, relation, node):
+    def propagate_downstream_existing(self, relation, node):
         # Check if need to propagate downstream
         downstream_relation = relation.transform_downstream(self)
         if downstream_relation is None:
@@ -120,10 +111,15 @@ class Node(object):
         if not isinstance(relation, _PackageRelation):
             assert isinstance(relation, Requirement)
             relation = _PackageRelation(relation.ref)
+        # First, a check against self, could be a loop-conflict
+        # This is equivalent as the _PackageRelation hash and eq methods
+        if relation.ref.name == self.ref.name:
+            return self, self
+
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(relation)
         if prev:
-            return prev
+            return prev, self
 
         # Check if need to propagate downstream
         downstream_relation = relation.transform_downstream(self)
@@ -190,6 +186,7 @@ class DepsGraph(object):
     def __init__(self, initial_node_id=None):
         self.nodes = []
         self.aliased = {}
+        self.conflict = False
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     @property
