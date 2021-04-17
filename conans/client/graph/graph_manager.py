@@ -18,9 +18,7 @@ class GraphManager(object):
         self._output = output
         self._resolver = resolver
         self._cache = cache
-        self._remote_manager = remote_manager
         self._loader = loader
-        self._binary_analyzer = binary_analyzer
 
     def load_consumer_conanfile(self, conanfile_path):
         """loads a conanfile for local flow: source
@@ -188,80 +186,6 @@ class GraphManager(object):
             compute_package_id(node)
 
         return deps_graph
-
-    def _recurse_build_requires(self, graph, builder, check_updates,
-                                update, build_mode, remotes, profile_build_requires, recorder,
-                                profile_host, profile_build, graph_lock, apply_build_requires=True,
-                                nodes_subset=None, root=None):
-        """
-        :param graph: This is the full dependency graph with all nodes from all recursions
-        """
-        default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
-        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
-        if not apply_build_requires:
-            return
-
-        for node in graph.ordered_iterate(nodes_subset):
-            # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
-            # FIXME: To be improved and build a explicit model for this
-            if node.recipe == RECIPE_VIRTUAL:
-                continue
-            # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
-            if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe != RECIPE_CONSUMER):
-                continue
-            package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
-            str_ref = str(node.ref)
-
-            #  Compute the update of the current recipe build_requires when updated with the
-            # downstream profile-defined build-requires
-            new_profile_build_requires = []
-            for pattern, build_requires in profile_build_requires.items():
-                if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                        (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                        fnmatch.fnmatch(str_ref, pattern)):
-                    for build_require in build_requires:
-                        br_key = (build_require.name, default_context)
-                        if br_key in package_build_requires:  # Override defined
-                            # this is a way to have only one package Name for all versions
-                            # (no conflicts)
-                            # but the dict key is not used at all
-                            package_build_requires[br_key] = build_require
-                        # Profile one or in different context
-                        elif build_require.name != node.name or default_context != node.context:
-                            new_profile_build_requires.append((build_require, default_context))
-
-            def _recurse_build_requires(br_list, transitive_build_requires):
-                nodessub = builder.extend_build_requires(graph, node, br_list, check_updates,
-                                                         update, remotes, profile_host,
-                                                         profile_build, graph_lock)
-                self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
-                                             remotes, transitive_build_requires, recorder,
-                                             profile_host, profile_build, graph_lock,
-                                             nodes_subset=nodessub, root=node)
-
-            if package_build_requires:
-                if default_context == CONTEXT_BUILD:
-                    br_build, br_host = [], []
-                    for (_, ctxt), it in package_build_requires.items():
-                        if ctxt == CONTEXT_BUILD:
-                            br_build.append((it, ctxt))
-                        else:
-                            br_host.append((it, ctxt))
-                    if br_build:
-                        _recurse_build_requires(br_build, profile_build.build_requires)
-                    if br_host:
-                        _recurse_build_requires(br_host, profile_build_requires)
-                else:
-                    br_all = [(it, ctxt) for (_, ctxt), it in package_build_requires.items()]
-                    _recurse_build_requires(br_all, profile_build_requires)
-
-            if new_profile_build_requires:
-                _recurse_build_requires(new_profile_build_requires, {})
-
-            if graph_lock:
-                graph_lock.check_locked_build_requires(node, package_build_requires,
-                                                       new_profile_build_requires)
 
     @staticmethod
     def _validate_graph_provides(deps_graph):
