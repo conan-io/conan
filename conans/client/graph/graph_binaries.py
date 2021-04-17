@@ -1,4 +1,5 @@
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
@@ -15,7 +16,7 @@ class GraphBinariesAnalyzer(object):
 
     def __init__(self, cache, output, remote_manager):
         self._cache = cache
-        self._out = output
+        self._output = output
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
@@ -251,8 +252,6 @@ class GraphBinariesAnalyzer(object):
         default_package_id_mode = self._cache.config.default_package_id_mode
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
-
-            self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:

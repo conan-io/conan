@@ -535,11 +535,13 @@ class BinaryInstaller(object):
         return pref
 
     def _propagate_info(self, node, using_build_profile):
+        # FIXME: Remove this, as propagate info is not done at graph level
+        return
         # it is necessary to recompute
         # the node transitive information necessary to compute the package_id
         # as it will be used by reevaluate_node() when package_revision_mode is used and
         # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-        self._binaries_analyzer.package_id_transitive_reqs(node)
+        # self._binaries_analyzer.package_id_transitive_reqs(node)
         # Get deps_cpp_info from upstream nodes
         node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
         # List sort is stable, will keep the original order of the closure, but prioritize levels
@@ -588,6 +590,7 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref):
+        # TODO: Make this lazy, this information is not necessary until generators
         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
         conanfile.cpp_info.version = conanfile.version
         conanfile.cpp_info.description = conanfile.description
@@ -595,8 +598,8 @@ class BinaryInstaller(object):
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes
-        public_deps = [name for name, req in conanfile.requires.items() if not req.private
-                       and not req.override]
+        # TODO public_deps = [req.ref.name for req in conanfile.requires if not req.private and not req.override]
+        public_deps = [req.ref.name for req in conanfile.requires]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts

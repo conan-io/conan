@@ -8,6 +8,7 @@ def compute_package_id(node):
     Compute the binary package ID of this node
     :param node: the node to compute the package-ID
     """
+    print("COMPUTING ID OF ", node)
     # TODO Conan 2.0. To separate the propagation of the graph (options) of the package-ID
     # A bit risky to be done now
     conanfile = node.conanfile

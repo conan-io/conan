@@ -86,6 +86,10 @@ class Node(object):
         self.dependants = []  # Edges
         self.conflict = None
 
+    def __lt__(self, other):
+        # TODO: Remove this order, shouldn't be necessary
+        return id(self) < id(other)
+
     def propagate_downstream(self, relation, node):
         if not isinstance(relation, _PackageRelation):
             assert isinstance(relation, Requirement)
@@ -113,7 +117,8 @@ class Node(object):
             relation = _PackageRelation(relation.ref)
         # First, a check against self, could be a loop-conflict
         # This is equivalent as the _PackageRelation hash and eq methods
-        if relation.ref.name == self.ref.name:
+        # TODO: Make self.ref always exist, but with name=None if name not defined
+        if self.ref is not None and relation.ref.name == self.ref.name:
             return self, self
 
         # First do a check against the current node dependencies

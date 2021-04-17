@@ -19,6 +19,7 @@ class GraphManager(object):
         self._resolver = resolver
         self._cache = cache
         self._loader = loader
+        self._binary_analyzer = binary_analyzer
 
     def load_consumer_conanfile(self, conanfile_path):
         """loads a conanfile for local flow: source
@@ -58,6 +59,8 @@ class GraphManager(object):
                                          check_updates, update, remotes)
         # Run some validations once the graph is built
         #TODO: self._validate_graph_provides(deps_graph)
+        # TODO: Move binary_analyzer elsewhere
+        self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
@@ -155,11 +158,13 @@ class GraphManager(object):
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
         # Injecting the tested reference
-        require = conanfile.requires.get(create_reference.name)
+        #TODO: Assume not declared in test_package
+        """require = conanfile.requires.get(create_reference.name)
         if require:
             require.ref = require.range_ref = create_reference
-        else:
-            conanfile.requires.add_ref(create_reference)
+        else:"""
+        conanfile.requires(repr(create_reference))
+        print("CONANFILE REQS ", conanfile.requires)
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)

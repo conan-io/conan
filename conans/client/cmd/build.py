@@ -19,7 +19,8 @@ def cmd_build(app, conanfile_path, conan_file, source_folder, build_folder, pack
 
     if test:
         try:
-            conan_file.requires.add_ref(test)
+            # TODO: check what to do with this, should be removed?
+            conan_file.requires(repr(test))
         except ConanException:
             pass
 
