@@ -3,6 +3,7 @@ from collections import defaultdict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
     BINARY_UNKNOWN
@@ -56,8 +57,7 @@ class GraphManager(object):
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
-                                         build_mode, check_updates, update, remotes, recorder,
-                                         apply_build_requires=apply_build_requires)
+                                         check_updates, update, remotes)
         # Run some validations once the graph is built
         #TODO: self._validate_graph_provides(deps_graph)
         return deps_graph
@@ -169,19 +169,13 @@ class GraphManager(object):
             graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
 
-    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
-                       check_updates, update, remotes, recorder, apply_build_requires=True):
-        build_mode = BuildMode(build_mode, self._output)
+    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock,
+                       check_updates, update, remotes):
 
-        assert isinstance(build_mode, BuildMode)
         profile_host_build_requires = profile_host.build_requires
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
-                                   recorder)
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
         deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                   profile_build, graph_lock)
-
-        self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes)
-
+                                        profile_build, graph_lock)
         version_ranges_output = self._resolver.output
         if version_ranges_output:
             self._output.success("Version ranges solved")
@@ -190,7 +184,9 @@ class GraphManager(object):
             self._output.writeln("")
             self._resolver.clear_output()
 
-        build_mode.report_matches()
+        for node in deps_graph.ordered_iterate():
+            compute_package_id(node)
+
         return deps_graph
 
     def _recurse_build_requires(self, graph, builder, check_updates,

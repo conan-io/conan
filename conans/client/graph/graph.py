@@ -180,6 +180,8 @@ class Edge(object):
         self.src = src
         self.dst = dst
         self.require = require
+        self.build_require = False  # Just to not break, but not user
+        self.private = False
 
 
 class DepsGraph(object):
@@ -232,7 +234,7 @@ class DepsGraph(object):
         return [[node1, node34], [node3], [node23, node8],...]
         """
         result = []
-        opened = nodes_subset if nodes_subset is not None else self.nodes
+        opened = nodes_subset if nodes_subset is not None else set(self.nodes)
         while opened:
             current_level = []
             for o in opened:
@@ -240,7 +242,7 @@ class DepsGraph(object):
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
 
-            current_level.sort()
+            # TODO: SORTING NOT NECESSARY NOW current_level.sort()
             result.append(current_level)
             # now initialize new level
             opened = opened.difference(current_level)

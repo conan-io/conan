@@ -244,6 +244,10 @@ class GraphBinariesAnalyzer(object):
         node.binary_remote = remote
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
+        build_mode = BuildMode(build_mode, self._output)
+
+        assert isinstance(build_mode, BuildMode)
+
         default_package_id_mode = self._cache.config.default_package_id_mode
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):

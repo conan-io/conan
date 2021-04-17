@@ -66,12 +66,11 @@ class DepsGraphBuilder(object):
                             expand_node(previous_node)                # recursion
     """
 
-    def __init__(self, proxy, output, loader, resolver, recorder):
+    def __init__(self, proxy, output, loader, resolver):
         self._proxy = proxy
         self._output = output
         self._loader = loader
         self._resolver = resolver
-        self._recorder = recorder
 
     def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
                    graph_lock=None):
@@ -324,8 +323,7 @@ class DepsGraphBuilder(object):
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
         try:
-            result = self._proxy.get_recipe(requirement.ref, check_updates, update,
-                                            remotes, self._recorder)
+            result = self._proxy.get_recipe(requirement.ref, check_updates, update, remotes)
         except ConanException as e:
             if current_node.ref:
                 self._output.error("Failed requirement '%s' from '%s'"

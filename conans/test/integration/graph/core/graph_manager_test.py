@@ -33,6 +33,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(libb.dependants), 1)
         self.assertEqual(libb.inverse_neighbors(), [app])
         self.assertEqual(libb.recipe, RECIPE_INCACHE)
+        assert libb.package_id == "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
     def test_transitive_two_levels(self):
         # app -> libb0.1 -> liba0.1
