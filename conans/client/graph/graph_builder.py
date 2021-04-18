@@ -206,7 +206,6 @@ class DepsGraphBuilder(object):
         name = require.ref.name  # TODO: allow bootstrapping, use references instead of names
 
         # If the requirement is found in the node public dependencies, it is a diamond
-        print("EXPANDING ", require.ref)
         previous = node.check_downstream_exists(require)
 
         if previous is None:

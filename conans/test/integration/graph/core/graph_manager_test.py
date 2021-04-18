@@ -6,7 +6,7 @@ from conans.test.utils.tools import GenConanfile
 class TransitiveGraphTest(GraphManagerTest):
     def test_basic(self):
         # say/0.1
-        deps_graph = self.build_graph(GenConanfile("Say", "0.1"), install=False)
+        deps_graph = self.build_graph(GenConanfile("Say", "0.1"))
         self.assertEqual(1, len(deps_graph.nodes))
         node = deps_graph.root
         self.assertEqual(node.conanfile.name, "Say")
@@ -18,7 +18,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libb/0.1")
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
@@ -41,7 +41,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -60,7 +60,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libc/0.1", ["liba/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
@@ -85,7 +85,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libf/0.1", ["libd/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libe/0.1", "libf/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(7, len(deps_graph.nodes))
         app = deps_graph.root
@@ -119,7 +119,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1", "libd/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -145,7 +145,7 @@ class TransitiveGraphTest(GraphManagerTest):
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1", "libd/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -170,7 +170,7 @@ class TransitiveGraphTest(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["libc/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libd/0.1", "libc/0.1", "libb/0.1"])
 
-        deps_graph = self.build_consumer(consumer, install=False)
+        deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
