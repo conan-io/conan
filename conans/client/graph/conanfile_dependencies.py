@@ -57,8 +57,9 @@ class ConanFileDependencies:
         requires = [ConanFileInterface(edge.dst.conanfile) for edge in self._node.dependencies
                     if not edge.build_require and not edge.private]
         requires.extend([ConanFileInterface(edge.dst.conanfile)
-                         for edge in self._node.dependencies if edge.build_require])
-        return DependencyOrderedSet([r for r in requires if r.context == CONTEXT_HOST])
+                         for edge in self._node.dependencies
+                         if edge.build_require and edge.dst.context == CONTEXT_HOST])
+        return DependencyOrderedSet(requires)
 
     @property
     def transitive_host_requires(self):
