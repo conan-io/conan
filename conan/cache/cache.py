@@ -11,6 +11,7 @@ from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
+from conans.util.files import rmdir
 from .db.folders import ConanFolders
 
 
@@ -49,9 +50,13 @@ class DataCache:
 
     @staticmethod
     def get_default_path(item: Union[ConanFileReference, PackageReference]) -> str:
-        """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
+        """ If revision is known returns the recipe revision as folder. This means that if
+            two references mypkg/1.0 and mypkg/2.0 share the same revision they will share
+            this folder two. This will save space because exports will not be copied in several
+            places but TODO: check if this is the desired behaviour and implications with locks
+        """
         if item.revision:
-            return item.revision#item.full_str().replace('@', '/').replace('#', '/').replace(':', '/')  # TODO: TBD
+            return item.revision
         else:
             return str(uuid.uuid4())
 
@@ -171,6 +176,13 @@ class DataCache:
         if move_reference_contents:
             old_path = self.db.try_get_reference_directory(new_ref)
             new_path = self.get_default_path(new_ref)
+            # TODO: Here we are always overwriting the contents of the rrev folder where
+            #  we are putting the exported files for the reference, but maybe we could
+            #  just check the the files in the destination folder are the same so we don't
+            #  have to do write operations (maybe other process is reading these files, this could
+            #  also be managed by locks anyway)
+            if os.path.exists(self._full_path(new_path)):
+                rmdir(self._full_path(new_path))
             shutil.move(self._full_path(old_path), self._full_path(new_path))
             self.db.update_reference_directory(new_ref, new_path)
             return new_path
