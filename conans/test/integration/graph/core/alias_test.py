@@ -3,7 +3,25 @@ from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 
 
-class AliasTest(GraphManagerTest):
+class TestAlias(GraphManagerTest):
+
+    def test_basic(self):
+        # app -> liba/latest -(alias)-> liba/0.1
+        self.recipe_cache("liba/0.1")
+        self.alias_cache("liba/latest", "liba/0.1")
+
+        consumer = self.recipe_consumer("app/0.1", ["liba/latest"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.1#123", dependents=[app])
+        self._check_node(app, "app/0.1", deps=[liba])
+
+
+class AliasBuildRequiresTest(GraphManagerTest):
 
     def test_non_conflicting_alias(self):
         # https://github.com/conan-io/conan/issues/5468

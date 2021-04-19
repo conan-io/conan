@@ -41,6 +41,8 @@ class TransitiveGraphTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
+        assert deps_graph.error is True
+
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
         self.assertEqual(app.conanfile.name, "app")

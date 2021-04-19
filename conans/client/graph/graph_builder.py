@@ -1,16 +1,11 @@
-import fnmatch
-import time
 from collections import OrderedDict
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
     RECIPE_MISSING
-from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter)
-from conans.model.conan_file import get_env_context_manager
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
-from conans.model.requires import Requirements, Requirement
-from conans.util.log import logger
+from conans.model.requires import Requirements
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -91,16 +86,10 @@ class DepsGraphBuilder(object):
 
     def _expand_node(self, node, graph, down_reqs, down_ref, down_options, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
-        """ expands the dependencies of the node, recursively
 
-        param node: Node object to be expanded in this step
-        down_reqs: the Requirements as coming from downstream, which can overwrite current
-                    values
-        param down_ref: ConanFileReference of who is depending on current node for this expansion
-        """
-        # basic node configuration: calling configure() and requirements()
         if graph_lock:
             graph_lock.pre_lock_node(node)
+        # basic node configuration: calling configure() and requirements()
         new_options = self._config_node(node, down_ref, down_options)
 
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
@@ -118,7 +107,6 @@ class DepsGraphBuilder(object):
         # RangeResolver are also done in new_reqs, and then propagated!
         conanfile = node.conanfile
         scope = conanfile.display_name
-        #self._resolve_ranges(graph, conanfile.requires.values(), scope, update, remotes)
         # Expand each one of the current requirements
         for require in node.conanfile.requires:
             # TODO: if require.override:
@@ -153,7 +141,7 @@ class DepsGraphBuilder(object):
 
         # If the required is found in the node ancestors a loop is being closed
         context = CONTEXT_BUILD if context_switch else node.context
-        name = require.ref.name  # TODO: allow bootstrapping, use references instead of names
+        # TODO: allow bootstrapping, use references instead of names
 
         # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.check_downstream_exists(require)
@@ -300,7 +288,7 @@ class DepsGraphBuilder(object):
             dep_graph.aliased[new_ref_norev] = pointed_ref  # Caching the alias
             if original_ref:  # So transitive alias resolve to the latest in the chain
                 dep_graph.aliased[original_ref] = pointed_ref
-            return self._resolve_recipe(current_node, dep_graph, ref, check_updates,
+            return self._resolve_recipe(current_node, dep_graph, pointed_ref, check_updates,
                                         update, remotes, profile, graph_lock, original_ref)
 
         return new_ref, dep_conanfile, recipe_status, remote, locked_id
