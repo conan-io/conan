@@ -1,4 +1,5 @@
 import mock
+import pytest
 from mock import Mock
 
 from conan.tools.cmake import CMakeDeps
@@ -9,7 +10,8 @@ from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference
 
 
-def test_cpp_info_name_cmakedeps():
+@pytest.mark.parametrize("using_properties", [True, False])
+def test_cpp_info_name_cmakedeps(using_properties):
     conanfile = ConanFile(Mock(), None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
@@ -20,8 +22,12 @@ def test_cpp_info_name_cmakedeps():
     conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    cpp_info.set_property("cmake_target_name", "MySuperPkg1")
-    cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    if using_properties:
+        cpp_info.set_property("cmake_target_name", "MySuperPkg1")
+        cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    else:
+        cpp_info.names["CMakeDeps"] = "MySuperPkg1"
+        cpp_info.filenames["CMakeDeps"] = "ComplexFileName1"
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
@@ -42,7 +48,8 @@ def test_cpp_info_name_cmakedeps():
                    in files["ComplexFileName1-release-x86-data.cmake"]
 
 
-def test_cpp_info_name_cmakedeps_components():
+@pytest.mark.parametrize("using_properties", [True, False])
+def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile = ConanFile(Mock(), None)
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
@@ -53,9 +60,14 @@ def test_cpp_info_name_cmakedeps_components():
     conanfile.settings.arch = "x64"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
-    cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
-    cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    if using_properties:
+        cpp_info.set_property("cmake_target_name", "GlobakPkgName1")
+        cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
+        cpp_info.set_property("cmake_file_name", "ComplexFileName1")
+    else:
+        cpp_info.names["CMakeDeps"] = "GlobakPkgName1"
+        cpp_info.components["mycomp"].names["CMakeDeps"] = "MySuperPkg1"
+        cpp_info.filenames["CMakeDeps"] = "ComplexFileName1"
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info

@@ -556,18 +556,28 @@ endforeach()
         return data_fname
 
     def get_name(self, req):
-        return req.cpp_info.get_property("cmake_target_name", self.name) or req.ref.name
+        ret = req.cpp_info.get_property("cmake_target_name", self.name)
+        if not ret:
+            ret = req.old_cpp_info.get_name(self.name)
+        return ret or req.ref.name
 
     def get_filename(self, req):
-        return req.cpp_info.get_property("cmake_file_name", self.name) or req.ref.name
+        ret = req.cpp_info.get_property("cmake_file_name", self.name)
+        if not ret:
+            ret = req.old_cpp_info.get_filename(self.name)
+        return ret or req.ref.name
 
     def get_component_name(self, req, comp_name):
         if comp_name not in req.cpp_info.components:
             if req.ref.name == comp_name:  # foo::foo might be referencing the root cppinfo
                 return self.get_name(req)
             raise KeyError(comp_name)
-        return req.cpp_info.components[comp_name].get_property("cmake_target_name",
-                                                               self.name) or comp_name
+        ret = req.cpp_info.components[comp_name].get_property("cmake_target_name",
+                                                              self.name)
+        if not ret:
+            ret = req.old_cpp_info.components[comp_name].get_name(self.name)
+
+        return ret or comp_name
 
     @property
     def content(self):
