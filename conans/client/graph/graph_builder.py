@@ -1,35 +1,9 @@
-from collections import OrderedDict
-
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
     RECIPE_MISSING
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-
-
-class _RecipeBuildRequires(OrderedDict):
-    def __init__(self, conanfile, default_context):
-        super(_RecipeBuildRequires, self).__init__()
-        build_requires = getattr(conanfile, "build_requires", [])
-        if not isinstance(build_requires, (list, tuple)):
-            build_requires = [build_requires]
-        self._default_context = default_context
-        for build_require in build_requires:
-            self.add(build_require, context=self._default_context)
-
-    def add(self, build_require, context):
-        if not isinstance(build_require, ConanFileReference):
-            build_require = ConanFileReference.loads(build_require)
-        self[(build_require.name, context)] = build_require
-
-    def __call__(self, build_require, force_host_context=False):
-        context = CONTEXT_HOST if force_host_context else self._default_context
-        self.add(build_require, context)
-
-    def __str__(self):
-        items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
-        return ", ".join(items)
 
 
 class DepsGraphBuilder(object):
@@ -62,7 +36,7 @@ class DepsGraphBuilder(object):
                             expand_node(previous_node)                # recursion
     """
 
-    class ConanGraphStopRecursion(Exception):
+    class StopRecursion(Exception):
         pass
 
     def __init__(self, proxy, output, loader, resolver):
@@ -85,7 +59,7 @@ class DepsGraphBuilder(object):
         try:
             self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
                               update, remotes, profile_host, profile_build, graph_lock)
-        except DepsGraphBuilder.ConanGraphStopRecursion:
+        except DepsGraphBuilder.StopRecursion:
             dep_graph.error = True
 
         return dep_graph
@@ -175,7 +149,7 @@ class DepsGraphBuilder(object):
                 error_node.recipe = RECIPE_MISSING
                 graph.add_node(error_node)
                 graph.add_edge(node, error_node, require)
-                raise DepsGraphBuilder.ConanGraphStopRecursion("Unresolved reference")
+                raise DepsGraphBuilder.StopRecursion("Unresolved reference")
 
             new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
@@ -195,16 +169,23 @@ class DepsGraphBuilder(object):
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
             previous, base_previous = previous
-            loop = previous == base_previous
+
+            if previous == base_previous:  # Loop
+                loop_node = Node(require.ref, None, context=context)
+                loop_node.conflict = previous
+                graph.add_node(loop_node)
+                graph.add_edge(node, loop_node, require)
+                raise DepsGraphBuilder.StopRecursion("Loop found")
+
             # self._resolve_cached_alias([require], graph)
             # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            conflict = loop or self._conflicting_references(previous, require.ref, node.ref)
+            conflict = self._conflicting_references(previous, require.ref, node.ref)
             if conflict:  # It is possible to get conflict from alias, try to resolve it
                 result = self._resolve_recipe(node, graph, require.ref, check_updates,
                                               update, remotes, profile_host, graph_lock)
                 _, dep_conanfile, recipe_status, _, _ = result
                 # Maybe it was an ALIAS, so we can check conflict again
-                conflict = loop or self._conflicting_references(previous, require.ref, node.ref)
+                conflict = self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
                     conflict_node = Node(require.ref, dep_conanfile, context=context)
                     conflict_node.recipe = recipe_status
@@ -212,7 +193,7 @@ class DepsGraphBuilder(object):
                     previous.conflict = conflict_node
                     graph.add_node(conflict_node)
                     graph.add_edge(node, conflict_node, require)
-                    raise DepsGraphBuilder.ConanGraphStopRecursion("Unresolved reference")
+                    raise DepsGraphBuilder.StopRecursion("Unresolved reference")
 
             graph.add_edge(node, previous, require)
 

@@ -8,8 +8,10 @@ from conans.util.env_reader import get_env
 class Requirement:
     """ A user definition of a requires in a conanfile
     """
-    def __init__(self, ref):
+    def __init__(self, ref, build_require=False):
+        # TODO: Decompose build_require in its traits
         self.ref = ref
+        self.build_require = build_require
 
     def __repr__(self):
         return repr(self.ref)
@@ -40,7 +42,7 @@ class Requirement:
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
-    def __init__(self, declared=None):
+    def __init__(self, declared=None, declared_build=None):
         self._requires = OrderedDict()
         # Construct from the class definitions
         if declared is not None:
@@ -49,14 +51,20 @@ class Requirements:
             for item in declared:
                 # Todo: Deprecate Conan 1.X definition of tuples, force to use method
                 self.__call__(item)
+        if declared_build is not None:
+            if isinstance(declared_build, str):
+                declared_build = [declared_build, ]
+            for item in declared_build:
+                # Todo: Deprecate Conan 1.X definition of tuples, force to use method
+                self.__call__(item, build_require=True)
 
     def values(self):
         return self._requires.values()
 
-    def __call__(self, str_ref):
+    def __call__(self, str_ref, build_require=False):
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
-        req = Requirement(ref)
+        req = Requirement(ref, build_require)
         self._requires[req] = req
 
     def __repr__(self):

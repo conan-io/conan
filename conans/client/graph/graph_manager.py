@@ -62,6 +62,7 @@ class GraphManager(object):
         # TODO: Move binary_analyzer elsewhere
         if not deps_graph.error:
             self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
+
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,

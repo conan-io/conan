@@ -262,7 +262,6 @@ class TransitiveGraphTest(GraphManagerTest):
         # TODO: Conflicted without revision
         self._check_node(libc2, "libc/0.1", dependents=[liba])
 
-        assert libc.conflict == libc2
         assert libc2.conflict == libc
 
     '''

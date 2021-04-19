@@ -139,7 +139,8 @@ class GraphManagerTest(unittest.TestCase):
         conanfile = node.conanfile
         ref = ConanFileReference.loads(str(ref))
         self.assertEqual(repr(node.ref), repr(ref))
-        self.assertEqual(conanfile.name, ref.name)
+        if conanfile:
+            self.assertEqual(conanfile.name, ref.name)
         self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
 
         dependants = node.inverse_neighbors()

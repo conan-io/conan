@@ -46,6 +46,19 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
                                           graph_lock, root_ref, build_modes, False, update, remotes,
                                           recorder, lockfile_node_id=lockfile_node_id)
 
+    if deps_graph.error:
+        conflicts = [n for n in deps_graph.nodes if n.conflict]
+        if len(conflicts) == 2:
+            raise ConanException("There was a conflict building the dependency graph")
+        elif len(conflicts) == 1:  # reporting a loop
+            loop_node = conflicts[0]
+            loop_ref = loop_node.ref
+            parent = loop_node.dependants[0]
+            parent_ref = parent.src.ref
+            msg = "Loop detected in context host: '{}' requires '{}' which is an ancestor too"
+            msg = msg.format(parent_ref, loop_ref)
+            raise ConanException(msg)
+
     graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
     root_node = deps_graph.root
     conanfile = root_node.conanfile
