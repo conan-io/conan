@@ -6,6 +6,7 @@ from collections import defaultdict, namedtuple
 import requests
 from six.moves.urllib.parse import urlparse, urljoin
 
+from conans import __version__
 from conans.client.cache.cache import ClientCache
 from conans.client.rest import response_to_str
 from conans.errors import AuthenticationException, RequestErrorException, ConanException
@@ -14,7 +15,6 @@ from conans.model.ref import ConanFileReference
 from conans.paths import ARTIFACTS_PROPERTIES_PUT_PREFIX
 from conans.paths import get_conan_user_home
 from conans.util.files import save
-from conans import __version__
 
 
 class Artifact(namedtuple('Artifact', ["sha1", "md5", "name", "id", "path"])):
@@ -94,8 +94,9 @@ class BuildInfoCreator(object):
             remotes = self._conan_cache.registry.load_remotes()
             remote_url = remotes[remote_name].url
             parsed_uri = urlparse(remote_url)
-            base_url = "{uri.scheme}://{uri.netloc}/artifactory/api/storage/conan/".format(
-                uri=parsed_uri)
+            service_context = "/artifactory" if "artifactory" in parsed_uri else ""
+            base_url = "{uri.scheme}://{uri.netloc}{service_context}/api/storage/conan/".format(
+                uri=parsed_uri, service_context=service_context)
             request_url = urljoin(base_url, "{}/conan_sources.tgz".format(ref_path))
             if self._user and self._password:
                 response = requests.get(request_url, auth=(self._user, self._password))
@@ -281,7 +282,9 @@ def stop_build_info(output):
 def publish_build_info(build_info_file, url, user, password, apikey):
     with open(build_info_file) as json_data:
         parsed_uri = urlparse(url)
-        request_url = "{uri.scheme}://{uri.netloc}/artifactory/api/build".format(uri=parsed_uri)
+        service_context = "/artifactory" if "artifactory" in url else ""
+        request_url = "{uri.scheme}://{uri.netloc}{service_context}/api/build".format(
+            uri=parsed_uri, service_context=service_context)
         if user and password:
             response = requests.put(request_url, headers={"Content-Type": "application/json"},
                                     data=json_data, auth=(user, password))
