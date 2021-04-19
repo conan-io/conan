@@ -12,6 +12,15 @@ class Requirement:
     def __repr__(self):
         return repr(self.ref)
 
+    @property
+    def version_range(self):
+        """ returns the version range expression, without brackets []
+        or None if it is not an expression
+        """
+        version = self.ref.version
+        if version.startswith("[") and version.endswith("]"):
+            return version[1:-1]
+
 
 class Requirements:
     """ User definitions of all requires in a conanfile

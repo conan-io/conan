@@ -99,26 +99,14 @@ class RangeResolver(object):
     def resolve(self, require, base_conanref, update, remotes):
         version_range = require.version_range
         if version_range is None:
-            return
-
-        if require.is_resolved:
-            ref = require.ref
-            resolved_ref = self._resolve_version(version_range, [ref])
-            if not resolved_ref:
-                raise ConanException("Version range '%s' required by '%s' not valid for "
-                                     "downstream requirement '%s'"
-                                     % (version_range, base_conanref, str(ref)))
-            else:
-                self._result.append("Version range '%s' required by '%s' valid for "
-                                    "downstream requirement '%s'"
-                                    % (version_range, base_conanref, str(ref)))
-            return
+            return require.ref
 
         ref = require.ref
         # The search pattern must be a string
         search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
 
         if update:
+            # FIXME: It will downgrade from remote even if older than cache
             resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
             if not resolved_ref:
                 remote_name = None
@@ -129,15 +117,9 @@ class RangeResolver(object):
             if not resolved_ref:
                 resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
 
-        origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
-        if resolved_ref:
-            self._result.append("Version range '%s' required by '%s' resolved to '%s' in %s"
-                                % (version_range, base_conanref, str(resolved_ref), origin))
-            require.ref = resolved_ref
-        else:
-            raise ConanException("Version range '%s' from requirement '%s' required by '%s' "
-                                 "could not be resolved in %s"
-                                 % (version_range, require, base_conanref, origin))
+        if resolved_ref is None:
+            raise ConanException("Cannot resolve version range {}".format(require.ref))
+        return resolved_ref
 
     def _resolve_local(self, search_ref, version_range):
         local_found = search_recipes(self._cache, search_ref)

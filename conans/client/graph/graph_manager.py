@@ -60,7 +60,8 @@ class GraphManager(object):
         # Run some validations once the graph is built
         #TODO: self._validate_graph_provides(deps_graph)
         # TODO: Move binary_analyzer elsewhere
-        self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
+        if not deps_graph.error:
+            self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
@@ -187,8 +188,10 @@ class GraphManager(object):
             self._output.writeln("")
             self._resolver.clear_output()
 
-        for node in deps_graph.ordered_iterate():
-            compute_package_id(node)
+        if not deps_graph.error:
+            # TODO: Maybe move this to elsewhere
+            for node in deps_graph.ordered_iterate():
+                compute_package_id(node)
 
         return deps_graph
 

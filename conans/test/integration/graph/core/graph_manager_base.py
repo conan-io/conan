@@ -57,9 +57,6 @@ class GraphManagerTest(unittest.TestCase):
         if requires:
             for r in requires:
                 conanfile.with_require(r)
-        conanfile.with_package_info(
-            cpp_info={"libs": ["mylib{}{}lib".format(ref.name, ref.version)]},
-            env_info={"MYENV": ["myenv{}{}env".format(ref.name, ref.version)]})
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
@@ -98,11 +95,6 @@ class GraphManagerTest(unittest.TestCase):
         return path
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
-        if isinstance(test_conanfile, GenConanfile):
-            name, version = test_conanfile._name, test_conanfile._version
-            test_conanfile = test_conanfile.with_package_info(
-                cpp_info={"libs": ["mylib{}{}lib".format(name, version)]},
-                env_info={"MYENV": ["myenv{}{}env".format(name, version)]})
         save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"

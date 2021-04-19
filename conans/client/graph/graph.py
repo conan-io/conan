@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement
+from conans.model.requires import Requirement, Requirements
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -13,6 +13,7 @@ RECIPE_NO_REMOTE = "No remote"
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Virtual"  # A virtual conanfile (dynamic in memory conanfile)
+RECIPE_MISSING = "Missing recipe"  # Impossible to find a recipe for this reference
 
 BINARY_CACHE = "Cache"
 BINARY_DOWNLOAD = "Download"
@@ -67,7 +68,8 @@ class Node(object):
         self.path = path  # path to the consumer conanfile.xx for consumer, None otherwise
         self._package_id = None
         self.prev = None
-        conanfile._conan_node = self  # Reference to self, to access data
+        if conanfile is not None:
+            conanfile._conan_node = self  # Reference to self, to access data
         self.conanfile = conanfile
 
         self.binary = None
@@ -142,6 +144,9 @@ class Node(object):
         source_node = d.src
         return source_node.check_downstream_exists(downstream_relation)
 
+    def get_override_reqs(self, new_node, require):
+        return Requirements()
+
     @property
     def package_id(self):
         return self._package_id
@@ -193,7 +198,7 @@ class DepsGraph(object):
     def __init__(self, initial_node_id=None):
         self.nodes = []
         self.aliased = {}
-        self.conflict = False
+        self.error = False
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     @property
