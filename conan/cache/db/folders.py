@@ -21,13 +21,10 @@ class FoldersDbTable(BaseDbTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
-                           ('path', str, False, None, True),  # TODO: Add unittest
+                           ('path', str, False, None),  # TODO: Add unittest
                            ('folder', int, False, [it.value for it in ConanFolders]),
                            ('last_modified', int)]
-    # TODO: Add unittest
-    # TODO: Check if the fact that path is not unique (several references that share the
-    #  same rrev will share the same folder in the cache is the desired behaviour)
-    unique_together = ('reference_pk', 'package_pk', 'folder')
+    unique_together = ('reference_pk', 'package_pk', 'path', 'folder')  # TODO: Add unittest
     references: ReferencesDbTable = None
     packages: PackagesDbTable = None
 
