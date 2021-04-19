@@ -188,15 +188,8 @@ class DepsCppCmake(object):
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
         def format_link_flags(link_flags):
-            result = []
-            for f in link_flags:
-                if f.startswith("-"):
-                    result.append(f)
-                else:
-                    if f.startswith("/"):  # msvc link flag
-                        f = f[1:]  # Remove the initial / and use only "-"
-                    result.append("-{}".format(f))
-            return result
+            # Trying to mess with - and / => https://github.com/conan-io/conan/issues/8811
+            return link_flags
 
         self.include_paths = join_paths(cpp_info.include_paths)
         self.include_path = join_paths_single_var(cpp_info.include_paths)
