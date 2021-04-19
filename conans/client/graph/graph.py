@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement, Requirements
+from conans.model.requires import Requirement
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -29,37 +29,19 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
-class _PackageRelation:
-    def __init__(self, ref):
-        self.ref = ref
-
-    def transform_downstream(self, node):
-        assert node
-        return _PackageRelation(self.ref)
-
-    def __hash__(self):
-        return hash(self.ref.name)
-
-    def __eq__(self, other):
-        return self.ref.name == other.ref.name
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class _TransitivePackages:
+class _TransitiveRequirements:
     def __init__(self):
         # The PackageRelation hash function is the key here
-        self._relations = OrderedDict()  # {require: Node}
+        self._requires = OrderedDict()  # {require: Node}
 
     def get(self, relation):
-        return self._relations.get(relation)
+        return self._requires.get(relation)
 
     def set(self, relation, node):
-        self._relations[relation] = node
+        self._requires[relation] = node
 
     def items(self):
-        return self._relations.items()
+        return self._requires.items()
 
 
 class Node(object):
@@ -83,7 +65,7 @@ class Node(object):
         self.graph_lock_node = None  # the locking information can be None
 
         # real graph model
-        self.transitive_deps = _TransitivePackages()
+        self.transitive_deps = _TransitiveRequirements()
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.conflict = None
@@ -93,9 +75,9 @@ class Node(object):
         return id(self) < id(other)
 
     def propagate_downstream(self, relation, node):
-        if not isinstance(relation, _PackageRelation):
+        if not isinstance(relation, Requirement):
             assert isinstance(relation, Requirement)
-            relation = _PackageRelation(relation.ref)
+            relation = Requirement(relation.ref)
 
         self.transitive_deps.set(relation, node)
         return self.propagate_downstream_existing(relation, node)
@@ -114,11 +96,11 @@ class Node(object):
         return source_node.propagate_downstream(downstream_relation, node)
 
     def check_downstream_exists(self, relation):
-        if not isinstance(relation, _PackageRelation):
+        if not isinstance(relation, Requirement):
             assert isinstance(relation, Requirement)
-            relation = _PackageRelation(relation.ref)
+            relation = Requirement(relation.ref)
         # First, a check against self, could be a loop-conflict
-        # This is equivalent as the _PackageRelation hash and eq methods
+        # This is equivalent as the Requirement hash and eq methods
         # TODO: Make self.ref always exist, but with name=None if name not defined
         if self.ref is not None and relation.ref.name == self.ref.name:
             return self, self
@@ -145,7 +127,10 @@ class Node(object):
         return source_node.check_downstream_exists(downstream_relation)
 
     def get_override_reqs(self, new_node, require):
-        return Requirements()
+        return self.conanfile.requires
+
+    def override_reqs(self, downstream_reqs, output, ref, down_ref):
+        self.conanfile.requires.override(downstream_reqs, output, ref, down_ref)
 
     @property
     def package_id(self):

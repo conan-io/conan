@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.util.env_reader import get_env
@@ -21,12 +23,25 @@ class Requirement:
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
+    def transform_downstream(self, node):
+        assert node
+        return Requirement(self.ref)
+
+    def __hash__(self):
+        return hash(self.ref.name)
+
+    def __eq__(self, other):
+        return self.ref.name == other.ref.name
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
     def __init__(self, declared=None):
-        self._requires = []
+        self._requires = OrderedDict()
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
@@ -35,19 +50,17 @@ class Requirements:
                 # Todo: Deprecate Conan 1.X definition of tuples, force to use method
                 self.__call__(item)
 
-    def __iter__(self):
-        return iter(self._requires)
-
-    def __next__(self):
-        return next(self._requires)
+    def values(self):
+        return self._requires.values()
 
     def __call__(self, str_ref):
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
-        self._requires.append(Requirement(ref))
+        req = Requirement(ref)
+        self._requires[req] = req
 
     def __repr__(self):
-        return repr(self._requires)
+        return repr(self._requires.values())
 
     def override(self, down_reqs, output, own_ref, down_ref):
         """ Compute actual requirement values when downstream values are defined
@@ -64,30 +77,20 @@ class Requirements:
 
         error_on_override = get_env("CONAN_ERROR_ON_OVERRIDE", False)
 
-        new_reqs = Requirements()
-        # FIXME: IMplement this
-        return new_reqs
+        overrides = []
         for req in self._requires:
-            if name in down_reqs and not req.locked_id:
-                other_req = down_reqs[name]
-                # update dependency
-                other_ref = other_req.ref
-                if other_ref and other_ref != req.ref:
-                    down_reference_str = str(down_ref) if down_ref else ""
-                    msg = "%s: requirement %s overridden by %s to %s " \
-                          % (own_ref, req.ref, down_reference_str or "your conanfile", other_ref)
+            down = down_reqs._requires.get(req)
+            if down is not None:
+                version_range = down.version_range
+                current_range = req.version_range
+                if version_range is not None:
+                    pass
+                overrides = [down]
 
-                    if error_on_override and not other_req.override:
-                        raise ConanException(msg)
+        for override in overrides:
+            # Effective override
+            self._requires[override] = override
 
-                    output.warn(msg)
-                    req.ref = other_ref
-                    # FIXME: We should compute the intersection of version_ranges
-                    if req.version_range and not other_req.version_range:
-                        req.range_ref = other_req.range_ref  # Override
-
-            new_reqs[name] = req
-        return new_reqs
 
 
 

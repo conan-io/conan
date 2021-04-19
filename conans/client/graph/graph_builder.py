@@ -62,6 +62,9 @@ class DepsGraphBuilder(object):
                             expand_node(previous_node)                # recursion
     """
 
+    class ConanGraphStopRecursion(Exception):
+        pass
+
     def __init__(self, proxy, output, loader, resolver):
         self._proxy = proxy
         self._output = output
@@ -79,12 +82,15 @@ class DepsGraphBuilder(object):
         dep_graph.add_node(root_node)
 
         # enter recursive computation
-        self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
-                          update, remotes, profile_host, profile_build, graph_lock)
+        try:
+            self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
+                              update, remotes, profile_host, profile_build, graph_lock)
+        except DepsGraphBuilder.ConanGraphStopRecursion:
+            dep_graph.error = True
 
         return dep_graph
 
-    def _expand_node(self, node, graph, down_reqs, down_ref, down_options, check_updates, update,
+    def _expand_node(self, node, graph, override_reqs, down_ref, down_options, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
 
         if graph_lock:
@@ -100,7 +106,8 @@ class DepsGraphBuilder(object):
 
         # propagation of requirements can be necessary if some nodes are not locked
         # OVERRIDES!!!
-        node.conanfile.requires.override(down_reqs, self._output, node.ref, down_ref)
+        node.override_reqs(override_reqs, self._output, node.ref, down_ref)
+
         # if there are version-ranges, resolve them before expanding each of the requirements
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
@@ -108,14 +115,12 @@ class DepsGraphBuilder(object):
         conanfile = node.conanfile
         scope = conanfile.display_name
         # Expand each one of the current requirements
-        for require in node.conanfile.requires:
+        for require in node.conanfile.requires.values():
             # TODO: if require.override:
             #     continue
-            error = self._expand_require(require, node, graph, check_updates, update, remotes,
-                                         profile_host, profile_build, new_options,
-                                         graph_lock, context_switch=False)
-            if error:
-                return True
+            self._expand_require(require, node, graph, check_updates, update, remotes,
+                                 profile_host, profile_build, new_options,
+                                 graph_lock, context_switch=False)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -170,8 +175,7 @@ class DepsGraphBuilder(object):
                 error_node.recipe = RECIPE_MISSING
                 graph.add_node(error_node)
                 graph.add_edge(node, error_node, require)
-                graph.error = True
-                return False
+                raise DepsGraphBuilder.ConanGraphStopRecursion("Unresolved reference")
 
             new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
@@ -208,8 +212,7 @@ class DepsGraphBuilder(object):
                     previous.conflict = conflict_node
                     graph.add_node(conflict_node)
                     graph.add_edge(node, conflict_node, require)
-                    graph.error = True
-                    return True
+                    raise DepsGraphBuilder.ConanGraphStopRecursion("Unresolved reference")
 
             graph.add_edge(node, previous, require)
 

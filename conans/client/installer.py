@@ -295,6 +295,8 @@ class BinaryInstaller(object):
 
     def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
                 graph_lock, keep_build=False):
+
+        assert not deps_graph.error, "This graph cannot be installed"
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
@@ -599,7 +601,7 @@ class BinaryInstaller(object):
 
         # Get deps_cpp_info from upstream nodes
         # TODO public_deps = [req.ref.name for req in conanfile.requires if not req.private and not req.override]
-        public_deps = [req.ref.name for req in conanfile.requires]
+        public_deps = [req.ref.name for req in conanfile.requires.values()]
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts

@@ -273,3 +273,28 @@ class TransitiveGraphTest(GraphManagerTest):
                                     "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
             self.build_consumer(consumer)
 '''
+
+
+class TransitiveOverridesGraphTest(GraphManagerTest):
+
+    def test_diamond(self):
+        # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
+        #    \-> --------- ->/
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = app.dependencies[1].dst
+        liba2 = libb.dependencies[0].dst
+
+        assert liba is liba2
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
