@@ -2,9 +2,11 @@ import json
 import os
 import textwrap
 import unittest
+from unittest.mock import Mock, patch
 
-from conans.build_info.build_info import update_build_info
+from conans.build_info.build_info import update_build_info, publish_build_info
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient
 from conans.tools import save
 from conans import __version__
 
@@ -572,3 +574,33 @@ class BuildInfoTest(unittest.TestCase):
                              res_json["modules"][index]["type"])
             self.assertEqual(mergedinfo["modules"][index]["repository"],
                              res_json["modules"][index]["repository"])
+
+
+# https://github.com/conan-io/conan/issues/8802
+def test_publish_artifactory_context():
+    client = TestClient()
+    client.save({"build_info.json": ""})
+
+    def mock_put_no_artifactory(url, data=None, **kwargs):
+        mock_put = Mock()
+        if "artifactory" not in url:
+            mock_put.status_code = 204
+        else:
+            mock_put.status_code = 501
+        return mock_put
+
+    def mock_put_artifactory(url, data=None, **kwargs):
+        mock_put = Mock()
+        if "artifactory" in url:
+            mock_put.status_code = 204
+        else:
+            mock_put.status_code = 501
+        return mock_put
+
+    with patch("conans.build_info.build_info.requests.put", side_effect=mock_put_no_artifactory):
+        publish_build_info(os.path.join(client.current_folder, "build_info.json"),
+                           "http://fakeurl:8081", "user", "password", "")
+
+    with patch("conans.build_info.build_info.requests.put", side_effect=mock_put_artifactory):
+        publish_build_info(os.path.join(client.current_folder, "build_info.json"),
+                           "http://fakeurl:8081/artifactory", "user", "password", "")
