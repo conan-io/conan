@@ -103,8 +103,9 @@ def test_cmake_deps_links_flags():
     conanfile.settings.arch = "x86"
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
-    cpp_info.sharedlinkflags = ["/NODEFAULTLIB", "/OTHERFLAG"]
-    cpp_info.exelinkflags = ["/OPT:NOICF"]
+    # https://github.com/conan-io/conan/issues/8811 regression, fix with explicit - instead of /
+    cpp_info.sharedlinkflags = ["-NODEFAULTLIB", "-OTHERFLAG"]
+    cpp_info.exelinkflags = ["-OPT:NOICF"]
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
 
