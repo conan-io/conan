@@ -16,24 +16,6 @@ from conans.util.files import load, save
 CONAN_CMAKE_GENERATOR_FILE = "conan_cmake_generator.txt"
 
 
-def get_generator_platform(settings, generator):
-    # Returns the generator platform to be used by CMake
-    compiler = settings.get_safe("compiler")
-    compiler_base = settings.get_safe("compiler.base")
-    arch = settings.get_safe("arch")
-
-    if settings.get_safe("os") == "WindowsCE":
-        return settings.get_safe("os.platform")
-
-    if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
-            generator and "Visual" in generator:
-        return {"x86": "Win32",
-                "x86_64": "x64",
-                "armv7": "ARM",
-                "armv8": "ARM64"}.get(arch)
-    return None
-
-
 class Variables(OrderedDict):
     _configuration_types = None  # Needed for py27 to avoid infinite recursion
 
@@ -451,10 +433,28 @@ class GenericSystemBlock(Block):
                     return "v14{}".format(minor)
         return None
 
+    def _get_generator_platform(self, generator):
+        settings = self._conanfile.settings
+        # Returns the generator platform to be used by CMake
+        compiler = settings.get_safe("compiler")
+        compiler_base = settings.get_safe("compiler.base")
+        arch = settings.get_safe("arch")
+
+        if settings.get_safe("os") == "WindowsCE":
+            return settings.get_safe("os.platform")
+
+        if (compiler in ("Visual Studio", "msvc") or compiler_base == "Visual Studio") and \
+                generator and "Visual" in generator:
+            return {"x86": "Win32",
+                    "x86_64": "x64",
+                    "armv7": "ARM",
+                    "armv8": "ARM64"}.get(arch)
+        return None
+
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
-        generator_platform = get_generator_platform(self._conanfile.settings, generator)
+        generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
