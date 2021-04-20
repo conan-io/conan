@@ -157,7 +157,7 @@ class ConanFile(object):
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
-        self._new_cpp_info = None  # Will be calculated lazy in the getter
+        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
 
     @property
     def context(self):
@@ -218,9 +218,9 @@ class ConanFile(object):
 
     @property
     def new_cpp_info(self):
-        if not self._new_cpp_info:
-            self._new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
-        return self._new_cpp_info
+        if not self._conan_new_cpp_info:
+            self._conan_new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
+        return self._conan_new_cpp_info
 
     @property
     def source_folder(self):
