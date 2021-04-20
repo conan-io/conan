@@ -106,7 +106,7 @@ def test_install_build_all_with_single(build_arg, bar, foo, foobar, build_all):
     check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Build", "Cache", "Build"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Cache"),
                                                       ("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Build", "Cache", "Build")])
 def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_all):
@@ -116,17 +116,16 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
 
         The arguments order matter, that's why we need to run twice.
     """
-    for argument in ["--build-exclude=foo {}".format(build_arg),
-                     "{} --build-exclude=foo".format(build_arg)]:
+    for argument in ["--build=!foo {}".format(build_arg),
+                     "{} --build=!foo".format(build_arg)]:
         build_all.run("install foobar/1.0@user/testing {}".format(argument))
-
         assert "bar/1.0@user/testing:7839863d5a059fc6579f28026763e1021268c55e - {}".format(bar) in build_all.out
         assert "foo/1.0@user/testing:4024617540c4f240a6a5e8911b0de9ef38a11a72 - {}".format(foo) in build_all.out
         assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - {}".format(foobar) in build_all.out
         check_if_build_from_sources({"foo": foo, "bar": bar, "foobar": foobar}, build_all.out)
 
 
-@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Build"),
+@pytest.mark.parametrize("build_arg,bar,foo,foobar", [("--build", "Cache", "Cache", "Cache"),
                                                       ("--build=", "Cache", "Cache", "Cache"),
                                                       ("--build=*", "Cache", "Cache", "Build")])
 def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_all):
@@ -136,8 +135,8 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
 
         The arguments order matter, that's why we need to run twice.
     """
-    for argument in ["--build-exclude=foo --build-exclude=bar {}".format(build_arg),
-                     "{} --build-exclude=foo --build-exclude=bar".format(build_arg)]:
+    for argument in ["--build=!foo --build=!bar {}".format(build_arg),
+                     "{} --build=!foo --build=!bar".format(build_arg)]:
         build_all.run("install foobar/1.0@user/testing {}".format(argument))
 
         assert "bar/1.0@user/testing:7839863d5a059fc6579f28026763e1021268c55e - {}".format(bar) in build_all.out
@@ -148,15 +147,15 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
 def test_report_matches(build_all):
     """ When a wrong reference is passed to be build, an error message should be shown
     """
-    build_all.run("install foobar/1.0@user/testing --build --build=baz")
-    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Cache" in build_all.out
-    assert "No package matching 'baz' pattern found to be built." in build_all.out
+    build_all.run("install foobar/1.0@user/testing --build=* --build=baz")
+    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Build" in build_all.out
+    assert "No package matching 'baz' pattern found." in build_all.out
 
-    build_all.run("install foobar/1.0@user/testing --build --build-exclude=baz")
-    assert "No package matching 'baz' pattern found to be excluded." in build_all.out
+    build_all.run("install foobar/1.0@user/testing --build=* --build=!baz")
+    assert "No package matching 'baz' pattern found." in build_all.out
     assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Build" in build_all.out
 
-    build_all.run("install foobar/1.0@user/testing --build --build-exclude=baz --build=blah")
-    assert "No package matching 'blah' pattern found to be built." in build_all.out
-    assert "No package matching 'baz' pattern found to be excluded." in build_all.out
-    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Cache" in build_all.out
+    build_all.run("install foobar/1.0@user/testing --build=* --build=!baz --build=blah")
+    assert "No package matching 'blah' pattern found." in build_all.out
+    assert "No package matching 'baz' pattern found." in build_all.out
+    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Build" in build_all.out

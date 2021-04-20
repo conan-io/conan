@@ -12,7 +12,7 @@ class BuildMode(object):
                    => "outdated" if user wrote "--build outdated"
                    => ["!foo"] means exclude when building all from sources
     """
-    def __init__(self, params, output, build_exclude=None):
+    def __init__(self, params, output):
         self._out = output
         self.outdated = False
         self.missing = False
@@ -20,7 +20,7 @@ class BuildMode(object):
         self.cascade = False
         self.patterns = []
         self._unused_patterns = []
-        self._excluded_patterns = build_exclude or []
+        self._excluded_patterns = []
         self.all = False
         if params is None:
             return
@@ -42,11 +42,14 @@ class BuildMode(object):
                     # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
                     clean_pattern = param[:-1] if param.endswith("@") else param
                     clean_pattern = clean_pattern.replace("@#", "#")
-                    self.patterns.append(clean_pattern)
+                    if clean_pattern and clean_pattern[0] == "!":
+                        self._excluded_patterns.append(clean_pattern[1:])
+                    else:
+                        self.patterns.append(clean_pattern)
 
             if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
-        self._unused_patterns = list(self.patterns)
+        self._unused_patterns = list(self.patterns) + self._excluded_patterns
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
         def pattern_match(pattern_):
@@ -57,7 +60,7 @@ class BuildMode(object):
         for pattern in self._excluded_patterns:
             if pattern_match(pattern):
                 try:
-                    self._excluded_patterns.remove(pattern)
+                    self._unused_patterns.remove(pattern)
                 except ValueError:
                     pass
                 conan_file.output.info("Excluded build from source")
@@ -97,6 +100,4 @@ class BuildMode(object):
 
     def report_matches(self):
         for pattern in self._unused_patterns:
-            self._out.error("No package matching '%s' pattern found to be built." % pattern)
-        for pattern in self._excluded_patterns:
-            self._out.error("No package matching '%s' pattern found to be excluded." % pattern)
+            self._out.error("No package matching '%s' pattern found." % pattern)

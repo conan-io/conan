@@ -506,7 +506,6 @@ class Command(object):
                                            verify=args.verify, manifests=args.manifests,
                                            manifests_interactive=args.manifests_interactive,
                                            build=args.build,
-                                           build_exclude=args.build_exclude,
                                            update=args.update, generators=args.generator,
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
@@ -529,7 +528,6 @@ class Command(object):
                                                      verify=args.verify, manifests=args.manifests,
                                                      manifests_interactive=manifest_interactive,
                                                      build=args.build,
-                                                     build_exclude=args.build_exclude,
                                                      update=args.update,
                                                      generators=args.generator,
                                                      install_folder=args.install_folder,
@@ -2207,9 +2205,6 @@ def _add_manifests_arguments(parser):
 def _add_common_install_arguments(parser, build_help, update_help=None, lockfile=True):
     if build_help:
         parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
-        parser.add_argument("-be", "--build-exclude", action=Extender, nargs="?",
-                            help="Exclude packages to be built from source whose package reference "
-                                 "matches the pattern. The pattern uses 'fnmatch' style wildcards.")
 
     parser.add_argument("-r", "--remote", action=OnceArgument,
                         help='Look in the specified remote server')

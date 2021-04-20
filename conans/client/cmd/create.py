@@ -28,7 +28,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 def create(app, ref, graph_info, remotes, update, build_modes,
            manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
-           test_folder, conanfile_path, recorder, build_exclude):
+           test_folder, conanfile_path, recorder):
     assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
@@ -51,8 +51,7 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                          build_modes=build_modes,
                          update=update,
                          keep_build=keep_build,
-                         recorder=recorder,
-                         build_exclude=build_exclude)
+                         recorder=recorder)
             out.info("Executing test_package %s" % repr(ref))
             try:
                 graph_info.graph_lock.relax()
@@ -75,8 +74,7 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                                    manifest_interactive=manifest_interactive,
                                    keep_build=keep_build,
                                    test_build_folder=test_build_folder,
-                                   recorder=recorder,
-                                   build_exclude=build_exclude)
+                                   recorder=recorder)
     else:
         deps_install(app=app,
                      ref_or_path=ref,
@@ -90,5 +88,4 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                      build_modes=build_modes,
                      update=update,
                      keep_build=keep_build,
-                     recorder=recorder,
-                     build_exclude=build_exclude)
+                     recorder=recorder)
