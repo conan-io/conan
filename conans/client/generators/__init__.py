@@ -9,7 +9,6 @@ from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
 from .b2 import B2Generator
-from .boostbuild import BoostBuildGenerator
 from .cmake import CMakeGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
@@ -55,7 +54,6 @@ class GeneratorManager(object):
                             "virtualenv_python": VirtualEnvPythonGenerator,
                             "virtualbuildenv": VirtualBuildEnvGenerator,
                             "virtualrunenv": VirtualRunEnvGenerator,
-                            "boost-build": BoostBuildGenerator,
                             "pkg_config": PkgConfigGenerator,
                             "json": JsonGenerator,
                             "b2": B2Generator,

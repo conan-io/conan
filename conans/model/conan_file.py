@@ -123,7 +123,7 @@ class ConanFile(object):
     # layout
     layout = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
@@ -134,7 +134,7 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
-        self._conan_requester = requester
+        self._conan_requester = None
 
         self.layout = Layout()
         self.buildenv_info = Environment()
@@ -150,6 +150,14 @@ class ConanFile(object):
     @property
     def dependencies(self):
         return ConanFileDependencies(self._conan_node)
+
+    @property
+    def ref(self):
+        return self._conan_node.ref
+
+    @property
+    def pref(self):
+        return self._conan_node.pref
 
     @property
     def buildenv(self):

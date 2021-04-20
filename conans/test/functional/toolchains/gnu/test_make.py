@@ -4,7 +4,6 @@ import unittest
 
 import pytest
 
-from conans.client.tools import which
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.utils.tools import TestClient
 
