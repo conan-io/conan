@@ -3,8 +3,10 @@ import textwrap
 import unittest
 
 from conans.client import tools
+from conans.model.ref import PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
+from conans.util.files import load
 
 
 class TestPackageTest(unittest.TestCase):
@@ -161,3 +163,117 @@ class TestPackageTest(unittest.TestCase):
         self.assertIn("hello/0.1: BUILD Dep MyDep VERSION 1.1", client.out)
         self.assertIn("hello/0.1 (test package): BUILD HELLO MyHello VERSION 0.1", client.out)
         self.assertIn("hello/0.1 (test package): TEST HELLO MyHello VERSION 0.1", client.out)
+
+
+class ConanTestTest(unittest.TestCase):
+
+    def test_partial_reference(self):
+        # Create two packages to test with the same test
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create . conan/stable")
+        client.run("create . conan/testing")
+        client.run("create . conan/foo")
+
+        def test(conanfile_test, test_reference, path=None):
+            path = path or "."
+            client.save({os.path.join(path, CONANFILE): conanfile_test}, clean_first=True)
+            client.run("test %s %s" % (path, test_reference))
+
+        # Specify a valid name
+        test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = ["Hello/0.1@conan/stable", ]
+    def test(self):
+        self.output.warn("Tested ok!")
+''', "Hello/0.1@conan/stable")
+        self.assertIn("Tested ok!", client.out)
+
+        # Specify a complete reference but not matching with the requires, it's ok, the
+        # require could be a tool or whatever
+        test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@conan/stable"
+    def test(self):
+        self.output.warn("Tested ok!")
+''', "Hello/0.1@conan/foo")
+        self.assertIn("Tested ok!", client.out)
+
+    def test_test_package_env(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def package_info(self):
+        self.env_info.PYTHONPATH.append("new/pythonpath/value")
+        '''
+        test_package = '''
+import os
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@lasote/testing"
+
+    def build(self):
+        assert("new/pythonpath/value" in os.environ["PYTHONPATH"])
+
+    def test(self):
+        assert("new/pythonpath/value" in os.environ["PYTHONPATH"])
+'''
+
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.run("export . lasote/testing")
+        client.run("test test_package Hello/0.1@lasote/testing --build missing")
+
+    def test_fail_test_package(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports = "*"
+
+    def package(self):
+        self.copy("*")
+"""
+        test_conanfile = """
+from conans import ConanFile, CMake
+import os
+
+class HelloReuseConan(ConanFile):
+    requires = "Hello/0.1@lasote/stable"
+
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "FindXXX.cmake": "Hello FindCmake",
+                     "test/conanfile.py": test_conanfile})
+        client.run("create . lasote/stable")
+        client.run("test test Hello/0.1@lasote/stable")
+        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        self.assertEqual("Hello FindCmake",
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+        client.save({"FindXXX.cmake": "Bye FindCmake"})
+        client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
+        self.assertEqual("Hello FindCmake",
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+        client.run("create . lasote/stable")  # create rebuild the package
+        self.assertEqual("Bye FindCmake",
+                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))

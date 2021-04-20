@@ -3,7 +3,7 @@ import platform
 import pytest
 import textwrap
 
-
+from conans.test.assets.autotools import gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
 from conans.test.utils.tools import TestClient
@@ -46,21 +46,13 @@ class TestSubsystems:
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows Subsystems")
 class TestSubsystemsBuild:
-    makefile = textwrap.dedent("""
-        .PHONY: all
-        all: app
 
-        app: main.o
-        	$(CXX) $(CFLAGS) -o app main.o
-
-        main.o: main.cpp
-        	$(CXX) $(CFLAGS) -c -o main.o main.cpp
-        """)
-
-    def _build(self, client):
+    @staticmethod
+    def _build(client):
+        makefile = gen_makefile(apps=["app"])
         main_cpp = gen_function_cpp(name="main")
-        client.save({"Makefile": self.makefile,
-                     "main.cpp": main_cpp})
+        client.save({"Makefile": makefile,
+                     "app.cpp": main_cpp})
         client.run_command("make")
         client.run_command("app")
 

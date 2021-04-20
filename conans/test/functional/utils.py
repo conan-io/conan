@@ -1,29 +1,35 @@
 from conan.tools.microsoft.visual import vcvars_command
 
 
-def check_vs_runtime(exe, client, vs_version, build_type, static, architecture="amd64"):
+def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64",
+                     static_runtime=False):
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
-    exe = exe.replace("/", "\\")
-    cmd = ('%s && dumpbin /dependents "%s"' % (vcvars, exe))
-    client.run_command(cmd)
-
-    if static:
-        assert "KERNEL32.dll" in client.out, "Error:{}".format(client.out)
-        assert "MSVC" not in client.out, "Error:{}".format(client.out)
-        assert "VCRUNTIME" not in client.out, "Error:{}".format(client.out)
-    else:
-        if vs_version == "15":
-            if build_type == "Debug":
-                assert "MSVCP140D.dll" in client.out, "Error:{}".format(client.out)
-                assert "VCRUNTIME140D.dll" in client.out, "Error:{}".format(client.out)
-            else:
-                assert "MSVCP140.dll" in client.out, "Error:{}".format(client.out)
-                assert "VCRUNTIME140.dll" in client.out, "Error:{}".format(client.out)
+    normalized_path = artifact.replace("/", "\\")
+    static = artifact.endswith(".a") or artifact.endswith(".lib")
+    if not static:
+        cmd = ('%s && dumpbin /nologo /dependents "%s"' % (vcvars, normalized_path))
+        client.run_command(cmd)
+        if static_runtime:
+            assert "KERNEL32.dll" in client.out
+            assert "MSVC" not in client.out
+            assert "VCRUNTIME" not in client.out
         else:
-            raise NotImplementedError()
+            if vs_version == "15":
+                debug = "D" if build_type == "Debug" else ""
+                assert "MSVCP140{}.dll".format(debug) in client.out
+                assert "VCRUNTIME140{}.dll".format(debug) in client.out
+            else:
+                raise NotImplementedError()
+    else:  # A static library cannot be checked the same
+        client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
+        if build_type == "Debug":
+            assert "RuntimeLibrary=MDd_DynamicDebug" in client.out
+        else:
+            assert "RuntimeLibrary=MD_DynamicRelease" in client.out
 
 
-def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None):
+def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,
+                  cxx11_abi=None):
     output = str(output)
     names = names if isinstance(names, list) else [names]
 
@@ -41,6 +47,8 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
 
         elif compiler == "gcc":
+            assert "{} __GNUC__".format(name) in output
+
             if arch == "x86":
                 assert "{} __i386__ defined".format(name) in output
             elif arch == "x86_64":
@@ -58,6 +66,13 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                                 "14": "201402",
                                 "17": "201703"}[cppstd]
                 assert "{} __cplusplus{}".format(name, cppstd_value) in output
+
+            if cxx11_abi is not None:
+                assert "{} _GLIBCXX_USE_CXX11_ABI {}".format(name, cxx11_abi) in output
+
+        elif compiler == "apple-clang":
+            # TODO: apple-clang requires checks too
+            pass
 
         if definitions:
             for k, v in definitions.items():

@@ -20,6 +20,7 @@ from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.config_parser import get_bool_from_text
+from conans.util.env_reader import get_env
 from conans.util.files import mkdir, get_abs_path, walk, decode_text
 from conans.util.runners import version_runner
 
@@ -225,13 +226,14 @@ class CMake(object):
         context = tools.no_op()
 
         if (is_msvc or is_clangcl) and platform.system() == "Windows":
-            if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM"]:
+            if self.generator in ["Ninja", "Ninja Multi-Config",
+                                  "NMake Makefiles", "NMake Makefiles JOM"]:
                 vcvars_dict = tools.vcvars_dict(self._settings, force=True, filter_known_paths=False,
                                                 output=self._conanfile.output)
                 context = _environment_add(vcvars_dict, post=self._append_vcvars)
         elif is_intel:
-            if self.generator in ["Ninja", "NMake Makefiles", "NMake Makefiles JOM",
-                                  "Unix Makefiles"]:
+            if self.generator in ["Ninja", "Ninja Multi-Config",
+                                  "NMake Makefiles", "NMake Makefiles JOM", "Unix Makefiles"]:
                 intel_compilervars_dict = tools.intel_compilervars_dict(self._conanfile, force=True)
                 context = _environment_add(intel_compilervars_dict, post=self._append_vcvars)
         with context:
@@ -330,7 +332,7 @@ class CMake(object):
         self._build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
-        if not self._conanfile.should_test:
+        if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True):
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"

@@ -1,6 +1,7 @@
 import os
 import textwrap
 import unittest
+import platform
 
 import pytest
 
@@ -11,6 +12,8 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.tool_compiler
+@pytest.mark.tool_pkg_config
+@pytest.mark.skipif(platform.system() == "Windows", reason="Requires pkg-config")
 class PkgConfigGeneratorWithComponentsTest(unittest.TestCase):
 
     @staticmethod
