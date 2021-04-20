@@ -52,7 +52,7 @@ def check_casing_conflict(cache, ref):
 
 
 def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
-               export=True, graph_lock=None, ignore_dirty=False):
+               graph_lock=None, ignore_dirty=False):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -91,13 +91,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
-    if not export:
-        metadata = package_layout.load_metadata()
-        recipe_revision = metadata.recipe.revision
-        ref = ref.copy_with_rev(recipe_revision)
-        if graph_lock:
-            graph_lock.update_exported_ref(node_id, ref)
-        return ref
 
     _check_settings_for_warnings(conanfile, output)
 
