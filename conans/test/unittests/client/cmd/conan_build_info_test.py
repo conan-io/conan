@@ -2,7 +2,8 @@ import json
 import os
 import textwrap
 import unittest
-from unittest.mock import Mock, patch
+
+from mock import patch, Mock
 
 from conans.build_info.build_info import update_build_info, publish_build_info
 from conans.test.utils.test_files import temp_folder
