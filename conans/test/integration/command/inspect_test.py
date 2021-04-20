@@ -196,6 +196,7 @@ revision_mode: hash
 settings: None
 options: None
 default_options: None
+deprecated: None
 """, client.out)
 
     def test_inspect_filled_attributes(self):
@@ -216,6 +217,7 @@ class Pkg(ConanFile):
     default_options = {"foo": True, "bar": False}
     _private = "Nothing"
     revision_mode = "scm"
+    deprecated = "suggestion"
     def build(self):
         pass
 """
@@ -243,6 +245,7 @@ options:
 default_options:
     bar: False
     foo: True
+deprecated: suggestion
 """, client.out)
 
     def test_default_options_list(self):
@@ -289,6 +292,7 @@ default_options:
                 386: False
                 no_asm: False
                 shared: False
+            deprecated: None
             """), client.out)
 
     def test_mixed_options_instances(self):
@@ -335,6 +339,7 @@ options:
 default_options:
     bar: True
     foo: True
+deprecated: None
 """, client.out)
 
         client.save({"conanfile.py": conanfile.replace("\"foo=True\", \"bar=True\"",
@@ -362,6 +367,7 @@ options:
 default_options:
     bar: True
     foo: True
+deprecated: None
 """, client.out)
 
 
