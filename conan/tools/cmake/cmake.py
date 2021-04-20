@@ -1,8 +1,9 @@
+import json
 import os
 import platform
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain import CONAN_CMAKE_GENERATOR_FILE
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
@@ -69,8 +70,8 @@ class CMake(object):
         self._parallel = parallel
 
         self._generator = None
-        if os.path.exists(CONAN_CMAKE_GENERATOR_FILE):
-            self._generator = load(CONAN_CMAKE_GENERATOR_FILE)
+        if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
+            self._generator = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))["cmake_generator"]
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 

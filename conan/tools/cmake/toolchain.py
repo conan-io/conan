@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import textwrap
@@ -6,14 +7,12 @@ from collections import OrderedDict
 import six
 from jinja2 import Template
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.microsoft.toolchain import write_conanvcvars, vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
-
-
-CONAN_CMAKE_GENERATOR_FILE = "conan_cmake_generator.txt"
 
 
 class Variables(OrderedDict):
@@ -618,7 +617,7 @@ class CMakeToolchain(object):
         if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
         if self.generator is not None:
-            save(CONAN_CMAKE_GENERATOR_FILE, self.generator)
+            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps({"cmake_generator": self.generator}))
 
     def _get_generator(self):
         # Returns the name of the generator to be used by CMake
