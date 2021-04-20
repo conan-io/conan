@@ -13,7 +13,6 @@ from .cmake import CMakeGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
-from .gcc import GCCGenerator
 from .json_generator import JsonGenerator
 from .make import MakeGenerator
 from .markdown import MarkdownGenerator
@@ -25,9 +24,6 @@ from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualenv_python import VirtualEnvPythonGenerator
 from .virtualrunenv import VirtualRunEnvGenerator
-from .visualstudio import VisualStudioGenerator
-from .visualstudio_multi import VisualStudioMultiGenerator
-from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
@@ -35,8 +31,7 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"gcc": GCCGenerator,
-                            "compiler_args": CompilerArgsGenerator,
+        self._generators = {"compiler_args": CompilerArgsGenerator,
                             "cmake": CMakeGenerator,
                             "cmake_multi": CMakeMultiGenerator,
                             "cmake_paths": CMakePathsGenerator,
@@ -45,9 +40,6 @@ class GeneratorManager(object):
                             "qmake": QmakeGenerator,
                             "qbs": QbsGenerator,
                             "scons": SConsGenerator,
-                            "visual_studio": VisualStudioGenerator,
-                            "visual_studio_multi": VisualStudioMultiGenerator,
-                            "visual_studio_legacy": VisualStudioLegacyGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "virtualenv": VirtualEnvGenerator,
@@ -62,7 +54,7 @@ class GeneratorManager(object):
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
-                                "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
+                                "MesonToolchain", "MSBuildDeps", "QbsToolchain",
                                 "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
     def add(self, name, generator_class, custom=False):
@@ -107,7 +99,7 @@ class GeneratorManager(object):
         elif generator_name == "MesonToolchain":
             from conan.tools.meson import MesonToolchain
             return MesonToolchain
-        elif generator_name in ("MSBuildDeps", "msbuild"):
+        elif generator_name == "MSBuildDeps":
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
         elif generator_name == "CMakeDeps":
@@ -129,17 +121,6 @@ class GeneratorManager(object):
         for generator_name in set(conanfile.generators):
             generator_class = self._new_generator(generator_name, output)
             if generator_class:
-                if generator_name == "msbuild":
-                    msg = (
-                        "\n*****************************************************************\n"
-                        "******************************************************************\n"
-                        "'msbuild' has been deprecated and moved.\n"
-                        "It will be removed in next Conan release.\n"
-                        "Use 'MSBuildDeps' method instead.\n"
-                        "********************************************************************\n"
-                        "********************************************************************\n")
-                    from conans.client.output import Color
-                    output.writeln(msg, front=Color.BRIGHT_RED)
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))

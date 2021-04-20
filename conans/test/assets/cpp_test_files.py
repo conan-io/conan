@@ -14,12 +14,11 @@ conanfile_build_cmake = """    def build(self):
 conanfile_build_new_env = """
     def build(self):
         import os
-        from conans import VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
+        from conans import AutoToolsBuildEnvironment
         from conans.tools import environment_append, vcvars_command, save
         from conans import tools
 
         if self.settings.compiler == "Visual Studio":
-            env_build = VisualStudioBuildEnvironment(self)
             with environment_append(env_build.vars):
                 vcvars = vcvars_command(self.settings)
                 flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)

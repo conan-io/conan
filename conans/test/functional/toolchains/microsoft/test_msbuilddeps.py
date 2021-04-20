@@ -562,7 +562,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "pkgb/1.0@", "pkga/1.0"
-                generators = "msbuild"
+                generators = "MSBuildDeps"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
@@ -651,7 +651,7 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             requires = "pkgb/1.0@", "pkga/1.0"
-            generators = "msbuild"
+            generators = "MSBuildDeps"
             def build(self):
                 msbuild = MSBuild(self)
                 msbuild.build("MyProject.sln")
