@@ -2282,6 +2282,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
+    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+                       reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.
