@@ -523,10 +523,10 @@ endforeach()
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
-                    pkg, cmp = require.split("::")
+                    pkg, cmp_name = require.split("::")
                     public_comp_deps.append("{}::{}".format(
                         self.get_name(requires[pkg]),
-                        self.get_component_name(requires[pkg], cmp)))
+                        self.get_component_name(requires[pkg], cmp_name)))
                 else:  # Points to a component of same package
                     public_comp_deps.append("{}::{}".format(self.get_name(req),
                                                             self.get_component_name(req, require)))
@@ -602,20 +602,14 @@ endforeach()
             pfolder = req.package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
             if not req.new_cpp_info.has_components:
                 deps = DepsCppCmake(req.new_cpp_info, pkg_target_name, self.name)
-                variables = {
-                   self._data_filename(pkg_filename):
-                       variables_template.format(name=pkg_target_name, deps=deps,
-                                                 package_folder=pfolder,
-                                                 build_type_suffix=build_type_suffix)
-                             }
-                dynamic_variables = {
-                    "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
-                    dynamic_variables_template.format(name=pkg_target_name,
-                                                      build_type_suffix=build_type_suffix,
-                                                      deps_names=dep_target_names)
-                }
-                ret.update(variables)
-                ret.update(dynamic_variables)
+                var_tmpl = variables_template.format(name=pkg_target_name, deps=deps,
+                                                     package_folder=pfolder,
+                                                     build_type_suffix=build_type_suffix)
+                ret[self._data_filename(pkg_filename)] = var_tmpl
+                dtmp = dynamic_variables_template.format(name=pkg_target_name,
+                                                         build_type_suffix=build_type_suffix,
+                                                         deps_names=dep_target_names)
+                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = dtmp
                 ret[self._config_filename(pkg_filename)] = self._config(
                     filename=pkg_filename,
                     name=pkg_target_name,
@@ -715,7 +709,8 @@ endforeach()
         pkg_public_deps_filenames = []
 
         # Get a list of dependencies target names and file names
-        if req.new_cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
+        # Declared cppinfo.requires or .components[].requires
+        if req.new_cpp_info.required_components:
             for dep_name, component_name in req.new_cpp_info.required_components:
                 if dep_name:  # External dep
                     filename = self.get_filename(requires[dep_name])
@@ -733,8 +728,8 @@ endforeach()
                 dep_target_names.append("{}::{}".format(_name, _cname))
         elif req.dependencies.host_requires:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            dep_target_names = ["{p}::{p}".format(p=self.get_name(req))
-                                for req in req.dependencies.host_requires]
-            pkg_public_deps_filenames = [self.get_filename(req)
-                                         for req in req.dependencies.host_requires]
+            dep_target_names = ["{p}::{p}".format(p=self.get_name(r))
+                                for r in req.dependencies.host_requires]
+            pkg_public_deps_filenames = [self.get_filename(r)
+                                         for r in req.dependencies.host_requires]
         return dep_target_names, pkg_public_deps_filenames
