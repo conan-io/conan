@@ -159,3 +159,8 @@ def test_report_matches(build_all):
     assert "No package matching 'blah' pattern found." in build_all.out
     assert "No package matching 'baz' pattern found." in build_all.out
     assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Build" in build_all.out
+
+    build_all.run("install foobar/1.0@user/testing --build=* --build=!baz --build=!blah")
+    assert "No package matching 'blah' pattern found." in build_all.out
+    assert "No package matching 'baz' pattern found." in build_all.out
+    assert "foobar/1.0@user/testing:89636fbae346e3983af2dd63f2c5246505e74be7 - Build" in build_all.out
