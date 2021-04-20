@@ -478,6 +478,7 @@ class BinaryInstaller(object):
             report_copied_files(copied_files, output)
             return
 
+        node.conanfile.cpp_info.filter_empty = False
         # OLD EDITABLE LAYOUTS:
         # Try with package-provided file
         editable_cpp_info = package_layout.editable_cpp_info()
@@ -632,12 +633,7 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_source(None)
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_install(None)
-        conanfile.cpp_info = conanfile.folders.package.cpp_info
-        # FIXME: Smells like the constructor of cpp_info should not have the root nor the name
-        conanfile.cpp_info._name = conanfile.name
-        conanfile.cpp_info._ref_name = conanfile.name
-        conanfile.cpp_info.version = conanfile.version
-        conanfile.cpp_info.description = conanfile.description
+
         conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
@@ -654,7 +650,6 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
-                    conanfile.cpp_info.filter_empty = not is_editable
                     conanfile.package_info()
 
                     if is_editable and hasattr(conanfile, "layout"):
@@ -664,6 +659,7 @@ class BinaryInstaller(object):
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
                         # Here package_folder is the editable base folder
+                        # !!!
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
                         conanfile.cpp_info.version = conanfile.version
                         conanfile.cpp_info.description = conanfile.description

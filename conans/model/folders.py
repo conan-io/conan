@@ -2,14 +2,14 @@ import os
 
 from conans.client.file_copier import FileCopier
 from conans.errors import ConanException
-from conans.model.build_info import CppInfo, CppInfoDefaultValues
+from conans.model.new_build_info import NewCppInfo
 from conans.util.log import logger
 
 
 class _FoldersEntry(object):
 
-    def __init__(self, default_cpp_info_values=None):
-        self.cpp_info = CppInfo(None, None, default_values=default_cpp_info_values)
+    def __init__(self):
+        self.cpp_info = NewCppInfo()
 
         self.include_patterns = []
         self.lib_patterns = []
@@ -30,26 +30,17 @@ class Folders(object):
         self._base_package = None
         self._base_generators = None
 
-        # By default, the cpp_info of the components are empty.
-        # Otherwise it become very difficult and confusing to override the default layout, for
-        # example, to clion, because every component created have the defaults again.
-        source_defaults = CppInfoDefaultValues()
-        self.source = _FoldersEntry(source_defaults)
+        self.source = _FoldersEntry()
         self.source.cpp_info.includedirs = ["include"]
         self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
 
-        build_defaults = CppInfoDefaultValues()
-        self.build = _FoldersEntry(build_defaults)
+        self.build = _FoldersEntry()
         self.build.cpp_info.builddirs = ["."]
         self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.build.bin_patterns = ["*.exe", "*.dll"]
 
-        # FIXME: Conan 2.0 I think the defaults (propagated to the components) should be empty too
-        #        in package. It is confusing a component being created with the "include" and so on.
         self.package = _FoldersEntry()
-
-        generators_defaults = CppInfoDefaultValues()
-        self.generators = _FoldersEntry(generators_defaults)
+        self.generators = _FoldersEntry()
 
     def __repr__(self):
         return str(self.__dict__)
@@ -86,7 +77,7 @@ class Folders(object):
         @param origin_cppinfo: cpp_info object of an origin (can be a component cppinfo too)
         @param package_cppinfo: cpp_info object of the package or a component from package
         """
-        var_name = "{}_paths".format(name)
+        var_name = "{}dirs".format(name)
         origin_patterns_var = "{}_patterns".format(name)
         origin_paths = getattr(origin_cppinfo, var_name)
         patterns = getattr(origin, origin_patterns_var)
@@ -124,11 +115,6 @@ class Folders(object):
 
     def set_base_source(self, folder):
         self._base_source = folder
-        self.source.cpp_info.rootpath = self.source_folder
-
-    @property
-    def base_source(self):
-        return self._base_source
 
     @property
     def build_folder(self):
@@ -144,11 +130,6 @@ class Folders(object):
 
     def set_base_build(self, folder):
         self._base_build = folder
-        self.build.cpp_info.rootpath = self.build_folder
-
-    @property
-    def base_build(self):
-        return self._base_build
 
     @property
     def base_install(self):
@@ -163,7 +144,6 @@ class Folders(object):
 
     def set_base_package(self, folder):
         self._base_package = folder
-        self.package.cpp_info.rootpath = folder
 
     @property
     def generators_folder(self):

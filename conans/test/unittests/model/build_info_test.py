@@ -208,7 +208,6 @@ VAR2=23
         mkdir(abs_lib)
         mkdir(abs_bin)
         info = CppInfo("", folder)
-        info.filter_empty = True
         info.includedirs.append(abs_include)
         info.libdirs.append(abs_lib)
         info.bindirs.append(abs_bin)
