@@ -1,30 +1,26 @@
-from conan.tools.microsoft.visual import vcvars_arch, vcvars_command
-from conans.client.tools import intel_compilervars_command
+import os
+
 from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf["tools.microsoft"].msbuild_verbosity
+    verbosity = conanfile.conf["tools.microsoft.msbuild"].verbosity
     if verbosity:
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
             raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
         return '/verbosity:{}'.format(verbosity)
 
 
+def msbuild_max_cpu_count_cmd_line_arg(conanfile):
+    max_cpu_count = conanfile.conf["tools.microsoft.msbuild"].max_cpu_count or \
+                    conanfile.conf["tools.build"].processes
+    if max_cpu_count:
+        return "/m:{}".format(max_cpu_count)
+
+
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self.compiler = conanfile.settings.get_safe("compiler")
-        # This is assuming this is the Visual Studio IDE version, used for the vcvars
-        self.version = (conanfile.settings.get_safe("compiler.base.version") or
-                        conanfile.settings.get_safe("compiler.version"))
-        if self.compiler == "msvc":
-            version = self.version[:4]  # Remove the latest version number 19.1X if existing
-            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
-                        '19.1': '15',
-                        '19.2': '16'}
-            self.version = _visuals[version]
-        self.vcvars_arch = vcvars_arch(conanfile)
         self.build_type = conanfile.settings.get_safe("build_type")
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
@@ -39,24 +35,23 @@ class MSBuild(object):
         self.platform = msvc_arch
 
     def command(self, sln):
-        if self.compiler == "intel":
-            cvars = intel_compilervars_command(self._conanfile)
-        else:
-            cvars = vcvars_command(self.version, architecture=self.vcvars_arch,
-                                   platform_type=None, winsdk_version=None,
-                                   vcvars_ver=None)
-        cmd = ('%s && msbuild "%s" /p:Configuration=%s /p:Platform=%s'
-               % (cvars, sln, self.build_type, self.platform))
+        cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
+               % (sln, self.build_type, self.platform))
 
         verbosity = msbuild_verbosity_cmd_line_arg(self._conanfile)
         if verbosity:
             cmd += " {}".format(verbosity)
 
+        max_cpu_count = msbuild_max_cpu_count_cmd_line_arg(self._conanfile)
+        if max_cpu_count:
+            cmd += " {}".format(max_cpu_count)
+
         return cmd
 
     def build(self, sln):
         cmd = self.command(sln)
-        self._conanfile.run(cmd)
+        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
 
     @staticmethod
     def get_version(_):

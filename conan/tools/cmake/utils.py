@@ -1,13 +1,13 @@
 import os
 
+from conan.tools._compilers import use_win_mingw
 from conans.errors import ConanException
-from conans.util.log import logger
 
 
 def is_multi_configuration(generator):
     if not generator:
         return False
-    return "Visual" in generator or "Xcode" in generator
+    return "Visual" in generator or "Xcode" in generator or "Multi-Config" in generator
 
 
 def get_generator(conanfile):
@@ -33,21 +33,7 @@ def get_generator(conanfile):
         return base
 
     compiler_base = conanfile.settings.get_safe("compiler.base")
-    arch = conanfile.settings.get_safe("arch")
-
     compiler_base_version = conanfile.settings.get_safe("compiler.base.version")
-    if hasattr(conanfile, 'settings_build'):
-        os_build = conanfile.settings_build.get_safe('os')
-    else:
-        os_build = conanfile.settings.get_safe('os_build')
-    if os_build is None:  # Assume is the same specified in host settings, not cross-building
-        os_build = conanfile.settings.get_safe("os")
-
-    if not compiler or not compiler_version or not arch:
-        if os_build == "Windows":
-            logger.warning("CMake generator could not be deduced from settings")
-            return None
-        return "Unix Makefiles"
 
     if compiler == "Visual Studio" or compiler_base == "Visual Studio":
         version = compiler_base_version or compiler_version
@@ -63,8 +49,7 @@ def get_generator(conanfile):
         base = "Visual Studio %s" % _visuals
         return base
 
-    # The generator depends on the build machine, not the target
-    if os_build == "Windows" and compiler != "qcc":
-        return "MinGW Makefiles"  # it is valid only under Windows
+    if use_win_mingw(conanfile):
+        return "MinGW Makefiles"
 
     return "Unix Makefiles"

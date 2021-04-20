@@ -73,8 +73,10 @@ class TestCMakeFindPackageGenerator:
                     cmake.configure()
             """)
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
-            project(test)
+            project(test CXX)
             find_package(hello)
             get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
             message("otherhello link libraries: ${tmp}")
@@ -101,7 +103,7 @@ class Test(ConanFile):
         self.cpp_info.libs.append("fake_lib")
         self.cpp_info.cflags.append("a_flag")
         self.cpp_info.cxxflags.append("a_cxx_flag")
-        self.cpp_info.sharedlinkflags.append("shared_link_flag")
+        self.cpp_info.sharedlinkflags.append("-shared_link_flag")
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -119,10 +121,11 @@ class Consumer(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-
     """
         cmakelists = """
-project(consumer)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(consumer CXX)
 cmake_minimum_required(VERSION 3.1)
 find_package(Test)
 message("Libraries to Link: ${Test_LIBS}")
@@ -140,8 +143,8 @@ message("Compile options: ${tmp}")
         self.assertIn("Libraries to Link: fake_lib", client.out)
         self.assertIn("Version: 0.1", client.out)
         self.assertIn("Target libs: fake_lib;;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:shared_link_flag>;"
-                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-shared_link_flag>;"
+                      "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-shared_link_flag>;"
                       "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>", client.out)
         self.assertIn("Compile options: a_cxx_flag;a_flag", client.out)
 
@@ -198,12 +201,13 @@ message("Target libs: ${tmp}")
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-
         """)
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
-            project(app)
+            project(app CXX)
             find_package(PkgC)
         """)
 
@@ -294,7 +298,6 @@ include_directories(${Hello0_INCLUDE_DIRS})
 target_link_libraries(helloHello1 PUBLIC ${Hello0_LIBS})
 add_executable(say_hello main.cpp)
 target_link_libraries(say_hello helloHello1)
-
 """
         client.save(files, clean_first=True)
         client.run("create . user/channel -s build_type=Release")
@@ -359,8 +362,10 @@ target_link_libraries(say_hello helloHello2)
                     cmake.configure()
         """)
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.1)
-            project(consumer)
+            project(consumer CXX)
             find_package(Test)
             message("Package libs: ${Test_LIBS}")
             message("Package version: ${Test_VERSION}")
@@ -402,10 +407,11 @@ class Consumer(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-
     """
         cmakelists = """
-project(consumer)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(consumer CXX)
 cmake_minimum_required(VERSION 3.1)
 find_package(Test)
 message("Libraries to link: ${Test_LIBS}")
@@ -493,8 +499,10 @@ message("Target libs: ${tmp}")
                     cmake.build()
             """)
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
-            project(test)
+            project(test CXX)
             find_package(test)
             custom_message("Printing using a external module!")
             """)
@@ -521,6 +529,7 @@ message("Target libs: ${tmp}")
                         output=client.out)
         client.run("create .")
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_ABI_COMPILED 1)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
@@ -599,6 +608,7 @@ message("Target libs: ${tmp}")
         client.run("create .")
 
         cmakelists = textwrap.dedent("""
+            set(CMAKE_CXX_ABI_COMPILED 1)
             set(CMAKE_CXX_COMPILER_WORKS 1)
             project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
@@ -708,7 +718,9 @@ message("Target libs: ${tmp}")
         """)
 
         cmakelists = textwrap.dedent("""
-            project(consumer)
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
+            project(consumer CXX)
             cmake_minimum_required(VERSION 3.1)
             find_package(requirement)
             get_target_property(tmp requirement::component INTERFACE_LINK_LIBRARIES)

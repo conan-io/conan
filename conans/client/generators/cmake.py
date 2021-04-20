@@ -34,6 +34,10 @@ class DepsCppCmake(object):
             """
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
+        def format_link_flags(link_flags):
+            # Trying to mess with - and / => https://github.com/conan-io/conan/issues/8811
+            return link_flags
+
         self.include_paths = join_paths(cpp_info.include_paths)
         self.include_path = join_paths_single_var(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
@@ -58,8 +62,8 @@ class DepsCppCmake(object):
         # Issue: #1251
         self.cxxflags_list = join_flags(";", cpp_info.cxxflags)
         self.cflags_list = join_flags(";", cpp_info.cflags)
-        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
-        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
+        self.sharedlinkflags_list = join_flags(";", format_link_flags(cpp_info.sharedlinkflags))
+        self.exelinkflags_list = join_flags(";", format_link_flags(cpp_info.exelinkflags))
 
         self.rootpath = join_paths([cpp_info.rootpath])
         self.build_modules_paths = join_paths(cpp_info.build_modules_paths.get(generator_name, []))

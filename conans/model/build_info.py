@@ -104,6 +104,7 @@ class _CppInfo(object):
 
     def __init__(self):
         self._name = None
+        self._generator_properties = {}
         self.names = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
@@ -123,10 +124,11 @@ class _CppInfo(object):
         self.exelinkflags = []  # linker flags
         self.build_modules = BuildModulesDict()  # FIXME: This should be just a plain dict
         self.filenames = {}  # name of filename to create for various generators
-        self._rootpath = ""
+        self.rootpath = ""
         self.sysroot = ""
         self.requires = []
         self._build_modules_paths = None
+        self._build_modules = None
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
@@ -136,17 +138,11 @@ class _CppInfo(object):
         self._framework_paths = None
         self.version = None  # Version of the conan package
         self.description = None  # Description of the conan package
-        # By default we don't filter empty, because we want to filter ONLY when the final cppinfo
-        # from package is full of files but before that we will play with the build and source layout
-        # and cppinfo and it mess a lot
-        self.filter_empty = False
-
-    @property
-    def rootpath(self):
-        return self._rootpath
+        # When package is editable, filter_empty=False, so empty dirs are maintained
+        self.filter_empty = True
 
     def _filter_paths(self, paths):
-        abs_paths = [os.path.join(self._rootpath, p)
+        abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
         if self.filter_empty:
             return [p for p in abs_paths if os.path.isdir(p)]
@@ -160,7 +156,9 @@ class _CppInfo(object):
                 conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
                                "{the_list}' instead".format(the_list=self.build_modules))
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
-            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self._rootpath)
+                # Invalidate necessary, get_build_modules used raise_incorrect_components_definition
+                self._build_modules = None
+            tmp = dict_to_abs_paths(BuildModulesDict(self.get_build_modules()), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
 
@@ -215,14 +213,57 @@ class _CppInfo(object):
     def name(self, value):
         self._name = value
 
+    # TODO: Deprecate for 2.0. Only cmake and pkg_config generators should access this.
+    #  Use get_property for 2.0
     def get_name(self, generator):
-        return self.names.get(generator, self._name)
+        property_name = None
+        if "cmake" in generator:
+            property_name = "cmake_target_name"
+        elif "pkg_config" in generator:
+            property_name = "pkg_config_name"
+        return self.get_property(property_name, generator) or self.names.get(generator, self._name)
 
+    # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
     def get_filename(self, generator):
-        result = self.filenames.get(generator)
+        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
         if result:
             return result
         return self.get_name(generator)
+
+    # TODO: Deprecate for 2.0. Use get_property for 2.0
+    def get_build_modules(self):
+        if self._build_modules is None:  # Not cached yet
+            try:
+                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
+            except KeyError:
+                ret_dict = {}
+            else:
+                ret_dict = {"cmake_find_package": default_build_modules_value,
+                            "cmake_find_package_multi": default_build_modules_value,
+                            "cmake": default_build_modules_value,
+                            "cmake_multi": default_build_modules_value}
+
+            for generator, values in self._generator_properties.items():
+                if generator:
+                    v = values.get("cmake_build_modules")
+                    if v:
+                        ret_dict[generator] = v
+            self._build_modules = ret_dict if ret_dict else self.build_modules
+        return self._build_modules
+
+    def set_property(self, property_name, value, generator=None):
+        self._generator_properties.setdefault(generator, {})[property_name] = value
+
+    def get_property(self, property_name, generator=None):
+        if generator:
+            try:
+                return self._generator_properties[generator][property_name]
+            except KeyError:
+                pass
+        try:
+            return self._generator_properties[None][property_name]
+        except KeyError:
+            pass
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
@@ -235,48 +276,12 @@ class _CppInfo(object):
 
     cppflags = property(get_cppflags, set_cppflags)
 
-    def merge(self, other, rootpath):
-        """Accumulate in a cppinfo object another one containing entries of a subdirectory,
-        for example the editable root containing two cppinfos, the source one and the build one"""
-        relpath = os.path.relpath(other._rootpath, rootpath)
-
-        def _merge_dir_list(seq1, seq2):
-            news = ["%s/%s" % (relpath, rs) if relpath != "." else rs for rs in seq2]
-            seq1.extend([n for n in news if n not in seq1])
-
-        def _merge_list(seq1, seq2):
-            seq1.extend([rs for rs in seq2 if rs not in seq1])
-
-        def _merge_build_modules_dict(seq1, seq2):
-            for k, v in seq2.items():
-                seq1[k] = v if k not in seq1 else _merge_list(seq1[k], seq2[k])
-
-        _merge_dir_list(self.includedirs, other.includedirs)
-        _merge_dir_list(self.libdirs, other.libdirs)
-        _merge_dir_list(self.bindirs, other.bindirs)
-        _merge_dir_list(self.resdirs, other.resdirs)
-        _merge_dir_list(self.builddirs, other.builddirs)
-        _merge_dir_list(self.frameworkdirs, other.frameworkdirs)
-        _merge_list(self.libs, other.libs)
-        _merge_list(self.defines, other.defines)
-        _merge_list(self.cflags, other.cflags)
-        _merge_list(self.cxxflags, other.cxxflags)
-        _merge_list(self.sharedlinkflags, other.sharedlinkflags)
-        _merge_list(self.exelinkflags, other.exelinkflags)
-        _merge_list(self.system_libs, other.system_libs)
-        _merge_list(self.rootpaths, other.rootpaths)
-        self.filenames.update(other.filenames)
-        _merge_list(self.requires, other.requires)
-        _merge_build_modules_dict(self.build_modules, other.build_modules)
-
 
 class Component(_CppInfo):
 
-    def __init__(self, rootpath, version, default_values, filter_empty):
+    def __init__(self, rootpath, version, default_values):
         super(Component, self).__init__()
-
-        self._rootpath = rootpath
-
+        self.rootpath = rootpath
         if default_values.includedir is not None:
             self.includedirs.append(default_values.includedir)
         if default_values.libdir is not None:
@@ -291,14 +296,11 @@ class Component(_CppInfo):
             self.frameworkdirs.append(default_values.frameworkdir)
         self.requires = []
         self.version = version
-        self.filter_empty = filter_empty
 
 
 class CppInfoDefaultValues(object):
 
-    def __init__(self, includedir=None, libdir=None, bindir=None, resdir=None, builddir=None,
-                 frameworkdir=None):
-
+    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
         self.includedir = includedir
         self.libdir = libdir
         self.bindir = bindir
@@ -318,7 +320,7 @@ class CppInfo(_CppInfo):
         super(CppInfo, self).__init__()
         self._ref_name = ref_name
         self._name = ref_name
-        self._rootpath = root_folder  # the full path of the package in which the conans is found
+        self.rootpath = root_folder  # the full path of the package in which the conans is found
         self._default_values = default_values or CppInfoDefaultValues(DEFAULT_INCLUDE, DEFAULT_LIB,
                                                                       DEFAULT_BIN, DEFAULT_RES,
                                                                       DEFAULT_BUILD,
@@ -335,34 +337,11 @@ class CppInfo(_CppInfo):
             self.builddirs.append(self._default_values.builddir)
         if self._default_values.frameworkdir is not None:
             self.frameworkdirs.append(self._default_values.frameworkdir)
-
-        self.components = DefaultOrderedDict(lambda: Component(self._rootpath,
-                                                               self.version, self._default_values,
-                                                               self.filter_empty))
+        self.components = DefaultOrderedDict(lambda: Component(self.rootpath,
+                                                               self.version, self._default_values))
         # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self._configs = {}
-
-    @property
-    def rootpath(self):
-        return self._rootpath
-
-    @rootpath.setter
-    def rootpath(self, path):
-        self._rootpath = path
-        for c in self.components.values():
-            c._rootpath = path
-        for c in self._configs.values():
-            c._rootpath = path
-
-    def merge(self, other, rootpath=None):
-        """ Used to aggregate build info objects when we have build and source declared
-        in the recipe layout and it is consumed as an editable package"""
-        super(CppInfo, self).merge(other, rootpath or self.rootpath)
-
-        for k, v in other.components.items():
-            # Use the rootpath from this general build info, not from the component
-            self.components[k].merge(v, self.rootpath)
 
     def __str__(self):
         return self._ref_name
@@ -390,7 +369,7 @@ class CppInfo(_CppInfo):
         def _get_cpp_info():
             result = _CppInfo()
             result.filter_empty = self.filter_empty
-            result._rootpath = self._rootpath
+            result.rootpath = self.rootpath
             result.sysroot = self.sysroot
             result.includedirs.append(self._default_values.includedir)
             result.libdirs.append(self._default_values.libdir)
@@ -422,7 +401,7 @@ class CppInfo(_CppInfo):
              self.cxxflags or
              self.sharedlinkflags or
              self.exelinkflags or
-             self.build_modules or
+             self.get_build_modules() or
              self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
@@ -471,6 +450,7 @@ class CppInfo(_CppInfo):
             requires_from_components = set()
             for comp_name, comp in self.components.items():
                 requires_from_components.update(comp.requires)
+
             _check_components_requires_instersection(requires_from_components)
         else:
             _check_components_requires_instersection(self.requires)
@@ -504,7 +484,6 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
 

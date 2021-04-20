@@ -187,6 +187,10 @@ class OSInfo(object):
         if not self.is_linux:
             return False
 
+        # https://github.com/conan-io/conan/issues/8737 zypper-aptitude can fake it
+        if "opensuse" in self.linux_distro or "sles" in self.linux_distro:
+            return False
+
         apt_location = which('apt-get')
         if apt_location:
             # Check if we actually have the official apt package.
@@ -204,7 +208,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in ("pidora", "fedora", "scientific", "centos",
                                                        "redhat", "rhel", "xenserver", "amazon",
-                                                       "oracle")
+                                                       "oracle", "amzn")
 
     @property
     def with_dnf(self):

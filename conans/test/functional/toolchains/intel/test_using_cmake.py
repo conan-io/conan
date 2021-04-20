@@ -4,7 +4,7 @@ import platform
 import pytest
 import textwrap
 
-from conan.tools.cmake.base import CMakeToolchainBase
+from conan.tools.cmake import CMakeToolchain
 from conan.tools.microsoft.visual import vcvars_command
 from ._base import BaseIntelTestCase
 
@@ -102,7 +102,7 @@ class CMakeIntelTestCase(BaseIntelTestCase):
         os.unlink(os.path.join(self.t.current_folder, exe))
 
         self.t.run_command('cmake . -G "Visual Studio 15 2017" '
-                           '-DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchainBase.filename))
+                           '-DCMAKE_TOOLCHAIN_FILE={}'.format(CMakeToolchain.filename))
         self.t.run_command('cmake --build . --config Release')
 
         self.t.run_command(exe)

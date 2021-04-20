@@ -94,9 +94,9 @@ _t_default_settings_yml = Template(textwrap.dedent("""
         clang:
             version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0",
                       "5.0", "6.0", "7.0", "7.1",
-                      "8", "9", "10", "11"]
+                      "8", "9", "10", "11", "12"]
             libcxx: [None, libstdc++, libstdc++11, libc++, c++_shared, c++_static]
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
             runtime: [None, MD, MT, MTd, MDd]
         apple-clang: &apple_clang
             version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0", "9.1", "10.0", "11.0", "12.0"]
@@ -128,7 +128,7 @@ _t_default_settings_yml = Template(textwrap.dedent("""
     build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]
 
 
-    cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]  # Deprecated, use compiler.cppstd
+    cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]  # Deprecated, use compiler.cppstd
     """))
 
 
@@ -716,16 +716,19 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def config_install_interval(self):
+        item = "general.config_install_interval"
         try:
-            interval = self.get_item("general.config_install_interval")
+            interval = self.get_item(item)
         except ConanException:
             return None
 
         try:
             return timedelta_from_text(interval)
         except Exception:
-            raise ConanException("Incorrect definition of general.config_install_interval: %s"
-                                 % interval)
+            self.rm_item(item)
+            raise ConanException("Incorrect definition of general.config_install_interval: {}. "
+                                 "Removing it from conan.conf to avoid possible loop error."
+                                 .format(interval))
 
     @property
     def required_conan_version(self):

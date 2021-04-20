@@ -38,6 +38,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     @param add_txt_generator: Add the txt to the list of generators
 
     """
+
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
 

@@ -98,7 +98,7 @@ def get_generator_platform(settings, generator):
 def is_multi_configuration(generator):
     if not generator:
         return False
-    return "Visual" in generator or "Xcode" in generator
+    return "Visual" in generator or "Xcode" in generator or "Multi-Config" in generator
 
 
 def is_toolset_supported(generator):

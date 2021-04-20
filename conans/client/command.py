@@ -199,8 +199,13 @@ class Command(object):
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
                             help='Define URL of the repository to upload')
+        parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
+
+        defines = args.define or []
+        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
+
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
@@ -215,7 +220,8 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template)
+                        template=args.template,
+                        defines=defines)
 
     def inspect(self, *args):
         """
@@ -1884,9 +1890,17 @@ class Command(object):
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
 
+        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
+        install_cmd.add_argument('lockfile', help='Path to the lockfile')
+        install_cmd.add_argument("--recipes", action="store_true",
+                                 help="Install only recipes, not binaries")
+        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
+                                 help='Generators to use')
+
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
-        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
+                                                        "like 'path/conanfile.py'")
         create_cmd.add_argument("--name", action=OnceArgument,
                                 help='Provide a package name if not specified in conanfile')
         create_cmd.add_argument("--version", action=OnceArgument,
@@ -1923,16 +1937,24 @@ class Command(object):
         update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
         update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
+        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
+                                                                 help='Clean modified flag')
+        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update":
+        if args.subcommand == "install":
+            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
+        elif args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "bundle":
             if args.bundlecommand == "create":
                 self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
             elif args.bundlecommand == "update":
                 self._conan.lock_bundle_update(args.bundle)
+            elif args.bundlecommand == "clean-modified":
+                self._conan.lock_bundle_clean_modified(args.bundle)
             elif args.bundlecommand == "build-order":
                 build_order = self._conan.lock_bundle_build_order(args.bundle)
                 self._out.writeln(build_order)
