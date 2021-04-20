@@ -327,8 +327,6 @@ class Command(object):
                             help='Do not remove the build folder in local cache. '
                                  'Implies --keep-source. '
                                  'Use this for testing purposes only')
-        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
-                            help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Working directory for the build of the test project.')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -365,7 +363,7 @@ class Command(object):
 
             info = self._conan.create(args.path, name, version, user, channel,
                                       args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder, args.not_export,
+                                      args.env_host, args.test_folder,
                                       args.build, args.keep_source, args.keep_build,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,

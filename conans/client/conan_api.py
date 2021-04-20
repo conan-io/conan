@@ -330,7 +330,7 @@ class ConanAPIV1(object):
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
                profile_names=None, settings=None,
-               options=None, env=None, test_folder=None, not_export=False,
+               options=None, env=None, test_folder=None,
                build_modes=None, keep_source=False, keep_build=False,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
                lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
@@ -360,7 +360,7 @@ class ConanAPIV1(object):
             # Make sure keep_source is set for keep_build
             keep_source = keep_source or keep_build
             new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, keep_source,
-                                 not not_export, graph_lock=graph_lock,
+                                 graph_lock=graph_lock,
                                  ignore_dirty=ignore_dirty)
 
             self.app.range_resolver.clear_output()  # invalidate version range output
