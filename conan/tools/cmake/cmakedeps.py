@@ -522,7 +522,7 @@ endforeach()
     def _get_components(self, req, requires):
         """Returns a list of (component_name, DepsCppCMake)"""
         ret = []
-        sorted_comps = req.cpp_info.get_sorted_components()
+        sorted_comps = req.new_cpp_info.get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
             comp_genname = self.get_component_name(req, comp_name)
@@ -556,26 +556,29 @@ endforeach()
         return data_fname
 
     def get_name(self, req):
-        ret = req.cpp_info.get_property("cmake_target_name", self.name)
+        ret = req.new_cpp_info.get_property("cmake_target_name", self.name)
         if not ret:
-            ret = req.old_cpp_info.get_name(self.name)
+            # The old cpp info
+            ret = req.cpp_info.get_name(self.name)
         return ret or req.ref.name
 
     def get_filename(self, req):
-        ret = req.cpp_info.get_property("cmake_file_name", self.name)
+        ret = req.new_cpp_info.get_property("cmake_file_name", self.name)
         if not ret:
-            ret = req.old_cpp_info.get_filename(self.name)
+            # The old cpp info
+            ret = req.cpp_info.get_filename(self.name)
         return ret or req.ref.name
 
     def get_component_name(self, req, comp_name):
-        if comp_name not in req.cpp_info.components:
+        if comp_name not in req.new_cpp_info.components:
             if req.ref.name == comp_name:  # foo::foo might be referencing the root cppinfo
                 return self.get_name(req)
             raise KeyError(comp_name)
-        ret = req.cpp_info.components[comp_name].get_property("cmake_target_name",
-                                                              self.name)
+        ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name",
+                                                                  self.name)
         if not ret:
-            ret = req.old_cpp_info.components[comp_name].get_name(self.name)
+            # The old cpp info
+            ret = req.cpp_info.components[comp_name].get_name(self.name)
 
         return ret or comp_name
 
@@ -592,10 +595,6 @@ endforeach()
 
         host_requires = {r.ref.name: r for r in
                          self._conanfile.dependencies.transitive_host_requires}
-        # FIXME: convert to NewCppInfo into the conanfile_interface.py
-        #  "cpp_info" getter for all the new generators
-        for req in host_requires.values():
-            req._cpp_info = NewCppInfo.from_old_cppinfo(req._conanfile.cpp_info)
 
         # Iterate all the transitive requires
         for req in host_requires.values():
@@ -608,8 +607,8 @@ endforeach()
             config_version = self.config_version_template.format(version=req.ref.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
             pfolder = req.package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-            if not req.cpp_info.has_components:
-                deps = DepsCppCmake(req.cpp_info, pkg_target_name, self.name)
+            if not req.new_cpp_info.has_components:
+                deps = DepsCppCmake(req.new_cpp_info, pkg_target_name, self.name)
                 variables = {
                    self._data_filename(pkg_filename):
                        variables_template.format(name=pkg_target_name, deps=deps,
@@ -637,7 +636,7 @@ endforeach()
                 # Note these are in reversed order, from more dependent to less dependent
                 pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
                                            comp_findname, _ in reversed(components)])
-                global_cppinfo = req.cpp_info.copy()
+                global_cppinfo = req.new_cpp_info.copy()
                 global_cppinfo.aggregate_components()
                 deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
                 global_variables = variables_template.format(name=pkg_target_name, deps=deps,
@@ -723,8 +722,8 @@ endforeach()
         pkg_public_deps_filenames = []
 
         # Get a list of dependencies target names and file names
-        if req.cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
-            for dep_name, component_name in req.cpp_info.required_components:
+        if req.new_cpp_info.required_components:  # Declared cppinfo.requires or .components[].requires
+            for dep_name, component_name in req.new_cpp_info.required_components:
                 if dep_name:  # External dep
                     filename = self.get_filename(requires[dep_name])
                     if filename not in pkg_public_deps_filenames:
