@@ -1,3 +1,4 @@
+from conans.client.graph.graph import CONTEXT_HOST
 from conans.errors import ConanException
 from conans.model.conanfile_interface import ConanFileInterface
 
@@ -56,7 +57,8 @@ class ConanFileDependencies:
         requires = [ConanFileInterface(edge.dst.conanfile) for edge in self._node.dependencies
                     if not edge.build_require and not edge.private]
         requires.extend([ConanFileInterface(edge.dst.conanfile)
-                         for edge in self._node.dependencies if edge.build_require])
+                         for edge in self._node.dependencies
+                         if edge.build_require and edge.dst.context == CONTEXT_HOST])
         return DependencyOrderedSet(requires)
 
     @property

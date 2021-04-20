@@ -35,4 +35,3 @@ def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     else:
         value = "v142"
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
-
