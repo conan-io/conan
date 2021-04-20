@@ -12,7 +12,7 @@ class BuildMode(object):
                    => "outdated" if user wrote "--build outdated"
                    => ["!foo"] means exclude when building all from sources
     """
-    def __init__(self, params, output, excluded_build=None):
+    def __init__(self, params, output, build_exclude=None):
         self._out = output
         self.outdated = False
         self.missing = False
@@ -20,15 +20,10 @@ class BuildMode(object):
         self.cascade = False
         self.patterns = []
         self._unused_patterns = []
-        self._excluded_patterns = excluded_build or []
+        self._excluded_patterns = build_exclude or []
         self.all = False
         if params is None:
             return
-
-        def clear_param(param):
-            # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
-            clean_pattern = param[:-1] if param.endswith("@") else param
-            return clean_pattern.replace("@#", "#")
 
         assert isinstance(params, list)
         if len(params) == 0:
@@ -44,17 +39,20 @@ class BuildMode(object):
                 elif param == "cascade":
                     self.cascade = True
                 else:
-                    self.patterns.append(clear_param(param))
+                    # Remove the @ at the end, to match for "conan install pkg/0.1@ --build=pkg/0.1@"
+                    clean_pattern = param[:-1] if param.endswith("@") else param
+                    clean_pattern = clean_pattern.replace("@#", "#")
+                    self.patterns.append(clean_pattern)
 
             if self.never and (self.outdated or self.missing or self.patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
-        def pattern_match(pattern):
-            return (fnmatch.fnmatchcase(ref.name, pattern) or
-                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern) or
-                    fnmatch.fnmatchcase(repr(ref), pattern))
+        def pattern_match(pattern_):
+            return (fnmatch.fnmatchcase(ref.name, pattern_) or
+                    fnmatch.fnmatchcase(repr(ref.copy_clear_rev()), pattern_) or
+                    fnmatch.fnmatchcase(repr(ref), pattern_))
 
         for pattern in self._excluded_patterns:
             if pattern_match(pattern):
