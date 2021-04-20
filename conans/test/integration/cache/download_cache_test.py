@@ -93,9 +93,8 @@ class DownloadCacheTest(unittest.TestCase):
                 continue
             save(f, load(f) + "a")
         client.run("remove * -f")
-        client.run("install mypkg/0.1@user/testing", assert_error=True)
-        self.assertIn("ERROR: md5 signature failed", client.out)
-        self.assertIn("Cached downloaded file corrupted", client.out)
+        client.run("install mypkg/0.1@user/testing")
+        self.assertIn("mypkg/0.1@user/testing: Downloaded package", client.out)
 
     @pytest.mark.skipif(not get_env("TESTING_REVISIONS_ENABLED", False), reason="Only revisions")
     def test_dirty_download(self):
