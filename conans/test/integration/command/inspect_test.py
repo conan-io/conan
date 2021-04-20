@@ -260,6 +260,7 @@ class Pkg(ConanFile):
     default_options = {"foo": True, "bar": False}
     _private = "Nothing"
     revision_mode = "scm"
+    deprecated = "suggestion"
     def build(self):
         pass
 """
@@ -287,6 +288,7 @@ options:
 default_options:
     bar: False
     foo: True
+deprecated: suggestion
 """, client.out)
 
     def test_default_options_list(self):
