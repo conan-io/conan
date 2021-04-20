@@ -11,7 +11,7 @@ from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
-from conans.util.files import rmdir
+from conans.util.files import rmdir, md5
 from .db.folders import ConanFolders
 
 
@@ -50,13 +50,9 @@ class DataCache:
 
     @staticmethod
     def get_default_path(item: Union[ConanFileReference, PackageReference]) -> str:
-        """ If revision is known returns the recipe revision as folder. This means that if
-            two references mypkg/1.0 and mypkg/2.0 share the same revision they will share
-            this folder two. This will save space because exports will not be copied in several
-            places but TODO: check if this is the desired behaviour and implications with locks
-        """
+        """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.revision:
-            return item.revision
+            return md5(item.full_str())
         else:
             return str(uuid.uuid4())
 

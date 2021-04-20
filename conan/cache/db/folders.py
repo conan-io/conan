@@ -21,7 +21,7 @@ class FoldersDbTable(BaseDbTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
-                           ('path', str, False, None),  # TODO: Add unittest
+                           ('path', str, False, None, True),  # TODO: Add unittest
                            ('folder', int, False, [it.value for it in ConanFolders]),
                            ('last_modified', int)]
     unique_together = ('reference_pk', 'package_pk', 'path', 'folder')  # TODO: Add unittest
