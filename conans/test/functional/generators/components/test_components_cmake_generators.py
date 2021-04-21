@@ -50,14 +50,19 @@ def setup_client_with_greetings():
                 elif self.options.components == "custom":
                     self.cpp_info.filenames["cmake_find_package_multi"] = "MYG"
                     self.cpp_info.filenames["cmake_find_package"] = "MYG"
+                    self.cpp_info.set_property("cmake_file_name", "MYG")
+
                     self.cpp_info.names["cmake_find_package_multi"] = "MyGreetings"
                     self.cpp_info.names["cmake_find_package"] = "MyGreetings"
+                    self.cpp_info.set_property("cmake_target_name", "MyGreetings")
+
                     self.cpp_info.components["hello"].names["cmake_find_package_multi"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package_multi"] = "MyBye"
                     self.cpp_info.components["hello"].names["cmake_find_package"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package"] = "MyBye"
-                    self.cpp_info.components["hello"].names["CMakeDeps"] = "MyHello"
-                    self.cpp_info.components["bye"].names["CMakeDeps"] = "MyBye"
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "MyHello")
+                    self.cpp_info.components["bye"].set_property("cmake_target_name", "MyBye")
+
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
                 else:
@@ -296,15 +301,19 @@ def test_custom_names(setup_client_with_greetings, generator):
         self.cpp_info.names["cmake_find_package_multi"] = "MyChat"
         self.cpp_info.names["cmake_find_package"] = "MyChat"
         # NOTE: For the new CMakeDeps only filenames mean filename, it is not using the "names" field
-        self.cpp_info.filenames["CMakeDeps"] = "MyChat"
+        self.cpp_info.set_property("cmake_target_name", "MyChat")
+        self.cpp_info.set_property("cmake_file_name", "MyChat")
+
         self.cpp_info.components["sayhello"].names["cmake_find_package_multi"] = "MySay"
         self.cpp_info.components["sayhello"].names["cmake_find_package"] = "MySay"
-        self.cpp_info.components["sayhello"].names["CMakeDeps"] = "MySay"
+        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
         self.cpp_info.components["sayhellobye"].names["cmake_find_package_multi"] ="MySayBye"
         self.cpp_info.components["sayhellobye"].names["cmake_find_package"] ="MySayBye"
-        self.cpp_info.components["sayhellobye"].names["CMakeDeps"] ="MySayBye"
+        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
         """)
@@ -339,8 +348,7 @@ def test_no_components(setup_client_with_greetings, generator):
     package_info = textwrap.dedent("""
         self.cpp_info.components["sayhello"].requires = ["greetings::greetings"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
-        self.cpp_info.components["sayhellobye"].requires = ["sayhello",
-                                                            "greetings::greetings"]
+        self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::greetings"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
         """)
 
@@ -578,7 +586,12 @@ class TestComponentsCMakeGenerators:
                 def package_info(self):
                     self.cpp_info.names["{generator}"] = "nonstd"
                     self.cpp_info.filenames["{generator}"] = "{name}"
+                    self.cpp_info.set_property("cmake_target_name", "nonstd", "{generator}")
+                    self.cpp_info.set_property("cmake_file_name", "{name}", "{generator}")
+
                     self.cpp_info.components["1"].names["{generator}"] = "{name}"
+                    self.cpp_info.components["1"].set_property("cmake_target_name",
+                                                               "{name}", "{generator}")
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         client = TestClient()

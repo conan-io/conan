@@ -38,7 +38,7 @@ class Extender(argparse.Action):
           settings = ['cucumber:true']
     """
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        # Need None here in case `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
         if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
@@ -327,8 +327,6 @@ class Command(object):
                             help='Do not remove the build folder in local cache. '
                                  'Implies --keep-source. '
                                  'Use this for testing purposes only')
-        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
-                            help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Working directory for the build of the test project.')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -365,7 +363,7 @@ class Command(object):
 
             info = self._conan.create(args.path, name, version, user, channel,
                                       args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder, args.not_export,
+                                      args.env_host, args.test_folder,
                                       args.build, args.keep_source, args.keep_build,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
@@ -2208,6 +2206,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
+    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+                       reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.
