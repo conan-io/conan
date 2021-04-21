@@ -8,6 +8,9 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
 def write_conanvcvars(conanfile):
     """
     write a conanvcvars.bat file with the good args from settings
@@ -21,7 +24,7 @@ def write_conanvcvars(conanfile):
     if compiler == "intel":
         cvars = intel_compilervars_command(conanfile)
     elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = _vs_ide_version(conanfile)
+        vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
         cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
                                winsdk_version=None, vcvars_ver=None)
@@ -30,10 +33,10 @@ def write_conanvcvars(conanfile):
             @echo off
             {}
             """.format(cvars))
-        save("conanvcvars.bat", content)
+        save(CONAN_VCVARS_FILE, content)
 
 
-def _vs_ide_version(conanfile):
+def vs_ide_version(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
