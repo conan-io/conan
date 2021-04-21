@@ -876,7 +876,7 @@ class Pkg(ConanFile):
                     path: C
                 HelloA/0.1@lasote/stable:
                     path: A
-                    generators: visual_studio
+                    generators: CMakeDeps
             layout: layout
             generators: cmake
             workspace_generator: cmake
@@ -897,8 +897,6 @@ class Pkg(ConanFile):
                                                     "conanbuildinfo.mak")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
                                                     "conanbuildinfo.pri")))
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "A",
-                                                    "conanbuildinfo.props")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "C",
                                                     "conanbuildinfo.cmake")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
