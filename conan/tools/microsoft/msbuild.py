@@ -35,6 +35,7 @@ class MSBuild(object):
         self.platform = msvc_arch
 
     def command(self, sln):
+        # TODO: Enable output_binary_log via config
         cmd = ('msbuild "%s" /p:Configuration=%s /p:Platform=%s'
                % (sln, self.build_type, self.platform))
 

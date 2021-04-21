@@ -8,11 +8,9 @@ import unittest
 import pytest
 
 from conans.client import tools
-from conans.client.conf import get_default_settings_yml
 from conans.client.tools.files import which
 from conans.client.tools.win import vswhere
 from conans.errors import ConanException
-from conans.model.settings import Settings
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.util.env_reader import get_env
@@ -76,34 +74,6 @@ class FunctionalToolsTest(unittest.TestCase):
 @pytest.mark.tool_visual_studio
 class VisualStudioToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
-
-    def test_msvc_build_command(self):
-        settings = Settings.loads(get_default_settings_yml())
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "14"
-
-        # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
-                                       arch="x86", output=self.output)
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
-                      '/p:UseEnv=false /p:Platform="x86"', cmd)
-        self.assertIn('vcvarsall.bat', cmd)
-
-        # tests errors if args not defined
-        with self.assertRaisesRegex(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln", output=self.output)
-
-        settings.arch = "x86"
-        with self.assertRaisesRegex(ConanException, "Cannot build_sln_command"):
-            tools.msvc_build_command(settings, "project.sln", output=self.output)
-
-        # successful definition via settings
-        settings.build_type = "Debug"
-        cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-        self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
-                      '/p:UseEnv=false /p:Platform="x86"', cmd)
-        self.assertIn('vcvarsall.bat', cmd)
 
     def test_vswhere_path(self):
         """
