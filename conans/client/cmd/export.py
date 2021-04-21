@@ -114,17 +114,12 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                                                           os.path.dirname(conanfile_path),
                                                           reference_layout, output,
                                                           ignore_dirty)
-    # Clear previous scm_folder
-    modified_recipe = False
+
     scm_sources_folder = reference_layout.scm_sources()
     if local_src_folder:
         # Copy the local scm folder to scm_sources in the cache
         mkdir(scm_sources_folder)
         _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
-        # https://github.com/conan-io/conan/issues/5195#issuecomment-551840597
-        # It will cause the source folder to be removed (needed because the recipe still has
-        # the "auto" with uncommitted changes)
-        modified_recipe = True
 
     # Execute post-export hook before computing the digest
     hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
@@ -152,10 +147,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                 output.info("Source folder is corrupted, forcing removal")
                 rmdir(source_folder)
                 clean_dirty(source_folder)
-            elif modified_recipe:
-                output.info("Package recipe modified in export, forcing source folder removal")
-                output.info("Use the --keep-source, -k option to skip it")
-                rmdir(source_folder)
         except BaseException as e:
             output.error("Unable to delete source folder. Will be marked as corrupted for deletion")
             output.warn(str(e))
