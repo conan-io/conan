@@ -232,7 +232,10 @@ class GraphManager(object):
         conanfile.output.scope = conanfile.display_name
 
         # Injection of the tested reference
-        if getattr(conanfile, "test_build_require", None):
+        test_type = getattr(conanfile, "test_type", ("requires", ))
+        if not isinstance(test_type, (list, tuple)):
+            test_type = (test_type, )
+        if "build_requires" in test_type:
             if getattr(conanfile, "build_requires", None):
                 # Injecting the tested reference
                 existing = conanfile.build_requires
@@ -241,7 +244,7 @@ class GraphManager(object):
                 conanfile.build_requires = list(existing) + [create_reference]
             else:
                 conanfile.build_requires = str(create_reference)
-        else:
+        if "requires" in test_type:
             require = conanfile.requires.get(create_reference.name)
             if require:
                 require.ref = require.range_ref = create_reference
