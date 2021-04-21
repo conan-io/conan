@@ -121,7 +121,7 @@ class {name}Conan(ConanFile):
                         static= {static}'''
     requires = ({requires})
     settings = {settings}
-    generators = "cmake", "gcc"
+    generators = "cmake"
     exports = '*'
 
     def config(self):
