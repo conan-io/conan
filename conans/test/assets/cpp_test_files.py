@@ -11,101 +11,6 @@ conanfile_build_cmake = """    def build(self):
         cmake.configure(defs=defs)
         cmake.build()"""
 
-conanfile_build_new_env = """
-    def build(self):
-        import os
-        from conans import AutoToolsBuildEnvironment
-        from conans.tools import environment_append, vcvars_command, save
-        from conans import tools
-
-        if self.settings.compiler == "Visual Studio":
-            with environment_append(env_build.vars):
-                vcvars = vcvars_command(self.settings)
-                flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)
-                lang = '/DCONAN_LANGUAGE=%s' % self.options.language
-                if self.options.static:
-                    self.run('{} && cl /c /EHsc hello.cpp {}'.format(vcvars, lang))
-                    self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(vcvars, self.name))
-                else:
-                    self.run('{} && cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
-                             '/link /OUT:hello{}.dll'.format(vcvars, lang, flags,
-                                                             self.name, self.name))
-
-                command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
-                self.run(command)
-        elif tools.os_info.bash_path() and tools.which("aclocal"):
-            makefile_am = '''
-bin_PROGRAMS = main
-lib_LIBRARIES = libhello{}.a
-libhello{}_a_SOURCES = hello.cpp
-main_SOURCES = main.cpp
-main_LDADD = libhello{}.a
-'''.format(self.name, self.name, self.name)
-
-            configure_ac = '''
-AC_INIT([main], [1.0], [luism@jfrog.com])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_PROG_CXX
-AC_PROG_RANLIB
-AM_PROG_AR
-AC_CONFIG_FILES([Makefile])
-AC_OUTPUT
-'''
-            save("Makefile.am", makefile_am)
-            save("configure.ac", configure_ac)
-
-            iswin = self.settings.os == "Windows"
-            self.run("aclocal", win_bash=iswin)
-            self.run("autoconf", win_bash=iswin)
-            self.run("automake --add-missing --foreign", win_bash=iswin)
-
-            autotools = AutoToolsBuildEnvironment(self, win_bash=iswin)
-            autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
-            autotools.configure()
-            autotools.make()
-            env = {"DYLD_LIBRARY_PATH": ".",
-                   "LD_LIBRARY_PATH": "."}
-            with tools.environment_append(env):
-                self.run("main.exe" if platform.system() == "Windows" else "./main")
-
-        elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
-            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-            if self.options.static:
-                self.run("c++ -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
-                self.run("ar rcs libhello{}.a hello.o".format(self.name))
-            else:
-                if self.settings.os == "Windows":
-                    self.run("c++ -o libhello{}.dll -shared -fPIC hello.cpp {} @conanbuildinfo.gcc "
-                             "-Wl,--out-implib,libhello{}.a".
-                             format(self.name, lang, self.name))
-                else:
-                    self.run("c++ -o libhello{}.so -shared -fPIC hello.cpp {} @conanbuildinfo.gcc".
-                    format(self.name, lang))
-            self.run('c++ -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
-        elif self.settings.compiler == "sun-cc":
-            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-            if self.options.static:
-                self.run("CC -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
-                self.run("ar rcs libhello{}.a hello.o".format(self.name))
-            else:
-                self.run("CC -o libhello{}.so -G -Kpic hello.cpp {} @conanbuildinfo.gcc".
-                format(self.name, lang))
-            self.run('CC -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
-        try:
-            os.makedirs("bin")
-        except:
-            pass
-
-        try:
-            if self.settings.os == "Windows":
-                os.rename("main.exe", "bin/say_hello.exe")
-            else:
-                os.rename("main", "bin/say_hello")
-                if not self.options.static:
-                    os.rename("libhello.so", "bin/libhello.so")
-        except:
-            pass
-"""
 
 conanfile_template = """
 from conans import ConanFile, CMake
@@ -320,7 +225,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, need_patch=False,
                           pure_c=False, config=True, build=True,
-                          use_cmake=True, cmake_targets=False, no_copy_source=False,
+                          cmake_targets=False, no_copy_source=False,
                           use_additional_infos=0, settings=None, with_exe=True):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
@@ -355,7 +260,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         pure_c=pure_c, cmake_targets=cmake_targets,
                                         with_exe=with_exe)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
-    build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
+    build_env = conanfile_build_cmake
 
     info_tmp = """
         self.env_info.%s.append("2")

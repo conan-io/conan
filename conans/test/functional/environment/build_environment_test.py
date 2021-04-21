@@ -106,12 +106,12 @@ class BuildEnvironmenTest(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows")
     @pytest.mark.tool_compiler
     def test_use_build_virtualenv_windows(self):
-        files = cpp_hello_conan_files("hello", "0.1",  use_cmake=False, with_exe=False)
+        files = cpp_hello_conan_files("hello", "0.1", with_exe=False)
         client = TestClient(path_with_spaces=False)
         client.save(files)
         client.run("create . user/testing")
         files = cpp_hello_conan_files("hello2", "0.1", deps=["hello/0.1@user/testing"],
-                                      use_cmake=False, with_exe=False)
+                                      with_exe=False)
         client.save(files, clean_first=True)
         client.run("create . user/testing")
 
@@ -129,8 +129,7 @@ class BuildEnvironmenTest(unittest.TestCase):
                     self.run('activate_build.bat && cl /EHsc main.cpp helloapp.lib')
             ''')
 
-        reuse = cpp_hello_conan_files("app", "0.1", deps=["hello2/0.1@user/testing"],
-                                      use_cmake=False)
+        reuse = cpp_hello_conan_files("app", "0.1", deps=["hello2/0.1@user/testing"])
         reuse["conanfile.py"] = reuse_conanfile
         client.save(reuse, clean_first=True)
         client.run("install .")
