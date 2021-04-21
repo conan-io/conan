@@ -1371,6 +1371,7 @@ class ConanAPIV1(object):
             print_graph(graph, self.app.out)
         else:
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                         base_folder=cwd,
                          remotes=remotes, graph_info=graph_info, build_modes=build,
                          generators=generators, recorder=recorder, lockfile_node_id=root_id)
 

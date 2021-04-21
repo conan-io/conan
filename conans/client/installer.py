@@ -628,6 +628,9 @@ class BinaryInstaller(object):
         add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
+        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
+        conanfile.cpp_info.version = conanfile.version
+        conanfile.cpp_info.description = conanfile.description
 
         conanfile.folders.set_base_package(package_folder)
         conanfile.folders.set_base_source(None)
@@ -650,21 +653,24 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
+                    if hasattr(conanfile, "layout") and not is_editable:
+                        # Copy the package_cpp_info into the old cppinfo
+                        conanfile.package_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
+
                     conanfile.package_info()
 
-                    if is_editable and hasattr(conanfile, "layout"):
+                    if hasattr(conanfile, "layout") and is_editable:
                         # Adjust the folders of the layout to consolidate the rootfolder of the
                         # cppinfos inside
                         conanfile.folders.set_base_build(package_folder)
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
                         # Here package_folder is the editable base folder
-                        # !!!
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
                         conanfile.cpp_info.version = conanfile.version
                         conanfile.cpp_info.description = conanfile.description
-                        conanfile.cpp_info.merge(conanfile.folders.build.cpp_info)
-                        conanfile.cpp_info.merge(conanfile.folders.source.cpp_info)
+                        conanfile.build_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
+                        conanfile.source_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:

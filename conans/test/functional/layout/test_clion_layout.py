@@ -12,7 +12,7 @@ def conanfile():
     conanfile = str(GenConanfile().with_import("from conans import tools")
                     .with_import("import os")
                     .with_settings("build_type")
-                    .with_import("from conan.tools.layout import clion_layout"))
+                    .with_import("from conan.tools.layout import clion_layout, LayoutPackager"))
 
     conanfile += """
     def source(self):
@@ -25,7 +25,7 @@ def conanfile():
         clion_layout(self)
 
     def package(self):
-        self.folders.package_files()
+        LayoutPackager(self).package()
     """
     return conanfile
 

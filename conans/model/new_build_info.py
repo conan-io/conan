@@ -79,21 +79,34 @@ class NewCppInfo(object):
     def has_components(self):
         return len(self.components) > 1
 
+    @property
+    def component_names(self):
+        return filter(None, self.components.keys())
+
     @staticmethod
     def from_old_cppinfo(old):
         ret = NewCppInfo()
-        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            setattr(ret, varname, getattr(old, varname))
+        NewCppInfo._copy_data(old, ret)
+        return ret
 
-        ret._generator_properties = copy.copy(old._generator_properties)
+    def copy_into_old_cppinfo(self, old):
+        NewCppInfo._copy_data(self, old)
+
+    @staticmethod
+    def _copy_data(origin, dest):
+        for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            setattr(dest, varname, getattr(origin, varname))
+
+        dest._generator_properties = copy.copy(origin._generator_properties)
 
         # COMPONENTS
-        for cname, c in old.components.items():
+        for cname, c in origin.components.items():
+            if cname is None:
+                continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                setattr(ret.components[cname], varname, getattr(c, varname))
-            ret.components[cname].requires = copy.copy(c.requires)
-            ret.components[cname]._generator_properties = copy.copy(c._generator_properties)
-        return ret
+                setattr(dest.components[cname], varname, getattr(c, varname))
+            dest.components[cname].requires = copy.copy(c.requires)
+            dest.components[cname]._generator_properties = copy.copy(c._generator_properties)
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the

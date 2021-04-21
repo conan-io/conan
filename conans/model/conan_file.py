@@ -157,7 +157,20 @@ class ConanFile(object):
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
-        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
+        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self.package_cpp_info = NewCppInfo()
+        self.package_cpp_info.includedirs = ["include"]
+        self.package_cpp_info.libdirs = ["lib"]
+        self.package_cpp_info.bindirs = ["bin"]
+        self.package_cpp_info.resdirs = ["res"]
+        self.package_cpp_info.builddirs = [""]
+        self.package_cpp_info.frameworkdirs = ["Frameworks"]
+
+        self.build_cpp_info = NewCppInfo()
+        self.build_cpp_info.builddirs = ["."]
+
+        self.source_cpp_info = NewCppInfo()
+        self.source_cpp_info.includedirs = ["include"]
 
     @property
     def context(self):

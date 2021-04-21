@@ -4,7 +4,6 @@ import textwrap
 from jinja2 import Template
 
 from conans.errors import ConanException
-from conans.model.new_build_info import NewCppInfo
 from conans.util.files import save
 
 conan_message = textwrap.dedent("""
