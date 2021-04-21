@@ -52,7 +52,7 @@ class DataCache:
     def get_default_path(item: Union[ConanFileReference, PackageReference]) -> str:
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.revision:
-            return md5(item.full_str())
+            return item.full_str().replace("/", "-")#"#md5(item.full_str())
         else:
             return str(uuid.uuid4())
 

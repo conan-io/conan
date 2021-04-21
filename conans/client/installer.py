@@ -180,53 +180,56 @@ class _PackageBuilder(object):
         conanfile = node.conanfile
         pref = node.pref
 
-        package_layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
-        source_folder = package_layout.source()
-        conanfile_path = package_layout.conanfile()
+        reference_layout = self._cache.ref_layout(pref.ref)
+        package_layout = self._cache.pkg_layout(pref)
+        source_folder = reference_layout.source()
+        conanfile_path = reference_layout.conanfile()
         package_folder = package_layout.package(pref)
 
         build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
                                                           pref, keep_build, recorder)
         # PREPARE SOURCES
         if not skip_build:
-            with package_layout.conanfile_write_lock(self._output):
-                set_dirty(build_folder)
-                self._prepare_sources(conanfile, pref, package_layout, remotes)
-                self._copy_sources(conanfile, source_folder, build_folder)
+            # TODO: cache2.0 check locks
+            # with package_layout.conanfile_write_lock(self._output):
+            set_dirty(build_folder)
+            self._prepare_sources(conanfile, pref, reference_layout, remotes)
+            self._copy_sources(conanfile, source_folder, build_folder)
 
         # BUILD & PACKAGE
-        with package_layout.conanfile_read_lock(self._output):
-            mkdir(build_folder)
-            with tools.chdir(build_folder):
-                self._output.info('Building your package in %s' % build_folder)
-                try:
-                    if getattr(conanfile, 'no_copy_source', False):
-                        conanfile.layout.set_base_source_folder(source_folder)
-                    else:
-                        conanfile.layout.set_base_source_folder(build_folder)
+        # TODO: cache2.0 check locks
+        # with package_layout.conanfile_read_lock(self._output):
+        mkdir(build_folder)
+        with tools.chdir(build_folder):
+            self._output.info('Building your package in %s' % build_folder)
+            try:
+                if getattr(conanfile, 'no_copy_source', False):
+                    conanfile.layout.set_base_source_folder(source_folder)
+                else:
+                    conanfile.layout.set_base_source_folder(build_folder)
 
-                    conanfile.layout.set_base_build_folder(build_folder)
-                    conanfile.layout.set_base_package_folder(package_folder)
-                    # In local cache, install folder always is build_folder
-                    conanfile.layout.set_base_install_folder(build_folder)
+                conanfile.layout.set_base_build_folder(build_folder)
+                conanfile.layout.set_base_package_folder(package_folder)
+                # In local cache, install folder always is build_folder
+                conanfile.layout.set_base_install_folder(build_folder)
 
-                    if not skip_build:
-                        self._build(conanfile, pref)
-                        clean_dirty(build_folder)
+                if not skip_build:
+                    self._build(conanfile, pref)
+                    clean_dirty(build_folder)
 
-                    prev = self._package(conanfile, pref, package_layout, conanfile_path)
-                    assert prev
-                    node.prev = prev
-                    log_file = os.path.join(build_folder, RUN_LOG_NAME)
-                    log_file = log_file if os.path.exists(log_file) else None
-                    log_package_built(pref, time.time() - t1, log_file)
-                    recorder.package_built(pref)
-                except ConanException as exc:
-                    recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
-                                                   remote_name=None)
-                    raise exc
+                prev = self._package(conanfile, pref, package_layout, conanfile_path)
+                assert prev
+                node.prev = prev
+                log_file = os.path.join(build_folder, RUN_LOG_NAME)
+                log_file = log_file if os.path.exists(log_file) else None
+                log_package_built(pref, time.time() - t1, log_file)
+                recorder.package_built(pref)
+            except ConanException as exc:
+                recorder.package_install_error(pref, INSTALL_ERROR_BUILDING, str(exc),
+                                               remote_name=None)
+                raise exc
 
-            return node.pref
+        return node.pref
 
 
 def _remove_folder_raising(folder):
@@ -480,40 +483,41 @@ class BinaryInstaller(object):
         conanfile = node.conanfile
         output = conanfile.output
 
-        layout = self._cache.package_layout(pref.ref, conanfile.short_paths)
+        layout = self._cache.pkg_layout(pref)
 
-        with layout.package_lock(pref):
-            bare_pref = PackageReference(pref.ref, pref.id)
-            processed_prev = processed_package_references.get(bare_pref)
-            if processed_prev is None:  # This package-id has not been processed before
-                if node.binary == BINARY_BUILD:
-                    assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                    layout.package_remove(pref)
-                    with layout.set_dirty_context_manager(pref):
-                        pref = self._build_package(node, output, keep_build, remotes)
-                    assert node.prev, "Node PREV shouldn't be empty"
-                    assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                    assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
-                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                    # this can happen after a re-evaluation of packageID with Package_ID_unknown
-                    self._download_pkg(layout, node)
-                elif node.binary == BINARY_CACHE:
-                    assert node.prev, "PREV for %s is None" % str(pref)
-                    output.success('Already installed!')
-                    log_package_got_from_local_cache(pref)
-                    self._recorder.package_fetched_from_cache(pref)
-                processed_package_references[bare_pref] = node.prev
-            else:
-                # We need to update the PREV of this node, as its processing has been skipped,
-                # but it could be that another node with same PREF was built and obtained a new PREV
-                node.prev = processed_prev
+        # TODO: cache2.0 Check with new locks
+        # with layout.package_lock(pref):
+        bare_pref = PackageReference(pref.ref, pref.id)
+        processed_prev = processed_package_references.get(bare_pref)
+        if processed_prev is None:  # This package-id has not been processed before
+            if node.binary == BINARY_BUILD:
+                assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+                #layout.package_remove(pref)
+                #with layout.set_dirty_context_manager(pref):
+                pref = self._build_package(node, output, keep_build, remotes)
+                assert node.prev, "Node PREV shouldn't be empty"
+                assert node.pref.revision, "Node PREF revision shouldn't be empty"
+                assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
+            elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                # this can happen after a re-evaluation of packageID with Package_ID_unknown
+                self._download_pkg(layout, node)
+            elif node.binary == BINARY_CACHE:
+                assert node.prev, "PREV for %s is None" % str(pref)
+                output.success('Already installed!')
+                log_package_got_from_local_cache(pref)
+                self._recorder.package_fetched_from_cache(pref)
+            processed_package_references[bare_pref] = node.prev
+        else:
+            # We need to update the PREV of this node, as its processing has been skipped,
+            # but it could be that another node with same PREF was built and obtained a new PREV
+            node.prev = processed_prev
 
-            package_folder = layout.package(pref)
-            assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
-                                                   % (str(pref), package_folder))
-            # Call the info method
-            self._call_package_info(conanfile, package_folder, ref=pref.ref)
-            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
+        package_folder = layout.package(pref)
+        assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                               % (str(pref), package_folder))
+        # Call the info method
+        self._call_package_info(conanfile, package_folder, ref=pref.ref)
+        self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, output, keep_build, remotes):
         conanfile = node.conanfile

@@ -21,7 +21,7 @@ class ConanProxy(object):
         self._remote_manager = remote_manager
 
     def get_recipe(self, ref, check_updates, update, remotes, recorder):
-        layout = self._cache.package_layout(ref)
+        layout = self._cache.ref_layout(ref)
         if isinstance(layout, PackageEditableLayout):
             conanfile_path = layout.conanfile()
             status = RECIPE_EDITABLE
@@ -29,13 +29,14 @@ class ConanProxy(object):
             # TODO: recorder.recipe_fetched_as_editable(reference)
             return conanfile_path, status, None, ref
 
-        with layout.conanfile_write_lock(self._out):
-            result = self._get_recipe(layout, ref, check_updates, update, remotes, recorder)
-            conanfile_path, status, remote, new_ref = result
+        # TODO: cache2.0 Check with new locks
+        # with layout.conanfile_write_lock(self._out):
+        result = self._get_recipe(layout, ref, check_updates, update, remotes, recorder)
+        conanfile_path, status, remote, new_ref = result
 
-            if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
-                log_recipe_got_from_local_cache(new_ref)
-                recorder.recipe_fetched_from_cache(new_ref)
+        if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
+            log_recipe_got_from_local_cache(new_ref)
+            recorder.recipe_fetched_from_cache(new_ref)
 
         return conanfile_path, status, remote, new_ref
 
@@ -51,42 +52,27 @@ class ConanProxy(object):
             status = RECIPE_DOWNLOADED
             return conanfile_path, status, remote, new_ref
 
-        metadata = layout.load_metadata()
-        cur_revision = metadata.recipe.revision
-        cur_remote = metadata.recipe.remote
+        # TODO: cache2.0: store the remote in the db?
+        # TODO: cache2.0: check with new --update flows
+        cur_remote = None
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
 
         check_updates = check_updates or update
-        requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
-        if requested_different_revision:
-            if check_updates:
-                remote, new_ref = self._download_recipe(layout, ref, output, remotes,
-                                                        selected_remote, recorder)
-                status = RECIPE_DOWNLOADED
-                return conanfile_path, status, remote, new_ref
-            else:
-                raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
-                                        "match the requested '%s'."
-                                        " Use '--update' to check in the remote."
-                                        % (cur_revision, repr(ref)))
 
         if not check_updates:
             status = RECIPE_INCACHE
-            ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, cur_remote, ref
 
         # Checking updates in the server
         if not selected_remote:
             status = RECIPE_NO_REMOTE
-            ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, None, ref
 
         try:  # get_recipe_manifest can fail, not in server
             upstream_manifest, ref = self._remote_manager.get_recipe_manifest(ref, selected_remote)
         except NotFoundException:
             status = RECIPE_NOT_IN_REMOTE
-            ref = ref.copy_with_rev(cur_revision)
             return conanfile_path, status, selected_remote, ref
 
         read_manifest = layout.recipe_manifest()
@@ -105,7 +91,6 @@ class ConanProxy(object):
         else:
             status = RECIPE_INCACHE
 
-        ref = ref.copy_with_rev(cur_revision)
         return conanfile_path, status, selected_remote, ref
 
     def _download_recipe(self, layout, ref, output, remotes, remote, recorder):

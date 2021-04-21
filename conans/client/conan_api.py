@@ -365,18 +365,15 @@ class ConanAPIV1(object):
 
             self.app.range_resolver.clear_output()  # invalidate version range output
 
-            # The new_ref contains the revision
-            # To not break existing things, that they used this ref without revision
-            ref = new_ref.copy_clear_rev()
             recorder.recipe_exported(new_ref)
 
             if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [ref.name]
+                build_modes = [new_ref.name]
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
             root_ref = ConanFileReference(None, None, None, None, validate=False)
-            recorder.add_recipe_being_developed(ref)
-            create(self.app, ref, profile_host, profile_build,
+            recorder.add_recipe_being_developed(new_ref)
+            create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes, keep_build,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder)
 
