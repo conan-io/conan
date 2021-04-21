@@ -8,6 +8,7 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
@@ -24,7 +25,7 @@ class Base(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
-            generators = "cmake_find_package_multi"
+            generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
 
@@ -94,7 +95,7 @@ class Base(unittest.TestCase):
         """)
 
     def setUp(self):
-        self.client = TestClient(path_with_spaces=True)
+        self.client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -440,6 +441,50 @@ class AppleTest(Base):
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.parametrize("version, vs_version",
+                         [("19.0", "15"),
+                          ("19.1", "15")])
+def test_msvc_vs_versiontoolset(version, vs_version):
+    settings = {"compiler": "msvc",
+                "compiler.version": version,
+                "compiler.runtime": "static",
+                "compiler.cppstd": "14",
+                "arch": "x86_64",
+                "build_type": "Release",
+                }
+    client = TestClient()
+    save(client.cache.new_config_path,
+         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+    conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+                exports_sources = "*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run("Release\\myapp.exe")
+            """)
+    cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
+    main = gen_function_cpp(name="main")
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "app.cpp": main,
+                 })
+    settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+    client.run("create . app/1.0@ {}".format(settings))
+    assert '-G "Visual Studio 15 2017"' in client.out
+
+    check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
 
 
 @pytest.mark.toolchain

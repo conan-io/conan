@@ -1,19 +1,20 @@
+import json
 import os
 import platform
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.utils import get_generator, is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
     msbuild_max_cpu_count_cmd_line_arg
 from conans.client import tools
-from conans.client.build import join_arguments
+
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.files import mkdir
+from conans.util.files import mkdir, load
 
 
 def _validate_recipe(conanfile):
@@ -61,17 +62,16 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, generator=None, build_folder=None, parallel=True):
+    def __init__(self, conanfile, build_folder=None, parallel=True):
         _validate_recipe(conanfile)
-
-        # assert generator is None, "'generator' is handled by the toolchain"
-        self._generator = generator or get_generator(conanfile)
-        self._is_multiconfiguration = is_multi_configuration(self._generator)
 
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
 
+        self._generator = None
+        if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
+            self._generator = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))["cmake_generator"]
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -109,17 +109,15 @@ class CMake(object):
         if self._build_folder:
             bf = os.path.join(self._conanfile.build_folder, self._build_folder)
 
-        if build_type and not self._is_multiconfiguration:
+        is_multi = is_multi_configuration(self._generator)
+        if build_type and not is_multi:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "
                                          "single-config build systems")
 
         bt = build_type or self._conanfile.settings.get_safe("build_type")
-        conan_v2_error("build_type setting should be defined.", not bt)
-
-        if bt and self._is_multiconfiguration:
-            build_config = "--config %s" % bt
-        else:
-            build_config = ""
+        if not bt:
+            raise ConanException("build_type setting should be defined.")
+        build_config = "--config {}".format(bt) if bt and is_multi else ""
 
         args = []
         if target is not None:
@@ -130,7 +128,8 @@ class CMake(object):
             args += ['--'] + cmd_line_args
 
         arg_list = [args_to_string([bf]), build_config, args_to_string(args)]
-        command = "%s --build %s" % (self._cmake_program, join_arguments(arg_list))
+        arg_list = " ".join(filter(None, arg_list))
+        command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
         self._conanfile.run(command)
 
@@ -149,7 +148,8 @@ class CMake(object):
         if not self._conanfile.should_test:
             return
         if not target:
-            target = "RUN_TESTS" if self._is_multiconfiguration else "test"
+            is_multi = is_multi_configuration(self._generator)
+            target = "RUN_TESTS" if is_multi else "test"
 
         env = {'CTEST_OUTPUT_ON_FAILURE': '1' if output_on_failure else '0'}
         if self._parallel:

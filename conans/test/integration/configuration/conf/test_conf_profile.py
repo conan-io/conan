@@ -15,6 +15,7 @@ def client():
 
         class Pkg(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
 
             def run(self, cmd):  # INTERCEPTOR of running
                 self.output.info("RECIPE-RUN: {}".format(cmd))
