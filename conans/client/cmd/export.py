@@ -49,7 +49,7 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
-def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
+def cmd_export(app, conanfile_path, name, version, user, channel,
                graph_lock=None, ignore_dirty=False):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a

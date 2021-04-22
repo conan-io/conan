@@ -63,7 +63,7 @@ class _PackageBuilder(object):
         self._remote_manager = remote_manager
         self._generator_manager = generators
 
-    def _get_build_folder(self, conanfile, package_layout, pref, keep_build, recorder):
+    def _get_build_folder(self, conanfile, package_layout, pref, recorder):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
@@ -72,21 +72,13 @@ class _PackageBuilder(object):
         build_pref = PackageReference(pref.ref, new_id) if new_id else pref
         build_folder = package_layout.build()
 
+        skip_build = False
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
 
-        # Decide if the build folder should be kept
-        skip_build = conanfile.develop and keep_build
-        if skip_build:
-            self._output.info("Won't be built as specified by --keep-build")
-            if not os.path.exists(build_folder):
-                msg = "--keep-build specified, but build folder not found"
-                recorder.package_install_error(pref, INSTALL_ERROR_MISSING_BUILD_FOLDER,
-                                               msg, remote_name=None)
-                raise ConanException(msg)
-        elif build_pref != pref and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
+        if build_pref != pref and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
             self._output.info("Won't be built, using previous build folder as defined in build_id()")
             skip_build = True
 
@@ -175,7 +167,7 @@ class _PackageBuilder(object):
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
-    def build_package(self, node, keep_build, recorder, remotes):
+    def build_package(self, node, recorder, remotes):
         t1 = time.time()
 
         conanfile = node.conanfile
@@ -188,7 +180,7 @@ class _PackageBuilder(object):
         package_folder = package_layout.package()
 
         build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
-                                                          pref, keep_build, recorder)
+                                                          pref, recorder)
         # PREPARE SOURCES
         if not skip_build:
             # TODO: cache2.0 check locks
@@ -298,14 +290,14 @@ class BinaryInstaller(object):
             app.loader.load_generators(generator_path)
 
     def install(self, deps_graph, remotes, build_mode, update, profile_host, profile_build,
-                graph_lock, keep_build=False):
+                graph_lock):
         # order by levels and separate the root node (ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()
         root_level = nodes_by_level.pop()
         root_node = root_level[0]
         # Get the nodes in order and if we have to build them
         self._out.info("Installing (downloading, building) binaries...")
-        self._build(nodes_by_level, keep_build, root_node, profile_host, profile_build,
+        self._build(nodes_by_level, root_node, profile_host, profile_build,
                     graph_lock, remotes, build_mode, update)
 
     @staticmethod
@@ -407,7 +399,7 @@ class BinaryInstaller(object):
         self._remote_manager.get_package(node.conanfile, node.pref, layout, node.binary_remote,
                                          node.conanfile.output, self._recorder)
 
-    def _build(self, nodes_by_level, keep_build, root_node, profile_host, profile_build, graph_lock,
+    def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
         using_build_profile = bool(profile_build)
         missing, invalid, downloads = self._classify(nodes_by_level)
@@ -440,7 +432,7 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, keep_build, processed_package_refs, remotes)
+                    self._handle_node_cache(node, processed_package_refs, remotes)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node, using_build_profile)
@@ -477,7 +469,7 @@ class BinaryInstaller(object):
                 copied_files = run_imports(node.conanfile, build_folder)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):
+    def _handle_node_cache(self, node, processed_package_references, remotes):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
@@ -493,7 +485,7 @@ class BinaryInstaller(object):
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                 #layout.package_remove(pref)
                 #with layout.set_dirty_context_manager(pref):
-                pref = self._build_package(node, output, keep_build, remotes)
+                pref = self._build_package(node, output, remotes)
                 assert node.prev, "Node PREV shouldn't be empty"
                 assert node.pref.revision, "Node PREF revision shouldn't be empty"
                 assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -521,7 +513,7 @@ class BinaryInstaller(object):
         self._call_package_info(conanfile, package_folder, ref=pref.ref)
         self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _build_package(self, node, output, keep_build, remotes):
+    def _build_package(self, node, output, remotes):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
         # Only the legacy python_requires allow this
@@ -535,7 +527,7 @@ class BinaryInstaller(object):
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
-        pref = builder.build_package(node, keep_build, self._recorder, remotes)
+        pref = builder.build_package(node, self._recorder, remotes)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
         return pref

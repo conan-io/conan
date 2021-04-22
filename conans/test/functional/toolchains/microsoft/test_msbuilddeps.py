@@ -7,7 +7,8 @@ import pytest
 
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.test.utils.tools import TestClient
 
 sln_file = r"""
@@ -683,3 +684,72 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert ca_exclude in depb
     else:
         assert "CAExcludePath" not in depb
+
+
+@pytest.mark.tool_visual_studio
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_vs_project_with_a():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            exports = '*'
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                self.copy("*.h", dst="include")
+                self.copy("*.a", dst="lib", keep_path=False)
+
+            def package_info(self):
+                self.cpp_info.libs = ["hello.a"]
+        """)
+    hello_cpp = gen_function_cpp(name="hello")
+    hello_h = gen_function_h(name="hello")
+    cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(MyLib CXX)
+
+        set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
+        add_library(hello hello.cpp)
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake,
+                 "hello.cpp": hello_cpp,
+                 "hello.h": hello_h})
+    client.run('create . mydep/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
+
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            requires = "mydep/0.1@"
+            generators = "MSBuildDeps", "MSBuildToolchain"
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
+        """)
+    files = get_vs_project_files()
+    main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    files["MyProject/main.cpp"] = main_cpp
+    files["conanfile.py"] = consumer
+    props = os.path.join(client.current_folder, "conandeps.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+    new = old + '<Import Project="{props}" />'.format(props=props)
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    client.save(files, clean_first=True)
+    client.run('install . -s compiler="Visual Studio" -s compiler.version=15')
+    client.run("build .")
+    client.run_command(r"x64\Release\MyProject.exe")
+    assert "hello: Release!" in client.out
+    # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
+    # assert "main: Release!" in client.out
