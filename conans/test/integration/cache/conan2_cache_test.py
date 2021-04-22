@@ -33,6 +33,9 @@ class TestCache:
                 generators = "cmake"
                 exports_sources = ["CMakeLists.txt"]
 
+                def build_id(self):
+                    self.info_build.settings.build_type = "Any"
+
                 def source(self):
                     self.run("git clone https://github.com/czoido/hello.git")
 
