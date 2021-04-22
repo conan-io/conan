@@ -15,8 +15,8 @@ def test_local_static_generators_folder():
     conan_file += """
     generators = "cmake", "CMakeToolchain"
     def layout(self):
-        self.folders.build.folder = "build-{}".format(self.settings.build_type)
-        self.folders.generators.folder = "{}/generators".format(self.folders.build.folder)
+        self.folders.build = "build-{}".format(self.settings.build_type)
+        self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -57,8 +57,8 @@ def test_local_dynamic_generators_folder():
         tc.generate()
 
     def layout(self):
-        self.folders.build.folder = "build-{}".format(self.settings.build_type)
-        self.folders.generators.folder = "{}/generators".format(self.folders.build.folder)
+        self.folders.build = "build-{}".format(self.settings.build_type)
+        self.folders.generators = "{}/generators".format(self.folders.build)
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install -g cmake")
@@ -125,8 +125,8 @@ def test_local_build():
     conan_file += """
 
     def layout(self):
-        self.folders.generators.folder = "my_generators"
-        self.folders.build.folder = "my_build"
+        self.folders.generators = "my_generators"
+        self.folders.build = "my_build"
 
     def build(self):
         self.output.warn("Generators folder: {}".format(self.folders.generators_folder))
@@ -149,7 +149,7 @@ def test_local_build_change_base():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def layout(self):
-        self.folders.build.folder = "my_build"
+        self.folders.build = "my_build"
     def build(self):
         tools.save("build_file.dll", "bar")
     """
@@ -168,7 +168,7 @@ def test_local_source():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def layout(self):
-        self.folders.source.folder = "my_source"
+        self.folders.source = "my_source"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -189,7 +189,7 @@ def test_local_source_change_base():
     conan_file = str(GenConanfile().with_import("from conans import tools"))
     conan_file += """
     def layout(self):
-        self.folders.source.folder = "my_source"
+        self.folders.source = "my_source"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -209,8 +209,8 @@ def test_export_pkg():
     no_copy_source = True
 
     def layout(self):
-        self.folders.source.folder = "my_source"
-        self.folders.build.folder = "my_build"
+        self.folders.source = "my_source"
+        self.folders.build = "my_build"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -255,8 +255,8 @@ def test_export_pkg_local():
     no_copy_source = True
 
     def layout(self):
-        self.folders.source.folder = "my_source"
-        self.folders.build.folder = "my_build"
+        self.folders.source = "my_source"
+        self.folders.build = "my_build"
 
     def source(self):
         tools.save("downloaded.h", "bar")

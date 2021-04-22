@@ -655,22 +655,23 @@ class BinaryInstaller(object):
                                                reference=ref)
                     if hasattr(conanfile, "layout") and not is_editable:
                         # Copy the package_cpp_info into the old cppinfo
-                        conanfile.package_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
+                        conanfile.infos.package.copy_into_old_cppinfo(conanfile.cpp_info)
 
                     conanfile.package_info()
 
                     if hasattr(conanfile, "layout") and is_editable:
                         # Adjust the folders of the layout to consolidate the rootfolder of the
                         # cppinfos inside
+                        print("!!!!!!!! {}".format(conanfile.cpp_info.libs))
                         conanfile.folders.set_base_build(package_folder)
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
                         # Here package_folder is the editable base folder
-                        conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
-                        conanfile.cpp_info.version = conanfile.version
-                        conanfile.cpp_info.description = conanfile.description
-                        conanfile.build_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
-                        conanfile.source_cpp_info.copy_into_old_cppinfo(conanfile.cpp_info)
+                        # !!!!!! ESE COPY ESTA SOBREESCRIBIENDO TODO, FALTA EL MERGE CON EL RELATIVO
+                        # AL DIRECTORIO conanfile.folders.build.folder
+                        conanfile.infos.build.copy_into_old_cppinfo(conanfile.cpp_info)
+                        conanfile.infos.source.copy_into_old_cppinfo(conanfile.cpp_info)
+                        print("!!!!!!!! {}".format(conanfile.cpp_info.libs))
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:

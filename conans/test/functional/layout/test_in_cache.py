@@ -18,8 +18,8 @@ def conanfile():
     no_copy_sources = True
 
     def layout(self):
-        self.folders.source.folder = "my_sources"
-        self.folders.build.folder = "my_build"
+        self.folders.source = "my_sources"
+        self.folders.build = "my_build"
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
@@ -96,7 +96,7 @@ def test_create_test_package_with_layout(conanfile):
                 tc.generate()
 
             def layout(self):
-                self.folders.generators.folder = "my_generators"
+                self.folders.generators = "my_generators"
 
             def build(self):
                 assert os.path.exists("my_generators/conan_toolchain.cmake")

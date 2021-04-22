@@ -257,6 +257,7 @@ class CMakeDeps(object):
 
     # This template takes the "name" of the target name::name and configs = ["Release", "Debug"..]
     target_properties = Template("""
+conan_message(STATUS "Target declared: '{{name}}::{{name}}'")
 # Assign target properties
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES

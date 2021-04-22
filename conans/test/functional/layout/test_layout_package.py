@@ -40,45 +40,45 @@ def test_auto_package_no_components():
 
 
     def layout(self):
-        self.folders.source.folder = "my_source"
-        self.folders.build.folder = "my_build"
-        self.folders.generators.folder = "my_build/generators"
+        self.folders.source = "my_source"
+        self.folders.build = "my_build"
+        self.folders.generators = "my_build/generators"
 
         # Package locations
-        self.package_cpp_info.includedirs = ["my_includes"]
-        self.package_cpp_info.srcdirs = ["my_sources"]
-        self.package_cpp_info.bindirs = ["my_bins"]
-        self.package_cpp_info.libdirs = ["my_libs"]
-        self.package_cpp_info.frameworkdirs = ["my_frameworks"]
+        self.infos.package.includedirs = ["my_includes"]
+        self.infos.package.srcdirs = ["my_sources"]
+        self.infos.package.bindirs = ["my_bins"]
+        self.infos.package.libdirs = ["my_libs"]
+        self.infos.package.frameworkdirs = ["my_frameworks"]
 
         # Source CPP INFO
-        self.source_cpp_info.srcdirs = ["source_sources"]
-        self.source_cpp_info.includedirs = ["source_includes", "source_includes2"]
-        self.source_cpp_info.libdirs = ["source_libs"]
-        self.source_cpp_info.bindirs = ["source_bins"]
-        self.source_cpp_info.frameworkdirs = ["source_frameworks"]
+        self.infos.source.srcdirs = ["source_sources"]
+        self.infos.source.includedirs = ["source_includes", "source_includes2"]
+        self.infos.source.libdirs = ["source_libs"]
+        self.infos.source.bindirs = ["source_bins"]
+        self.infos.source.frameworkdirs = ["source_frameworks"]
 
         # Source File patterns
-        self.folders.source.include_patterns = ["*.hpp"] # Discard include3.h from source
-        self.folders.source.lib_patterns = ["*.a"]
-        self.folders.source.bin_patterns = ["*.exe"]
-        self.folders.source.src_patterns = ["*.cpp"]
-        self.folders.source.framework_patterns = ["sframe*"]
+        self.patterns.source.include = ["*.hpp"] # Discard include3.h from source
+        self.patterns.source.lib = ["*.a"]
+        self.patterns.source.bin = ["*.exe"]
+        self.patterns.source.src = ["*.cpp"]
+        self.patterns.source.framework = ["sframe*"]
 
         # Build CPP INFO
-        self.build_cpp_info.srcdirs = ["build_sources",
+        self.infos.build.srcdirs = ["build_sources",
                                               "build_sources/subdir/othersubdir"]
-        self.build_cpp_info.includedirs = ["build_includes"]
-        self.build_cpp_info.libdirs = ["build_libs"]
-        self.build_cpp_info.bindirs = ["build_bins"]
-        self.build_cpp_info.frameworkdirs = ["build_frameworks"]
+        self.infos.build.includedirs = ["build_includes"]
+        self.infos.build.libdirs = ["build_libs"]
+        self.infos.build.bindirs = ["build_bins"]
+        self.infos.build.frameworkdirs = ["build_frameworks"]
 
         # Build File patterns
-        self.folders.build.include_patterns = ["*.h"]
-        self.folders.build.lib_patterns = ["*.a"]
-        self.folders.build.bin_patterns = ["*.exe"]
-        self.folders.build.src_patterns = ["*.cpp"]
-        self.folders.build.framework_patterns = ["bframe*"]
+        self.patterns.build.include = ["*.h"]
+        self.patterns.build.lib = ["*.a"]
+        self.patterns.build.bin = ["*.exe"]
+        self.patterns.build.src = ["*.cpp"]
+        self.patterns.build.framework = ["bframe*"]
 
     def package(self):
         LayoutPackager(self).package()
@@ -154,18 +154,18 @@ def test_auto_package_with_components():
 
     def layout(self):
         # Build and source infos
-        self.source_cpp_info.components["component1"].includedirs = ["includes1"]
-        self.source_cpp_info.components["component2"].includedirs = ["includes2"]
-        self.build_cpp_info.components["component1"].libdirs = ["build_libs"]
-        self.build_cpp_info.components["component2"].libdirs = ["build_libs"]
-        self.build_cpp_info.components["component3"].bindirs = ["build_bins"]
+        self.infos.source.components["component1"].includedirs = ["includes1"]
+        self.infos.source.components["component2"].includedirs = ["includes2"]
+        self.infos.build.components["component1"].libdirs = ["build_libs"]
+        self.infos.build.components["component2"].libdirs = ["build_libs"]
+        self.infos.build.components["component3"].bindirs = ["build_bins"]
 
         # Package infos
-        self.package_cpp_info.components["component1"].includedirs = ["include"]
-        self.package_cpp_info.components["component2"].includedirs = ["include2"]
-        self.package_cpp_info.components["component1"].libdirs = ["lib"]
-        self.package_cpp_info.components["component2"].libdirs = ["lib"]
-        self.package_cpp_info.components["component3"].bindirs = ["bin"]
+        self.infos.package.components["component1"].includedirs = ["include"]
+        self.infos.package.components["component2"].includedirs = ["include2"]
+        self.infos.package.components["component1"].libdirs = ["lib"]
+        self.infos.package.components["component2"].libdirs = ["lib"]
+        self.infos.package.components["component3"].bindirs = ["bin"]
 
     def package(self):
         LayoutPackager(self).package()
@@ -207,16 +207,16 @@ def test_auto_package_with_components_declared_badly():
 
     def layout(self):
         # Build and source infos
-        self.source_cpp_info.components["component1"].includedirs = ["includes1"]
-        self.source_cpp_info.components["component2"].includedirs = ["includes2"]
-        self.build_cpp_info.components["component1"].libdirs = ["build_libs"]
-        self.build_cpp_info.components["component2"].libdirs = ["build_libs"]
-        self.build_cpp_info.components["component3"].bindirs = ["build_bins"]
+        self.infos.source.components["component1"].includedirs = ["includes1"]
+        self.infos.source.components["component2"].includedirs = ["includes2"]
+        self.infos.build.components["component1"].libdirs = ["build_libs"]
+        self.infos.build.components["component2"].libdirs = ["build_libs"]
+        self.infos.build.components["component3"].bindirs = ["build_bins"]
 
         # Package infos BUT NOT DECLARING component2
-        self.package_cpp_info.components["component1"].includedirs = ["include"]
-        self.package_cpp_info.components["component1"].libdirs = ["lib"]
-        self.package_cpp_info.components["component3"].bindirs = ["bin"]
+        self.infos.package.components["component1"].includedirs = ["include"]
+        self.infos.package.components["component1"].libdirs = ["lib"]
+        self.infos.package.components["component3"].bindirs = ["bin"]
 
     def package(self):
         LayoutPackager(self).package()
@@ -231,9 +231,9 @@ def test_auto_package_with_components_declared_badly():
 
 def test_auto_package_default_patterns():
     """By default:
-        self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
-        self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.build.bin_patterns = ["*.exe", "*.dll"]
+        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
+        self.patterns.build.bin = ["*.exe", "*.dll"]
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
@@ -258,9 +258,9 @@ def test_auto_package_default_patterns():
         tools.save("ugly_build/mylib.janderclander", "")
 
     def layout(self):
-        self.source_cpp_info.includedirs = ["myincludes"]
-        self.build_cpp_info.libdirs = ["ugly_build"]
-        self.build_cpp_info.bindirs = ["ugly_build"]
+        self.infos.source.includedirs = ["myincludes"]
+        self.infos.build.libdirs = ["ugly_build"]
+        self.infos.build.bindirs = ["ugly_build"]
 
     def package(self):
         LayoutPackager(self).package()
@@ -287,7 +287,7 @@ def test_auto_package_default_folders_with_components():
                      .with_import("from conan.tools.layout import LayoutPackager"))
     conan_file += """
     def layout(self):
-        for el in [self.source_cpp_info, self.build_cpp_info]:
+        for el in [self.infos.source, self.infos.build]:
             assert el.components["foo"].includedirs == []
             assert el.components["foo"].libdirs == []
             assert el.components["foo"].bindirs == []
@@ -295,12 +295,12 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs == []
             assert el.components["foo"].resdirs == []
 
-        assert self.package_cpp_info.components["foo"].includedirs == []
-        assert self.package_cpp_info.components["foo"].libdirs == []
-        assert self.package_cpp_info.components["foo"].bindirs == []
-        assert self.package_cpp_info.components["foo"].frameworkdirs == []
-        assert self.package_cpp_info.components["foo"].srcdirs == []
-        assert self.package_cpp_info.components["foo"].resdirs == []
+        assert self.infos.package.components["foo"].includedirs == []
+        assert self.infos.package.components["foo"].libdirs == []
+        assert self.infos.package.components["foo"].bindirs == []
+        assert self.infos.package.components["foo"].frameworkdirs == []
+        assert self.infos.package.components["foo"].srcdirs == []
+        assert self.infos.package.components["foo"].resdirs == []
 
     def package(self):
         LayoutPackager(self).package()
@@ -325,10 +325,10 @@ def test_auto_package_with_custom_package_too():
         tools.save("ugly_build/mylib.a", "")
 
     def layout(self):
-        self.source_cpp_info.includedirs = ["myincludes"]
-        self.build_cpp_info.libdirs = ["ugly_build"]
-        self.folders.source.include_patterns = ["*.header"]
-        self.folders.build.lib_patterns = ["*.a"]
+        self.infos.source.includedirs = ["myincludes"]
+        self.infos.build.libdirs = ["ugly_build"]
+        self.patterns.source.include = ["*.header"]
+        self.patterns.build.lib = ["*.a"]
 
     def package(self):
         LayoutPackager(self).package()
@@ -358,12 +358,12 @@ def test_auto_package_only_one_destination():
        tools.save("ugly_build/mylib.a", "")
 
     def layout(self):
-       self.source_cpp_info.includedirs = ["myincludes"]
-       self.build_cpp_info.libdirs = ["ugly_build"]
-       self.folders.source.include_patterns = ["*.header"]
-       self.folders.build.lib_patterns = ["*.a"]
+       self.infos.source.includedirs = ["myincludes"]
+       self.infos.build.libdirs = ["ugly_build"]
+       self.patterns.source.include = ["*.header"]
+       self.patterns.build.lib = ["*.a"]
 
-       self.package_cpp_info.{} = ["folder1", "folder2"]
+       self.infos.package.{} = ["folder1", "folder2"]
 
     def package(self):
         LayoutPackager(self).package()

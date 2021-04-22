@@ -97,7 +97,7 @@ class NewCppInfo(object):
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
             setattr(dest, varname, getattr(origin, varname))
 
-        dest._generator_properties = copy.copy(origin._generator_properties)
+        dest._generator_properties.update(copy.copy(origin._generator_properties))
 
         # COMPONENTS
         for cname, c in origin.components.items():

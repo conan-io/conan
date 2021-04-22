@@ -1,21 +1,37 @@
 import os
 
-from conans.client.file_copier import FileCopier
-from conans.errors import ConanException
-from conans.util.log import logger
+from conans.model.new_build_info import NewCppInfo
 
 
-class _FoldersEntry(object):
+class _PatternEntry(object):
 
     def __init__(self):
-        self.include_patterns = []
-        self.lib_patterns = []
-        self.bin_patterns = []
-        self.src_patterns = []
-        self.build_patterns = []
-        self.res_patterns = []
-        self.framework_patterns = []
-        self.folder = ""
+        self.include = []
+        self.lib = []
+        self.bin = []
+        self.src = []
+        self.build = []
+        self.res = []
+        self.framework = []
+
+
+class Patterns(object):
+
+    def __init__(self):
+
+        self.source = _PatternEntry()
+        self.build = _PatternEntry()
+        # TODO: Pending use case
+        # self.package = _PatternEntry()
+
+
+class Infos(object):
+
+    def __init__(self):
+
+        self.source = NewCppInfo()
+        self.build = NewCppInfo()
+        self.package = NewCppInfo()
 
 
 class Folders(object):
@@ -27,16 +43,10 @@ class Folders(object):
         self._base_package = None
         self._base_generators = None
 
-        self.source = _FoldersEntry()
-
-        self.source.include_patterns = ["*.h", "*.hpp", "*.hxx"]
-
-        self.build = _FoldersEntry()
-        self.build.lib_patterns = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
-        self.build.bin_patterns = ["*.exe", "*.dll"]
-
-        self.package = _FoldersEntry()
-        self.generators = _FoldersEntry()
+        self.source = ""
+        self.build = ""
+        self.package = ""
+        self.generators = ""
 
     def __repr__(self):
         return str(self.__dict__)
@@ -45,10 +55,10 @@ class Folders(object):
     def source_folder(self):
         if self._base_source is None:
             return None
-        if not self.source.folder:
+        if not self.source:
             return self._base_source
 
-        return os.path.join(self._base_source, self.source.folder)
+        return os.path.join(self._base_source, self.source)
 
     @property
     def base_source(self):
@@ -61,9 +71,9 @@ class Folders(object):
     def build_folder(self):
         if self._base_build is None:
             return None
-        if not self.build.folder:
+        if not self.build:
             return self._base_build
-        return os.path.join(self._base_build, self.build.folder)
+        return os.path.join(self._base_build, self.build)
 
     @property
     def base_build(self):
@@ -90,9 +100,9 @@ class Folders(object):
     def generators_folder(self):
         if self._base_generators is None:
             return None
-        if not self.generators.folder:
+        if not self.generators:
             return self._base_generators
-        return os.path.join(self._base_generators, self.generators.folder)
+        return os.path.join(self._base_generators, self.generators)
 
     def set_base_generators(self, folder):
         self._base_generators = folder

@@ -10,7 +10,7 @@ from conans import ConanFile, Options
 from conans.client.output import ConanOutput
 from conans.client.userio import UserIO
 from conans.model.env_info import DepsEnvInfo, EnvInfo, EnvValues
-from conans.model.folders import Folders
+from conans.model.layout import Folders
 from conans.model.options import PackageOptions
 from conans.model.user_info import DepsUserInfo
 

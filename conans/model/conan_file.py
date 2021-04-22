@@ -14,7 +14,7 @@ from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
-from conans.model.folders import Folders
+from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import NewCppInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
@@ -136,6 +136,7 @@ class ConanFile(object):
 
     # Folders
     folders = None
+    patterns = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -150,7 +151,6 @@ class ConanFile(object):
         self._conan_using_build_profile = False
         self._conan_requester = None
 
-        self.folders = Folders()
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -158,19 +158,31 @@ class ConanFile(object):
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
-        self.package_cpp_info = NewCppInfo()
-        self.package_cpp_info.includedirs = ["include"]
-        self.package_cpp_info.libdirs = ["lib"]
-        self.package_cpp_info.bindirs = ["bin"]
-        self.package_cpp_info.resdirs = ["res"]
-        self.package_cpp_info.builddirs = [""]
-        self.package_cpp_info.frameworkdirs = ["Frameworks"]
 
-        self.build_cpp_info = NewCppInfo()
-        self.build_cpp_info.builddirs = ["."]
+        # layout() method related variables:
+        self.folders = Folders()
+        self.patterns = Patterns()
+        self.infos = Infos()
 
-        self.source_cpp_info = NewCppInfo()
-        self.source_cpp_info.includedirs = ["include"]
+        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.source.lib = []
+        self.patterns.source.bin = []
+
+        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
+        self.patterns.build.bin = ["*.exe", "*.dll"]
+
+        self.infos.package.includedirs = ["include"]
+        self.infos.package.libdirs = ["lib"]
+        self.infos.package.bindirs = ["bin"]
+        self.infos.package.resdirs = ["res"]
+        self.infos.package.builddirs = [""]
+        self.infos.package.frameworkdirs = ["Frameworks"]
+
+        self.infos.build.builddirs = ["."]
+
+        self.infos.source = NewCppInfo()
+        self.infos.source.includedirs = ["include"]
 
     @property
     def context(self):
