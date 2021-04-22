@@ -83,8 +83,6 @@ _PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to the current directory can also be specified")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
-                     "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
@@ -321,12 +319,6 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
-        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
-                            help=_KEEP_SOURCE_HELP)
-        parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. '
-                                 'Implies --keep-source. '
-                                 'Use this for testing purposes only')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Working directory for the build of the test project.')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -364,7 +356,7 @@ class Command(object):
             info = self._conan.create(args.path, name, version, user, channel,
                                       args.profile_host, args.settings_host, args.options_host,
                                       args.env_host, args.test_folder,
-                                      args.build, args.keep_source, args.keep_build,
+                                      args.build,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
@@ -1002,8 +994,6 @@ class Command(object):
                             help="user/channel, Pkg/version@user/channel (if name "
                                  "and version are not declared in the conanfile.py) "
                                  "Pkg/version@ if user/channel is not relevant.")
-        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
-                            help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile file.")
         parser.add_argument("--lockfile-out", action=OnceArgument,
@@ -1027,7 +1017,7 @@ class Command(object):
 
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile=args.lockfile,
                                   lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
