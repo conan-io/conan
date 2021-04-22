@@ -215,20 +215,21 @@ class _CppInfo(object):
 
     # TODO: Deprecate for 2.0. Only cmake and pkg_config generators should access this.
     #  Use get_property for 2.0
-    def get_name(self, generator):
+    def get_name(self, generator, default_name=True):
         property_name = None
         if "cmake" in generator:
             property_name = "cmake_target_name"
         elif "pkg_config" in generator:
             property_name = "pkg_config_name"
-        return self.get_property(property_name, generator) or self.names.get(generator, self._name)
+        return self.get_property(property_name, generator) \
+               or self.names.get(generator, self._name if default_name else None)
 
     # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
-    def get_filename(self, generator):
+    def get_filename(self, generator, default_name=True):
         result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
         if result:
             return result
-        return self.get_name(generator)
+        return self.get_name(generator, default_name=default_name)
 
     # TODO: Deprecate for 2.0. Use get_property for 2.0
     def get_build_modules(self):
@@ -346,8 +347,8 @@ class CppInfo(_CppInfo):
     def __str__(self):
         return self._ref_name
 
-    def get_name(self, generator):
-        name = super(CppInfo, self).get_name(generator)
+    def get_name(self, generator, default_name=True):
+        name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
         # Legacy logic for pkg_config generator
         from conans.client.generators.pkg_config import PkgConfigGenerator
