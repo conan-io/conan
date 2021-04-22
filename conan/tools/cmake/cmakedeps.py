@@ -552,17 +552,11 @@ endforeach()
     def get_name(self, req):
         ret = req.new_cpp_info.get_property("cmake_target_name", self.name)
         if not ret:
-            # The old cpp info
-            ret = req.cpp_info.get_name(self.name, default_name=False)
-        if not ret:
             ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
         return ret or req.ref.name
 
     def get_filename(self, req):
         ret = req.new_cpp_info.get_property("cmake_file_name", self.name)
-        if not ret:
-            # The old cpp info
-            ret = req.cpp_info.get_filename(self.name, default_name=False)
         if not ret:
             ret = req.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
         return ret or req.ref.name
@@ -574,12 +568,8 @@ endforeach()
             raise KeyError(comp_name)
         ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", self.name)
         if not ret:
-            # The old cpp info
-            ret = req.cpp_info.components[comp_name].get_name(self.name, default_name=False)
-        if not ret:
             ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
                                                               default_name=False)
-
         return ret or comp_name
 
     @property

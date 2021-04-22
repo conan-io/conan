@@ -26,8 +26,8 @@ def test_cpp_info_name_cmakedeps(using_properties):
         cpp_info.set_property("cmake_target_name", "MySuperPkg1")
         cpp_info.set_property("cmake_file_name", "ComplexFileName1")
     else:
-        cpp_info.names["CMakeDeps"] = "MySuperPkg1"
-        cpp_info.filenames["CMakeDeps"] = "ComplexFileName1"
+        cpp_info.names["cmake_find_package_multi"] = "MySuperPkg1"
+        cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
@@ -65,9 +65,9 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
         cpp_info.components["mycomp"].set_property("cmake_target_name", "MySuperPkg1")
         cpp_info.set_property("cmake_file_name", "ComplexFileName1")
     else:
-        cpp_info.names["CMakeDeps"] = "GlobakPkgName1"
-        cpp_info.components["mycomp"].names["CMakeDeps"] = "MySuperPkg1"
-        cpp_info.filenames["CMakeDeps"] = "ComplexFileName1"
+        cpp_info.names["cmake_find_package_multi"] = "GlobakPkgName1"
+        cpp_info.components["mycomp"].names["cmake_find_package_multi"] = "MySuperPkg1"
+        cpp_info.filenames["cmake_find_package_multi"] = "ComplexFileName1"
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
