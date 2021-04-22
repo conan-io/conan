@@ -71,6 +71,7 @@ class _PackageBuilder(object):
         build_pref = PackageReference(pref.ref, new_id) if new_id else pref
         build_folder = package_layout.build(build_pref)
 
+        skip_build = False
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
