@@ -67,9 +67,10 @@ class _PackageBuilder(object):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
-        new_id = build_id(conanfile)
+        # TODO: cache2.0 FIX: we are not taking intto account the conanfile build_id
+        new_id = None #build_id(conanfile)
         build_pref = PackageReference(pref.ref, new_id) if new_id else pref
-        build_folder = package_layout.build(build_pref)
+        build_folder = package_layout.build()
 
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
@@ -91,12 +92,12 @@ class _PackageBuilder(object):
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, package_layout, remotes):
-        export_folder = package_layout.export()
-        export_source_folder = package_layout.export_sources()
-        scm_sources_folder = package_layout.scm_sources()
-        conanfile_path = package_layout.conanfile()
-        source_folder = package_layout.source()
+    def _prepare_sources(self, conanfile, pref, reference_layout, remotes):
+        export_folder = reference_layout.export()
+        export_source_folder = reference_layout.export_sources()
+        scm_sources_folder = reference_layout.scm_sources()
+        conanfile_path = reference_layout.conanfile()
+        source_folder = reference_layout.source()
 
         retrieve_exports_sources(self._remote_manager, self._cache, conanfile, pref.ref, remotes)
 
