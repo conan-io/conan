@@ -11,7 +11,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.tool_cmake
+@pytest.mark.tool_cmake(version="3.19")
 class LinkOrderTest(unittest.TestCase):
     """ Check that the link order of libraries is preserved when using CMake generators
         https://github.com/conan-io/conan/issues/6280
