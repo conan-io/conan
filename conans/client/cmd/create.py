@@ -27,8 +27,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 
 def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
-           keep_build, test_build_folder,
-           test_folder, conanfile_path, recorder):
+           test_build_folder, test_folder, conanfile_path, recorder):
     assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
@@ -50,7 +49,6 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                          root_ref=root_ref,
                          build_modes=build_modes,
                          update=update,
-                         keep_build=keep_build,
                          recorder=recorder)
             out.info("Executing test_package %s" % repr(ref))
             try:
@@ -70,7 +68,6 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
             install_build_and_test(app, test_conanfile_path, ref, profile_host, profile_build,
                                    graph_lock, root_ref, remotes, update,
                                    build_modes=build_modes,
-                                   keep_build=keep_build,
                                    test_build_folder=test_build_folder,
                                    recorder=recorder)
     else:
@@ -85,5 +82,4 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                      root_ref=root_ref,
                      build_modes=build_modes,
                      update=update,
-                     keep_build=keep_build,
                      recorder=recorder)
