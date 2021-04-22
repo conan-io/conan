@@ -427,7 +427,7 @@ class ConanAPIV1(object):
                                                                                self.app.out,
                                                                                lockfile=lockfile)
 
-            new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel, True,
+            new_ref = cmd_export(self.app, conanfile_path, name, version, user, channel,
                                  graph_lock=graph_lock, ignore_dirty=ignore_dirty)
             ref = new_ref.copy_clear_rev()
             # new_ref has revision
