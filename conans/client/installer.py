@@ -184,7 +184,7 @@ class _PackageBuilder(object):
         package_layout = self._cache.pkg_layout(pref)
         source_folder = reference_layout.source()
         conanfile_path = reference_layout.conanfile()
-        package_folder = package_layout.package(pref)
+        package_folder = package_layout.package()
 
         build_folder, skip_build = self._get_build_folder(conanfile, package_layout,
                                                           pref, keep_build, recorder)
@@ -483,8 +483,6 @@ class BinaryInstaller(object):
         conanfile = node.conanfile
         output = conanfile.output
 
-        layout = self._cache.pkg_layout(pref)
-
         # TODO: cache2.0 Check with new locks
         # with layout.package_lock(pref):
         bare_pref = PackageReference(pref.ref, pref.id)
@@ -500,6 +498,8 @@ class BinaryInstaller(object):
                 assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
             elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                 # this can happen after a re-evaluation of packageID with Package_ID_unknown
+                # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
+                #  move the layout inside the get... method
                 self._download_pkg(layout, node)
             elif node.binary == BINARY_CACHE:
                 assert node.prev, "PREV for %s is None" % str(pref)
@@ -512,6 +512,7 @@ class BinaryInstaller(object):
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
 
+        layout = self._cache.pkg_layout(pref)
         package_folder = layout.package(pref)
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                % (str(pref), package_folder))
