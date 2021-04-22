@@ -147,7 +147,6 @@ class GeneratorManager(object):
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
-                    generator.output_path = new_gen_folder
                     mkdir(new_gen_folder)
                     with chdir(new_gen_folder):
                         generator.generate()

@@ -130,7 +130,8 @@ class _PackageBuilder(object):
     def _build(self, conanfile, pref):
         # Read generators from conanfile and generate the needed files
         logger.info("GENERATORS: Writing generators")
-        self._generator_manager.write_generators(conanfile, conanfile.build_folder, conanfile.generators_folder, self._output)
+        self._generator_manager.write_generators(conanfile, conanfile.build_folder,
+                                                 conanfile.generators_folder, self._output)
 
         logger.info("TOOLCHAIN: Writing toolchain")
         write_toolchain(conanfile, conanfile.generators_folder, self._output)

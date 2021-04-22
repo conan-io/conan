@@ -510,8 +510,6 @@ endforeach()
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
         self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
-        # FIXME: Ugly way to define the output path
-        self.output_path = os.getcwd()
 
     def _get_components(self, req, requires):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -537,9 +535,9 @@ endforeach()
         return ret
 
     def generate(self):
+        # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
-            generator_file = os.path.join(self.output_path, generator_file)
             save(generator_file, content)
 
     def _data_filename(self, pkg_filename):
