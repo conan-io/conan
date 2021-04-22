@@ -33,7 +33,7 @@ def environment_wrap_command(filename, cmd, cwd=None):
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
 
     if bats:
-        command = " && ".join(bats)
+        command = " && ".join('"{}"'.format(b) for b in bats)
         return "{} && {}".format(command, cmd)
     elif shs:
         command = " && ".join(". ./{}".format(f) for f in shs)
