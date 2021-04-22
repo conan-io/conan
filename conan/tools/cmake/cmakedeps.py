@@ -454,7 +454,7 @@ endforeach()
         {%- for comp_name, comp in components %}
 
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
-
+        conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ comp_name }}'")
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
                      {%- for config in configs %}
                      $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
@@ -481,6 +481,7 @@ endforeach()
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
         if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
+            conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ pkg_name }}'")
             set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
                          {%- for config in configs %}
                          $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
@@ -551,15 +552,13 @@ endforeach()
     def get_name(self, req):
         ret = req.new_cpp_info.get_property("cmake_target_name", self.name)
         if not ret:
-            # The old cpp info
-            ret = req.cpp_info.get_name(self.name)
+            ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
         return ret or req.ref.name
 
     def get_filename(self, req):
         ret = req.new_cpp_info.get_property("cmake_file_name", self.name)
         if not ret:
-            # The old cpp info
-            ret = req.cpp_info.get_filename(self.name)
+            ret = req.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
         return ret or req.ref.name
 
     def get_component_name(self, req, comp_name):
@@ -567,12 +566,10 @@ endforeach()
             if req.ref.name == comp_name:  # foo::foo might be referencing the root cppinfo
                 return self.get_name(req)
             raise KeyError(comp_name)
-        ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name",
-                                                                  self.name)
+        ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", self.name)
         if not ret:
-            # The old cpp info
-            ret = req.cpp_info.components[comp_name].get_name(self.name)
-
+            ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
+                                                              default_name=False)
         return ret or comp_name
 
     @property
