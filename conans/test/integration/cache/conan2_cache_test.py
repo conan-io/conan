@@ -22,10 +22,51 @@ class TestCache:
         client.run("export . mypkg/3.0@user/channel")
 
     def test_conan_create(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile, CMake, tools
+
+
+            class MypkgConan(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+                generators = "cmake"
+                exports_sources = ["CMakeLists.txt"]
+
+                def source(self):
+                    self.run("git clone https://github.com/czoido/hello.git")
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure(source_folder="hello")
+                    cmake.build()
+
+                def package(self):
+                    self.copy("*.h", dst="include", src="hello")
+                    self.copy("*hello.lib", dst="lib", keep_path=False)
+                    self.copy("*.dll", dst="bin", keep_path=False)
+                    self.copy("*.so", dst="lib", keep_path=False)
+                    self.copy("*.dylib", dst="lib", keep_path=False)
+                    self.copy("*.a", dst="lib", keep_path=False)
+
+                def package_info(self):
+                    self.cpp_info.libs = ["hello"]
+            """)
+
+        cmakelists = textwrap.dedent("""
+            CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
+            PROJECT(HelloWorld)
+            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+            conan_basic_setup()
+            ADD_LIBRARY(hello hello.cpp)
+            ADD_EXECUTABLE(greet main.cpp)
+            TARGET_LINK_LIBRARIES(greet hello)
+            """)
+
         client = TestClient()
         client.run_command("open '{}'".format(client.cache_folder))
-        client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
-                     "source.txt": "somesource"})
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelists})
         client.run("create . mypkg/1.0@user/channel")
         client.run("create . mypkg/2.0@user/channel")
 
