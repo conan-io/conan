@@ -415,11 +415,12 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuild
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "Hello1/1.0", "Hello3/1.0"
-                generators = "MSBuildDeps"
+                generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
@@ -489,7 +490,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . mypkg/0.1@")
-        client.run("install mypkg/0.1@ -g msbuild -s build_type=None", assert_error=True)
+        client.run("install mypkg/0.1@ -g MSBuildDeps -s build_type=None", assert_error=True)
         self.assertIn("The 'msbuild' generator requires a 'build_type' setting value", client.out)
 
     def test_custom_configuration(self):
@@ -559,11 +560,12 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkgb/1.0@")
 
         conanfile = textwrap.dedent("""
-            from conans import ConanFile, MSBuild
+            from conans import ConanFile
+            from conan.tools.microsoft import MSBuild
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
                 requires = "pkgb/1.0@", "pkga/1.0"
-                generators = "MSBuildDeps"
+                generators = "MSBuildDeps", "MSBuildToolchain"
                 def build(self):
                     msbuild = MSBuild(self)
                     msbuild.build("MyProject.sln")
@@ -581,7 +583,6 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
         client.save(files, clean_first=True)
         client.run("install .")
-        self.assertIn("'msbuild' has been deprecated and moved.", client.out)
         client.run("build .")
         self.assertNotIn("warning MSB4011", client.out)
 
