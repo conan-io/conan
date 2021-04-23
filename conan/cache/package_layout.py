@@ -36,13 +36,10 @@ class PackageLayout(LockableMixin):
                 self._package_folder = new_directory
 
     def build(self):
-        def get_build_directory():
-            with self.lock(blocking=False):
-                return os.path.join(self._cache.base_folder, BUILD_FOLDER)
-        return get_build_directory()
+        return os.path.join(self._cache.base_folder, self._package_folder, BUILD_FOLDER)
 
     def package(self):
-        def get_package_directory():
-            with self.lock(blocking=False):
-                return os.path.join(self._cache.base_folder, PACKAGES_FOLDER)
-        return get_package_directory()
+        return os.path.join(self._cache.base_folder, self._package_folder, PACKAGES_FOLDER)
+
+    def base_directory(self):
+        return os.path.join(self._cache.base_folder, self._package_folder)
