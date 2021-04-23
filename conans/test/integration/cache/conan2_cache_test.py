@@ -31,13 +31,13 @@ class TestCache:
                 options = {"shared": [True, False], "fPIC": [True, False]}
                 default_options = {"shared": False, "fPIC": True}
                 generators = "cmake"
-                exports_sources = ["CMakeLists.txt"]
+                exports_sources = ["file.txt"]
 
                 def build_id(self):
                     self.info_build.settings.build_type = "Any"
 
                 def source(self):
-                    self.run("git clone https://github.com/czoido/hello.git")
+                    self.run("git clone https://github.com/conan-io/hello.git")
 
                 def build(self):
                     cmake = CMake(self)
@@ -56,20 +56,10 @@ class TestCache:
                     self.cpp_info.libs = ["hello"]
             """)
 
-        cmakelists = textwrap.dedent("""
-            CMAKE_MINIMUM_REQUIRED(VERSION 3.15)
-            PROJECT(HelloWorld)
-            include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-            conan_basic_setup()
-            ADD_LIBRARY(hello hello.cpp)
-            ADD_EXECUTABLE(greet main.cpp)
-            TARGET_LINK_LIBRARIES(greet hello)
-            """)
-
         client = TestClient()
         client.run_command("open '{}'".format(client.cache_folder))
         client.save({"conanfile.py": conanfile,
-                     "CMakeLists.txt": cmakelists})
+                     "file.txt": ""})
         client.run("create . mypkg/1.0@user/channel")
         # client.run("create . mypkg/2.0@user/channel")
         #

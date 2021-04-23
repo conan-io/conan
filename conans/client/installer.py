@@ -160,7 +160,11 @@ class _PackageBuilder(object):
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
 
-        update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
+        # TODO: cache2.0: remove metadata, move to db
+        #update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
+
+        pref = pref.copy_with_revs(pref.ref.revision, prev)
+        package_layout.assign_prev(pref, move_contents=True)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(conanfile.layout.base_package_folder)
