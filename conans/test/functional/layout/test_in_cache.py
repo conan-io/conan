@@ -51,17 +51,10 @@ def test_create_test_package_no_layout(conanfile):
         import os
 
         from conans import ConanFile, tools
-        from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
 
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-
-            def generate(self):
-                deps = CMakeDeps(self)
-                deps.generate()
-                tc = CMakeToolchain(self)
-                tc.generate()
-
+            generators = "CMakeDeps", "CMakeToolchain"
             def build(self):
                 assert os.path.exists("conan_toolchain.cmake")
                 self.output.warn("hey! building")
