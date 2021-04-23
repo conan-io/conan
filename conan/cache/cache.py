@@ -11,8 +11,7 @@ from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
-from conans.util.files import rmdir, md5
-from .db.folders import ConanFolders
+from conans.util.files import rmdir
 
 
 class DataCache:
@@ -140,8 +139,7 @@ class DataCache:
         return self._get_package_layout(pref)
 
     def _get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
-        package_path = self.db.try_get_package_reference_directory(pref,
-                                                                   folder=ConanFolders.PKG_PACKAGE)
+        package_path = self.db.try_get_package_reference_directory(pref)
         from conan.cache.package_layout import PackageLayout
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=True)
@@ -155,8 +153,7 @@ class DataCache:
         if not pref.revision:
             pref = pref.copy_with_revs(pref.ref.revision, package_path)
 
-        package_path, created = self.db.get_or_create_package(pref, path=package_path,
-                                                              folder=ConanFolders.PKG_PACKAGE)
+        package_path, created = self.db.get_or_create_package(pref, path=package_path)
         self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
@@ -191,10 +188,9 @@ class DataCache:
 
         self.db.update_package_reference(old_pref, new_pref)
         if move_package_contents:
-            old_path = self.db.try_get_package_reference_directory(new_pref,
-                                                                   ConanFolders.PKG_PACKAGE)
+            old_path = self.db.try_get_package_reference_directory(new_pref)
             new_path = self.get_default_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_package_reference_directory(new_pref, new_path, ConanFolders.PKG_PACKAGE)
+            self.db.update_package_reference_directory(new_pref, new_path)
             return new_path
         return None

@@ -4,7 +4,7 @@ import uuid
 from conan.cache.cache import DataCache
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
-from .db.folders import ConanFolders
+from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER
 
 
 class PackageLayout(LockableMixin):
@@ -36,27 +36,13 @@ class PackageLayout(LockableMixin):
                 self._package_folder = new_directory
 
     def build(self):
-        """ Returns the 'build' folder. Here we would need to deal with different situations:
-            * temporary folder (to be removed after used)
-            * persistent folder
-            * deterministic folder (forced from outside)
-        """
-
         def get_build_directory():
             with self.lock(blocking=False):
-                build_folder = self._cache.db.get_or_create_package_reference_directory(
-                    self._pref, str(uuid.uuid4()), ConanFolders.PKG_BUILD)
-                return os.path.join(self._cache.base_folder, build_folder)
-
+                return os.path.join(self._cache.base_folder, BUILD_FOLDER)
         return get_build_directory()
 
     def package(self):
-        """ We want this folder to be deterministic, although the final location is not known
-            until we have the package revision... so it has to be updated!
-        """
-
         def get_package_directory():
             with self.lock(blocking=False):
-                return os.path.join(self._cache.base_folder, self._package_folder)
-
+                return os.path.join(self._cache.base_folder, PACKAGES_FOLDER)
         return get_package_directory()

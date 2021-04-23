@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from conan.cache.db.folders import FoldersDbTable, ConanFolders
+from conan.cache.db.folders import FoldersDbTable
 from conan.cache.db.packages import PackagesDbTable
 from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
@@ -57,12 +57,8 @@ def test_save_and_retrieve_pref(sqlite3_database):
     table.save_ref(sqlite3_database, pref1.ref, 'path/to/ref')
 
     path1 = 'path/for/pref1/build'
-    path2 = 'path/for/pref1/package'
-    table.save_pref(sqlite3_database, pref1, path1, ConanFolders.PKG_BUILD)
-    table.save_pref(sqlite3_database, pref1, path2, ConanFolders.PKG_PACKAGE)
-
-    assert path1 == table.get_path_pref(sqlite3_database, pref1, ConanFolders.PKG_BUILD)
-    assert path2 == table.get_path_pref(sqlite3_database, pref1, ConanFolders.PKG_PACKAGE)
+    table.save_pref(sqlite3_database, pref1, path1)
+    assert path1 == table.get_path_pref(sqlite3_database, pref1)
 
 
 def test_lru_ref(sqlite3_database):
@@ -108,8 +104,8 @@ def test_lru_pref(sqlite3_database):
 
     path1 = 'path/for/pref1/build'
     path2 = 'path/for/pref1/package'
-    table.save_pref(sqlite3_database, pref1, path1, ConanFolders.PKG_BUILD)
-    table.save_pref(sqlite3_database, pref1, path2, ConanFolders.PKG_PACKAGE)
+    table.save_pref(sqlite3_database, pref1, path1)
+    table.save_pref(sqlite3_database, pref1, path2)
 
     time.sleep(1)
     now = int(time.time())

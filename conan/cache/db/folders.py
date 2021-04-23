@@ -1,6 +1,5 @@
 import sqlite3
 import time
-from enum import Enum, unique
 from typing import Optional
 
 from conan.cache.db.table import BaseDbTable
@@ -10,21 +9,13 @@ from .packages import PackagesDbTable
 from .references import ReferencesDbTable
 
 
-@unique
-class ConanFolders(Enum):
-    REFERENCE = 0
-    PKG_BUILD = 1
-    PKG_PACKAGE = 2
-
-
 class FoldersDbTable(BaseDbTable):
     table_name = 'conan_paths'
     columns_description = [('reference_pk', int),
                            ('package_pk', int, True),
                            ('path', str, False, None, True),  # TODO: Add unittest
-                           ('folder', int, False, [it.value for it in ConanFolders]),
                            ('last_modified', int)]
-    unique_together = ('reference_pk', 'package_pk', 'path', 'folder')  # TODO: Add unittest
+    unique_together = ('reference_pk', 'package_pk', 'path')  # TODO: Add unittest
     references: ReferencesDbTable = None
     packages: PackagesDbTable = None
 
@@ -44,13 +35,13 @@ class FoldersDbTable(BaseDbTable):
         self.packages = packages
 
     def _as_tuple(self, conn: sqlite3.Cursor, ref: ConanFileReference,
-                  pref: Optional[PackageReference], path: str, folder: ConanFolders,
+                  pref: Optional[PackageReference], path: str,
                   last_modified: int):
         assert not pref or pref.ref == ref, "Reference and pkg-reference must be the same"
         reference_pk = self.references.pk(conn, ref)
         package_pk = self.packages.pk(conn, pref) if pref else None
         return self.row_type(reference_pk=reference_pk, package_pk=package_pk, path=path,
-                             folder=folder.value, last_modified=last_modified)
+                             last_modified=last_modified)
 
     """
     Functions to touch (update) the timestamp of given entries
@@ -93,17 +84,16 @@ class FoldersDbTable(BaseDbTable):
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
-                         list(self._as_tuple(conn, ref, None, path, ConanFolders.REFERENCE,
+                         list(self._as_tuple(conn, ref, None, path,
                                              timestamp)))
         return r.lastrowid
 
-    def save_pref(self, conn: sqlite3.Cursor, pref: PackageReference, path: str,
-                  folder: ConanFolders):
+    def save_pref(self, conn: sqlite3.Cursor, pref: PackageReference, path: str):
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
-                         list(self._as_tuple(conn, pref.ref, pref, path, folder, timestamp)))
+                         list(self._as_tuple(conn, pref.ref, pref, path, timestamp)))
         return r.lastrowid
 
     def get_path_ref(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> str:
@@ -127,15 +117,13 @@ class FoldersDbTable(BaseDbTable):
         r = conn.execute(query, [path, ref_pk, ])
         return r.lastrowid
 
-    def get_path_pref(self, conn: sqlite3.Cursor, pref: PackageReference,
-                      folder: ConanFolders) -> str:
+    def get_path_pref(self, conn: sqlite3.Cursor, pref: PackageReference) -> str:
         """ Returns and touches (updates LRU) the path for the given package reference """
         ref_pk = self.references.pk(conn, pref.ref)
         pref_pk = self.packages.pk(conn, pref)
         query = f'SELECT rowid, {self.columns.path} FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} = ?' \
-                f'       AND {self.columns.folder} = ?;'
-        r = conn.execute(query, [ref_pk, pref_pk, folder.value, ])
+                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} = ?;'
+        r = conn.execute(query, [ref_pk, pref_pk, ])
         row = r.fetchone()
         if not row:
             raise FoldersDbTable.DoesNotExist(f"No entry folder for package reference '{pref.full_str()}'")
@@ -144,16 +132,14 @@ class FoldersDbTable(BaseDbTable):
         self.touch_ref(conn, pref.ref)
         return row[1]
 
-    def update_path_pref(self, conn: sqlite3.Cursor, pref: ConanFileReference, path: str,
-                         folder: ConanFolders):
+    def update_path_pref(self, conn: sqlite3.Cursor, pref: ConanFileReference, path: str):
         """ Updates the value of the path assigned to given package reference and folder-type """
         ref_pk = self.references.pk(conn, pref.ref)
         pref_pk = self.packages.pk(conn, pref)
         query = f'UPDATE {self.table_name} ' \
                 f'SET {self.columns.path} = ? ' \
-                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} = ?' \
-                f'       AND {self.columns.folder} = ?;'
-        r = conn.execute(query, [path, ref_pk, pref_pk, folder.value, ])
+                f'WHERE {self.columns.reference_pk} = ? AND {self.columns.package_pk} = ?;'
+        r = conn.execute(query, [path, ref_pk, pref_pk, ])
         return r.lastrowid
 
     def get_lru_ref(self, conn: sqlite3.Cursor, timestamp: int):
