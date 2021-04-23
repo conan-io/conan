@@ -13,13 +13,12 @@ from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager
                                merge_directories, clean_dirty)
 
 
-def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
+def retrieve_exports_sources(remote_manager, reference_layout, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    package_layout = cache.package_layout(ref, conanfile.short_paths)
-    export_sources_folder = package_layout.export_sources()
+    export_sources_folder = reference_layout.export_sources()
     if os.path.exists(export_sources_folder):
         return None
 
@@ -27,6 +26,7 @@ def retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes):
         mkdir(export_sources_folder)
         return None
 
+    # TODO: cache2.0 check what behaviour for this in 2.0
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
     current_remote = package_layout.load_metadata().recipe.remote
