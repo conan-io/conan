@@ -138,7 +138,8 @@ def test_auto_package_no_components():
 def test_auto_package_with_components():
     """The files from the components are not mixed in package if they belong to different dirs"""
     client = TestClient()
-    conan_file = str(GenConanfile().with_settings("build_type")
+    conan_file = str(GenConanfile()
+                     .with_settings("build_type")
                      .with_import("from conans import tools")
                      .with_import("from conan.tools.layout import LayoutPackager"))
     conan_file += """

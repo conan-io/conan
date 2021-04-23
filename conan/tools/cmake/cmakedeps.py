@@ -594,8 +594,6 @@ endforeach()
             config_version = self.config_version_template.format(version=req.ref.version)
             ret[self._config_version_filename(pkg_filename)] = config_version
             pfolder = req.package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-            # Remove the non existent directories, otherwise CMake fails
-            req.new_cpp_info.filter_missing_folders(req.package_folder)
 
             if not req.new_cpp_info.has_components:
                 deps = DepsCppCmake(req.new_cpp_info, pkg_target_name, self.name)

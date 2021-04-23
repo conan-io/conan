@@ -20,7 +20,7 @@ from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
-from conans.model.build_info import CppInfo, DepCppInfo
+from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
@@ -654,9 +654,13 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
-                    if hasattr(conanfile, "layout") and not is_editable:
-                        # Copy the package_cpp_info into the old cppinfo
-                        conanfile.infos.package.copy_into_old_cppinfo(conanfile.cpp_info)
+                    if hasattr(conanfile, "layout"):
+                        # Old cpp info without defaults (the defaults are in the new one)
+                        conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
+                                                     default_values=CppInfoDefaultValues())
+                        if not is_editable:
+                            # Copy the package_cpp_info into the old cppinfo
+                            conanfile.infos.package.copy_into_old_cppinfo(conanfile.cpp_info)
 
                     conanfile.package_info()
 

@@ -301,7 +301,8 @@ class Component(_CppInfo):
 
 class CppInfoDefaultValues(object):
 
-    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
+    def __init__(self, includedir=None, libdir=None, bindir=None,
+                 resdir=None, builddir=None, frameworkdir=None):
         self.includedir = includedir
         self.libdir = libdir
         self.bindir = bindir
@@ -388,12 +389,15 @@ class CppInfo(_CppInfo):
 
         # Raise if mixing components
         if self.components and \
-            (self.includedirs != [self._default_values.includedir] or
-             self.libdirs != [self._default_values.libdir] or
-             self.bindirs != [self._default_values.bindir] or
-             self.resdirs != [self._default_values.resdir] or
-             self.builddirs != [self._default_values.builddir] or
-             self.frameworkdirs != [self._default_values.frameworkdir] or
+            (self.includedirs != [self._default_values.includedir]
+                if self._default_values.includedir else [] or
+             self.libdirs != [self._default_values.libdir] if self._default_values.libdir else [] or
+             self.bindirs != [self._default_values.bindir] if self._default_values.bindir else [] or
+             self.resdirs != [self._default_values.resdir] if self._default_values.resdir else [] or
+             self.builddirs != [self._default_values.builddir]
+                if self._default_values.builddir else [] or
+             self.frameworkdirs != [self._default_values.frameworkdir]
+                if self._default_values.frameworkdir else [] or
              self.libs or
              self.system_libs or
              self.frameworks or

@@ -91,8 +91,10 @@ class NewCppInfo(object):
         return ret
 
     def copy_into_old_cppinfo(self, old):
+        if self.has_components:
+            # If the user declared components, reset the global values
+            self.components[None] = _NewComponent()
         NewCppInfo._append_data(self, old)
-
 
     @staticmethod
     def _append_data(origin, dest):
@@ -114,19 +116,7 @@ class NewCppInfo(object):
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 merge_list(getattr(c, varname), getattr(dest.components[cname], varname))
             merge_list(c.requires, dest.components[cname].requires, )
-            merge_list(c._generator_properties, dest.components[cname]._generator_properties)
-
-    def filter_missing_folders(self, base_folder):
-        """Given an absolute path, root of all the folders, remove from the lists the
-           folders without contents"""
-        for cname, c in self.components.items():
-            for varname in _DIRS_VAR_NAMES:
-                new_list = []
-                for el in getattr(self.components[cname], varname):
-                    if os.path.exists(os.path.join(base_folder, el)):
-                        new_list.append(el)
-
-                setattr(self.components[cname], varname, new_list)
+            dest.components[cname]._generator_properties.update(copy.copy(c._generator_properties))
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
