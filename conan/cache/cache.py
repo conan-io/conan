@@ -151,8 +151,9 @@ class DataCache:
 
         # Assign a random (uuid4) revision if not set
         locked = bool(pref.revision)
+        # if the package revision is not calculated yet, assign the uuid of the path as prev
         if not pref.revision:
-            pref = pref.copy_with_revs(pref.ref.revision, str(uuid.uuid4()))
+            pref = pref.copy_with_revs(pref.ref.revision, package_path)
 
         package_path, created = self.db.get_or_create_package(pref, path=package_path,
                                                               folder=ConanFolders.PKG_PACKAGE)
