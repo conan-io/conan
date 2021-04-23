@@ -11,7 +11,7 @@ from conan.cache.cache_database import CacheDatabase
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
-from conans.util.files import rmdir
+from conans.util.files import rmdir, md5
 
 
 class DataCache:
@@ -51,7 +51,7 @@ class DataCache:
     def get_default_path(item: Union[ConanFileReference, PackageReference]) -> str:
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.revision:
-            return item.full_str().replace("/", "-").replace(':', '-')#"#md5(item.full_str())
+            return md5(item.full_str())
         else:
             return str(uuid.uuid4())
 

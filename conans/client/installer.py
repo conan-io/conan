@@ -510,7 +510,7 @@ class BinaryInstaller(object):
             node.prev = processed_prev
 
         layout = self._cache.pkg_layout(pref)
-        package_folder = layout.package(pref)
+        package_folder = layout.package()
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                % (str(pref), package_folder))
         # Call the info method

@@ -61,11 +61,11 @@ class TestCache:
         client.save({"conanfile.py": conanfile,
                      "file.txt": ""})
         client.run("create . mypkg/1.0@user/channel")
-        # client.run("create . mypkg/2.0@user/channel")
-        #
-        # conanfile = GenConanfile().with_scm({"type": "git", "revision": "auto",
-        #                                      "url": "auto"})
-        # path, _ = create_local_git_repo({"conanfile.py": str(conanfile),
-        #                                  "source.txt": "somesource"})
-        # client.current_folder = path
-        # client.run("create . mypkg/3.0@user/channel")
+        client.run("create . mypkg/2.0@user/channel")
+
+        conanfile = GenConanfile().with_scm({"type": "git", "revision": "auto",
+                                             "url": "auto"})
+        path, _ = create_local_git_repo({"conanfile.py": str(conanfile),
+                                         "source.txt": "somesource"})
+        client.current_folder = path
+        client.run("create . mypkg/3.0@user/channel")
