@@ -556,7 +556,6 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
-        subparsers.add_parser('list', help='List Conan configuration properties')
         get_subparser = subparsers.add_parser('get', help='Get the value of configuration item')
         home_subparser = subparsers.add_parser('home', help='Retrieve the Conan home directory')
         install_subparser = subparsers.add_parser('install', help='Install a full configuration '
@@ -564,7 +563,7 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
-
+        list_subparser = subparsers.add_parser('list', help='List Conan configuration properties')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -593,6 +592,8 @@ class Command(object):
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
                                     help='Overwrite existing Conan configuration files')
+        list_subparser.add_argument('-r', '--raw', default=False, action='store_true',
+                                    help='Print just the list of recipes')
 
         args = parser.parse_args(*args)
 
@@ -631,6 +632,8 @@ class Command(object):
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
+            if not args.raw:
+                self._out.info("Supported Conan conan.conf properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
 
