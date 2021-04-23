@@ -626,11 +626,6 @@ class ConanAPIV1(object):
             result = self.app.config.storage_path
         else:
             result = self.app.config.get_item(item)
-        if item is None:
-            # TODO: Provide a helper
-            result += "\n[conf]\n"
-            result += self.app.cache.new_config.dumps() + "\n"
-            result += self.app.cache.default_profile.conf.dumps()
         self.app.out.info(result)
         return result
 
