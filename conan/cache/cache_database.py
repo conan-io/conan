@@ -4,7 +4,7 @@ from io import StringIO
 from typing import Tuple, Iterator
 
 from conans.model.ref import ConanFileReference, PackageReference
-from .db.folders import FoldersDbTable, ConanFolders
+from .db.folders import FoldersDbTable
 from .db.packages import PackagesDbTable
 from .db.references import ReferencesDbTable
 
@@ -125,35 +125,32 @@ class CacheDatabase:
             except sqlite3.IntegrityError:
                 raise PackagesDbTable.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
 
-    def update_package_reference_directory(self, pref: PackageReference, path: str,
-                                           folder: ConanFolders):
+    def update_package_reference_directory(self, pref: PackageReference, path: str):
         with self.connect() as conn:
-            self._folders.update_path_pref(conn, pref, path, folder)
+            self._folders.update_path_pref(conn, pref, path)
 
-    def try_get_package_reference_directory(self, pref: PackageReference, folder: ConanFolders):
+    def try_get_package_reference_directory(self, pref: PackageReference):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
-            return self._folders.get_path_pref(conn, pref, folder)
+            return self._folders.get_path_pref(conn, pref)
 
-    def get_or_create_package_reference_directory(self, pref: PackageReference, path: str,
-                                                  folder: ConanFolders) -> str:
+    def get_or_create_package_reference_directory(self, pref: PackageReference, path: str) -> str:
         with self.connect() as conn:
             try:
-                return self._folders.get_path_pref(conn, pref, folder)
+                return self._folders.get_path_pref(conn, pref)
             except FoldersDbTable.DoesNotExist:
-                self._folders.save_pref(conn, pref, path, folder)
+                self._folders.save_pref(conn, pref, path)
                 return path
 
-    def get_or_create_package(self, pref: PackageReference, path: str,
-                              folder: ConanFolders) -> Tuple[str, bool]:
+    def get_or_create_package(self, pref: PackageReference, path: str) -> Tuple[str, bool]:
         """ Returns the path for the given package. The corresponding reference must exist.
             If the package doesn't exist in the database, it will create the entry for the package
             using the path given as argument.
         """
         with self.connect() as conn:
             try:
-                return self._folders.get_path_pref(conn, pref, folder), False
+                return self._folders.get_path_pref(conn, pref), False
             except PackagesDbTable.DoesNotExist:
                 self._packages.save(conn, pref)
-                self._folders.save_pref(conn, pref, path, folder)
+                self._folders.save_pref(conn, pref, path)
                 return path, True
