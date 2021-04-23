@@ -55,7 +55,7 @@ class DataCache:
         else:
             return str(uuid.uuid4())
 
-    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+    def list_references(self, only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
             can be used to filter and return only the latest recipe revision for each reference.
         """
@@ -63,7 +63,7 @@ class DataCache:
             yield it
 
     def search_references(self, pattern: str,
-                          only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+                          only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
         """ Returns an iterator to all the references matching the pattern given. The pattern is
             checked against the references full name using SQL LIKE functionality. The argument
             'only_latest_rrev' can be used to filter and return only the latest recipe revision for

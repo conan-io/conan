@@ -59,7 +59,7 @@ class CacheDatabase:
                 yield it
 
     def search_references(self, pattern: str,
-                          only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+                          only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
         with self.connect() as conn:
             for it in self._references.filter(conn, pattern, only_latest_rrev):
                 yield it

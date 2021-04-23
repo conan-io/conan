@@ -97,8 +97,7 @@ class ClientCache(object):
         return self._data_cache.get_or_create_package_layout(ref)[0]
 
     def all_refs(self):
-        subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
+        return [ref for ref in self._data_cache.list_references()]
 
     @property
     def store(self):
