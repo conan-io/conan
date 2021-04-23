@@ -67,7 +67,6 @@ class TestCache:
             """)
 
         client = TestClient()
-        client.run_command("open '{}'".format(client.cache_folder))
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelists})
         client.run("create . mypkg/1.0@user/channel")
