@@ -1,4 +1,5 @@
 import copy
+import os
 from collections import OrderedDict
 
 from conans.errors import ConanException
@@ -86,16 +87,23 @@ class NewCppInfo(object):
     @staticmethod
     def from_old_cppinfo(old):
         ret = NewCppInfo()
-        NewCppInfo._copy_data(old, ret)
+        NewCppInfo._append_data(old, ret)
         return ret
 
     def copy_into_old_cppinfo(self, old):
-        NewCppInfo._copy_data(self, old)
+        NewCppInfo._append_data(self, old)
+
 
     @staticmethod
-    def _copy_data(origin, dest):
+    def _append_data(origin, dest):
+
+        def merge_list(o, d):
+            for e in o:
+                if e not in d:
+                    d.append(e)
+
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            setattr(dest, varname, getattr(origin, varname))
+            merge_list(getattr(origin, varname), getattr(dest, varname))
 
         dest._generator_properties.update(copy.copy(origin._generator_properties))
 
@@ -104,9 +112,30 @@ class NewCppInfo(object):
             if cname is None:
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                setattr(dest.components[cname], varname, getattr(c, varname))
-            dest.components[cname].requires = copy.copy(c.requires)
-            dest.components[cname]._generator_properties = copy.copy(c._generator_properties)
+                merge_list(getattr(c, varname), getattr(dest.components[cname], varname))
+            merge_list(c.requires, dest.components[cname].requires, )
+            merge_list(c._generator_properties, dest.components[cname]._generator_properties)
+
+    def filter_missing_folders(self, base_folder):
+        """Given an absolute path, root of all the folders, remove from the lists the
+           folders without contents"""
+        for cname, c in self.components.items():
+            for varname in _DIRS_VAR_NAMES:
+                new_list = []
+                for el in getattr(self.components[cname], varname):
+                    if os.path.exists(os.path.join(base_folder, el)):
+                        new_list.append(el)
+
+                setattr(self.components[cname], varname, new_list)
+
+    def set_relative_base_folder(self, folder):
+        """Prepend the folder to all the directories"""
+        for cname, c in self.components.items():
+            for varname in _DIRS_VAR_NAMES:
+                new_list = []
+                for el in getattr(self.components[cname], varname):
+                    new_list.append(os.path.join(folder, el))
+                setattr(self.components[cname], varname, new_list)
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
@@ -180,3 +209,12 @@ class NewCppInfo(object):
             ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
             ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
+
+    def __str__(self):
+        ret = []
+        for cname, c in self.components.items():
+            for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+                ret.append("Component: '{}' "
+                           "Var: '{}' "
+                           "Value: '{}'".format(cname, n, getattr(c, n)))
+        return "\n".join(ret)

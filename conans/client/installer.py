@@ -663,16 +663,19 @@ class BinaryInstaller(object):
                     if hasattr(conanfile, "layout") and is_editable:
                         # Adjust the folders of the layout to consolidate the rootfolder of the
                         # cppinfos inside
-                        print("!!!!!!!! {}".format(conanfile.cpp_info.libs))
                         conanfile.folders.set_base_build(package_folder)
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
+
                         # Here package_folder is the editable base folder
-                        # !!!!!! ESE COPY ESTA SOBREESCRIBIENDO TODO, FALTA EL MERGE CON EL RELATIVO
-                        # AL DIRECTORIO conanfile.folders.build.folder
-                        conanfile.infos.build.copy_into_old_cppinfo(conanfile.cpp_info)
-                        conanfile.infos.source.copy_into_old_cppinfo(conanfile.cpp_info)
-                        print("!!!!!!!! {}".format(conanfile.cpp_info.libs))
+                        build_cppinfo = conanfile.infos.build.copy()
+                        build_cppinfo.set_relative_base_folder(conanfile.folders.build)
+
+                        source_cppinfo = conanfile.infos.source.copy()
+                        source_cppinfo.set_relative_base_folder(conanfile.folders.source)
+
+                        source_cppinfo.copy_into_old_cppinfo(conanfile.cpp_info)
+                        build_cppinfo.copy_into_old_cppinfo(conanfile.cpp_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
