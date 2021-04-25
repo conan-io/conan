@@ -102,7 +102,7 @@ class Test(ConanFile):
         self.cpp_info.libs.append("fake_lib")
         self.cpp_info.cflags.append("a_flag")
         self.cpp_info.cxxflags.append("a_cxx_flag")
-        self.cpp_info.sharedlinkflags.append("shared_link_flag")
+        self.cpp_info.sharedlinkflags.append("-shared_link_flag")
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})

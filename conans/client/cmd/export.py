@@ -51,8 +51,8 @@ def check_casing_conflict(cache, ref):
                              % (str(ref), " ".join(str(s) for s in refs)))
 
 
-def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
-               export=True, graph_lock=None, ignore_dirty=False):
+def cmd_export(app, conanfile_path, name, version, user, channel,
+               graph_lock=None, ignore_dirty=False):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -91,13 +91,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
 
     check_casing_conflict(cache=cache, ref=ref)
     package_layout = cache.package_layout(ref, short_paths=conanfile.short_paths)
-    if not export:
-        metadata = package_layout.load_metadata()
-        recipe_revision = metadata.recipe.revision
-        ref = ref.copy_with_rev(recipe_revision)
-        if graph_lock:
-            graph_lock.update_exported_ref(node_id, ref)
-        return ref
 
     _check_settings_for_warnings(conanfile, output)
 
@@ -134,7 +127,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
         # Clear previous scm_folder
         modified_recipe = False
         scm_sources_folder = package_layout.scm_sources()
-        if local_src_folder and not keep_source:
+        if local_src_folder:
             # Copy the local scm folder to scm_sources in the cache
             mkdir(scm_sources_folder)
             _export_scm(scm_data, local_src_folder, scm_sources_folder, output)
@@ -173,7 +166,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel, keep_source,
                 output.info("Source folder is corrupted, forcing removal")
                 rmdir(source_folder)
                 clean_dirty(source_folder)
-            elif modified_recipe and not keep_source:
+            elif modified_recipe:
                 output.info("Package recipe modified in export, forcing source folder removal")
                 output.info("Use the --keep-source, -k option to skip it")
                 rmdir(source_folder)

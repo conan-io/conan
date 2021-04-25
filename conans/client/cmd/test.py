@@ -9,7 +9,7 @@ from conans.util.files import rmdir
 
 
 def install_build_and_test(app, conanfile_abs_path, reference, profile_host, profile_build,
-                           graph_lock, root_ref, remotes, update, build_modes=None, keep_build=False,
+                           graph_lock, root_ref, remotes, update, build_modes=None,
                            test_build_folder=None, recorder=None):
     """
     Installs the reference (specified by the parameters or extracted from the test conanfile)
@@ -33,7 +33,6 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  root_ref=root_ref,
                                  update=update,
                                  build_modes=build_modes,
-                                 keep_build=keep_build,
                                  recorder=recorder)
         conanfile = deps_info.root.conanfile
         cmd_build(app, conanfile_abs_path, conanfile, base_folder, test_build_folder,
