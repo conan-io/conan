@@ -1,7 +1,7 @@
 import os
 
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import RECIPE_VIRTUAL
+from conans.client.graph.graph import RECIPE_VIRTUAL, GraphError
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
@@ -47,17 +47,20 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
                                           recorder, lockfile_node_id=lockfile_node_id)
 
     if deps_graph.error:
-        conflicts = [n for n in deps_graph.nodes if n.conflict]
-        if len(conflicts) == 2:
-            raise ConanException("There was a conflict building the dependency graph")
-        elif len(conflicts) == 1:  # reporting a loop
-            loop_node = conflicts[0]
-            loop_ref = loop_node.ref
-            parent = loop_node.dependants[0]
-            parent_ref = parent.src.ref
-            msg = "Loop detected in context host: '{}' requires '{}' which is an ancestor too"
-            msg = msg.format(parent_ref, loop_ref)
-            raise ConanException(msg)
+        conflict_nodes = [n for n in deps_graph.nodes if n.conflict]
+        for node in conflict_nodes:  # At the moment there should be only 1 conflict at most
+            conflict = node.conflict
+            if conflict[0] == GraphError.LOOP:
+                loop_ref = node.ref
+                parent = node.dependants[0]
+                parent_ref = parent.src.ref
+                msg = "Loop detected in context host: '{}' requires '{}' which is an ancestor too"
+                msg = msg.format(parent_ref, loop_ref)
+                raise ConanException(msg)
+            elif conflict[0] == GraphError.VERSION_CONFLICT:
+                raise ConanException("There was a version conflict building the dependency graph")
+            elif conflict[0] == GraphError.PROVIDE_CONFLICT:
+                raise ConanException("There was a provides conflict building the dependency graph")
 
     graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
     root_node = deps_graph.root

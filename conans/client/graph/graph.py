@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from enum import Enum
 
 from conans.model.ref import PackageReference
 from conans.model.requires import Requirement
@@ -27,6 +28,12 @@ BINARY_INVALID = "Invalid"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
+
+
+class GraphError(Enum):
+    LOOP = "Graph loop"
+    VERSION_CONFLICT = "version conflict"
+    PROVIDE_CONFLICT = "provide conflict"
 
 
 class _TransitiveRequirements:
