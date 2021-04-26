@@ -1,7 +1,7 @@
 from conans.errors import ConanException
 
 
-def get_gnu_triplet(os_, arch, compiler=None):
+def _get_gnu_triplet(os_, arch, compiler=None):
     """
     Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
 

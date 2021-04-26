@@ -3,7 +3,9 @@ import json
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
-from conan.tools.oss import cross_building, get_cross_building_settings, get_gnu_triplet
+from conan.tools.gnu.cross_building import _cross_building
+from conan.tools.gnu.get_cross_building_settings import _get_cross_building_settings
+from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 # FIXME: need to refactor this import and bring to conan.tools
 from conans.client.build.cppstd_flags import cppstd_flag_new
 from conans.util.files import save
@@ -39,10 +41,10 @@ class AutotoolsToolchain:
         self._build = None
         self._target = None
 
-        if cross_building(self._conanfile):
-            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
-            self._host = get_gnu_triplet(os_host, arch_host)
-            self._build = get_gnu_triplet(os_build, arch_build)
+        if _cross_building(self._conanfile):
+            os_build, arch_build, os_host, arch_host = _get_cross_building_settings(self._conanfile)
+            self._host = _get_gnu_triplet(os_host, arch_host)
+            self._build = _get_gnu_triplet(os_build, arch_build)
 
     def _rpaths_link(self):
         # TODO: Not implemented yet

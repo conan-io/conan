@@ -152,7 +152,7 @@ def _get_build_os_arch(conanfile):
         return conanfile.settings.get_safe('os_build'), conanfile.settings.get_safe('arch_build')
 
 
-def get_cross_building_settings(conanfile, self_os=None, self_arch=None):
+def _get_cross_building_settings(conanfile, self_os=None, self_arch=None):
     os_build, arch_build = _get_build_os_arch(conanfile)
     if not hasattr(conanfile, 'settings_build'):
         # Let it override from outside only if no 'profile_build' is used
