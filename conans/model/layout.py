@@ -42,11 +42,13 @@ class Folders(object):
         self._base_build = None
         self._base_package = None
         self._base_generators = None
+        self._base_imports = None
 
         self.source = ""
         self.build = ""
         self.package = ""
         self.generators = ""
+        self.imports = ""
 
     def __repr__(self):
         return str(self.__dict__)
@@ -106,8 +108,7 @@ class Folders(object):
         if self._base_package is None:
             return None
         if not self.package:
-            # FIXME: Remove in 2.0 This is an ugly default from the conan package command
-            return os.path.join(self._base_package, "package")
+            return self._base_package
         return os.path.join(self._base_package, self.package)
 
     @property
@@ -120,3 +121,19 @@ class Folders(object):
 
     def set_base_generators(self, folder):
         self._base_generators = folder
+
+    @property
+    def imports_folder(self):
+        if self._base_imports is None:
+            return None
+        if not self.imports:
+            return self._base_imports
+
+        return os.path.join(self._base_imports, self.imports)
+
+    @property
+    def base_imports(self):
+        return self._base_imports
+
+    def set_base_imports(self, folder):
+        self._base_imports = folder

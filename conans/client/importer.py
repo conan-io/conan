@@ -70,20 +70,19 @@ def _make_files_writable(file_names):
         os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 
-def run_imports(conanfile, dest_folder):
+def run_imports(conanfile):
     if not hasattr(conanfile, "imports"):
         return []
-    mkdir(dest_folder)
-    file_importer = _FileImporter(conanfile, dest_folder)
+    mkdir(conanfile.imports_folder)
+    file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
-    conanfile.imports_folder = dest_folder
     with get_env_context_manager(conanfile):
-        with tools.chdir(dest_folder):
+        with tools.chdir(conanfile.imports_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
     _make_files_writable(copied_files)
     import_output = ScopedOutput("%s imports()" % conanfile.display_name, conanfile.output)
-    _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
+    _report_save_manifest(copied_files, import_output, conanfile.imports_folder, IMPORTS_MANIFESTS)
     return copied_files
 
 

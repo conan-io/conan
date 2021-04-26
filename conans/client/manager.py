@@ -92,6 +92,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         manifest_manager.print_log()
 
     conanfile.folders.set_base_install(install_folder)
+    conanfile.folders.set_base_imports(install_folder)
     conanfile.folders.set_base_generators(base_folder)
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
@@ -121,7 +122,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
-            run_imports(conanfile, install_folder)
+            run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile, conanfile.output)
 

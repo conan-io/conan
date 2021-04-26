@@ -138,8 +138,8 @@ class _PackageBuilder(object):
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
-        # FIXME: imports belong to layout too
-        copied_files = run_imports(conanfile, conanfile.build_folder)
+
+        copied_files = run_imports(conanfile)
 
         try:
             mkdir(conanfile.build_folder)
@@ -215,6 +215,7 @@ class _PackageBuilder(object):
                     conanfile.folders.set_base_source(base_build)
 
                 conanfile.folders.set_base_build(base_build)
+                conanfile.folders.set_base_imports(base_build)
                 conanfile.folders.set_base_package(base_package)
 
                 if not skip_build:
@@ -474,8 +475,7 @@ class BinaryInstaller(object):
             graph_info_node.graph_lock = graph_lock
             graph_info_node.save(base_path)
             output.info("Generated conan.lock")
-            # FIXME: Imports probably should go to a new imports_folder
-            copied_files = run_imports(conanfile, conanfile.build_folder)
+            copied_files = run_imports(conanfile)
             report_copied_files(copied_files, output)
             return
 
@@ -511,7 +511,7 @@ class BinaryInstaller(object):
                 output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
-                copied_files = run_imports(conanfile, build_folder)
+                copied_files = run_imports(conanfile)
                 report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, keep_build, processed_package_references, remotes):

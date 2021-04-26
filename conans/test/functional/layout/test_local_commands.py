@@ -294,3 +294,47 @@ def test_export_pkg_local():
     # Check the artifacts packaged, THERE IS NO "my_package" in the cache
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
+
+
+def test_imports():
+    """The 'conan imports' follows the layout"""
+    client = TestClient()
+    # Hello to be reused
+    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file += """
+    no_copy_source = True
+
+    def build(self):
+        tools.save("library.dll", "bar")
+        tools.save("generated.h", "bar")
+
+    def package(self):
+        self.copy("*.h")
+        self.copy("*.dll")
+    """
+    client.save({"conanfile.py": conan_file})
+    client.run("create . hello/1.0@")
+
+    # Consumer of the hello importing the shared
+    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file += """
+    no_copy_source = True
+    requires = "hello/1.0"
+
+    def layout(self):
+        self.folders.imports = "my_imports"
+
+    def imports(self):
+        self.output.warn("Imports folder: {}".format(self.imports_folder))
+        self.copy("*.dll")
+    """
+
+    client.save({"conanfile.py": conan_file})
+    client.run("install . -if=my_install")
+    client.run("imports . -if=my_install")
+
+    imports_folder = os.path.join(client.current_folder, "my_imports")
+    dll_path = os.path.join(client.current_folder, "my_imports", "library.dll")
+
+    assert "WARN: Imports folder: {}".format(imports_folder) in client.out
+    assert os.path.exists(dll_path)

@@ -779,8 +779,11 @@ class ConanAPIV1(object):
 
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
-
-        package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
+        if not conanfile.folders.package:
+            default_pkg_folder = os.path.join(build_folder, "package")
+            package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+        else:
+            package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
 
         conanfile.folders.set_base_build(build_folder)
         conanfile.folders.set_base_source(source_folder)
@@ -828,7 +831,9 @@ class ConanAPIV1(object):
         conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_abs_path, info_folder,
                                                                    deps_info_required=True)
-        run_imports(conanfile, dest)
+
+        conanfile.folders.set_base_imports(dest)
+        run_imports(conanfile)
 
     @api_method
     def imports_undo(self, manifest_path):
