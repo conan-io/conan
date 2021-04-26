@@ -123,7 +123,9 @@ class AutotoolsToolchain:
         env = self.environment()
         env.save_sh("conanautotoolstoolchain.sh")
         env.save_bat("conanautotoolstoolchain.bat")
+        self.generate_args()
 
+    def generate_args(self):
         args = {"build": self._build,
                 "host": self._host,
                 "target": self._target}
