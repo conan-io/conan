@@ -211,11 +211,11 @@ def test_init_overwrite():
     save_append(client.cache.default_profile_path, dummy_content)
 
     client.run('config init --force')
-    assert dummy_content in load(client.cache.conan_conf_path)
-    assert dummy_content in load(client.cache.conan_conf_path)
-    assert dummy_content in load(client.cache.settings_path)
-    assert dummy_content in load(client.cache.remotes_path)
-    assert dummy_content in load(client.cache.default_profile_path)
+    assert dummy_content not in load(client.cache.conan_conf_path)
+    assert dummy_content not in load(client.cache.conan_conf_path)
+    assert dummy_content not in load(client.cache.settings_path)
+    assert dummy_content not in load(client.cache.remotes_path)
+    assert dummy_content not in load(client.cache.default_profile_path)
 
 
 def test_config_list():
