@@ -97,6 +97,20 @@ class Folders(object):
         self._base_package = folder
 
     @property
+    def package_folder(self):
+        """For the cache, the package folder is only the base"""
+        return self._base_package
+
+    @property
+    def local_package_folder(self):
+        if self._base_package is None:
+            return None
+        if not self.package:
+            # FIXME: Remove in 2.0 This is an ugly default from the conan package command
+            return os.path.join(self._base_package, "package")
+        return os.path.join(self._base_package, self.package)
+
+    @property
     def generators_folder(self):
         if self._base_generators is None:
             return None

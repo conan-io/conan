@@ -8,6 +8,8 @@ from conans.util.files import mkdir, save
 
 def export_pkg(conanfile, package_id, src_package_folder, hook_manager, conanfile_path, ref):
 
+    # NOTE: The layout folder is not taken into account for the cache, it is not useful to introduce
+    #       a subfolder there.
     mkdir(conanfile.package_folder)
 
     output = conanfile.output
@@ -22,9 +24,9 @@ def export_pkg(conanfile, package_id, src_package_folder, hook_manager, conanfil
     hook_manager.execute("post_package", conanfile=conanfile, conanfile_path=conanfile_path,
                          reference=ref, package_id=package_id)
 
-    save(os.path.join(conanfile.folders.base_package, CONANINFO), conanfile.info.dumps())
-    manifest = FileTreeManifest.create(conanfile.folders.base_package)
-    manifest.save(conanfile.folders.base_package)
+    save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
+    manifest = FileTreeManifest.create(conanfile.package_folder)
+    manifest.save(conanfile.package_folder)
     report_files_from_manifest(output, manifest)
 
     output.success("Package '%s' created" % package_id)

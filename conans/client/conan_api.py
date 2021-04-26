@@ -780,8 +780,7 @@ class ConanAPIV1(object):
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path, install_folder,
                                                                    deps_info_required=True)
 
-        default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
+        package_folder = _make_abs_path(package_folder, cwd, default=build_folder)
 
         conanfile.folders.set_base_build(build_folder)
         conanfile.folders.set_base_source(source_folder)
@@ -789,7 +788,7 @@ class ConanAPIV1(object):
         conanfile.folders.set_base_install(install_folder)
 
         run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
-                           copy_info=True)
+                           copy_info=True, use_pkg_layout=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

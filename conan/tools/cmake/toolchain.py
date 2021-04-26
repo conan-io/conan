@@ -373,8 +373,6 @@ class FindConfigFiles(Block):
     def context(self):
         # To find the generated cmake_find_package finders
         # TODO: Change this for parameterized output location of CMakeDeps
-        cmake_prefix_path = self._conanfile.generators_folder.replace("\\", "/")
-        cmake_module_path = self._conanfile.generators_folder.replace("\\", "/")
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
         prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
@@ -383,8 +381,8 @@ class FindConfigFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
         return {"find_package_prefer_config": find_package_prefer_config,
-                "cmake_prefix_path": cmake_prefix_path,
-                "cmake_module_path": cmake_module_path,
+                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR}",
+                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR}",
                 "android_prefix_path": android_prefix}
 
 

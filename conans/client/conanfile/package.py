@@ -14,12 +14,15 @@ from conans.util.files import save, mkdir
 from conans.util.log import logger
 
 
-def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info=False):
+def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info=False,
+                       use_pkg_layout=False):
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
+    if use_pkg_layout:
+        conanfile.folders.set_base_package(conanfile.folders.local_package_folder)
 
     if conanfile.package_folder == conanfile.build_folder:
         raise ConanException("Cannot 'conan package' to the build folder. "
@@ -70,19 +73,19 @@ def _create_aux_files(conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-    logger.debug("PACKAGE: Creating config files to %s" % conanfile.folders.base_package)
+    logger.debug("PACKAGE: Creating config files to %s" % conanfile.package_folder)
     if copy_info:
         try:
             shutil.copy(os.path.join(conanfile.install_folder, CONANINFO),
-                        conanfile.folders.base_package)
+                        conanfile.package_folder)
         except IOError:
             raise ConanException("%s does not exist inside of your %s folder. "
                                  "Try to re-build it again to solve it."
                                  % (CONANINFO, conanfile.install_folder))
     else:
-        save(os.path.join(conanfile.folders.base_package, CONANINFO), conanfile.info.dumps())
+        save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
 
     # Create the digest for the package
-    manifest = FileTreeManifest.create(conanfile.folders.base_package)
-    manifest.save(conanfile.folders.base_package)
+    manifest = FileTreeManifest.create(conanfile.package_folder)
+    manifest.save(conanfile.package_folder)
     return manifest

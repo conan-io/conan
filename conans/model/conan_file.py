@@ -265,7 +265,7 @@ class ConanFile(object):
 
     @property
     def package_folder(self):
-        return self.folders.base_package
+        return self.folders.package_folder
 
     @package_folder.setter
     def package_folder(self, folder):

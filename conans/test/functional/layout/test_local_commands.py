@@ -257,6 +257,7 @@ def test_export_pkg_local():
     def layout(self):
         self.folders.source = "my_source"
         self.folders.build = "my_build"
+        self.folders.package = "my_package"
 
     def source(self):
         tools.save("downloaded.h", "bar")
@@ -280,16 +281,16 @@ def test_export_pkg_local():
     client.run("package . -if=my_install")
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = os.path.join(client.current_folder, "package")
+    pf = os.path.join(client.current_folder, "my_package")
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
     assert "WARN: Package folder: {}".format(pf) in client.out
 
-    client.run("export-pkg . lib/1.0@ -if=my_install -pf=package")
+    client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     pf_cache = client.cache.package_layout(ref).package(pref)
 
-    # Check the artifacts packaged
+    # Check the artifacts packaged, THERE IS NO "my_package" in the cache
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
