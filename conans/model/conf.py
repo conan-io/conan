@@ -3,6 +3,27 @@ import fnmatch
 from conans.errors import ConanException
 
 
+DEFAULT_CONFIGURATION = {
+    "core.required_conan_version": "Will raise if the current Conan version does not match the defined version range.",
+    "core.package_id.msvc_visual_incompatible": "Allows opting-out the fallback from the new msvc compiler to the Visual Studio compiler existing binaries",
+    "tools.microsoft.msbuild:verbosity": "Verbosity level for MSBuild: 'Quiet', 'Minimal', 'Normal', 'Detailed', 'Diagnostic'",
+    "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m (/maxCpuCount) when running MSBuild",
+    "tools.microsoft.msbuild:vs_version": "Defines the compiler version when using using the new msvc compiler",
+    "tools.microsoft.msbuilddeps:exclude_code_analysis": "Suppress MSBuild code analysis for patterns",
+    "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
+    "tools.build:processes": "Default jobs number",
+    "tools.ninja:jobs": "Argument for the --jobs parameter when running Ninja generator",
+    "tools.gnu.make:jobs": "Argument for the -j parameter when running Make generator",
+    "tools.gnu:make_program": "Indicate path to make program",
+    "tools.env.virtualenv:auto_use": "Automatically activate virtualenvs when changing into a directory",
+    "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
+    "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
+    "tools.files.download:retry": "Number of retries in case of failure when downloading",
+    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+}
+
+
 class _ConfModule(object):
     """
     a dictionary of key: values for each config property of a module

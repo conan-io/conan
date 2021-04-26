@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 import six
+from parameterized.parameterized import parameterized
 
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
@@ -9,6 +10,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
+from conans.model.conf import DEFAULT_CONFIGURATION
 
 
 class ConfigTest(unittest.TestCase):
@@ -164,3 +166,11 @@ class ConfigTest(unittest.TestCase):
     def _assert_dict_subset(self, expected, actual):
         actual = {k: v for k, v in actual.items() if k in expected}
         self.assertDictEqual(expected, actual)
+
+    def test_config_list(self):
+        """ config list MUST show all configuration available for global.conf
+        """
+        self.client.run('config list')
+        self.assertIn("Supported Conan *experimental* conan.conf properties:", self.client.out)
+        for key, value in DEFAULT_CONFIGURATION.items():
+            self.assertIn("{}: {}".format(key, value), self.client.out)
