@@ -33,3 +33,5 @@ class AutotoolsGen:
         else:
             build_env.save_sh("conanbuildenv.sh")
             run_env.save_sh("conanrunenv.sh")
+
+        self.toolchain.generate_args()

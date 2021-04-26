@@ -14,7 +14,9 @@ lib_LIBRARIES = {{ lib }}
 {% if main and lib %}
 {{main}}_LDADD = {{ lib }}
 {% endif %}
+
 """
+# newline at the end is important: m4: INTERNAL ERROR: recursive push_string!
 
 
 def gen_makefile_am(**context):
@@ -30,7 +32,9 @@ AC_PROG_RANLIB
 AM_PROG_AR
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
+
 """
+# newline at the end is important: m4: INTERNAL ERROR: recursive push_string!
 
 
 def gen_configure_ac(**context):
