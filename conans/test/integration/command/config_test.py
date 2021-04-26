@@ -167,15 +167,10 @@ class ConfigTest(unittest.TestCase):
         actual = {k: v for k, v in actual.items() if k in expected}
         self.assertDictEqual(expected, actual)
 
-    @parameterized.expand([("", True), ("--raw", False)])
-    def test_config_list(self, argument, expected):
+    def test_config_list(self):
         """ config list MUST show all configuration available for global.conf
         """
-        self.client.run('config list {}'.format(argument))
-        title = "Supported Conan conan.conf properties:"
-        if expected:
-            self.assertIn(title, self.client.out)
-        else:
-            self.assertNotIn(title, self.client.out)
+        self.client.run('config list')
+        self.assertIn("Supported Conan *experimental* conan.conf properties:", self.client.out)
         for key, value in DEFAULT_CONFIGURATION.items():
             self.assertIn("{}: {}".format(key, value), self.client.out)

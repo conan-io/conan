@@ -592,8 +592,6 @@ class Command(object):
         set_subparser.add_argument("item", help="'item=value' to set")
         init_subparser.add_argument('-f', '--force', default=False, action='store_true',
                                     help='Overwrite existing Conan configuration files')
-        list_subparser.add_argument('-r', '--raw', default=False, action='store_true',
-                                    help='Print just the list of recipes')
 
         args = parser.parse_args(*args)
 
@@ -632,8 +630,7 @@ class Command(object):
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
         elif args.subcommand == "list":
-            if not args.raw:
-                self._out.info("Supported Conan conan.conf properties:")
+            self._out.info("Supported Conan *experimental* conan.conf properties:")
             for key, value in DEFAULT_CONFIGURATION.items():
                 self._out.writeln("{}: {}".format(key, value))
 
