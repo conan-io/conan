@@ -3,7 +3,6 @@ import os
 import platform
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
@@ -71,7 +70,9 @@ class CMake(object):
 
         self._generator = None
         if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
-            self._generator = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))["cmake_generator"]
+            json_args = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))
+            self._generator = json_args.get("cmake_generator")
+            self._toolchain_file = json_args.get("cmake_toolchain_file")
         self._build_folder = build_folder
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -89,17 +90,20 @@ class CMake(object):
             build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
 
         mkdir(build_folder)
-        arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            CMakeToolchain.filename,
-            self._conanfile.package_folder.replace("\\", "/"),
-            source)
 
+        arg_list = [self._cmake_program]
+        if self._generator:
+            arg_list.append('-G "{}"'.format(self._generator))
+        if self._toolchain_file:
+            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(self._toolchain_file))
+        if self._conanfile.package_folder:
+            pkg_folder = self._conanfile.package_folder.replace("\\", "/")
+            arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
         if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
-            arg_list += ' -DCMAKE_SH="CMAKE_SH-NOTFOUND"'
+            arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
+        arg_list.append('"{}"'.format(source))
 
-        generator = '-G "{}" '.format(self._generator) if self._generator else ""
-        command = "%s %s%s" % (self._cmake_program, generator, arg_list)
-
+        command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
             self._conanfile.run(command)

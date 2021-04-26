@@ -390,6 +390,9 @@ class FindConfigFiles(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if user_toolchain %}
+        include({{usertoolchain}})
+        {% endif %}
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -464,10 +467,15 @@ class GenericSystemBlock(Block):
 
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
+
+        # This is global [conf] injection of extra toolchain files
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain"].user_toolchain
+
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type}
+                "build_type": build_type,
+                "user_toolchain": user_toolchain}
 
 
 class ToolchainBlocks:
@@ -616,8 +624,18 @@ class CMakeToolchain(object):
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
+        self.writebuild()
+
+    def writebuild(self):
+        result = {}
+        # TODO: Lets do it compatible with presets soon
         if self.generator is not None:
-            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps({"cmake_generator": self.generator}))
+            result["cmake_generator"] = self.generator
+        toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain"].toolchain_file
+        result["cmake_toolchain_file"] = toolchain_file or self.filename
+
+        if result:
+            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(result))
 
     def _get_generator(self):
         # Returns the name of the generator to be used by CMake
