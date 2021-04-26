@@ -21,19 +21,14 @@ class DiamondTest(unittest.TestCase):
 
     def test_diamond_cmake(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        self._run(use_cmake=True, language=1)
+        self._run(language=1)
 
     def test_diamond_cmake_targets(self):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        self._run(use_cmake=True, cmake_targets=True)
+        self._run(cmake_targets=True)
 
-    def test_diamond_default(self):
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
-                                 path_with_spaces=False)
-        self._run(use_cmake=False)
-
-    def _export(self, name, version=None, deps=None, use_cmake=True, cmake_targets=False):
-        files = cpp_hello_conan_files(name, version, deps, need_patch=True, use_cmake=use_cmake,
+    def _export(self, name, version=None, deps=None, cmake_targets=False):
+        files = cpp_hello_conan_files(name, version, deps, need_patch=True,
                                       cmake_targets=cmake_targets, with_exe=False)
         self.client.save(files, clean_first=True)
         self.client.run("export . lasote/stable")
@@ -52,21 +47,21 @@ class DiamondTest(unittest.TestCase):
             self.assertIn("set(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
             self.assertIn("set(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
 
-    def _run(self, use_cmake=True, cmake_targets=False, language=0):
+    def _run(self, cmake_targets=False, language=0):
 
-        if not use_cmake and platform.system() == "SunOS":
+        if platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work
 
-        self._export("Hello0", "0.1", use_cmake=use_cmake, cmake_targets=cmake_targets)
-        self._export("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake,
+        self._export("Hello0", "0.1", cmake_targets=cmake_targets)
+        self._export("Hello1", "0.1", ["Hello0/0.1@lasote/stable"],
                      cmake_targets=cmake_targets)
-        self._export("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake,
+        self._export("Hello2", "0.1", ["Hello0/0.1@lasote/stable"],
                      cmake_targets=cmake_targets)
         self._export("Hello3", "0.1", ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"],
-                     use_cmake=use_cmake, cmake_targets=cmake_targets)
+                     cmake_targets=cmake_targets)
 
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
-                                       language=language, use_cmake=use_cmake,
+                                       language=language,
                                        cmake_targets=cmake_targets)
 
         # Add some stuff to base project conanfile to test further the individual
@@ -80,13 +75,12 @@ class DiamondTest(unittest.TestCase):
         self.client.save(files3)
 
         self.client.run("build . --build missing")
-        if use_cmake:
-            if cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", self.client.out)
-                self.assertNotIn("Conan: Using cmake global configuration", self.client.out)
-            else:
-                self.assertIn("Conan: Using cmake global configuration", self.client.out)
-                self.assertNotIn("Conan: Using cmake targets configuration", self.client.out)
+        if cmake_targets:
+            self.assertIn("Conan: Using cmake targets configuration", self.client.out)
+            self.assertNotIn("Conan: Using cmake global configuration", self.client.out)
+        else:
+            self.assertIn("Conan: Using cmake global configuration", self.client.out)
+            self.assertNotIn("Conan: Using cmake targets configuration", self.client.out)
         self._check_individual_deps()
 
         def check_run_output(client):
@@ -108,8 +102,7 @@ class DiamondTest(unittest.TestCase):
         self.assertEqual(str(self.client.out).count("Uploading package"), 4)
 
         # Reuse in another client
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
-                             path_with_spaces=use_cmake)
+        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client2.save(files3)
         client2.run("build .")
 

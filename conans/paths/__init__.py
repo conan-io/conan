@@ -26,11 +26,9 @@ def get_conan_user_home():
 CONANFILE = 'conanfile.py'
 CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
-BUILD_INFO_GCC = 'conanbuildinfo.gcc'
 BUILD_INFO_COMPILER_ARGS = 'conanbuildinfo.args'
 BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
-BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_PREMAKE = 'conanbuildinfo.premake.lua'
 BUILD_INFO_DEPLOY = 'deploy_manifest.txt'

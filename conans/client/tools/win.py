@@ -157,49 +157,6 @@ def latest_visual_studio_version_installed(output):
     return None
 
 
-def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
-                       output=None):
-    """ Do both: set the environment variables and call the .sln build
-    """
-    conan_v2_error("'tools.msvc_build_command' is deprecated, use 'MSBuild()' helper instead")
-    vcvars_cmd = vcvars_command(settings, force=force_vcvars, output=output)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms, output=output)
-    command = "%s && %s" % (vcvars_cmd, build)
-    return command
-
-
-def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None, output=None,
-                      verbosity=None, definitions=None):
-    """
-    Use example:
-        build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
-        command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
-        self.run(command)
-    """
-    conan_v2_error("'tools.build_sln_command' is deprecated, use 'MSBuild()' helper instead")
-    from conans.client.build.msbuild import MSBuild
-    tmp = MSBuild(settings)
-    output = default_output(output, fn_name='conans.client.tools.win.build_sln_command')
-    tmp._output = output
-
-    # Generate the properties file
-    props_file_contents = tmp._get_props_file_contents(definitions)
-    tmp_path = os.path.join(mkdir_tmp(), ".conan_properties")
-    save(tmp_path, props_file_contents)
-
-    # Build command
-    command = tmp.get_command(sln_path, tmp_path,
-                              targets=targets, upgrade_project=upgrade_project,
-                              build_type=build_type, arch=arch, parallel=parallel,
-                              toolset=toolset, platforms=platforms, use_env=False,
-                              verbosity=verbosity)
-
-    return command
-
-
 def vs_installation_path(version, preference=None):
 
     if not preference:
