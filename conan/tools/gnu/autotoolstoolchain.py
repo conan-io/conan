@@ -3,9 +3,9 @@ import json
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
+from conan.tools.oss import cross_building, get_cross_building_settings, get_gnu_triplet
 # FIXME: need to refactor this import and bring to conan.tools
 from conans.client.build.cppstd_flags import cppstd_flag_new
-from conans.client.tools.oss import cross_building, get_cross_building_settings, get_gnu_triplet
 from conans.util.files import save
 
 
