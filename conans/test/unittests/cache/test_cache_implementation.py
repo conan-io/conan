@@ -4,7 +4,6 @@ import tempfile
 
 import pytest
 
-from conan.cache.db.packages import PackagesDbTable
 from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache import DataCache
 from conans.model.ref import ConanFileReference, PackageReference

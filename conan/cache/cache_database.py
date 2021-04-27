@@ -4,8 +4,6 @@ from io import StringIO
 from typing import Tuple, Iterator
 
 from conans.model.ref import ConanFileReference, PackageReference
-from .db.folders import FoldersDbTable
-from .db.packages import PackagesDbTable
 from .db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
@@ -14,8 +12,6 @@ CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database 
 class CacheDatabase:
     """ Abstracts the operations with the database and ensures they run sequentially """
     _references = ReferencesDbTable()
-    _packages = PackagesDbTable()
-    _folders = FoldersDbTable()
 
     timeout = CONNECTION_TIMEOUT_SECONDS
 
@@ -35,122 +31,42 @@ class CacheDatabase:
     def initialize(self, if_not_exists=True):
         with self.connect() as conn:
             self._references.create_table(conn, if_not_exists)
-            self._packages.create_table(conn, self._references, if_not_exists)
-            self._folders.create_table(conn, self._references, self._packages, if_not_exists)
 
     def dump(self, output: StringIO):
         with self.connect() as conn:
             output.write(f"\nReferencesDbTable (table '{self._references.table_name}'):\n")
             self._references.dump(conn, output)
 
-            output.write(f"\nPackagesDbTable (table '{self._packages.table_name}'):\n")
-            self._packages.dump(conn, output)
-
-            output.write(f"\nFolders (table '{self._folders.table_name}'):\n")
-            self._folders.dump(conn, output)
-
-    """
-    Functions related to references
-    """
-
-    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
-        with self.connect() as conn:
-            for it in self._references.all(conn, only_latest_rrev):
-                yield it
-
-    def search_references(self, pattern: str,
-                          only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
-        with self.connect() as conn:
-            for it in self._references.filter(conn, pattern, only_latest_rrev):
-                yield it
-
-    def list_reference_versions(self, name: str,
-                                only_latest_rrev: bool) -> Iterator[ConanFileReference]:
-        with self.connect() as conn:
-            for it in self._references.versions(conn, name, only_latest_rrev):
-                yield it
-
-    def update_reference(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
+    def update_reference_revision(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         with self.connect() as conn:
-            ref_pk = self._references.pk(conn, old_ref)
+            ref_pk = self._references.pk(conn, str(old_ref), old_ref.revision, None, None)
             try:
-                self._references.update(conn, ref_pk, new_ref)
+                self._references.update(conn, ref_pk, str(new_ref), new_ref.revision, None, None)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(f"Reference '{new_ref.full_str()}' already exists")
 
-    def update_reference_directory(self, ref: ConanFileReference, path: str):
+    def update_reference_directory(self, path, reference, rrev, pkgid, prev):
         with self.connect() as conn:
-            self._folders.update_path_ref(conn, ref, path)
+            self._references.update_path_ref(conn, path, reference, rrev, pkgid, prev)
 
-    def try_get_reference_directory(self, ref: ConanFileReference):
+    def try_get_reference_directory(self, reference, rrev, pkgid, prev):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
-            return self._folders.get_path_ref(conn, ref)
+            return self._references.get_path_ref(conn, reference, rrev, pkgid, prev)
 
-    def get_or_create_reference(self, ref: ConanFileReference, path: str) -> Tuple[str, bool]:
+    def get_or_create_reference(self, path, reference, rrev, pkgid, prev) -> Tuple[str, bool]:
         """ Returns the path for the given reference. If the reference doesn't exist in the
             database, it will create the entry for the reference using the path given as argument.
         """
         with self.connect() as conn:
             try:
-                return self._folders.get_path_ref(conn, ref), False
+                return self._references.get_path_ref(conn, reference, rrev, pkgid, prev), False
             except ReferencesDbTable.DoesNotExist:
-                self._references.save(conn, ref)
-                self._folders.save_ref(conn, ref, path)
+                self._references.save(conn, path, reference, rrev, pkgid, prev)
                 return path, True
 
-    """
-    Functions related to package references
-    """
-
-    def list_package_references(self, ref: ConanFileReference,
-                                only_latest_prev: bool = False) -> Iterator[PackageReference]:
+    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         with self.connect() as conn:
-            for it in self._packages.filter(conn, ref, only_latest_prev):
+            for it in self._references.all(conn, only_latest_rrev):
                 yield it
-
-    def search_package_references(self, ref: ConanFileReference, package_id: str,
-                                  only_latest_prev: bool = False) -> Iterator[PackageReference]:
-        with self.connect() as conn:
-            for it in self._packages.search(conn, ref, package_id, only_latest_prev):
-                yield it
-
-    def update_package_reference(self, old_pref: PackageReference, new_pref: PackageReference):
-        """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
-        with self.connect() as conn:
-            pref_pk = self._packages.pk(conn, old_pref)
-            try:
-                self._packages.update(conn, pref_pk, new_pref)
-            except sqlite3.IntegrityError:
-                raise PackagesDbTable.AlreadyExist(f"Package '{new_pref.full_str()}' already exists")
-
-    def update_package_reference_directory(self, pref: PackageReference, path: str):
-        with self.connect() as conn:
-            self._folders.update_path_pref(conn, pref, path)
-
-    def try_get_package_reference_directory(self, pref: PackageReference):
-        """ Returns the directory where the given reference is stored (or fails) """
-        with self.connect() as conn:
-            return self._folders.get_path_pref(conn, pref)
-
-    def get_or_create_package_reference_directory(self, pref: PackageReference, path: str) -> str:
-        with self.connect() as conn:
-            try:
-                return self._folders.get_path_pref(conn, pref)
-            except FoldersDbTable.DoesNotExist:
-                self._folders.save_pref(conn, pref, path)
-                return path
-
-    def get_or_create_package(self, pref: PackageReference, path: str) -> Tuple[str, bool]:
-        """ Returns the path for the given package. The corresponding reference must exist.
-            If the package doesn't exist in the database, it will create the entry for the package
-            using the path given as argument.
-        """
-        with self.connect() as conn:
-            try:
-                return self._folders.get_path_pref(conn, pref), False
-            except PackagesDbTable.DoesNotExist:
-                self._packages.save(conn, pref)
-                self._folders.save_pref(conn, pref, path)
-                return path, True

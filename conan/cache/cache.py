@@ -55,45 +55,30 @@ class DataCache:
         else:
             return str(uuid.uuid4())
 
-    def list_references(self, only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
-        """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
-            can be used to filter and return only the latest recipe revision for each reference.
-        """
-        for it in self.db.list_references(only_latest_rrev):
-            yield it
-
-    def search_references(self, pattern: str,
-                          only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
-        """ Returns an iterator to all the references matching the pattern given. The pattern is
-            checked against the references full name using SQL LIKE functionality. The argument
-            'only_latest_rrev' can be used to filter and return only the latest recipe revision for
-            the matching references.
-        """
-        for it in self.db.search_references(pattern, only_latest_rrev):
-            yield it
-
-    def list_reference_versions(self, ref: ConanFileReference,
-                                only_latest_rrev: bool) -> Iterator[ConanFileReference]:
-        """ Returns an iterator to all the references with the same 'ref.name' as the one provided.
-            The argument 'only_latest_rrev' can be used to filter and return only the latest recipe
-            revision for each of them.
-        """
-        for it in self.db.list_reference_versions(ref.name, only_latest_rrev):
-            yield it
-
     def get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
         """ Returns the layout for a reference. The recipe revision is a requirement, only references
             with rrev are stored in the database. If it doesn't exists, it will raise
             References.DoesNotExist exception.
         """
         assert ref.revision, "Ask for a reference layout only if the rrev is known"
-        return self._get_reference_layout(ref)
-
-    def _get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
         from conan.cache.recipe_layout import RecipeLayout
-        reference_path = self.db.try_get_reference_directory(ref)
+        reference_path = self.db.try_get_reference_directory(str(ref), ref.revision, None, None)
         return RecipeLayout(ref, cache=self, manager=self._locks_manager, base_folder=reference_path,
                             locked=True)
+
+        # TODO: Should get_or_create_package_layout if not prev?
+
+    def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
+        """ Returns the layout for a package. The recipe revision and the package revision are a
+            requirement, only packages with rrev and prev are stored in the database.
+        """
+        assert pref.ref.revision, "Ask for a package layout only if the rrev is known"
+        assert pref.revision, "Ask for a package layout only if the prev is known"
+        package_path = self.db.try_get_reference_directory(str(pref.ref), pref.ref.revision,
+                                                           pref.package_id, pref.revision)
+        from conan.cache.package_layout import PackageLayout
+        return PackageLayout(pref, cache=self, manager=self._locks_manager,
+                             package_folder=package_path, locked=True)
 
     def get_or_create_reference_layout(self, ref: ConanFileReference) -> Tuple['RecipeLayout', bool]:
         path = self.get_default_path(ref)
@@ -103,46 +88,14 @@ class DataCache:
         if not ref.revision:
             ref = ref.copy_with_rev(str(uuid.uuid4()))
 
-        reference_path, created = self.db.get_or_create_reference(ref, path=path)
+        reference_path, created = self.db.get_or_create_reference(path, str(ref), ref.revision, None,
+                                                                  None)
         self._create_path(reference_path, remove_contents=created)
 
         from conan.cache.recipe_layout import RecipeLayout
         return RecipeLayout(ref, cache=self, manager=self._locks_manager,
                             base_folder=reference_path,
                             locked=locked), created
-
-    def list_package_references(self, ref: ConanFileReference,
-                                only_latest_prev: bool) -> Iterator[PackageReference]:
-        """ Returns an iterator to the all the PackageReference for the given recipe reference. The
-            argument 'only_latest_prev' can be used to filter and return only the latest package
-            revision for each of them.
-        """
-        for it in self.db.list_package_references(ref, only_latest_prev):
-            yield it
-
-    def search_package_references(self, ref: ConanFileReference, package_id: str,
-                                  only_latest_prev: bool) -> Iterator[PackageReference]:
-        """ Returns an iterator to the all the PackageReference for the given recipe reference and
-            package-id. The argument 'only_latest_prev' can be used to filter and return only the
-            latest package revision for each of them.
-        """
-        for it in self.db.search_package_references(ref, package_id, only_latest_prev):
-            yield it
-
-    # TODO: Should get_or_create_package_layout if not prev?
-    def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
-        """ Returns the layout for a package. The recipe revision and the package revision are a
-            requirement, only packages with rrev and prev are stored in the database.
-        """
-        assert pref.ref.revision, "Ask for a package layout only if the rrev is known"
-        assert pref.revision, "Ask for a package layout only if the prev is known"
-        return self._get_package_layout(pref)
-
-    def _get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
-        package_path = self.db.try_get_package_reference_directory(pref)
-        from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, manager=self._locks_manager,
-                             package_folder=package_path, locked=True)
 
     def get_or_create_package_layout(self, pref: PackageReference) -> Tuple['PackageLayout', bool]:
         package_path = self.get_default_path(pref)
@@ -153,7 +106,9 @@ class DataCache:
         if not pref.revision:
             pref = pref.copy_with_revs(pref.ref.revision, package_path)
 
-        package_path, created = self.db.get_or_create_package(pref, path=package_path)
+        package_path, created = self.db.get_or_create_reference(package_path, str(pref.ref),
+                                                                pref.ref.revision, pref.package_id,
+                                                                pref.revision)
         self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
@@ -186,11 +141,18 @@ class DataCache:
                    move_package_contents: bool = False) -> Optional[str]:
         # TODO: Add a little bit of all-or-nothing aka rollback
 
-        self.db.update_package_reference(old_pref, new_pref)
+        self.db.update_reference(old_pref, new_pref)
         if move_package_contents:
-            old_path = self.db.try_get_package_reference_directory(new_pref)
+            old_path = self.db.try_get_reference_directory(new_pref)
             new_path = self.get_default_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_package_reference_directory(new_pref, new_path)
+            self.db.update_reference_directory(new_pref, new_path)
             return new_path
         return None
+
+    def list_references(self, only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
+        """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
+            can be used to filter and return only the latest recipe revision for each reference.
+        """
+        for it in self.db.list_references(only_latest_rrev):
+            yield it

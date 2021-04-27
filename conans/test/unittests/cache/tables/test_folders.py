@@ -4,8 +4,6 @@ import time
 
 import pytest
 
-from conan.cache.db.folders import FoldersDbTable
-from conan.cache.db.packages import PackagesDbTable
 from conan.cache.db.references import ReferencesDbTable
 from conan.cache.cache_database import CacheDatabase
 from conans.model.ref import ConanFileReference, PackageReference

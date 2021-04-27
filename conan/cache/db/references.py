@@ -4,7 +4,7 @@ from collections import namedtuple
 from typing import Tuple, List, Iterator
 
 from conan.cache.db.table import BaseDbTable
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import ConanException
 
 
@@ -12,8 +12,10 @@ class ReferencesDbTable(BaseDbTable):
     table_name = 'conan_references'
     columns_description = [('reference', str),
                            ('rrev', str),
+                           ('pkgid', str, True),
+                           ('prev', str, True),
+                           ('path', str, False, None, True),
                            ('timestamp', int)]
-    unique_together = ('reference', 'rrev')  # TODO: Add unittest
 
     class DoesNotExist(ConanException):
         pass
@@ -24,30 +26,41 @@ class ReferencesDbTable(BaseDbTable):
     class AlreadyExist(ConanException):
         pass
 
-    def _as_tuple(self, ref: ConanFileReference, timestamp: int):
-        return self.row_type(reference=str(ref), rrev=ref.revision,
-                             timestamp=timestamp)
-
     def _as_ref(self, row: namedtuple):
-        return ConanFileReference.loads(f'{row.reference}#{row.rrev}', validate=False)
+        if row.prev:
+            return PackageReference.loads(f'{row.reference}#{row.rrev}:{row.pkgid}#{row.prev}',
+                                          validate=False)
+        else:
+            return ConanFileReference.loads(f'{row.reference}#{row.rrev}', validate=False)
 
-    def _where_clause(self, ref: ConanFileReference) -> Tuple[str, Tuple]:
+    def _where_clause(self, reference, rrev, pkgid, prev):
         where = {
-            self.columns.reference: str(ref),
-            self.columns.rrev: ref.revision
+            self.columns.reference: reference,
+            self.columns.rrev: rrev,
+            self.columns.pkgid: pkgid or "NULL",
+            self.columns.prev: prev or "NULL",
         }
         where_expr = ' AND '.join([f'{k} = ?' for k, v in where.items()])
         return where_expr, tuple(where.values())
 
-    """
-    Functions to manage the data in this table using Conan types
-    """
+    def get_path_ref(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev) -> str:
+        """ Returns the row matching the reference or fails """
+        where_clause, where_values = self._where_clause(reference, rrev, pkgid, prev)
+        query = f'SELECT {self.columns.path} FROM {self.table_name} ' \
+                f'WHERE {where_clause};'
+        r = conn.execute(query, where_values)
+        row = r.fetchone()
+        if not row:
+            raise ReferencesDbTable.DoesNotExist(f"No entry for reference '{reference}#{rrev}:{pkgid}#{prev}'")
+        return row[0]
 
-    def save(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev) -> int:
+    def save(self, conn: sqlite3.Cursor, path, reference, rrev, pkgid, prev) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        pkgid = pkgid or 'NULL'
+        prev = prev or 'NULL'
         r = conn.execute(f'INSERT INTO {self.table_name} '
-                         f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, timestamp])
+                         f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, path, timestamp])
         return r.lastrowid
 
     def update(self, conn: sqlite3.Cursor, pk: int, reference, rrev, pkgid, prev):
@@ -57,19 +70,18 @@ class ReferencesDbTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f"SET {setters} " \
                 f"WHERE rowid = ?;"
-        ref_as_tuple = [reference, rrev, pkgid, prev, timestamp]
-        r = conn.execute(query, ref_as_tuple + [pk, ])
+        r = conn.execute(query, [reference, rrev, pkgid, prev, timestamp, pk])
         return r.lastrowid
 
-    def pk(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> int:
+    def pk(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev):
         """ Returns the row matching the reference or fails """
-        where_clause, where_values = self._where_clause(ref)
+        where_clause, where_values = self._where_clause(reference, rrev, pkgid, prev)
         query = f'SELECT rowid FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(f"No entry for reference '{ref.full_str()}'")
+            raise ReferencesDbTable.DoesNotExist(f"No entry for reference ''{reference}#{rrev}:{pkgid}#{prev}''")
         return row[0]
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:
