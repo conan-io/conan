@@ -289,12 +289,12 @@ def test_auto_package_default_folders_with_components():
     conan_file += """
     def layout(self):
         for el in [self.infos.source, self.infos.build]:
-            assert el.components["foo"].includedirs == []
-            assert el.components["foo"].libdirs == []
-            assert el.components["foo"].bindirs == []
-            assert el.components["foo"].frameworkdirs == []
-            assert el.components["foo"].srcdirs == []
-            assert el.components["foo"].resdirs == []
+            assert el.components["foo"].includedirs is None
+            assert el.components["foo"].libdirs is None
+            assert el.components["foo"].bindirs is None
+            assert el.components["foo"].frameworkdirs is None
+            assert el.components["foo"].srcdirs is None
+            assert el.components["foo"].resdirs is None
 
         assert self.infos.package.components["foo"].includedirs == []
         assert self.infos.package.components["foo"].libdirs == []
@@ -361,6 +361,12 @@ def test_auto_package_only_one_destination():
     def layout(self):
        self.infos.source.includedirs = ["myincludes"]
        self.infos.build.libdirs = ["ugly_build"]
+       self.infos.build.bindirs = ["ugly_build"]
+       self.infos.build.frameworkdirs = ["ugly_build"]
+       self.infos.build.srcdirs = ["ugly_build"]
+       self.infos.build.builddirs = ["ugly_build"]
+       self.infos.build.resdirs = ["ugly_build"]
+
        self.patterns.source.include = ["*.header"]
        self.patterns.build.lib = ["*.a"]
 

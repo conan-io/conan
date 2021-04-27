@@ -1,8 +1,8 @@
 import pytest
 
-from conans.errors import ConanException
 from conans.model.build_info import CppInfo
-from conans.model.new_build_info import NewCppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
+from conans.model.new_build_info import NewCppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES, \
+    fill_old_cppinfo
 
 
 def test_components_order():
@@ -88,21 +88,8 @@ def norm(paths):
     return [d.replace("\\", "/") for d in paths]
 
 
-def test_cpp_info_merge_with_components():
-    """If we try to merge a cpp info with another one and some of them have components, assert"""
-    cppinfo = NewCppInfo()
-    cppinfo.components["foo"].cxxflags = ["var"]
-
-    other = NewCppInfo()
-    other.components["foo2"].cxxflags = ["var2"]
-
-    with pytest.raises(ConanException) as exc:
-        cppinfo.merge(other)
-
-    assert "Cannot aggregate two cppinfo objects with components" in str(exc.value)
-
-
-def test_cpp_info_merge_aggregating_components_first():
+@pytest.mark.parametrize("aggregate_first", [True, False])
+def test_cpp_info_merge_aggregating_components_first(aggregate_first):
     cppinfo = NewCppInfo()
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(cppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
@@ -117,16 +104,29 @@ def test_cpp_info_merge_aggregating_components_first():
 
     other.components["boo"].requires = ["boo2"]  # Deterministic order
 
-    cppinfo.aggregate_components()
-    other.aggregate_components()
+    if aggregate_first:
+        cppinfo.aggregate_components()
+        other.aggregate_components()
 
     cppinfo.merge(other)
 
-    for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-        assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n),
-                                       "var2_{}_1".format(n), "var2_{}_2".format(n),
-                                       "jar_{}_1".format(n), "jar_{}_2".format(n),
-                                       "jar2_{}_1".format(n), "jar2_{}_2".format(n)]
+    if aggregate_first:
+        for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n),
+                                           "var2_{}_1".format(n), "var2_{}_2".format(n),
+                                           "jar_{}_1".format(n), "jar_{}_2".format(n),
+                                           "jar2_{}_1".format(n), "jar2_{}_2".format(n)]
+    else:
+        for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+            assert getattr(cppinfo.components["foo"], n) == ["var_{}_1".format(n),
+                                                             "var_{}_2".format(n)]
+            assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
+                                                              "var2_{}_2".format(n)]
+            assert getattr(cppinfo.components["boo"], n) == ["jar_{}_1".format(n),
+                                                             "jar_{}_2".format(n)]
+            assert getattr(cppinfo.components["boo2"], n) == ["jar2_{}_1".format(n),
+                                                              "jar2_{}_2".format(n)]
+            assert getattr(cppinfo, n) == []
 
 
 def test_from_old_cppinfo_components():
@@ -161,3 +161,27 @@ def test_from_old_cppinfo_no_components():
 
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]
+
+
+def test_fill_old_cppinfo():
+    """The source/build have priority unless it is not declared at all"""
+    source = NewCppInfo(none_values=True)
+    source.libdirs = ["source_libdir"]
+    source.cxxflags = ["source_cxxflags"]
+    build = NewCppInfo(none_values=True)
+    build.libdirs = ["build_libdir"]
+
+    old_cpp = CppInfo("lib/1.0", "/root/folder")
+    old_cpp.filter_empty = False
+    old_cpp.libdirs = ["package_libdir"]
+    old_cpp.cxxflags = ["package_cxxflags"]
+    old_cpp.cflags = ["package_cflags"]
+
+    full_editables = NewCppInfo(none_values=True)
+    full_editables.merge(source)
+    full_editables.merge(build)
+
+    fill_old_cppinfo(full_editables, old_cpp)
+    assert old_cpp.lib_paths == ["/root/folder/source_libdir", "/root/folder/build_libdir"]
+    assert old_cpp.cxxflags == ["source_cxxflags"]
+    assert old_cpp.cflags == ["package_cflags"]

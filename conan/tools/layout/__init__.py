@@ -63,6 +63,8 @@ class LayoutPackager(object):
         for var in ["include", "lib", "bin", "framework", "src", "build", "res"]:
             dirs_var_name = "{}dirs".format(var)
             origin_paths = getattr(origin_cppinfo, dirs_var_name)
+            if not origin_paths:
+                continue
             patterns = getattr(patterns_var, var)
             destinations = getattr(dest_cppinfo, dirs_var_name)
             if not destinations:  # For example: Not declared "includedirs" in package.cpp_info

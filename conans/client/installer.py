@@ -16,7 +16,6 @@ from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
     INSTALL_ERROR_MISSING_BUILD_FOLDER
 from conans.client.source import retrieve_exports_sources, config_source
-from conans.client.tools.env import no_op
 from conans.client.tools.env import pythonpath
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
@@ -27,6 +26,7 @@ from conans.model.env_info import EnvInfo
 from conans.model.graph_info import GraphInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
+from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
 from conans.model.ref import PackageReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
@@ -463,6 +463,11 @@ class BinaryInstaller(object):
 
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):
+            conanfile.folders.set_base_package(base_path)
+            conanfile.folders.set_base_source(base_path)
+            conanfile.folders.set_base_build(base_path)
+            conanfile.folders.set_base_install(base_path)
+
             output = conanfile.output
             output.info("Rewriting files of editable package "
                         "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
@@ -659,8 +664,12 @@ class BinaryInstaller(object):
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,
                                                      default_values=CppInfoDefaultValues())
                         if not is_editable:
-                            # Copy the package_cpp_info into the old cppinfo
-                            conanfile.infos.package.copy_into_old_cppinfo(conanfile.cpp_info)
+                            package_cppinfo = conanfile.infos.package.copy()
+                            package_cppinfo.set_relative_base_folder(conanfile.folders.package)
+                            # Copy the infos.package into the old cppinfo
+                            fill_old_cppinfo(conanfile.infos.package, conanfile.cpp_info)
+                        else:
+                            conanfile.cpp_info.filter_empty = False
 
                     conanfile.package_info()
 
@@ -671,15 +680,20 @@ class BinaryInstaller(object):
                         conanfile.folders.set_base_source(package_folder)
                         conanfile.folders.set_base_generators(package_folder)
 
-                        # Here package_folder is the editable base folder
+                        # convert directory entries to be relative to the declared folders.build
                         build_cppinfo = conanfile.infos.build.copy()
                         build_cppinfo.set_relative_base_folder(conanfile.folders.build)
 
+                        # convert directory entries to be relative to the declared folders.source
                         source_cppinfo = conanfile.infos.source.copy()
                         source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                        source_cppinfo.copy_into_old_cppinfo(conanfile.cpp_info)
-                        build_cppinfo.copy_into_old_cppinfo(conanfile.cpp_info)
+                        full_editable_cppinfo = NewCppInfo(none_values=True)
+                        full_editable_cppinfo.merge(source_cppinfo)
+                        full_editable_cppinfo.merge(build_cppinfo)
+                        # Paste the editable cpp_info but prioritizing it, only if a
+                        # variable is not declared at build/source, the package will keep the value
+                        fill_old_cppinfo(full_editable_cppinfo, conanfile.cpp_info)
 
                     if conanfile._conan_dep_cpp_info is None:
                         try:
