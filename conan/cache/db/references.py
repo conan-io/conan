@@ -11,9 +11,8 @@ from conans.errors import ConanException
 class ReferencesDbTable(BaseDbTable):
     table_name = 'conan_references'
     columns_description = [('reference', str),
-                           ('name', str),
                            ('rrev', str),
-                           ('rrev_order', int)]
+                           ('timestamp', int)]
     unique_together = ('reference', 'rrev')  # TODO: Add unittest
 
     class DoesNotExist(ConanException):
@@ -25,9 +24,9 @@ class ReferencesDbTable(BaseDbTable):
     class AlreadyExist(ConanException):
         pass
 
-    def _as_tuple(self, ref: ConanFileReference, rrev_order: int):
-        return self.row_type(reference=str(ref), name=ref.name, rrev=ref.revision,
-                             rrev_order=rrev_order)
+    def _as_tuple(self, ref: ConanFileReference, timestamp: int):
+        return self.row_type(reference=str(ref), rrev=ref.revision,
+                             timestamp=timestamp)
 
     def _as_ref(self, row: namedtuple):
         return ConanFileReference.loads(f'{row.reference}#{row.rrev}', validate=False)
@@ -44,21 +43,21 @@ class ReferencesDbTable(BaseDbTable):
     Functions to manage the data in this table using Conan types
     """
 
-    def save(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> int:
+    def save(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
-                         f'VALUES ({placeholders})', list(self._as_tuple(ref, timestamp)))
+                         f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, timestamp])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, pk: int, ref: ConanFileReference):
+    def update(self, conn: sqlite3.Cursor, pk: int, reference, rrev, pkgid, prev):
         """ Updates row 'pk' with values from 'ref' """
         timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
         setters = ', '.join([f"{it} = ?" for it in self.columns])
         query = f"UPDATE {self.table_name} " \
                 f"SET {setters} " \
                 f"WHERE rowid = ?;"
-        ref_as_tuple = list(self._as_tuple(ref, timestamp))
+        ref_as_tuple = [reference, rrev, pkgid, prev, timestamp]
         r = conn.execute(query, ref_as_tuple + [pk, ])
         return r.lastrowid
 
@@ -84,12 +83,12 @@ class ReferencesDbTable(BaseDbTable):
                only_latest_rrev: bool) -> Iterator[ConanFileReference]:
         """ Returns the references that match a given pattern (sql style) """
         if only_latest_rrev:
-            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
-                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
+            query = f'SELECT DISTINCT {self.columns.reference}, ' \
+                    f'                {self.columns.rrev}, MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference} LIKE ? ' \
                     f'GROUP BY {self.columns.reference} ' \
-                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
+                    f'ORDER BY MAX({self.columns.timestamp}) ASC'
         else:
             query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference} LIKE ?;'
@@ -99,30 +98,14 @@ class ReferencesDbTable(BaseDbTable):
 
     def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
         if only_latest_rrev:
-            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
-                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
+            query = f'SELECT DISTINCT {self.columns.reference}, ' \
+                    f'                {self.columns.rrev}, MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'GROUP BY {self.columns.reference} ' \
-                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
+                    f'ORDER BY MAX({self.columns.timestamp}) ASC'
         else:
             query = f'SELECT * FROM {self.table_name};'
         r = conn.execute(query)
-        for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
-
-    def versions(self, conn: sqlite3.Cursor, name: str, only_latest_rrev: bool) -> List[ConanFileReference]:
-        """ Returns the references matching a given name """
-        if only_latest_rrev:
-            query = f'SELECT DISTINCT {self.columns.reference}, {self.columns.name},' \
-                    f'                {self.columns.rrev}, MAX({self.columns.rrev_order}) ' \
-                    f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.name} = ? ' \
-                    f'GROUP BY {self.columns.reference} ' \
-                    f'ORDER BY MAX({self.columns.rrev_order}) ASC'
-        else:
-            query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.name} = ?;'
-        r = conn.execute(query, [name, ])
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
