@@ -1,7 +1,9 @@
 import os
 import platform
 
+from conans.errors import ConanException
 from conans.model.version import Version
+from conans.util.runners import check_output_runner
 
 
 class _OSInfo(object):
@@ -26,7 +28,7 @@ class _OSInfo(object):
     def __init__(self):
         system = platform.system()
         self.os_version = None
-        self.os_version_name = None
+
         self.is_linux = system == "Linux"
         self.linux_distro = None
         self.is_msys = system.startswith("MING") or system.startswith("MSYS_NT")
@@ -42,10 +44,6 @@ class _OSInfo(object):
         import distro
         self.linux_distro = distro.id()
         self.os_version = Version(distro.version())
-        version_name = distro.codename()
-        self.os_version_name = version_name if version_name != "n/a" else ""
-        if not self.os_version_name and self.linux_distro == "debian":
-            self.os_version_name = self.get_debian_version_name(self.os_version)
 
     @staticmethod
     def get_aix_architecture():
@@ -56,6 +54,18 @@ class _OSInfo(object):
                 return "ppc64" if kernel_bitness == "64" else "ppc32"
         elif "rs6000" in processor:
             return "ppc32"
+
+    @staticmethod
+    def get_aix_conf(options=None):
+        options = " %s" % options if options else ""
+        if not _OSInfo().is_aix:
+            raise ConanException("Command only for AIX operating system")
+
+        try:
+            ret = check_output_runner("getconf%s" % options).strip()
+            return ret
+        except Exception:
+            return None
 
     @staticmethod
     def get_solaris_architecture():

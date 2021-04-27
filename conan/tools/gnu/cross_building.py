@@ -1,33 +1,8 @@
-import warnings
-from collections import namedtuple
-
 from conan.tools.gnu.get_cross_building_settings import _get_cross_building_settings
-from conans.errors import ConanException
 
 
-def _cross_building(conanfile=None, self_os=None, self_arch=None, skip_x64_x86=False, settings=None):
-    # Handle input arguments (backwards compatibility with 'settings' as first argument)
-    # TODO: This can be promoted to a decorator pattern for tools if we adopt 'conanfile' as the
-    #   first argument for all of them.
-    if conanfile and settings:
-        raise ConanException("Do not set both arguments, 'conanfile' and 'settings',"
-                             " to call cross_building function")
-
-    from conans.model.conan_file import ConanFile
-    if conanfile and not isinstance(conanfile, ConanFile):
-        return _cross_building(settings=conanfile, self_os=self_os, self_arch=self_arch,
-                               skip_x64_x86=skip_x64_x86)
-
-    if settings:
-        warnings.warn("Argument 'settings' has been deprecated, use 'conanfile' instead")
-
-    if conanfile:
-        ret = _get_cross_building_settings(conanfile, self_os, self_arch)
-    else:
-        # TODO: If Conan is using 'profile_build' here we don't have any information about it,
-        #   we are falling back to the old behavior (which is probably wrong here)
-        conanfile = namedtuple('_ConanFile', ['settings'])(settings)
-        ret = _get_cross_building_settings(conanfile, self_os, self_arch)
+def _cross_building(conanfile, self_os=None, self_arch=None, skip_x64_x86=False):
+    ret = _get_cross_building_settings(conanfile, self_os, self_arch)
 
     build_os, build_arch, host_os, host_arch = ret
 
