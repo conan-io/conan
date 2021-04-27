@@ -15,7 +15,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import NewCppInfo
+from conans.model.new_build_info import NewCppInfo, from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -244,7 +244,7 @@ class ConanFile(object):
     @property
     def new_cpp_info(self):
         if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
+            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
         return self._conan_new_cpp_info
 
     @property

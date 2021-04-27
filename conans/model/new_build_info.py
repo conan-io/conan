@@ -90,12 +90,6 @@ class NewCppInfo(object):
     def component_names(self):
         return filter(None, self.components.keys())
 
-    @staticmethod
-    def from_old_cppinfo(old):
-        ret = NewCppInfo()
-        ret.merge(old)
-        return ret
-
     def merge(self, other):
         def merge_list(o, d):
             for e in o:
@@ -214,6 +208,12 @@ class NewCppInfo(object):
                            "Var: '{}' "
                            "Value: '{}'".format(cname, n, getattr(c, n)))
         return "\n".join(ret)
+
+
+def from_old_cppinfo(old):
+    ret = NewCppInfo()
+    ret.merge(old)
+    return ret
 
 
 def fill_old_cppinfo(origin, old_cpp):

@@ -2,7 +2,7 @@ import pytest
 
 from conans.model.build_info import CppInfo
 from conans.model.new_build_info import NewCppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES, \
-    fill_old_cppinfo
+    fill_old_cppinfo, from_old_cppinfo
 
 
 def test_components_order():
@@ -139,7 +139,7 @@ def test_from_old_cppinfo_components():
     oldcppinfo.components["foo"].names["Gen"] = ["MyName"]
     oldcppinfo.filenames["Gen"] = ["Myfilename"]
 
-    cppinfo = NewCppInfo.from_old_cppinfo(oldcppinfo)
+    cppinfo = from_old_cppinfo(oldcppinfo)
 
     assert isinstance(cppinfo, NewCppInfo)
 
@@ -155,7 +155,7 @@ def test_from_old_cppinfo_no_components():
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo, n, ["var_{}_1".format(n), "var_{}_2".format(n)])
 
-    cppinfo = NewCppInfo.from_old_cppinfo(oldcppinfo)
+    cppinfo = from_old_cppinfo(oldcppinfo)
 
     assert isinstance(cppinfo, NewCppInfo)
 
