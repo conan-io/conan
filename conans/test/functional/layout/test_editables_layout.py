@@ -76,6 +76,7 @@ def test_cpp_info_editable():
     # Create the consumer again, now it will use the hello editable
     client2.run("create . lib/1.0@")
     out = str(client2.out).replace("\\", "/")
+    print(out)
     assert "**includedirs:['my_sources/my_include_source', 'my_build/my_include']**" in out
     assert "**libdirs:['my_build/my_libdir']**" in out
     assert "**builddirs:['my_sources/my_builddir_source']**" in out

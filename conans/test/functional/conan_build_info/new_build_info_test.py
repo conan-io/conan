@@ -182,6 +182,7 @@ def test_fill_old_cppinfo():
     full_editables.merge(build)
 
     fill_old_cppinfo(full_editables, old_cpp)
-    assert old_cpp.lib_paths == ["/root/folder/source_libdir", "/root/folder/build_libdir"]
+    assert [e.replace("\\", "/") for e in old_cpp.lib_paths] == \
+           ["/root/folder/source_libdir", "/root/folder/build_libdir"]
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
