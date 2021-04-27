@@ -236,7 +236,7 @@ class AutoToolsBuildEnvironment(object):
         conan_v2_error("build_type setting should be defined.", not self._build_type)
         conan_make_program = os.getenv("CONAN_MAKE_PROGRAM")
         if conan_make_program and self._win_bash:
-            conan_make_program = tools.unix_path(conan_make_program, subsystem)
+            conan_make_program = tools.unix_path(conan_make_program, path_flavor=self.subsystem)
         make_program = conan_make_program or make_program or "make"
         with environment_append(vars or self.vars):
             str_args = args_to_string(args)
