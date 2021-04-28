@@ -292,6 +292,16 @@ def test_export_pkg_local():
     pf_cache = client.cache.package_layout(ref).package(pref)
 
     # Check the artifacts packaged, THERE IS NO "my_package" in the cache
+    assert "my_package" not in pf_cache
+    assert os.path.exists(os.path.join(pf_cache, "generated.h"))
+    assert os.path.exists(os.path.join(pf_cache, "library.lib"))
+
+    # Doing a conan create: Same as export-pkg, there is "my_package" in the cache
+    client.run("create . lib/1.0@")
+    ref = ConanFileReference.loads("lib/1.0@")
+    pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+    pf_cache = client.cache.package_layout(ref).package(pref)
+    assert "my_package" not in pf_cache
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
@@ -327,6 +337,7 @@ def test_imports():
     def imports(self):
         self.output.warn("Imports folder: {}".format(self.imports_folder))
         self.copy("*.dll")
+
     """
 
     client.save({"conanfile.py": conan_file})
@@ -334,7 +345,15 @@ def test_imports():
     client.run("imports . -if=my_install")
 
     imports_folder = os.path.join(client.current_folder, "my_imports")
-    dll_path = os.path.join(client.current_folder, "my_imports", "library.dll")
+    dll_path = os.path.join(imports_folder, "library.dll")
 
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out
     assert os.path.exists(dll_path)
+
+    # If we do a conan create, the imports folder is used also in the cache
+    client.run("create . foo/1.0@")
+    ref = ConanFileReference.loads("foo/1.0@")
+    pref = PackageReference(ref, "d907e6df55d956f730ed74c2844b3403dc86f97d")
+    bfolder = client.cache.package_layout(ref).build(pref)
+    imports_folder = os.path.join(bfolder, "my_imports")
+    assert "WARN: Imports folder: {}".format(imports_folder) in client.out
