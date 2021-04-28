@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from io import StringIO
 from typing import Tuple, Iterator, Union
 
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from .db.references import ReferencesDbTable
 
@@ -39,7 +40,6 @@ class CacheDatabase:
 
     def update_reference(self, old_ref: Union[ConanFileReference, PackageReference],
                          new_ref: Union[ConanFileReference, PackageReference]):
-
         """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
         if isinstance(old_ref, ConanFileReference):
             old_reference, old_rrev, old_pkgid, old_prev = str(old_ref), old_ref.revision, None, None
@@ -50,7 +50,7 @@ class CacheDatabase:
             new_reference, new_rrev, new_pkgid, new_prev = str(
                 new_ref.ref), new_ref.ref.revision, new_ref.id, new_ref.revision
         else:
-            assert f"Not valid type: {type(old_ref).__name__}"
+            raise ConanException(f"Reference has not a valid type: {type(old_ref).__name__}")
 
         with self.connect() as conn:
             ref_pk, *_ = self._references.pk(conn, old_reference, old_rrev, old_pkgid, old_prev)
