@@ -165,10 +165,10 @@ def test_from_old_cppinfo_no_components():
 
 def test_fill_old_cppinfo():
     """The source/build have priority unless it is not declared at all"""
-    source = NewCppInfo(none_values=True)
+    source = NewCppInfo()
     source.libdirs = ["source_libdir"]
     source.cxxflags = ["source_cxxflags"]
-    build = NewCppInfo(none_values=True)
+    build = NewCppInfo()
     build.libdirs = ["build_libdir"]
     build.frameworkdirs = []  # An empty list is an explicit delaration with priority too
 
@@ -179,7 +179,7 @@ def test_fill_old_cppinfo():
     old_cpp.cflags = ["package_cflags"]
     old_cpp.frameworkdirs = ["package_frameworks"]
 
-    full_editables = NewCppInfo(none_values=True)
+    full_editables = NewCppInfo()
     full_editables.merge(source)
     full_editables.merge(build)
 
@@ -189,3 +189,27 @@ def test_fill_old_cppinfo():
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
     assert old_cpp.frameworkdirs == []
+
+
+def test_fill_old_cppinfo_simple():
+    """ The previous test but simpler, just with one cppinfo simulating the package layout"""
+    package_info = NewCppInfo()
+    package_info.libs = []  # This is explicit declaration too
+    package_info.includedirs = ["other_include"]
+
+    old_cpp = CppInfo("lib/1.0", "/root/folder")
+    old_cpp.filter_empty = False
+    old_cpp.libs = ["this_is_discarded"]
+    old_cpp.libdirs = ["package_libdir"]
+    old_cpp.cxxflags = ["package_cxxflags"]
+    old_cpp.cflags = ["package_cflags"]
+    old_cpp.frameworkdirs = ["package_frameworks"]
+
+    fill_old_cppinfo(package_info, old_cpp)
+    assert [e.replace("\\", "/") for e in old_cpp.lib_paths] == \
+           ["/root/folder/package_libdir"]
+    assert old_cpp.cxxflags == ["package_cxxflags"]
+    assert old_cpp.cflags == ["package_cflags"]
+    assert old_cpp.frameworkdirs == ["package_frameworks"]
+    assert old_cpp.libs == []
+    assert old_cpp.includedirs == ["other_include"]

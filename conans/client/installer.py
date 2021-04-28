@@ -688,7 +688,7 @@ class BinaryInstaller(object):
                         source_cppinfo = conanfile.infos.source.copy()
                         source_cppinfo.set_relative_base_folder(conanfile.folders.source)
 
-                        full_editable_cppinfo = NewCppInfo(none_values=True)
+                        full_editable_cppinfo = NewCppInfo()
                         full_editable_cppinfo.merge(source_cppinfo)
                         full_editable_cppinfo.merge(build_cppinfo)
                         # Paste the editable cpp_info but prioritizing it, only if a

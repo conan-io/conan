@@ -12,32 +12,32 @@ _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "c
 
 class _NewComponent(object):
 
-    def __init__(self, none_values):
+    def __init__(self):
 
         # ###### PROPERTIES
-        self._generator_properties = None if none_values else {}
+        self._generator_properties = None
 
         # ###### DIRECTORIES
-        self.includedirs = None if none_values else []  # Ordered list of include paths
-        self.srcdirs = None if none_values else []  # Ordered list of source paths
-        self.libdirs = None if none_values else []  # Directories to find libraries
-        self.resdirs = None if none_values else []  # Directories to find resources, data, etc
-        self.bindirs = None if none_values else []  # Directories to find executables and shared libs
-        self.builddirs = None if none_values else []
-        self.frameworkdirs = None if none_values else []
+        self.includedirs = None  # Ordered list of include paths
+        self.srcdirs = None  # Ordered list of source paths
+        self.libdirs = None # Directories to find libraries
+        self.resdirs = None  # Directories to find resources, data, etc
+        self.bindirs = None  # Directories to find executables and shared libs
+        self.builddirs = None
+        self.frameworkdirs = None
 
         # ##### FIELDS
-        self.system_libs = None if none_values else []  # Ordered list of system libraries
-        self.frameworks = None if none_values else []  # Macos .framework
-        self.libs = None if none_values else []  # The libs to link against
-        self.defines = None if none_values else []  # preprocessor definitions
-        self.cflags = None if none_values else []  # pure C flags
-        self.cxxflags = None if none_values else []  # C++ compilation flags
-        self.sharedlinkflags = None if none_values else []  # linker flags
-        self.exelinkflags = None if none_values else []  # linker flags
+        self.system_libs = None  # Ordered list of system libraries
+        self.frameworks = None  # Macos .framework
+        self.libs = None  # The libs to link against
+        self.defines = None  # preprocessor definitions
+        self.cflags = None  # pure C flags
+        self.cxxflags = None  # C++ compilation flags
+        self.sharedlinkflags = None  # linker flags
+        self.exelinkflags = None  # linker flags
 
-        self.sysroot = None if none_values else ""
-        self.requires = None if none_values else []
+        self.sysroot = None
+        self.requires = None
 
     @property
     def required_component_names(self):
@@ -67,11 +67,11 @@ class _NewComponent(object):
 
 class NewCppInfo(object):
 
-    def __init__(self, none_values=False):
+    def __init__(self,):
         super(NewCppInfo, self).__init__()
-        self.components = DefaultOrderedDict(lambda: _NewComponent(none_values))
+        self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
-        self.components[None] = _NewComponent(none_values)
+        self.components[None] = _NewComponent()
 
     def __getattr__(self, attr):
         return getattr(self.components[None], attr)
@@ -178,13 +178,13 @@ class NewCppInfo(object):
             # FIXME: What to do about sysroot?
         # Leave only the aggregated value
         main_value = self.components[None]
-        self.components = DefaultOrderedDict(lambda: _NewComponent(none_values=False))
+        self.components = DefaultOrderedDict(lambda: _NewComponent())
         self.components[None] = main_value
 
     def copy(self):
         ret = NewCppInfo()
         ret._generator_properties = copy.copy(self._generator_properties)
-        ret.components = DefaultOrderedDict(lambda: _NewComponent(none_values=True))
+        ret.components = DefaultOrderedDict(lambda: _NewComponent())
         for comp_name in self.components:
             ret.components[comp_name] = copy.copy(self.components[comp_name])
         return ret
@@ -196,8 +196,9 @@ class NewCppInfo(object):
         # FIXME: Cache the value
         ret = []
         for comp in self.components.values():
-            ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
-            ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
+            if comp.requires is not None:
+                ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
+                ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
 
     def __str__(self):
@@ -222,7 +223,7 @@ def fill_old_cppinfo(origin, old_cpp):
 
     if origin.has_components:
         # If the user declared components, reset the global values
-        origin.components[None] = _NewComponent(none_values=True)
+        origin.components[None] = _NewComponent()
         # COMPONENTS
         for cname, c in origin.components.items():
             if cname is None:

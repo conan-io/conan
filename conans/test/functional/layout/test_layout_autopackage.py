@@ -296,12 +296,12 @@ def test_auto_package_default_folders_with_components():
             assert el.components["foo"].srcdirs is None
             assert el.components["foo"].resdirs is None
 
-        assert self.infos.package.components["foo"].includedirs == []
-        assert self.infos.package.components["foo"].libdirs == []
-        assert self.infos.package.components["foo"].bindirs == []
-        assert self.infos.package.components["foo"].frameworkdirs == []
-        assert self.infos.package.components["foo"].srcdirs == []
-        assert self.infos.package.components["foo"].resdirs == []
+        assert self.infos.package.components["foo"].includedirs is None
+        assert self.infos.package.components["foo"].libdirs is None
+        assert self.infos.package.components["foo"].bindirs is None
+        assert self.infos.package.components["foo"].frameworkdirs is None
+        assert self.infos.package.components["foo"].srcdirs is None
+        assert self.infos.package.components["foo"].resdirs is None
 
     def package(self):
         LayoutPackager(self).package()

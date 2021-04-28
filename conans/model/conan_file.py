@@ -181,8 +181,8 @@ class ConanFile(object):
 
         # Init all fields with None so we can certainly know when a field has been declared
         # to be able to merge them to the package one
-        self.infos.source = NewCppInfo(none_values=True)
-        self.infos.build = NewCppInfo(none_values=True)
+        self.infos.source = NewCppInfo()
+        self.infos.build = NewCppInfo()
 
     @property
     def context(self):
