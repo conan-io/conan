@@ -58,5 +58,9 @@ class ConanFileInterface:
         return self._conanfile.context
 
     @property
+    def conf_info(self):
+        return self._conanfile.conf_info
+
+    @property
     def dependencies(self):
         return self._conanfile.dependencies

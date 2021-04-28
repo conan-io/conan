@@ -41,6 +41,14 @@ class _ConfModule(object):
         """
         self._confs.update(other._confs)
 
+    def compose(self, other):
+        """
+        :type other: _ConfModule
+        """
+        for k, v in other._confs.items():
+            if k not in self._confs:
+                self._confs[k] = v
+
     def set_value(self, k, v):
         if k != k.lower():
             raise ConanException("Conf key '{}' must be lowercase".format(k))
@@ -82,12 +90,25 @@ class Conf(object):
 
     def update(self, other):
         """
+        :param other: has more priority than current one
         :type other: Conf
         """
         for module_name, module_conf in other._conf_modules.items():
             existing = self._conf_modules.get(module_name)
             if existing:
                 existing.update(module_conf)
+            else:
+                self._conf_modules[module_name] = module_conf
+
+    def compose(self, other):
+        """
+        :param other: other has less priority than current one
+        :type other: Conf
+        """
+        for module_name, module_conf in other._conf_modules.items():
+            existing = self._conf_modules.get(module_name)
+            if existing:
+                existing.compose(module_conf)
             else:
                 self._conf_modules[module_name] = module_conf
 

@@ -33,6 +33,7 @@ from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
+from conans.model.conf import Conf
 
 
 class GeneratorManager(object):
@@ -190,6 +191,19 @@ class GeneratorManager(object):
                 raise ConanException(e)
 
 
+def _receive_conf(conanfile):
+    """  collect conf_info from the immediate build_requires, aggregate it and injects/update
+    current conf
+    """
+    # TODO: Open question 1: Only build_requires can define config?
+    # TODO: Only direct build_requires?
+    # TODO: Is really the best mechanism to define this info? Better than env-vars?
+    # Conf only for first level build_requires
+    for build_require in conanfile.dependencies.build_requires:
+        if build_require.conf_info:
+            conanfile.conf.compose(build_require.conf_info)
+
+
 def write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
         msg = ("\n*****************************************************************\n"
@@ -199,6 +213,8 @@ def write_toolchain(conanfile, path, output):
                "********************************************************************\n"
                "********************************************************************\n")
         raise ConanException(msg)
+
+    _receive_conf(conanfile)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
