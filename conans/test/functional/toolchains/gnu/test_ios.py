@@ -65,8 +65,7 @@ def test_ios():
                  "Makefile.am": makefile_am,
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
-    client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=m1")
     client.run_command("./main", assert_error=True)
     assert "Bad CPU type in executable" in client.out
     client.run_command("lipo -info main")
