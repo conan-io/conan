@@ -17,6 +17,7 @@ def test_cpp_info_editable():
         self.infos.build.includedirs = ["my_include"]
         self.infos.build.libdirs = ["my_libdir"]
         self.infos.build.libs = ["hello"]
+        self.infos.build.frameworkdirs = []  # Empty list is also explicit priority declaration
 
         self.infos.source.cxxflags = ["my_cxx_flag"]
         self.infos.source.includedirs = ["my_include_source"]
@@ -34,8 +35,12 @@ def test_cpp_info_editable():
         # when editable: This one will be discarded because declared in source
         self.cpp_info.cxxflags.append("my_cxx_flag2")
 
+        # when editable: This one will be discarded because declared in source
+        self.cpp_info.frameworkdirs.append("package_frameworks_path")
+
         # when editable: This one WONT be discarded as has not been declared in the editables layout
         self.cpp_info.cflags.append("my_c_flag")
+
      """
 
     client.save({"conanfile.py": conan_hello})
@@ -54,6 +59,7 @@ def test_cpp_info_editable():
             self.output.warn("**includedirs:{}**".format(info.includedirs))
             self.output.warn("**libdirs:{}**".format(info.libdirs))
             self.output.warn("**builddirs:{}**".format(info.builddirs))
+            self.output.warn("**frameworkdirs:{}**".format(info.frameworkdirs))
             self.output.warn("**libs:{}**".format(info.libs))
             self.output.warn("**cxxflags:{}**".format(info.cxxflags))
             self.output.warn("**cflags:{}**".format(info.cflags))
@@ -65,6 +71,7 @@ def test_cpp_info_editable():
     assert "**includedirs:['package_include']**" in client2.out
     assert "**libdirs:['lib']**" in client2.out
     assert "**builddirs:['']**" in client2.out
+    assert "**frameworkdirs:['Frameworks', 'package_frameworks_path']**" in client2.out
     assert "**libs:['lib_when_package', 'lib_when_package2']**" in client2.out
     assert "**cxxflags:['my_cxx_flag2']**" in client2.out
     assert "**cflags:['my_c_flag']**" in client2.out
@@ -82,5 +89,5 @@ def test_cpp_info_editable():
     assert "**libs:['hello']**" in out
     assert "**cxxflags:['my_cxx_flag']**" in out
     assert "**cflags:['my_c_flag']**" in out
-
+    assert "**frameworkdirs:[]**" in client2.out
 

@@ -170,12 +170,14 @@ def test_fill_old_cppinfo():
     source.cxxflags = ["source_cxxflags"]
     build = NewCppInfo(none_values=True)
     build.libdirs = ["build_libdir"]
+    build.frameworkdirs = []  # An empty list is an explicit delaration with priority too
 
     old_cpp = CppInfo("lib/1.0", "/root/folder")
     old_cpp.filter_empty = False
     old_cpp.libdirs = ["package_libdir"]
     old_cpp.cxxflags = ["package_cxxflags"]
     old_cpp.cflags = ["package_cflags"]
+    old_cpp.frameworkdirs = ["package_frameworks"]
 
     full_editables = NewCppInfo(none_values=True)
     full_editables.merge(source)
@@ -186,3 +188,4 @@ def test_fill_old_cppinfo():
            ["/root/folder/source_libdir", "/root/folder/build_libdir"]
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
+    assert old_cpp.frameworkdirs == []

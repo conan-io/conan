@@ -97,7 +97,7 @@ class NewCppInfo(object):
                     d.append(e)
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            if not getattr(other, varname):
+            if getattr(other, varname) is None:
                 continue
             if getattr(self, varname) is None:
                 setattr(self, varname, [])
