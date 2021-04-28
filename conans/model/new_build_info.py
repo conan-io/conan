@@ -208,6 +208,20 @@ class NewCppInfo(object):
                 ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
 
+    def clear_none(self):
+        """A field with None meaning is 'not declared' but for consumers, that is irrelevant, an
+        empty list is easier to handle and makes perfect sense."""
+        for c in self.components.values():
+            for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
+                if getattr(c, varname) is None:
+                    setattr(c, varname, [])
+            if c.requires is None:
+                c.requires = []
+        if self.sysroot is None:
+            self.sysroot = ""
+        if self._generator_properties is None:
+            self._generator_properties = {}
+
     def __str__(self):
         ret = []
         for cname, c in self.components.items():
@@ -221,6 +235,7 @@ class NewCppInfo(object):
 def from_old_cppinfo(old):
     ret = NewCppInfo()
     ret.merge(old)
+    ret.clear_none()
     return ret
 
 
