@@ -78,6 +78,7 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
         self.t.run("build . -s build_type=Debug")
         self._check_frameworks_found(str(self.t.out))
 
+    @pytest.mark.tool_cmake(version="3.19")
     def test_apple_framework_cmake_multi_xcode(self):
         app_cmakelists = textwrap.dedent("""
             project(Testing CXX)
@@ -295,6 +296,7 @@ class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
         if not len(settings):
             self.assertIn("Hello World Release!", client.out)
 
+    @pytest.mark.tool_cmake(version="3.19")
     def test_apple_own_framework_cmake_multi(self):
         client = TestClient()
 

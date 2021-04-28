@@ -1,6 +1,7 @@
 import json
 import os
-import unittest
+
+import pytest
 
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
@@ -8,158 +9,220 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load, save_append
 from conans.test.utils.test_files import temp_folder
 from conans.client.tools import environment_append
+from conans.model.conf import DEFAULT_CONFIGURATION
 
 
-class ConfigTest(unittest.TestCase):
+def _assert_dict_subset(expected, actual):
+    actual = {k: v for k, v in actual.items() if k in expected}
+    assert all(v == actual[k] for k, v in expected.items()) and len(expected) == len(actual)
 
-    def setUp(self):
-        self.client = TestClient()
 
-    def test_basic(self):
-        # show the full file
-        self.client.run("config get")
-        self.assertIn("default_profile = default", self.client.out)
-        self.assertIn("path = ./data", self.client.out)
+def test_basic():
+    """ config get MUST show full file
+    """
+    client = TestClient()
+    client.run("config get")
+    assert "default_profile = default" in client.out
+    assert "path = ./data" in client.out
 
-    def test_storage(self):
-        # show the full file
-        self.client.run("config get storage")
-        self.assertIn("path = ./data", self.client.out)
 
-        self.client.run("config get storage.path")
-        full_path = os.path.join(self.client.cache_folder, "data")
-        self.assertIn(full_path, self.client.out)
-        self.assertNotIn("path:", self.client.out)
+def test_storage():
+    """ config get storage.path MUST show cache path
+    """
+    client = TestClient()
+    client.run("config get storage")
+    assert "path = ./data" in client.out
 
-    def test_errors(self):
-        self.client.run("config get whatever", assert_error=True)
-        self.assertIn("'whatever' is not a section of conan.conf", self.client.out)
-        self.client.run("config get whatever.what", assert_error=True)
-        self.assertIn("'whatever' is not a section of conan.conf", self.client.out)
-        self.client.run("config get storage.what", assert_error=True)
-        self.assertIn("'what' doesn't exist in [storage]", self.client.out)
-        self.client.run('config set proxies=https:', assert_error=True)
-        self.assertIn("You can't set a full section, please specify a section.key=value",
-                      self.client.out)
+    client.run("config get storage.path")
+    full_path = os.path.join(client.cache_folder, "data")
+    assert full_path in client.out
+    assert "path:" not in client.out
 
-        self.client.run('config set proxies.http:Value', assert_error=True)
-        self.assertIn("Please specify 'key=value'", self.client.out)
 
-    def test_define(self):
-        self.client.run("config set general.fakeos=Linux")
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn("fakeos = Linux", conf_file)
+def test_errors():
+    """ Invalid properties MUST be considered an error
+    """
+    client = TestClient()
+    client.run("config get whatever", assert_error=True)
+    assert "'whatever' is not a section of conan.conf" in client.out
 
-        self.client.run('config set general.compiler="Other compiler"')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn('compiler = Other compiler', conf_file)
+    client.run("config get whatever.what", assert_error=True)
+    assert "'whatever' is not a section of conan.conf" in client.out
 
-        self.client.run('config set general.compiler.version=123.4.5')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn('compiler.version = 123.4.5', conf_file)
-        self.assertNotIn("14", conf_file)
+    client.run("config get storage.what", assert_error=True)
+    assert "'what' doesn't exist in [storage]" in client.out
 
-        self.client.run('config set general.new_setting=mysetting ')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn('new_setting = mysetting', conf_file)
+    client.run('config set proxies=https:', assert_error=True)
+    assert "You can't set a full section, please specify a section.key=value" in client.out
 
-        self.client.run('config set proxies.https=myurl')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn("https = myurl", conf_file.splitlines())
+    client.run('config set proxies.http:Value', assert_error=True)
+    assert "Please specify 'key=value'" in client.out
 
-    def test_set_with_weird_path(self):
-        # https://github.com/conan-io/conan/issues/4110
-        self.client.run("config set log.trace_file=/recipe-release%2F0.6.1")
-        self.client.run("config get log.trace_file")
-        self.assertIn("/recipe-release%2F0.6.1", self.client.out)
 
-    def test_remove(self):
-        self.client.run('config set proxies.https=myurl')
-        self.client.run('config rm proxies.https')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertNotIn('myurl', conf_file)
+def test_define():
+    """ config set MUST add/override conan.conf properties
+    """
+    client = TestClient()
+    client.run("config set general.fakeos=Linux")
+    conf_file = load(client.cache.conan_conf_path)
+    assert "fakeos = Linux" in conf_file
 
-    def test_remove_section(self):
-        self.client.run('config rm proxies')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertNotIn('[proxies]', conf_file)
+    client.run('config set general.compiler="Other compiler"')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'compiler = Other compiler' in conf_file
 
-    def test_remove_envvar(self):
-        self.client.run('config set env.MY_VAR=MY_VALUE')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertIn('MY_VAR = MY_VALUE', conf_file)
-        self.client.run('config rm env.MY_VAR')
-        conf_file = load(self.client.cache.conan_conf_path)
-        self.assertNotIn('MY_VAR', conf_file)
+    client.run('config set general.compiler.version=123.4.5')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'compiler.version = 123.4.5' in conf_file
+    assert "14" not in conf_file
 
-    def test_missing_subarguments(self):
-        self.client.run("config", assert_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+    client.run('config set general.new_setting=mysetting')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'new_setting = mysetting' in conf_file
 
-    def test_config_home_default(self):
-        self.client.run("config home")
-        self.assertIn(self.client.cache.cache_folder, self.client.out)
-        self.client.run("config home --json home.json")
-        self._assert_dict_subset({"home": self.client.cache.cache_folder},
-                                 json.loads(self.client.load("home.json")))
+    client.run('config set proxies.https=myurl')
+    conf_file = load(client.cache.conan_conf_path)
+    assert "https = myurl" in conf_file.splitlines()
 
-    def test_config_home_custom_home_dir(self):
-        cache_folder = os.path.join(temp_folder(), "custom")
-        with environment_append({"CONAN_USER_HOME": cache_folder}):
-            client = TestClient(cache_folder=cache_folder)
-            client.run("config home")
-            self.assertIn(cache_folder, client.out)
-            client.run("config home --json home.json")
-            self._assert_dict_subset({"home": cache_folder}, json.loads(client.load("home.json")))
 
-    def test_config_home_custom_install(self):
-        cache_folder = os.path.join(temp_folder(), "custom")
-        with environment_append({"CONAN_USER_HOME": cache_folder}):
-            client = TestClient(cache_folder=cache_folder, cache_autopopulate=False)
-            client.save({"conanfile.py": GenConanfile()})
-            client.run("install .")
-            self.assertIn("conanfile.py: Installing package", client.out)
+def test_set_with_weird_path():
+    """ config MUST support symbols in path
+       https://github.com/conan-io/conan/issues/4110
+    """
+    client = TestClient()
+    client.run("config set log.trace_file=/recipe-release%2F0.6.1")
+    client.run("config get log.trace_file")
+    assert "/recipe-release%2F0.6.1", client.out
 
-    def test_config_home_short_home_dir(self):
-        cache_folder = os.path.join(temp_folder(), "custom")
-        with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
-            with self.assertRaisesRegex(ConanException,
-                                       "cannot be a subdirectory of the conan cache"):
-                TestClient(cache_folder=cache_folder)
 
-    def test_config_home_short_home_dir_contains_cache_dir(self):
-        # https://github.com/conan-io/conan/issues/6273
-        cache_folder = os.path.join(temp_folder(), "custom")
-        short_path_home_folder = cache_folder + '_short'
-        with environment_append({"CONAN_USER_HOME_SHORT": short_path_home_folder}):
-            client = TestClient(cache_folder=cache_folder)
-            self.assertEqual(client.cache.config.short_paths_home, short_path_home_folder)
+def test_remove():
+    """ config rm MUST remove property value and key
+    """
+    client = TestClient()
+    client.run('config set proxies.https=myurl')
+    client.run('config rm proxies.https')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'myurl' not in conf_file
 
-    def test_init(self):
-        self.client.run('config init')
-        self.assertTrue(os.path.exists(self.client.cache.conan_conf_path))
-        self.assertTrue(os.path.exists(self.client.cache.remotes_path))
-        self.assertTrue(os.path.exists(self.client.cache.settings_path))
-        self.assertTrue(os.path.exists(self.client.cache.default_profile_path))
 
-    def test_init_overwrite(self):
-        # create and add dummy content to the config files
-        self.client.run('config init')
-        dummy_content = 'DUMMY CONTENT. SHOULD BE REMOVED!'
-        save_append(self.client.cache.conan_conf_path, dummy_content)
-        save_append(self.client.cache.remotes_path, dummy_content)
-        save_append(self.client.cache.settings_path, dummy_content)
-        save_append(self.client.cache.default_profile_path, dummy_content)
+def test_remove_section():
+    """ config rm MUST remove sections
+    """
+    client = TestClient()
+    client.run('config rm proxies')
+    conf_file = load(client.cache.conan_conf_path)
+    assert '[proxies]' not in conf_file
 
-        # overwrite files
-        self.client.run('config init --force')
 
-        self.assertNotIn(dummy_content, load(self.client.cache.conan_conf_path))
-        self.assertNotIn(dummy_content, load(self.client.cache.remotes_path))
-        self.assertNotIn(dummy_content, load(self.client.cache.conan_conf_path))
-        self.assertNotIn(dummy_content, load(self.client.cache.settings_path))
-        self.assertNotIn(dummy_content, load(self.client.cache.default_profile_path))
+def test_remove_envvar():
+    """ config MUST add/remove env vars in conan.conf
+    """
+    client = TestClient()
+    client.run('config set env.MY_VAR=MY_VALUE')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'MY_VAR = MY_VALUE' in conf_file
+    client.run('config rm env.MY_VAR')
+    conf_file = load(client.cache.conan_conf_path)
+    assert 'MY_VAR' not in conf_file
 
-    def _assert_dict_subset(self, expected, actual):
-        actual = {k: v for k, v in actual.items() if k in expected}
-        self.assertDictEqual(expected, actual)
+
+def test_missing_subarguments():
+    """ config MUST run  with a subcommand. Otherwise, it MUST exits with error.
+    """
+    client = TestClient()
+    client.run("config", assert_error=True)
+    assert "ERROR: Exiting with code: 2" in client.out
+
+
+def test_config_home_default():
+    """ config home MUST show conan home path
+    """
+    client = TestClient()
+    client.run("config home")
+    assert client.cache.cache_folder in client.out
+    client.run("config home --json home.json")
+    _assert_dict_subset({"home": client.cache.cache_folder}, json.loads(client.load("home.json")))
+
+
+def test_config_home_custom_home_dir():
+    """ config home MUST accept CONAN_USER_HOME as custom home path
+    """
+    cache_folder = os.path.join(temp_folder(), "custom")
+    with environment_append({"CONAN_USER_HOME": cache_folder}):
+        client = TestClient(cache_folder=cache_folder)
+        client.run("config home")
+        assert cache_folder in client.out
+        client.run("config home --json home.json")
+        _assert_dict_subset({"home": cache_folder}, json.loads(client.load("home.json")))
+
+
+def test_config_home_custom_install():
+    """ config install MUST accept CONAN_USER_HOME as custom home path
+    """
+    cache_folder = os.path.join(temp_folder(), "custom")
+    with environment_append({"CONAN_USER_HOME": cache_folder}):
+        client = TestClient(cache_folder=cache_folder, cache_autopopulate=False)
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("install .")
+        assert "conanfile.py: Installing package" in client.out
+
+
+def test_config_home_short_home_dir():
+    """ conan home MUST no be a conan cache sub folder
+    """
+    cache_folder = os.path.join(temp_folder(), "custom")
+    with environment_append({"CONAN_USER_HOME_SHORT": cache_folder}):
+        with pytest.raises(ConanException) as excinfo:
+            TestClient(cache_folder=cache_folder)
+            assert "cannot be a subdirectory of the conan cache" in str(excinfo.value)
+
+
+def test_config_home_short_home_dir_contains_cache_dir():
+    """ short path property for home MUST be equals to CONAN_USER_HOME_SHORT
+        https://github.com/conan-io/conan/issues/6273
+    """
+    cache_folder = os.path.join(temp_folder(), "custom")
+    short_path_home_folder = cache_folder + '_short'
+    with environment_append({"CONAN_USER_HOME_SHORT": short_path_home_folder}):
+        client = TestClient(cache_folder=cache_folder)
+        assert client.cache.config.short_paths_home == short_path_home_folder
+
+
+def test_init():
+    """ config init MUST initialize conan.conf, remotes, settings and default profile
+    """
+    client = TestClient()
+    client.run('config init')
+    assert os.path.exists(client.cache.conan_conf_path)
+    assert os.path.exists(client.cache.remotes_path)
+    assert os.path.exists(client.cache.settings_path)
+    assert os.path.exists(client.cache.default_profile_path)
+
+
+def test_init_overwrite():
+    """ config init --force MUST override current content
+    """
+    client = TestClient()
+    client.run('config init')
+    dummy_content = 'DUMMY CONTENT. SHOULD BE REMOVED!'
+    save_append(client.cache.conan_conf_path, dummy_content)
+    save_append(client.cache.remotes_path, dummy_content)
+    save_append(client.cache.settings_path, dummy_content)
+    save_append(client.cache.default_profile_path, dummy_content)
+
+    client.run('config init --force')
+    assert dummy_content not in load(client.cache.conan_conf_path)
+    assert dummy_content not in load(client.cache.conan_conf_path)
+    assert dummy_content not in load(client.cache.settings_path)
+    assert dummy_content not in load(client.cache.remotes_path)
+    assert dummy_content not in load(client.cache.default_profile_path)
+
+
+def test_config_list():
+    """ config list MUST show all configuration available for global.conf
+    """
+    client = TestClient()
+    client.run('config list')
+    assert "Supported Conan *experimental* conan.conf properties:" in client.out
+    for key, value in DEFAULT_CONFIGURATION.items():
+        assert "{}: {}".format(key, value) in client.out
