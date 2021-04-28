@@ -170,9 +170,16 @@ class NewCppInfo(object):
             for name in cnames:
                 component = components[name]
                 for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                    dest = getattr(self.components[None], n)
-                    dest += [i for i in getattr(component, n) if i not in dest]
-                self.components[None].requires.extend(component.requires)
+                    if getattr(component, n):
+                        dest = getattr(self.components[None], n)
+                        if dest is None:
+                            setattr(self.components[None], n, [])
+                        dest += [i for i in getattr(component, n) if i not in dest]
+
+                if component.requires:
+                    if self.components[None].requires is None:
+                        self.components[None].requires = []
+                    self.components[None].requires.extend(component.requires)
                 # The generator properties are not aggregated, should be defined in the root
                 # cpp info if needed
             # FIXME: What to do about sysroot?
