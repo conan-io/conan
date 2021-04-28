@@ -61,10 +61,6 @@ class TestCache:
         client.save({"conanfile.py": conanfile,
                      "file.txt": ""})
 
-        # client.run("export . mypkg/1.0@user/channel")
-        # client.run("export . mypkg/2.0@user/channel")
-        # client.run("search *")
-
         client.run("create . mypkg/1.0@user/channel")
         client.run("create . mypkg/2.0@user/channel")
 

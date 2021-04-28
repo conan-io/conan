@@ -107,7 +107,7 @@ class DataCache:
             pref = pref.copy_with_revs(pref.ref.revision, package_path)
 
         package_path, created = self.db.get_or_create_reference(package_path, str(pref.ref),
-                                                                pref.ref.revision, pref.package_id,
+                                                                pref.ref.revision, pref.id,
                                                                 pref.revision)
         self._create_path(package_path, remove_contents=created)
 
@@ -117,13 +117,10 @@ class DataCache:
 
     def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
                    move_reference_contents: bool = False) -> Optional[str]:
-        # Once we know the revision for a given reference, we need to update information in the
-        # backend and we might want to move folders.
-        # TODO: Add a little bit of all-or-nothing aka rollback
-
         self.db.update_reference(old_ref, new_ref)
         if move_reference_contents:
-            old_path = self.db.try_get_reference_directory(new_ref)
+            old_path = self.db.try_get_reference_directory(str(new_ref), new_ref.revision, None,
+                                                           None)
             new_path = self.get_default_path(new_ref)
             # TODO: Here we are always overwriting the contents of the rrev folder where
             #  we are putting the exported files for the reference, but maybe we could
@@ -133,7 +130,9 @@ class DataCache:
             if os.path.exists(self._full_path(new_path)):
                 rmdir(self._full_path(new_path))
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_reference_directory(new_ref, new_path)
+            # TODO: cache2.0 for all this methods go back to pass references and check if
+            #  are package or recipes
+            self.db.update_reference_directory(new_path, str(new_ref), new_ref.revision, None, None)
             return new_path
         return None
 
@@ -143,10 +142,12 @@ class DataCache:
 
         self.db.update_reference(old_pref, new_pref)
         if move_package_contents:
-            old_path = self.db.try_get_reference_directory(new_pref)
+            old_path = self.db.try_get_reference_directory(str(new_pref.ref), new_pref.ref.revision,
+                                                           new_pref.id, new_pref.revision)
             new_path = self.get_default_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_reference_directory(new_pref, new_path)
+            self.db.update_reference_directory(new_path, str(new_pref.ref), new_pref.ref.revision,
+                                               new_pref.id, new_pref.revision)
             return new_path
         return None
 

@@ -1,11 +1,11 @@
 import sqlite3
 import time
 from collections import namedtuple
-from typing import Tuple, List, Iterator
+from typing import List, Iterator
 
 from conan.cache.db.table import BaseDbTable
-from conans.model.ref import ConanFileReference, PackageReference
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 class ReferencesDbTable(BaseDbTable):
@@ -51,7 +51,8 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(f"No entry for reference '{reference}#{rrev}:{pkgid}#{prev}'")
+            raise ReferencesDbTable.DoesNotExist(
+                f"No entry for reference '{reference}#{rrev}:{pkgid}#{prev}'")
         return row[0]
 
     def save(self, conn: sqlite3.Cursor, path, reference, rrev, pkgid, prev) -> int:
@@ -63,26 +64,46 @@ class ReferencesDbTable(BaseDbTable):
                          f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, path, timestamp])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, pk: int, reference, rrev, pkgid, prev):
-        """ Updates row 'pk' with values from 'ref' """
+    def update(self, conn: sqlite3.Cursor, pk: int, new_path, new_reference, new_rrev, new_pkgid,
+               new_prev):
+        assert new_reference, "Reference name can't be None"
+        assert new_reference, "Recipe revision can't be None"
+        update_columns = [f"{it}" for it in self.columns]
+        if not new_path:
+            update_columns.remove("path")
+        if not new_pkgid:
+            update_columns.remove("pkgid")
+        if not new_prev:
+            update_columns.remove("prev")
         timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
-        setters = ', '.join([f"{it} = ?" for it in self.columns])
+        setters = ', '.join([f"{it} = ?" for it in update_columns])
         query = f"UPDATE {self.table_name} " \
                 f"SET {setters} " \
                 f"WHERE rowid = ?;"
-        r = conn.execute(query, [reference, rrev, pkgid, prev, timestamp, pk])
+        all_values = [new_reference, new_rrev, new_pkgid, new_prev, new_path, timestamp, pk]
+        r = conn.execute(query, [val for val in all_values if val])
+        return r.lastrowid
+
+    def update_path_ref(self, conn: sqlite3.Cursor, pk: int, new_path):
+        timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
+        setters = ', '.join([f"{it} = ?" for it in ("path", "timestamp")])
+        query = f"UPDATE {self.table_name} " \
+                f"SET {setters} " \
+                f"WHERE rowid = ?;"
+        r = conn.execute(query, [new_path, timestamp, pk])
         return r.lastrowid
 
     def pk(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev):
         """ Returns the row matching the reference or fails """
         where_clause, where_values = self._where_clause(reference, rrev, pkgid, prev)
-        query = f'SELECT rowid FROM {self.table_name} ' \
+        query = f'SELECT rowid, * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(f"No entry for reference ''{reference}#{rrev}:{pkgid}#{prev}''")
-        return row[0]
+            raise ReferencesDbTable.DoesNotExist(
+                f"No entry for reference ''{reference}#{rrev}:{pkgid}#{prev}''")
+        return row
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:
         query = f'SELECT * FROM {self.table_name} ' \
