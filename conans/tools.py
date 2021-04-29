@@ -208,14 +208,6 @@ def vcvars(*args, **kwargs):
         yield
 
 
-def msvc_build_command(*args, **kwargs):
-    return tools_win.msvc_build_command(output=_global_output, *args, **kwargs)
-
-
-def build_sln_command(*args, **kwargs):
-    return tools_win.build_sln_command(output=_global_output, *args, **kwargs)
-
-
 def vcvars_command(*args, **kwargs):
     return tools_win.vcvars_command(output=_global_output, *args, **kwargs)
 

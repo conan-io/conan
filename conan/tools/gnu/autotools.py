@@ -1,6 +1,9 @@
-import platform
+import json
+import os
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import use_win_mingw
+from conans.util.files import load
 
 
 class Autotools(object):
@@ -20,9 +23,14 @@ class Autotools(object):
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
-
-        # Precalculate build, host, target triplets
-        # TODO self.build, self.host, self.target = self._get_host_build_target_flags()
+        self._build = None
+        self._host = None
+        self._target = None
+        if os.path.isfile(CONAN_TOOLCHAIN_ARGS_FILE):
+            args = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))
+            self._build = args["build"] if "build" in args else None
+            self._host = args["host"] if "host" in args else None
+            self._target = args["target"] if "target" in args else None
 
     def configure(self):
         """
@@ -33,11 +41,13 @@ class Autotools(object):
             return
         configure_dir = "."
 
-        # TODO: Management of build, host, target triplet
         # TODO: Management of PKG_CONFIG_PATH
         # TODO: Implement management of --prefix, bindir, sbindir, libexecdir, libdir, includedir
 
         cmd = "%s/configure" % configure_dir
+        cmd += ' --host=%s' % self._host if self._host else ''
+        cmd += ' --build=%s' % self._build if self._build else ''
+        cmd += ' --target=%s' % self._target if self._target else ''
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd)
 

@@ -159,7 +159,7 @@ message("Compile options: ${tmp}")
         files = cpp_hello_conan_files(name="Hello1", deps=["Hello0/0.1@user/channel"],
                                       settings='"os", "compiler", "arch", "build_type"')
         files["conanfile.py"] = files["conanfile.py"].replace(
-            'generators = "cmake", "gcc"',
+            'generators = "cmake"',
             'generators = "cmake_find_package"')
         files["CMakeLists.txt"] = """
 set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -236,7 +236,7 @@ message("Target libs: ${tmp}")
         files = cpp_hello_conan_files(name="Hello1", deps=["Hello0/0.1@user/channel"],
                                       settings='"os", "compiler", "arch", "build_type"')
         files["conanfile.py"] = files["conanfile.py"].replace(
-            'generators = "cmake", "gcc"',
+            'generators = "cmake"',
             'generators = "cmake_find_package"')
         files["CMakeLists.txt"] = """
 set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -321,7 +321,7 @@ add_executable(say_hello main.cpp)
 target_link_libraries(say_hello helloHello2)
         """
         files["conanfile.py"] = files["conanfile.py"].replace(
-            'generators = "cmake", "gcc"',
+            'generators = "cmake"',
             'generators = "cmake_find_package"')
         client.save(files, clean_first=True)
         client.run("create . user/channel -s build_type=Release")

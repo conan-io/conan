@@ -181,12 +181,26 @@ class GraphManager(object):
                                                channel=create_reference.channel)
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
-        # Injecting the tested reference
-        require = conanfile.requires.get(create_reference.name)
-        if require:
-            require.ref = require.range_ref = create_reference
-        else:
-            conanfile.requires.add_ref(create_reference)
+
+        # Injection of the tested reference
+        test_type = getattr(conanfile, "test_type", ("requires", ))
+        if not isinstance(test_type, (list, tuple)):
+            test_type = (test_type, )
+        if "build_requires" in test_type:
+            if getattr(conanfile, "build_requires", None):
+                # Injecting the tested reference
+                existing = conanfile.build_requires
+                if not isinstance(existing, (list, tuple)):
+                    existing = [existing]
+                conanfile.build_requires = list(existing) + [create_reference]
+            else:
+                conanfile.build_requires = str(create_reference)
+        if "requires" in test_type:
+            require = conanfile.requires.get(create_reference.name)
+            if require:
+                require.ref = require.range_ref = create_reference
+            else:
+                conanfile.requires.add_ref(create_reference)
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)

@@ -35,7 +35,7 @@ class BasicTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
-                generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain", "MakeToolchain")
+                generators = ("CMakeToolchain", "CMakeDeps", "MesonToolchain")
             """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -43,12 +43,9 @@ class BasicTest(unittest.TestCase):
 
         self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
-        self.assertIn("conanfile.py: Generator 'MakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.py: Generator 'CMakeDeps' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
-        toolchain = client.load("conan_toolchain.mak")
-        self.assertIn("# Conan generated toolchain file", toolchain)
         toolchain = client.load("conan_meson_native.ini")
         self.assertIn("[project options]", toolchain)
 
@@ -145,7 +142,7 @@ class BasicTest(unittest.TestCase):
                 name = "Pkg"
                 version = "0.1"
                 settings = "os", "compiler", "arch", "build_type"
-                generators = "msbuild"
+                generators = "MSBuildDeps"
 
                 def generate(self):
                     tc = MSBuildToolchain(self)

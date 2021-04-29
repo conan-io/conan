@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient
 class MultiGeneratorsTestCase(unittest.TestCase):
 
     @parameterized.expand([("cmake_find_package_multi",),
-                           ("visual_studio_multi", ),
                            ("cmake_multi", )])
     def test_no_build_type(self, generator):
         client = TestClient()
