@@ -38,42 +38,19 @@ class CacheDatabase:
             output.write(f"\nReferencesDbTable (table '{self._references.table_name}'):\n")
             self._references.dump(conn, output)
 
-    def update_reference(self, old_ref: Union[ConanFileReference, PackageReference],
-                         new_ref: Union[ConanFileReference, PackageReference]):
-        """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
-        if isinstance(old_ref, ConanFileReference):
-            old_reference, old_rrev, old_pkgid, old_prev = str(old_ref), old_ref.revision, None, None
-            new_reference, new_rrev, new_pkgid, new_prev = str(new_ref), new_ref.revision, None, None
-        elif isinstance(old_ref, PackageReference):
-            old_reference, old_rrev, old_pkgid, old_prev = str(
-                old_ref.ref), old_ref.ref.revision, old_ref.id, old_ref.revision
-            new_reference, new_rrev, new_pkgid, new_prev = str(
-                new_ref.ref), new_ref.ref.revision, new_ref.id, new_ref.revision
-        else:
-            raise ConanException(f"Reference has not a valid type: {type(old_ref).__name__}")
-
+    def update_reference(self, old_ref, new_ref, new_path=None):
         with self.connect() as conn:
-            ref_pk, *_ = self._references.pk(conn, old_reference, old_rrev, old_pkgid, old_prev)
+            ref_pk, *_ = self._references.pk(conn, old_ref)
             try:
-                self._references.update(conn, ref_pk, None, new_reference, new_rrev, new_pkgid,
-                                        new_prev)
+                self._references.update(conn, ref_pk, new_path, new_ref.reference, new_ref.rrev, new_ref.pkgid,
+                                        new_ref.prev)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(
                     f"Reference '{new_ref.full_str()}' already exists")
 
-    def update_reference_revision(self, old_ref: ConanFileReference, new_ref: ConanFileReference):
-        """ Assigns a revision 'new_ref.revision' to the reference given by 'old_ref' """
+    def update_reference_directory(self, path, ref):
         with self.connect() as conn:
-            ref_pk, *_ = self._references.pk(conn, str(old_ref), old_ref.revision, None, None)
-            try:
-                self._references.update(conn, ref_pk, str(new_ref), new_ref.revision, None, None)
-            except sqlite3.IntegrityError:
-                raise ReferencesDbTable.AlreadyExist(
-                    f"Reference '{new_ref.full_str()}' already exists")
-
-    def update_reference_directory(self, path, reference, rrev, pkgid, prev):
-        with self.connect() as conn:
-            ref_pk, *_ = self._references.pk(conn, reference, rrev, pkgid, prev)
+            ref_pk, *_ = self._references.pk(conn, ref)
             self._references.update_path_ref(conn, ref_pk, path)
 
     def try_get_reference_directory(self, reference, rrev, pkgid, prev):

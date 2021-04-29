@@ -58,11 +58,15 @@ class TestCache:
 
         client = TestClient()
 
+        client.run("new mypkg/1.0")
+
+        client.run("create .")
+
         client.save({"conanfile.py": conanfile,
                      "file.txt": ""})
 
-        client.run("create . mypkg/1.0@user/channel")
         client.run("create . mypkg/2.0@user/channel")
+        client.run("create . mypkg/3.0@user/channel")
 
         conanfile = GenConanfile().with_scm({"type": "git", "revision": "auto",
                                              "url": "auto"})

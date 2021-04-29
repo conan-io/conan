@@ -8,6 +8,7 @@ from typing import Optional, Union, Tuple, Iterator
 # TODO: Add timestamp for LRU
 # TODO: We need the workflow to remove existing references.
 from conan.cache.cache_database import CacheDatabase
+from conan.cache.conan_reference import ConanReference
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
@@ -117,7 +118,7 @@ class DataCache:
 
     def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
                    move_reference_contents: bool = False) -> Optional[str]:
-        self.db.update_reference(old_ref, new_ref)
+        self.db.update_reference(ConanReference(old_ref), ConanReference(new_ref))
         if move_reference_contents:
             old_path = self.db.try_get_reference_directory(str(new_ref), new_ref.revision, None,
                                                            None)
@@ -132,7 +133,7 @@ class DataCache:
             shutil.move(self._full_path(old_path), self._full_path(new_path))
             # TODO: cache2.0 for all this methods go back to pass references and check if
             #  are package or recipes
-            self.db.update_reference_directory(new_path, str(new_ref), new_ref.revision, None, None)
+            self.db.update_reference_directory(new_path, ConanReference(new_ref))
             return new_path
         return None
 
@@ -140,14 +141,13 @@ class DataCache:
                    move_package_contents: bool = False) -> Optional[str]:
         # TODO: Add a little bit of all-or-nothing aka rollback
 
-        self.db.update_reference(old_pref, new_pref)
+        self.db.update_reference(ConanReference(old_pref), ConanReference(new_pref))
         if move_package_contents:
             old_path = self.db.try_get_reference_directory(str(new_pref.ref), new_pref.ref.revision,
                                                            new_pref.id, new_pref.revision)
             new_path = self.get_default_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_reference_directory(new_path, str(new_pref.ref), new_pref.ref.revision,
-                                               new_pref.id, new_pref.revision)
+            self.db.update_reference_directory(new_path, ConanReference(new_pref))
             return new_path
         return None
 

@@ -34,14 +34,26 @@ class ReferencesDbTable(BaseDbTable):
             return ConanFileReference.loads(f'{row.reference}#{row.rrev}', validate=False)
 
     def _where_clause(self, reference, rrev, pkgid, prev):
-        where = {
+        where_dict = {
             self.columns.reference: reference,
             self.columns.rrev: rrev,
             self.columns.pkgid: pkgid or "NULL",
             self.columns.prev: prev or "NULL",
         }
-        where_expr = ' AND '.join([f'{k} = ?' for k, v in where.items()])
-        return where_expr, tuple(where.values())
+        where_expr = ' AND '.join([f'{k} = ?' for k, v in where_dict.items()])
+        return where_expr, tuple(where_dict.values())
+
+    def _set_clause(self, path=None, reference=None, rrev=None, pkgid=None, prev=None, timestamp=None):
+        set_dict = {
+            self.columns.reference: reference or None,
+            self.columns.rrev: rrev or None,
+            self.columns.pkgid: pkgid or None,
+            self.columns.prev: prev or None,
+            self.columns.path: path or None,
+            self.columns.timestamp: timestamp or None,
+        }
+        set_expr = ', '.join([f"{k} = ?" for k, v in set_dict.items() if v is not None])
+        return set_expr, tuple([v for v in set_dict.values() if v is not None])
 
     def get_path_ref(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev) -> str:
         """ Returns the row matching the reference or fails """
@@ -64,24 +76,15 @@ class ReferencesDbTable(BaseDbTable):
                          f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, path, timestamp])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, pk: int, new_path, new_reference, new_rrev, new_pkgid,
-               new_prev):
-        assert new_reference, "Reference name can't be None"
-        assert new_reference, "Recipe revision can't be None"
-        update_columns = [f"{it}" for it in self.columns]
-        if not new_path:
-            update_columns.remove("path")
-        if not new_pkgid:
-            update_columns.remove("pkgid")
-        if not new_prev:
-            update_columns.remove("prev")
+    def update(self, conn: sqlite3.Cursor, pk: int, path=None, reference=None,
+               rrev=None, pkgid=None, prev=None):
         timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
-        setters = ', '.join([f"{it} = ?" for it in update_columns])
+        set_clause, set_values = self._set_clause(reference=reference, rrev=rrev, pkgid=pkgid,
+                                                  prev=prev, path=path, timestamp=timestamp)
         query = f"UPDATE {self.table_name} " \
-                f"SET {setters} " \
+                f"SET {set_clause} " \
                 f"WHERE rowid = ?;"
-        all_values = [new_reference, new_rrev, new_pkgid, new_prev, new_path, timestamp, pk]
-        r = conn.execute(query, [val for val in all_values if val])
+        r = conn.execute(query, (*set_values, pk))
         return r.lastrowid
 
     def update_path_ref(self, conn: sqlite3.Cursor, pk: int, new_path):
@@ -93,16 +96,16 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query, [new_path, timestamp, pk])
         return r.lastrowid
 
-    def pk(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev):
+    def pk(self, conn: sqlite3.Cursor, ref):
         """ Returns the row matching the reference or fails """
-        where_clause, where_values = self._where_clause(reference, rrev, pkgid, prev)
+        where_clause, where_values = self._where_clause(ref.reference, ref.rrev, ref.pkgid, ref.prev)
         query = f'SELECT rowid, * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
         r = conn.execute(query, where_values)
         row = r.fetchone()
         if not row:
             raise ReferencesDbTable.DoesNotExist(
-                f"No entry for reference ''{reference}#{rrev}:{pkgid}#{prev}''")
+                f"No entry for reference '{ref.full_ref}'")
         return row
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:
@@ -134,10 +137,11 @@ class ReferencesDbTable(BaseDbTable):
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'                {self.columns.rrev}, MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.prev} IS NULL ' \
                     f'GROUP BY {self.columns.reference} ' \
                     f'ORDER BY MAX({self.columns.timestamp}) ASC'
         else:
-            query = f'SELECT * FROM {self.table_name};'
+            query = f'SELECT * FROM {self.table_name} WHERE {self.columns.prev} IS NULL;'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))

@@ -73,15 +73,3 @@ class RecipeLayout(LockableMixin):
     # TODO: cache2.0: Do we want this method?
     def scm_sources(self):
         return os.path.join(self.base_directory, SCM_SRC_FOLDER)
-
-    # TODO: Remove: Probably will not use metadata in the future
-    def metadata(self):
-        return os.path.join(self.base_directory, PACKAGE_METADATA)
-
-    # TODO: Remove: Probably will not use metadata in the future
-    def load_metadata(self):
-        try:
-            text = load(self.metadata())
-        except IOError:
-            raise RecipeNotFoundException(self._ref)
-        return PackageMetadata.loads(text)
