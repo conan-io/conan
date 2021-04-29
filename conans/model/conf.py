@@ -39,6 +39,8 @@ class Conf(object):
         return self._values.get(name)
 
     def __setitem__(self, name, value):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
         self._values[name] = value
 
     def __repr__(self):
@@ -125,7 +127,7 @@ class ConfDefinition(object):
                 if pattern:
                     result.append("{}:{}={}".format(pattern, name, value))
                 else:
-                    result.append("{}={}".format(name, name, value))
+                    result.append("{}={}".format(name, value))
         return "\n".join(result)
 
     def loads(self, text, profile=False):

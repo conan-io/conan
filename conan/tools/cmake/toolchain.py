@@ -376,7 +376,7 @@ class FindConfigFiles(Block):
         cmake_prefix_path = "${CMAKE_CURRENT_LIST_DIR}"
         cmake_module_path = "${CMAKE_CURRENT_LIST_DIR}"
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
-        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_confi"]
+        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_config"]
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
             find_package_prefer_config = "OFF"
 
