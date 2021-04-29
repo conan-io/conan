@@ -5,7 +5,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class ConanReference(namedtuple("ConanFileReference", "name version user channel rrev pkgid prev")):
+class ConanReference(namedtuple("ConanReference", "name version user channel rrev pkgid prev")):
     def __new__(cls, *args):
         if isinstance(args[0], ConanFileReference):
             ref = args[0]
