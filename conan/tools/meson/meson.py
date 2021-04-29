@@ -5,8 +5,8 @@ from conans.client.tools.oss import cross_building
 
 
 def ninja_jobs_cmd_line_arg(conanfile):
-    njobs = conanfile.conf["tools.ninja"].jobs or \
-            conanfile.conf["tools.build"].processes
+    njobs = conanfile.conf["tools.ninja:jobs"] or \
+            conanfile.conf["tools.build:processes"]
     if njobs:
         return "-j{}".format(njobs)
 

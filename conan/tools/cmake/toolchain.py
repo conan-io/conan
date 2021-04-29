@@ -245,7 +245,7 @@ class ParallelBlock(Block):
 
     def context(self):
         # TODO: Check this conf
-        max_cpu_count = self._conanfile.conf["tools.cmake.cmaketoolchain"].msvc_parallel_compile
+        max_cpu_count = self._conanfile.conf["tools.cmake.cmaketoolchain:msvc_parallel_compile"]
 
         if max_cpu_count:
             return {"parallel": max_cpu_count}
@@ -278,7 +278,7 @@ class AndroidSystemBlock(Block):
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
 
         # TODO: Do not use envvar! This has to be provided by the user somehow
-        android_ndk = self._conanfile.conf["tools.android"].ndk_path
+        android_ndk = self._conanfile.conf["tools.android:ndk_path"]
         if not android_ndk:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
         android_ndk = android_ndk.replace("\\", "/")
@@ -376,7 +376,7 @@ class FindConfigFiles(Block):
         cmake_prefix_path = "${CMAKE_CURRENT_LIST_DIR}"
         cmake_module_path = "${CMAKE_CURRENT_LIST_DIR}"
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
-        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain"].find_package_prefer_config
+        prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_confi"]
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
             find_package_prefer_config = "OFF"
 
