@@ -163,6 +163,8 @@ def test_locally_build_macos(build_type, shared, client):
                   cppstd=None)
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.tool_visual_studio
 def test_ninja_conf():
     conanfile = GenConanfile().with_generator("CMakeToolchain").with_settings("os", "compiler",
                                                                               "build_type", "arch")
@@ -170,7 +172,7 @@ def test_ninja_conf():
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=19.0
+        compiler.version=19.1
         compiler.runtime=dynamic
         compiler.cppstd=14
         build_type=Release
@@ -186,4 +188,4 @@ def test_ninja_conf():
     assert '"cmake_generator": "Ninja"' in conanbuild
     if platform.system() == "Windows":
         vcvars = client.load("conanvcvars.bat")
-        assert "Microsoft Visual Studio 14.0" in vcvars
+        assert "2017" in vcvars
