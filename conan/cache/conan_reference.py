@@ -29,6 +29,7 @@ class ConanReference(namedtuple("ConanReference", "name version user channel rre
             return f'{self.name}/{self.version}'
         return f'{self.name}/{self.version}@{self.user}/{self.channel}'
 
+    @property
     def full_reference(self):
         if self.prev:
             return f'{self.reference}#{self.rrev}:{self.pkgid}#{self.prev}'

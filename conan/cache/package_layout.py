@@ -2,6 +2,7 @@ import os
 import uuid
 
 from conan.cache.cache import DataCache
+from conan.cache.conan_reference import ConanReference
 from conan.locks.lockable_mixin import LockableMixin
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER
@@ -16,13 +17,13 @@ class PackageLayout(LockableMixin):
         self._cache = cache
         self._locked = locked
         self._package_folder = package_folder
-        super().__init__(resource=self._pref.full_str(), **kwargs)
+        super().__init__(resource=self._pref.full_reference, **kwargs)
 
-    def assign_prev(self, pref: PackageReference, move_contents: bool = False):
-        assert pref.ref.full_str() == self._pref.ref.full_str(), "You cannot change the reference here"
+    def assign_prev(self, pref: ConanReference, move_contents: bool = False):
+        assert pref.reference == self._pref.reference, "You cannot change the reference here"
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
-        assert pref.revision, "It only makes sense to change if you are providing a revision"
-        new_resource: str = pref.full_str()
+        assert pref.prev, "It only makes sense to change if you are providing a revision"
+        new_resource: str = pref.full_reference
 
         with self.exchange(new_resource):
             # Assign the new revision

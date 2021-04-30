@@ -4,6 +4,7 @@ import textwrap
 import time
 from multiprocessing.pool import ThreadPool
 
+from conan.cache.conan_reference import ConanReference
 from conans.client import tools
 from conans.client.conanfile.build import run_build_method
 from conans.client.conanfile.package import run_package_method
@@ -164,7 +165,7 @@ class _PackageBuilder(object):
         #update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
         pref = pref.copy_with_revs(pref.ref.revision, prev)
-        package_layout.assign_prev(pref, move_contents=True)
+        package_layout.assign_prev(ConanReference(pref), move_contents=True)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(conanfile.layout.base_package_folder)

@@ -49,7 +49,7 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def get_reference_path(item: ConanReference) -> str:
+    def get_or_create_reference_path(item: ConanReference) -> str:
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.rrev:
             return md5(item.full_reference)
@@ -57,7 +57,7 @@ class DataCache:
             return str(uuid.uuid4())
 
     @staticmethod
-    def get_package_path(item: ConanReference) -> str:
+    def get_or_create_package_path(item: ConanReference) -> str:
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.prev:
             return md5(item.full_reference)
@@ -89,7 +89,7 @@ class DataCache:
                              package_folder=package_path, locked=True)
 
     def get_or_create_reference_layout(self, ref: ConanReference) -> Tuple['RecipeLayout', bool]:
-        path = self.get_reference_path(ref)
+        path = self.get_or_create_reference_path(ref)
 
         # Assign a random (uuid4) revision if not set
         locked = bool(ref.rrev)
@@ -106,7 +106,7 @@ class DataCache:
                             locked=locked), created
 
     def get_or_create_package_layout(self, pref: ConanReference) -> Tuple['PackageLayout', bool]:
-        package_path = self.get_package_path(pref)
+        package_path = self.get_or_create_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
         locked = bool(pref.prev)
@@ -122,12 +122,12 @@ class DataCache:
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=locked), created
 
-    def _move_rrev(self, old_ref: ConanFileReference, new_ref: ConanFileReference,
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference,
                    move_reference_contents: bool = False) -> Optional[str]:
-        self.db.update_reference(ConanReference(old_ref), ConanReference(new_ref))
+        self.db.update_reference(old_ref, new_ref)
         if move_reference_contents:
-            old_path = self.db.try_get_reference_directory(ConanReference(new_ref))
-            new_path = self.get_default_path(new_ref)
+            old_path = self.db.try_get_reference_directory(new_ref)
+            new_path = self.get_or_create_reference_path(new_ref)
             # TODO: Here we are always overwriting the contents of the rrev folder where
             #  we are putting the exported files for the reference, but maybe we could
             #  just check the the files in the destination folder are the same so we don't
@@ -138,20 +138,20 @@ class DataCache:
             shutil.move(self._full_path(old_path), self._full_path(new_path))
             # TODO: cache2.0 for all this methods go back to pass references and check if
             #  are package or recipes
-            self.db.update_reference_directory(new_path, ConanReference(new_ref))
+            self.db.update_reference_directory(new_path, new_ref)
             return new_path
         return None
 
-    def _move_prev(self, old_pref: PackageReference, new_pref: PackageReference,
+    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference,
                    move_package_contents: bool = False) -> Optional[str]:
         # TODO: Add a little bit of all-or-nothing aka rollback
 
-        self.db.update_reference(ConanReference(old_pref), ConanReference(new_pref))
+        self.db.update_reference(old_pref, new_pref)
         if move_package_contents:
-            old_path = self.db.try_get_reference_directory(ConanReference(new_pref))
-            new_path = self.get_default_path(new_pref)
+            old_path = self.db.try_get_reference_directory(new_pref)
+            new_path = self.get_or_create_reference_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_reference_directory(new_path, ConanReference(new_pref))
+            self.db.update_reference_directory(new_path, new_pref)
             return new_path
         return None
 

@@ -24,10 +24,9 @@ class RecipeLayout(LockableMixin):
 
     def assign_rrev(self, ref: ConanReference, move_contents: bool = False):
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
-        assert str(ref.full_reference) == str(self._ref.full_reference), "You cannot change the reference here"
-        assert ref.revision, "It only makes sense to change if you are providing a revision"
-        new_resource: str = ref.full_str()
-
+        assert ref.reference == self._ref.reference, "You cannot change reference name here"
+        assert ref.rrev, "It only makes sense to change if you are providing a revision"
+        new_resource: str = ref.full_reference
         # Block the recipe and all the packages too
         with self.exchange(new_resource):
             # Assign the new revision
