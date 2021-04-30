@@ -39,6 +39,15 @@ class Requirement:
         return not self.__eq__(other)
 
 
+class BuildRequirements:
+    # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
+    def __init__(self, requires):
+        self._requires = requires
+
+    def __call__(self, ref):
+        self._requires(ref, build_require=True)
+
+
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
@@ -98,7 +107,5 @@ class Requirements:
         for override in overrides:
             # Effective override
             self._requires[override] = override
-
-
 
 

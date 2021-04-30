@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement
+from conans.model.requires import Requirement, Requirements
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -185,6 +185,9 @@ class DepsGraph(object):
         self.aliased = {}
         self.error = False
         self._node_counter = initial_node_id if initial_node_id is not None else -1
+
+    def __repr__(self):
+        return "\n".join((repr(n) for n in self.nodes))
 
     @property
     def root(self):

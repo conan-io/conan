@@ -365,15 +365,28 @@ class BuildRequiresGraphTest(GraphManagerTest):
         self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
                                                       .with_require(grass01_ref))
 
-        with self.assertRaisesRegex(ConanException,
-                                   "Conflict in cheetah/0.1:\n"
-                                   "    'cheetah/0.1' requires 'grass/0.2@user/testing' while "
-                                   "'gazelle/0.1@user/testing' requires 'grass/0.1@user/testing'.\n"
-                                   "    To fix this conflict you need to override the package "
-                                   "'grass' in your root package."):
-            self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
+        deps_graph = self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
                                            .with_require(gazelle_ref)
                                            .with_build_requires(grass02_ref))
+
+        assert deps_graph.error is True
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        # TODO: Conflicted without revision
+        self._check_node(liba2, "liba/0.2", dependents=[libc])
+
+        assert liba1.conflict == liba2
+        assert liba2.conflict == liba1
 
     def test_build_require_link_order(self):
         # https://github.com/conan-io/conan/issues/4931

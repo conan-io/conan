@@ -1,9 +1,12 @@
+import fnmatch
+import logging
+
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
-    RECIPE_MISSING
+    RECIPE_MISSING, RECIPE_CONSUMER
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
-from conans.model.requires import Requirements
+from conans.model.requires import Requirements, BuildRequirements
 
 
 class DepsGraphBuilder(object):
@@ -47,6 +50,9 @@ class DepsGraphBuilder(object):
 
     def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
                    graph_lock=None):
+        assert profile_host is not None
+        assert profile_build is not None
+        print("Loading graph")
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -64,9 +70,23 @@ class DepsGraphBuilder(object):
 
         return dep_graph
 
+    def _add_profile_build_requires(self, node, profile_host, profile_build):
+        profile = profile_host if node.context == CONTEXT_HOST else profile_build
+        build_requires = profile.build_requires
+        str_ref = str(node.ref)
+
+        for pattern, build_requires in build_requires.items():
+            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
+                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
+                for build_require in build_requires:  # Do the override
+                    # FIXME: converting back to string?
+                    node.conanfile.requires(str(build_require), build_require=True)
+
     def _expand_node(self, node, graph, override_reqs, down_ref, down_options, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
 
+        print("Expanding node", node)
         if graph_lock:
             graph_lock.pre_lock_node(node)
         # basic node configuration: calling configure() and requirements()
@@ -75,12 +95,12 @@ class DepsGraphBuilder(object):
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
         # TODO: self._resolve_cached_alias(node.conanfile.requires.values(), graph)
 
-        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
-            graph_lock.lock_node(node, node.conanfile.requires.values())
-
         # propagation of requirements can be necessary if some nodes are not locked
         # OVERRIDES!!!
         node.override_reqs(override_reqs, self._output, node.ref, down_ref)
+        self._add_profile_build_requires(node, profile_host, profile_build)
+        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
+            graph_lock.lock_node(node, node.conanfile.requires.values())
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         # Resolve possible version ranges of the current node requirements
@@ -94,7 +114,7 @@ class DepsGraphBuilder(object):
             #     continue
             self._expand_require(require, node, graph, check_updates, update, remotes,
                                  profile_host, profile_build, new_options,
-                                 graph_lock, context_switch=False)
+                                 graph_lock)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -112,22 +132,20 @@ class DepsGraphBuilder(object):
                     require.ref = alias
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
-                        profile_build, new_options, graph_lock, context_switch,
+                        profile_build, new_options, graph_lock,
                         populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
 
-        # If the required is found in the node ancestors a loop is being closed
-        context = CONTEXT_BUILD if context_switch else node.context
         # TODO: allow bootstrapping, use references instead of names
-
+        print("  Expanding require ", node, "->", require)
         # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.check_downstream_exists(require)
 
         if previous is None:
             # new node, must be added and expanded (node -> new_node)
-            if context_switch:
+            if require.build_require:
                 profile = profile_build
                 context = CONTEXT_BUILD
             else:
@@ -154,8 +172,7 @@ class DepsGraphBuilder(object):
             new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
                                              recipe_status, remote, locked_id, profile_host,
-                                             profile_build,
-                                             context_switch, populate_settings_target)
+                                             profile_build, populate_settings_target)
 
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)
@@ -171,7 +188,7 @@ class DepsGraphBuilder(object):
             previous, base_previous = previous
 
             if previous == base_previous:  # Loop
-                loop_node = Node(require.ref, None, context=context)
+                loop_node = Node(require.ref, None, context=previous.context)
                 loop_node.conflict = previous
                 graph.add_node(loop_node)
                 graph.add_edge(node, loop_node, require)
@@ -187,7 +204,7 @@ class DepsGraphBuilder(object):
                 # Maybe it was an ALIAS, so we can check conflict again
                 conflict = self._conflicting_references(previous, require.ref, node.ref)
                 if conflict:
-                    conflict_node = Node(require.ref, dep_conanfile, context=context)
+                    conflict_node = Node(require.ref, dep_conanfile, context=previous.context)
                     conflict_node.recipe = recipe_status
                     conflict_node.conflict = previous
                     previous.conflict = conflict_node
@@ -249,6 +266,14 @@ class DepsGraphBuilder(object):
             with conanfile_exception_formatter(str(conanfile), "requirements"):
                 conanfile.requirements()
 
+        # TODO: Maybe this could be integrated in one single requirements() method
+        # Update requirements (overwrites), computing new upstream
+        if hasattr(conanfile, "build_requirements"):
+            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
+                # This calls "self.build_requires("")
+                conanfile.build_requires = BuildRequirements(conanfile.requires)
+                conanfile.build_requirements()
+
         new_options = conanfile.options.deps_package_values
         return new_options
 
@@ -279,12 +304,13 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, current_node, dep_conanfile, requirement, new_ref, context,
                          recipe_status, remote, locked_id, profile_host, profile_build,
-                         context_switch, populate_settings_target):
+                         populate_settings_target):
         # If there is a context_switch, it is because it is a BR-build
 
         # Assign the profiles depending on the context
         if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
             dep_conanfile.settings_build = profile_build.processed_settings.copy()
+            context_switch = (current_node.context == CONTEXT_HOST and requirement.build_require)
             if not context_switch:
                 if populate_settings_target:
                     # TODO: Check this, getting the settings from current doesn't seem right

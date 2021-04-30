@@ -110,24 +110,27 @@ class GraphManagerTest(unittest.TestCase):
 
     def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
                        install=True):
-        profile = Profile()
+        profile_host = Profile()
+        profile_build = Profile()
         if profile_build_requires:
-            profile.build_requires = profile_build_requires
-        profile.process_settings(self.cache)
+            profile_host.build_requires = profile_build_requires
+        profile_host.process_settings(self.cache)
+        profile_build.process_settings(self.cache)
         update = check_updates = False
         recorder = ActionRecorder()
         remotes = Remotes()
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
-        deps_graph = app.graph_manager.load_graph(path, create_ref, profile, None, None, ref,
+        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
+                                                  None, ref,
                                                   build_mode, check_updates, update, remotes,
                                                   recorder)
         if install:
             binary_installer = BinaryInstaller(app, recorder)
             build_mode = BuildMode(build_mode, app.out)
-            binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile,
-                                     profile_build=None, graph_lock=None)
+            binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile_host,
+                                     profile_build=profile_build, graph_lock=None)
         return deps_graph
 
     def _check_node(self, node, ref, deps=None, build_deps=None, dependents=None, closure=None):
