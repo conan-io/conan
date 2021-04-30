@@ -41,9 +41,7 @@ class CacheDatabase:
         with self.connect() as conn:
             ref_pk, *_ = self._references.pk(conn, old_ref)
             try:
-                self._references.update(conn, ref_pk, new_path, new_ref.reference, new_ref.rrev,
-                                        new_ref.pkgid,
-                                        new_ref.prev)
+                self._references.update(conn, ref_pk, new_ref, new_path)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(
                     f"Reference '{new_ref.full_str()}' already exists")
