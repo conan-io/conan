@@ -10,10 +10,10 @@ def clion_layout(conanfile):
         raise ConanException("The 'clion_layout' requires the 'build_type' setting")
     base = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
     conanfile.folders.build = base
-    conanfile.infos.build.libdirs = ["."]
+    conanfile.cpp.build.libdirs = ["."]
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
-    conanfile.infos.source.includedirs = ["."]
+    conanfile.cpp.source.includedirs = ["."]
 
 
 def vs_layout(conanfile):
@@ -32,10 +32,10 @@ def vs_layout(conanfile):
         base = str(conanfile.settings.build_type)
 
     conanfile.folders.build = base
-    conanfile.infos.build.libdirs = ["."]
+    conanfile.cpp.build.libdirs = ["."]
     conanfile.folders.generators = os.path.join(base, "generators")
     conanfile.folders.source = "."
-    conanfile.infos.source.includedirs = ["."]
+    conanfile.cpp.source.includedirs = ["."]
 
 
 # FIXME: Not sure about the location, interface, name etc.
@@ -49,9 +49,9 @@ class LayoutPackager(object):
         cf = self._conanfile
 
         # Check that the components declared in source/build are in package
-        cnames = set(cf.infos.source.component_names)
-        cnames = cnames.union(set(cf.infos.build.component_names))
-        if cnames.difference(set(cf.infos.package.component_names)):
+        cnames = set(cf.cpp.source.component_names)
+        cnames = cnames.union(set(cf.cpp.build.component_names))
+        if cnames.difference(set(cf.cpp.package.component_names)):
             # TODO: Raise? Warning? Ignore?
             raise ConanException("There are components declared in source_cpp_info.components"
                                  " or in build_cpp_info.components that are not declared in"
@@ -60,15 +60,15 @@ class LayoutPackager(object):
 
         if cnames:
             for cname in cnames:
-                if cname in cf.infos.source.components:
-                    self._package_cppinfo("source", cf.infos.source.components[cname],
-                                                    cf.infos.package.components[cname])
-                if cname in cf.infos.build.components:
-                    self._package_cppinfo("build",  cf.infos.build.components[cname],
-                                                    cf.infos.package.components[cname])
+                if cname in cf.cpp.source.components:
+                    self._package_cppinfo("source", cf.cpp.source.components[cname],
+                                                    cf.cpp.package.components[cname])
+                if cname in cf.cpp.build.components:
+                    self._package_cppinfo("build",  cf.cpp.build.components[cname],
+                                                    cf.cpp.package.components[cname])
         else:  # No components declared
-            self._package_cppinfo("source", cf.infos.source, cf.infos.package)
-            self._package_cppinfo("build", cf.infos.build, cf.infos.package)
+            self._package_cppinfo("source", cf.cpp.source, cf.cpp.package)
+            self._package_cppinfo("build", cf.cpp.build, cf.cpp.package)
 
     def _package_cppinfo(self, origin_name, origin_cppinfo, dest_cppinfo):
         """

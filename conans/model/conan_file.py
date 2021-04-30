@@ -162,7 +162,7 @@ class ConanFile(object):
         # layout() method related variables:
         self.folders = Folders()
         self.patterns = Patterns()
-        self.infos = Infos()
+        self.cpp = Infos()
 
         self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
         self.patterns.source.lib = []
@@ -172,12 +172,12 @@ class ConanFile(object):
         self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
         self.patterns.build.bin = ["*.exe", "*.dll"]
 
-        self.infos.package.includedirs = ["include"]
-        self.infos.package.libdirs = ["lib"]
-        self.infos.package.bindirs = ["bin"]
-        self.infos.package.resdirs = ["res"]
-        self.infos.package.builddirs = [""]
-        self.infos.package.frameworkdirs = ["Frameworks"]
+        self.cpp.package.includedirs = ["include"]
+        self.cpp.package.libdirs = ["lib"]
+        self.cpp.package.bindirs = ["bin"]
+        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.builddirs = [""]
+        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def context(self):

@@ -14,16 +14,16 @@ def test_cpp_info_editable():
         self.folders.source = "my_sources"
         self.folders.build = "my_build"
 
-        self.infos.build.includedirs = ["my_include"]
-        self.infos.build.libdirs = ["my_libdir"]
-        self.infos.build.libs = ["hello"]
-        self.infos.build.frameworkdirs = []  # Empty list is also explicit priority declaration
+        self.cpp.build.includedirs = ["my_include"]
+        self.cpp.build.libdirs = ["my_libdir"]
+        self.cpp.build.libs = ["hello"]
+        self.cpp.build.frameworkdirs = []  # Empty list is also explicit priority declaration
 
-        self.infos.source.cxxflags = ["my_cxx_flag"]
-        self.infos.source.includedirs = ["my_include_source"]
-        self.infos.source.builddirs = ["my_builddir_source"]
+        self.cpp.source.cxxflags = ["my_cxx_flag"]
+        self.cpp.source.includedirs = ["my_include_source"]
+        self.cpp.source.builddirs = ["my_builddir_source"]
 
-        self.infos.package.libs = ["lib_when_package"]
+        self.cpp.package.libs = ["lib_when_package"]
 
     def package_info(self):
         # when editable: This one will be discarded because declared in build
@@ -102,24 +102,24 @@ def test_cpp_info_components_editable():
         self.folders.source = "my_sources"
         self.folders.build = "my_build"
 
-        self.infos.build.components["foo"].includedirs = ["my_include_foo"]
-        self.infos.build.components["foo"].libdirs = ["my_libdir_foo"]
-        self.infos.build.components["foo"].libs = ["hello_foo"]
+        self.cpp.build.components["foo"].includedirs = ["my_include_foo"]
+        self.cpp.build.components["foo"].libdirs = ["my_libdir_foo"]
+        self.cpp.build.components["foo"].libs = ["hello_foo"]
 
-        self.infos.build.components["var"].includedirs = ["my_include_var"]
-        self.infos.build.components["var"].libdirs = ["my_libdir_var"]
-        self.infos.build.components["var"].libs = ["hello_var"]
+        self.cpp.build.components["var"].includedirs = ["my_include_var"]
+        self.cpp.build.components["var"].libdirs = ["my_libdir_var"]
+        self.cpp.build.components["var"].libs = ["hello_var"]
 
-        self.infos.source.components["foo"].cxxflags = ["my_cxx_flag_foo"]
-        self.infos.source.components["foo"].includedirs = ["my_include_source_foo"]
-        self.infos.source.components["foo"].builddirs = ["my_builddir_source_foo"]
+        self.cpp.source.components["foo"].cxxflags = ["my_cxx_flag_foo"]
+        self.cpp.source.components["foo"].includedirs = ["my_include_source_foo"]
+        self.cpp.source.components["foo"].builddirs = ["my_builddir_source_foo"]
 
-        self.infos.source.components["var"].cxxflags = ["my_cxx_flag_var"]
-        self.infos.source.components["var"].includedirs = ["my_include_source_var"]
-        self.infos.source.components["var"].builddirs = ["my_builddir_source_var"]
+        self.cpp.source.components["var"].cxxflags = ["my_cxx_flag_var"]
+        self.cpp.source.components["var"].includedirs = ["my_include_source_var"]
+        self.cpp.source.components["var"].builddirs = ["my_builddir_source_var"]
 
-        self.infos.package.components["foo"].libs = ["lib_when_package_foo"]
-        self.infos.package.components["var"].libs = ["lib_when_package_var"]
+        self.cpp.package.components["foo"].libs = ["lib_when_package_foo"]
+        self.cpp.package.components["var"].libs = ["lib_when_package_var"]
 
     def package_info(self):
         # when editable: This one will be discarded because declared in build
