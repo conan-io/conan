@@ -204,6 +204,5 @@ class CrossBuildingBaseTestCase(GraphManagerTest):
             build_mode = BuildMode(build_mode, app.out)
             binary_installer.install(deps_graph, None, build_mode, update=False,
                                      profile_host=profile_host, profile_build=profile_build,
-                                     graph_lock=None,
-                                     keep_build=False)
+                                     graph_lock=None)
         return deps_graph

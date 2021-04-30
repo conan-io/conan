@@ -749,8 +749,7 @@ class HelloConan(ConanFile):
             self.assertIn("All downloads from (3) URLs have failed.", str(error.exception))
 
     def test_check_output_runner(self):
-        import tempfile
-        original_temp = tempfile.gettempdir()
+        original_temp = temp_folder()
         patched_temp = os.path.join(original_temp, "dir with spaces")
         payload = "hello world"
         with patch("tempfile.mktemp") as mktemp:

@@ -11,6 +11,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Layout
+from conans.model.new_build_info import NewCppInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -129,6 +130,8 @@ class ConanFile(object):
         self.requires = Requirements(getattr(self, "requires", None),
                                      getattr(self, "build_requires", None))
 
+        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
+
     @property
     def context(self):
         return self._conan_node.context
@@ -184,6 +187,12 @@ class ConanFile(object):
 
         if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")
+
+    @property
+    def new_cpp_info(self):
+        if not self._conan_new_cpp_info:
+            self._conan_new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
+        return self._conan_new_cpp_info
 
     @property
     def source_folder(self):

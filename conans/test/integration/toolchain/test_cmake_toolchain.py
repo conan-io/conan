@@ -1,19 +1,17 @@
 import platform
 
-
 import pytest
-from parameterized import parameterized
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@parameterized.expand([("msvc", "19.2", "dynamic"),
-                       ("msvc", "19.26", "static"),
-                       ("msvc", "19.28", "static")]
-                      )
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-def test_toolchain_win(compiler, version, runtime):
+@pytest.mark.parametrize("compiler, version, runtime",
+                         [("msvc", "19.2", "dynamic"),
+                          ("msvc", "19.26", "static"),
+                          ("msvc", "19.28", "static")])
+def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": compiler,
                 "compiler.version": version,
@@ -32,9 +30,8 @@ def test_toolchain_win(compiler, version, runtime):
     client.run("install . {}".format(settings))
     toolchain = client.load("conan_toolchain.cmake")
     if len(version) == 5:  # Fullversion
-        line = 'set(CMAKE_GENERATOR_TOOLSET "version=14.{}" CACHE STRING "" FORCE)'
         minor = version.split(".")[1]
-        assert line.format(minor) in toolchain
+        value = "version=14.{}".format(minor)
     else:
-        assert "CMAKE_GENERATOR_TOOLSET" not in toolchain
-
+        value = "v142"
+    assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain

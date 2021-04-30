@@ -1,7 +1,14 @@
+import json
+
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.env import Environment
+from conan.tools.gnu.cross_building import _cross_building
+from conan.tools.gnu.get_cross_building_settings import _get_cross_building_settings
+from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 # FIXME: need to refactor this import and bring to conan.tools
 from conans.client.build.cppstd_flags import cppstd_flag_new
+from conans.util.files import save
 
 
 class AutotoolsToolchain:
@@ -29,6 +36,15 @@ class AutotoolsToolchain:
         self.arch_flag = architecture_flag(self._conanfile.settings)
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
         self.build_type_flags = build_type_flags(self._conanfile.settings)
+
+        self._host = None
+        self._build = None
+        self._target = None
+
+        if _cross_building(self._conanfile):
+            os_build, arch_build, os_host, arch_host = _get_cross_building_settings(self._conanfile)
+            self._host = _get_gnu_triplet(os_host, arch_host)
+            self._build = _get_gnu_triplet(os_build, arch_build)
 
     def _rpaths_link(self):
         # TODO: Not implemented yet
@@ -109,3 +125,11 @@ class AutotoolsToolchain:
         env = self.environment()
         env.save_sh("conanautotoolstoolchain.sh")
         env.save_bat("conanautotoolstoolchain.bat")
+        self.generate_args()
+
+    def generate_args(self):
+        args = {"build": self._build,
+                "host": self._host,
+                "target": self._target}
+        args = {k: v for k, v in args.items() if v is not None}
+        save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(args))

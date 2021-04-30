@@ -196,6 +196,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @pytest.mark.skipif(platform.system() not in ["Windows", "Darwin"], reason="Exclude Linux")
+    @pytest.mark.tool_cmake(version="3.19")
     def test_cmake_multi(self):
         client = TestClient()
 

@@ -16,7 +16,7 @@ from conans.model.graph_lock import GraphLockFile, GraphLock
 
 def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, graph_lock, root_ref,
                  remotes=None, build_modes=None, update=False, generators=None, no_imports=False,
-                 create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None):
+                 create_reference=None, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -80,7 +80,7 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
     # TODO: Extract this from the GraphManager, reuse same object, check args earlier
     build_modes = BuildMode(build_modes, out)
     installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
-                      graph_lock, keep_build=keep_build)
+                      graph_lock)
 
     graph_lock.complete_matching_prevs()
 

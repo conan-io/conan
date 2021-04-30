@@ -66,8 +66,7 @@ class DownloadCacheTest(unittest.TestCase):
         content = load(log_trace_file)
         self.assertEqual(0, content.count('"_action": "DOWNLOAD"'))
 
-    @staticmethod
-    def test_dirty_download():
+    def test_dirty_download(self):
         # https://github.com/conan-io/conan/issues/8578
         client = TestClient(default_server_user=True)
         cache_folder = temp_folder()

@@ -20,6 +20,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
+from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -38,7 +39,7 @@ class Extender(argparse.Action):
           settings = ['cucumber:true']
     """
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        # Need None here in case `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
         if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
@@ -83,8 +84,6 @@ _PREF_EXAMPLE = "MyPackage/1.2@user/channel:af7901d8bdfde621d086181aa1c495c25a17
 
 _BUILD_FOLDER_HELP = ("Directory for the build process. Defaulted to the current directory. A "
                       "relative path to the current directory can also be specified")
-_KEEP_SOURCE_HELP = ("Do not remove the source folder in the local cache, "
-                     "even if the recipe changed. Use this for testing purposes only")
 _PATTERN_OR_REFERENCE_HELP = ("Pattern or package recipe reference, e.g., '%s', "
                               "'%s'" % (_PATTERN_EXAMPLE, _REFERENCE_EXAMPLE))
 _PATTERN_REF_OR_PREF_HELP = ("Pattern, recipe reference or package reference e.g., '%s', "
@@ -321,14 +320,6 @@ class Command(object):
                             '(if name or version declared in conanfile.py, they should match)')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='json file path where the install information will be written to')
-        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
-                            help=_KEEP_SOURCE_HELP)
-        parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
-                            help='Do not remove the build folder in local cache. '
-                                 'Implies --keep-source. '
-                                 'Use this for testing purposes only')
-        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
-                            help='Do not export the conanfile.py')
         parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
                             help='Working directory for the build of the test project.')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
@@ -365,8 +356,8 @@ class Command(object):
 
             info = self._conan.create(args.path, name, version, user, channel,
                                       args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder, args.not_export,
-                                      args.build, args.keep_source, args.keep_build,
+                                      args.env_host, args.test_folder,
+                                      args.build,
                                       args.remote, args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
@@ -550,6 +541,7 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
+        list_subparser = subparsers.add_parser('list', help='List Conan configuration properties')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -615,6 +607,10 @@ class Command(object):
                                               target_folder=args.target_folder)
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
+        elif args.subcommand == "list":
+            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            for key, value in DEFAULT_CONFIGURATION.items():
+                self._out.writeln("{}: {}".format(key, value))
 
     def info(self, *args):
         """
@@ -1004,8 +1000,6 @@ class Command(object):
                             help="user/channel, Pkg/version@user/channel (if name "
                                  "and version are not declared in the conanfile.py) "
                                  "Pkg/version@ if user/channel is not relevant.")
-        parser.add_argument('-k', '-ks', '--keep-source', default=False, action='store_true',
-                            help=_KEEP_SOURCE_HELP)
         parser.add_argument("-l", "--lockfile", action=OnceArgument,
                             help="Path to a lockfile file.")
         parser.add_argument("--lockfile-out", action=OnceArgument,
@@ -1029,7 +1023,7 @@ class Command(object):
 
         return self._conan.export(path=args.path,
                                   name=name, version=version, user=user, channel=channel,
-                                  keep_source=args.keep_source, lockfile=args.lockfile,
+                                  lockfile=args.lockfile,
                                   lockfile_out=args.lockfile_out,
                                   ignore_dirty=args.ignore_dirty)
 
@@ -2208,6 +2202,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
+    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+                       reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.

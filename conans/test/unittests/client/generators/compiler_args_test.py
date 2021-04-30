@@ -2,7 +2,6 @@ import unittest
 
 from conans.client.conf import get_default_settings_yml
 from conans.client.generators.compiler_args import CompilerArgsGenerator
-from conans.client.generators.gcc import GCCGenerator
 from conans.model.build_info import CppInfo, DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvInfo
 from conans.model.settings import Settings
@@ -62,58 +61,6 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file.env_info = EnvInfo()
         return conan_file
-
-    def test_gcc(self):
-        settings = Settings.loads(get_default_settings_yml())
-        settings.os = "Linux"
-        settings.compiler = "gcc"
-        settings.compiler.version = "6.3"
-        settings.arch = "x86"
-        settings.build_type = "Release"
-        settings.cppstd = "gnu17"
-
-        conan_file = self._get_conanfile(settings)
-        gcc = GCCGenerator(conan_file)
-        self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
-                         ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
-                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
-                         ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -F /root/Frameworks -std=gnu++17', gcc.content)
-
-        settings.arch = "x86_64"
-        settings.build_type = "Debug"
-        settings.compiler.libcxx = "libstdc++11"
-
-        gcc = GCCGenerator(conan_file)
-        self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
-                         ' cxx_flag1 c_flag1 -m64 -g'
-                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
-                         ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=1 -F /root/Frameworks -std=gnu++17',
-                         gcc.content)
-
-        settings.compiler.libcxx = "libstdc++"
-        gcc = GCCGenerator(conan_file)
-        self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
-                         ' cxx_flag1 c_flag1 -m64 -g'
-                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
-                         ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
-                         gcc.content)
-
-        settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "15"
-        settings.arch = "x86"
-        settings.build_type = "Release"
-        gcc = GCCGenerator(conan_file)
-        # GCC generator ignores the compiler setting, it is always gcc
-        self.assertEqual('-Dmydefine1 -I/root/include -I/root/path/to/include1'
-                         ' cxx_flag1 c_flag1 -m32 -O3 -s -DNDEBUG'
-                         ' -Wl,-rpath,"/root/lib" -Wl,-rpath,"/root/path/to/lib1"'
-                         ' -L/root/lib -L/root/path/to/lib1 -lmylib'
-                         ' -D_GLIBCXX_USE_CXX11_ABI=0 -F /root/Frameworks -std=gnu++17',
-                         gcc.content)
 
     def test_compiler_args(self):
         settings = Settings.loads(get_default_settings_yml())
