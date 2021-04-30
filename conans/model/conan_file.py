@@ -179,11 +179,6 @@ class ConanFile(object):
         self.infos.package.builddirs = [""]
         self.infos.package.frameworkdirs = ["Frameworks"]
 
-        # Init all fields with None so we can certainly know when a field has been declared
-        # to be able to merge them to the package one
-        self.infos.source = NewCppInfo()
-        self.infos.build = NewCppInfo()
-
     @property
     def context(self):
         return self._conan_node.context
