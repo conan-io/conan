@@ -63,7 +63,7 @@ class DepsGraphBuilder(object):
 
         # enter recursive computation
         try:
-            self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
+            self._expand_node(root_node, dep_graph, None, None, check_updates,
                               update, remotes, profile_host, profile_build, graph_lock)
         except DepsGraphBuilder.StopRecursion:
             dep_graph.error = True
@@ -83,7 +83,7 @@ class DepsGraphBuilder(object):
                     # FIXME: converting back to string?
                     node.conanfile.requires(str(build_require), build_require=True)
 
-    def _expand_node(self, node, graph, override_reqs, down_ref, down_options, check_updates, update,
+    def _expand_node(self, node, graph, down_ref, down_options, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
 
         print("Expanding node", node)
@@ -95,9 +95,6 @@ class DepsGraphBuilder(object):
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
         # TODO: self._resolve_cached_alias(node.conanfile.requires.values(), graph)
 
-        # propagation of requirements can be necessary if some nodes are not locked
-        # OVERRIDES!!!
-        node.override_reqs(override_reqs, self._output, node.ref, down_ref)
         self._add_profile_build_requires(node, profile_host, profile_build)
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
@@ -106,8 +103,11 @@ class DepsGraphBuilder(object):
         # Resolve possible version ranges of the current node requirements
         # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
         # RangeResolver are also done in new_reqs, and then propagated!
-        conanfile = node.conanfile
-        scope = conanfile.display_name
+
+        # Add existing requires to the transitive_deps, so they are there for overrides
+        for require in node.conanfile.requires.values():
+            node.transitive_deps.set_empty(require)
+
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():
             # TODO: if require.override:
@@ -142,8 +142,42 @@ class DepsGraphBuilder(object):
         print("  Expanding require ", node, "->", require)
         # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.check_downstream_exists(require)
+        prev_node = None
+        if previous:
+            prev_require, prev_node, base_previous = previous
+            print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
-        if previous is None:
+            if prev_require is None:  # Loop
+                loop_node = Node(require.ref, None, context=prev_node.context)
+                loop_node.conflict = prev_node
+                graph.add_node(loop_node)
+                graph.add_edge(node, loop_node, require)
+                raise DepsGraphBuilder.StopRecursion("Loop found")
+
+            if prev_node is None:  # Existing override
+                print("  Require was an override from ", base_previous, "=", prev_require)
+                # TODO: resolve the override, version ranges, etc
+                require = prev_require
+            else:
+                # self._resolve_cached_alias([require], graph)
+                # As we are closing a diamond, there can be conflicts. This will raise if conflicts
+                conflict = self._conflicting_references(prev_node, require.ref, node.ref)
+                if conflict:  # It is possible to get conflict from alias, try to resolve it
+                    result = self._resolve_recipe(node, graph, require.ref, check_updates,
+                                                  update, remotes, profile_host, graph_lock)
+                    _, dep_conanfile, recipe_status, _, _ = result
+                    # Maybe it was an ALIAS, so we can check conflict again
+                    conflict = self._conflicting_references(prev_node, require.ref, node.ref)
+                    if conflict:
+                        conflict_node = Node(require.ref, dep_conanfile, context=prev_node.context)
+                        conflict_node.recipe = recipe_status
+                        conflict_node.conflict = prev_node
+                        prev_node.conflict = conflict_node
+                        graph.add_node(conflict_node)
+                        graph.add_edge(node, conflict_node, require)
+                        raise DepsGraphBuilder.StopRecursion("Unresolved reference")
+
+        if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
             if require.build_require:
                 profile = profile_build
@@ -178,56 +212,17 @@ class DepsGraphBuilder(object):
             graph.add_edge(node, new_node, require)
             node.propagate_downstream(require, new_node)
 
-            override_reqs = node.get_override_reqs(new_node, require)
-
             # RECURSION, keep expanding (depth-first) the new node
-            return self._expand_node(new_node, graph, override_reqs, node.ref, new_options,
-                                     check_updates,
+            return self._expand_node(new_node, graph, node.ref, new_options, check_updates,
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
-            previous, base_previous = previous
+            print("Closing a loop from ", node, "=>", prev_node)
+            graph.add_edge(node, prev_node, require)
 
-            if previous == base_previous:  # Loop
-                loop_node = Node(require.ref, None, context=previous.context)
-                loop_node.conflict = previous
-                graph.add_node(loop_node)
-                graph.add_edge(node, loop_node, require)
-                raise DepsGraphBuilder.StopRecursion("Loop found")
-
-            # self._resolve_cached_alias([require], graph)
-            # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-            conflict = self._conflicting_references(previous, require.ref, node.ref)
-            if conflict:  # It is possible to get conflict from alias, try to resolve it
-                result = self._resolve_recipe(node, graph, require.ref, check_updates,
-                                              update, remotes, profile_host, graph_lock)
-                _, dep_conanfile, recipe_status, _, _ = result
-                # Maybe it was an ALIAS, so we can check conflict again
-                conflict = self._conflicting_references(previous, require.ref, node.ref)
-                if conflict:
-                    conflict_node = Node(require.ref, dep_conanfile, context=previous.context)
-                    conflict_node.recipe = recipe_status
-                    conflict_node.conflict = previous
-                    previous.conflict = conflict_node
-                    graph.add_node(conflict_node)
-                    graph.add_edge(node, conflict_node, require)
-                    raise DepsGraphBuilder.StopRecursion("Unresolved reference")
-
-            graph.add_edge(node, previous, require)
-
-            node.propagate_downstream(require, previous)
-            for prev_relation, prev_node in previous.transitive_deps.items():
+            node.propagate_downstream(require, prev_node)
+            for transitive in prev_node.transitive_deps.values():
                 # TODO: possibly optimize in a bulk propagate
-                node.propagate_downstream_existing(prev_relation, prev_node)
-
-            """# Recursion is only necessary if the inputs conflict with the current "previous"
-            # configuration of upstream versions and options
-            # recursion can stop if there is a graph_lock not relaxed
-            lock_recurse = not (graph_lock and not graph_lock.relaxed)
-            if lock_recurse and self._recurse(previous.public_closure, new_reqs, new_options,
-                                              previous.context):
-                self._expand_node(previous, graph, new_reqs, node.ref, new_options, check_updates,
-                                  update, remotes, profile_host, profile_build, graph_lock)
-            """
+                node.propagate_downstream_existing(transitive.require, transitive.node)
 
     @staticmethod
     def _conflicting_references(previous, new_ref, consumer_ref=None):

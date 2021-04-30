@@ -1,8 +1,6 @@
 from collections import OrderedDict
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.util.env_reader import get_env
 
 
 class Requirement:
@@ -78,34 +76,3 @@ class Requirements:
 
     def __repr__(self):
         return repr(self._requires.values())
-
-    def override(self, down_reqs, output, own_ref, down_ref):
-        """ Compute actual requirement values when downstream values are defined
-        param down_reqs: the current requirements as coming from downstream to override
-                         current requirements
-        param own_ref: ConanFileReference of the current conanfile
-        param down_ref: ConanFileReference of the downstream that is overriding values or None
-        return: new Requirements() value to be passed upstream
-        """
-
-        assert isinstance(down_reqs, Requirements)
-        assert isinstance(own_ref, ConanFileReference) if own_ref else True
-        assert isinstance(down_ref, ConanFileReference) if down_ref else True
-
-        error_on_override = get_env("CONAN_ERROR_ON_OVERRIDE", False)
-
-        overrides = []
-        for req in self._requires:
-            down = down_reqs._requires.get(req)
-            if down is not None:
-                version_range = down.version_range
-                current_range = req.version_range
-                if version_range is not None:
-                    pass
-                overrides = [down]
-
-        for override in overrides:
-            # Effective override
-            self._requires[override] = override
-
-

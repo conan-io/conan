@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement, Requirements
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -29,6 +28,12 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
+class _TransitiveRequirement:
+    def __init__(self, require, node):
+        self.require = require
+        self.node = node
+
+
 class _TransitiveRequirements:
     def __init__(self):
         # The PackageRelation hash function is the key here
@@ -37,11 +42,15 @@ class _TransitiveRequirements:
     def get(self, relation):
         return self._requires.get(relation)
 
-    def set(self, relation, node):
-        self._requires[relation] = node
+    def set(self, transitive):
+        self._requires[transitive.require] = transitive
 
-    def items(self):
-        return self._requires.items()
+    def set_empty(self, require):
+        self._requires[require] = _TransitiveRequirement(require, None)
+
+    def values(self):
+        # No items, as the key might be outdated/incomplete compared to value
+        return self._requires.values()
 
 
 class Node(object):
@@ -74,18 +83,14 @@ class Node(object):
         # TODO: Remove this order, shouldn't be necessary
         return id(self) < id(other)
 
-    def propagate_downstream(self, relation, node):
-        if not isinstance(relation, Requirement):
-            assert isinstance(relation, Requirement)
-            relation = Requirement(relation.ref)
+    def propagate_downstream(self, require, node):
+        self.transitive_deps.set(_TransitiveRequirement(require, node))
+        return self.propagate_downstream_existing(require, node)
 
-        self.transitive_deps.set(relation, node)
-        return self.propagate_downstream_existing(relation, node)
-
-    def propagate_downstream_existing(self, relation, node):
+    def propagate_downstream_existing(self, require, node):
         # Check if need to propagate downstream
-        downstream_relation = relation.transform_downstream(self)
-        if downstream_relation is None:
+        downstream_require = require.transform_downstream(self)
+        if downstream_require is None:
             return
 
         if not self.dependants:
@@ -93,25 +98,23 @@ class Node(object):
         assert len(self.dependants) == 1
         d = self.dependants[0]
         source_node = d.src
-        return source_node.propagate_downstream(downstream_relation, node)
+        return source_node.propagate_downstream(downstream_require, node)
 
-    def check_downstream_exists(self, relation):
-        if not isinstance(relation, Requirement):
-            assert isinstance(relation, Requirement)
-            relation = Requirement(relation.ref)
+    def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
         # This is equivalent as the Requirement hash and eq methods
         # TODO: Make self.ref always exist, but with name=None if name not defined
-        if self.ref is not None and relation.ref.name == self.ref.name:
-            return self, self
+        if self.ref is not None and require.ref.name == self.ref.name:
+            return None, self, self  # First is the require, as it is a loop => None
 
         # First do a check against the current node dependencies
-        prev = self.transitive_deps.get(relation)
-        if prev:
-            return prev, self
+        prev = self.transitive_deps.get(require)
+        # Overrides: The existing require could be itself, that was just added
+        if prev and (prev.require is not require or prev.node is not None):
+            return prev.require, prev.node, self
 
         # Check if need to propagate downstream
-        downstream_relation = relation.transform_downstream(self)
+        downstream_relation = require.transform_downstream(self)
         if downstream_relation is None:
             return
 
@@ -125,12 +128,6 @@ class Node(object):
         d = self.dependants[0]
         source_node = d.src
         return source_node.check_downstream_exists(downstream_relation)
-
-    def get_override_reqs(self, new_node, require):
-        return self.conanfile.requires
-
-    def override_reqs(self, downstream_reqs, output, ref, down_ref):
-        self.conanfile.requires.override(downstream_reqs, output, ref, down_ref)
 
     @property
     def package_id(self):
