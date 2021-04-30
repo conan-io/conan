@@ -83,7 +83,7 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
     # Check the build folder (release)
     if layout_helper_name == "clion_layout":
         assert os.path.exists(os.path.join(client.current_folder,
-                                           "cmake-build-{}".format(build_type),
+                                           "cmake-build-{}".format(build_type.lower()),
                                            "mylib.lib"))
     elif layout_helper_name == "vs_layout":
         sf_arch = subfolders_arch.get(arch)
