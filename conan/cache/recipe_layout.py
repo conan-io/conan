@@ -4,11 +4,7 @@ from contextlib import contextmanager, ExitStack
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conan.locks.lockable_mixin import LockableMixin
-from conans.errors import RecipeNotFoundException
-from conans.model.package_metadata import PackageMetadata
-from conans.model.ref import ConanFileReference
-from conans.paths import PACKAGE_METADATA, CONANFILE, SCM_SRC_FOLDER
-from conans.util.files import load
+from conans.paths import CONANFILE, SCM_SRC_FOLDER
 
 
 class RecipeLayout(LockableMixin):

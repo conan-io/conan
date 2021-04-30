@@ -37,43 +37,44 @@ class ReferencesDbTable(BaseDbTable):
         where_dict = {
             self.columns.reference: reference,
             self.columns.rrev: rrev,
-            self.columns.pkgid: pkgid or "NULL",
-            self.columns.prev: prev or "NULL",
+            self.columns.pkgid: pkgid,
+            self.columns.prev: prev,
         }
-        where_expr = ' AND '.join([f'{k} = ?' for k, v in where_dict.items()])
-        return where_expr, tuple(where_dict.values())
+        where_expr = ' AND '.join(
+            [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
+        return where_expr
 
-    def _set_clause(self, path=None, reference=None, rrev=None, pkgid=None, prev=None, timestamp=None):
+    def _set_clause(self, path=None, reference=None, rrev=None, pkgid=None, prev=None,
+                    timestamp=None):
         set_dict = {
-            self.columns.reference: reference or None,
-            self.columns.rrev: rrev or None,
-            self.columns.pkgid: pkgid or None,
-            self.columns.prev: prev or None,
-            self.columns.path: path or None,
-            self.columns.timestamp: timestamp or None,
+            self.columns.reference: reference,
+            self.columns.rrev: rrev,
+            self.columns.pkgid: pkgid,
+            self.columns.prev: prev,
+            self.columns.path: path,
+            self.columns.timestamp: timestamp,
         }
         set_expr = ', '.join([f"{k} = ?" for k, v in set_dict.items() if v is not None])
         return set_expr, tuple([v for v in set_dict.values() if v is not None])
 
-    def get_path_ref(self, conn: sqlite3.Cursor, reference, rrev, pkgid, prev) -> str:
+    def get_path_ref(self, conn: sqlite3.Cursor, ref) -> str:
         """ Returns the row matching the reference or fails """
-        where_clause, where_values = self._where_clause(reference, rrev, pkgid, prev)
+        where_clause = self._where_clause(ref.reference, ref.rrev, ref.pkgid, ref.prev)
         query = f'SELECT {self.columns.path} FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
-        r = conn.execute(query, where_values)
+        r = conn.execute(query)
         row = r.fetchone()
         if not row:
             raise ReferencesDbTable.DoesNotExist(
-                f"No entry for reference '{reference}#{rrev}:{pkgid}#{prev}'")
+                f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
-    def save(self, conn: sqlite3.Cursor, path, reference, rrev, pkgid, prev) -> int:
+    def save(self, conn: sqlite3.Cursor, path, ref) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        pkgid = pkgid or 'NULL'
-        prev = prev or 'NULL'
         r = conn.execute(f'INSERT INTO {self.table_name} '
-                         f'VALUES ({placeholders})', [reference, rrev, pkgid, prev, path, timestamp])
+                         f'VALUES ({placeholders})',
+                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp])
         return r.lastrowid
 
     def update(self, conn: sqlite3.Cursor, pk: int, path=None, reference=None,
@@ -98,14 +99,14 @@ class ReferencesDbTable(BaseDbTable):
 
     def pk(self, conn: sqlite3.Cursor, ref):
         """ Returns the row matching the reference or fails """
-        where_clause, where_values = self._where_clause(ref.reference, ref.rrev, ref.pkgid, ref.prev)
+        where_clause = self._where_clause(ref.reference, ref.rrev, ref.pkgid, ref.prev)
         query = f'SELECT rowid, * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
-        r = conn.execute(query, where_values)
+        r = conn.execute(query)
         row = r.fetchone()
         if not row:
             raise ReferencesDbTable.DoesNotExist(
-                f"No entry for reference '{ref.full_ref}'")
+                f"No entry for reference '{ref.full_reference}'")
         return row
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:

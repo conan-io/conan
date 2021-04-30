@@ -3,8 +3,6 @@ from collections import namedtuple
 from io import StringIO
 from typing import Tuple, List, Optional
 
-from conans.errors import ConanException
-
 
 class BaseDbTable:
     table_name: str = None
@@ -19,7 +17,8 @@ class BaseDbTable:
         self.columns = self.row_type(*column_names)
 
     def create_table(self, conn: sqlite3.Cursor, if_not_exists: bool = True):
-        def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None, unique = False):
+        def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None,
+                      unique=False):
             field_str = name
             if typename in [str, ]:
                 field_str += ' text'

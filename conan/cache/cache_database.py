@@ -1,10 +1,9 @@
 import sqlite3
 from contextlib import contextmanager
 from io import StringIO
-from typing import Tuple, Iterator, Union
+from typing import Tuple, Iterator
 
-from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from .db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
@@ -42,7 +41,8 @@ class CacheDatabase:
         with self.connect() as conn:
             ref_pk, *_ = self._references.pk(conn, old_ref)
             try:
-                self._references.update(conn, ref_pk, new_path, new_ref.reference, new_ref.rrev, new_ref.pkgid,
+                self._references.update(conn, ref_pk, new_path, new_ref.reference, new_ref.rrev,
+                                        new_ref.pkgid,
                                         new_ref.prev)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(
@@ -56,7 +56,7 @@ class CacheDatabase:
     def try_get_reference_directory(self, ref):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
-            return self._references.get_path_ref(conn, ref.reference, ref.rrev, ref.pkgid, ref.prev)
+            return self._references.get_path_ref(conn, ref)
 
     def get_or_create_reference(self, path, ref) -> Tuple[str, bool]:
         """ Returns the path for the given reference. If the reference doesn't exist in the
@@ -64,9 +64,9 @@ class CacheDatabase:
         """
         with self.connect() as conn:
             try:
-                return self._references.get_path_ref(conn, ref.reference, ref.rrev, ref.pkgid, ref.prev), False
+                return self._references.get_path_ref(conn, ref), False
             except ReferencesDbTable.DoesNotExist:
-                self._references.save(conn, path, ref.reference, ref.rrev, ref.pkgid, ref.prev)
+                self._references.save(conn, path, ref)
                 return path, True
 
     def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:

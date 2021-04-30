@@ -1,5 +1,4 @@
 import os
-import uuid
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
