@@ -14,15 +14,12 @@ from conans.util.files import save, mkdir
 from conans.util.log import logger
 
 
-def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info=False,
-                       use_pkg_layout=False):
+def run_package_method(conanfile, package_id, hook_manager, conanfile_path, ref, copy_info=False):
     """ calls the recipe "package()" method
     - Assigns folders to conanfile.package_folder, source_folder, install_folder, build_folder
     - Calls pre-post package hook
     - Prepares FileCopier helper for self.copy
     """
-    if use_pkg_layout:
-        conanfile.folders.set_base_package(conanfile.folders.local_package_folder)
 
     if conanfile.package_folder == conanfile.build_folder:
         raise ConanException("Cannot 'conan package' to the build folder. "

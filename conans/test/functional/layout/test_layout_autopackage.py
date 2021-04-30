@@ -40,6 +40,7 @@ def test_auto_package_no_components():
 
 
     def layout(self):
+
         self.folders.source = "my_source"
         self.folders.build = "my_build"
         self.folders.generators = "my_build/generators"

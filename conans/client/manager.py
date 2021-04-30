@@ -102,16 +102,14 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
         tmp = list(conanfile.generators)  # Add the command line specified generators
         generators = set(generators) if generators else set()
         tmp.extend([g for g in generators if g not in tmp])
+        if add_txt_generator:
+            tmp.append("txt")
         conanfile.generators = tmp
         app.generator_manager.write_generators(conanfile, install_folder,
                                                conanfile.generators_folder,
                                                output)
         write_toolchain(conanfile, conanfile.generators_folder, output)
-        if add_txt_generator:
-            # FIXME: This should be removed in 2.0, the local commmands need the txt generator
-            conanfile.generators = ["txt"]
-            app.generator_manager.write_generators(conanfile, install_folder,
-                                                   conanfile.generators_folder, output)
+
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())

@@ -790,8 +790,12 @@ class ConanAPIV1(object):
         conanfile.folders.set_base_package(package_folder)
         conanfile.folders.set_base_install(install_folder)
 
+        # Use the complete package layout for the local method
+        if conanfile.folders.package:
+            pf = os.path.join(package_folder, conanfile.folders.package)
+            conanfile.folders.set_base_package(pf)
         run_package_method(conanfile, None, self.app.hook_manager, conanfile_path, None,
-                           copy_info=True, use_pkg_layout=True)
+                           copy_info=True)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):

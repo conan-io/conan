@@ -104,14 +104,6 @@ class Folders(object):
         return self._base_package
 
     @property
-    def local_package_folder(self):
-        if self._base_package is None:
-            return None
-        if not self.package:
-            return self._base_package
-        return os.path.join(self._base_package, self.package)
-
-    @property
     def generators_folder(self):
         if self._base_generators is None:
             return None
