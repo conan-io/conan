@@ -18,18 +18,21 @@ def msbuild_max_cpu_count_cmd_line_arg(conanfile):
         return "/m:{}".format(max_cpu_count)
 
 
+def msbuild_arch(arch):
+    return {'x86': 'x86',
+            'x86_64': 'x64',
+            'armv7': 'ARM',
+            'armv8': 'ARM64'}.get(str(arch))
+
+
 class MSBuild(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self.build_type = conanfile.settings.get_safe("build_type")
-        msvc_arch = {'x86': 'x86',
-                     'x86_64': 'x64',
-                     'armv7': 'ARM',
-                     'armv8': 'ARM64'}
         # if platforms:
         #    msvc_arch.update(platforms)
         arch = conanfile.settings.get_safe("arch")
-        msvc_arch = msvc_arch.get(str(arch))
+        msvc_arch = msbuild_arch(arch)
         if conanfile.settings.get_safe("os") == "WindowsCE":
             msvc_arch = conanfile.settings.get_safe("os.platform")
         self.platform = msvc_arch

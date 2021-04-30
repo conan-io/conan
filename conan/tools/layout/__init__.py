@@ -1,11 +1,9 @@
 import os
 
+from conan.tools.microsoft.msbuild import msbuild_arch
 from conans.client.file_copier import FileCopier
 from conans.errors import ConanException
 
-
-# FIXME: Not documented, just a POC, missing a way to do something similar without modifying
-#        the recipe
 
 def clion_layout(conanfile):
     if not conanfile.settings.get_safe("build_type"):
@@ -13,11 +11,31 @@ def clion_layout(conanfile):
     base = "cmake-build-{}".format(str(conanfile.settings.build_type).lower())
     conanfile.folders.build = base
     conanfile.infos.build.libdirs = ["."]
-
     conanfile.folders.generators = os.path.join(base, "generators")
-
     conanfile.folders.source = "."
-    conanfile.infos.source.includedirs = ["include"]
+    conanfile.infos.source.includedirs = ["."]
+
+
+def vs_layout(conanfile):
+    if not conanfile.settings.get_safe("build_type"):
+        raise ConanException("The 'vs_layout' requires the 'build_type' setting")
+    if not conanfile.settings.get_safe("arch"):
+        raise ConanException("The 'vs_layout' requires the 'arch' setting")
+
+    if conanfile.settings.arch != "x86":
+        arch = msbuild_arch(conanfile.settings.arch)
+        if not arch:
+            raise ConanException("The 'vs_layout' doesn't "
+                                 "work with the arch '{}'".format(conanfile.settings.arch))
+        base = "{}/{}".format(arch, str(conanfile.settings.build_type))
+    else:
+        base = str(conanfile.settings.build_type)
+
+    conanfile.folders.build = base
+    conanfile.infos.build.libdirs = ["."]
+    conanfile.folders.generators = os.path.join(base, "generators")
+    conanfile.folders.source = "."
+    conanfile.infos.source.includedirs = ["."]
 
 
 # FIXME: Not sure about the location, interface, name etc.
