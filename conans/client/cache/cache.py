@@ -6,6 +6,7 @@ from collections import OrderedDict
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
+from conan.cache.conan_reference import ConanReference
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -91,7 +92,7 @@ class ClientCache(object):
         self._data_cache = DataCache(self._store_folder, db_filename, locks_directory)
 
     def ref_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ref)[0]
+        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))[0]
 
     def pkg_layout(self, ref):
         return self._data_cache.get_or_create_package_layout(ref)[0]

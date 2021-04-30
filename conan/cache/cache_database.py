@@ -53,20 +53,20 @@ class CacheDatabase:
             ref_pk, *_ = self._references.pk(conn, ref)
             self._references.update_path_ref(conn, ref_pk, path)
 
-    def try_get_reference_directory(self, reference, rrev, pkgid, prev):
+    def try_get_reference_directory(self, ref):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
-            return self._references.get_path_ref(conn, reference, rrev, pkgid, prev)
+            return self._references.get_path_ref(conn, ref.reference, ref.rrev, ref.pkgid, ref.prev)
 
-    def get_or_create_reference(self, path, reference, rrev, pkgid, prev) -> Tuple[str, bool]:
+    def get_or_create_reference(self, path, ref) -> Tuple[str, bool]:
         """ Returns the path for the given reference. If the reference doesn't exist in the
             database, it will create the entry for the reference using the path given as argument.
         """
         with self.connect() as conn:
             try:
-                return self._references.get_path_ref(conn, reference, rrev, pkgid, prev), False
+                return self._references.get_path_ref(conn, ref.reference, ref.rrev, ref.pkgid, ref.prev), False
             except ReferencesDbTable.DoesNotExist:
-                self._references.save(conn, path, reference, rrev, pkgid, prev)
+                self._references.save(conn, path, ref.reference, ref.rrev, ref.pkgid, ref.prev)
                 return path, True
 
     def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:

@@ -2,6 +2,7 @@ import os
 from contextlib import contextmanager, ExitStack
 
 from conan.cache.cache import DataCache
+from conan.cache.conan_reference import ConanReference
 from conan.locks.lockable_mixin import LockableMixin
 from conans.errors import RecipeNotFoundException
 from conans.model.package_metadata import PackageMetadata
@@ -12,18 +13,18 @@ from conans.util.files import load
 
 class RecipeLayout(LockableMixin):
 
-    def __init__(self, ref: ConanFileReference, cache: DataCache, base_folder: str,
+    def __init__(self, ref: ConanReference, cache: DataCache, base_folder: str,
                  locked=True,
                  **kwargs):
         self._ref = ref
         self._cache = cache
         self._locked = locked
         self._base_folder = base_folder
-        super().__init__(resource=self._ref.full_str(), **kwargs)
+        super().__init__(resource=self._ref.full_reference, **kwargs)
 
-    def assign_rrev(self, ref: ConanFileReference, move_contents: bool = False):
+    def assign_rrev(self, ref: ConanReference, move_contents: bool = False):
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
-        assert str(ref) == str(self._ref), "You cannot change the reference here"
+        assert str(ref.full_reference) == str(self._ref.full_reference), "You cannot change the reference here"
         assert ref.revision, "It only makes sense to change if you are providing a revision"
         new_resource: str = ref.full_str()
 

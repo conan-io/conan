@@ -3,6 +3,7 @@ import shutil
 
 import yaml
 
+from conan.cache.conan_reference import ConanReference
 from conans.client.file_copier import FileCopier
 from conans.client.output import Color, ScopedOutput
 from conans.client.remover import DiskRemover
@@ -136,7 +137,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    reference_layout.assign_rrev(ref, move_contents=True)
+    reference_layout.assign_rrev(ConanReference(ref), move_contents=True)
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part

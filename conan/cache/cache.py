@@ -2,7 +2,7 @@ import os
 import shutil
 import uuid
 from io import StringIO
-from typing import Optional, Union, Tuple, Iterator
+from typing import Optional, Tuple, Iterator
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -49,10 +49,18 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def get_default_path(item: Union[ConanFileReference, PackageReference]) -> str:
+    def get_reference_path(item: ConanReference) -> str:
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
-        if item.revision:
-            return md5(item.full_str())
+        if item.rrev:
+            return md5(item.full_reference)
+        else:
+            return str(uuid.uuid4())
+
+    @staticmethod
+    def get_package_path(item: ConanReference) -> str:
+        """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
+        if item.prev:
+            return md5(item.full_reference)
         else:
             return str(uuid.uuid4())
 
@@ -63,7 +71,7 @@ class DataCache:
         """
         assert ref.revision, "Ask for a reference layout only if the rrev is known"
         from conan.cache.recipe_layout import RecipeLayout
-        reference_path = self.db.try_get_reference_directory(str(ref), ref.revision, None, None)
+        reference_path = self.db.try_get_reference_directory(ConanReference(ref))
         return RecipeLayout(ref, cache=self, manager=self._locks_manager, base_folder=reference_path,
                             locked=True)
 
@@ -75,22 +83,21 @@ class DataCache:
         """
         assert pref.ref.revision, "Ask for a package layout only if the rrev is known"
         assert pref.revision, "Ask for a package layout only if the prev is known"
-        package_path = self.db.try_get_reference_directory(str(pref.ref), pref.ref.revision,
-                                                           pref.package_id, pref.revision)
+        package_path = self.db.try_get_reference_directory(ConanReference(pref))
         from conan.cache.package_layout import PackageLayout
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=True)
 
-    def get_or_create_reference_layout(self, ref: ConanFileReference) -> Tuple['RecipeLayout', bool]:
-        path = self.get_default_path(ref)
+    def get_or_create_reference_layout(self, ref: ConanReference) -> Tuple['RecipeLayout', bool]:
+        path = self.get_reference_path(ref)
 
         # Assign a random (uuid4) revision if not set
-        locked = bool(ref.revision)
-        if not ref.revision:
-            ref = ref.copy_with_rev(str(uuid.uuid4()))
+        locked = bool(ref.rrev)
+        if not ref.rrev:
+            ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, path,
+                                 ref.pkgid, ref.prev)
 
-        reference_path, created = self.db.get_or_create_reference(path, str(ref), ref.revision, None,
-                                                                  None)
+        reference_path, created = self.db.get_or_create_reference(path, ref)
         self._create_path(reference_path, remove_contents=created)
 
         from conan.cache.recipe_layout import RecipeLayout
@@ -98,18 +105,17 @@ class DataCache:
                             base_folder=reference_path,
                             locked=locked), created
 
-    def get_or_create_package_layout(self, pref: PackageReference) -> Tuple['PackageLayout', bool]:
-        package_path = self.get_default_path(pref)
+    def get_or_create_package_layout(self, pref: ConanReference) -> Tuple['PackageLayout', bool]:
+        package_path = self.get_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
-        locked = bool(pref.revision)
+        locked = bool(pref.prev)
         # if the package revision is not calculated yet, assign the uuid of the path as prev
-        if not pref.revision:
-            pref = pref.copy_with_revs(pref.ref.revision, package_path)
+        if not pref.prev:
+            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, package_path,
+                                 pref.pkgid, pref.prev)
 
-        package_path, created = self.db.get_or_create_reference(package_path, str(pref.ref),
-                                                                pref.ref.revision, pref.id,
-                                                                pref.revision)
+        package_path, created = self.db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
@@ -120,8 +126,7 @@ class DataCache:
                    move_reference_contents: bool = False) -> Optional[str]:
         self.db.update_reference(ConanReference(old_ref), ConanReference(new_ref))
         if move_reference_contents:
-            old_path = self.db.try_get_reference_directory(str(new_ref), new_ref.revision, None,
-                                                           None)
+            old_path = self.db.try_get_reference_directory(ConanReference(new_ref))
             new_path = self.get_default_path(new_ref)
             # TODO: Here we are always overwriting the contents of the rrev folder where
             #  we are putting the exported files for the reference, but maybe we could
@@ -143,8 +148,7 @@ class DataCache:
 
         self.db.update_reference(ConanReference(old_pref), ConanReference(new_pref))
         if move_package_contents:
-            old_path = self.db.try_get_reference_directory(str(new_pref.ref), new_pref.ref.revision,
-                                                           new_pref.id, new_pref.revision)
+            old_path = self.db.try_get_reference_directory(ConanReference(new_pref))
             new_path = self.get_default_path(new_pref)
             shutil.move(self._full_path(old_path), self._full_path(new_path))
             self.db.update_reference_directory(new_path, ConanReference(new_pref))
