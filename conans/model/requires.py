@@ -9,7 +9,13 @@ class Requirement:
     def __init__(self, ref, build_require=False):
         # TODO: Decompose build_require in its traits
         self.ref = ref
-        self.build_require = build_require
+        if build_require:
+            self.link = False
+            self.build = True
+        else:
+            self.link = True
+            self.build = False
+        self.run = None
 
     def __repr__(self):
         return repr(self.ref)
@@ -31,7 +37,9 @@ class Requirement:
         return hash(self.ref.name)
 
     def __eq__(self, other):
-        return self.ref.name == other.ref.name
+        return self.ref.name == other.ref.name and ((self.link and other.link) or
+                                                    (self.build and other.build) or
+                                                    (self.run and other.run))
 
     def __ne__(self, other):
         return not self.__eq__(other)

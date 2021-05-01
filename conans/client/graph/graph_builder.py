@@ -179,7 +179,7 @@ class DepsGraphBuilder(object):
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
-            if require.build_require:
+            if require.build:
                 profile = profile_build
                 context = CONTEXT_BUILD
             else:
@@ -305,7 +305,7 @@ class DepsGraphBuilder(object):
         # Assign the profiles depending on the context
         if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
             dep_conanfile.settings_build = profile_build.processed_settings.copy()
-            context_switch = (current_node.context == CONTEXT_HOST and requirement.build_require)
+            context_switch = (current_node.context == CONTEXT_HOST and requirement.build)
             if not context_switch:
                 if populate_settings_target:
                     # TODO: Check this, getting the settings from current doesn't seem right
