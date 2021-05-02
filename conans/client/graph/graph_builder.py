@@ -123,6 +123,8 @@ class DepsGraphBuilder(object):
 
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():
+            if require.override:
+                continue
             self._expand_require(require, node, graph, check_updates, update, remotes, profile_host,
                                  profile_build, new_reqs, new_options, graph_lock,
                                  context_switch=False)
