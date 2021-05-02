@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.model.ref import PackageReference
+from conans.model.requires import Requirement
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -33,11 +34,18 @@ class _TransitiveRequirement:
         self.require = require
         self.node = node
 
+    def __repr__(self):
+        return "Require: {}, Node: {}".format(repr(self.require),
+                                              repr(self.node))
+
 
 class _TransitiveRequirements:
     def __init__(self):
         # The PackageRelation hash function is the key here
         self._requires = OrderedDict()  # {require: Node}
+
+    def __repr__(self):
+        return repr(self._requires)
 
     def get(self, relation):
         return self._requires.get(relation)
@@ -84,12 +92,38 @@ class Node(object):
         return id(self) < id(other)
 
     def propagate_downstream(self, require, node):
+        up_shared = str(node.conanfile.options.get_safe("shared"))
+        if up_shared == "True":
+            require.run = True
+        elif up_shared == "False":
+            require.run = False
         self.transitive_deps.set(_TransitiveRequirement(require, node))
+
         return self.propagate_downstream_existing(require, node)
 
     def propagate_downstream_existing(self, require, node):
+        up_shared = str(node.conanfile.options.get_safe("shared"))
+        self_shared = str(self.conanfile.options.get_safe("shared"))
+        if up_shared is not None:
+            up_shared = eval(up_shared)
+        if self_shared is not None:  # FIXME: ugly
+            self_shared = eval(self_shared)
+        downstream_require = None
+        if up_shared:
+            if self_shared:
+                downstream_require = Requirement(require.ref, link=False, build=False, run=True)
+            elif self_shared is False:  # static
+                pass
+            # TODO: Header, App
+        elif up_shared is False:  # static
+            if self_shared:
+                pass
+            elif self_shared is False:  # static
+                downstream_require = Requirement(require.ref, link=True, build=False, run=False)
+        else:  # Unknown
+            downstream_require = require.transform_downstream(self)
+
         # Check if need to propagate downstream
-        downstream_require = require.transform_downstream(self)
         if downstream_require is None:
             return
 

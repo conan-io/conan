@@ -83,13 +83,10 @@ class DepsGraphBuilder(object):
                     # FIXME: converting back to string?
                     node.conanfile.requires(str(build_require), build_require=True)
 
-    def _expand_node(self, node, graph, down_ref, down_options, check_updates, update,
-                     remotes, profile_host, profile_build, graph_lock):
-
-        print("Expanding node", node)
+    def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
             graph_lock.pre_lock_node(node)
-        # basic node configuration: calling configure() and requirements()
+            # basic node configuration: calling configure() and requirements()
         new_options = self._config_node(node, down_ref, down_options)
 
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
@@ -98,6 +95,13 @@ class DepsGraphBuilder(object):
         self._add_profile_build_requires(node, profile_host, profile_build)
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
+
+        return new_options
+
+    def _expand_node(self, node, graph, down_ref, down_options, check_updates, update,
+                     remotes, profile_host, profile_build, graph_lock):
+
+        print("Expanding node", node)
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         # Resolve possible version ranges of the current node requirements
@@ -113,8 +117,8 @@ class DepsGraphBuilder(object):
             # TODO: if require.override:
             #     continue
             self._expand_require(require, node, graph, check_updates, update, remotes,
-                                 profile_host, profile_build, new_options,
-                                 graph_lock)
+                                 profile_host, profile_build,
+                                 graph_lock, down_ref, down_options)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -132,7 +136,7 @@ class DepsGraphBuilder(object):
                     require.ref = alias
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
-                        profile_build, new_options, graph_lock,
+                        profile_build, graph_lock, down_ref, down_options,
                         populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
@@ -207,6 +211,9 @@ class DepsGraphBuilder(object):
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
                                              recipe_status, remote, locked_id, profile_host,
                                              profile_build, populate_settings_target)
+
+            new_options = self._prepare_node(node, profile_host, profile_build, graph_lock,
+                                             down_ref, down_options)
 
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)

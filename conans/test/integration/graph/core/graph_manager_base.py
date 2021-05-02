@@ -51,12 +51,16 @@ class GraphManagerTest(unittest.TestCase):
                        binaries, generator_manager)
         return app
 
-    def recipe_cache(self, reference, requires=None):
+    def recipe_cache(self, reference, requires=None, option_shared=None):
         ref = ConanFileReference.loads(reference)
         conanfile = GenConanfile()
         if requires:
             for r in requires:
                 conanfile.with_require(r)
+        if option_shared is not None:
+            conanfile.with_option("shared", [True, False])
+            conanfile.with_default_option("shared", option_shared)
+
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
