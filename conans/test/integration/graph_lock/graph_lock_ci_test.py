@@ -373,8 +373,8 @@ class GraphLockCITest(unittest.TestCase):
         # PkgC/0.2
         client.save({"conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
                      def requirements(self):
-                         self.requires("PkgA/0.2@user/channel")
-                         self.requires("PkgB/0.3@user/channel")
+                         self.requires("PkgA/0.2@user/channel", override=True)
+                         self.requires("PkgB/0.3@user/channel", override=False)
                      """), "    ")),
                      "myfile.txt": "This is PkgC/0.2!"})
         client.run("export . PkgC/0.2@user/channel")
@@ -387,10 +387,10 @@ class GraphLockCITest(unittest.TestCase):
         # PkgE/0.1
         client.save({"conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
                      def requirements(self):
-                         self.requires("PkgA/0.3@user/channel")
-                         self.requires("PkgB/0.1@user/channel")
-                         self.requires("PkgC/0.2@user/channel")
-                         self.requires("PkgD/0.1@user/channel")
+                         self.requires("PkgA/0.3@user/channel", override=True)
+                         self.requires("PkgB/0.1@user/channel", override=True)
+                         self.requires("PkgC/0.2@user/channel", override=False)
+                         self.requires("PkgD/0.1@user/channel", override=False)
                      """), "    ")),
                      "myfile.txt": "This is PkgE/0.1!"})
         client.run("export . PkgE/0.1@user/channel")
