@@ -315,84 +315,99 @@ class GraphLockCITest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgA: ByeA World!!", client.out)
 
     def test_override(self):
-        r"""
-        The original (unresolved) graph shows the requirements how they are
-        specified in the original package recipes.  The graph contains
-        conflicts: There are three different versions of PkgA and two different
-        versions of PkgB.
-
-        Overridden (resolved) graph shows the requirements with resolved
-        requirements.  It contains only one version per package.  The
-        conflicting requirements have been overridden by PkgE.
-
-        Original (unresolved) graph:       :  Overridden (resolved) graph:
-        ============================       :  ============================
-                                           :
-        PkgA/0.1   PkgA/0.2    PkgA/0.3    :                       PkgA/0.3
-           |          |           |\____   :       __________________/|
-           |          |           |     \  :      /                   |
-        PkgB/0.1      |        PkgB/0.3 |  :  PkgB/0.1                |
-           |\____     | _________/      |  :     |\_______   ________/|
-           |     \    |/                |  :     |        \ /         |
-           |     | PkgC/0.2             |  :     |      PkgC/0.2      |
-           |     |    |                 |  :     |         |          |
-           |     |    |                 |  :     |         |          |
-        PkgD/0.1 |    |                 |  :  PkgD/0.1     |          |
-           | ___/____/_________________/   :     | _______/__________/
-           |/                              :     |/
-        PkgE/0.1                           :  PkgE/0.1
-        """
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
 
+        # The original (unresolved) graph shows the requirements how they are
+        # specified in the package recipes.  The graph contains conflicts:
+        # There are three different versions of PkgA and two different versions
+        # of PkgB.
+        #
+        # The overridden (resolved) graph shows the requirements after
+        # conflicts have been resolved by overriding required package versions
+        # in package PkgE.  This graph contains only one version per package.
+        #
+        # Original (unresolved) graph:       :  Overridden (resolved) graph:
+        # ============================       :  ============================
+        #                                    :
+        # PkgA/0.1   PkgA/0.2    PkgA/0.3    :                       PkgA/0.3
+        #    |          |           |\____   :       __________________/|
+        #    |          |           |     \  :      /                   |
+        # PkgB/0.1      |        PkgB/0.3 |  :  PkgB/0.1                |
+        #    |\____     | _________/      |  :     |\_______   ________/|
+        #    |     \    |/                |  :     |        \ /         |
+        #    |     | PkgC/0.2             |  :     |      PkgC/0.2      |
+        #    |     |    |                 |  :     |         |          |
+        #    |     |    |                 |  :     |         |          |
+        # PkgD/0.1 |    |                 |  :  PkgD/0.1     |          |
+        #    | ___/____/_________________/   :     | _______/__________/
+        #    |/                              :     |/
+        # PkgE/0.1                           :  PkgE/0.1
+
         # PkgA/0.1
-        client.save({"conanfile.py": conanfile.format(requires=""),
-                     "myfile.txt": "This is PkgA/0.1!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.1!",
+        })
         client.run("export . PkgA/0.1@user/channel")
 
         # PkgA/0.2
-        client.save({"conanfile.py": conanfile.format(requires=""),
-                     "myfile.txt": "This is PkgA/0.2!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.2!",
+        })
         client.run("export . PkgA/0.2@user/channel")
 
         # PkgA/0.3
-        client.save({"conanfile.py": conanfile.format(requires=""),
-                     "myfile.txt": "This is PkgA/0.3!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.3!",
+        })
         client.run("export . PkgA/0.3@user/channel")
 
         # PkgB/0.1
-        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
-                     "myfile.txt": "This is PkgB/0.1!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
+            "myfile.txt": "This is PkgB/0.1!",
+        })
         client.run("export . PkgB/0.1@user/channel")
 
         # PkgB/0.3
-        client.save({"conanfile.py": conanfile.format(requires='requires="PkgA/0.3@user/channel"'),
-                     "myfile.txt": "This is PkgB/0.3!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.3@user/channel"'),
+            "myfile.txt": "This is PkgB/0.3!",
+        })
         client.run("export . PkgB/0.3@user/channel")
 
         # PkgC/0.2
-        client.save({"conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
-                     def requirements(self):
-                         self.requires("PkgA/0.2@user/channel", override=True)
-                         self.requires("PkgB/0.3@user/channel", override=False)
-                     """), "    ")),
-                     "myfile.txt": "This is PkgC/0.2!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
+                def requirements(self):
+                    self.requires("PkgA/0.2@user/channel", override=True)
+                    self.requires("PkgB/0.3@user/channel", override=False)
+                """), "    ")),
+            "myfile.txt": "This is PkgC/0.2!",
+        })
         client.run("export . PkgC/0.2@user/channel")
 
         # PkgD/0.1
-        client.save({"conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"'),
-                     "myfile.txt": "This is PkgD/0.1!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"'),
+            "myfile.txt": "This is PkgD/0.1!",
+        })
         client.run("export . PkgD/0.1@user/channel")
 
         # PkgE/0.1
-        client.save({"conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
-                     def requirements(self):
-                         self.requires("PkgA/0.3@user/channel", override=True)
-                         self.requires("PkgB/0.1@user/channel", override=True)
-                         self.requires("PkgC/0.2@user/channel", override=False)
-                         self.requires("PkgD/0.1@user/channel", override=False)
-                     """), "    ")),
-                     "myfile.txt": "This is PkgE/0.1!"})
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.indent(textwrap.dedent("""
+                def requirements(self):
+                    self.requires("PkgA/0.3@user/channel", override=True)
+                    self.requires("PkgB/0.1@user/channel", override=True)
+                    self.requires("PkgC/0.2@user/channel", override=False)
+                    self.requires("PkgD/0.1@user/channel", override=False)
+                """), "    ")),
+            "myfile.txt": "This is PkgE/0.1!",
+        })
         client.run("export . PkgE/0.1@user/channel")
 
         client.run("lock create --reference=PkgE/0.1@user/channel --lockfile-out=master.lock")
@@ -431,8 +446,11 @@ class GraphLockCITest(unittest.TestCase):
             "PkgE/0.1@user/channel: DEP FILE PkgD: This is PkgD/0.1!",
             "PkgE/0.1@user/channel: SELF FILE: This is PkgE/0.1!",
         ]
-        self.assertListEqual(sorted(filtered_output), sorted(expected_output),
-            msg = "Original client output:\n%s" % client.out)
+        self.assertListEqual(
+            sorted(filtered_output),
+            sorted(expected_output),
+            msg = "Original client output:\n%s" % client.out,
+        )
 
     def test_options(self):
         conanfile = textwrap.dedent("""
