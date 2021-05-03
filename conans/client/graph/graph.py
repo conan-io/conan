@@ -35,8 +35,7 @@ class _TransitiveRequirement:
         self.node = node
 
     def __repr__(self):
-        return "Require: {}, Node: {}".format(repr(self.require),
-                                              repr(self.node))
+        return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
 
 
 class _TransitiveRequirements:
@@ -113,7 +112,8 @@ class Node(object):
             if self_shared:
                 downstream_require = Requirement(require.ref, link=False, build=False, run=True)
             elif self_shared is False:  # static
-                pass
+                # Consumers will need to find it at build time too
+                downstream_require = Requirement(require.ref, link=True, build=False, run=True)
             # TODO: Header, App
         elif up_shared is False:  # static
             if self_shared:
@@ -126,6 +126,13 @@ class Node(object):
         # Check if need to propagate downstream
         if downstream_require is None:
             return
+
+        if require.headers == "private":
+            downstream_require.headers = False
+        elif require.headers == "public":
+            downstream_require.headers = True
+        else:
+            downstream_require.headers = require.headers
 
         if not self.dependants:
             return

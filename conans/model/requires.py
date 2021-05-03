@@ -6,12 +6,13 @@ from conans.model.ref import ConanFileReference
 class Requirement:
     """ A user definition of a requires in a conanfile
     """
-    def __init__(self, ref, link=True, build=False, run=None):
+    def __init__(self, ref, link=True, build=False, run=None, headers="private"):
         # TODO: Decompose build_require in its traits
         self.ref = ref
         self.link = link
         self.build = build
         self.run = run
+        self.headers = headers
 
     def __repr__(self):
         return repr(self.ref)
