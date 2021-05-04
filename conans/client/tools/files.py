@@ -420,6 +420,7 @@ def dos2unix(filepath):
 
 
 def rename(src, dst):
+    # FIXME: Deprecated, use new interface from conan.tools
     """
     rename a file or folder to avoid "Access is denied" error on Windows
     :param src: Source file or folder
