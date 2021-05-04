@@ -90,23 +90,35 @@ class Node(object):
         # TODO: Remove this order, shouldn't be necessary
         return id(self) < id(other)
 
-    def propagate_downstream(self, require, node):
-        up_shared = str(node.conanfile.options.get_safe("shared"))
-        if up_shared == "True":
-            require.run = True
-        elif up_shared == "False":
-            require.run = False
+    def propagate_closing_loop(self, require, prev_node):
+        self.propagate_downstream(require, prev_node)
+        for transitive in prev_node.transitive_deps.values():
+            # TODO: possibly optimize in a bulk propagate
+            prev_node.propagate_downstream(transitive.require, transitive.node, self)
+
+    def propagate_downstream(self, require, node, prev_node=None):
+        # This sets the transitive_deps node if it was None (overrides)
         self.transitive_deps.set(_TransitiveRequirement(require, node))
 
-        return self.propagate_downstream_existing(require, node)
+        if not self.dependants:
+            return
 
-    def propagate_downstream_existing(self, require, node):
+        if prev_node:
+            d = [d for d in self.dependants if d.src is prev_node][0]
+        else:
+            assert len(self.dependants) == 1
+            d = self.dependants[0]
+
+        source_node = d.src
+        source_require = d.require
+
         up_shared = str(node.conanfile.options.get_safe("shared"))
         self_shared = str(self.conanfile.options.get_safe("shared"))
         if up_shared is not None:
             up_shared = eval(up_shared)
         if self_shared is not None:  # FIXME: ugly
             self_shared = eval(self_shared)
+
         downstream_require = None
         if up_shared:
             if self_shared:
@@ -123,22 +135,15 @@ class Node(object):
         else:  # Unknown
             downstream_require = require.transform_downstream(self)
 
+        if require.public:
+            if downstream_require is None:
+                downstream_require = Requirement(require.ref, link=False, build=False, run=False,
+                                                 public=True)
+
         # Check if need to propagate downstream
         if downstream_require is None:
             return
 
-        if require.headers == "private":
-            downstream_require.headers = False
-        elif require.headers == "public":
-            downstream_require.headers = True
-        else:
-            downstream_require.headers = require.headers
-
-        if not self.dependants:
-            return
-        assert len(self.dependants) == 1
-        d = self.dependants[0]
-        source_node = d.src
         return source_node.propagate_downstream(downstream_require, node)
 
     def check_downstream_exists(self, require):

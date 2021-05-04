@@ -6,13 +6,13 @@ from conans.model.ref import ConanFileReference
 class Requirement:
     """ A user definition of a requires in a conanfile
     """
-    def __init__(self, ref, link=True, build=False, run=None, headers="private"):
+    def __init__(self, ref, link=True, build=False, run=None, public=True):
         # TODO: Decompose build_require in its traits
         self.ref = ref
         self.link = link
         self.build = build
         self.run = run
-        self.headers = headers
+        self.public = public
 
     def __repr__(self):
         return repr(self.ref)
@@ -36,7 +36,8 @@ class Requirement:
     def __eq__(self, other):
         return self.ref.name == other.ref.name and ((self.link and other.link) or
                                                     (self.build and other.build) or
-                                                    (self.run and other.run))
+                                                    (self.run and other.run) or
+                                                    (self.public or other.public))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -77,7 +78,7 @@ class Requirements:
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
         if build_require:
-            req = Requirement(ref, link=False, build=True, run=False)
+            req = Requirement(ref, link=False, build=True, run=False, public=False)
         else:
             req = Requirement(ref)
         self._requires[req] = req

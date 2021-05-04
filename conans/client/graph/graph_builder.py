@@ -1,12 +1,11 @@
 import fnmatch
-import logging
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
     RECIPE_MISSING, RECIPE_CONSUMER
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
-from conans.model.requires import Requirements, BuildRequirements
+from conans.model.requires import BuildRequirements
 
 
 class DepsGraphBuilder(object):
@@ -59,6 +58,9 @@ class DepsGraphBuilder(object):
         if profile_build:
             root_node.conanfile.settings_build = profile_build.processed_settings.copy()
             root_node.conanfile.settings_target = None
+
+        new_options = self._prepare_node(root_node, profile_host, profile_build, graph_lock,
+                                         None, None)
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -212,8 +214,14 @@ class DepsGraphBuilder(object):
                                              recipe_status, remote, locked_id, profile_host,
                                              profile_build, populate_settings_target)
 
-            new_options = self._prepare_node(node, profile_host, profile_build, graph_lock,
+            new_options = self._prepare_node(new_node, profile_host, profile_build, graph_lock,
                                              down_ref, down_options)
+
+            up_shared = str(new_node.conanfile.options.get_safe("shared"))
+            if up_shared == "True":
+                require.run = True
+            elif up_shared == "False":
+                require.run = False
 
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)
@@ -224,12 +232,14 @@ class DepsGraphBuilder(object):
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
             print("Closing a loop from ", node, "=>", prev_node)
-            graph.add_edge(node, prev_node, require)
+            up_shared = str(prev_node.conanfile.options.get_safe("shared"))
+            if up_shared == "True":
+                require.run = True
+            elif up_shared == "False":
+                require.run = False
 
-            node.propagate_downstream(require, prev_node)
-            for transitive in prev_node.transitive_deps.values():
-                # TODO: possibly optimize in a bulk propagate
-                node.propagate_downstream_existing(transitive.require, transitive.node)
+            graph.add_edge(node, prev_node, require)
+            node.propagate_closing_loop(require, prev_node)
 
     @staticmethod
     def _conflicting_references(previous, new_ref, consumer_ref=None):

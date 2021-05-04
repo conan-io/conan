@@ -93,7 +93,7 @@ class TransitiveGraphTest(GraphManagerTest):
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb, libc], closure=[libb, libc, liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
     def test_consecutive_diamonds(self):
