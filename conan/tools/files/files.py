@@ -3,9 +3,9 @@ import os
 import platform
 import subprocess
 
-from client.tools import which
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
+from conans.client.tools import which
 from conans.client.tools.files import unzip
 from conans.client.downloaders.download import run_downloader
 
