@@ -38,8 +38,6 @@ def vs_layout(conanfile):
     conanfile.cpp.source.includedirs = ["."]
 
 
-# FIXME: Not sure about the location, interface, name etc.
-#        Do we want a public explicit FileCopier maybe? Review and suggest!
 class LayoutPackager(object):
 
     def __init__(self, conanfile):
