@@ -95,9 +95,10 @@ class GenConanfile(object):
             self.with_require(ref)
         return self
 
-    def with_requirement(self, ref, private=False, override=False):
+    def with_requirement(self, ref, private=False, override=False, transitive_headers=None,
+                         public=None):
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._requirements.append((ref_str, private, override))
+        self._requirements.append((ref_str, private, override, transitive_headers, public))
         return self
 
     def with_build_requires(self, *refs):
@@ -131,6 +132,9 @@ class GenConanfile(object):
     def with_default_option(self, option_name, value):
         self._default_options[option_name] = value
         return self
+
+    def with_shared_option(self, default=False):
+        return self.with_option("shared", [True, False]).with_default_option("shared", default)
 
     def with_package_file(self, file_name, contents=None, env_var=None, link=None):
         if not contents and not env_var:
@@ -279,16 +283,16 @@ class GenConanfile(object):
         if not self._requirements:
             return ""
 
-        lines = []
-        for ref, private, override in self._requirements:
+        lines = ["", "    def requirements(self):"]
+        for ref, private, override, trans_h, public in self._requirements:
             private_str = ", private=True" if private else ""
             override_str = ", override=True" if override else ""
-            lines.append('        self.requires("{}"{}{})'.format(ref, private_str, override_str))
+            transitive_h = ", transitive_headers={}".format(trans_h) if trans_h is not None else ""
+            public = ", public={}".format(public) if public is not None else ""
+            lines.append('        self.requires("{}"{}{}{}{})'.format(ref, private_str, override_str,
+                                                                      transitive_h, public))
 
-        return """
-    def requirements(self):
-{}
-        """.format("\n".join(lines))
+        return "\n".join(lines)
 
     @property
     def _package_method(self):

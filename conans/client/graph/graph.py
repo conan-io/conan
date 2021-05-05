@@ -104,10 +104,12 @@ class Node(object):
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
     def propagate_downstream(self, require, node, prev_node=None):
+        print("  Propagating downstream ", self, "<-", require)
         # This sets the transitive_deps node if it was None (overrides)
         self.transitive_deps.set(_TransitiveRequirement(require, node))
 
         if not self.dependants:
+            print("  No further dependants, stop propagate")
             return
 
         if prev_node:
@@ -129,26 +131,29 @@ class Node(object):
         downstream_require = None
         if up_shared:
             if self_shared:
-                downstream_require = Requirement(require.ref, link=False, build=False, run=True)
+                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             elif self_shared is False:  # static
                 # Consumers will need to find it at build time too
-                downstream_require = Requirement(require.ref, link=True, build=False, run=True)
+                downstream_require = Requirement(require.ref, include=False, link=True, run=True)
             # TODO: Header, App
         elif up_shared is False:  # static
             if self_shared:
                 pass
             elif self_shared is False:  # static
-                downstream_require = Requirement(require.ref, link=True, build=False, run=False)
+                downstream_require = Requirement(require.ref, include=False, link=True, run=False)
         else:  # Unknown
             downstream_require = require.transform_downstream(self)
 
         if require.public:
             if downstream_require is None:
-                downstream_require = Requirement(require.ref, link=False, build=False, run=False,
-                                                 public=True)
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+
+        if require.transitive_headers:
+            downstream_require.include = True
 
         # Check if need to propagate downstream
         if downstream_require is None:
+            print("  No downstream require, stopping propagate")
             return
 
         return source_node.propagate_downstream(downstream_require, node)

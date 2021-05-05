@@ -232,12 +232,7 @@ class DepsGraphBuilder(object):
             new_options = self._prepare_node(new_node, profile_host, profile_build, graph_lock,
                                              down_ref, down_options)
 
-            up_shared = str(new_node.conanfile.options.get_safe("shared"))
-            if up_shared == "True":
-                require.run = True
-            elif up_shared == "False":
-                require.run = False
-
+            require.compute_run(new_node)
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)
             node.propagate_downstream(require, new_node)
@@ -247,12 +242,7 @@ class DepsGraphBuilder(object):
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
             print("Closing a loop from ", node, "=>", prev_node)
-            up_shared = str(prev_node.conanfile.options.get_safe("shared"))
-            if up_shared == "True":
-                require.run = True
-            elif up_shared == "False":
-                require.run = False
-
+            require.compute_run(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
