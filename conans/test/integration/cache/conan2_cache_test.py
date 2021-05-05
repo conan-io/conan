@@ -58,9 +58,13 @@ class TestCache:
 
         client = TestClient()
 
-        client.run("new mypkg/1.0")
+        conanfile = GenConanfile().with_exports_sources("source.txt")
+        client.save({"conanfile.py": conanfile,
+                     "source.txt": "sources"})
+        client.run("create . mypkg/1.0@user/channel")
+        client.run("create . mypkg/1.0@user/channel")
 
-        client.run_command("open '{}'".format(client.cache_folder))
+        client.run("new mypkg/1.0")
 
         client.run("create .")
         client.run("create .")
