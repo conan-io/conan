@@ -2,7 +2,7 @@ import os
 import shutil
 import uuid
 from io import StringIO
-from typing import Optional, Tuple, Iterator
+from typing import Tuple, Iterator
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -114,7 +114,7 @@ class DataCache:
         # if the package revision is not calculated yet, assign the uuid of the path as prev
         if not pref.prev:
             pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, package_path,
-                                 pref.pkgid, pref.prev)
+                                  pref.pkgid, pref.prev)
 
         package_path, created = self.db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
@@ -123,7 +123,7 @@ class DataCache:
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=locked), created
 
-    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> Optional[str]:
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
         try:
@@ -131,7 +131,7 @@ class DataCache:
         except ReferencesDbTable.AlreadyExist:
             self.db.delete_ref_by_path(old_path)
             # TODO: fix this, update timestamp
-            self.db.update_reference(new_ref, new_ref, new_path=new_path)
+            self.db.update_reference(new_ref, new_ref)
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -146,18 +146,21 @@ class DataCache:
         self.db.update_reference_directory(new_path, new_ref)
         return new_path
 
-    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference,
-                   move_package_contents: bool = False) -> Optional[str]:
-        # TODO: Add a little bit of all-or-nothing aka rollback
+    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference) -> str:
+        old_path = self.db.try_get_reference_directory(old_pref)
+        new_path = self.get_or_create_reference_path(new_pref)
+        try:
+            self.db.update_reference(old_pref, new_pref, new_path=new_path)
+        except ReferencesDbTable.AlreadyExist:
+            self.db.delete_ref_by_path(old_path)
+            # TODO: fix this, update timestamp
+            self.db.update_reference(new_pref, new_pref)
 
-        self.db.update_reference(old_pref, new_pref)
-        if move_package_contents:
-            old_path = self.db.try_get_reference_directory(new_pref)
-            new_path = self.get_or_create_reference_path(new_pref)
-            shutil.move(self._full_path(old_path), self._full_path(new_path))
-            self.db.update_reference_directory(new_path, new_pref)
-            return new_path
-        return None
+        if os.path.exists(self._full_path(new_path)):
+            rmdir(self._full_path(new_path))
+        shutil.move(self._full_path(old_path), self._full_path(new_path))
+
+        return new_path
 
     def list_references(self, only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'

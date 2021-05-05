@@ -18,7 +18,7 @@ class PackageLayout(LockableMixin):
         self._package_folder = package_folder
         super().__init__(resource=self._pref.full_reference, **kwargs)
 
-    def assign_prev(self, pref: ConanReference, move_contents: bool = False):
+    def assign_prev(self, pref: ConanReference):
         assert pref.reference == self._pref.reference, "You cannot change the reference here"
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
         assert pref.prev, "It only makes sense to change if you are providing a revision"
@@ -31,7 +31,7 @@ class PackageLayout(LockableMixin):
             self._random_prev = False
 
             # Reassign PACKAGE folder in the database (BUILD is not moved)
-            new_directory = self._cache._move_prev(old_pref, self._pref, move_contents)
+            new_directory = self._cache._move_prev(old_pref, self._pref)
             if new_directory:
                 self._package_folder = new_directory
 

@@ -165,7 +165,7 @@ class _PackageBuilder(object):
         #update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
 
         pref = pref.copy_with_revs(pref.ref.revision, prev)
-        package_layout.assign_prev(ConanReference(pref), move_contents=True)
+        package_layout.assign_prev(ConanReference(pref))
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(conanfile.layout.base_package_folder)
