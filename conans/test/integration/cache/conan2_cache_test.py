@@ -60,6 +60,9 @@ class TestCache:
 
         client.run("new mypkg/1.0")
 
+        client.run_command("open '{}'".format(client.cache_folder))
+
+        client.run("create .")
         client.run("create .")
 
         client.save({"conanfile.py": conanfile,
