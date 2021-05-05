@@ -44,7 +44,11 @@ class CacheDatabase:
                 self._references.update(conn, ref_pk, new_ref, new_path)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(
-                    f"Reference '{new_ref.full_str()}' already exists")
+                    f"Reference '{new_ref.full_reference}' already exists")
+
+    def delete_ref_by_path(self, path):
+        with self.connect() as conn:
+            self._references.delete_by_path(conn, path)
 
     def update_reference_directory(self, path, ref):
         with self.connect() as conn:

@@ -137,7 +137,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    reference_layout.assign_rrev(ConanReference(ref), move_contents=True)
+    reference_layout.assign_rrev(ConanReference(ref))
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part

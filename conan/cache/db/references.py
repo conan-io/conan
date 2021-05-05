@@ -16,6 +16,7 @@ class ReferencesDbTable(BaseDbTable):
                            ('prev', str, True),
                            ('path', str, False, None, True),
                            ('timestamp', int)]
+    unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     class DoesNotExist(ConanException):
         pass
@@ -83,6 +84,12 @@ class ReferencesDbTable(BaseDbTable):
                 f"SET {set_clause} " \
                 f"WHERE rowid = ?;"
         r = conn.execute(query, (pk,))
+        return r.lastrowid
+
+    def delete_by_path(self, conn: sqlite3.Cursor, path):
+        query = f"DELETE FROM {self.table_name} " \
+                f"WHERE path = ?;"
+        r = conn.execute(query, (path,))
         return r.lastrowid
 
     def update_path_ref(self, conn: sqlite3.Cursor, pk: int, new_path):

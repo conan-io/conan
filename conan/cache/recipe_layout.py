@@ -18,7 +18,7 @@ class RecipeLayout(LockableMixin):
         self._base_folder = base_folder
         super().__init__(resource=self._ref.full_reference, **kwargs)
 
-    def assign_rrev(self, ref: ConanReference, move_contents: bool = False):
+    def assign_rrev(self, ref: ConanReference):
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
         assert ref.reference == self._ref.reference, "You cannot change reference name here"
         assert ref.rrev, "It only makes sense to change if you are providing a revision"
@@ -30,8 +30,8 @@ class RecipeLayout(LockableMixin):
             self._ref = ref
             self._locked = True
 
-            # Reassign folder in the database (only the recipe-folders)
-            new_path = self._cache._move_rrev(old_ref, self._ref, move_contents)
+            # Move temporal folder contents to final folder
+            new_path = self._cache._move_rrev(old_ref, self._ref)
             if new_path:
                 self._base_folder = new_path
 

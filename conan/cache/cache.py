@@ -9,6 +9,7 @@ from typing import Optional, Tuple, Iterator
 # TODO: We need the workflow to remove existing references.
 from conan.cache.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
+from conan.cache.db.references import ReferencesDbTable
 from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
@@ -122,25 +123,28 @@ class DataCache:
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=locked), created
 
-    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference,
-                   move_reference_contents: bool = False) -> Optional[str]:
-        self.db.update_reference(old_ref, new_ref)
-        if move_reference_contents:
-            old_path = self.db.try_get_reference_directory(new_ref)
-            new_path = self.get_or_create_reference_path(new_ref)
-            # TODO: Here we are always overwriting the contents of the rrev folder where
-            #  we are putting the exported files for the reference, but maybe we could
-            #  just check the the files in the destination folder are the same so we don't
-            #  have to do write operations (maybe other process is reading these files, this could
-            #  also be managed by locks anyway)
-            if os.path.exists(self._full_path(new_path)):
-                rmdir(self._full_path(new_path))
-            shutil.move(self._full_path(old_path), self._full_path(new_path))
-            # TODO: cache2.0 for all this methods go back to pass references and check if
-            #  are package or recipes
-            self.db.update_reference_directory(new_path, new_ref)
-            return new_path
-        return None
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> Optional[str]:
+        old_path = self.db.try_get_reference_directory(old_ref)
+        new_path = self.get_or_create_reference_path(new_ref)
+        try:
+            self.db.update_reference(old_ref, new_ref, new_path=new_path)
+        except ReferencesDbTable.AlreadyExist:
+            self.db.delete_ref_by_path(old_path)
+            # TODO: fix this, update timestamp
+            self.db.update_reference(new_ref, new_ref, new_path=new_path)
+
+        # TODO: Here we are always overwriting the contents of the rrev folder where
+        #  we are putting the exported files for the reference, but maybe we could
+        #  just check the the files in the destination folder are the same so we don't
+        #  have to do write operations (maybe other process is reading these files, this could
+        #  also be managed by locks anyway)
+        if os.path.exists(self._full_path(new_path)):
+            rmdir(self._full_path(new_path))
+        shutil.move(self._full_path(old_path), self._full_path(new_path))
+        # TODO: cache2.0 for all this methods go back to pass references and check if
+        #  are package or recipes
+        self.db.update_reference_directory(new_path, new_ref)
+        return new_path
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference,
                    move_package_contents: bool = False) -> Optional[str]:
