@@ -91,14 +91,28 @@ class DepsGraphBuilder(object):
     def _check_provides(dep_graph):
         for node in dep_graph.nodes:
             provides = {}
-            for n in node.transitive_deps.values():
-                for p in n.node.conanfile.provides:
-                    provides.setdefault(p, []).append(n)
-            for p, transitive in provides.items():
-                if len(transitive) > 1:
-                    node.conflict = (GraphError.PROVIDE_CONFLICT, [t.node for t in transitive])
-                    dep_graph.error = True
-                    return
+            for v in node.transitive_deps.values():
+                if not v.node.conanfile.provides:
+                    continue
+                for provide in v.node.conanfile.provides:
+                    new_req = v.require.copy()
+                    new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
+                                                     new_req.ref.channel, validate=False)
+                    existing = node.transitive_deps.get(new_req)
+                    if existing is not None:
+                        node.conflict = (GraphError.PROVIDE_CONFLICT, [existing.node, v.node])
+                        dep_graph.error = True
+                        return
+                    else:
+                        existing_provide = provides.get(new_req)
+                        if existing_provide is not None:
+                            node.conflict = (GraphError.PROVIDE_CONFLICT, [existing_provide.node,
+                                                                           v.node])
+                            dep_graph.error = True
+                            return
+                        else:
+                            provides[new_req] = v.node
+
 
     def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
@@ -177,6 +191,7 @@ class DepsGraphBuilder(object):
 
             if prev_node is None:  # Existing override
                 print("  Require was an override from ", base_previous, "=", prev_require)
+                print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
                 # TODO: resolve the override, version ranges, etc
                 require = prev_require
             else:

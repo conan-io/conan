@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from enum import Enum
 
+from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.model.requires import Requirement
 
@@ -60,6 +61,7 @@ class _TransitiveRequirements:
         self._requires[transitive.require] = transitive
 
     def set_empty(self, require):
+        # Necessary to define an override, node doesn't exist yet
         self._requires[require] = _TransitiveRequirement(require, None)
 
     def values(self):
@@ -118,8 +120,14 @@ class Node(object):
             assert len(self.dependants) == 1
             d = self.dependants[0]
 
+        if require.build:  # Build-requires do not propagate anything
+            return
+
         source_node = d.src
         source_require = d.require
+
+        #if source_require.build:  # Build-requires do not propagate anything
+        #    return
 
         up_shared = str(node.conanfile.options.get_safe("shared"))
         self_shared = str(self.conanfile.options.get_safe("shared"))
@@ -344,3 +352,23 @@ class DepsGraph(object):
             current = new_current
 
         return [n for n in self.nodes if n not in public_nodes]
+
+    def report_graph_error(self):
+        if self.error:
+            conflict_nodes = [n for n in self.nodes if n.conflict]
+            for node in conflict_nodes:  # At the moment there should be only 1 conflict at most
+                conflict = node.conflict
+                if conflict[0] == GraphError.LOOP:
+                    loop_ref = node.ref
+                    parent = node.dependants[0]
+                    parent_ref = parent.src.ref
+                    msg = "Loop detected in context host: '{}' requires '{}' which "\
+                          "is an ancestor too"
+                    msg = msg.format(parent_ref, loop_ref)
+                    raise ConanException(msg)
+                elif conflict[0] == GraphError.VERSION_CONFLICT:
+                    raise ConanException(
+                        "There was a version conflict building the dependency graph")
+                elif conflict[0] == GraphError.PROVIDE_CONFLICT:
+                    raise ConanException(
+                        "There was a provides conflict building the dependency graph")

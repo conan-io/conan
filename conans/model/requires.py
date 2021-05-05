@@ -21,6 +21,10 @@ class Requirement:
         return repr((self.ref, self.include, self.link, self.build, self.run, self.public,
                     self.transitive_headers))
 
+    def copy(self):
+        return Requirement(self.ref, self.include, self.link, self.build, self.run, self.public,
+                           self.transitive_headers)
+
     @property
     def version_range(self):
         """ returns the version range expression, without brackets []
@@ -46,14 +50,14 @@ class Requirement:
         return Requirement(self.ref)
 
     def __hash__(self):
-        return hash(self.ref.name)
+        return hash((self.ref.name, self.build))
 
     def __eq__(self, other):
-        return self.ref.name == other.ref.name and ((self.include and other.include) or
-                                                    (self.link and other.link) or
-                                                    (self.build and other.build) or
-                                                    (self.run and other.run) or
-                                                    (self.public or other.public))
+        return self.ref.name == other.ref.name and self.build == other.build and \
+               ((self.include and other.include) or
+                (self.link and other.link) or
+                (self.run and other.run) or
+                (self.public and other.public))
 
     def __ne__(self, other):
         return not self.__eq__(other)

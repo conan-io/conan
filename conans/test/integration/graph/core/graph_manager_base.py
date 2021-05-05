@@ -135,6 +135,7 @@ class GraphManagerTest(unittest.TestCase):
                                                   build_mode, check_updates, update, remotes,
                                                   recorder)
         if install:
+            deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app, recorder)
             build_mode = BuildMode(build_mode, app.out)
             binary_installer.install(deps_graph, None, build_mode, update, profile_host=profile_host,
