@@ -138,6 +138,11 @@ def test_from_old_cppinfo_components():
     # The names and filenames are not copied to the new model
     oldcppinfo.components["foo"].names["Gen"] = ["MyName"]
     oldcppinfo.filenames["Gen"] = ["Myfilename"]
+    oldcppinfo.components["foo"].build_modules = \
+        {"cmake_find_package_multi": ["foo_my_scripts.cmake"],
+         "cmake_find_package": ["foo.cmake"]}
+    oldcppinfo.components["foo2"].build_modules = \
+        {"cmake_find_package_multi": ["foo2_my_scripts.cmake"]}
 
     cppinfo = from_old_cppinfo(oldcppinfo)
 
@@ -149,11 +154,19 @@ def test_from_old_cppinfo_components():
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
                                                           "var2_{}_2".format(n)]
 
+    assert cppinfo.components["foo"].get_property("cmake_build_modules") == \
+           ["foo_my_scripts.cmake", "foo.cmake"]
+    assert cppinfo.components["foo2"].get_property("cmake_build_modules") == \
+           ["foo2_my_scripts.cmake"]
+
 
 def test_from_old_cppinfo_no_components():
     oldcppinfo = CppInfo("ref", "/root/")
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo, n, ["var_{}_1".format(n), "var_{}_2".format(n)])
+
+    oldcppinfo.build_modules = {"cmake_find_package": ["my_scripts.cmake", "foo.cmake"],
+                                "cmake_find_package_multi": ["my_scripts.cmake", "foo2.cmake"]}
 
     cppinfo = from_old_cppinfo(oldcppinfo)
 
@@ -161,6 +174,9 @@ def test_from_old_cppinfo_no_components():
 
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]
+
+    assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake", "foo.cmake",
+                                                           "foo2.cmake"]
 
 
 def test_fill_old_cppinfo():
@@ -171,6 +187,8 @@ def test_fill_old_cppinfo():
     build = NewCppInfo()
     build.libdirs = ["build_libdir"]
     build.frameworkdirs = []  # An empty list is an explicit delaration with priority too
+    build.set_property("cmake_build_modules", ["my_cmake.cmake"])
+    build.builddirs = ["my_build"]
 
     old_cpp = CppInfo("lib/1.0", "/root/folder")
     old_cpp.filter_empty = False
@@ -189,6 +207,8 @@ def test_fill_old_cppinfo():
     assert old_cpp.cxxflags == ["source_cxxflags"]
     assert old_cpp.cflags == ["package_cflags"]
     assert old_cpp.frameworkdirs == []
+    assert old_cpp.get_property("cmake_build_modules", "my_cmake.cmake")
+    assert old_cpp.builddirs == ["my_build"]
 
 
 def test_fill_old_cppinfo_simple():

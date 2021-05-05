@@ -237,6 +237,26 @@ def from_old_cppinfo(old):
     ret = NewCppInfo()
     ret.merge(old)
     ret.clear_none()
+
+    def _copy_build_modules_to_property(origin, dest):
+        if isinstance(origin.build_modules, list):
+            old_value = dest.get_property("cmake_build_modules") or []
+            old_value.extend([v for v in origin.build_modules if v not in old_value])
+            dest.set_property("cmake_build_modules", old_value)
+        else:
+            for generator_name, origin_value in origin.build_modules.items():
+                if "cmake" in generator_name.lower() or generator_name is None:
+                    old_value = dest.get_property("cmake_build_modules") or []
+                    old_value.extend([v for v in origin_value if v not in old_value])
+                    dest.set_property("cmake_build_modules", old_value)
+
+    # Copy the build modules as the new recommended property
+    if old.build_modules:
+        _copy_build_modules_to_property(old, ret)
+
+    for cname, c in old.components.items():
+        if c.build_modules:
+            _copy_build_modules_to_property(c, ret.components[cname])
     return ret
 
 
@@ -267,5 +287,5 @@ def fill_old_cppinfo(origin, old_cpp):
             if value is not None:
                 # Override the self.cpp_info value
                 setattr(old_cpp, varname, copy.copy(value))
-
-
+        if origin._generator_properties is not None:
+            old_cpp._generator_properties = copy.copy(origin._generator_properties)

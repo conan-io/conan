@@ -22,6 +22,7 @@ def setup_client_with_greetings():
     bye_cpp = gen_function_cpp(name="bye", includes=["bye"])
 
     conanfile_greetings = textwrap.dedent("""
+        import os
         from conans import ConanFile, CMake
 
         class GreetingsConan(ConanFile):
@@ -42,8 +43,12 @@ def setup_client_with_greetings():
                 self.copy("*.h", dst="include", src="src")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
+                tools.save(os.path.join(self.package_folder, "build", "my_cmake_functions.cmake"))
 
             def package_info(self):
+                self.cpp_info.components["hello"].buildirs = ["build"]
+                self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
+
                 if self.options.components == "standard":
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
