@@ -63,6 +63,10 @@ class GraphManagerTest(unittest.TestCase):
 
         self._put_in_cache(ref, conanfile)
 
+    def recipe_conanfile(self, reference, conanfile):
+        ref = ConanFileReference.loads(reference)
+        self._put_in_cache(ref, conanfile)
+
     def _put_in_cache(self, ref, conanfile):
         layout = self.cache.package_layout(ref)
         save(layout.conanfile(), str(conanfile))

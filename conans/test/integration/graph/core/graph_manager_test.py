@@ -1,4 +1,4 @@
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING, GraphError
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
@@ -225,15 +225,13 @@ class TransitiveGraphTest(GraphManagerTest):
         liba1 = libb.dependencies[0].dst
         liba2 = libc.dependencies[0].dst
         self._check_node(app, "app/0.1", deps=[libb, libc])
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
 
         self._check_node(liba1, "liba/0.1#123", dependents=[libb])
         # TODO: Conflicted without revision
         self._check_node(liba2, "liba/0.2", dependents=[libc])
-
-        assert liba1.conflict == liba2
-        assert liba2.conflict == liba1
 
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
@@ -262,7 +260,7 @@ class TransitiveGraphTest(GraphManagerTest):
         # TODO: Conflicted without revision
         self._check_node(libc2, "libc/0.1", dependents=[liba])
 
-        assert libc2.conflict == libc
+        assert libc2.conflict == (GraphError.LOOP, libc)
 
     '''
     def test_self_loop(self):

@@ -2,7 +2,8 @@ import fnmatch
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
-    RECIPE_MISSING, RECIPE_CONSUMER
+    RECIPE_MISSING, RECIPE_CONSUMER, GraphError
+
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
 from conans.model.requires import BuildRequirements
@@ -69,7 +70,8 @@ class DepsGraphBuilder(object):
                               update, remotes, profile_host, profile_build, graph_lock)
         except DepsGraphBuilder.StopRecursion:
             dep_graph.error = True
-
+        else:
+            self._check_provides(dep_graph)
         return dep_graph
 
     def _add_profile_build_requires(self, node, profile_host, profile_build):
@@ -84,6 +86,19 @@ class DepsGraphBuilder(object):
                 for build_require in build_requires:  # Do the override
                     # FIXME: converting back to string?
                     node.conanfile.requires(str(build_require), build_require=True)
+
+    @staticmethod
+    def _check_provides(dep_graph):
+        for node in dep_graph.nodes:
+            provides = {}
+            for n in node.transitive_deps.values():
+                for p in n.node.conanfile.provides:
+                    provides.setdefault(p, []).append(n)
+            for p, transitive in provides.items():
+                if len(transitive) > 1:
+                    node.conflict = (GraphError.PROVIDE_CONFLICT, [t.node for t in transitive])
+                    dep_graph.error = True
+                    return
 
     def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
@@ -155,7 +170,7 @@ class DepsGraphBuilder(object):
 
             if prev_require is None:  # Loop
                 loop_node = Node(require.ref, None, context=prev_node.context)
-                loop_node.conflict = prev_node
+                loop_node.conflict = GraphError.LOOP, prev_node
                 graph.add_node(loop_node)
                 graph.add_edge(node, loop_node, require)
                 raise DepsGraphBuilder.StopRecursion("Loop found")
@@ -177,8 +192,8 @@ class DepsGraphBuilder(object):
                     if conflict:
                         conflict_node = Node(require.ref, dep_conanfile, context=prev_node.context)
                         conflict_node.recipe = recipe_status
-                        conflict_node.conflict = prev_node
-                        prev_node.conflict = conflict_node
+                        base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
+                                                                               conflict_node]
                         graph.add_node(conflict_node)
                         graph.add_edge(node, conflict_node, require)
                         raise DepsGraphBuilder.StopRecursion("Unresolved reference")

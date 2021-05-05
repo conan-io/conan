@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from enum import Enum
 
 from conans.model.ref import PackageReference
 from conans.model.requires import Requirement
@@ -36,6 +37,12 @@ class _TransitiveRequirement:
 
     def __repr__(self):
         return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
+
+
+class GraphError(Enum):
+    LOOP = "Graph loop"
+    VERSION_CONFLICT = "version conflict"
+    PROVIDE_CONFLICT = "provide conflict"
 
 
 class _TransitiveRequirements:
