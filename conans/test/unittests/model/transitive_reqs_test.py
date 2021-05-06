@@ -97,7 +97,7 @@ class GraphTest(unittest.TestCase):
         profile = create_profile(profile=profile)
         root_conan = self.retriever.root(str(content), profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
-                                             profile_host=profile, profile_build=None)
+                                             profile_host=profile, profile_build=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
@@ -1483,7 +1483,7 @@ class ConsumerConan(ConanFile):
         profile = create_profile()
         root_conan = self.retriever.root(content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             profile_host=profile, profile_build=None)
+                                             profile_host=profile, profile_build=profile)
         return deps_graph
 
     def test_avoid_duplicate_expansion(self):
@@ -1867,7 +1867,7 @@ class ChatConan(ConanFile):
         profile = create_profile(profile=profile)
         root_conan = self.retriever.root(chat_content, profile)
         deps_graph = self.builder.load_graph(root_conan, False, False, None,
-                                             profile_host=profile, profile_build=None)
+                                             profile_host=profile, profile_build=profile)
 
         build_mode = BuildMode([], self.output)
         self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
