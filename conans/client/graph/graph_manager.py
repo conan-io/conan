@@ -52,9 +52,8 @@ class GraphManager(object):
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
         profile_host = self._cache.default_profile
         profile_host.process_settings(self._cache)
-        profile_build = None
-        name, version, user, channel = None, None, None, None
 
+        name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             conanfile = self._loader.load_consumer(conanfile_path,
@@ -62,10 +61,6 @@ class GraphManager(object):
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
-
-            if profile_build:
-                conanfile.settings_build = profile_build.processed_settings.copy()
-                conanfile.settings_target = None
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
@@ -245,7 +240,7 @@ class GraphManager(object):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
         """
-        default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
+        default_context = CONTEXT_BUILD
         self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
         if not apply_build_requires:
             return

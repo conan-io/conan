@@ -134,7 +134,6 @@ class ConanFile(object):
         self._conan_channel = channel
 
         self.compatible_packages = []
-        self._conan_using_build_profile = False
         self._conan_requester = None
 
         self.layout = Layout()
@@ -342,15 +341,14 @@ class ConanFile(object):
         if run_environment:
             # When using_build_profile the required environment is already applied through
             # 'conanfile.env' in the contextmanager 'get_env_context_manager'
-            with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
-                if OSInfo().is_macos and isinstance(command, str):
-                    # Security policy on macOS clears this variable when executing /bin/sh. To
-                    # keep its value, set it again inside the shell when running the command.
-                    command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
-                              (os.environ.get('DYLD_LIBRARY_PATH', ''),
-                               os.environ.get("DYLD_FRAMEWORK_PATH", ''),
-                               command)
-                retcode = _run()
+            if OSInfo().is_macos and isinstance(command, str):
+                # Security policy on macOS clears this variable when executing /bin/sh. To
+                # keep its value, set it again inside the shell when running the command.
+                command = 'DYLD_LIBRARY_PATH="%s" DYLD_FRAMEWORK_PATH="%s" %s' % \
+                          (os.environ.get('DYLD_LIBRARY_PATH', ''),
+                           os.environ.get("DYLD_FRAMEWORK_PATH", ''),
+                           command)
+            retcode = _run()
         else:
             retcode = _run()
 
