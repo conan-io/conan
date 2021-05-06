@@ -58,6 +58,16 @@ class TestCache:
 
         client = TestClient()
 
+        # conanfile = GenConanfile().with_exports_sources("source.txt")
+        # client.save({"conanfile.py": conanfile,
+        #              "source.txt": "sources"})
+        # client.run("create . mypkg/1.0@user/channel")
+        # client.run("create . mypkg/1.0@user/channel")
+
+        client.run("remote add conan-center https://center.conan.io")
+        client.run_command("open '{}'".format(client.cache_folder))
+        client.run("install zlib/1.2.11@ -r conan-center")
+
         conanfile = GenConanfile().with_exports_sources("source.txt")
         client.save({"conanfile.py": conanfile,
                      "source.txt": "sources"})

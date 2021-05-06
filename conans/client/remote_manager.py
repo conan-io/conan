@@ -5,6 +5,7 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
+from conan.cache.conan_reference import ConanReference
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
@@ -88,7 +89,7 @@ class RemoteManager(object):
         # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
         return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
 
-    def get_recipe(self, ref, remote):
+    def get_recipe(self, ref, remote, layout):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
@@ -96,20 +97,18 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        package_layout = self._cache.package_layout(ref)
-        package_layout.export_remove()
 
         ref = self._resolve_latest_ref(ref, remote)
 
+        layout.assign_rrev(ConanReference(ref))
+
         t1 = time.time()
-        download_export = package_layout.download_export()
+        download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        recipe_checksums = calc_files_checksum(zipped_files)
-
-        export_folder = package_layout.export()
+        export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
@@ -119,14 +118,12 @@ class RemoteManager(object):
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
         # Make sure that the source dir is deleted
-        rm_conandir(package_layout.source())
+        rm_conandir(layout.source())
         touch_folder(export_folder)
-        conanfile_path = package_layout.conanfile()
+        conanfile_path = layout.conanfile()
 
-        with package_layout.update_metadata() as metadata:
-            metadata.recipe.revision = ref.revision
-            metadata.recipe.checksums = recipe_checksums
-            metadata.recipe.remote = remote.name
+        # TODO: cache2.0: store the remote in the db? In 1.X we stored the remote in the metadata
+        #  at this point
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)

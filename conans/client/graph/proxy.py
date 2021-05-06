@@ -50,9 +50,10 @@ class ConanProxy(object):
             remote, new_ref = self._download_recipe(layout, ref, output, remotes, remotes.selected,
                                                     recorder)
             status = RECIPE_DOWNLOADED
+            conanfile_path = layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
-        # TODO: cache2.0: store the remote in the db?
+        # TODO: cache2.0: store the remote in the db? In 1.X we took the remote from the metadata
         # TODO: cache2.0: check with new --update flows
         cur_remote = None
         cur_remote = remotes[cur_remote] if cur_remote else None
@@ -95,10 +96,10 @@ class ConanProxy(object):
 
     def _download_recipe(self, layout, ref, output, remotes, remote, recorder):
 
-        def _retrieve_from_remote(the_remote):
+        def _retrieve_from_remote(the_remote, layout):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
-            _ref = self._remote_manager.get_recipe(ref, the_remote)
+            _ref = self._remote_manager.get_recipe(ref, the_remote, layout)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
@@ -118,7 +119,7 @@ class ConanProxy(object):
 
         if remote:
             try:
-                new_ref = _retrieve_from_remote(remote)
+                new_ref = _retrieve_from_remote(remote, layout)
                 return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
