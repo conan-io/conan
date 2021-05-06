@@ -57,7 +57,7 @@ int main(){
 """
 
 
-@pytest.mark.xfail("It is not possible to inject a host-build_require from profiles")
+@pytest.mark.xfail(reason="It is not possible to inject a host-build_require from profiles")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class BuildRequiresTest(unittest.TestCase):
