@@ -121,7 +121,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
         t.run("create mytoolchain.py --profile=profile_host")
 
         # old way, the toolchain will have the same profile (profile_host=Linux) only
-        t.run("create gtest.py --profile=profile_host")
+        t.run("create gtest.py --profile:host=profile_host --profile:build=profile_host")
         self.assertIn("gtest/1.0: Building with: MYTOOLCHAIN_VALUE-Linux", t.out)
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
 

@@ -144,12 +144,13 @@ def test_upper_option_txt(client):
 
 def test_cross_platform_msg(client):
     # Explicit with os_build and os_arch settings
-    client.run("install Hello0/0.1@lasote/stable -s os_build=Macos -s os=Windows", assert_error=True)
-    assert "Cross-build from 'Macos:x86_64' to 'Windows:None'" in client.out
+    client.run("install Hello0/0.1@lasote/stable -s:b os=Macos -s:h os=Windows", assert_error=True)
+    print(client.out)
+    assert "Cross-build from 'Macos:None' to 'Windows:None'" in client.out
     assert "ERROR: Missing binary: Hello0" in client.out
 
     bad_os = "Windows" if platform.system() != "Windows" else "Macos"
     client.run("install Hello0/0.1@lasote/stable -s os={}".format(bad_os), assert_error=True)
     # Implicit detection when not available (retrocompatibility)
-    message = "Cross-build from '{}:x86_64' to '{}:None'".format(detected_os(), bad_os)
+    message = "Cross-build from '{}:None' to '{}:None'".format(detected_os(), bad_os)
     assert message in client.out

@@ -3,6 +3,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.graph_lock import LOCKFILE
@@ -602,6 +603,8 @@ class CIPythonRequiresTest(unittest.TestCase):
 
 
 class CIBuildRequiresTest(unittest.TestCase):
+    @pytest.mark.xfail(reason="This test cannot pass until we have a way to build a build-require as"
+                              "build_require with a 'conan install'")
     def test_version_ranges(self):
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
@@ -634,8 +637,10 @@ class CIBuildRequiresTest(unittest.TestCase):
         self.assertIn("PkgD/0.1@user/channel: DEP FILE PkgC: HelloC", client.out)
 
         # Go back to main orchestrator
-        client.run("lock create --reference=PkgD/0.1@user/channel --build -pr=myprofile "
+        client.run("lock create --reference=PkgD/0.1@user/channel --build -pr:h=myprofile -pr:b=myprofile "
                    " --lockfile-out=conan.lock")
+
+        print(client.load("conan.lock"))
 
         # Do a change in br
         client.run("create br br/0.2@user/channel")
@@ -648,7 +653,7 @@ class CIBuildRequiresTest(unittest.TestCase):
         json_file = client.load("build_order.json")
         to_build = json.loads(json_file)
         build_order = [[['br/0.1@user/channel#f3367e0e7d170aa12abccb175fee5f97',
-                         '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '5']],
+                         '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'build', '5']],
                        [['PkgA/0.1@user/channel#189390ce059842ce984e0502c52cf736',
                          '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
                        [['PkgB/0.1@user/channel#fa97c46bf83849a5db4564327b3cfada',

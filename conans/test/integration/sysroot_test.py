@@ -16,9 +16,10 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": sysroot})
         client.run("create . sysroot/0.1@user/testing")
 
+        # TODO: sysroot is only from host context, not from a build_requires
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
-    build_requires = "sysroot/0.1@user/testing"
+    requires = "sysroot/0.1@user/testing"
     def build(self):
         self.output.info("PKG SYSROOT: %s" % self.deps_cpp_info.sysroot)
     def package_info(self):

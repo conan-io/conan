@@ -1,6 +1,8 @@
 import json
 import os
 
+import pytest
+
 from conans.model.graph_lock import GraphLockFile
 from conans.test.utils.tools import TestClient, GenConanfile
 
@@ -116,6 +118,8 @@ def test_basic():
     assert '"modified": true' not in lock2
 
 
+@pytest.mark.xfail(reason="This test cannot pass until we have a way to build a build-require as"
+                          "build_require with a 'conan install'")
 def test_build_requires():
     client = TestClient()
     client.save({"tool/conanfile.py": GenConanfile().with_settings("os"),
@@ -124,7 +128,7 @@ def test_build_requires():
                  "app1/conanfile.py": GenConanfile().with_settings("os").with_requires("pkgb/0.1"),
                  "app2/conanfile.py": GenConanfile().with_settings("os").with_requires("pkgb/0.2"),
                  "profile": "[build_requires]\ntool/0.1"})
-    client.run("export tool tool/0.1@")
+    client.run("create tool tool/0.1@")
     client.run("export pkga pkga/0.1@")
     client.run("export pkgb pkgb/0.1@")
     client.run("export pkgb pkgb/0.2@")
@@ -133,26 +137,26 @@ def test_build_requires():
     client.run("lock create --ref=app1/0.1 --base --lockfile-out=app1_base.lock")
     client.run("lock create --ref=app2/0.1 --base --lockfile-out=app2_base.lock")
 
-    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Windows --lockfile=app1_base.lock "
-               "--lockfile-out=app1_windows.lock --build=missing")
+    client.run("lock create --ref=app1/0.1 -pr:h=profile -s:h os=Windows -s:b os=Windows "
+               "--lockfile=app1_base.lock --lockfile-out=app1_windows.lock --build=missing")
     assert "tool/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build" in client.out
     assert "app1/0.1:3bcd6800847f779e0883ee91b411aad9ddd8e83c - Build" in client.out
     assert "pkga/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build" in client.out
     assert "pkgb/0.1:cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23 - Build" in client.out
-    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Linux  --lockfile=app1_base.lock "
-               "--lockfile-out=app1_linux.lock --build=missing")
+    client.run("lock create --ref=app1/0.1 -pr:h=profile -s:h os=Linux -s:b os=Linux "
+               "--lockfile=app1_base.lock --lockfile-out=app1_linux.lock --build=missing")
     assert "tool/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build" in client.out
     assert "app1/0.1:60fbb0a22359b4888f7ecad69bcdfcd6e70e2784 - Build" in client.out
     assert "pkga/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build" in client.out
     assert "pkgb/0.1:cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23 - Build" in client.out
-    client.run("lock create --ref=app2/0.1 -pr=profile -s os=Windows  --lockfile=app2_base.lock "
-               "--lockfile-out=app2_windows.lock --build=missing")
+    client.run("lock create --ref=app2/0.1 -pr=profile -s:b os=Windows -s:h os=Windows "
+               " --lockfile=app2_base.lock --lockfile-out=app2_windows.lock --build=missing")
     assert "tool/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build" in client.out
     assert "app2/0.1:0f886d82040d47739aa363db84eef5fe4c958c23 - Build" in client.out
     assert "pkga/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Build" in client.out
     assert "pkgb/0.2:cfd10f60aeaa00f5ca1f90b5fe97c3fe19e7ec23 - Build" in client.out
-    client.run("lock create --ref=app2/0.1 -pr=profile -s os=Linux  --lockfile=app2_base.lock "
-               "--lockfile-out=app2_linux.lock --build=missing")
+    client.run("lock create --ref=app2/0.1 -pr=profile -s:b os=Linux -s:h os=Linux  "
+               "--lockfile=app2_base.lock --lockfile-out=app2_linux.lock --build=missing")
     assert "tool/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build" in client.out
     assert "app2/0.1:156f38906bdcdceba1b26a206240cf199619fee1 - Build" in client.out
     assert "pkga/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build" in client.out
@@ -246,7 +250,7 @@ def test_build_requires_error():
     client.run("lock create --ref=app1/0.1 -pr=profile -s os=Windows "
                "--lockfile-out=app1_windows.lock --build=missing")
     assert "tool/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache" in client.out
-    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Linux "
+    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Linux -s:b os=Linux "
                "--lockfile-out=app1_linux.lock --build=missing")
     assert "tool/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache" in client.out
 

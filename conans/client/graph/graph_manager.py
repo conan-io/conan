@@ -78,6 +78,9 @@ class GraphManager(object):
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
+        assert profile_host is not None
+        assert profile_build is not None
+
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,

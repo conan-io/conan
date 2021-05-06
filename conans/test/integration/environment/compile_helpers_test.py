@@ -12,7 +12,7 @@ from conans import ConanFile
 
 class AConan(ConanFile):
     settings = "os"
-    requires = "Hello/0.1@lasote/testing"
+    build_requires = "Hello/0.1@lasote/testing"
 
     def build(self):
         self.run("SET" if self.settings.os=="Windows" else "env")
@@ -44,6 +44,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
 
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         self.client.run("build . --build=missing -pr scopes_env")
+        print(self.client.out)
         self.assertRegex(str(self.client.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")

@@ -242,7 +242,7 @@ class App(ConanFile):
         client.run("export . gtest/0.1@lasote/stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
-        client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile")
+        client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile -pr:b=myprofile")
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
                       client.out)
         self.assertIn("gtest/0.1@lasote/stable: GTEST PATH FOR BUILD mymingwpath",
