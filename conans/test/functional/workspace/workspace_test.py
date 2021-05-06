@@ -871,7 +871,7 @@ class Pkg(ConanFile):
             editables:
                 HelloB/0.1@lasote/stable:
                     path: B
-                    generators: [make, qmake]
+                    generators: [qmake]
                 HelloC/0.1@lasote/stable:
                     path: C
                 HelloA/0.1@lasote/stable:
@@ -893,8 +893,6 @@ class Pkg(ConanFile):
         self.assertIn("HelloB/0.1@lasote/stable from user folder - Editable", client.out)
         self.assertIn("HelloC/0.1@lasote/stable from user folder - Editable", client.out)
 
-        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
-                                                    "conanbuildinfo.mak")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "B",
                                                     "conanbuildinfo.pri")))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "C",

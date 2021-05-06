@@ -14,7 +14,6 @@ from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
-from .make import MakeGenerator
 from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
 from .qbs import QbsGenerator
@@ -50,7 +49,6 @@ class GeneratorManager(object):
                             "json": JsonGenerator,
                             "b2": B2Generator,
                             "premake": PremakeGenerator,
-                            "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
