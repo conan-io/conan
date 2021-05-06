@@ -63,13 +63,13 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
         # Check BUILD packages (default behavior changes if we use profile_build)
         cmake_application_build = application.dependencies[1].dst
         self.assertEqual(cmake_application_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_application_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
+        self.assertEqual(cmake_application_build.context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_application_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+                         profile_build.settings['os'])
 
         cmake_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(cmake_application_build, cmake_lib_build)
         self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_lib_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
+        self.assertEqual(cmake_lib_build.context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_lib_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+                         profile_build.settings['os'])

@@ -262,7 +262,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                     self.env_info.MYTOOLCHAIN_VAR = "MYTOOLCHAIN_VALUE-" + str(self.settings.os)
             """)
         t.save({'mytoolchain.py': toolchain})
-        t.run("create mytoolchain.py --profile=profile_build")
+        t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
         self.assertIn("mytoolchain/1.0: Building with: MYCREATOR_VALUE-Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
 

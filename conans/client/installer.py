@@ -560,10 +560,8 @@ class BinaryInstaller(object):
                 conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
                 conan_file.deps_env_info.update(n.conanfile.env_info, n.ref.name)
             else:
-                print("PROPAGATING NEW", node, "<-", n)
                 if n in transitive or n in br_host:
                     conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                    print("PROPAGATING NEW deps_cpp_info", node, "<-", n)
                     conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
                 else:
                     conan_file.user_info_build[n.ref.name] = n.conanfile.user_info

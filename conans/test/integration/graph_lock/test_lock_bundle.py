@@ -247,7 +247,7 @@ def test_build_requires_error():
     client.run("export pkga pkga/0.1@")
     client.run("export app1 app1/0.1@")
 
-    client.run("lock create --ref=app1/0.1 -pr=profile -s os=Windows "
+    client.run("lock create --ref=app1/0.1 -pr=profile -s:b os=Windows -s:h os=Windows "
                "--lockfile-out=app1_windows.lock --build=missing")
     assert "tool/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Cache" in client.out
     client.run("lock create --ref=app1/0.1 -pr=profile -s os=Linux -s:b os=Linux "

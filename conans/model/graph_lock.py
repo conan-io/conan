@@ -507,6 +507,7 @@ class GraphLock(object):
             locked_requires = locked_node.requires or []
 
         refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_) for id_ in locked_requires}
+
         for require in requires:
             try:
                 locked_ref, locked_id = refs[require.ref.name]
