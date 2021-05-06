@@ -17,7 +17,6 @@ from .json_generator import JsonGenerator
 from .make import MakeGenerator
 from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
-from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
@@ -38,7 +37,6 @@ class GeneratorManager(object):
                             "cmake_find_package": CMakeFindPackageGenerator,
                             "cmake_find_package_multi": CMakeFindPackageMultiGenerator,
                             "qmake": QmakeGenerator,
-                            "qbs": QbsGenerator,
                             "scons": SConsGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
