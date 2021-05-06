@@ -98,11 +98,6 @@ class GraphManager(object):
         """
         profile_host.dev_reference = create_reference  # Make sure the created one has develop=True
 
-        if isinstance(reference, list):  # Install workspace with multiple root nodes
-            conanfile = self._loader.load_virtual(reference, profile_host, scope_options=False)
-            # Locking in workspaces not implemented yet
-            return Node(ref=None, context=CONTEXT_HOST, conanfile=conanfile, recipe=RECIPE_VIRTUAL)
-
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
             return self._load_root_direct_reference(reference, graph_lock, profile_host,
