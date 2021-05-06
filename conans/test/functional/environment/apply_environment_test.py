@@ -470,7 +470,7 @@ import os
 from conans import ConanFile
 
 class Hello2Conan(ConanFile):
-    requires="Hello/0.1@lasote/stable"
+    build_requires="Hello/0.1@lasote/stable"
 
     def build(self):
         self.output.info("VAR1=>%s" % os.environ.get("VAR1"))
