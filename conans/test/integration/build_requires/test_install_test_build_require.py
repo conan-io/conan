@@ -66,8 +66,8 @@ def test_build_require_test_package(existing_br, build_profile, client):
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
-            settings = "os"
-            generators = "cmake_find_package"  # No find_package should be generated!
+            settings = "os", "build_type"
+            generators = "CMakeDeps"  # No find_package should be generated!
             test_type = "build_requires"
             {}
 
@@ -115,8 +115,8 @@ def test_both_types(existing_br, client):
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
-            settings = "os"
-            generators = "cmake_find_package"  # No find_package should be generated!
+            settings = "os", "build_type"
+            generators = "CMakeDeps"  # No find_package should be generated!
             test_type = "build_requires", "requires"
             {}
 

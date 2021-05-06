@@ -1,8 +1,6 @@
 import traceback
 from os.path import join
 
-from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
-from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -34,8 +32,6 @@ class GeneratorManager(object):
                             "cmake": CMakeGenerator,
                             "cmake_multi": CMakeMultiGenerator,
                             "cmake_paths": CMakePathsGenerator,
-                            "cmake_find_package": CMakeFindPackageGenerator,
-                            "cmake_find_package_multi": CMakeFindPackageMultiGenerator,
                             "qmake": QmakeGenerator,
                             "scons": SConsGenerator,
                             "xcode": XCodeGenerator,

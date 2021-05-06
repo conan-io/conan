@@ -10,7 +10,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         conanfile = textwrap.dedent("""
             [generators]
             cmake
-            cmake_find_package
+            CMakeDeps
             cmake
         """)
 
@@ -24,7 +24,8 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
             from conans import ConanFile
 
             class Recipe(ConanFile):
-                generators = "cmake", "cmake_find_package", "cmake"
+                settings = "build_type"
+                generators = "cmake", "CMakeDeps", "cmake"
         """)
         t = TestClient()
         t.save({'conanfile.py': conanfile})
@@ -39,7 +40,8 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
                 pass
 
             class BaseConan(object):
-                generators = "cmake", "cmake_find_package"
+
+                generators = "cmake", "CMakeDeps"
         """)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -47,8 +49,8 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
             class Recipe(ConanFile):
                 python_requires = "base/1.0"
                 python_requires_extend = "base.BaseConan"
-
-                generators = "cmake", "cmake_find_package"
+                settings = "build_type"
+                generators = "cmake", "CMakeDeps"
 
                 def init(self):
                     base = self.python_requires["base"].module.BaseConan
