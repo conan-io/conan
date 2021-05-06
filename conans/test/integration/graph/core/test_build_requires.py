@@ -1,6 +1,5 @@
 from parameterized import parameterized
 
-from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -55,7 +54,7 @@ class BuildRequiresGraphTest(GraphManagerTest):
                          dependents=[lib], closure=[])
 
     def test_transitive_build_require_recipe_profile(self):
-        # app -> lib -(br)-> gtest -(br)-> mingw
+        # app -> lib -(br)-> gtest
         # profile \---(br)-> mingw
         # app -(br)-> mingw
         mingw_ref = ConanFileReference.loads("mingw/0.1@user/testing")
@@ -71,11 +70,11 @@ class BuildRequiresGraphTest(GraphManagerTest):
                                                     .with_require(lib_ref),
                                       profile_build_requires=profile_build_requires)
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
         lib = app.dependencies[0].dst
         gtest = lib.dependencies[0].dst
-        mingw_gtest = gtest.dependencies[0].dst
+
         mingw_lib = lib.dependencies[1].dst
         mingw_app = app.dependencies[1].dst
 
@@ -84,11 +83,9 @@ class BuildRequiresGraphTest(GraphManagerTest):
 
         self._check_node(lib, "lib/0.1@user/testing#123", deps=[], build_deps=[mingw_lib, gtest],
                          dependents=[app], closure=[mingw_lib, gtest])
-        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[mingw_gtest],
-                         dependents=[lib], closure=[mingw_gtest])
+        self._check_node(gtest, "gtest/0.1@user/testing#123", deps=[], build_deps=[],
+                         dependents=[lib], closure=[])
         # MinGW leaf nodes
-        self._check_node(mingw_gtest, "mingw/0.1@user/testing#123", deps=[], build_deps=[],
-                         dependents=[gtest], closure=[])
         self._check_node(mingw_lib, "mingw/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[lib], closure=[])
         self._check_node(mingw_app, "mingw/0.1@user/testing#123", deps=[], build_deps=[],

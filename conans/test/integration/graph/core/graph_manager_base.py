@@ -122,13 +122,15 @@ class GraphManagerTest(unittest.TestCase):
         if profile_build_requires:
             profile.build_requires = profile_build_requires
         profile.process_settings(self.cache)
+        profile_build = Profile()
+        profile_build.process_settings(self.cache)
         update = check_updates = False
         recorder = ActionRecorder()
         remotes = Remotes()
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
-        deps_graph = app.graph_manager.load_graph(path, create_ref, profile, profile, None, ref,
+        deps_graph = app.graph_manager.load_graph(path, create_ref, profile, profile_build, None, ref,
                                                   build_mode, check_updates, update, remotes,
                                                   recorder)
         if install:
@@ -161,11 +163,3 @@ class GraphManagerTest(unittest.TestCase):
             self.assertEqual(conanfile.requires[dep.name].ref, dep.ref)
 
         self.assertEqual(closure, list(node.public_closure))
-        libs = []
-        envs = []
-        for n in closure:
-            libs.append("mylib%s%slib" % (n.ref.name, n.ref.version))
-            envs.append("myenv%s%senv" % (n.ref.name, n.ref.version))
-        self.assertListEqual(list(conanfile.deps_cpp_info.libs), libs)
-        env = {"MYENV": envs} if envs else {}
-        self.assertEqual(conanfile.deps_env_info.vars, env)
