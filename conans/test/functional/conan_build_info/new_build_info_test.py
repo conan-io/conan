@@ -46,6 +46,7 @@ def test_component_aggregation():
     cppinfo.components["c2"].frameworkdirs = ["frameworkdir_c2"]
     cppinfo.components["c2"].cxxflags = ["cxxflags_c2"]
     cppinfo.components["c2"].defines = ["defines_c2"]
+    cppinfo.components["c2"].set_property("my_foo", ["bar", "bar2"])
 
     cppinfo.components["c1"].requires = ["c2", "LIB_A::C1"]
     cppinfo.components["c1"].includedirs = ["includedir_c1"]
@@ -56,6 +57,8 @@ def test_component_aggregation():
     cppinfo.components["c1"].frameworkdirs = ["frameworkdir_c1"]
     cppinfo.components["c1"].cxxflags = ["cxxflags_c1"]
     cppinfo.components["c1"].defines = ["defines_c1"]
+    cppinfo.components["c1"].set_property("my_foo", "jander")
+    cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
 
     ret = cppinfo.copy()
     ret.aggregate_components()
@@ -68,6 +71,8 @@ def test_component_aggregation():
     assert ret.frameworkdirs == ["frameworkdir_c1", "frameworkdir_c2"]
     assert ret.cxxflags == ["cxxflags_c1", "cxxflags_c2"]
     assert ret.defines == ["defines_c1", "defines_c2"]
+    assert ret.get_property("my_foo") == ['bar', 'bar2']
+    assert ret.get_property("my_foo2", "other_gen") == "bar2"
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
@@ -82,10 +87,6 @@ def test_component_aggregation():
     assert ret.bindirs == ["bindir_c2", "bindir_c1"]
     assert ret.builddirs == ["builddir_c2", "builddir_c1"]
     assert ret.frameworkdirs == ["frameworkdir_c2", "frameworkdir_c1"]
-
-
-def norm(paths):
-    return [d.replace("\\", "/") for d in paths]
 
 
 @pytest.mark.parametrize("aggregate_first", [True, False])

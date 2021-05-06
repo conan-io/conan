@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 from jinja2 import Template
@@ -39,7 +40,7 @@ conan_package_library_targets = textwrap.dedent("""
            find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                         NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
            if(CONAN_FOUND_LIBRARY)
-               conan_message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+               conan_message(DEBUG "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                # Create a micro-target for each lib/a found
@@ -53,7 +54,7 @@ conan_package_library_targets = textwrap.dedent("""
                    conan_message(STATUS "Skipping already existing target: ${_LIB_NAME}")
                endif()
                list(APPEND _out_libraries_target ${_LIB_NAME})
-               conan_message(STATUS "Found: ${CONAN_FOUND_LIBRARY}")
+               conan_message(DEBUG "Found: ${CONAN_FOUND_LIBRARY}")
            else()
                conan_message(ERROR "Library ${_LIBRARY_NAME} not found in package")
            endif()
@@ -134,10 +135,10 @@ endforeach()
 set({name}_LIBRARIES_TARGETS{build_type_suffix} "${{{name}_LIBRARIES_TARGETS{build_type_suffix}}};{deps_names}")
 set({name}_LIBRARIES{build_type_suffix} "${{{name}_LIBRARIES{build_type_suffix}}};{deps_names}")
 
-
 # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
 set(CMAKE_MODULE_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_MODULE_PATH}})
 set(CMAKE_PREFIX_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_PREFIX_PATH}})
+
 """
 
 
@@ -231,7 +232,6 @@ class CMakeDeps(object):
         include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
 
         {target_props_block}
-        {build_modules_block}
         {find_dependencies_block}
         """)
 
@@ -281,7 +281,7 @@ set_property(TARGET {{name}}::{{name}}
              {%- endfor %})
     """)
 
-    build_modules = Template("""
+    build_modulesBORRAR = Template("""
 # Build modules
 {%- for config in configs %}
 foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
@@ -316,6 +316,14 @@ endforeach()
         """)
 
     components_variables_tpl = Template(textwrap.dedent("""\
+        ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
+        #############################################################################################
+
+        set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ pkg_components }})
+        list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
+        set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ public_deps }})
+        list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
+
         ########### VARIABLES #######################################################################
         #############################################################################################
 
@@ -337,7 +345,6 @@ endforeach()
         set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ build_type }} {{ comp.system_libs }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ build_type }} {{ comp.framework_paths }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ build_type }} {{ comp.frameworks }})
-        set({{ pkg_name }}_{{ comp_name }}_BUILD_MODULES_PATHS_{{ build_type }} {{ comp.build_modules_paths }})
         set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES_{{ build_type }} {{ comp.public_deps }})
         set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_{{ build_type }}
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
@@ -348,10 +355,6 @@ endforeach()
     """))
 
     components_dynamic_variables_tpl = Template(textwrap.dedent("""\
-        ########## MACROS ###########################################################################
-        #############################################################################################
-        include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
-
         ########### VARIABLES #######################################################################
         #############################################################################################
 
@@ -378,21 +381,33 @@ endforeach()
         set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }})
 
         {%- endfor %}
-        """))
 
-    components_targets_tpl = Template(textwrap.dedent("""\
+
+                {%- macro tvalue(pkg_name, comp_name, var, build_type) -%}
+        {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+build_type.upper()+'}'}}
+        {%- endmacro -%}
         {%- for comp_name, comp in components %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ comp_name }})
-            add_library({{ pkg_name }}::{{ comp_name }} INTERFACE IMPORTED)
-        endif()
+        ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
+        conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ comp_name }}'")
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
+                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', build_type)}}
+                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', build_type)}}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', build_type)}}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', build_type)}}>)
+        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
+                     $<$<CONFIG:{{build_type}}>:
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', build_type)}}
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', build_type)}}>)
+        set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}
 
-        if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-            add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
-        endif()
+        """))
 
+    components_targets_tpl = Template(textwrap.dedent("""\
         # Load the debug and release variables
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
         file(GLOB DATA_FILES "${_DIR}/{{ pkg_filename }}-*-data.cmake")
@@ -400,6 +415,17 @@ endforeach()
         foreach(f ${DATA_FILES})
             include(${f})
         endforeach()
+
+        # Create the targets for all the components
+        foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
+            if(NOT TARGET {{ '${_COMPONENT}' }})
+                add_library({{ '${_COMPONENT}' }} INTERFACE IMPORTED)
+            endif()
+        endforeach()
+
+        if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
+            add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+        endif()
 
         # Load the debug and release library finders
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
@@ -429,53 +455,19 @@ endforeach()
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
+        include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
         include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_filename }}Targets.cmake)
-
-        ########## FIND PACKAGE DEPENDENCY ##########################################################
-        #############################################################################################
-
         include(CMakeFindDependencyMacro)
 
-        {%- for public_dep in pkg_public_deps %}
+        foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
+            if(NOT {{ '${_DEPENDENCY}' }}_FOUND)
+                find_dependency({{ '${_DEPENDENCY}' }} REQUIRED NO_MODULE)
+            endif()
+        endforeach()
 
-        if(NOT {{ public_dep }}_FOUND)
-            find_dependency({{ public_dep }} REQUIRED NO_MODULE)
-        endif()
-
-        {%- endfor %}
-
-        ########## TARGETS PROPERTIES ###############################################################
-        #############################################################################################
-        {%- macro tvalue(pkg_name, comp_name, var, config) -%}
-        {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
-        {%- endmacro -%}
-
-        {%- for comp_name, comp in components %}
-
-        ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
-        conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ comp_name }}'")
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     {%- for config in configs %}
-                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
-                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config)}}>
-                     {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     {%- for config in configs %}
-                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config)}}>
-                     {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     {%- for config in configs %}
-                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config)}}>
-                     {%- endfor %})
-        set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                     {%- for config in configs %}
-                     $<$<CONFIG:{{config}}>:
-                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config)}}
-                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', config)}}>
-                     {%- endfor %})
-        set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
-
-        {%- endfor %}
+        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS_' + build_type + '}' }} )
+            include({{ '${_BUILD_MODULE}' }})
+        endforeach()
 
         ########## GLOBAL TARGET PROPERTIES #########################################################
 
@@ -487,21 +479,6 @@ endforeach()
                          {%- endfor %})
         endif()
 
-        ########## BUILD MODULES ####################################################################
-        #############################################################################################
-
-        {%- for comp_name, comp in components %}
-
-        ########## COMPONENT {{ comp_name }} BUILD MODULES ##########################################
-
-        {%- for config in configs %}
-
-        foreach(_BUILD_MODULE_PATH {{ '${'+pkg_name+'_'+comp_name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
-            include(${_BUILD_MODULE_PATH})
-        endforeach()
-        {%- endfor %}
-
-        {%- endfor %}
         """))
 
     def __init__(self, conanfile):
@@ -628,7 +605,7 @@ endforeach()
                 variables = {
                     self._data_filename(pkg_filename):
                         self.components_variables_tpl.render(
-                         package_folder=pfolder,
+                         package_folder=pfolder, public_deps=" ".join(pkg_public_deps_filenames),
                          pkg_name=pkg_target_name, global_variables=global_variables,
                          pkg_components=pkg_components, build_type=build_type, components=components)
                 }
@@ -656,9 +633,14 @@ endforeach()
                     pkg_filename=pkg_filename,
                     components=components,
                     pkg_public_deps=pkg_public_deps_filenames,
-                    configs=self.configurations
+                    build_type=build_type.upper()
                 )
-                ret[self._config_filename(pkg_filename)] = target_config
+                # Check if the XXConfig.cmake exists to keep the first generated configuration
+                # to only include the build_modules from the first conan install. The rest of the
+                # file is common for the different configurations.
+                config_file_path = self._config_filename(pkg_filename)
+                if not os.path.exists(config_file_path):
+                    ret[config_file_path] = target_config
         return ret
 
     @staticmethod
@@ -679,8 +661,6 @@ endforeach()
         # Builds the XXXConfig.cmake file for one package
         # Define the targets properties
         targets_props = self.target_properties.render(name=name, configs=self.configurations)
-        # Add build modules
-        build_modules_block = self.build_modules.render(name=name, configs=self.configurations)
         # The find_dependencies_block
         find_dependencies_block = ""
         if public_deps_names:
@@ -690,7 +670,6 @@ endforeach()
         tmp = self.config_template.format(name=name, version=version,
                                           filename=filename,
                                           target_props_block=targets_props,
-                                          build_modules_block=build_modules_block,
                                           find_dependencies_block=find_dependencies_block)
         return tmp
 

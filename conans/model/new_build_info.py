@@ -159,6 +159,7 @@ class NewCppInfo(object):
 
     def aggregate_components(self):
         """Aggregates all the components as global values"""
+
         if self.has_components:
             components = self.get_sorted_components()
             cnames = list(components.keys())
@@ -176,6 +177,15 @@ class NewCppInfo(object):
                         if dest is None:
                             setattr(self.components[None], n, [])
                         dest += [i for i in getattr(component, n) if i not in dest]
+                # Aggregate the properties
+                if component._generator_properties:
+                    if self.components[None]._generator_properties is None:
+                        self.components[None]._generator_properties = {}
+                    for gen_name, properties in component._generator_properties.items():
+                        # The same property is overwritten if declared twice
+                        self.components[None]._generator_properties.\
+                            setdefault(gen_name, {}).update(properties)
+
 
                 if component.requires:
                     if self.components[None].requires is None:
