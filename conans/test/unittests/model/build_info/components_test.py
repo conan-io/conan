@@ -414,3 +414,18 @@ class CppInfoComponentsTest(unittest.TestCase):
         self.assertListEqual([os.path.join(folder, "include")], list(deps_cpp_info.include_paths))
         self.assertListEqual([os.path.join(folder, "include")],
                              list(deps_cpp_info["my_lib"].components["Component"].include_paths))
+
+    def test_deps_cpp_info_components_includedirs(self):
+        folder = temp_folder()
+        info = CppInfo("my_lib", folder)
+        # Create files so paths are not cleared
+        save(os.path.join(folder, "lib", "kk.lib"), "")
+        save(os.path.join(folder, "include", "kk.h"), "")
+        info.components["component"].includedirs = ["lib", "include"]
+        dep_info = DepCppInfo(info)
+        expected = [os.path.join(folder, "lib"), os.path.join(folder, "include")]
+        self.assertListEqual(expected, list(dep_info.include_paths))
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.add("my_lib", dep_info)
+        expected = [os.path.join(folder, "lib"), os.path.join(folder, "include")]
+        self.assertListEqual(expected, list(deps_cpp_info.includedirs))

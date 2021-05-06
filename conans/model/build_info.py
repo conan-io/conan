@@ -560,10 +560,13 @@ class DepCppInfo(object):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
-        values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
+            values = getattr(self._cpp_info, item)
+            values.clear()  # Get only the value type to be able to aggregate it
             for component in self._get_sorted_components().values():
                 values = agg_func(values, getattr(component, item))
+        else:
+            values = getattr(self._cpp_info, item)
         setattr(self, "_%s" % item, values)
         return values
 
