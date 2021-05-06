@@ -121,7 +121,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
         reuse = textwrap.dedent("""
             from conans import ConanFile
             class HelloConan(ConanFile):
-                requires = "Pkg/0.1@lasote/testing"
+                build_requires = "Pkg/0.1@lasote/testing"
 
                 def build(self):
                     self.run("say_hello", run_environment=True)

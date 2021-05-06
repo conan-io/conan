@@ -155,7 +155,8 @@ class CustomSettingsTest(unittest.TestCase):
             set(CMAKE_EXE_LINKER_FLAGS_MYRELEASE ${CMAKE_EXE_LINKER_FLAGS_RELEASE})
             """)
         self.client.save({"src/CMakeLists.txt": cmake})
-        self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease")
+        self.client.run("create . hello/0.1@ -s compiler.version=15 -s build_type=MyRelease "
+                        "-s:b build_type=MyRelease")
 
         # Prepare the actual consumer package
         self.client.save({"conanfile.py": self.conanfile,
@@ -169,12 +170,13 @@ class CustomSettingsTest(unittest.TestCase):
                     "build_type": "MyRelease",
                     }
 
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+        settings_h = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items())
+        settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings.items())
 
         # Run the configure corresponding to this test case
         build_directory = os.path.join(self.client.current_folder, "build").replace("\\", "/")
         with self.client.chdir(build_directory):
-            self.client.run("install .. %s" % settings)
+            self.client.run("install .. %s %s" % (settings_h, settings_b))
             self.assertTrue(os.path.isfile(os.path.join(self.client.current_folder,
                                                         "helloTarget-myrelease.cmake")))
 
