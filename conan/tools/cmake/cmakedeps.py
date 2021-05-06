@@ -281,15 +281,6 @@ set_property(TARGET {{name}}::{{name}}
              {%- endfor %})
     """)
 
-    build_modulesBORRAR = Template("""
-# Build modules
-{%- for config in configs %}
-foreach(_BUILD_MODULE_PATH {{ '${'+name+'_BUILD_MODULES_PATHS_'+config.upper()+'}' }})
-    include(${_BUILD_MODULE_PATH})
-endforeach()
-{%- endfor %}
-    """)
-
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
     config_version_template = textwrap.dedent("""
         set(PACKAGE_VERSION "{version}")
@@ -572,75 +563,56 @@ endforeach()
             ret[self._config_version_filename(pkg_filename)] = config_version
             pfolder = req.package_folder.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
 
-            if not req.new_cpp_info.has_components:
-                deps = DepsCppCmake(req.new_cpp_info, pkg_target_name, self.name)
-                var_tmpl = variables_template.format(name=pkg_target_name, deps=deps,
-                                                     package_folder=pfolder,
-                                                     build_type_suffix=build_type_suffix)
-                ret[self._data_filename(pkg_filename)] = var_tmpl
-                dtmp = dynamic_variables_template.format(name=pkg_target_name,
+            components = self._get_components(req, host_requires)
+            # Note these are in reversed order, from more dependent to less dependent
+            pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
+                                       comp_findname, _ in reversed(components)])
+            global_cppinfo = req.new_cpp_info.copy()
+            global_cppinfo.aggregate_components()
+            deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
+            global_variables = variables_template.format(name=pkg_target_name, deps=deps,
+                                                         package_folder=pfolder,
                                                          build_type_suffix=build_type_suffix,
                                                          deps_names=dep_target_names)
-                ret["{}Target-{}.cmake".format(pkg_filename, self.configuration.lower())] = dtmp
-                ret[self._config_filename(pkg_filename)] = self._config(
-                    filename=pkg_filename,
-                    name=pkg_target_name,
-                    version=req.ref.version,
-                    public_deps_names=pkg_public_deps_filenames
-                )
-                ret["{}Targets.cmake".format(pkg_filename)] = self.targets_template.format(
-                    filename=pkg_filename, name=pkg_target_name)
-            else:
-                components = self._get_components(req, host_requires)
-                # Note these are in reversed order, from more dependent to less dependent
-                pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
-                                           comp_findname, _ in reversed(components)])
-                global_cppinfo = req.new_cpp_info.copy()
-                global_cppinfo.aggregate_components()
-                deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
-                global_variables = variables_template.format(name=pkg_target_name, deps=deps,
-                                                             package_folder=pfolder,
-                                                             build_type_suffix=build_type_suffix,
-                                                             deps_names=dep_target_names)
-                variables = {
-                    self._data_filename(pkg_filename):
-                        self.components_variables_tpl.render(
-                         package_folder=pfolder, public_deps=" ".join(pkg_public_deps_filenames),
-                         pkg_name=pkg_target_name, global_variables=global_variables,
-                         pkg_components=pkg_components, build_type=build_type, components=components)
-                }
-                ret.update(variables)
-                global_dynamic_variables = dynamic_variables_template.format(
-                                            name=pkg_target_name,
-                                            build_type_suffix=build_type_suffix,
-                                            deps_names=dep_target_names)
-                dynamic_variables = {
-                    "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
-                    self.components_dynamic_variables_tpl.render(
-                        pkg_name=pkg_target_name, global_dynamic_variables=global_dynamic_variables,
-                        pkg_components=pkg_components, build_type=build_type, components=components)
-                }
-                ret.update(dynamic_variables)
-                targets = self.components_targets_tpl.render(
-                    pkg_name=pkg_target_name,
-                    pkg_filename=pkg_filename,
-                    components=components,
-                    build_type=build_type
-                )
-                ret["{}Targets.cmake".format(pkg_filename)] = targets
-                target_config = self.components_config_tpl.render(
-                    pkg_name=pkg_target_name,
-                    pkg_filename=pkg_filename,
-                    components=components,
-                    pkg_public_deps=pkg_public_deps_filenames,
-                    build_type=build_type.upper()
-                )
-                # Check if the XXConfig.cmake exists to keep the first generated configuration
-                # to only include the build_modules from the first conan install. The rest of the
-                # file is common for the different configurations.
-                config_file_path = self._config_filename(pkg_filename)
-                if not os.path.exists(config_file_path):
-                    ret[config_file_path] = target_config
+            variables = {
+                self._data_filename(pkg_filename):
+                    self.components_variables_tpl.render(
+                     package_folder=pfolder, public_deps=" ".join(pkg_public_deps_filenames),
+                     pkg_name=pkg_target_name, global_variables=global_variables,
+                     pkg_components=pkg_components, build_type=build_type, components=components)
+            }
+            ret.update(variables)
+            global_dynamic_variables = dynamic_variables_template.format(
+                                        name=pkg_target_name,
+                                        build_type_suffix=build_type_suffix,
+                                        deps_names=dep_target_names)
+            dynamic_variables = {
+                "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
+                self.components_dynamic_variables_tpl.render(
+                    pkg_name=pkg_target_name, global_dynamic_variables=global_dynamic_variables,
+                    pkg_components=pkg_components, build_type=build_type, components=components)
+            }
+            ret.update(dynamic_variables)
+            targets = self.components_targets_tpl.render(
+                pkg_name=pkg_target_name,
+                pkg_filename=pkg_filename,
+                components=components,
+                build_type=build_type
+            )
+            ret["{}Targets.cmake".format(pkg_filename)] = targets
+            target_config = self.components_config_tpl.render(
+                pkg_name=pkg_target_name,
+                pkg_filename=pkg_filename,
+                components=components,
+                pkg_public_deps=pkg_public_deps_filenames,
+                build_type=build_type.upper()
+            )
+            # Check if the XXConfig.cmake exists to keep the first generated configuration
+            # to only include the build_modules from the first conan install. The rest of the
+            # file is common for the different configurations.
+            config_file_path = self._config_filename(pkg_filename)
+            if not os.path.exists(config_file_path):
+                ret[config_file_path] = target_config
         return ret
 
     @staticmethod
