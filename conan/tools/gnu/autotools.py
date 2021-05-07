@@ -63,7 +63,7 @@ class Autotools(object):
                                                        cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)"""
 
-        make_program = self._conanfile.conf["tools.gnu"].make_program
+        make_program = self._conanfile.conf["tools.gnu:make_program"]
         if make_program is None:
             make_program = "mingw32-make" if use_win_mingw(self._conanfile) else "make"
         # Need to activate the buildenv if existing

@@ -183,7 +183,7 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualenv import VirtualEnv
             env = VirtualEnv(conanfile)
