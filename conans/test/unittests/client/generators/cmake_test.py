@@ -305,20 +305,6 @@ endmacro()""", macro)
         self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
         self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
 
-    def test_cmake_find_package_multi_definitions(self):
-        # CMAKE_PREFIX_PATH and CMAKE_MODULE_PATH must be in cmake_find_package_multi definitions
-
-        settings_mock = _MockSettings(build_type="Release")
-        conanfile = ConanFile(Mock(), None)
-        conanfile.initialize(settings_mock, EnvValues())
-        install_folder = "/c/foo/testing"
-        setattr(conanfile, "install_folder", install_folder)
-        conanfile.generators = ["cmake_find_package_multi"]
-        definitions_builder = CMakeDefinitionsBuilder(conanfile)
-        definitions = definitions_builder.get_definitions("3.13")
-        self.assertEqual(install_folder, definitions["CMAKE_PREFIX_PATH"])
-        self.assertEqual(install_folder, definitions["CMAKE_MODULE_PATH"])
-
     def test_cmake_definitions_apple(self):
         # https://github.com/conan-io/conan/issues/7875
         settings_mock = _MockSettings(build_type="Release")

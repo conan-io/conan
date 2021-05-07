@@ -72,7 +72,7 @@ def test_no_version_file(hello_client):
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
-        project(consumer)
+        project(consumer NONE)
         find_package(hello 1.0 REQUIRED)
         message(STATUS "hello found: ${{hello_FOUND}}")
         """)
@@ -83,7 +83,7 @@ def test_no_version_file(hello_client):
         class Conan(ConanFile):
             settings = "build_type"
             requires = "hello/1.1"
-            generators = "cmake_find_package_multi"
+            generators = "CMakeDeps"
 
             def build(self):
                 cmake = CMake(self)

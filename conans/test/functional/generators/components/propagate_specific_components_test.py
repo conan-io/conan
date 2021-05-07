@@ -1,7 +1,6 @@
 import textwrap
 import unittest
 
-import pytest
 
 from conans.test.utils.tools import TestClient
 
@@ -64,7 +63,7 @@ class PropagateSpecificComponents(unittest.TestCase):
 
 
 class WrongComponentsTestCase(unittest.TestCase):
-    generators_using_components = ['pkg_config', 'CMakeDeps']
+    generators_using_components = ['pkg_config']
 
     top = textwrap.dedent("""
         from conans import ConanFile

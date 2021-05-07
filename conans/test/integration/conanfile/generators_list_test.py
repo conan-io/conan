@@ -40,13 +40,13 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
                 pass
 
             class BaseConan(object):
-
                 generators = "cmake", "CMakeDeps"
         """)
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
             class Recipe(ConanFile):
+                settings = "build_type"
                 python_requires = "base/1.0"
                 python_requires_extend = "base.BaseConan"
                 settings = "build_type"

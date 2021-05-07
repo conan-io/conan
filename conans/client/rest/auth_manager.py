@@ -48,9 +48,6 @@ class ConanApiAuthManager(object):
                 # Anonymous is not enough, ask for a user
                 self._user_io.out.info('Please log in to "%s" to perform this action. '
                                        'Execute "conan user" command.' % remote.name)
-                if "bintray" in remote.url:
-                    self._user_io.out.info('If you don\'t have an account sign up here: '
-                                           'https://bintray.com/signup/oss')
                 return self._retry_with_new_token(user, remote, method_name, *args, **kwargs)
             elif token and refresh_token:
                 # If we have a refresh token try to refresh the access token

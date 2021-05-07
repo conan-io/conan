@@ -240,8 +240,7 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
     assert "bye: Debug!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["CMakeDeps"])
-def test_standard_names(setup_client_with_greetings, generator):
+def test_standard_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
@@ -269,10 +268,10 @@ def test_standard_names(setup_client_with_greetings, generator):
         target_link_libraries(example2 chat::chat)
         """)
 
-    create_chat(client, generator, "standard", package_info, cmake_find, test_cmake_find)
+    create_chat(client, "CMakeDeps", "standard", package_info, cmake_find, test_cmake_find)
 
     # Test consumer multi-config
-    if generator == "cmake_find_package_multi" and platform.system() == "Windows":
+    if platform.system() == "Windows":
         with client.chdir("test_package"):
             client.run("install . -s build_type=Release")
             client.run("install . -s build_type=Debug")
@@ -291,8 +290,7 @@ def test_standard_names(setup_client_with_greetings, generator):
             assert "bye: Release!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["CMakeDeps"])
-def test_custom_names(setup_client_with_greetings, generator):
+def test_custom_names(setup_client_with_greetings):
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
@@ -335,11 +333,10 @@ def test_custom_names(setup_client_with_greetings, generator):
         add_executable(example2 example.cpp)
         target_link_libraries(example2 MyChat::MyChat)
         """)
-    create_chat(client, generator, "custom", package_info, cmake_find, test_cmake_find)
+    create_chat(client, "CMakeDeps", "custom", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["CMakeDeps"])
-def test_no_components(setup_client_with_greetings, generator):
+def test_no_components(setup_client_with_greetings):
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
@@ -368,13 +365,12 @@ def test_no_components(setup_client_with_greetings, generator):
         add_executable(example2 example.cpp)
         target_link_libraries(example2 chat::chat)
         """)
-    create_chat(client, generator, "none", package_info, cmake_find, test_cmake_find)
+    create_chat(client, "CMakeDeps", "none", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["CMakeDeps"])
 @pytest.mark.slow
 @pytest.mark.tool_cmake
-def test_same_names(generator):
+def test_same_names():
     client = TestClient()
     conanfile_greetings = textwrap.dedent("""
         from conans import ConanFile, CMake
@@ -420,7 +416,7 @@ def test_same_names(generator):
 
         class HelloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "cmake", "{}"
+            generators = "cmake", "CMakeDeps"
 
             def build(self):
                 cmake = CMake(self)
@@ -430,7 +426,7 @@ def test_same_names(generator):
             def test(self):
                 os.chdir("bin")
                 self.run(".%sexample" % os.sep)
-        """.format(generator))
+        """)
     test_package_greetings_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
     test_package_greetings_cmakelists = textwrap.dedent("""
@@ -461,8 +457,7 @@ def test_same_names(generator):
 @pytest.mark.tool_cmake
 class TestComponentsCMakeGenerators:
 
-    @pytest.mark.parametrize("generator", ["CMakeDeps"])
-    def test_component_not_found(self, generator):
+    def test_component_not_found(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -486,12 +481,11 @@ class TestComponentsCMakeGenerators:
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . world/0.0.1@")
-        client.run("install world/0.0.1@ -g {}".format(generator), assert_error=True)
+        client.run("install world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
-    @pytest.mark.parametrize("generator", ["CMakeDeps"])
-    def test_component_not_found_cmake(self, generator):
+    def test_component_not_found_cmake(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
 
@@ -508,13 +502,13 @@ class TestComponentsCMakeGenerators:
 
             class ConsumerConan(ConanFile):
                 settings = "build_type"
-                generators = "{}"
+                generators = "CMakeDeps"
                 requires = "greetings/0.0.1"
 
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
-        """.format(generator))
+        """)
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
@@ -530,18 +524,17 @@ class TestComponentsCMakeGenerators:
         assert "Conan: Component 'hello' found in package 'greetings'" in client.out
         assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
 
-    @pytest.mark.parametrize("generator", ["CMakeDeps"])
-    def test_component_not_found_same_name_as_pkg_require(self, generator):
-        zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator(generator)
-        mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator(generator)
-        final = GenConanfile("final", "0.1").with_setting("build_type").with_generator(generator)\
+    def test_component_not_found_same_name_as_pkg_require(self):
+        zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator("CMakeDeps")
+        mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator("CMakeDeps")
+        final = GenConanfile("final", "0.1").with_setting("build_type").with_generator("CMakeDeps")\
             .with_require(ConanFileReference("zlib", "0.1", None, None))\
             .with_require(ConanFileReference("mypkg", "0.1", None, None))\
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
         consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
-            .with_generator(generator)\
+            .with_generator("CMakeDeps")\
             .with_requirement(ConanFileReference("final", "0.1", None, None))
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
@@ -552,8 +545,7 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
-    @pytest.mark.parametrize("generator", ["CMakeDeps"])
-    def test_same_name_global_target_collision(self, generator):
+    def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
             from conans import ConanFile, CMake
@@ -589,7 +581,7 @@ class TestComponentsCMakeGenerators:
         client = TestClient()
         for name in ["expected", "variant"]:
             client.run("new {name}/1.0 -s".format(name=name))
-            client.save({"conanfile.py": conanfile_tpl.format(name=name, generator=generator)})
+            client.save({"conanfile.py": conanfile_tpl.format(name=name, generator="CMakeDeps")})
             client.run("create . {name}/1.0@".format(name=name))
         middle_cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
@@ -632,7 +624,7 @@ class TestComponentsCMakeGenerators:
 
                 def package_info(self):
                     self.cpp_info.libs = ["middle"]
-            """.format(generator))
+            """.format("CMakeDeps"))
         client.save({"conanfile.py": middle_conanfile, "src/CMakeLists.txt": middle_cmakelists,
                      "src/middle.h": middle_h, "src/middle.cpp": middle_cpp}, clean_first=True)
         client.run("create . middle/1.0@")
@@ -653,7 +645,7 @@ class TestComponentsCMakeGenerators:
                     cmake.configure(source_folder="src")
                     cmake.build()
                     self.run(os.path.join("bin", "main"))
-            """.format(generator))
+            """.format("CMakeDeps"))
         cmakelists = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)
             set(CMAKE_CXX_ABI_COMPILED 1)
