@@ -77,7 +77,8 @@ def test_transitive_multi(client):
             assert "MYVARlibb: Release" in client.out
         else:
             for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={}'.format(bt))
+                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} "'
+                                   '"-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
                 client.run_command('cmake --build .')
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
