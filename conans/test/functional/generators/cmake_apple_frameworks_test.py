@@ -96,20 +96,6 @@ class CMakeAppleFrameworksTestCase(unittest.TestCase):
             self.t.run("build . -s build_type=Debug")
             self._check_frameworks_found(str(self.t.out))
 
-    def test_apple_framework_cmake_find_package(self):
-        app_cmakelists = textwrap.dedent("""
-            project(Testing CXX)
-
-            find_package(lib)
-
-            message(">>> CONAN_FRAMEWORKS_FOUND_LIB: ${lib_FRAMEWORKS_FOUND}")
-        """)
-
-        self.t.save({'conanfile.py': self.app_conanfile.format(generator="CMakeDeps"),
-                     'CMakeLists.txt': app_cmakelists})
-        self.t.run("build .")
-        self._check_frameworks_found(str(self.t.out))
-
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 class CMakeAppleOwnFrameworksTestCase(unittest.TestCase):
