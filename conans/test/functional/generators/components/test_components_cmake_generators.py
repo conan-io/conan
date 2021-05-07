@@ -465,8 +465,7 @@ def test_same_names(generator):
 @pytest.mark.tool_cmake
 class TestComponentsCMakeGenerators:
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["CMakeDeps"])
     def test_component_not_found(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -495,8 +494,7 @@ class TestComponentsCMakeGenerators:
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["CMakeDeps"])
     def test_component_not_found_cmake(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -536,8 +534,7 @@ class TestComponentsCMakeGenerators:
         assert "Conan: Component 'hello' found in package 'greetings'" in client.out
         assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["CMakeDeps"])
     def test_component_not_found_same_name_as_pkg_require(self, generator):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator(generator)
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator(generator)
@@ -559,8 +556,7 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["CMakeDeps"])
     def test_same_name_global_target_collision(self, generator):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
