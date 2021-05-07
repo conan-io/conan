@@ -82,12 +82,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertNotIn("top::cmp2", content)
         self.assertIn("top::cmp1", content)
 
-    def test_pkg_config(self):
-        t = TestClient(cache_folder=self.cache_folder)
-        t.run('install middle/version@ -g pkg_config')
-        content = t.load('middle.pc')
-        self.assertIn('Requires: cmp1', content)
-
 
 class WrongComponentsTestCase(unittest.TestCase):
 

@@ -62,7 +62,8 @@ def test_transitive_multi(client):
         assert "find_dependency(liba REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
-            client.run_command('cmake .. -G "Visual Studio 15 Win64"')
+            client.run_command('cmake .. -G "Visual Studio 15 Win64" '
+                               '-DCMAKE_PREFIX_PATH="{}"'.format(client.current_folder))
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
@@ -77,8 +78,8 @@ def test_transitive_multi(client):
             assert "MYVARlibb: Release" in client.out
         else:
             for bt in ("Debug", "Release"):
-                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} "'
-                                   '"-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
+                client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
+                                   '-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
                 client.run_command('cmake --build .')
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
