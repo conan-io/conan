@@ -91,7 +91,7 @@ def setup_client_with_greetings():
 
         class GreetingsTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "cmake", "cmake_find_package_multi"
+            generators = "cmake", "CMakeDeps"
             requires = "greetings/0.0.1"
 
             def build(self):
@@ -240,8 +240,7 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
     assert "bye: Debug!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["CMakeDeps"])
 def test_standard_names(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
@@ -292,8 +291,7 @@ def test_standard_names(setup_client_with_greetings, generator):
             assert "bye: Release!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["CMakeDeps"])
 def test_custom_names(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
@@ -340,8 +338,7 @@ def test_custom_names(setup_client_with_greetings, generator):
     create_chat(client, generator, "custom", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["CMakeDeps"])
 def test_no_components(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
@@ -374,8 +371,7 @@ def test_no_components(setup_client_with_greetings, generator):
     create_chat(client, generator, "none", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["CMakeDeps"])
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 def test_same_names(generator):

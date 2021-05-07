@@ -11,80 +11,6 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, replace_
 from conans.util.files import load
 
 
-@pytest.mark.tool_cmake
-class TestCMakeFindPackageMultiGenerator:
-
-    @pytest.mark.parametrize("use_components", [False, True])
-    def test_build_modules_alias_target(self, use_components):
-        client = TestClient()
-        conanfile = textwrap.dedent("""
-            import os
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                name = "hello"
-                version = "1.0"
-                settings = "os", "arch", "compiler", "build_type"
-                exports_sources = ["target-alias.cmake"]
-                generators = "cmake"
-
-                def package(self):
-                    self.copy("target-alias.cmake", dst="share/cmake")
-
-                def package_info(self):
-                    module = os.path.join("share", "cmake", "target-alias.cmake")
-            %s
-            """)
-        if use_components:
-            info = textwrap.dedent("""\
-                self.cpp_info.name = "namespace"
-                self.cpp_info.filenames["cmake_find_package_multi"] = "hello"
-                self.cpp_info.components["comp"].libs = ["hello"]
-                self.cpp_info.components["comp"].build_modules["cmake_find_package_multi"].append(module)
-                """)
-        else:
-            info = textwrap.dedent("""\
-                self.cpp_info.libs = ["hello"]
-                self.cpp_info.build_modules["cmake_find_package_multi"].append(module)
-                """)
-        target_alias = textwrap.dedent("""
-            add_library(otherhello INTERFACE IMPORTED)
-            target_link_libraries(otherhello INTERFACE {target_name})
-            """).format(target_name="namespace::comp" if use_components else "hello::hello")
-        conanfile = conanfile % "\n".join(["        %s" % line for line in info.splitlines()])
-        client.save({"conanfile.py": conanfile, "target-alias.cmake": target_alias})
-        client.run("create .")
-
-        consumer = textwrap.dedent("""
-            from conans import ConanFile, CMake
-
-            class Conan(ConanFile):
-                name = "consumer"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-                exports_sources = ["CMakeLists.txt"]
-                generators = "cmake_find_package_multi"
-                requires = "hello/1.0"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-            """)
-        cmakelists = textwrap.dedent("""
-            cmake_minimum_required(VERSION 3.0)
-            project(test)
-            find_package(hello)
-            get_target_property(tmp otherhello INTERFACE_LINK_LIBRARIES)
-            message("otherhello link libraries: ${tmp}")
-            """)
-        client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-        client.run("create .")
-        if use_components:
-            assert "otherhello link libraries: namespace::comp" in client.out
-        else:
-            assert "otherhello link libraries: hello::hello" in client.out
-
-
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
@@ -110,7 +36,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 bye/1.0@user/channel
 
                 [generators]
-                cmake_find_package_multi
+                CMakeDeps
                 """)
             example_cpp = gen_function_cpp(name="main", includes=["bye"], calls=["bye"])
             c.save({"conanfile.txt": conanfile, "example.cpp": example_cpp})
@@ -194,7 +120,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 version = "1.0"
                 settings = "os", "compiler", "build_type", "arch"
                 exports_sources = ["CMakeLists.txt"]
-                generators = "cmake_find_package_multi"
+                generators = "CMakeDeps"
                 requires = "test/1.0"
 
                 def build(self):
@@ -236,7 +162,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             Test/0.1
 
             [generators]
-            cmake_find_package_multi
+            CMakeDeps
             """)
         cmakelists_release = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.1)
@@ -325,7 +251,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
             class Conan(ConanFile):
                 settings = "build_type"
                 requires = "hello2/1.0"
-                generators = "cmake_find_package_multi"
+                generators = "CMakeDeps"
 
                 def build(self):
                     cmake = CMake(self)
@@ -350,43 +276,6 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
                 "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in client.out
 
-    def test_cpp_info_config(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class Requirement(ConanFile):
-                name = "requirement"
-                version = "version"
-
-                settings = "os", "arch", "compiler", "build_type"
-
-                def package_info(self):
-                    self.cpp_info.libs = ["lib_both"]
-                    self.cpp_info.debug.libs = ["lib_debug"]
-                    self.cpp_info.release.libs = ["lib_release"]
-
-                    self.cpp_info.cxxflags = ["-req_both"]
-                    self.cpp_info.debug.cxxflags = ["-req_debug"]
-                    self.cpp_info.release.cxxflags = ["-req_release"]
-        """)
-        t = TestClient()
-        t.save({"conanfile.py": conanfile})
-        t.run("create . -s build_type=Release")
-        t.run("create . -s build_type=Debug")
-
-        t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Release")
-        t.run("install requirement/version@ -g cmake_find_package_multi -s build_type=Debug")
-        content_release = t.load("requirementTarget-release.cmake")
-        content_debug = t.load("requirementTarget-debug.cmake")
-
-        self.assertIn('set(requirement_COMPILE_OPTIONS_RELEASE_LIST "-req_both;-req_release" "")',
-                      content_release)
-        self.assertIn('set(requirement_COMPILE_OPTIONS_DEBUG_LIST "-req_both;-req_debug" "")',
-                      content_debug)
-
-        self.assertIn('set(requirement_LIBRARY_LIST_RELEASE lib_both lib_release)', content_release)
-        self.assertIn('set(requirement_LIBRARY_LIST_DEBUG lib_both lib_debug)', content_debug)
-
     def test_components_system_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -410,7 +299,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
                 name = "consumer"
                 version = "0.1"
                 requires = "requirement/system"
-                generators = "cmake_find_package_multi"
+                generators = "CMakeDeps"
                 exports_sources = "CMakeLists.txt"
                 settings = "os", "arch", "compiler", "build_type"
 
@@ -471,7 +360,7 @@ class TestNoNamespaceTarget:
                 self.cpp_info.libs = ["library"]
                 module = os.path.join("share", "cmake", "build-module.cmake")
                 self.cpp_info.build_modules['cmake_find_package'] = [module, ]
-                self.cpp_info.build_modules['cmake_find_package_multi'] = [module, ]
+                self.cpp_info.build_modules['CMakeDeps'] = [module, ]
     """)
 
     build_module = textwrap.dedent("""
@@ -525,7 +414,7 @@ class TestNoNamespaceTarget:
     def test_non_multi_generator(self):
         t = self.t
         with t.chdir('not_multi'):
-            t.run('install library/version@ -g cmake_find_package -s build_type=Release')
+            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
             generator = '-G "Visual Studio 15 Win64"' if platform.system() == "Windows" else ''
             t.run_command(
                 'cmake .. {} -DCMAKE_MODULE_PATH:PATH="{}"'.format(generator, t.current_folder))
@@ -538,8 +427,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_windows(self):
         t = self.t
         with t.chdir('multi_windows'):
-            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
-            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
+            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
             generator = '-G "Visual Studio 15 Win64"'
             t.run_command(
                 'cmake .. {} -DCMAKE_PREFIX_PATH:PATH="{}"'.format(generator, t.current_folder))
@@ -553,8 +442,8 @@ class TestNoNamespaceTarget:
     def test_multi_generator_macos(self):
         t = self.t
         with t.chdir('multi_macos'):
-            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Release')
-            t.run('install library/version@ -g cmake_find_package_multi -s build_type=Debug')
+            t.run('install library/version@ -g CMakeDeps -s build_type=Release')
+            t.run('install library/version@ -g CMakeDeps -s build_type=Debug')
             t.run_command('cmake .. -G Xcode -DCMAKE_PREFIX_PATH:PATH="{}"'.format(t.current_folder))
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
