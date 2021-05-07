@@ -76,6 +76,29 @@ class WrongComponentsTestCase(unittest.TestCase):
                 self.cpp_info.components["cmp2"].libs = ["top_cmp2"]
     """)
 
+    def test_wrong_component(self):
+        """ If the requirement doesn't provide the component, it fails.
+            We can only raise this error after the graph is fully resolved, it is when we
+            know the actual components that the requirement is going to provide.
+        """
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Recipe(ConanFile):
+                requires = "top/version"
+                def package_info(self):
+                    self.cpp_info.requires = ["top::not-existing"]
+        """)
+        t = TestClient()
+        t.save({'top.py': self.top, 'consumer.py': consumer})
+        t.run('create top.py top/version@')
+        t.run('create consumer.py wrong/version@')
+
+        for generator in self.generators_using_components:
+            t.run('install wrong/version@ -g {}'.format(generator), assert_error=True)
+            self.assertIn("ERROR: Component 'top::not-existing' not found in 'top'"
+                          " package requirement", t.out)
+
     def test_unused_requirement(self):
         """ Requires should include all listed requirements
             This error is known when creating the package if the requirement is consumed.
