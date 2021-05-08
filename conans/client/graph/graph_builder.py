@@ -57,16 +57,15 @@ class DepsGraphBuilder(object):
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
 
-        # compute the conanfile entry point for this dependency graph
+        # TODO: Why assign here the settings_build and settings_target?
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
         root_node.conanfile.settings_target = None
-        new_options = self._prepare_node(root_node, profile_host, profile_build, graph_lock,
-                                         None, None)
+        self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
         dep_graph.add_node(root_node)
 
         # enter recursive computation
         try:
-            self._expand_node(root_node, dep_graph, None, None, check_updates,
+            self._expand_node(root_node, dep_graph, check_updates,
                               update, remotes, profile_host, profile_build, graph_lock)
         except DepsGraphBuilder.StopRecursion:
             dep_graph.error = True
@@ -74,7 +73,8 @@ class DepsGraphBuilder(object):
             self._check_provides(dep_graph)
         return dep_graph
 
-    def _add_profile_build_requires(self, node, profile_host, profile_build):
+    @staticmethod
+    def _add_profile_build_requires(node, profile_host, profile_build):
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         build_requires = profile.build_requires
         str_ref = str(node.ref)
@@ -113,12 +113,27 @@ class DepsGraphBuilder(object):
                         else:
                             provides[new_req] = v.node
 
-
     def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
             graph_lock.pre_lock_node(node)
-            # basic node configuration: calling configure() and requirements()
-        new_options = self._config_node(node, down_ref, down_options)
+
+        # basic node configuration: calling configure() and requirements()
+        conanfile, ref = node.conanfile, node.ref
+
+        run_configure_method(conanfile, down_options, down_ref, ref)
+
+        # Update requirements (overwrites), computing new upstream
+        if hasattr(conanfile, "requirements"):
+            with conanfile_exception_formatter(str(conanfile), "requirements"):
+                conanfile.requirements()
+
+        # TODO: Maybe this could be integrated in one single requirements() method
+        # Update requirements (overwrites), computing new upstream
+        if hasattr(conanfile, "build_requirements"):
+            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
+                # This calls "self.build_requires("")
+                conanfile.build_requires = BuildRequirements(conanfile.requires)
+                conanfile.build_requirements()
 
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
         # TODO: self._resolve_cached_alias(node.conanfile.requires.values(), graph)
@@ -127,9 +142,7 @@ class DepsGraphBuilder(object):
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
 
-        return new_options
-
-    def _expand_node(self, node, graph, down_ref, down_options, check_updates, update,
+    def _expand_node(self, node, graph, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
 
         print("Expanding node", node)
@@ -149,7 +162,7 @@ class DepsGraphBuilder(object):
             #     continue
             self._expand_require(require, node, graph, check_updates, update, remotes,
                                  profile_host, profile_build,
-                                 graph_lock, down_ref, down_options)
+                                 graph_lock)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -167,8 +180,7 @@ class DepsGraphBuilder(object):
                     require.ref = alias
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
-                        profile_build, graph_lock, down_ref, down_options,
-                        populate_settings_target=True):
+                        profile_build, graph_lock, populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -244,8 +256,9 @@ class DepsGraphBuilder(object):
                                              recipe_status, remote, locked_id, profile_host,
                                              profile_build, populate_settings_target)
 
-            new_options = self._prepare_node(new_node, profile_host, profile_build, graph_lock,
-                                             down_ref, down_options)
+            down_options = node.conanfile.options.deps_package_values
+            self._prepare_node(new_node, profile_host, profile_build, graph_lock,
+                               node.ref, down_options)
 
             require.compute_run(new_node)
             graph.add_node(new_node)
@@ -254,7 +267,7 @@ class DepsGraphBuilder(object):
                 raise DepsGraphBuilder.StopRecursion("Conflict in runtime")
 
             # RECURSION, keep expanding (depth-first) the new node
-            return self._expand_node(new_node, graph, node.ref, new_options, check_updates,
+            return self._expand_node(new_node, graph, check_updates,
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
             print("Closing a loop from ", node, "=>", prev_node)
@@ -284,32 +297,6 @@ class DepsGraphBuilder(object):
             return True
         return False
 
-    @staticmethod
-    def _config_node(node, down_ref, down_options):
-        """ update settings and option in the current ConanFile, computing actual
-        requirement values, cause they can be overridden by downstream requires
-        param settings: dict of settings values => {"os": "windows"}
-        """
-        conanfile, ref = node.conanfile, node.ref
-
-        run_configure_method(conanfile, down_options, down_ref, ref)
-
-        # Update requirements (overwrites), computing new upstream
-        if hasattr(conanfile, "requirements"):
-            with conanfile_exception_formatter(str(conanfile), "requirements"):
-                conanfile.requirements()
-
-        # TODO: Maybe this could be integrated in one single requirements() method
-        # Update requirements (overwrites), computing new upstream
-        if hasattr(conanfile, "build_requirements"):
-            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
-                # This calls "self.build_requires("")
-                conanfile.build_requires = BuildRequirements(conanfile.requires)
-                conanfile.build_requirements()
-
-        new_options = conanfile.options.deps_package_values
-        return new_options
-
     def _resolve_recipe(self, current_node, dep_graph, ref, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
         result = self._proxy.get_recipe(ref, check_updates, update, remotes)
@@ -335,9 +322,12 @@ class DepsGraphBuilder(object):
 
         return new_ref, dep_conanfile, recipe_status, remote, locked_id
 
-    def _create_new_node(self, current_node, dep_conanfile, requirement, new_ref, context,
+    @staticmethod
+    def _create_new_node(current_node, dep_conanfile, requirement, new_ref, context,
                          recipe_status, remote, locked_id, profile_host, profile_build,
                          populate_settings_target):
+
+        # TODO: This should be out of here
         # If there is a context_switch, it is because it is a BR-build
         # Assign the profiles depending on the context
         dep_conanfile.settings_build = profile_build.processed_settings.copy()

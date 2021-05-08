@@ -41,7 +41,7 @@ class _TransitiveRequirement:
 
 
 class GraphError(Enum):
-    LOOP = "Graph loop"
+    LOOP = "graph loop"
     VERSION_CONFLICT = "version conflict"
     PROVIDE_CONFLICT = "provide conflict"
 

@@ -1,14 +1,9 @@
-import fnmatch
-from collections import defaultdict
-
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compute_pid import compute_package_id
-from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_BUILD
-from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
-    BINARY_UNKNOWN
+from conans.client.graph.graph import Node, CONTEXT_HOST
+from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL
 from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.errors import ConanException
+from conans.errors import  conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.ref import ConanFileReference
 
 
@@ -53,10 +48,30 @@ class GraphManager(object):
 
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id)
-        deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
-                                         check_updates, update, remotes)
-        # Run some validations once the graph is built
-        #TODO: self._validate_graph_provides(deps_graph)
+        profile_host_build_requires = profile_host.build_requires
+        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
+        deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
+                                        profile_build, graph_lock)
+        version_ranges_output = self._resolver.output
+        if version_ranges_output:
+            self._output.success("Version ranges solved")
+            for msg in version_ranges_output:
+                self._output.info("    %s" % msg)
+            self._output.writeln("")
+            self._resolver.clear_output()
+
+        if not deps_graph.error:
+            # TODO: Maybe move this to elsewhere
+            for node in deps_graph.ordered_iterate():
+                compute_package_id(node)  # TODO: revise compute_package_id()
+                conanfile = node.conanfile
+                if hasattr(conanfile, "validate") and callable(conanfile.validate):
+                    with conanfile_exception_formatter(str(conanfile), "validate"):
+                        try:
+                            conanfile.validate()
+                        except ConanInvalidConfiguration as e:
+                            conanfile.info.invalid = str(e)
+
         # TODO: Move binary_analyzer elsewhere
         if not deps_graph.error:
             self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
@@ -179,89 +194,3 @@ class GraphManager(object):
         if graph_lock:
             graph_lock.find_require_and_lock(create_reference, conanfile)
         return root_node
-
-    def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock,
-                       check_updates, update, remotes):
-        profile_host_build_requires = profile_host.build_requires
-        builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver)
-        deps_graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                        profile_build, graph_lock)
-        version_ranges_output = self._resolver.output
-        if version_ranges_output:
-            self._output.success("Version ranges solved")
-            for msg in version_ranges_output:
-                self._output.info("    %s" % msg)
-            self._output.writeln("")
-            self._resolver.clear_output()
-
-        if not deps_graph.error:
-            # TODO: Maybe move this to elsewhere
-            for node in deps_graph.ordered_iterate():
-                compute_package_id(node)
-
-        return deps_graph
-
-    @staticmethod
-    def _validate_graph_provides(deps_graph):
-        # Check that two different nodes are not providing the same (ODR violation)
-        for node in deps_graph.nodes:
-            provides = defaultdict(list)
-            if node.conanfile.provides is not None:  # consumer conanfile doesn't initialize
-                for it in node.conanfile.provides:
-                    provides[it].append(node)
-
-            for item in filter(lambda u: u.context == CONTEXT_HOST, node.public_closure):
-                for it in item.conanfile.provides:
-                    provides[it].append(item)
-
-            # Check (and report) if any functionality is provided by several different recipes
-            conflicts = [it for it, nodes in provides.items() if len(nodes) > 1]
-            if conflicts:
-                msg_lines = ["At least two recipes provides the same functionality:"]
-                for it in conflicts:
-                    nodes_str = "', '".join([n.conanfile.display_name for n in provides[it]])
-                    msg_lines.append(" - '{}' provided by '{}'".format(it, nodes_str))
-                raise ConanException('\n'.join(msg_lines))
-
-    @staticmethod
-    def _propagate_options(node):
-        # TODO: USE
-        # as this is the graph model
-        conanfile = node.conanfile
-        neighbors = node.neighbors()
-        transitive_reqs = set()  # of PackageReference, avoid duplicates
-        for neighbor in neighbors:
-            ref, nconan = neighbor.ref, neighbor.conanfile
-            transitive_reqs.add(neighbor.pref)
-            transitive_reqs.update(nconan.info.requires.refs())
-
-            conanfile.options.propagate_downstream(ref, nconan.info.full_options)
-            # Update the requirements to contain the full revision. Later in lockfiles
-            conanfile.requires[ref.name].ref = ref
-
-        # There might be options that are not upstream, backup them, might be for build-requires
-        conanfile.build_requires_options = conanfile.options.values
-        conanfile.options.clear_unused(transitive_reqs)
-        conanfile.options.freeze()
-
-
-        self._propagate_options(node)
-
-        # Make sure that locked options match
-        if (node.graph_lock_node is not None and
-            node.graph_lock_node.options is not None and
-            node.conanfile.options.values != node.graph_lock_node.options):
-            raise ConanException("{}: Locked options do not match computed options\n"
-                                 "Locked options:\n{}\n"
-                                 "Computed options:\n{}".format(node.ref,
-                                                                node.graph_lock_node.options,
-                                                                node.conanfile.options.values))
-
-    """
-        if hasattr(conanfile, "validate") and callable(conanfile.validate):
-        with conanfile_exception_formatter(str(conanfile), "validate"):
-            try:
-                conanfile.validate()
-            except ConanInvalidConfiguration as e:
-                conanfile.info.invalid = str(e)
-    """
