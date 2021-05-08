@@ -5,7 +5,7 @@ from jinja2 import Template
 
 def gen_cmakelists(language="CXX", verify=True, project="project", libname="mylibrary",
                    libsources=None, appname="myapp", appsources=None, cmake_version="3.15",
-                   install=False, find_package=None):
+                   install=False, find_package=None, libtype=None):
     """
     language: C, C++, C/C++
     project: the project name
@@ -26,7 +26,7 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
         {% endfor %}
 
         {% if libsources %}
-        add_library({{libname}} {% for s in libsources %} {{s}} {% endfor %})
+        add_library({{libname}} {{libtype}} {% for s in libsources %} {{s}} {% endfor %})
         {% endif %}
 
         {% if libsources and find_package %}
@@ -60,5 +60,6 @@ def gen_cmakelists(language="CXX", verify=True, project="project", libname="myli
                      "appsources": appsources,
                      "cmake_version": cmake_version,
                      "install": install,
-                     "find_package": find_package or []
+                     "find_package": find_package or [],
+                     "libtype": libtype
                      })
