@@ -158,7 +158,13 @@ class Node(object):
     def propagate_downstream(self, require, node, prev_node=None):
         print("  Propagating downstream ", self, "<-", require)
         # This sets the transitive_deps node if it was None (overrides)
-        # TODO: The
+        # Take into account that while propagating we can find RUNTIME shared conflicts we
+        # didn't find at check_downstream_exist, because we didn't know the shared/static
+        existing = self.transitive_deps.get(require)
+        if existing is not None:
+            if existing.node is not None and existing.node.ref != node.ref:
+                self.conflict = GraphError.VERSION_CONFLICT, [existing.node, node]
+                return True
         self.transitive_deps.set(_TransitiveRequirement(require, node))
 
         if not self.dependants:

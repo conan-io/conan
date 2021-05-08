@@ -250,7 +250,8 @@ class DepsGraphBuilder(object):
             require.compute_run(new_node)
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)
-            node.propagate_downstream(require, new_node)
+            if node.propagate_downstream(require, new_node):
+                raise DepsGraphBuilder.StopRecursion("Conflict in runtime")
 
             # RECURSION, keep expanding (depth-first) the new node
             return self._expand_node(new_node, graph, node.ref, new_options, check_updates,

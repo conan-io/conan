@@ -1,6 +1,7 @@
 import pytest
 from parameterized import parameterized
 
+from conans.client.graph.graph import GraphError
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -248,7 +249,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
         self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1", "mingw/0.1"))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
+                                      install=False)
 
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
@@ -258,6 +260,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         zlib1 = cmake.dependencies[0].dst
         zlib2 = mingw.dependencies[0].dst
 
+        assert zlib1 is not zlib2
+
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[cmake, mingw], dependents=[app])
         self._check_node(cmake, "cmake/0.1#123", deps=[zlib1], dependents=[lib])
@@ -265,10 +269,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(mingw, "mingw/0.1#123", deps=[zlib2], dependents=[lib])
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
 
-        # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])
-        _check_transitive(lib, [(cmake, False, False, True, True),
-                                (mingw, False, False, True, True)])
+        assert lib.conflict == (GraphError.VERSION_CONFLICT, [zlib1, zlib2])
 
     @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_conflict(self):
