@@ -16,7 +16,6 @@ from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
-from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
@@ -37,7 +36,6 @@ class GeneratorManager(object):
                             "cmake_find_package": CMakeFindPackageGenerator,
                             "cmake_find_package_multi": CMakeFindPackageMultiGenerator,
                             "qmake": QmakeGenerator,
-                            "qbs": QbsGenerator,
                             "scons": SConsGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
@@ -183,7 +181,7 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualenv import VirtualEnv
             env = VirtualEnv(conanfile)

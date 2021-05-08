@@ -196,7 +196,7 @@ class RestCommonMethods(object):
 
         content = decode_text(response.content)
         content_type = response.headers.get("Content-Type")
-        if content_type != 'application/json':
+        if content_type != 'application/json' and content_type != 'application/json; charset=utf-8':
             raise ConanException("%s\n\nResponse from remote is not json, but '%s'"
                                  % (content, content_type))
 

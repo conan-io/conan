@@ -48,9 +48,6 @@ class EditablePackages(object):
             return True
         return False
 
-    def override(self, workspace_edited):
-        self._edited_refs = workspace_edited
-
     @contextmanager
     def disable_editables(self):
         """
