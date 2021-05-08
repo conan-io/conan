@@ -229,6 +229,35 @@ class TransitiveGraphTest(GraphManagerTest):
         # TODO: Conflicted without revision
         self._check_node(liba2, "liba/0.2", dependents=[libc])
 
+    def test_shared_conflict_shared(self):
+        # app -> libb0.1 (shared) -> liba0.1 (shared)
+        #    \-> libc0.1 (shared) -> liba0.2 (shared)
+        self.recipe_cache("liba/0.1", option_shared=True)
+        self.recipe_cache("liba/0.2", option_shared=True)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
+        self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error is True
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert liba1 is not liba2
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
+
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        self._check_node(liba2, "liba/0.2", dependents=[libc])
+
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|

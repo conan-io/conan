@@ -105,28 +105,16 @@ class Node(object):
             # TODO: possibly optimize in a bulk propagate
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
-    def propagate_downstream(self, require, node, prev_node=None):
-        print("  Propagating downstream ", self, "<-", require)
-        # This sets the transitive_deps node if it was None (overrides)
-        self.transitive_deps.set(_TransitiveRequirement(require, node))
-
-        if not self.dependants:
-            print("  No further dependants, stop propagate")
-            return
-
-        if prev_node:
-            d = [d for d in self.dependants if d.src is prev_node][0]
-        else:
-            assert len(self.dependants) == 1
-            d = self.dependants[0]
-
+    def _transform_downstream_require(self, require, node, dependant):
         if require.build:  # Build-requires do not propagate anything
-            return
+            return  # TODO: check this
 
-        source_node = d.src
-        source_require = d.require
+        source_require = dependant.require
 
-        up_shared = str(node.conanfile.options.get_safe("shared"))
+        if node is not None:
+            up_shared = str(node.conanfile.options.get_safe("shared"))
+        else:
+            up_shared = None
         self_shared = str(self.conanfile.options.get_safe("shared"))
         if up_shared is not None:
             up_shared = eval(up_shared)
@@ -138,7 +126,7 @@ class Node(object):
             if up_shared:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
                                                  run=True, public=False,)
-                return source_node.propagate_downstream(downstream_require, node)
+                return downstream_require
             return
 
         downstream_require = None
@@ -154,8 +142,9 @@ class Node(object):
                 pass
             elif self_shared is False:  # static
                 downstream_require = Requirement(require.ref, include=False, link=True, run=False)
-        else:  # Unknown
-            downstream_require = require.transform_downstream(self)
+        else:  # Unknown, default
+            # FIXME
+            downstream_require = Requirement(require.ref)
 
         if require.public:
             if downstream_require is None:
@@ -164,12 +153,32 @@ class Node(object):
         if require.transitive_headers:
             downstream_require.include = True
 
+        return downstream_require
+
+    def propagate_downstream(self, require, node, prev_node=None):
+        print("  Propagating downstream ", self, "<-", require)
+        # This sets the transitive_deps node if it was None (overrides)
+        # TODO: The
+        self.transitive_deps.set(_TransitiveRequirement(require, node))
+
+        if not self.dependants:
+            print("  No further dependants, stop propagate")
+            return
+
+        if prev_node:
+            d = [d for d in self.dependants if d.src is prev_node][0]  # TODO: improve ugly
+        else:
+            assert len(self.dependants) == 1
+            d = self.dependants[0]
+
+        downstream_require = self._transform_downstream_require(require, node, d)
+
         # Check if need to propagate downstream
         if downstream_require is None:
             print("  No downstream require, stopping propagate")
             return
 
-        return source_node.propagate_downstream(downstream_require, node)
+        return d.src.propagate_downstream(downstream_require, node)
 
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
@@ -187,20 +196,24 @@ class Node(object):
             return prev.require, prev.node, self
 
         # Check if need to propagate downstream
-        downstream_relation = require.transform_downstream(self)
-        if downstream_relation is None:
-            return
-
         # Then propagate downstream
-        # TODO: Implement an optimization where the requires is checked against a graph global
+
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time
         if not self.dependants:
             return
         assert len(self.dependants) == 1
         d = self.dependants[0]
+
+        # TODO: Implement an optimization where the requires is checked against a graph global
+        print("    Lets check_downstream one more")
+        downstream_require = self._transform_downstream_require(require, None, d)
+        if downstream_require is None:
+            print("    No need to check dowstream more")
+            return
+
         source_node = d.src
-        return source_node.check_downstream_exists(downstream_relation)
+        return source_node.check_downstream_exists(downstream_require)
 
     @property
     def package_id(self):

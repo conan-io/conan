@@ -45,10 +45,6 @@ class Requirement:
         elif up_shared == "False":
             self.run = False
 
-    def transform_downstream(self, node):
-        assert node
-        return Requirement(self.ref)
-
     def __hash__(self):
         return hash((self.ref.name, self.build))
 
