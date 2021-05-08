@@ -447,7 +447,6 @@ class TestPackageInfo(unittest.TestCase):
             from conans import ConanFile
             class Package(ConanFile):
                 requires = 'gtest/1.0'
-                generators = 'cmake_find_package'
 
                 def build(self):
                     info = self.deps_cpp_info['gtest'].get_name('cmake_find_package')
@@ -460,7 +459,5 @@ class TestPackageInfo(unittest.TestCase):
         self.assertIn("pkg/1.0: GTEST_INFO: GTest", client.out)
         self.assertIn("pkg/1.0: GTEST_FILEINFO: GtesT", client.out)
         client.run("build . --name=pkg --version=1.0")
-        self.assertIn("Generator cmake_find_package created FindGtesT.cmake", client.out)
         self.assertIn("conanfile.py (pkg/1.0): GTEST_INFO: GTest", client.out)
         self.assertIn("conanfile.py (pkg/1.0): GTEST_FILEINFO: GtesT", client.out)
-
