@@ -32,7 +32,7 @@ class GraphLockBuildRequireTestCase(unittest.TestCase):
         # Compute build order
         t.run("lock build-order conan.lock --json=bo.json")
         expected = [[['br/0.1@#99b906c1d69c56560d0b12ff2b3d10c0',
-                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '3']],
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'build', '3']],
                     [['zlib/0.1@#1ce889ac4d50e301d4817064b4e4b6ee',
                       '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1'],
                      ['bzip2/0.1@#ac5d76c1046b5effa212f7f69c409a0c',

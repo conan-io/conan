@@ -57,7 +57,6 @@ from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
 from conans.model.lock_bundle import LockBundle
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
-from conans.model.workspace import Workspace
 from conans.paths import get_conan_user_home
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
@@ -466,52 +465,6 @@ class ConanAPIV1(object):
             download(self.app, ref, packages, remote, recipe, recorder, remotes=remotes)
         else:
             raise ConanException("Provide a valid full reference without wildcards.")
-
-    @api_method
-    def workspace_install(self, path, settings=None, options=None, env=None,
-                          remote_name=None, build=None, profile_name=None,
-                          update=False, cwd=None, install_folder=None, profile_build=None):
-        profile_host = ProfileData(profiles=profile_name, settings=settings, options=options,
-                                   env=env)
-        cwd = cwd or os.getcwd()
-        abs_path = os.path.normpath(os.path.join(cwd, path))
-
-        remotes = self.app.load_remotes(remote_name=remote_name, update=update)
-
-        workspace = Workspace(abs_path, self.app.cache)
-        profile_host, profile_build, graph_lock, root_ref = get_graph_info(profile_host,
-                                                                           profile_build, cwd,
-                                                                           self.app.cache,
-                                                                           self.app.out)
-
-        self.app.out.info("Configuration:")
-        self.app.out.writeln(profile_host.dumps())
-
-        self.app.cache.editable_packages.override(workspace.get_editable_dict())
-
-        recorder = ActionRecorder()
-        deps_graph = self.app.graph_manager.load_graph(workspace.root, None, profile_host,
-                                                       profile_build, graph_lock,
-                                                       root_ref, build, False, update,
-                                                       remotes, recorder)
-        graph_lock = graph_lock or GraphLock(deps_graph)
-        print_graph(deps_graph, self.app.out)
-
-        # Inject the generators before installing
-        for node in deps_graph.nodes:
-            if node.recipe == RECIPE_EDITABLE:
-                generators = workspace[node.ref].generators
-                if generators is not None:
-                    tmp = list(node.conanfile.generators)
-                    tmp.extend([g for g in generators if g not in tmp])
-                    node.conanfile.generators = tmp
-
-        installer = BinaryInstaller(self.app, recorder=recorder)
-        installer.install(deps_graph, remotes, build, update, profile_host,
-                          profile_build, graph_lock=graph_lock)
-
-        install_folder = install_folder or cwd
-        workspace.generate(install_folder, deps_graph, self.app.out)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -1440,7 +1393,7 @@ class ConanAPIV1(object):
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
                                       profile_host.options, profile_host.env, cwd, self.app.cache)
 
-        if profile_build and not pbuild:
+        if not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, cwd, self.app.cache)
@@ -1490,8 +1443,7 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
             raise ConanException("Lockfiles with --base do not contain profile information, "
                                  "cannot be used. Create a full lockfile")
         profile_host.process_settings(cache, preprocess=False)
-        if profile_build is not None:
-            profile_build.process_settings(cache, preprocess=False)
+        profile_build.process_settings(cache, preprocess=False)
         graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return profile_host, profile_build, graph_lock, root_ref
@@ -1499,19 +1451,15 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                               profile_host.env, cwd, cache)
     phost.process_settings(cache)
-    if profile_build:
-        # Only work on the profile_build if something is provided
-        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                   profile_build.options, profile_build.env, cwd, cache)
-        pbuild.process_settings(cache)
-    else:
-        pbuild = None
+    # Only work on the profile_build if something is provided
+    pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                               profile_build.options, profile_build.env, cwd, cache)
+    pbuild.process_settings(cache)
 
     # Preprocess settings and convert to real settings
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
     phost.conf.rebase_conf_definition(cache.new_config)
-    if pbuild is not None:
-        pbuild.conf.rebase_conf_definition(cache.new_config)
+    pbuild.conf.rebase_conf_definition(cache.new_config)
     return phost, pbuild, None, root_ref

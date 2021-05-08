@@ -226,7 +226,7 @@ import os
 from conans import ConanFile
 
 class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@lasote/testing"
+    build_requires = "Hello/0.1@lasote/testing"
 
     def build(self):
         assert("new/pythonpath/value" in os.environ["PYTHONPATH"])

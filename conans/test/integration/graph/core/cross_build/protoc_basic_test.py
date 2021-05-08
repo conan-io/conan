@@ -1,7 +1,5 @@
 import textwrap
 
-from parameterized import parameterized
-
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
@@ -43,18 +41,14 @@ class ClassicProtocExampleBase(CrossBuildingBaseTestCase):
 
 class ClassicProtocExample(ClassicProtocExampleBase):
 
-    @parameterized.expand([(True, ), (False, )])
-    def test_crossbuilding(self, xbuilding):
+    def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
         profile_host.process_settings(self.cache)
 
-        if xbuilding:
-            profile_build = Profile()
-            profile_build.settings["os"] = "Build"
-            profile_build.process_settings(self.cache)
-        else:
-            profile_build = None
+        profile_build = Profile()
+        profile_build.settings["os"] = "Build"
+        profile_build.process_settings(self.cache)
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build,
                                        install=True)
@@ -66,23 +60,23 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         self.assertEqual(application.conanfile.name, "app")
         self.assertEqual(application.context, CONTEXT_HOST)
         self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
-        if xbuilding:
-            #   - application::deps_cpp_info:
-            protobuf_host_cpp_info = application.conanfile.deps_cpp_info["protobuf"]
-            self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
-            self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
-            self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
-            with self.assertRaises(KeyError):
-                _ = application.conanfile.deps_cpp_info["protoc"]
 
-            #   - application::deps_env_info:
-            protoc_env_info = application.conanfile.deps_env_info["protoc"]
-            self.assertEqual(protoc_env_info.PATH, ['protoc-build'])
-            self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
+        #   - application::deps_cpp_info:
+        protobuf_host_cpp_info = application.conanfile.deps_cpp_info["protobuf"]
+        self.assertEqual(protobuf_host_cpp_info.includedirs, ['protobuf-host'])
+        self.assertEqual(protobuf_host_cpp_info.libdirs, ['protobuf-host'])
+        self.assertEqual(protobuf_host_cpp_info.bindirs, ['protobuf-host'])
+        with self.assertRaises(KeyError):
+            _ = application.conanfile.deps_cpp_info["protoc"]
 
-            protobuf_env_info = application.conanfile.deps_env_info["protobuf"]
-            self.assertEqual(protobuf_env_info.PATH, ['protobuf-build'])
-            self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
+        #   - application::deps_env_info:
+        protoc_env_info = application.conanfile.deps_env_info["protoc"]
+        self.assertEqual(protoc_env_info.PATH, ['protoc-build'])
+        self.assertEqual(protoc_env_info.OTHERVAR, 'protoc-build')
+
+        protobuf_env_info = application.conanfile.deps_env_info["protobuf"]
+        self.assertEqual(protobuf_env_info.PATH, ['protobuf-build'])
+        self.assertEqual(protobuf_env_info.OTHERVAR, 'protobuf-build')
 
         #   - protobuf host
         protobuf_host = application.dependencies[0].dst
@@ -94,15 +88,13 @@ class ClassicProtocExample(ClassicProtocExampleBase):
         #   - protoc
         protoc_build = application.dependencies[1].dst
         self.assertEqual(protoc_build.conanfile.name, "protoc")
-        self.assertEqual(protoc_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
-        self.assertEqual(str(protoc_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+        self.assertEqual(protoc_build.context, CONTEXT_BUILD)
+        self.assertEqual(str(protoc_build.conanfile.settings.os), profile_build.settings['os'])
 
         #   - protobuf
         protobuf_build = protoc_build.dependencies[0].dst
         self.assertEqual(protobuf_build.conanfile.name, "protobuf")
-        self.assertEqual(protoc_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
-        self.assertEqual(str(protobuf_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+        self.assertEqual(protoc_build.context, CONTEXT_BUILD)
+        self.assertEqual(str(protobuf_build.conanfile.settings.os), profile_build.settings['os'])
 
 

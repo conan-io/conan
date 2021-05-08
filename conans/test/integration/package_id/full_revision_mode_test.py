@@ -115,8 +115,6 @@ class FullRevisionModeTest(unittest.TestCase):
             class Pkg(ConanFile):
                 build_requires = "Tool/0.1@user/testing"
                 %s
-                def build(self):
-                    self.output.info("TOOLS LIBS: {}".format(self.deps_cpp_info["Tool"].libs))
                 def package(self):
                     save(os.path.join(self.package_folder, "file.txt"),
                          str(uuid.uuid1()))

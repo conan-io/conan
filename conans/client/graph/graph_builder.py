@@ -56,10 +56,13 @@ class DepsGraphBuilder(object):
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
-        if profile_build:
-            root_node.conanfile.settings_build = profile_build.processed_settings.copy()
-            root_node.conanfile.settings_target = None
 
+        # compute the conanfile entry point for this dependency graph
+        root_node.public_closure.add(root_node)
+        root_node.public_deps.add(root_node)
+        root_node.transitive_closure[root_node.name] = root_node
+        root_node.conanfile.settings_build = profile_build.processed_settings.copy()
+        root_node.conanfile.settings_target = None
         new_options = self._prepare_node(root_node, profile_host, profile_build, graph_lock,
                                          None, None)
         dep_graph.add_node(root_node)
@@ -338,22 +341,21 @@ class DepsGraphBuilder(object):
                          recipe_status, remote, locked_id, profile_host, profile_build,
                          populate_settings_target):
         # If there is a context_switch, it is because it is a BR-build
-
         # Assign the profiles depending on the context
-        if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
-            dep_conanfile.settings_build = profile_build.processed_settings.copy()
-            context_switch = (current_node.context == CONTEXT_HOST and requirement.build)
-            if not context_switch:
-                if populate_settings_target:
-                    # TODO: Check this, getting the settings from current doesn't seem right
-                    dep_conanfile.settings_target = current_node.conanfile.settings_target
-                else:
-                    dep_conanfile.settings_target = None
+        dep_conanfile.settings_build = profile_build.processed_settings.copy()
+        context_switch = (current_node.context == CONTEXT_HOST and requirement.build)
+        # Assign the profiles depending on the context, with the new profile build/host
+        dep_conanfile.settings_build = profile_build.processed_settings.copy()
+        if not context_switch:
+            if populate_settings_target:
+                dep_conanfile.settings_target = current_node.conanfile.settings_target
             else:
-                if current_node.context == CONTEXT_HOST:
-                    dep_conanfile.settings_target = profile_host.processed_settings.copy()
-                else:
-                    dep_conanfile.settings_target = profile_build.processed_settings.copy()
+                dep_conanfile.settings_target = None
+        else:
+            if current_node.context == CONTEXT_HOST:
+                dep_conanfile.settings_target = profile_host.processed_settings.copy()
+            else:
+                dep_conanfile.settings_target = profile_build.processed_settings.copy()
 
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.revision_pinned = requirement.ref.revision is not None

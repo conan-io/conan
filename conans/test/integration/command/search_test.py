@@ -105,26 +105,6 @@ conan_vars4 = """[settings]
   HelloInfo1/0.45@myuser/testing:33333
 """
 
-conan_vars_tool_winx86 = """[settings]
-  os_build=Windows
-  arch_build=x86
-"""
-
-conan_vars_tool_winx64 = """[settings]
-  os_build=Windows
-  arch_build=x86_64
-"""
-
-conan_vars_tool_linx86 = """[settings]
-  os_build=Linux
-  arch_build=x86
-"""
-
-conan_vars_tool_linx64 = """[settings]
-  os_build=Linux
-  arch_build=x86_64
-"""
-
 
 class SearchTest(unittest.TestCase):
 
@@ -181,19 +161,7 @@ class SearchTest(unittest.TestCase):
                                                        CONANINFO): conan_vars4,
                           "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
                                                        PACKAGES_FOLDER,
-                                                       "hello.txt"): "Hello",
-                          "%s/%s/winx86/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_winx86,
-                          "%s/%s/winx64/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_winx64,
-                          "%s/%s/linx86/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_linx86,
-                          "%s/%s/linx64/%s" % (root_folder_tool,
-                                               PACKAGES_FOLDER,
-                                               CONANINFO): conan_vars_tool_linx64},
+                                                       "hello.txt"): "Hello"},
                          self.client.cache.store)
         # Fake metadata
 
@@ -573,24 +541,6 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 'arch="x86" AND arch.vendor="intel" AND os.distro="Ubuntu" AND ' \
                 'os.distro.version="19.04" AND compiler.version="4.3" AND os="Linux"'
             self._assert_pkg_q(q, ["LinuxPackageCustom"], remote, ref="Hello/1.5.10@myuser/testing")
-
-            q = 'os_build="Windows"'
-            self._assert_pkg_query_tool(q, ["winx86", "winx64"], remote)
-
-            q = 'os_build="Linux"'
-            self._assert_pkg_query_tool(q, ["linx86", "linx64"], remote)
-
-            q = 'arch_build="x86"'
-            self._assert_pkg_query_tool(q, ["winx86", "linx86"], remote)
-
-            q = 'arch_build="x86_64"'
-            self._assert_pkg_query_tool(q, ["winx64", "linx64"], remote)
-
-            q = 'os_build="Windows" AND arch_build="x86_64"'
-            self._assert_pkg_query_tool(q, ["winx64"], remote)
-
-            q = 'os_build="Windoooows"'
-            self._assert_pkg_query_tool(q, [], remote)
 
         # test in local
         test_cases()

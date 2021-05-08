@@ -254,7 +254,7 @@ class BuildRequiresBuildOrderTest(unittest.TestCase):
         locked = json.loads(client.load("conan.lock"))["graph_lock"]["nodes"]
 
         build_order = [[["dep/0.1@#f3367e0e7d170aa12abccb175fee5f97",
-                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
+                         "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "build", "3"]],
                        [["pkg/0.1@#1364f701b47130c7e38f04c5e5fab985",
                          "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
                        [["app/0.1@#5e0af887c3e9391c872773734ccd2ca0",
@@ -394,13 +394,29 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         harf = "harfbuzz/1.0#3172f5e84120f235f75f8dd90fdef84f"
         zlib = "zlib/1.0#f3367e0e7d170aa12abccb175fee5f97"
         expected = [[['fontconfig/1.0@#f3367e0e7d170aa12abccb175fee5f97',
-                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '2'],
-                    ['zlib/1.0@#f3367e0e7d170aa12abccb175fee5f97',
-                     '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+                      'host',
+                      '2'],
+                     ['zlib/1.0@#f3367e0e7d170aa12abccb175fee5f97',
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+                      'host',
+                      '4'],
+                     ['fontconfig/1.0@#f3367e0e7d170aa12abccb175fee5f97',
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+                      'build',
+                      '5']],
                     [['harfbuzz/1.0@#3172f5e84120f235f75f8dd90fdef84f',
-                      'ea61889683885a5517800e8ebb09547d1d10447a', 'host', '3']],
+                      'ea61889683885a5517800e8ebb09547d1d10447a',
+                      'host',
+                      '3'],
+                     ['harfbuzz/1.0@#3172f5e84120f235f75f8dd90fdef84f',
+                      'ea61889683885a5517800e8ebb09547d1d10447a',
+                      'build',
+                      '6']],
                     [['ffmpeg/1.0@#5522e93e2abfbd455e6211fe4d0531a2',
-                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '1']]]
+                      '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9',
+                      'host',
+                      '1']]]
 
         lock1 = client.load("conan.lock")
         lock = json.loads(lock1)
@@ -453,7 +469,7 @@ class GraphLockBuildRequireErrorTestCase(unittest.TestCase):
         liba = "libA/1.0@#3fb401b4f9169fab06be253aa3fbcc1b"
         app = "app/1.0@#ac2e355bf59f54e838c9d2f1d8d1126c"
         expected = [
-            [[tool, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "3"]],
+            [[tool, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "build", "3"]],
             [[liba, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", "host", "2"]],
             [[app, "8a4d75100b721bfde375a978c780bf3880a22bab", "host", "1"]]
             ]

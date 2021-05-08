@@ -55,19 +55,10 @@ class AConan(ConanFile):
         assert(self.source_folder is not None)
         self.copy_source_folder = self.source_folder
 
-        if %(source_with_infos)s:
-            self.assert_deps_infos()
-
-    def assert_deps_infos(self):
-        assert(self.deps_user_info["parent"].MyVar == "MyVarValue")
-        assert(self.deps_cpp_info["parent"].cxxflags[0] == "-myflag")
-        assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
-
     def build(self):
         assert(self.build_folder == os.getcwd())
 
         self.assert_in_local_cache()
-        self.assert_deps_infos()
 
         if self.no_copy_source and self.in_local_cache:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
@@ -83,7 +74,6 @@ class AConan(ConanFile):
         assert(self.install_folder is not None)
         assert(self.build_folder == os.getcwd())
         self.assert_in_local_cache()
-        self.assert_deps_infos()
 
         if self.in_local_cache:
             assert(self.copy_build_folder == self.build_folder)

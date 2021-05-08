@@ -130,8 +130,8 @@ class GraphManagerTest(unittest.TestCase):
         build_mode = []  # Means build all
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
-        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
-                                                  None, ref,
+
+        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build, None, ref,
                                                   build_mode, check_updates, update, remotes,
                                                   recorder)
         if install:
@@ -159,4 +159,3 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(len(dependants), len(dependents))
         for d in dependents:
             self.assertIn(d, dependants)
-

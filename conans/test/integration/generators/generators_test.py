@@ -24,7 +24,6 @@ unknown
         base = '''
 [generators]
 cmake
-qbs
 qmake
 scons
 virtualenv
@@ -42,7 +41,7 @@ ycm
             venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
-                                 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
+                                 'conanbuildinfo.pri',
                                  'SConscript_conan',
                                  'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
