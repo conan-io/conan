@@ -126,15 +126,20 @@ class Node(object):
         source_node = d.src
         source_require = d.require
 
-        #if source_require.build:  # Build-requires do not propagate anything
-        #    return
-
         up_shared = str(node.conanfile.options.get_safe("shared"))
         self_shared = str(self.conanfile.options.get_safe("shared"))
         if up_shared is not None:
             up_shared = eval(up_shared)
         if self_shared is not None:  # FIXME: ugly
             self_shared = eval(self_shared)
+
+        if source_require.build:  # Build-requires
+            print("    Propagating build-require",  self, "<-", require)
+            if up_shared:
+                downstream_require = Requirement(require.ref, include=False, link=False, build=True,
+                                                 run=True, public=False,)
+                return source_node.propagate_downstream(downstream_require, node)
+            return
 
         downstream_require = None
         if up_shared:
@@ -175,6 +180,8 @@ class Node(object):
 
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(require)
+        print("    Transitive deps", self.transitive_deps)
+        print("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
         if prev and (prev.require is not require or prev.node is not None):
             return prev.require, prev.node, self

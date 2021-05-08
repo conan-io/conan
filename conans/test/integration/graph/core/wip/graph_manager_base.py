@@ -103,6 +103,8 @@ class GraphManagerTest(unittest.TestCase):
         return path
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
+        if not isinstance(ref, ConanFileReference):
+            ref = ConanFileReference.loads(ref)
         save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
         with self.cache.package_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
@@ -142,10 +144,8 @@ class GraphManagerTest(unittest.TestCase):
                                      profile_build=profile_build, graph_lock=None)
         return deps_graph
 
-    def _check_node(self, node, ref, deps=None, build_deps=None, dependents=None, closure=None):
-        build_deps = build_deps or []
+    def _check_node(self, node, ref, deps=None, dependents=None):
         dependents = dependents or []
-        closure = closure or []
         deps = deps or []
 
         conanfile = node.conanfile
@@ -153,7 +153,10 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(repr(node.ref), repr(ref))
         if conanfile:
             self.assertEqual(conanfile.name, ref.name)
-        self.assertEqual(len(node.dependencies), len(deps) + len(build_deps))
+
+        self.assertEqual(len(node.dependencies), len(deps))
+        for d in node.neighbors():
+            assert d in deps
 
         dependants = node.inverse_neighbors()
         self.assertEqual(len(dependants), len(dependents))

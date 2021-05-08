@@ -1,6 +1,5 @@
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 
 class TestVersionRanges(GraphManagerTest):
 

@@ -1,5 +1,5 @@
 from conans.client.graph.graph import GraphError
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 

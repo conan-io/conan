@@ -527,7 +527,7 @@ class BinaryInstaller(object):
 
     def _propagate_info(self, node):
         # FIXME: Remove this, as propagate info is not done at graph level
-
+        return
         # it is necessary to recompute
         # the node transitive information necessary to compute the package_id
         # as it will be used by reevaluate_node() when package_revision_mode is used and

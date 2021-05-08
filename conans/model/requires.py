@@ -98,7 +98,7 @@ class Requirements:
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
         if build_require:
-            req = Requirement(ref, include=False, link=False, build=True, run=False, public=False)
+            req = Requirement(ref, include=False, link=False, build=True, run=True, public=False)
         else:
             if public is None:  # TODO: This pattern is a bit ugly
                 req = Requirement(ref, transitive_headers=transitive_headers)

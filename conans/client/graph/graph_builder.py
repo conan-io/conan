@@ -58,9 +58,6 @@ class DepsGraphBuilder(object):
         dep_graph = DepsGraph(initial_node_id=initial)
 
         # compute the conanfile entry point for this dependency graph
-        root_node.public_closure.add(root_node)
-        root_node.public_deps.add(root_node)
-        root_node.transitive_closure[root_node.name] = root_node
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
         root_node.conanfile.settings_target = None
         new_options = self._prepare_node(root_node, profile_host, profile_build, graph_lock,

@@ -1,5 +1,5 @@
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING, GraphError
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 
@@ -70,8 +70,8 @@ class TransitiveGraphTest(GraphManagerTest):
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1", deps=[libb], closure=[libb, liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
     def test_diamond(self):
@@ -91,9 +91,9 @@ class TransitiveGraphTest(GraphManagerTest):
         liba = libb.dependencies[0].dst
 
         # TODO: No Revision??? Because of consumer?
-        self._check_node(app, "app/0.1", deps=[libb, libc], closure=[libb, libc, liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
     def test_consecutive_diamonds(self):
@@ -118,16 +118,12 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = libd.dependencies[1].dst
         liba = libc.dependencies[0].dst
 
-        self._check_node(app, "app/0.1", deps=[libe, libf],
-                         closure=[libe, libf, libd, libb, libc, liba])
-        self._check_node(libe, "libe/0.1#123", deps=[libd], dependents=[app],
-                         closure=[libd, libb, libc, liba])
-        self._check_node(libf, "libf/0.1#123", deps=[libd], dependents=[app],
-                         closure=[libd, libb, libc, liba])
-        self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[libe, libf],
-                         closure=[libb, libc, liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[libd], closure=[liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba],  dependents=[libd], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[libe, libf])
+        self._check_node(libe, "libe/0.1#123", deps=[libd], dependents=[app])
+        self._check_node(libf, "libf/0.1#123", deps=[libd], dependents=[app])
+        self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[libe, libf])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libd])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
     def test_parallel_diamond(self):
@@ -150,10 +146,10 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1", deps=[libb, libc, libd], closure=[libb, libc, libd, liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app], closure=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, libc, libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc, libd])
 
     def test_nested_diamond(self):
@@ -176,10 +172,10 @@ class TransitiveGraphTest(GraphManagerTest):
         libd = app.dependencies[2].dst
         liba = libb.dependencies[0].dst
 
-        self._check_node(app, "app/0.1", deps=[libb, libc, libd], closure=[libb, libd, libc, liba])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app, libd], closure=[liba])
-        self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app], closure=[libc, liba])
+        self._check_node(app, "app/0.1", deps=[libb, libc, libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app, libd])
+        self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
     def test_multiple_transitive(self):
@@ -200,10 +196,10 @@ class TransitiveGraphTest(GraphManagerTest):
         libc = app.dependencies[1].dst
         libb = app.dependencies[2].dst
 
-        self._check_node(app, "app/0.1", deps=[libd, libc, libb], closure=[libb, libc, libd])
+        self._check_node(app, "app/0.1", deps=[libd, libc, libb])
         self._check_node(libd, "libd/0.1#123", dependents=[app, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app], closure=[libc, libd])
-        self._check_node(libc, "libc/0.1#123", deps=[libd], dependents=[app, libb], closure=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[libd], dependents=[app, libb])
 
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
