@@ -1,4 +1,3 @@
-import os
 import platform
 import textwrap
 
@@ -80,12 +79,11 @@ def test_transitive_multi(client):
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
                                    '-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
-                client.run_command('cmake --build .')
+                client.run_command('cmake --build . --clean-first')
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
                 assert "MYVARliba: {}".format(bt) in client.out
                 assert "MYVARlibb: {}".format(bt) in client.out
-                os.remove(os.path.join(client.current_folder, "example"))
 
 
 @pytest.mark.tool_cmake
