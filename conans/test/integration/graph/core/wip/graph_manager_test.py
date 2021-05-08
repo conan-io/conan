@@ -3,62 +3,57 @@ from conans.test.integration.graph.core.wip.graph_manager_base import GraphManag
 from conans.test.utils.tools import GenConanfile
 
 
-class TransitiveGraphTest(GraphManagerTest):
+def _check_transitive(node, transitive_deps):
+    values = list(node.transitive_deps.values())
+    print([v.require for v in values])
+    print(transitive_deps)
+    assert len(values) == len(transitive_deps)
+
+    for v1, v2 in zip(values, transitive_deps):
+        assert v1.node is v2[0]
+        assert v1.require.include is v2[1]
+        assert v1.require.link is v2[2]
+        assert v1.require.build is v2[3]
+        assert v1.require.run is v2[4]
+
+
+class TestLinear(GraphManagerTest):
     def test_basic(self):
-        # say/0.1
-        deps_graph = self.build_graph(GenConanfile("Say", "0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1"))
         self.assertEqual(1, len(deps_graph.nodes))
         node = deps_graph.root
-        self.assertEqual(node.conanfile.name, "Say")
-        self.assertEqual(len(node.dependencies), 0)
-        self.assertEqual(len(node.dependants), 0)
+        self._check_node(node, "app/0.1")
 
-    def test_transitive(self):
+    def test_dependency(self):
         # app -> libb0.1
         self.recipe_cache("libb/0.1")
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        self.assertEqual(app.conanfile.name, "app")
-        self.assertEqual(app.recipe, RECIPE_CONSUMER)
-        self.assertEqual(len(app.dependencies), 1)
-        self.assertEqual(len(app.dependants), 0)
-
         libb = app.dependencies[0].dst
-        self.assertEqual(libb.conanfile.name, "libb")
-        self.assertEqual(len(libb.dependencies), 0)
-        self.assertEqual(len(libb.dependants), 1)
-        self.assertEqual(libb.inverse_neighbors(), [app])
-        self.assertEqual(libb.recipe, RECIPE_INCACHE)
-        assert libb.package_id == "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
-    def test_transitive_missing(self):
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
+
+    def test_dependency_missing(self):
         # app -> libb0.1 (non existing)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
         deps_graph = self.build_consumer(consumer, install=False)
 
         assert deps_graph.error is True
 
-        self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
-        self.assertEqual(app.conanfile.name, "app")
-        self.assertEqual(app.recipe, RECIPE_CONSUMER)
-        self.assertEqual(len(app.dependencies), 1)
-        self.assertEqual(len(app.dependants), 0)
-
         libb = app.dependencies[0].dst
-        self.assertEqual(libb.recipe, RECIPE_MISSING)
-        self.assertEqual(libb.ref.name, "libb")
-        self.assertEqual(len(libb.dependencies), 0)
-        self.assertEqual(len(libb.dependants), 1)
-        self.assertEqual(libb.inverse_neighbors(), [app])
 
-    def test_transitive_two_levels(self):
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1", deps=[], dependents=[app])
+        assert libb.recipe == RECIPE_MISSING
+
+    def test_transitive(self):
         # app -> libb0.1 -> liba0.1
+        # By default if packages do not specify anything link=True is propagated run=None (unknown)
         self.recipe_cache("liba/0.1")
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
@@ -73,6 +68,222 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
+
+    def test_transitive_all_static(self):
+        # app -> libb0.1 -> liba0.1
+        self.recipe_cache("liba/0.1", option_shared=False)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, False, True, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
+
+    def test_transitive_all_static_transitive_headers(self):
+        # app -> libb0.1 -> liba0.1
+        self.recipe_cache("liba/0.1", option_shared=False)
+        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
+        libb.with_shared_option()
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, True, True, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
+
+    def test_transitive_all_shared(self):
+        # app -> libb0.1 -> liba0.1
+        self.recipe_cache("liba/0.1", option_shared=True)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        # Default for app->liba is that it doesn't link, libb shared will isolate symbols by default
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (liba, False, False, False, True)])
+        _check_transitive(libb, [(liba, True, True, False, True)])
+
+    def test_transitive_all_shared_transitive_headers(self):
+        # app -> libb0.1 (shared) -> liba0.1 (shared)
+        self.recipe_cache("liba/0.1", option_shared=True)
+        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
+        libb.with_shared_option(True)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        # Default for app->liba is that it doesn't link, libb shared will isolate symbols by default
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (liba, True, False, False, True)])
+        _check_transitive(libb, [(liba, True, True, False, True)])
+
+    def test_middle_shared_up_static(self):
+        # app -> libb0.1 (shared) -> liba0.1 (static)
+        self.recipe_cache("liba/0.1", option_shared=False)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (liba, False, False, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
+
+    def test_middle_shared_up_static_transitive_headers(self):
+        # app -> libb0.1 (shared) -> liba0.1 (static)
+        self.recipe_cache("liba/0.1", option_shared=False)
+        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
+        libb.with_shared_option(True)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (liba, True, False, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
+
+    def test_middle_static_up_shared(self):
+        # app -> libb0.1 (static) -> liba0.1 (shared)
+        self.recipe_cache("liba/0.1", option_shared=True)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, False, True, False, True)])
+        _check_transitive(libb, [(liba, True, True, False, True)])
+
+    def test_middle_static_up_shared_transitive_headers(self):
+        # app -> libb0.1 (static) -> liba0.1 (shared)
+        self.recipe_cache("liba/0.1", option_shared=True)
+        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
+        libb.with_shared_option(False)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, True, True, False, True)])
+        _check_transitive(libb, [(liba, True, True, False, True)])
+
+    def test_private(self):
+        # app -> libb0.1 -(private) -> liba0.1
+        self.recipe_cache("liba/0.1")
+        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
+
+
+class TestDiamond(GraphManagerTest):
 
     def test_diamond(self):
         # app -> libb0.1 -> liba0.1
@@ -95,6 +306,202 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+    def test_shared_static(self):
+        # app -> libb0.1 (shared) -> liba0.1 (static)
+        #    \-> libc0.1 (shared) ->/
+        self.recipe_cache("liba/0.1", option_shared=False)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
+        self.recipe_cache("libc/0.1", ["liba/0.1"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba1 = libc.dependencies[0].dst
+
+        assert liba is liba1
+
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (libc, True, True, False, True),
+                                (liba, False, False, False, False)])
+        _check_transitive(libb, [(liba, True, True, False, False)])
+        _check_transitive(libc, [(liba, True, True, False, False)])
+
+    def test_private(self):
+        # app -> libd0.1 -(private)-> libb0.1 -> liba0.1
+        #            \ ---(private)-> libc0.1 --->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.1"])
+        libd = GenConanfile().with_requirement("libb/0.1", public=False)
+        libd.with_requirement("libc/0.1", public=False)
+        self.recipe_conanfile("libd/0.1", libd)
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert liba is liba2
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libd])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[libd])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libd, True, True, False, None)])
+        _check_transitive(libd, [(libb, True, True, False, None),
+                                 (libc, True, True, False, None),
+                                 (liba, True, True, False, None)])
+
+    def test_shared_static_private(self):
+        # app -> libb0.1 (shared) -(private)-> liba0.1 (static)
+        #    \-> libc0.1 (shared) -> liba0.2 (static)
+        # This private allows to avoid the liba conflict
+        self.recipe_cache("liba/0.1", option_shared=False)
+        self.recipe_cache("liba/0.2", option_shared=False)
+        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        libb.with_shared_option(True)
+        self.recipe_conanfile("libb/0.1", libb)
+        self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert liba1 is not liba2
+
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        self._check_node(liba2, "liba/0.2#123", dependents=[libc])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, True),
+                                (libc, True, True, False, True),
+                                (liba2, False, False, False, False)])
+        _check_transitive(libb, [(liba1, True, True, False, False)])
+        _check_transitive(libc, [(liba2, True, True, False, False)])
+
+    def test_diamond_conflict(self):
+        # app -> libb0.1 -> liba0.1
+        #    \-> libc0.1 -> liba0.2
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.2"])
+
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error is True
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        # TODO: Conflicted without revision
+        self._check_node(liba2, "liba/0.2", dependents=[libc])
+
+    def test_shared_conflict_shared(self):
+        # app -> libb0.1 (shared) -> liba0.1 (shared)
+        #    \-> libc0.1 (shared) -> liba0.2 (shared)
+        self.recipe_cache("liba/0.1", option_shared=True)
+        self.recipe_cache("liba/0.2", option_shared=True)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
+        self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error is True
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert liba1 is not liba2
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
+
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+        self._check_node(liba2, "liba/0.2", dependents=[libc])
+
+    def test_private_conflict(self):
+        # app -> libd0.1 -(private)-> libb0.1 -> liba0.1
+        #            \ ---(private)-> libc0.1 -> liba0.2
+        #
+        # private requires do not avoid conflicts at the node level, only downstream
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.2"])
+        libd = GenConanfile().with_requirement("libb/0.1", public=False)
+        libd.with_requirement("libc/0.1", public=False)
+        self.recipe_conanfile("libd/0.1", libd)
+        consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
+
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        self.assertEqual(6, len(deps_graph.nodes))
+        app = deps_graph.root
+        libd = app.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba1 = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert liba1 is not liba2
+        assert deps_graph.error is True
+        assert libd.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
+
+        self._check_node(app, "app/0.1", deps=[libd])
+        self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[app])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[libd])
+        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[libd])
+        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
+
+
+class TestDiamondMultiple(GraphManagerTest):
 
     def test_consecutive_diamonds(self):
         # app -> libe0.1 -> libd0.1 -> libb0.1 -> liba0.1
@@ -201,63 +608,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[libd], dependents=[app, libb])
 
-    def test_diamond_conflict(self):
-        # app -> libb0.1 -> liba0.1
-        #    \-> libc0.1 -> liba0.2
-        self.recipe_cache("liba/0.1")
-        self.recipe_cache("liba/0.2")
-        self.recipe_cache("libb/0.1", ["liba/0.1"])
-        self.recipe_cache("libc/0.1", ["liba/0.2"])
-
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
-        deps_graph = self.build_consumer(consumer, install=False)
-
-        assert deps_graph.error is True
-
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
-
-    def test_shared_conflict_shared(self):
-        # app -> libb0.1 (shared) -> liba0.1 (shared)
-        #    \-> libc0.1 (shared) -> liba0.2 (shared)
-        self.recipe_cache("liba/0.1", option_shared=True)
-        self.recipe_cache("liba/0.2", option_shared=True)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
-        self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
-
-        deps_graph = self.build_consumer(consumer, install=False)
-
-        assert deps_graph.error is True
-
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert liba1 is not liba2
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
-
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
-
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|
@@ -287,15 +637,6 @@ class TransitiveGraphTest(GraphManagerTest):
 
         assert libc2.conflict == (GraphError.LOOP, libc)
 
-    '''
-    def test_self_loop(self):
-        self.recipe_cache("liba/0.1")
-        consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])
-        with self.assertRaisesRegex(ConanException,
-                                    "Loop detected in context host: 'liba/0.2' requires 'liba/0.1'"):
-            self.build_consumer(consumer)
-'''
-
 
 class TransitiveOverridesGraphTest(GraphManagerTest):
 
@@ -320,273 +661,3 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb, liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
-
-
-def _check_transitive(node, transitive_deps):
-    values = list(node.transitive_deps.values())
-    assert len(values) == len(transitive_deps)
-
-    for v1, v2 in zip(values, transitive_deps):
-        assert v1.node is v2[0]
-        assert v1.require.include is v2[1]
-        assert v1.require.link is v2[2]
-        assert v1.require.build is v2[3]
-        assert v1.require.run is v2[4]
-
-
-class TestRequiresTransitivityLinear(GraphManagerTest):
-
-    def test_all_static(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=False)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, False, True, False, False)])
-        _check_transitive(libb, [(liba, True, True, False, False)])
-
-    def test_all_static_transitive_headers(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=False)
-        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
-        libb.with_shared_option()
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, True, True, False, False)])
-        _check_transitive(libb, [(liba, True, True, False, False)])
-
-    def test_all_shared(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=True)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        # Default for app->liba is that it doesn't link, libb shared will isolate symbols by default
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (liba, False, False, False, True)])
-        _check_transitive(libb, [(liba, True, True, False, True)])
-
-    def test_all_shared_transitive_headers(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=True)
-        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
-        libb.with_shared_option(True)
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        # Default for app->liba is that it doesn't link, libb shared will isolate symbols by default
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (liba, True, False, False, True)])
-        _check_transitive(libb, [(liba, True, True, False, True)])
-
-    def test_middle_shared_up_static(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=False)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (liba, False, False, False, False)])
-        _check_transitive(libb, [(liba, True, True, False, False)])
-
-    def test_middle_shared_up_static_transitive_headers(self):
-        # app -> libb0.1 -> liba0.1
-        self.recipe_cache("liba/0.1", option_shared=False)
-        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
-        libb.with_shared_option(True)
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (liba, True, False, False, False)])
-        _check_transitive(libb, [(liba, True, True, False, False)])
-
-    def test_middle_static_up_shared(self):
-        # app -> libb0.1 (static) -> liba0.1 (shared)
-        self.recipe_cache("liba/0.1", option_shared=True)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, False, True, False, True)])
-        _check_transitive(libb, [(liba, True, True, False, True)])
-
-    def test_middle_static_up_shared_transitive_headers(self):
-        # app -> libb0.1 (static) -> liba0.1 (shared)
-        self.recipe_cache("liba/0.1", option_shared=True)
-        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
-        libb.with_shared_option(False)
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, True, True, False, True)])
-        _check_transitive(libb, [(liba, True, True, False, True)])
-
-
-class TestRequiresTransitivityDiamond(GraphManagerTest):
-
-    def test_shared_static(self):
-        # app -> libb0.1 (shared) -> liba0.1 (static)
-        #    \-> libc0.1 (shared) ->/
-        self.recipe_cache("liba/0.1", option_shared=False)
-        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
-        self.recipe_cache("libc/0.1", ["liba/0.1"], option_shared=True)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(4, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
-        liba1 = libc.dependencies[0].dst
-
-        assert liba is liba1
-
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (libc, True, True, False, True),
-                                (liba, False, False, False, False)])
-        _check_transitive(libb, [(liba, True, True, False, False)])
-        _check_transitive(libc, [(liba, True, True, False, False)])
-
-    def test_shared_static_private(self):
-        # app -> libb0.1 (shared) -(private)-> liba0.1 (static)
-        #    \-> libc0.1 (shared) -> liba0.2 (static)
-        self.recipe_cache("liba/0.1", option_shared=False)
-        self.recipe_cache("liba/0.2", option_shared=False)
-        libb = GenConanfile().with_requirement("liba/0.1", public=False)
-        libb.with_shared_option(True)
-        self.recipe_conanfile("libb/0.1", libb)
-        self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
-
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert liba1 is not liba2
-
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        self._check_node(liba2, "liba/0.2#123", dependents=[libc])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, True),
-                                (libc, True, True, False, True),
-                                (liba2, False, False, False, False)])
-        _check_transitive(libb, [(liba1, True, True, False, False)])
-        _check_transitive(libc, [(liba2, True, True, False, False)])

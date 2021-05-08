@@ -109,6 +109,10 @@ class Node(object):
         if require.build:  # Build-requires do not propagate anything
             return  # TODO: check this
 
+        if require.public is False:
+            # TODO: We could implement checks in case private is violated (e.g shared libs)
+            return
+
         source_require = dependant.require
 
         if node is not None:
@@ -152,6 +156,9 @@ class Node(object):
 
         if require.transitive_headers:
             downstream_require.include = True
+
+        if source_require.public is False:
+            downstream_require.public = False
 
         return downstream_require
 
