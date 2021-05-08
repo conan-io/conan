@@ -63,7 +63,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.save({'conanfile.py': self.app})
         t.run("install .  -g CMakeDeps")
         config = t.load("middleTarget-release.cmake")
-        print(config)
         self.assertIn('top::cmp1', config)
         self.assertNotIn("top::top", config)
 
@@ -77,7 +76,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertIn("find_package(top REQUIRED NO_MODULE)", content)
 
         content = t.load('middleTarget-release.cmake')
-        print(content)
         self.assertNotIn("top::top", content)
         self.assertNotIn("top::cmp2", content)
         self.assertIn("top::cmp1", content)
