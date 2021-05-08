@@ -75,7 +75,7 @@ class TestLinear(GraphManagerTest):
         _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_transitive_all_static(self):
-        # app -> libb0.1 -> liba0.1
+        # app -> libb0.1 (static) -> liba0.1 (static)
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
@@ -97,7 +97,7 @@ class TestLinear(GraphManagerTest):
         _check_transitive(libb, [(liba, True, True, False, False)])
 
     def test_transitive_all_static_transitive_headers(self):
-        # app -> libb0.1 -> liba0.1
+        # app -> libb0.1 (static) -> liba0.1 (static)
         self.recipe_cache("liba/0.1", option_shared=False)
         libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
         libb.with_shared_option()
@@ -121,7 +121,7 @@ class TestLinear(GraphManagerTest):
         _check_transitive(libb, [(liba, True, True, False, False)])
 
     def test_transitive_all_shared(self):
-        # app -> libb0.1 -> liba0.1
+        # app -> libb0.1 (shared)  -> liba0.1 (shared)
         self.recipe_cache("liba/0.1", option_shared=True)
         self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=True)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
