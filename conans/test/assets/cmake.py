@@ -5,7 +5,7 @@ from jinja2 import Template
 
 def gen_cmakelists(language="CXX", verify=True, project="project", libname="mylibrary",
                    libsources=None, appname="myapp", appsources=None, cmake_version="3.15",
-                   install=False, find_package=None, libtype=None):
+                   install=False, find_package=None, libtype=""):
     """
     language: C, C++, C/C++
     project: the project name
