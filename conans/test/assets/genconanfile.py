@@ -35,6 +35,7 @@ class GenConanfile(object):
         self._requirements = []
         self._build_requires = []
         self._build_requirements = []
+        self._test_requires = []
         self._revision_mode = None
         self._package_info = {}
         self._package_id_lines = []
@@ -105,6 +106,12 @@ class GenConanfile(object):
         for ref in refs:
             ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
             self._build_requires.append(ref_str)
+        return self
+
+    def with_test_requires(self, *refs):
+        for ref in refs:
+            ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
+            self._test_requires.append(ref_str)
         return self
 
     def with_build_requirement(self, ref, force_host_context=False):
@@ -264,6 +271,14 @@ class GenConanfile(object):
         return tmp
 
     @property
+    def _test_requires_line(self):
+        if not self._test_requires:
+            return ""
+        line = ", ".join(['"{}"'.format(r) for r in self._test_requires])
+        tmp = "test_requires = {}".format(line)
+        return tmp
+
+    @property
     def _requires_line(self):
         if not self._requires:
             return ""
@@ -397,6 +412,8 @@ class GenConanfile(object):
             ret.append("    {}".format(self._requires_line))
         if self._build_requires_line:
             ret.append("    {}".format(self._build_requires_line))
+        if self._test_requires_line:
+            ret.append("    {}".format(self._test_requires_line))
         if self._requirements_method:
             ret.append("    {}".format(self._requirements_method))
         if self._build_requirements_method:

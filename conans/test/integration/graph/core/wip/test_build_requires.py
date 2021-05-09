@@ -331,3 +331,43 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(cheetah, "cheetah/0.1@", deps=[gazelle], dependents=[])
         self.assertListEqual(list(cheetah.conanfile.deps_cpp_info.libs),
                              ['mylibgazelle0.1lib', 'mylibgrass0.1lib'])
+
+
+class TestTestRequire(GraphManagerTest):
+
+    def test_basic(self):
+        # app -(tr)-> gtest
+        self._cache_recipe("gtest/0.1", GenConanfile())
+        conanfile = GenConanfile("app", "0.1").with_test_requires("gtest/0.1")
+
+        deps_graph = self.build_graph(conanfile)
+
+        # Build requires always apply to the consumer
+        self.assertEqual(2, len(deps_graph.nodes))
+        app = deps_graph.root
+        gtest = app.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[gtest], dependents=[])
+        self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[app])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(gtest, True, True, False, None)])  # TODO: Check run=None
+
+    def test_lib_build_require(self):
+        # app -> lib -(tr)-> gtest
+        self._cache_recipe("gtest/0.1", GenConanfile())
+        self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        gtest = lib.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app])
+        self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(lib, [(gtest, True, True, False, None)])

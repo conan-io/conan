@@ -127,7 +127,8 @@ class ConanFile(object):
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
         self.requires = Requirements(getattr(self, "requires", None),
-                                     getattr(self, "build_requires", None))
+                                     getattr(self, "build_requires", None),
+                                     getattr(self, "test_requires", None))
 
         self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
 

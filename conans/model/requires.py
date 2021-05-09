@@ -7,7 +7,7 @@ class Requirement:
     """ A user definition of a requires in a conanfile
     """
     def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
-                 transitive_headers=None):
+                 transitive_headers=None, test=False, package_id_mode=None):
         # TODO: Decompose build_require in its traits
         self.ref = ref
         self.include = include  # This dependent node has headers that must be -I<include-path>
@@ -16,10 +16,11 @@ class Requirement:
         self.run = run  # node contains executables, shared libs or data necessary at host run time
         self.public = public  # Even if not linked or visible, the node is unique, can conflict
         self.transitive_headers = transitive_headers
+        self.test = test
+        self.package_id_mode = package_id_mode
 
     def __repr__(self):
-        return repr((self.ref, self.include, self.link, self.build, self.run, self.public,
-                    self.transitive_headers))
+        return repr(self.__dict__)
 
     def copy(self):
         return Requirement(self.ref, self.include, self.link, self.build, self.run, self.public,
@@ -68,10 +69,19 @@ class BuildRequirements:
         self._requires(ref, build_require=True)
 
 
+class TestRequirements:
+    # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
+    def __init__(self, requires):
+        self._requires = requires
+
+    def __call__(self, ref):
+        self._requires(ref, test_require=True)
+
+
 class Requirements:
     """ User definitions of all requires in a conanfile
     """
-    def __init__(self, declared=None, declared_build=None):
+    def __init__(self, declared=None, declared_build=None, declared_test=None):
         self._requires = OrderedDict()
         # Construct from the class definitions
         if declared is not None:
@@ -86,15 +96,27 @@ class Requirements:
             for item in declared_build:
                 # Todo: Deprecate Conan 1.X definition of tuples, force to use method
                 self.__call__(item, build_require=True)
+        if declared_test is not None:
+            if isinstance(declared_test, str):
+                declared_test = [declared_test, ]
+            for item in declared_test:
+                # Todo: Deprecate Conan 1.X definition of tuples, force to use method
+                self.__call__(item, test_require=True)
 
     def values(self):
         return self._requires.values()
 
-    def __call__(self, str_ref, build_require=False, transitive_headers=None, public=None):
+    # TODO: Plan the interface for smooth transition from 1.X
+    def __call__(self, str_ref, build_require=False, test_require=False, transitive_headers=None,
+                 public=None):
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
         if build_require:
-            req = Requirement(ref, include=False, link=False, build=True, run=True, public=False)
+            req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
+                              package_id_mode=None)
+        elif test_require:
+            req = Requirement(ref, include=True, link=True, build=False, run=None, public=False,
+                              test=True, package_id_mode=None)
         else:
             if public is None:  # TODO: This pattern is a bit ugly
                 req = Requirement(ref, transitive_headers=transitive_headers)

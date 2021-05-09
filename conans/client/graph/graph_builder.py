@@ -6,7 +6,7 @@ from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_
 
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
-from conans.model.requires import BuildRequirements
+from conans.model.requires import BuildRequirements, TestRequirements
 
 
 class DepsGraphBuilder(object):
@@ -133,6 +133,7 @@ class DepsGraphBuilder(object):
             with conanfile_exception_formatter(str(conanfile), "build_requirements"):
                 # This calls "self.build_requires("")
                 conanfile.build_requires = BuildRequirements(conanfile.requires)
+                conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()
 
         # Alias that are cached should be replaced here, bc next requires.update() will warn if not
