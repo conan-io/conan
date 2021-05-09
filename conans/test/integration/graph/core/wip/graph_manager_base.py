@@ -1,7 +1,7 @@
 import os
 import textwrap
 import unittest
-from collections import namedtuple
+from collections import namedtuple, Counter
 
 from mock import Mock
 
@@ -19,11 +19,20 @@ from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.manifest import FileTreeManifest
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.test.unittests.model.transitive_reqs_test import MockRemoteManager
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import GenConanfile
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
+
+
+class MockRemoteManager(object):
+    def __init__(self, packages=None):
+        self.packages = packages or []
+        self.count = Counter()
+
+    def search_recipes(self, remote, pattern, ignorecase):  # @UnusedVariable
+        self.count[pattern] += 1
+        return self.packages
 
 
 class GraphManagerTest(unittest.TestCase):

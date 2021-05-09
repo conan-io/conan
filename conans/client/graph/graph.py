@@ -405,3 +405,5 @@ class DepsGraph(object):
                 elif conflict[0] == GraphError.PROVIDE_CONFLICT:
                     raise ConanException(
                         "There was a provides conflict building the dependency graph")
+
+            raise ConanException(self.error)

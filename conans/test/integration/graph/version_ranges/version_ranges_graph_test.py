@@ -1,15 +1,66 @@
-from collections import OrderedDict
+import unittest
+from collections import OrderedDict, defaultdict
 from collections import namedtuple
 
+from mock import Mock
 from parameterized import parameterized
 
+from conans import Settings
+from conans.client.cache.cache import ClientCache
+from conans.client.cache.remote_registry import Remotes
+from conans.client.conf import get_default_settings_yml
+from conans.client.graph.build_mode import BuildMode
+from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
+from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.graph.range_resolver import RangeResolver
+from conans.client.loader import ConanFileLoader
 from conans.errors import ConanException
+from conans.model.options import OptionsValues
+from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirements
-from conans.test.unittests.model.transitive_reqs_test import GraphTest
+from conans.model.values import Values
+from conans.test.integration.graph.core.wip.graph_manager_base import MockRemoteManager
+from conans.test.unittests.model.fake_retriever import Retriever
+from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.tools import GenConanfile, TurboTestClient, TestServer, \
     NO_SETTINGS_PACKAGE_ID
 from conans.test.utils.tools import create_profile
+
+
+class GraphTest(unittest.TestCase):
+
+    def setUp(self):
+        self.output = TestBufferConanOutput()
+        self.loader = ConanFileLoader(None, self.output)
+        self.retriever = Retriever(self.loader)
+        paths = ClientCache(self.retriever.folder, self.output)
+        self.remote_manager = MockRemoteManager()
+        self.remotes = Remotes()
+        self.resolver = RangeResolver(paths, self.remote_manager)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
+                                        self.resolver)
+        cache = Mock()
+        cache.config.default_package_id_mode = "semver_direct_mode"
+        cache.new_config = defaultdict(Mock)
+        self.binaries_analyzer = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
+
+    def build_graph(self, content, options="", settings=""):
+        self.loader._cached_conanfile_classes = {}
+        full_settings = Settings.loads(get_default_settings_yml())
+        full_settings.values = Values.loads(settings)
+        profile = Profile()
+        profile.processed_settings = full_settings
+        profile.options = OptionsValues.loads(options)
+        profile = create_profile(profile=profile)
+        root_conan = self.retriever.root(str(content), profile)
+        deps_graph = self.builder.load_graph(root_conan, False, False, self.remotes,
+                                             profile_host=profile, profile_build=profile)
+
+        build_mode = BuildMode([], self.output)
+        self.binaries_analyzer.evaluate_graph(deps_graph, build_mode=build_mode,
+                                              update=False, remotes=self.remotes)
+        return deps_graph
 
 
 def _get_nodes(graph, name):

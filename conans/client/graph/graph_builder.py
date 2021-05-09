@@ -67,8 +67,8 @@ class DepsGraphBuilder(object):
         try:
             self._expand_node(root_node, dep_graph, check_updates,
                               update, remotes, profile_host, profile_build, graph_lock)
-        except DepsGraphBuilder.StopRecursion:
-            dep_graph.error = True
+        except DepsGraphBuilder.StopRecursion as e:
+            dep_graph.error = str(e)
         else:
             self._check_provides(dep_graph)
         return dep_graph
@@ -244,12 +244,12 @@ class DepsGraphBuilder(object):
                 # This accounts for alias too
                 resolved = self._resolve_recipe(node, graph, resolved_ref, check_updates, update,
                                                 remotes, profile, graph_lock)
-            except ConanException:
+            except ConanException as e:
                 error_node = Node(require.ref, conanfile=None, context=context)
                 error_node.recipe = RECIPE_MISSING
                 graph.add_node(error_node)
                 graph.add_edge(node, error_node, require)
-                raise DepsGraphBuilder.StopRecursion("Unresolved reference")
+                raise DepsGraphBuilder.StopRecursion(str(e))
 
             new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,

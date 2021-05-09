@@ -266,7 +266,7 @@ class ConanFileLoader(object):
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
             ref = ConanFileReference.loads(reference)  # Raise if invalid
-            conanfile.requires.add_ref(ref)
+            conanfile.requires(reference)
         for build_reference in parser.build_requirements:
             ConanFileReference.loads(build_reference)
             if not hasattr(conanfile, "build_requires"):

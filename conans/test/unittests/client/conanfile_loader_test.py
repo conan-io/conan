@@ -42,22 +42,6 @@ class BasePackage(ConanFile):
         result = loader.load_consumer(conanfile_path, profile_host=create_profile())
         self.assertEqual(result.short_paths, True)
 
-    def test_requires_init(self):
-        loader = ConanFileLoader(None, Mock())
-        tmp_dir = temp_folder()
-        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
-        conanfile = """from conans import ConanFile
-class MyTest(ConanFile):
-    requires = {}
-    def requirements(self):
-        self.requires("MyPkg/0.1@user/channel")
-"""
-        for requires in ("''", "[]", "()", "None"):
-            save(conanfile_path, conanfile.format(requires))
-            result = loader.load_consumer(conanfile_path, profile_host=create_profile())
-            result.requirements()
-            self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
-
     def test_package_settings(self):
         # CREATE A CONANFILE TO LOAD
         tmp_dir = temp_folder()
@@ -173,11 +157,10 @@ OpenCV:other_option=False
 OpenCV2:use_python2=1
 OpenCV2:other_option=Cosa""")
         requirements = Requirements()
-        requirements.add("OpenCV/2.4.10@phil/stable")
-        requirements.add("OpenCV2/2.4.10@phil/stable")
+        requirements("OpenCV/2.4.10@phil/stable")
+        requirements("OpenCV2/2.4.10@phil/stable")
         build_requirements = ["MyPkg/1.0.0@phil/stable"]
 
-        self.assertEqual(ret.requires, requirements)
         self.assertEqual(ret.build_requires, build_requirements)
         self.assertEqual(ret.generators, ["one", "two"])
         self.assertEqual(ret.options.values.dumps(), options1.dumps())
