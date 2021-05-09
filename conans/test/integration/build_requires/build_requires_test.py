@@ -62,7 +62,8 @@ class BuildRequiresTest(unittest.TestCase):
                     GenConanfile().with_package_info(cpp_info={"libs": ["mylibcatch0.1lib"]},
                                                      env_info={"MYENV": ["myenvcatch0.1env"]})})
         t.run("create . catch/0.1@user/testing")
-        t.save({"conanfile.py": GenConanfile().with_require(catch_ref, private=True)})
+        t.save({"conanfile.py": GenConanfile().with_requirement(catch_ref, private=True)})
+        print(t.load("conanfile.py"))
         t.run("create . LibA/0.1@user/testing")
         t.save({"conanfile.py": GenConanfile().with_require(libA_ref)
                                               .with_build_requires(catch_ref)})

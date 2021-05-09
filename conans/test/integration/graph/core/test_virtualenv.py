@@ -4,7 +4,7 @@ import textwrap
 from conans.client.generators import VirtualEnvGenerator
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 
 
 class VirtualEnvGeneratorTestCase(GraphManagerTest):

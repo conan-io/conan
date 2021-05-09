@@ -281,7 +281,7 @@ class ConanAPIV1(object):
                 else:
                     ref = self.app.remote_manager.get_recipe(ref, remote)
 
-            result = self.app.proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
+            result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name

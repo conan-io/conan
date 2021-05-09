@@ -1,7 +1,7 @@
 import pytest
 
 from conans.errors import ConanException
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 
 
 class TestAlias(GraphManagerTest):

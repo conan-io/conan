@@ -31,12 +31,8 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     pkg_node = nodes[0]
     conanfile = pkg_node.conanfile
 
-    def _init_conanfile_infos():
-        node_order = [n for n in pkg_node.public_closure if n.binary != BINARY_SKIP]
-        subtree_libnames = [node.ref.name for node in node_order]
-        add_env_conaninfo(conanfile, subtree_libnames)
-
-    _init_conanfile_infos()
+    # TODO: Conan 1.X was setting the environment of the conanfile, why not set by the graph?
+    # _init_conanfile_infos()
 
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)

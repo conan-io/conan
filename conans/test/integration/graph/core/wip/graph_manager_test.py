@@ -42,7 +42,8 @@ class TestLinear(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        # TODO: Better error handling
+        assert deps_graph.error == 'No remote defined'
 
         app = deps_graph.root
         libb = app.dependencies[0].dst
@@ -420,7 +421,7 @@ class TestDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error == 'Unresolved reference'
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -448,7 +449,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error == 'Unresolved reference'
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -491,7 +492,7 @@ class TestDiamond(GraphManagerTest):
         liba2 = libc.dependencies[0].dst
 
         assert liba1 is not liba2
-        assert deps_graph.error is True
+        assert deps_graph.error == 'Unresolved reference'
         assert libd.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
 
         self._check_node(app, "app/0.1", deps=[libd])
@@ -618,7 +619,8 @@ class TestDiamondMultiple(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-        assert deps_graph.error is True
+        # TODO: Better error modeling
+        assert deps_graph.error == 'Loop found'
 
         self.assertEqual(5, len(deps_graph.nodes))
 

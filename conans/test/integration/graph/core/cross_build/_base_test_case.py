@@ -8,7 +8,7 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.installer import BinaryInstaller
 from conans.client.recorder.action_recorder import ActionRecorder
 from conans.model.ref import ConanFileReference
-from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
