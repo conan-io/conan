@@ -97,7 +97,7 @@ class Node(object):
 
     def __lt__(self, other):
         # TODO: Remove this order, shouldn't be necessary
-        return id(self) < id(other)
+        return str(self.ref) < str(other.ref)
 
     def propagate_closing_loop(self, require, prev_node):
         self.propagate_downstream(require, prev_node)
@@ -336,7 +336,8 @@ class DepsGraph(object):
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
 
-            # TODO: SORTING NOT NECESSARY NOW current_level.sort()
+            # TODO: SORTING seems only necessary for test order
+            current_level.sort()
             result.append(current_level)
             # now initialize new level
             opened = opened.difference(current_level)
