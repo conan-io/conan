@@ -15,6 +15,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Layout
+from conans.model.new_build_info import NewCppInfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -136,7 +137,7 @@ class ConanFile(object):
     # layout
     layout = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None, requester=None):
+    def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
@@ -147,7 +148,7 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
-        self._conan_requester = requester
+        self._conan_requester = None
 
         self.layout = Layout()
         self.buildenv_info = Environment()
@@ -156,6 +157,8 @@ class ConanFile(object):
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
 
+        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
+
     @property
     def context(self):
         return self._conan_node.context
@@ -163,6 +166,14 @@ class ConanFile(object):
     @property
     def dependencies(self):
         return ConanFileDependencies(self._conan_node)
+
+    @property
+    def ref(self):
+        return self._conan_node.ref
+
+    @property
+    def pref(self):
+        return self._conan_node.pref
 
     @property
     def buildenv(self):
@@ -204,6 +215,12 @@ class ConanFile(object):
 
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
+
+    @property
+    def new_cpp_info(self):
+        if not self._conan_new_cpp_info:
+            self._conan_new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
+        return self._conan_new_cpp_info
 
     @property
     def source_folder(self):

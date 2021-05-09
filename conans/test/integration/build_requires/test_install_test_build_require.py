@@ -7,7 +7,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def client():
     openssl = textwrap.dedent(r"""
         import os
@@ -55,15 +55,19 @@ def client():
     return client
 
 
-def test_build_require_test_package(client):
+@pytest.mark.parametrize("existing_br", ["",
+                                         'build_requires="tool/1.0"',
+                                         'build_requires=("tool/1.0", )',
+                                         'build_requires=["tool/1.0"]'])
+@pytest.mark.parametrize("build_profile", ["", "-pr:b=default"])
+def test_build_require_test_package(existing_br, build_profile, client):
     test_cmake = textwrap.dedent(r"""
         import os, platform
         from conans import ConanFile
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            generators = "cmake_find_package"  # No find_package should be generated!
-            test_build_require = True
+            test_type = "build_requires"
             {}
 
             def build(self):
@@ -75,21 +79,73 @@ def test_build_require_test_package(client):
         """)
 
     # Test with extra build_requires to check it doesn't interfere or get deleted
-    for br in ("", 'build_requires="tool/1.0"', 'build_requires=("tool/1.0", )',
-               'build_requires=["tool/1.0"]'):
-        client.save({"cmake/test_package/conanfile.py": test_cmake.format(br)})
-        # This works when using the build-host contexts
-        client.run("create cmake mycmake/1.0@ -pr:b=default --build=missing")
-        if "tool" in br:
-            assert "mycmake/1.0 (test package): Applying build-requirement: tool/1.0" in client.out
+    client.save({"cmake/test_package/conanfile.py": test_cmake.format(existing_br)})
+    client.run("create cmake mycmake/1.0@ {} --build=missing".format(build_profile))
 
-        assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in client.out
-        assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in client.out
-        assert "cmake_find_package" not in client.out
+    def check(out):
+        if "tool" in existing_br:
+            assert "mycmake/1.0 (test package): Applying build-requirement: tool/1.0" in out
+        else:
+            assert "tool/1.0" not in out
+
+        assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in out
+        assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in out
 
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-        assert "MYCMAKE={}!!".format(system) in client.out
-        assert "MYOPENSSL={}!!".format(system) in client.out
+        assert "MYCMAKE={}!!".format(system) in out
+        assert "MYOPENSSL={}!!".format(system) in out
+
+    check(client.out)
+
+    client.run("test cmake/test_package mycmake/1.0@ {}".format(build_profile))
+    check(client.out)
+
+
+@pytest.mark.parametrize("existing_br", ["",
+                                         'build_requires="tool/1.0"',
+                                         'build_requires=("tool/1.0", )',
+                                         'build_requires=["tool/1.0"]'])
+def test_both_types(existing_br, client):
+    # When testing same package in both contexts, the 2 profiles approach must be used
+    test_cmake = textwrap.dedent(r"""
+        import os, platform
+        from conans import ConanFile
+        from conans.tools import save, chdir
+        class Pkg(ConanFile):
+            settings = "os"
+            test_type = "build_requires", "requires"
+            {}
+
+            def build(self):
+                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
+                self.run(mybuild_cmd)
+
+            def test(self):
+                pass
+        """)
+
+    # Test with extra build_requires to check it doesn't interfere or get deleted
+    client.save({"cmake/test_package/conanfile.py": test_cmake.format(existing_br)})
+    # This must use the build-host contexts to have same dep in different contexts
+    client.run("create cmake mycmake/1.0@ -pr:b=default --build=missing")
+
+    def check(out):
+        if "tool" in existing_br:
+            assert "mycmake/1.0 (test package): Applying build-requirement: tool/1.0" in out
+        else:
+            assert "tool/1.0" not in out
+
+        assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in out
+        assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in out
+
+        system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
+        assert "MYCMAKE={}!!".format(system) in out
+        assert "MYOPENSSL={}!!".format(system) in out
+
+    check(client.out)
+
+    client.run("test cmake/test_package mycmake/1.0@ -pr:b=default")
+    check(client.out)
 
 
 def test_build_require_conanfile_text(client):

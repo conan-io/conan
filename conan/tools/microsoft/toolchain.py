@@ -8,16 +8,23 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
 def write_conanvcvars(conanfile):
     """
     write a conanvcvars.bat file with the good args from settings
     """
+    os_ = conanfile.settings.get_safe("os")
+    if os_ != "Windows":
+        return
+
     compiler = conanfile.settings.get_safe("compiler")
     cvars = None
     if compiler == "intel":
         cvars = intel_compilervars_command(conanfile)
     elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = _vs_ide_version(conanfile)
+        vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
         cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
                                winsdk_version=None, vcvars_ver=None)
@@ -26,15 +33,15 @@ def write_conanvcvars(conanfile):
             @echo off
             {}
             """.format(cvars))
-        save("conanvcvars.bat", content)
+        save(CONAN_VCVARS_FILE, content)
 
 
-def _vs_ide_version(conanfile):
+def vs_ide_version(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild"].vs_version
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
         if toolset_override:
             visual_version = toolset_override
         else:
@@ -153,7 +160,7 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain"].compile_options
+        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)

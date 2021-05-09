@@ -47,8 +47,8 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display, user, channel,
-                                  self._requester)
+            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
                     conanfile.init()
@@ -85,7 +85,8 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display, user, channel, self._requester)
+            result = conanfile(self._output, self._runner, display, user, channel)
+            result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
                     result.init()

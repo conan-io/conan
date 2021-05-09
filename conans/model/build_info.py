@@ -104,6 +104,7 @@ class _CppInfo(object):
 
     def __init__(self):
         self._name = None
+        self._generator_properties = {}
         self.names = {}
         self.system_libs = []  # Ordered list of system libraries
         self.includedirs = []  # Ordered list of include paths
@@ -127,6 +128,7 @@ class _CppInfo(object):
         self.sysroot = ""
         self.requires = []
         self._build_modules_paths = None
+        self._build_modules = None
         self._include_paths = None
         self._lib_paths = None
         self._bin_paths = None
@@ -154,7 +156,9 @@ class _CppInfo(object):
                 conan_v2_error("Use 'self.cpp_info.build_modules[\"<generator>\"] = "
                                "{the_list}' instead".format(the_list=self.build_modules))
                 self.build_modules = BuildModulesDict.from_list(self.build_modules)
-            tmp = dict_to_abs_paths(BuildModulesDict(self.build_modules), self.rootpath)
+                # Invalidate necessary, get_build_modules used raise_incorrect_components_definition
+                self._build_modules = None
+            tmp = dict_to_abs_paths(BuildModulesDict(self.get_build_modules()), self.rootpath)
             self._build_modules_paths = tmp
         return self._build_modules_paths
 
@@ -209,14 +213,58 @@ class _CppInfo(object):
     def name(self, value):
         self._name = value
 
-    def get_name(self, generator):
-        return self.names.get(generator, self._name)
+    # TODO: Deprecate for 2.0. Only cmake and pkg_config generators should access this.
+    #  Use get_property for 2.0
+    def get_name(self, generator, default_name=True):
+        property_name = None
+        if "cmake" in generator:
+            property_name = "cmake_target_name"
+        elif "pkg_config" in generator:
+            property_name = "pkg_config_name"
+        return self.get_property(property_name, generator) \
+               or self.names.get(generator, self._name if default_name else None)
 
-    def get_filename(self, generator):
-        result = self.filenames.get(generator)
+    # TODO: Deprecate for 2.0. Only cmake generators should access this. Use get_property for 2.0
+    def get_filename(self, generator, default_name=True):
+        result = self.get_property("cmake_file_name", generator) or self.filenames.get(generator)
         if result:
             return result
-        return self.get_name(generator)
+        return self.get_name(generator, default_name=default_name)
+
+    # TODO: Deprecate for 2.0. Use get_property for 2.0
+    def get_build_modules(self):
+        if self._build_modules is None:  # Not cached yet
+            try:
+                default_build_modules_value = self._generator_properties[None]["cmake_build_modules"]
+            except KeyError:
+                ret_dict = {}
+            else:
+                ret_dict = {"cmake_find_package": default_build_modules_value,
+                            "cmake_find_package_multi": default_build_modules_value,
+                            "cmake": default_build_modules_value,
+                            "cmake_multi": default_build_modules_value}
+
+            for generator, values in self._generator_properties.items():
+                if generator:
+                    v = values.get("cmake_build_modules")
+                    if v:
+                        ret_dict[generator] = v
+            self._build_modules = ret_dict if ret_dict else self.build_modules
+        return self._build_modules
+
+    def set_property(self, property_name, value, generator=None):
+        self._generator_properties.setdefault(generator, {})[property_name] = value
+
+    def get_property(self, property_name, generator=None):
+        if generator:
+            try:
+                return self._generator_properties[generator][property_name]
+            except KeyError:
+                pass
+        try:
+            return self._generator_properties[None][property_name]
+        except KeyError:
+            pass
 
     # Compatibility for 'cppflags' (old style property to allow decoration)
     def get_cppflags(self):
@@ -299,8 +347,8 @@ class CppInfo(_CppInfo):
     def __str__(self):
         return self._ref_name
 
-    def get_name(self, generator):
-        name = super(CppInfo, self).get_name(generator)
+    def get_name(self, generator, default_name=True):
+        name = super(CppInfo, self).get_name(generator, default_name=default_name)
 
         # Legacy logic for pkg_config generator
         from conans.client.generators.pkg_config import PkgConfigGenerator
@@ -354,7 +402,7 @@ class CppInfo(_CppInfo):
              self.cxxflags or
              self.sharedlinkflags or
              self.exelinkflags or
-             self.build_modules or
+             self.get_build_modules() or
              self.requires):
             raise ConanException("self.cpp_info.components cannot be used with self.cpp_info "
                                  "global values at the same time")
@@ -437,7 +485,6 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
-
         if not self.sysroot:
             self.sysroot = dep_cpp_info.sysroot
 

@@ -15,7 +15,6 @@ class TestTxtCommandLine(unittest.TestCase):
             [generators]
             CMakeToolchain
             MesonToolchain
-            MakeToolchain
             """)
         client = TestClient()
         client.save({"conanfile.txt": conanfile})
@@ -25,19 +24,15 @@ class TestTxtCommandLine(unittest.TestCase):
     def _check(self, client):
         self.assertIn("conanfile.txt: Generator 'CMakeToolchain' calling 'generate()'", client.out)
         self.assertIn("conanfile.txt: Generator 'MesonToolchain' calling 'generate()'", client.out)
-        self.assertIn("conanfile.txt: Generator 'MakeToolchain' calling 'generate()'", client.out)
         toolchain = client.load("conan_toolchain.cmake")
         self.assertIn("Conan automatically generated toolchain file", toolchain)
-        toolchain = client.load("conan_toolchain.mak")
-        self.assertIn("# Conan generated toolchain file", toolchain)
         toolchain = client.load("conan_meson_native.ini")
         self.assertIn("[project options]", toolchain)
 
     def test_command_line(self):
         client = TestClient()
         client.save({"conanfile.txt": ""})
-        client.run("install . -g CMakeToolchain -g MesonToolchain "
-                   "-g MakeToolchain")
+        client.run("install . -g CMakeToolchain -g MesonToolchain ")
         self._check(client)
 
 

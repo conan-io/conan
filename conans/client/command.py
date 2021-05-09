@@ -22,6 +22,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
+from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -40,7 +41,7 @@ class Extender(argparse.Action):
           settings = ['cucumber:true']
     """
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        # Need None here in case `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
         if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
@@ -565,6 +566,7 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
+        list_subparser = subparsers.add_parser('list', help='List Conan configuration properties')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -630,6 +632,10 @@ class Command(object):
                                               target_folder=args.target_folder)
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
+        elif args.subcommand == "list":
+            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            for key, value in DEFAULT_CONFIGURATION.items():
+                self._out.writeln("{}: {}".format(key, value))
 
     def info(self, *args):
         """
@@ -2285,6 +2291,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
+    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+                       reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.

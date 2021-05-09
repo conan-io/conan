@@ -16,9 +16,8 @@ def client():
 
         class Pkg(ConanFile):
             def generate(self):
-                for k, conf in self.conf.items():
-                    for name, value in conf.items():
-                        self.output.info("{}${}${}".format(k, name, value))
+                for k, v in self.conf.items():
+                    self.output.info("{}${}".format(k, v))
         """)
     client.save({"conanfile.py": conanfile})
     return client
@@ -40,23 +39,23 @@ def test_basic_composition(client):
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("install . -pr=profile1")
-    assert "tools.microsoft.msbuild$verbosity$Quiet" in client.out
-    assert "tools.microsoft.msbuild$performance$Slow" in client.out
-    assert "tools.cmake.cmake$verbosity$Extra" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Quiet" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.cmake.cmake:verbosity$Extra" in client.out
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "tools.microsoft.msbuild$verbosity$Minimal" in client.out
-    assert "tools.microsoft.msbuild$performance$Slow" in client.out
-    assert "tools.microsoft.msbuild$robustness$High" in client.out
-    assert "tools.cmake.cmake$verbosity$Extra" in client.out
-    assert "tools.meson.meson$verbosity$Super" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.cmake.cmake:verbosity$Extra" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
 
     client.run("install . -pr=profile2 -pr=profile1")
-    assert "tools.microsoft.msbuild$verbosity$Quiet" in client.out
-    assert "tools.microsoft.msbuild$performance$Slow" in client.out
-    assert "tools.microsoft.msbuild$robustness$High" in client.out
-    assert "tools.cmake.cmake$verbosity$Extra" in client.out
-    assert "tools.meson.meson$verbosity$Super" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Quiet" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.cmake.cmake:verbosity$Extra" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
 
 
 def test_basic_inclusion(client):
@@ -77,11 +76,11 @@ def test_basic_inclusion(client):
                  "profile2": profile2})
 
     client.run("install . -pr=profile2")
-    assert "tools.microsoft.msbuild$verbosity$Minimal" in client.out
-    assert "tools.microsoft.msbuild$performance$Slow" in client.out
-    assert "tools.microsoft.msbuild$robustness$High" in client.out
-    assert "tools.cmake.cmake$verbosity$Extra" in client.out
-    assert "tools.meson.meson$verbosity$Super" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.cmake.cmake:verbosity$Extra" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
 
 
 def test_composition_conan_conf(client):
@@ -99,11 +98,11 @@ def test_composition_conan_conf(client):
         """)
     client.save({"profile": profile})
     client.run("install . -pr=profile")
-    assert "tools.microsoft.msbuild$verbosity$Minimal" in client.out
-    assert "tools.microsoft.msbuild$performance$Slow" in client.out
-    assert "tools.microsoft.msbuild$robustness$High" in client.out
-    assert "tools.cmake.cmake$verbosity$Extra" in client.out
-    assert "tools.meson.meson$verbosity$Super" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.cmake.cmake:verbosity$Extra" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
 
 
 def test_new_config_file(client):
@@ -116,9 +115,9 @@ def test_new_config_file(client):
         """)
     save(client.cache.new_config_path, conf)
     client.run("install .")
-    assert "tools.microsoft.msbuild$verbosity$Minimal" in client.out
-    assert "user.mycompany.myhelper$myconfig$myvalue" in client.out
-    assert "tools.cmake.cmake$generator$X" in client.out
+    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
+    assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
+    assert "tools.cmake.cmake:generator$X" in client.out
     assert "no_locks" not in client.out
     assert "read_only" not in client.out
 

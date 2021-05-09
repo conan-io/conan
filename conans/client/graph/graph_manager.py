@@ -235,7 +235,10 @@ class GraphManager(object):
         conanfile.output.scope = conanfile.display_name
 
         # Injection of the tested reference
-        if getattr(conanfile, "test_build_require", None):
+        test_type = getattr(conanfile, "test_type", ("requires", ))
+        if not isinstance(test_type, (list, tuple)):
+            test_type = (test_type, )
+        if "build_requires" in test_type:
             if getattr(conanfile, "build_requires", None):
                 # Injecting the tested reference
                 existing = conanfile.build_requires
@@ -244,7 +247,7 @@ class GraphManager(object):
                 conanfile.build_requires = list(existing) + [create_reference]
             else:
                 conanfile.build_requires = str(create_reference)
-        else:
+        if "requires" in test_type:
             require = conanfile.requires.get(create_reference.name)
             if require:
                 require.ref = require.range_ref = create_reference
@@ -302,10 +305,6 @@ class GraphManager(object):
             return
 
         for node in graph.ordered_iterate(nodes_subset):
-            # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
-            # FIXME: To be improved and build a explicit model for this
-            #if node.recipe == RECIPE_VIRTUAL:
-            #    continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
                     and node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)):
@@ -317,6 +316,8 @@ class GraphManager(object):
             # downstream profile-defined build-requires
             new_profile_build_requires = []
             for pattern, build_requires in profile_build_requires.items():
+                if node.recipe == RECIPE_VIRTUAL:  # Virtual do not get profile build requires
+                    continue
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
@@ -359,7 +360,7 @@ class GraphManager(object):
             if new_profile_build_requires:
                 _recurse_build_requires(new_profile_build_requires, {})
 
-            if graph_lock:
+            if graph_lock and node.recipe != RECIPE_VIRTUAL:
                 graph_lock.check_locked_build_requires(node, package_build_requires,
                                                        new_profile_build_requires)
 

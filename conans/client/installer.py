@@ -10,8 +10,7 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
-    RECIPE_VIRTUAL
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -577,10 +576,7 @@ class BinaryInstaller(object):
 
         for n in node_order:
             if n not in transitive:
-                try:
-                    conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-                except:
-                    pass
+                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
 
             dep_cpp_info = n.conanfile._conan_dep_cpp_info
 

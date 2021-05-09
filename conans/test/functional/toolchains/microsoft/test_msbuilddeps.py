@@ -5,11 +5,10 @@ import unittest
 
 import pytest
 
-from parameterized import parameterized
-
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
+from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.test.utils.tools import TestClient
 
 sln_file = r"""
@@ -610,57 +609,147 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("Conan_tools.props in deps", client.out)
 
-
-    @parameterized.expand([("['*']", True, True),
-                           ("['pkga']", True, False),
-                           ("['pkgb']", False, True),
-                           ("['pkg*']", True, True),
-                           ("['pkga', 'pkgb']", True, True),
-                           ("['*a', '*b']", True, True),
-                           ("['nonexist']", False, False),
-                           ])
-    def test_exclude_code_analysis(self, pattern, exclude_a, exclude_b):
+    def test_install_transitive_build_requires(self):
+        # https://github.com/conan-io/conan/issues/8170
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkga/1.0@")
-        client.run("create . pkgb/1.0@")
+        client.run("export . dep/1.0@")
+        client.run("export . tool_build/1.0@")
+        client.run("export . tool_test/1.0@")
+        conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
+            with_build_requirement("tool_test/1.0", force_host_context=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("export . pkg/1.0@")
 
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.microsoft import MSBuild
+        client.save({"conanfile.py": GenConanfile().
+                    with_settings("os", "compiler", "arch", "build_type").
+                    with_requires("pkg/1.0")}, clean_first=True)
+        client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default --build=missing")
+        pkg = client.load("conan_pkg_release_x64.props")
+        assert "conan_dep.props" in pkg
+        assert "tool" not in pkg
 
-            class HelloConan(ConanFile):
-                settings = "os", "build_type", "compiler", "arch"
-                requires = "pkgb/1.0@", "pkga/1.0"
-                generators = "msbuild"
-                def build(self):
-                    msbuild = MSBuild(self)
-                    msbuild.build("MyProject.sln")
-            """)
-        profile = textwrap.dedent("""
-            include(default)
-            build_type=Release
-            arch=x86_64
-            [conf]
-            tools.microsoft.msbuilddeps:exclude_code_analysis = %s
-            """ % pattern)
 
-        client.save({"conanfile.py": conanfile,
-                     "profile": profile})
-        client.run("install . --profile profile")
-        depa = client.load("conan_pkga_release_x64.props")
-        depb = client.load("conan_pkgb_release_x64.props")
+@pytest.mark.parametrize("pattern,exclude_a,exclude_b",
+                         [("['*']", True, True),
+                          ("['pkga']", True, False),
+                          ("['pkgb']", False, True),
+                          ("['pkg*']", True, True),
+                          ("['pkga', 'pkgb']", True, True),
+                          ("['*a', '*b']", True, True),
+                          ("['nonexist']", False, False),
+                          ])
+def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . pkga/1.0@")
+    client.run("create . pkgb/1.0@")
 
-        if exclude_a:
-            inc = "$(ConanpkgaIncludeDirectories)"
-            ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
-            assert ca_exclude in depa
-        else:
-            assert "CAExcludePath" not in depa
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
 
-        if exclude_b:
-            inc = "$(ConanpkgbIncludeDirectories)"
-            ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
-            assert ca_exclude in depb
-        else:
-            assert "CAExcludePath" not in depb
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            requires = "pkgb/1.0@", "pkga/1.0"
+            generators = "msbuild"
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
+        """)
+    profile = textwrap.dedent("""
+        include(default)
+        build_type=Release
+        arch=x86_64
+        [conf]
+        tools.microsoft.msbuilddeps:exclude_code_analysis = %s
+        """ % pattern)
+
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . --profile profile")
+    depa = client.load("conan_pkga_release_x64.props")
+    depb = client.load("conan_pkgb_release_x64.props")
+
+    if exclude_a:
+        inc = "$(ConanpkgaIncludeDirectories)"
+        ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
+        assert ca_exclude in depa
+    else:
+        assert "CAExcludePath" not in depa
+
+    if exclude_b:
+        inc = "$(ConanpkgbIncludeDirectories)"
+        ca_exclude = "<CAExcludePath>%s;$(CAExcludePath)</CAExcludePath>" % inc
+        assert ca_exclude in depb
+    else:
+        assert "CAExcludePath" not in depb
+
+
+@pytest.mark.tool_visual_studio
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_vs_project_with_a():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile, CMake
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            exports = '*'
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                self.copy("*.h", dst="include")
+                self.copy("*.a", dst="lib", keep_path=False)
+
+            def package_info(self):
+                self.cpp_info.libs = ["hello.a"]
+        """)
+    hello_cpp = gen_function_cpp(name="hello")
+    hello_h = gen_function_h(name="hello")
+    cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(MyLib CXX)
+
+        set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
+        add_library(hello hello.cpp)
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmake,
+                 "hello.cpp": hello_cpp,
+                 "hello.h": hello_h})
+    client.run('create . mydep/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
+
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            requires = "mydep/0.1@"
+            generators = "MSBuildDeps", "MSBuildToolchain"
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
+        """)
+    files = get_vs_project_files()
+    main_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    files["MyProject/main.cpp"] = main_cpp
+    files["conanfile.py"] = consumer
+    props = os.path.join(client.current_folder, "conandeps.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+    new = old + '<Import Project="{props}" />'.format(props=props)
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    client.save(files, clean_first=True)
+    client.run('install . -s compiler="Visual Studio" -s compiler.version=15')
+    client.run("build .")
+    client.run_command(r"x64\Release\MyProject.exe")
+    assert "hello: Release!" in client.out
+    # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
+    # assert "main: Release!" in client.out
