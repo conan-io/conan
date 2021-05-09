@@ -342,6 +342,8 @@ class Command(object):
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
+        parser.add_argument("--build-require", action='store_true', default=False,
+                            help='The provided reference is a build-require')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
@@ -379,7 +381,8 @@ class Command(object):
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
-                                      profile_build=profile_build)
+                                      profile_build=profile_build,
+                                      is_build_require=args.build_require)
         except ConanException as exc:
             info = exc.info
             raise

@@ -339,7 +339,8 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
+               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
+               is_build_require=False):
         """
         API method to create a conan package
 
@@ -384,7 +385,8 @@ class ConanAPIV1(object):
             recorder.add_recipe_being_developed(ref)
             create(self.app, ref, graph_info, remotes, update, build_modes,
                    manifest_folder, manifest_verify, manifest_interactive, keep_build,
-                   test_build_folder, test_folder, conanfile_path, recorder=recorder)
+                   test_build_folder, test_folder, conanfile_path, recorder=recorder,
+                   is_build_require=is_build_require)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)

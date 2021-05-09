@@ -217,7 +217,8 @@ class GraphManager(object):
         conanfile = self._loader.load_virtual([reference], profile,
                                               is_build_require=is_build_require)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        if graph_lock:  # Find the Node ID in the lock of current root
+        # Build_requires cannot be found as early as this, because there is no require yet
+        if graph_lock and not is_build_require:  # Find the Node ID in the lock of current root
             graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
         return root_node
 

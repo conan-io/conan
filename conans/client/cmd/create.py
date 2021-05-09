@@ -28,7 +28,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 def create(app, ref, graph_info, remotes, update, build_modes,
            manifest_folder, manifest_verify, manifest_interactive, keep_build, test_build_folder,
-           test_folder, conanfile_path, recorder):
+           test_folder, conanfile_path, recorder, is_build_require=False):
     assert isinstance(ref, ConanFileReference), "ref needed"
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
@@ -88,4 +88,5 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                      build_modes=build_modes,
                      update=update,
                      keep_build=keep_build,
-                     recorder=recorder)
+                     recorder=recorder,
+                     is_build_require=is_build_require)
