@@ -163,6 +163,7 @@ def rename(conanfile, src, dst):
     :param dst: Destination file or folder
     :return: None
     """
+    # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
     if os.path.exists(dst):
         raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
 
