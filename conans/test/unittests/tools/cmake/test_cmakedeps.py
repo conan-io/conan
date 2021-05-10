@@ -83,7 +83,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 
             cmakedeps = CMakeDeps(conanfile)
             files = cmakedeps.content
-            assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
+            assert "TARGET GlobakPkgName1::MySuperPkg1" in files["ComplexFileName1Target-debug.cmake"]
             assert 'set(GlobakPkgName1_INCLUDE_DIRS_DEBUG "${GlobakPkgName1_PACKAGE_FOLDER}/include")' \
                    in files["ComplexFileName1-debug-x64-data.cmake"]
             assert 'set(GlobakPkgName1_MySuperPkg1_INCLUDE_DIRS_DEBUG ' \
