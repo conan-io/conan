@@ -101,7 +101,7 @@ class MSBuildDeps(object):
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
         # ca_exclude section
         self.exclude_code_analysis = None
-        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
+        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps:exclude_code_analysis"]
         if ca_exclude is not None:
             # TODO: Accept single strings, not lists
             self.exclude_code_analysis = eval(ca_exclude)

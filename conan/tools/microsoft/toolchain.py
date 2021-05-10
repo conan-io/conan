@@ -41,7 +41,7 @@ def vs_ide_version(conanfile):
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild"].vs_version
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
         if toolset_override:
             visual_version = toolset_override
         else:
@@ -160,7 +160,7 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain"].compile_options
+        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)
