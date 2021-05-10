@@ -39,12 +39,12 @@ class GenConanfile(object):
         self._package_info = None
         self._package_id_lines = None
         self._test_lines = None
-        self._short_path = None
+        self._short_paths = None
         self._exports_sources = None
         self._exports = None
 
     def with_short_paths(self, value):
-        self._short_path = value
+        self._short_paths = value
         return self
 
     def with_name(self, name):
@@ -361,7 +361,7 @@ class GenConanfile(object):
 
     @property
     def _short_paths_render(self):
-        return "short_paths = {}".format(str(self._short_path))
+        return "short_paths = {}".format(str(self._short_paths))
 
     @property
     def _exports_sources_render(self):
