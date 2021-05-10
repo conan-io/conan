@@ -156,12 +156,8 @@ OpenCV2:other_option=Cosa
 OpenCV:other_option=False
 OpenCV2:use_python2=1
 OpenCV2:other_option=Cosa""")
-        requirements = Requirements()
-        requirements("OpenCV/2.4.10@phil/stable")
-        requirements("OpenCV2/2.4.10@phil/stable")
-        build_requirements = ["MyPkg/1.0.0@phil/stable"]
 
-        self.assertEqual(ret.build_requires, build_requirements)
+        self.assertEqual(len(ret.requires.values()), 3)
         self.assertEqual(ret.generators, ["one", "two"])
         self.assertEqual(ret.options.values.dumps(), options1.dumps())
 
