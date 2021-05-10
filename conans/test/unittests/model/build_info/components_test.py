@@ -416,16 +416,12 @@ class CppInfoComponentsTest(unittest.TestCase):
                              list(deps_cpp_info["my_lib"].components["Component"].include_paths))
 
     def test_deps_cpp_info_components_includedirs(self):
-        folder = temp_folder()
-        info = CppInfo("my_lib", folder)
-        # Create files so paths are not cleared
-        save(os.path.join(folder, "lib", "kk.lib"), "")
-        save(os.path.join(folder, "include", "kk.h"), "")
-        info.components["component"].includedirs = ["lib", "include"]
+        info = CppInfo("my_lib", "root")
+        info.components["component"].includedirs = ["include1", "include2"]
+        info.components["component"].filter_empty = False
         dep_info = DepCppInfo(info)
-        expected = [os.path.join(folder, "lib"), os.path.join(folder, "include")]
+        expected = [os.path.join("root", "include1"), os.path.join("root", "include2")]
         self.assertListEqual(expected, list(dep_info.include_paths))
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.add("my_lib", dep_info)
-        expected = [os.path.join(folder, "lib"), os.path.join(folder, "include")]
         self.assertListEqual(expected, list(deps_cpp_info.includedirs))
