@@ -85,7 +85,7 @@ class DepsGraphBuilder(object):
                     fnmatch.fnmatch(str_ref, pattern)):
                 for build_require in build_requires:  # Do the override
                     # FIXME: converting back to string?
-                    node.conanfile.requires(str(build_require), build_require=True)
+                    node.conanfile.requires.build_require(str(build_require))
 
     @staticmethod
     def _check_provides(dep_graph):

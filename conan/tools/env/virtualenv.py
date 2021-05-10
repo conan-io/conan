@@ -22,6 +22,23 @@ class VirtualEnv:
         profile_env = self._conanfile.buildenv
         build_env.compose(profile_env)
 
+        # FIXME: This will be missing the order
+        # FIXME: Private access
+        for transitive in self._conanfile._conan_node.transitive_deps.values():
+            require = transitive.require
+            node = transitive.node
+            print("PROCESSING ", transitive)
+            if require.build:  # build context
+                if require.run:
+                    build_env.compose(node.conanfile.buildenv_info)
+                    # Second, the implicit self information in build_require.cpp_info
+                    build_env.compose(self._runenv_from_cpp_info(node.conanfile.cpp_info))
+            else:  # host context can inject any buildenv_info
+                if node.conanfile.buildenv_info:
+                    build_env.compose(node.conanfile.buildenv_info)
+
+
+        """
         # First visit the direct build_requires
         transitive_requires = []
         for build_require in self._conanfile.dependencies.build_requires:
@@ -53,7 +70,7 @@ class VirtualEnv:
                 reqs = new_requires
 
         _apply_transitive_buildenv(self._conanfile.dependencies.requires, build_env)
-
+        """
         return build_env
 
     @staticmethod

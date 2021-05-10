@@ -8,7 +8,7 @@ class Requirement:
     """
     def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
                  transitive_headers=None, test=False, package_id_mode=None):
-        # TODO: Decompose build_require in its traits
+        # By default this is a generic library requirement
         self.ref = ref
         self.include = include  # This dependent node has headers that must be -I<include-path>
         self.link = link
@@ -94,34 +94,33 @@ class Requirements:
             if isinstance(declared_build, str):
                 declared_build = [declared_build, ]
             for item in declared_build:
-                # Todo: Deprecate Conan 1.X definition of tuples, force to use method
-                self.__call__(item, build_require=True)
+                self.build_require(item)
         if declared_test is not None:
             if isinstance(declared_test, str):
                 declared_test = [declared_test, ]
             for item in declared_test:
-                # Todo: Deprecate Conan 1.X definition of tuples, force to use method
-                self.__call__(item, test_require=True)
+                self.test_require(item)
 
     def values(self):
         return self._requires.values()
 
     # TODO: Plan the interface for smooth transition from 1.X
-    def __call__(self, str_ref, build_require=False, test_require=False, transitive_headers=None,
-                 public=None):
+    def __call__(self, str_ref, **kwargs):
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
-        if build_require:
-            req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
-                              package_id_mode=None)
-        elif test_require:
-            req = Requirement(ref, include=True, link=True, build=False, run=None, public=False,
-                              test=True, package_id_mode=None)
-        else:
-            if public is None:  # TODO: This pattern is a bit ugly
-                req = Requirement(ref, transitive_headers=transitive_headers)
-            else:
-                req = Requirement(ref, transitive_headers=transitive_headers, public=public)
+        req = Requirement(ref, **kwargs)
+        self._requires[req] = req
+
+    def build_require(self, ref):
+        ref = ConanFileReference.loads(ref)
+        req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
+                          package_id_mode=None)
+        self._requires[req] = req
+
+    def test_require(self, ref):
+        ref = ConanFileReference.loads(ref)
+        req = Requirement(ref, include=True, link=True, build=False, run=None, public=False,
+                          test=True, package_id_mode=None)
         self._requires[req] = req
 
     def __repr__(self):

@@ -1,12 +1,214 @@
 import os
+import platform
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
+from conan.tools.env.environment import environment_wrap_command
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import save
+
+
+@pytest.fixture()
+def client():
+    openssl = textwrap.dedent(r"""
+        import os
+        from conans import ConanFile
+        from conans.tools import save, chdir
+        class Pkg(ConanFile):
+            settings = "os"
+            #options = {"shared": [True, False]}
+            #default_options = {"shared": True}
+            def package(self):
+                with chdir(self.package_folder):
+                    echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
+                    save("bin/myopenssl.bat", echo)
+                    save("bin/myopenssl.sh", echo)
+                    os.chmod("bin/myopenssl.sh", 0o777)
+            """)
+
+    cmake = textwrap.dedent(r"""
+        import os
+        from conans import ConanFile
+        from conans.tools import save, chdir
+        class Pkg(ConanFile):
+            settings = "os"
+            def requirements(self):
+                self.requires("openssl/1.0", run=True)
+            def package(self):
+                with chdir(self.package_folder):
+                    echo = "@echo off\necho MYCMAKE={}!!".format(self.settings.os)
+                    save("mycmake.bat", echo + "\ncall myopenssl.bat")
+                    save("mycmake.sh", echo + "\n myopenssl.sh")
+                    os.chmod("mycmake.sh", 0o777)
+
+            def package_info(self):
+                # Custom buildenv not defined by cpp_info
+                self.buildenv_info.prepend_path("PATH", self.package_folder)
+                self.buildenv_info.define("MYCMAKEVAR", "MYCMAKEVALUE!!")
+            """)
+
+    gtest = textwrap.dedent(r"""
+        import os
+        from conans import ConanFile
+        from conans.tools import save, chdir
+        class Pkg(ConanFile):
+            settings = "os"
+            def package(self):
+                with chdir(self.package_folder):
+                    echo = "@echo off\necho MYGTEST={}!!".format(self.settings.os)
+                    save("bin/mygtest.bat", echo)
+                    save("bin/mygtest.sh", echo)
+                    os.chmod("bin/mygtest.sh", 0o777)
+
+            def package_info(self):
+                self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
+            """)
+    client = TestClient()
+    save(client.cache.default_profile_path, "[settings]\nos=Windows")
+    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
+    client.save({"cmake/conanfile.py": cmake,
+                 "gtest/conanfile.py": gtest,
+                 "openssl/conanfile.py": openssl})
+
+    client.run("create openssl openssl/1.0@")
+    client.run("create cmake mycmake/1.0@")
+    client.run("create gtest mygtest/1.0@")
+
+    myrunner_bat = "@echo off\necho MYGTESTVAR=%MYGTESTVAR%!!\n"
+    myrunner_sh = "echo MYGTESTVAR=$MYGTESTVAR!!\n"
+    client.save({"myrunner.bat": myrunner_bat,
+                 "myrunner.sh": myrunner_sh}, clean_first=True)
+    os.chmod(os.path.join(client.current_folder, "myrunner.sh"), 0o777)
+    return client
+
+
+def test_conanfile_txt(client):
+    # conanfile.txt -(br)-> cmake
+    client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:h os=Linux")
+    print(client.out)
+    assert "mycmake/1.0:7d482e961aadd6a15d84aaa43f23d8338e239cf7" in client.out
+    assert "openssl/1.0:3475bd55b91ae904ac96fde0f106a136ab951a5e" in client.out
+    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
+    cmd = environment_wrap_command("conanbuildenv", "mycmake.{}".format(ext),
+                                   cwd=client.current_folder)
+    print(client.load("conanbuildenv.bat"))
+    client.run_command(cmd)
+
+    assert "MYCMAKE=Windows!!" in client.out
+    assert "MYOPENSSL=Windows!!" in client.out
+
+
+
+def test_complete(client):
+    conanfile = textwrap.dedent("""
+        import platform
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            build_requires = "mycmake/1.0"
+            apply_env = False
+
+            def build_requirements(self):
+                self.build_requires("mygtest/1.0", force_host_context=True)
+
+            def build(self):
+                mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
+                self.run(mybuild_cmd)
+                mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
+                self.run(mytest_cmd, env="conanrunenv")
+       """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    # Run the BUILD environment
+    ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
+    cmd = environment_wrap_command("conanbuildenv", "mycmake.{}".format(ext),
+                                   cwd=client.current_folder)
+    client.run_command(cmd)
+    assert "MYCMAKE=Windows!!" in client.out
+    assert "MYOPENSSL=Windows!!" in client.out
+
+    # Run the RUN environment
+    cmd = environment_wrap_command("conanrunenv",
+                                   "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
+                                                                                  sep=os.sep),
+                                   cwd=client.current_folder)
+    client.run_command(cmd)
+    assert "MYGTEST=Linux!!" in client.out
+    assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
+
+    client.run("build . -s:b os=Windows -s:h os=Linux")
+    assert "MYCMAKE=Windows!!" in client.out
+    assert "MYOPENSSL=Windows!!" in client.out
+    assert "MYGTEST=Linux!!" in client.out
+
+
+
+
+
+def test_transitive_order():
+    # conanfile.py -(br)-> cmake -> openssl (unknown=static)
+    #     \                    \-(br)-> gcc
+    #      \--------(br)-> gcc
+    #       \---------------------> openssl
+    gcc = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyGCCValue")
+        """)
+    openssl = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            build_requires = "gcc/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
+        """)
+    cmake = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            build_requires = "gcc/1.0"
+            def package_info(self):
+                self.runenv_info.append("MYVAR", "MyCMakeRunValue")
+                self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
+        """)
+    client = TestClient()
+    client.save({"gcc/conanfile.py": gcc,
+                 "cmake/conanfile.py": cmake,
+                 "openssl/conanfile.py": openssl})
+
+    client.run("export gcc gcc/1.0@")
+    client.run("export openssl openssl/1.0@")
+    client.run("export cmake cmake/1.0@")
+
+    consumer = textwrap.dedent(r"""
+        from conans import ConanFile
+        from conan.tools.env import VirtualEnv
+        class Pkg(ConanFile):
+            requires = "openssl/1.0"
+            build_requires = "cmake/1.0", "gcc/1.0"
+            def generate(self):
+                env = VirtualEnv(self)
+                buildenv = env.build_environment()
+                self.output.info("BUILDENV: {}!!!".format(buildenv.value("MYVAR")))
+                runenv = env.run_environment()
+                self.output.info("RUNENV: {}!!!".format(runenv.value("MYVAR")))
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
+    print(client.out)
+    assert "BUILDENV: MYVAR MyCMakeBuildValue!!!" in client.out
+    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+
+
 
 tool_conanfile = """from conans import ConanFile
 
@@ -50,6 +252,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 """
 
 
+@pytest.mark.xfail(reason="Legacy tests with wrong propagation asumptions")
 class BuildRequiresTest(unittest.TestCase):
 
     def test_consumer(self):
@@ -133,24 +336,6 @@ class MyTest(ConanFile):
                                                   "Applying build-requirement:"
                                                   " Build1/0.1@conan/stable"))
         self.assertIn("TESTING!!", client.out)
-
-    def test_dependents_txt(self):
-        client = TestClient()
-        boost = """from conans import ConanFile
-class Boost(ConanFile):
-    def package_info(self):
-        self.env_info.PATH.append("myboostpath")
-"""
-        client.save({CONANFILE: boost})
-        client.run("create . Boost/1.0@user/channel")
-        other = """[build_requires]
-Boost/1.0@user/channel
-"""
-        client.save({"conanfile.txt": other}, clean_first=True)
-        client.run("install .")
-
-        self.assertIn("""Build requirements
-    Boost/1.0@user/channel""", client.out)
 
     def test_dependents(self):
         client = TestClient()

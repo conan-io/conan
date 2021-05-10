@@ -96,10 +96,9 @@ class GenConanfile(object):
             self.with_require(ref)
         return self
 
-    def with_requirement(self, ref, private=False, override=False, transitive_headers=None,
-                         public=None):
+    def with_requirement(self, ref, **kwargs):
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._requirements.append((ref_str, private, override, transitive_headers, public))
+        self._requirements.append((ref_str, kwargs))
         return self
 
     def with_build_requires(self, *refs):
@@ -299,13 +298,9 @@ class GenConanfile(object):
             return ""
 
         lines = ["", "    def requirements(self):"]
-        for ref, private, override, trans_h, public in self._requirements:
-            private_str = ", private=True" if private else ""
-            override_str = ", override=True" if override else ""
-            transitive_h = ", transitive_headers={}".format(trans_h) if trans_h is not None else ""
-            public = ", public={}".format(public) if public is not None else ""
-            lines.append('        self.requires("{}"{}{}{}{})'.format(ref, private_str, override_str,
-                                                                      transitive_h, public))
+        for ref, kwargs in self._requirements:
+            args = ", ".join("{}={}".format(k, v) for k, v in kwargs.items())
+            lines.append('        self.requires("{}", {})'.format(ref, args))
 
         return "\n".join(lines)
 

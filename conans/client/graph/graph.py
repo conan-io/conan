@@ -127,7 +127,8 @@ class Node(object):
 
         if source_require.build:  # Build-requires
             print("    Propagating build-require",  self, "<-", require)
-            if up_shared:
+            # If the above is shared or the requirement is explicit run=True
+            if up_shared or require.run:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
                                                  run=True, public=False,)
                 return downstream_require
@@ -374,18 +375,7 @@ class DepsGraph(object):
         transitively). Nodes that are both in requires and build_requires will not be returned.
         This is used just for output purposes, printing deps, HTML graph, etc.
         """
-        public_nodes = set()
-        current = [self.root]
-        while current:
-            new_current = set()
-            public_nodes.update(current)
-            for n in current:
-                # Might skip deps
-                to_add = [d.dst for d in n.dependencies if not d.build_require]
-                new_current.update(to_add)
-            current = new_current
-
-        return [n for n in self.nodes if n not in public_nodes]
+        return [n for n in self.nodes if n.context == CONTEXT_BUILD]
 
     def report_graph_error(self):
         if self.error:

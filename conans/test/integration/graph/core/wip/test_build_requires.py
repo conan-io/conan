@@ -65,50 +65,50 @@ class BuildRequiresGraphTest(GraphManagerTest):
         _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
-    def test_build_require_transitive(self):
-        # app -> lib -(br)-> cmake -> zlib (static)
-        self._cache_recipe("zlib/0.1", GenConanfile("zlib", "0.1").with_shared_option(False))
-        self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1"))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+    @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
+    def test_build_require_transitive(self, cmakelib_type):
+        # app -> lib -(br)-> cmake -> cmakelib (cmakelib_type)
+
+        if cmakelib_type in ("notrun", "run"):  # Unknown
+            cmakelib = GenConanfile().with_settings("os")
+        else:
+            cmakelib = GenConanfile().with_settings("os").\
+                with_shared_option(cmakelib_type == "shared")
+        run = True if cmakelib_type == "run" else None  # Not necessary to specify
+
+        self._cache_recipe("cmakelib/0.1", cmakelib)
+        self._cache_recipe("cmake/0.1", GenConanfile().with_settings("os").
+                           with_requirement("cmakelib/0.1", run=run))
+        self._cache_recipe("lib/0.1", GenConanfile().with_settings("os").
+                           with_build_requires("cmake/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
+                                      with_require("lib/0.1"))
 
         self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         lib = app.dependencies[0].dst
         cmake = lib.dependencies[0].dst
-        zlib = cmake.dependencies[0].dst
+        cmakelib = cmake.dependencies[0].dst
 
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
-        self._check_node(cmake, "cmake/0.1#123", deps=[zlib], dependents=[lib])
-        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[cmake])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(cmake, False, False, True, True)])
-
-    def test_build_require_transitive_shared(self):
-        # app -> lib -(br)-> cmake -> zlib (shared)
-        self._cache_recipe("zlib/0.1", GenConanfile("zlib", "0.1").with_shared_option(True))
-        self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.1"))
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
-
-        self.assertEqual(4, len(deps_graph.nodes))
-        app = deps_graph.root
-        lib = app.dependencies[0].dst
-        cmake = lib.dependencies[0].dst
-        zlib = cmake.dependencies[0].dst
-
-        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
-        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
-        self._check_node(cmake, "cmake/0.1#123", deps=[zlib], dependents=[lib])
-        self._check_node(zlib, "zlib/0.1#123", deps=[], dependents=[cmake])
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[], settings={"os": "Linux"})
+        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app],
+                         settings={"os": "Linux"})
+        self._check_node(cmake, "cmake/0.1#123", deps=[cmakelib], dependents=[lib],
+                         settings={"os": "Windows"})
+        self._check_node(cmakelib, "cmakelib/0.1#123", deps=[], dependents=[cmake],
+                         settings={"os": "Windows"})
 
         # node, include, link, build, run
         _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
-        _check_transitive(lib, [(cmake, False, False, True, True),
-                                (zlib, False, False, True, True)])
+
+        if cmakelib_type in ("static", "notrun"):
+            _check_transitive(lib, [(cmake, False, False, True, True)])
+        else:
+            _check_transitive(lib, [(cmake, False, False, True, True),
+                                    (cmakelib, False, False, True, True)])
+
+
+
 
 
 

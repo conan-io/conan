@@ -41,6 +41,8 @@ class GraphManagerTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
         cache_folder = temp_folder()
         cache = ClientCache(cache_folder, self.output)
+        save(cache.default_profile_path, "")
+        save(cache.settings_path, "os: [Windows, Linux]")
         self.cache = cache
 
     def _get_app(self):
@@ -130,7 +132,9 @@ class GraphManagerTest(unittest.TestCase):
     def build_consumer(self, path, profile_build_requires=None, ref=None, create_ref=None,
                        install=True):
         profile_host = Profile()
+        profile_host.settings["os"] = "Linux"
         profile_build = Profile()
+        profile_build.settings["os"] = "Windows"
         if profile_build_requires:
             profile_host.build_requires = profile_build_requires
         profile_host.process_settings(self.cache)
@@ -153,7 +157,7 @@ class GraphManagerTest(unittest.TestCase):
                                      profile_build=profile_build, graph_lock=None)
         return deps_graph
 
-    def _check_node(self, node, ref, deps=None, dependents=None):
+    def _check_node(self, node, ref, deps=None, dependents=None, settings=None):
         dependents = dependents or []
         deps = deps or []
 
@@ -171,3 +175,8 @@ class GraphManagerTest(unittest.TestCase):
         self.assertEqual(len(dependants), len(dependents))
         for d in dependents:
             self.assertIn(d, dependants)
+
+        if settings is not None:
+            for k, v in settings.items():
+                print(node, k, v, conanfile.settings.get_safe(k))
+                assert conanfile.settings.get_safe(k) == v

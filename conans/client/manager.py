@@ -52,6 +52,7 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
+
     print_graph(deps_graph, out)
 
     try:

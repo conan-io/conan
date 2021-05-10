@@ -274,7 +274,6 @@ class GraphLock(object):
         for graph_node in deps_graph.nodes:
             if graph_node.recipe == RECIPE_VIRTUAL:
                 continue
-            print("NOD ", graph_node)
             assert graph_node.conanfile is not None
             # Creating a GraphLockNode from the existing DepsGraph node
             requires = []
