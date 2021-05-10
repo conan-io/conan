@@ -266,10 +266,8 @@ def _cppstd_gcc(gcc_version, cppstd):
         vgnu20 = "gnu++2a"
 
     if Version(gcc_version) >= "11":
-        v20 = "c++20"
-        vgnu20 = "gnu++20"
-        v23 = "c++23"
-        vgnu23 = "gnu++23"
+        v23 = "c++2b"
+        vgnu23 = "gnu++2b"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
