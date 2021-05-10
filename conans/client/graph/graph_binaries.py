@@ -1,3 +1,4 @@
+from conan.cache.conan_reference import ConanReference
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
@@ -224,16 +225,20 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        package_layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
-        metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
+        #package_layout = self._cache.pkg_layout(pref)
+
+        latest_prev = self._cache.get_package_revisions(ConanReference(pref), only_latest_prev=True)
+
+        # TODO: cache2.0: remove metadata, move to db
+        #metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
-        if not remote:
-            # If the remote_name is not given, follow the binary remote, or the recipe remote
-            # If it is defined it won't iterate (might change in conan2.0)
-            metadata = metadata or package_layout.load_metadata()
-            remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
-            remote = remotes.get(remote_name)
+        # if not remote:
+        #     # If the remote_name is not given, follow the binary remote, or the recipe remote
+        #     # If it is defined it won't iterate (might change in conan2.0)
+        #     metadata = metadata or package_layout.load_metadata()
+        #     remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+        #     remote = remotes.get(remote_name)
 
         if package_layout.package_id_exists(pref.id):  # Binary already in cache, check for updates
             self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
