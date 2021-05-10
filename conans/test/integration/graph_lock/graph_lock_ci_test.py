@@ -640,8 +640,6 @@ class CIBuildRequiresTest(unittest.TestCase):
         client.run("lock create --reference=PkgD/0.1@user/channel --build -pr:h=myprofile -pr:b=myprofile "
                    " --lockfile-out=conan.lock")
 
-        print(client.load("conan.lock"))
-
         # Do a change in br
         client.run("create br br/0.2@user/channel")
 
