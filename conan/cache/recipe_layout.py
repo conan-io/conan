@@ -59,6 +59,9 @@ class RecipeLayout(LockableMixin):
     def export_sources(self):
         return os.path.join(self.base_directory, 'export_sources')
 
+    def download_export(self):
+        return os.path.join(self.base_directory, "dl", "export")
+
     def source(self):
         return os.path.join(self.base_directory, 'source')
 

@@ -168,3 +168,8 @@ class DataCache:
         """
         for it in self.db.list_references(only_latest_rrev):
             yield it
+
+    def get_package_revisions(self, ref, only_latest_prev=False):
+        for it in self.db.get_package_revisions(ref, only_latest_prev):
+            yield it
+

@@ -75,3 +75,8 @@ class CacheDatabase:
         with self.connect() as conn:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it
+
+    def get_package_revisions(self, ref, only_latest_prev=False):
+        with self.connect() as conn:
+            for it in self._references.get_prevs(conn, ref, only_latest_prev):
+                yield it

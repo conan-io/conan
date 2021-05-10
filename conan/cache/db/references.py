@@ -160,3 +160,18 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query, [str(ref), ])
         row = r.fetchone()
         return self._as_ref(self.row_type(*row))
+
+    def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[PackageReference]:
+        if only_latest_prev:
+            query = f'SELECT * ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.rrev} = "{ref.rrev}" '\
+                    f'AND {self.columns.reference} = "{ref.reference}" ' \
+                    f'AND {self.columns.prev} IS NOT NULL ' \
+                    f'AND {self.columns.timestamp} = (SELECT MAX({self.columns.timestamp}) FROM {self.table_name})'
+        else:
+            query = f'SELECT * FROM {self.table_name}'\
+                    f'WHERE {self.columns.rrev} = "{ref.rrev}" AND {self.columns.reference} = "{ref.reference}"'
+        r = conn.execute(query)
+        for row in r.fetchall():
+            yield self._as_ref(self.row_type(*row))
