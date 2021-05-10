@@ -150,16 +150,18 @@ class RemoteManager(object):
         touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, pref, layout, remote, output, recorder):
-        conanfile_path = layout.conanfile()
+        ref_layout = self._cache.ref_layout(pref.ref)
+        conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        layout.package_remove(pref)  # Remove first the destination folder
-        with layout.set_dirty_context_manager(pref):
-            info = getattr(conanfile, 'info', None)
-            self._get_package(layout, pref, remote, output, recorder, info=info)
+        # TODO: cache2.0: check
+        #layout.package_remove(pref)  # Remove first the destination folder
+        #with layout.set_dirty_context_manager(pref):
+        info = getattr(conanfile, 'info', None)
+        self._get_package(layout, pref, remote, output, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
@@ -174,24 +176,25 @@ class RemoteManager(object):
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
 
-            download_pkg_folder = layout.download_package(pref)
+            download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
 
             # Compute and update the package metadata
             package_checksums = calc_files_checksum(zipped_files)
-            with layout.update_metadata() as metadata:
-                metadata.packages[pref.id].revision = pref.revision
-                metadata.packages[pref.id].recipe_revision = pref.ref.revision
-                metadata.packages[pref.id].checksums = package_checksums
-                metadata.packages[pref.id].remote = remote.name
+            # TODO: cache2.0: remove metadata, move to db
+            # with layout.update_metadata() as metadata:
+            #     metadata.packages[pref.id].revision = pref.revision
+            #     metadata.packages[pref.id].recipe_revision = pref.ref.revision
+            #     metadata.packages[pref.id].checksums = package_checksums
+            #     metadata.packages[pref.id].remote = remote.name
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
-            package_folder = layout.package(pref)
+            package_folder = layout.package()
             if tgz_file:  # This must happen always, but just in case
                 # TODO: The output could be changed to the package one, but
                 uncompress_file(tgz_file, package_folder, output=self._output)

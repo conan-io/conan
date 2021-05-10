@@ -43,3 +43,6 @@ class PackageLayout(LockableMixin):
 
     def base_directory(self):
         return os.path.join(self._cache.base_folder, self._package_folder)
+
+    def download_package(self):
+        return os.path.join(self._cache.base_folder, self._package_folder, "dl", "pkg")

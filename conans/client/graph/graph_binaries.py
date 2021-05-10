@@ -227,7 +227,7 @@ class GraphBinariesAnalyzer(object):
 
         #package_layout = self._cache.pkg_layout(pref)
 
-        latest_prev = self._cache.get_package_revisions(ConanReference(pref), only_latest_prev=True)
+        latest_prev_for_pkg_id = self._cache.get_package_revisions(ConanReference(pref), only_latest_prev=True)
 
         # TODO: cache2.0: remove metadata, move to db
         #metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
@@ -240,7 +240,7 @@ class GraphBinariesAnalyzer(object):
         #     remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
         #     remote = remotes.get(remote_name)
 
-        if package_layout.package_id_exists(pref.id):  # Binary already in cache, check for updates
+        if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
             self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
