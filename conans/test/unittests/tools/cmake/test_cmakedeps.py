@@ -43,7 +43,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
 
             cmakedeps = CMakeDeps(conanfile)
             files = cmakedeps.content
-            assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Config.cmake"]
+            assert "TARGET MySuperPkg1::MySuperPkg1" in files["ComplexFileName1Target-release.cmake"]
             assert 'set(MySuperPkg1_INCLUDE_DIRS_RELEASE "${MySuperPkg1_PACKAGE_FOLDER}/include")' \
                    in files["ComplexFileName1-release-x86-data.cmake"]
 

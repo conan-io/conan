@@ -109,6 +109,11 @@ class NewCppInfo(object):
                 self._generator_properties = {}
             self._generator_properties.update(other._generator_properties)
 
+        if other.requires:
+            if self.requires is None:
+                self.requires = []
+            merge_list(other.requires, self.requires)
+
         # COMPONENTS
         for cname, c in other.components.items():
             if cname is None:
@@ -213,10 +218,9 @@ class NewCppInfo(object):
         If the require is internal (to another component), the require will be None"""
         # FIXME: Cache the value
         ret = []
-        for comp in self.components.values():
-            if comp.requires is not None:
-                ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
-                ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
+        for key, comp in self.components.items():
+            ret.extend([r.split("::") for r in comp.requires if "::" in r and r not in ret])
+            ret.extend([(None, r) for r in comp.requires if "::" not in r and r not in ret])
         return ret
 
     def clear_none(self):

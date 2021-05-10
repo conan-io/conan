@@ -135,6 +135,7 @@ def test_from_old_cppinfo_components():
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo.components["foo"], n, ["var_{}_1".format(n), "var_{}_2".format(n)])
         setattr(oldcppinfo.components["foo2"], n, ["var2_{}_1".format(n), "var2_{}_2".format(n)])
+    oldcppinfo.components["foo"].requires = ["my_req::my_component"]
 
     # The names and filenames are not copied to the new model
     oldcppinfo.components["foo"].names["Gen"] = ["MyName"]
@@ -157,12 +158,14 @@ def test_from_old_cppinfo_components():
 
     assert cppinfo.components["foo"].get_property("cmake_build_modules") == \
            ["foo_my_scripts.cmake", "foo.cmake"]
+    assert cppinfo.components["foo"].requires == ["my_req::my_component"]
     assert cppinfo.components["foo2"].get_property("cmake_build_modules") == \
            ["foo2_my_scripts.cmake"]
 
 
 def test_from_old_cppinfo_no_components():
     oldcppinfo = CppInfo("ref", "/root/")
+    oldcppinfo.requires = ["my_req::my_component"]
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         setattr(oldcppinfo, n, ["var_{}_1".format(n), "var_{}_2".format(n)])
 
@@ -178,6 +181,7 @@ def test_from_old_cppinfo_no_components():
 
     assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake", "foo.cmake",
                                                            "foo2.cmake"]
+    assert cppinfo.requires == ["my_req::my_component"]
 
 
 def test_fill_old_cppinfo():
