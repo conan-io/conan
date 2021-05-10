@@ -33,7 +33,7 @@ apple_frameworks_macro = textwrap.dedent("""
 
 
 conan_package_library_targets = textwrap.dedent("""
-   function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target build_type package_name)
+   function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target config package_name)
        unset(_CONAN_ACTUAL_TARGETS CACHE)
 
        foreach(_LIBRARY_NAME ${libraries})
@@ -44,7 +44,7 @@ conan_package_library_targets = textwrap.dedent("""
                list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                # Create a micro-target for each lib/a found
-               set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${build_type})
+               set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config})
                if(NOT TARGET ${_LIB_NAME})
                    # Create a micro-target for each lib/a found
                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
@@ -75,69 +75,69 @@ conan_package_library_targets = textwrap.dedent("""
 
 variables_template = """
 set({name}_PACKAGE_FOLDER "{package_folder}")
-set({name}_INCLUDE_DIRS{build_type_suffix} {deps.include_paths})
-set({name}_RES_DIRS{build_type_suffix} {deps.res_paths})
-set({name}_DEFINITIONS{build_type_suffix} {deps.defines})
-set({name}_SHARED_LINK_FLAGS{build_type_suffix} {deps.sharedlinkflags_list})
-set({name}_EXE_LINK_FLAGS{build_type_suffix} {deps.exelinkflags_list})
-set({name}_COMPILE_DEFINITIONS{build_type_suffix} {deps.compile_definitions})
-set({name}_COMPILE_OPTIONS_C{build_type_suffix} {deps.cflags_list})
-set({name}_COMPILE_OPTIONS_CXX{build_type_suffix} {deps.cxxflags_list})
-set({name}_LIB_DIRS{build_type_suffix} {deps.lib_paths})
-set({name}_LIBS{build_type_suffix} {deps.libs})
-set({name}_SYSTEM_LIBS{build_type_suffix} {deps.system_libs})
-set({name}_FRAMEWORK_DIRS{build_type_suffix} {deps.framework_paths})
-set({name}_FRAMEWORKS{build_type_suffix} {deps.frameworks})
-set({name}_BUILD_MODULES_PATHS{build_type_suffix} {deps.build_modules_paths})
-set({name}_BUILD_DIRS{build_type_suffix} {deps.build_paths})
+set({name}_INCLUDE_DIRS{config_suffix} {deps.include_paths})
+set({name}_RES_DIRS{config_suffix} {deps.res_paths})
+set({name}_DEFINITIONS{config_suffix} {deps.defines})
+set({name}_SHARED_LINK_FLAGS{config_suffix} {deps.sharedlinkflags_list})
+set({name}_EXE_LINK_FLAGS{config_suffix} {deps.exelinkflags_list})
+set({name}_COMPILE_DEFINITIONS{config_suffix} {deps.compile_definitions})
+set({name}_COMPILE_OPTIONS_C{config_suffix} {deps.cflags_list})
+set({name}_COMPILE_OPTIONS_CXX{config_suffix} {deps.cxxflags_list})
+set({name}_LIB_DIRS{config_suffix} {deps.lib_paths})
+set({name}_LIBS{config_suffix} {deps.libs})
+set({name}_SYSTEM_LIBS{config_suffix} {deps.system_libs})
+set({name}_FRAMEWORK_DIRS{config_suffix} {deps.framework_paths})
+set({name}_FRAMEWORKS{config_suffix} {deps.frameworks})
+set({name}_BUILD_MODULES_PATHS{config_suffix} {deps.build_modules_paths})
+set({name}_BUILD_DIRS{config_suffix} {deps.build_paths})
 # Missing the dependencies information here
 """
 
 
 dynamic_variables_template = """
 
-set({name}_COMPILE_OPTIONS{build_type_suffix}
-        "$<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX{build_type_suffix}}}>"
-        "$<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C{build_type_suffix}}}>")
+set({name}_COMPILE_OPTIONS{config_suffix}
+        "$<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX{config_suffix}}}>"
+        "$<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C{config_suffix}}}>")
 
-set({name}_LINKER_FLAGS{build_type_suffix}
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{build_type_suffix}}}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{build_type_suffix}}}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{{name}_EXE_LINK_FLAGS{build_type_suffix}}}>")
+set({name}_LINKER_FLAGS{config_suffix}
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{config_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{config_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{{name}_EXE_LINK_FLAGS{config_suffix}}}>")
 
-set({name}_FRAMEWORKS_FOUND{build_type_suffix} "") # Will be filled later
-conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{build_type_suffix} "${{{name}_FRAMEWORKS{build_type_suffix}}}" "${{{name}_FRAMEWORK_DIRS{build_type_suffix}}}")
+set({name}_FRAMEWORKS_FOUND{config_suffix} "") # Will be filled later
+conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{config_suffix} "${{{name}_FRAMEWORKS{config_suffix}}}" "${{{name}_FRAMEWORK_DIRS{config_suffix}}}")
 
 # Gather all the libraries that should be linked to the targets (do not touch existing variables):
-set(_{name}_DEPENDENCIES{build_type_suffix} "${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}} ${{{name}_SYSTEM_LIBS{build_type_suffix}}} {deps_names}")
+set(_{name}_DEPENDENCIES{config_suffix} "${{{name}_FRAMEWORKS_FOUND{config_suffix}}} ${{{name}_SYSTEM_LIBS{config_suffix}}} {deps_names}")
 
-set({name}_LIBRARIES_TARGETS{build_type_suffix} "") # Will be filled later, if CMake 3
-set({name}_LIBRARIES{build_type_suffix} "") # Will be filled later
-conan_package_library_targets("${{{name}_LIBS{build_type_suffix}}}"           # libraries
-                              "${{{name}_LIB_DIRS{build_type_suffix}}}"       # package_libdir
-                              "${{_{name}_DEPENDENCIES{build_type_suffix}}}"  # deps
-                              {name}_LIBRARIES{build_type_suffix}             # out_libraries
-                              {name}_LIBRARIES_TARGETS{build_type_suffix}     # out_libraries_targets
-                              "{build_type_suffix}"                           # build_type
+set({name}_LIBRARIES_TARGETS{config_suffix} "") # Will be filled later, if CMake 3
+set({name}_LIBRARIES{config_suffix} "") # Will be filled later
+conan_package_library_targets("${{{name}_LIBS{config_suffix}}}"           # libraries
+                              "${{{name}_LIB_DIRS{config_suffix}}}"       # package_libdir
+                              "${{_{name}_DEPENDENCIES{config_suffix}}}"  # deps
+                              {name}_LIBRARIES{config_suffix}             # out_libraries
+                              {name}_LIBRARIES_TARGETS{config_suffix}     # out_libraries_targets
+                              "{config_suffix}"                           # build_type
                               "{name}")                                       # package_name
 
-foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{build_type_suffix}}})
-    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_FRAMEWORK}})
-    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_FRAMEWORK}})
+foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{config_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{config_suffix} ${{_FRAMEWORK}})
+    list(APPEND {name}_LIBRARIES{config_suffix} ${{_FRAMEWORK}})
 endforeach()
 
-foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{build_type_suffix}}})
-    list(APPEND {name}_LIBRARIES_TARGETS{build_type_suffix} ${{_SYSTEM_LIB}})
-    list(APPEND {name}_LIBRARIES{build_type_suffix} ${{_SYSTEM_LIB}})
+foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{config_suffix}}})
+    list(APPEND {name}_LIBRARIES_TARGETS{config_suffix} ${{_SYSTEM_LIB}})
+    list(APPEND {name}_LIBRARIES{config_suffix} ${{_SYSTEM_LIB}})
 endforeach()
 
 # We need to add our requirements too
-set({name}_LIBRARIES_TARGETS{build_type_suffix} "${{{name}_LIBRARIES_TARGETS{build_type_suffix}}};{deps_names}")
-set({name}_LIBRARIES{build_type_suffix} "${{{name}_LIBRARIES{build_type_suffix}}};{deps_names}")
+set({name}_LIBRARIES_TARGETS{config_suffix} "${{{name}_LIBRARIES_TARGETS{config_suffix}}};{deps_names}")
+set({name}_LIBRARIES{config_suffix} "${{{name}_LIBRARIES{config_suffix}}};{deps_names}")
 
 # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
-set(CMAKE_MODULE_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_MODULE_PATH}})
-set(CMAKE_PREFIX_PATH ${{{name}_BUILD_DIRS{build_type_suffix}}} ${{CMAKE_PREFIX_PATH}})
+set(CMAKE_MODULE_PATH ${{{name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH ${{{name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_PREFIX_PATH}})
 
 """
 
@@ -254,31 +254,23 @@ class CMakeDeps(object):
         endforeach()
         """)
 
-    # This template takes the "name" of the target name::name and configs = ["Release", "Debug"..]
+    # This template takes the "name" of the target name::name and the current config
     target_properties = Template("""
 conan_message(STATUS "Target declared: '{{name}}::{{name}}'")
 # Assign target properties
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
-             {%- for config in configs %}
              $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS_{{config.upper()}}}
-                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}}>
-             {%- endfor %})
+                                    ${{'{'}}{{name}}_LINKER_FLAGS_{{config.upper()}}}>)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-             {%- for config in configs %}
-             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>
-             {%- endfor %})
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_INCLUDE_DIRS_{{config.upper()}}}>)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
-             {%- for config in configs %}
-             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>
-             {%- endfor %})
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS_{{config.upper()}}}>)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-             {%- for config in configs %}
-             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}}>
-             {%- endfor %})
+             $<$<CONFIG:{{config}}>:${{'{'}}{{name}}_COMPILE_OPTIONS_{{config.upper()}}}>)
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -319,25 +311,25 @@ set_property(TARGET {{name}}::{{name}}
         #############################################################################################
 
         {{ global_variables }}
-        set({{ pkg_name }}_COMPONENTS_{{ build_type }} {{ pkg_components }})
+        set({{ pkg_name }}_COMPONENTS_{{ config }} {{ pkg_components }})
 
         {%- for comp_name, comp in components %}
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
         set({{ pkg_name }}_PACKAGE_FOLDER "{{ package_folder }}")
-        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ build_type }} {{ comp.include_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ build_type }} {{ comp.lib_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ build_type }} {{ comp.res_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ build_type }} {{ comp.defines }})
-        set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS_{{ build_type }} {{ comp.compile_definitions }})
-        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C_{{ build_type }} "{{ comp.cflags_list }}")
-        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX_{{ build_type }} "{{ comp.cxxflags_list }}")
-        set({{ pkg_name }}_{{ comp_name }}_LIBS_{{ build_type }} {{ comp.libs }})
-        set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ build_type }} {{ comp.system_libs }})
-        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ build_type }} {{ comp.framework_paths }})
-        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ build_type }} {{ comp.frameworks }})
-        set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES_{{ build_type }} {{ comp.public_deps }})
-        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_{{ build_type }}
+        set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS_{{ config }} {{ comp.include_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS_{{ config }} {{ comp.lib_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_RES_DIRS_{{ config }} {{ comp.res_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_DEFINITIONS_{{ config }} {{ comp.defines }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS_{{ config }} {{ comp.compile_definitions }})
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C_{{ config }} "{{ comp.cflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX_{{ config }} "{{ comp.cxxflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS_{{ config }} {{ comp.libs }})
+        set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS_{{ config }} {{ comp.system_libs }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS_{{ config }} {{ comp.framework_paths }})
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_{{ config }} {{ comp.frameworks }})
+        set({{ pkg_name }}_{{ comp_name }}_DEPENDENCIES_{{ config }} {{ comp.public_deps }})
+        set({{ pkg_name }}_{{ comp_name }}_LINKER_FLAGS_{{ config }}
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp.sharedlinkflags_list }}>
                 $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp.exelinkflags_list }}>
@@ -355,43 +347,45 @@ set_property(TARGET {{name}}::{{name}}
 
         ########## COMPONENT {{ comp_name }} FIND LIBRARIES & FRAMEWORKS / DYNAMIC VARS #############
 
-        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "")
-        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ build_type }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_'+build_type+'}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS_'+build_type+'}' }}")
+        set({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ config }} "")
+        conan_find_apple_frameworks({{ pkg_name }}_{{ comp_name }}_FRAMEWORKS_FOUND_{{ config }} "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_'+config+'}' }}" "{{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORK_DIRS_'+config+'}' }}")
 
-        set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }} "")
-        set({{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }} "")
-        set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+build_type+'}' }})
-        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS_'+build_type+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS_'+build_type+'}' }}"
-                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }}"
-                                      {{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ build_type }}
-                                      {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ build_type }}
-                                      "{{ build_type }}"
+        set({{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ config }} "")
+        set({{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ config }} "")
+        set({{ pkg_name }}_{{ comp_name }}_LIBS_FRAMEWORKS_DEPS_{{ config }} {{ '${'+pkg_name+'_'+comp_name+'_FRAMEWORKS_FOUND_'+config+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_SYSTEM_LIBS_'+config+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_DEPENDENCIES_'+config+'}' }})
+        conan_package_library_targets("{{ '${'+pkg_name+'_'+comp_name+'_LIBS_'+config+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIB_DIRS_'+config+'}' }}"
+                                      "{{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+config+'}' }}"
+                                      {{ pkg_name }}_{{ comp_name }}_NOT_USED_{{ config }}
+                                      {{ pkg_name }}_{{ comp_name }}_LIB_TARGETS_{{ config }}
+                                      "{{ config }}"
                                       "{{ pkg_name }}_{{ comp_name }}")
 
-        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ build_type }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+build_type+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+build_type+'}' }})
+        set({{ pkg_name }}_{{ comp_name }}_LINK_LIBS_{{ config }} {{ '${'+pkg_name+'_'+comp_name+'_LIB_TARGETS_'+config+'}' }} {{ '${'+pkg_name+'_'+comp_name+'_LIBS_FRAMEWORKS_DEPS_'+config+'}' }})
 
         {%- endfor %}
 
+        ########## GLOBAL TARGET PROPERTIES {{ config }} ########################################
+        {{ global_targets_props }}
 
-                {%- macro tvalue(pkg_name, comp_name, var, build_type) -%}
-        {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+build_type.upper()+'}'}}
+        {%- macro tvalue(pkg_name, comp_name, var, config) -%}
+            {{'${'+pkg_name+'_'+comp_name+'_'+var+'_'+config.upper()+'}'}}
         {%- endmacro -%}
         {%- for comp_name, comp in components %}
 
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
         conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ comp_name }}'")
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', build_type)}}
-                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', build_type)}}>)
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config)}}
+                        {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config)}}>)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', build_type)}}>)
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config)}}>)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', build_type)}}>)
+                     $<$<CONFIG:{{config}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config)}}>)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<CONFIG:{{build_type}}>:
-                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', build_type)}}
-                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', build_type)}}>)
+                     $<$<CONFIG:{{config}}>:
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config)}}
+                         {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', config)}}>)
         set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
 
         {%- endfor %}
@@ -428,7 +422,7 @@ set_property(TARGET {{name}}::{{name}}
 
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS_{{ build_type }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS_{{ config }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -456,19 +450,9 @@ set_property(TARGET {{name}}::{{name}}
             endif()
         endforeach()
 
-        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS_' + build_type + '}' }} )
+        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS_' + config + '}' }} )
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
-
-        ########## GLOBAL TARGET PROPERTIES #########################################################
-
-        if(NOT {{ pkg_name }}_{{ pkg_name }}_TARGET_PROPERTIES)
-            conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ pkg_name }}'")
-            set_property(TARGET {{ pkg_name }}::{{ pkg_name }} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-                         {%- for config in configs %}
-                         $<$<CONFIG:{{config}}>:{{ '${'+pkg_name+'_COMPONENTS_'+config.upper()+'}'}}>
-                         {%- endfor %})
-        endif()
 
         """))
 
@@ -541,7 +525,7 @@ set_property(TARGET {{name}}::{{name}}
     def content(self):
         ret = {}
         build_type = str(self._conanfile.settings.build_type).upper()
-        build_type_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
+        config_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         ret["cmakedeps_macros.cmake"] = "\n".join([
             conan_message,
             apple_frameworks_macro,
@@ -572,32 +556,36 @@ set_property(TARGET {{name}}::{{name}}
             deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
             global_variables = variables_template.format(name=pkg_target_name, deps=deps,
                                                          package_folder=pfolder,
-                                                         build_type_suffix=build_type_suffix,
+                                                         config_suffix=config_suffix,
                                                          deps_names=dep_target_names)
             variables = {
                 self._data_filename(pkg_filename):
                     self.components_variables_tpl.render(
                      package_folder=pfolder, public_deps=" ".join(pkg_public_deps_filenames),
                      pkg_name=pkg_target_name, global_variables=global_variables,
-                     pkg_components=pkg_components, build_type=build_type, components=components)
+                     pkg_components=pkg_components, config=build_type, components=components)
             }
             ret.update(variables)
             global_dynamic_variables = dynamic_variables_template.format(
                                         name=pkg_target_name,
-                                        build_type_suffix=build_type_suffix,
+                                        config_suffix=config_suffix,
                                         deps_names=dep_target_names)
+
+            global_targets_props = self.target_properties.render(name=pkg_target_name,
+                                                                 config=build_type)
             dynamic_variables = {
                 "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
                 self.components_dynamic_variables_tpl.render(
+                    global_targets_props=global_targets_props,
                     pkg_name=pkg_target_name, global_dynamic_variables=global_dynamic_variables,
-                    pkg_components=pkg_components, build_type=build_type, components=components)
+                    pkg_components=pkg_components, config=build_type, components=components)
             }
             ret.update(dynamic_variables)
             targets = self.components_targets_tpl.render(
                 pkg_name=pkg_target_name,
                 pkg_filename=pkg_filename,
                 components=components,
-                build_type=build_type
+                config=build_type
             )
             ret["{}Targets.cmake".format(pkg_filename)] = targets
             target_config = self.components_config_tpl.render(
@@ -605,7 +593,7 @@ set_property(TARGET {{name}}::{{name}}
                 pkg_filename=pkg_filename,
                 components=components,
                 pkg_public_deps=pkg_public_deps_filenames,
-                build_type=build_type.upper()
+                config=build_type.upper()
             )
             # Check if the XXConfig.cmake exists to keep the first generated configuration
             # to only include the build_modules from the first conan install. The rest of the
@@ -628,22 +616,6 @@ set_property(TARGET {{name}}::{{name}}
             return "{}-config-version.cmake".format(pkg_filename)
         else:
             return "{}ConfigVersion.cmake".format(pkg_filename)
-
-    def _config(self, filename, name, version, public_deps_names):
-        # Builds the XXXConfig.cmake file for one package
-        # Define the targets properties
-        targets_props = self.target_properties.render(name=name, configs=self.configurations)
-        # The find_dependencies_block
-        find_dependencies_block = ""
-        if public_deps_names:
-            # Here we are generating only Config files, so do not search for FindXXX modules
-            find_dependencies_block = find_transitive_dependencies(public_deps_names)
-
-        tmp = self.config_template.format(name=name, version=version,
-                                          filename=filename,
-                                          target_props_block=targets_props,
-                                          find_dependencies_block=find_dependencies_block)
-        return tmp
 
     def get_target_names_and_filenames(self, req, requires):
         """

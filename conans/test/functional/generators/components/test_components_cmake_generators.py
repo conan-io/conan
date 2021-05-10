@@ -23,7 +23,7 @@ def setup_client_with_greetings():
 
     conanfile_greetings = textwrap.dedent("""
         import os
-        from conans import ConanFile, CMake
+        from conans import ConanFile, CMake, tools
 
         class GreetingsConan(ConanFile):
             name = "greetings"
@@ -43,15 +43,15 @@ def setup_client_with_greetings():
                 self.copy("*.h", dst="include", src="src")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
-                tools.save(os.path.join(self.package_folder, "build", "my_cmake_functions.cmake"))
+                tools.save(os.path.join(self.package_folder,
+                                        "my_cmake_functions.cmake"), "set(MY_CMAKE_VAR 99)")
 
             def package_info(self):
-                self.cpp_info.components["hello"].buildirs = ["build"]
-                self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
 
                 if self.options.components == "standard":
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+                    self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
                 elif self.options.components == "custom":
                     self.cpp_info.filenames["cmake_find_package_multi"] = "MYG"
                     self.cpp_info.filenames["cmake_find_package"] = "MYG"
@@ -70,6 +70,11 @@ def setup_client_with_greetings():
 
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+
+                    # Duplicated on purpose to check that it doesn't break
+                    self.cpp_info.components["bye"].build_modules = ["my_cmake_functions.cmake"]
+                    self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
+
                 else:
                     self.cpp_info.libs = ["hello", "bye"]
 
@@ -689,7 +694,8 @@ class TestComponentsCMakeGenerators:
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
         client.run("create . consumer/1.0@")
-
+        print(client.out)
+        # assert False
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out
         assert 'expected/1.0: Hello World Release!' in client.out
