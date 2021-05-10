@@ -282,12 +282,14 @@ class GenConanfile(object):
 
     @property
     def _package_method(self):
-        return self._package_files or self._package_files_env or self._package_files_link
+        return (self._package_lines or self._package_files or self._package_files_env or
+                self._package_files_link)
 
     @property
     def _package_method_render(self):
         lines = []
-        lines.extend("        {}".format(line) for line in self._package_lines)
+        if self._package_lines:
+            lines.extend("        {}".format(line) for line in self._package_lines)
         if self._package_files:
             lines = ['        tools.save(os.path.join(self.package_folder, "{}"), "{}")'
                      ''.format(key, value)
@@ -359,17 +361,17 @@ class GenConanfile(object):
 
     @property
     def _short_paths_render(self):
-        return "    short_paths = {}".format(str(self._short_path))
+        return "short_paths = {}".format(str(self._short_path))
 
     @property
     def _exports_sources_render(self):
         line = ", ".join('"{}"'.format(e) for e in self._exports_sources)
-        return "    exports_sources = {}".format(line)
+        return "exports_sources = {}".format(line)
 
     @property
     def _exports_render(self):
         line = ", ".join('"{}"'.format(e) for e in self._exports)
-        return "    exports = {}".format(line)
+        return "exports = {}".format(line)
 
     def __repr__(self):
         ret = []
