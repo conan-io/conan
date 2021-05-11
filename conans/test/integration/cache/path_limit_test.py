@@ -197,7 +197,6 @@ class PathLengthLimitTest(unittest.TestCase):
     def test_basic_disabled(self):
         client = TestClient()
         conanfile = GenConanfile().with_short_paths(True)
-        print(conanfile)
         client.save({"conanfile.py": conanfile})
 
         client.run("create . lib/0.1@user/channel")
