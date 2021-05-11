@@ -228,7 +228,10 @@ class MarkdownGenerator(Generator):
         template = env.get_template('package.md')
 
         def read_pkg_file(filename):
-            return open(filename, 'r').read()
+            try:
+                return open(filename, 'r').read()
+            except IOError:
+                return '# Error reading file content. Please report.'
 
         env.filters['read_pkg_file'] = read_pkg_file
 
