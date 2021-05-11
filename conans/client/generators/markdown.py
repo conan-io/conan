@@ -32,9 +32,6 @@ render_cpp_info = textwrap.dedent("""
     {%- if cpp_info.cxxflags %}
     * CXX_FLAGS: {{ join_list_sources(cpp_info.cxxflags) }}
     {%- endif %}
-    {%- if cpp_info.build_modules %}
-    * Build modules (see [below](#build-modules)): {{ join_list_sources(cpp_info.build_modules) }}
-    {%- endif %}
     {%- endmacro %}
 """)
 
@@ -49,6 +46,17 @@ generator_cmake_tpl = textwrap.dedent("""
 
     target_link_libraries(<library_name> CONAN_PKG::{{ cpp_info.get_name("cmake") }})
     ```
+
+    {% set build_modules = cpp_info.build_modules.get('cmake', None) %}
+    {% if build_modules %}
+    This generator will include some _build modules_:
+    {% for bm in build_modules -%}
+    * `{{ bm }}`
+      ```
+      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      ```
+    {%- endfor -%}
+    {%- endif %}
 """)
 
 generator_cmake_find_package_tpl = textwrap.dedent("""
@@ -75,6 +83,17 @@ generator_cmake_find_package_tpl = textwrap.dedent("""
     Remember to adjust your build system settings to match the binaries you are linking with. You can
     use the [CMake build helper](https://docs.conan.io/en/latest/reference/build_helpers/cmake.html) and
     the ``cmake`` generator from a *conanfile.py* or the new [toolchain paradigm](https://docs.conan.io/en/latest/creating_packages/toolchains.html).
+
+    {% set build_modules = cpp_info.build_modules.get('cmake_find_package', None) %}
+    {% if build_modules %}
+    This generator will include some _build modules_:
+    {% for bm in build_modules -%}
+    * `{{ bm }}`
+      ```
+      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      ```
+    {%- endfor -%}
+    {%- endif %}
 """)
 
 generator_pkg_config_tpl = textwrap.dedent("""
@@ -89,6 +108,17 @@ generator_pkg_config_tpl = textwrap.dedent("""
     {%- endfor -%}
     {%- endif -%}.
     Use your *pkg-config* tool as usual to consume the information provided by the Conan package.
+
+    {% set build_modules = cpp_info.build_modules.get('pkg_config', None) %}
+    {% if build_modules %}
+    This generator will include some _build modules_:
+    {% for bm in build_modules -%}
+    * `{{ bm }}`
+      ```
+      {{ '/'.join([cpp_info.rootpath, bm])|read_pkg_file|indent(width=2) }}
+      ```
+    {%- endfor -%}
+    {%- endif %}
 """)
 
 requirement_tpl = textwrap.dedent("""
@@ -139,6 +169,9 @@ requirement_tpl = textwrap.dedent("""
     these generators they have to be listed in the _conanfile.py_ file or using the command
     line argument ``--generator/-g`` in the ``conan install`` command.
 
+    * [``cmake``](#Generator-cmake)
+    * [``cmake_find_package``](#Generator-cmake_find_package)
+    * [``pkg_config``](#Generator-pkg_config)
 
     {% include 'generator_cmake' %}
     {% include 'generator_cmake_find_package' %}
@@ -154,20 +187,6 @@ requirement_tpl = textwrap.dedent("""
     {{ header }}
     {%- endfor %}
     ```
-
-    {%- if cpp_info.build_modules %}
-    ---
-    ## Build modules
-
-    Modules exported by this recipe. They are automatically included when using Conan generators:
-
-    {% for name, build_module in build_modules %}
-    **{{ name }}**
-    ```
-    {{ build_module }}
-    ```
-    {% endfor %}
-    {% endif %}
 
     ---
     ---
@@ -192,11 +211,6 @@ class MarkdownGenerator(Generator):
             if cpp_info.name in other_cpp_info.public_deps:
                 yield other_name, other_cpp_info
 
-    def _read_build_modules(self, cpp_info):
-        for build_module in cpp_info.build_modules:
-            filename = os.path.join(cpp_info.rootpath, build_module)
-            yield build_module, open(filename, 'r').read()
-
     @property
     def filename(self):
         pass
@@ -213,6 +227,11 @@ class MarkdownGenerator(Generator):
         env = Environment(loader=dict_loader)
         template = env.get_template('package.md')
 
+        def read_pkg_file(filename):
+            return open(filename, 'r').read()
+
+        env.filters['read_pkg_file'] = read_pkg_file
+
         from conans import __version__ as conan_version
         ret = {}
         for name, cpp_info in self.conanfile.deps_cpp_info.dependencies:
@@ -221,7 +240,6 @@ class MarkdownGenerator(Generator):
                 headers=self._list_headers(cpp_info),
                 requires=list(self._list_requires(cpp_info)),
                 required_by=list(self._list_required_by(cpp_info)),
-                build_modules=self._read_build_modules(cpp_info),
                 conan_version=conan_version,
                 now=datetime.datetime.now()
             )
