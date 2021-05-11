@@ -68,7 +68,7 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove(pref)
             return metadata
 
-    def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update):
+    def _evaluate_cache_pkg(self, node, package_layout, pref, remote, remotes, update):
         if update:
             output = node.conanfile.output
             if remote:
@@ -88,11 +88,13 @@ class GraphBinariesAnalyzer(object):
                 pass  # Current behavior: no remote explicit or in metadata, do not update
             else:
                 output.warn("Can't update, no remote defined")
-        if not node.binary:
-            node.binary = BINARY_CACHE
-            metadata = metadata or package_layout.load_metadata()
-            node.prev = metadata.packages[pref.id].revision
-            assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
+
+        # TODO: cache2.0: remove metadata
+        # if not node.binary:
+        #     node.binary = BINARY_CACHE
+        #     metadata = metadata or package_layout.load_metadata()
+        #     node.prev = metadata.packages[pref.id].revision
+        #     assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
@@ -241,7 +243,8 @@ class GraphBinariesAnalyzer(object):
         #     remote = remotes.get(remote_name)
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
-            self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
+            package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id[0])
+            self._evaluate_cache_pkg(node, package_layout, pref, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
             remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
