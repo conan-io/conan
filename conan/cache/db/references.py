@@ -1,6 +1,7 @@
 import sqlite3
 import time
 from collections import namedtuple
+from io import StringIO
 from typing import List, Iterator
 
 from conan.cache.db.table import BaseDbTable
@@ -15,7 +16,8 @@ class ReferencesDbTable(BaseDbTable):
                            ('pkgid', str, True),
                            ('prev', str, True),
                            ('path', str, False, None, True),
-                           ('timestamp', int)]
+                           ('timestamp', int),
+                           ('remote', str, True)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     class DoesNotExist(ConanException):
@@ -45,7 +47,7 @@ class ReferencesDbTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def _set_clause(self, ref, path=None, timestamp=None):
+    def _set_clause(self, ref, path=None, timestamp=None, remote=None):
         set_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -53,6 +55,7 @@ class ReferencesDbTable(BaseDbTable):
             self.columns.prev: ref.prev,
             self.columns.path: path,
             self.columns.timestamp: timestamp,
+            self.columns.remote: remote,
         }
         set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         return set_expr
@@ -69,17 +72,17 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
-    def save(self, conn: sqlite3.Cursor, path, ref) -> int:
+    def save(self, conn: sqlite3.Cursor, path, ref, remote=None) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
-                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp])
+                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, pk: int, ref, path=None):
+    def update(self, conn: sqlite3.Cursor, pk: int, ref, path=None, remote=None):
         timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
-        set_clause = self._set_clause(ref, path=path, timestamp=timestamp)
+        set_clause = self._set_clause(ref, path=path, timestamp=timestamp, remote=remote)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE rowid = ?;"
@@ -169,6 +172,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.pkgid}, ' \
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
+                    f'{self.columns.remote}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
