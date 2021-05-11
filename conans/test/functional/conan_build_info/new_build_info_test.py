@@ -179,8 +179,8 @@ def test_from_old_cppinfo_no_components():
     for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
         assert getattr(cppinfo, n) == ["var_{}_1".format(n), "var_{}_2".format(n)]
 
-    assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake", "foo.cmake",
-                                                           "foo2.cmake"]
+    assert cppinfo.get_property("cmake_build_modules") == ["my_scripts.cmake",
+                                                           "foo2.cmake", "foo.cmake"]
     assert cppinfo.requires == ["my_req::my_component"]
 
 

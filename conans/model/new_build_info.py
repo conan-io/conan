@@ -253,16 +253,17 @@ def from_old_cppinfo(old):
     ret.clear_none()
 
     def _copy_build_modules_to_property(origin, dest):
+        current_value = dest.get_property("cmake_build_modules") or []
         if isinstance(origin.build_modules, list):
-            old_value = dest.get_property("cmake_build_modules") or []
-            old_value.extend([v for v in origin.build_modules if v not in old_value])
-            dest.set_property("cmake_build_modules", old_value)
+            current_value.extend([v for v in origin.build_modules if v not in current_value])
         else:
-            for generator_name, origin_value in origin.build_modules.items():
-                if "cmake" in generator_name.lower() or generator_name is None:
-                    old_value = dest.get_property("cmake_build_modules") or []
-                    old_value.extend([v for v in origin_value if v not in old_value])
-                    dest.set_property("cmake_build_modules", old_value)
+            multi = origin.build_modules.get("cmake_find_package_multi")
+            no_multi = origin.build_modules.get("cmake_find_package")
+            if multi:
+                current_value.extend([v for v in multi if v not in current_value])
+            if no_multi:
+                current_value.extend([v for v in no_multi if v not in current_value])
+        dest.set_property("cmake_build_modules", current_value)
 
     # Copy the build modules as the new recommended property
     if old.build_modules:
