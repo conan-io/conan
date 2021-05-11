@@ -164,13 +164,18 @@ class ReferencesDbTable(BaseDbTable):
     def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[PackageReference]:
         assert ref.pkgid, "To search for package revisions you must provide a package_id."
         if only_latest_prev:
-            query = f'SELECT * ' \
+            query = f'SELECT {self.columns.reference}, ' \
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.pkgid}, ' \
+                    f'{self.columns.prev}, ' \
+                    f'{self.columns.path}, ' \
+                    f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.pkgid} = "{ref.pkgid}" ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
-                    f'AND {self.columns.timestamp} = (SELECT MAX({self.columns.timestamp}) FROM {self.table_name})'
+                    f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name}' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
