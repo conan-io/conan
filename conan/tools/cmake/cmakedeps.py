@@ -74,7 +74,7 @@ conan_package_library_targets = textwrap.dedent("""
 
 
 variables_template = """
-set({name}_PACKAGE_FOLDER "{package_folder}")
+set({name}_PACKAGE_FOLDER{config_suffix} "{package_folder}")
 set({name}_INCLUDE_DIRS{config_suffix} {deps.include_paths})
 set({name}_RES_DIRS{config_suffix} {deps.res_paths})
 set({name}_DEFINITIONS{config_suffix} {deps.defines})
@@ -158,15 +158,15 @@ def find_transitive_dependencies(public_deps_filenames):
 
 class DepsCppCmake(object):
 
-    def __init__(self, cpp_info, package_name, generator_name):
+    def __init__(self, cpp_info, generator_name, pfolder_var_name):
 
         def join_paths(paths):
             """
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-            return "\n\t\t\t".join('"${%s_PACKAGE_FOLDER}/%s"' %
-                                   (package_name,
+            return "\n\t\t\t".join('"${%s}/%s"' %
+                                   (pfolder_var_name,
                                     p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
                                    for p in paths)
 
@@ -260,17 +260,17 @@ class CMakeDeps(object):
 # Assign target properties
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:{{build_type}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS{{config_suffix}}}
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                     ${{'{'}}{{name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-             $<$<CONFIG:{{build_type}}>:${{'{'}}{{name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
-             $<$<CONFIG:{{build_type}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
 set_property(TARGET {{name}}::{{name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-             $<$<CONFIG:{{build_type}}>:${{'{'}}{{name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
@@ -316,7 +316,7 @@ set_property(TARGET {{name}}::{{name}}
         {%- for comp_name, comp in components %}
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
-        set({{ pkg_name }}_PACKAGE_FOLDER "{{ package_folder }}")
+        set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS{{ config_suffix }} {{ comp.include_paths }})
         set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS{{ config_suffix }} {{ comp.lib_paths }})
         set({{ pkg_name }}_{{ comp_name }}_RES_DIRS{{ config_suffix }} {{ comp.res_paths }})
@@ -365,7 +365,7 @@ set_property(TARGET {{name}}::{{name}}
 
         {%- endfor %}
 
-        ########## GLOBAL TARGET PROPERTIES {{ build_type }} ########################################
+        ########## GLOBAL TARGET PROPERTIES {{ configuration }} ########################################
         {{ global_targets_props }}
 
         {%- macro tvalue(pkg_name, comp_name, var, config_suffix) -%}
@@ -375,14 +375,14 @@ set_property(TARGET {{name}}::{{name}}
 
         ########## COMPONENT {{ comp_name }} TARGET PROPERTIES ######################################
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_LINK_LIBRARIES
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config_suffix)}}
+                     $<$<CONFIG:{{configuration}}>:{{tvalue(pkg_name, comp_name, 'LINK_LIBS', config_suffix)}}
                         {{tvalue(pkg_name, comp_name, 'LINKER_FLAGS', config_suffix)}}> APPEND)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
+                     $<$<CONFIG:{{configuration}}>:{{tvalue(pkg_name, comp_name, 'INCLUDE_DIRS', config_suffix)}}> APPEND)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     $<$<CONFIG:{{build_type}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
+                     $<$<CONFIG:{{configuration}}>:{{tvalue(pkg_name, comp_name, 'COMPILE_DEFINITIONS', config_suffix)}}> APPEND)
         set_property(TARGET {{ pkg_name }}::{{ comp_name }} PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<CONFIG:{{build_type}}>:
+                     $<$<CONFIG:{{configuration}}>:
                          {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_C', config_suffix)}}
                          {{tvalue(pkg_name, comp_name, 'COMPILE_OPTIONS_CXX', config_suffix)}}> APPEND)
         set({{ pkg_name }}_{{ comp_name }}_TARGET_PROPERTIES TRUE)
@@ -463,25 +463,9 @@ set_property(TARGET {{name}}::{{name}}
         self.configuration = str(self._conanfile.settings.build_type)
         self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
 
-    """
-        def _validate_components(self, cpp_info):
-
-            def _check_component_in_requirements(require):
-                if COMPONENT_SCOPE in require:
-                    req_name, req_comp_name = require.split(COMPONENT_SCOPE)
-                    if req_name == req_comp_name:
-                        return
-                    if req_comp_name not in self.deps_build_info[req_name].components:
-                        raise ConanException("Component '%s' not found in '%s' package requirement"
-                                             % (require, req_name))
-
-        for comp_name, comp in cpp_info.components.items():
-            for cmp_require in comp.requires:
-                _check_component_in_requirements(cmp_require)
-
-        for pkg_require in cpp_info.requires:
-            _check_component_in_requirements(pkg_require)
-    """
+    @property
+    def config_suffix(self):
+        return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
     def _get_components(self, req, requires):
         """Returns a list of (component_name, DepsCppCMake)"""
@@ -490,7 +474,8 @@ set_property(TARGET {{name}}::{{name}}
 
         for comp_name, comp in sorted_comps.items():
             comp_genname = self.get_component_name(req, comp_name)
-            deps_cpp_cmake = DepsCppCmake(comp, self.get_name(req), self.name)
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.get_name(req), self.config_suffix)
+            deps_cpp_cmake = DepsCppCmake(comp, self.name, pfolder_var_name)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
@@ -545,8 +530,6 @@ set_property(TARGET {{name}}::{{name}}
     @property
     def content(self):
         ret = {}
-        build_type = str(self._conanfile.settings.build_type)
-        config_suffix = "_{}".format(self.configuration.upper()) if self.configuration else ""
         ret["cmakedeps_macros.cmake"] = "\n".join([
             conan_message,
             apple_frameworks_macro,
@@ -574,41 +557,42 @@ set_property(TARGET {{name}}::{{name}}
                                        comp_findname, _ in reversed(components)])
             global_cppinfo = req.new_cpp_info.copy()
             global_cppinfo.aggregate_components()
-            deps = DepsCppCmake(global_cppinfo, pkg_target_name, self.name)
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(pkg_target_name, self.config_suffix)
+            deps = DepsCppCmake(global_cppinfo, self.name, pfolder_var_name)
             global_variables = variables_template.format(name=pkg_target_name, deps=deps,
                                                          package_folder=pfolder,
-                                                         config_suffix=config_suffix,
+                                                         config_suffix=self.config_suffix,
                                                          deps_names=dep_target_names)
             variables = {
                 self._data_filename(pkg_filename):
                     self.components_variables_tpl.render(
                      package_folder=pfolder, public_deps=" ".join(pkg_public_deps_filenames),
                      pkg_name=pkg_target_name, global_variables=global_variables,
-                     pkg_components=pkg_components, config_suffix=config_suffix, components=components)
+                     pkg_components=pkg_components, config_suffix=self.config_suffix, components=components)
             }
             ret.update(variables)
             global_dynamic_variables = dynamic_variables_template.format(
                                         name=pkg_target_name,
-                                        config_suffix=config_suffix,
+                                        config_suffix=self.config_suffix,
                                         deps_names=dep_target_names)
 
             global_targets_props = self.target_properties.render(name=pkg_target_name,
-                                                                 build_type=build_type,
-                                                                 config_suffix=config_suffix)
+                                                                 configuration=self.configuration,
+                                                                 config_suffix=self.config_suffix)
             dynamic_variables = {
-                "{}Target-{}.cmake".format(pkg_filename, build_type.lower()):
+                "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
                 self.components_dynamic_variables_tpl.render(
                     global_targets_props=global_targets_props,
                     pkg_name=pkg_target_name, global_dynamic_variables=global_dynamic_variables,
-                    pkg_components=pkg_components, build_type=build_type, components=components,
-                    config_suffix=config_suffix)
+                    pkg_components=pkg_components, configuration=self.configuration, components=components,
+                    config_suffix=self.config_suffix)
             }
             ret.update(dynamic_variables)
             targets = self.components_targets_tpl.render(
                 pkg_name=pkg_target_name,
                 pkg_filename=pkg_filename,
                 components=components,
-                config_suffix=config_suffix
+                config_suffix=self.config_suffix
             )
             ret["{}Targets.cmake".format(pkg_filename)] = targets
             target_config = self.components_config_tpl.render(
@@ -616,7 +600,7 @@ set_property(TARGET {{name}}::{{name}}
                 pkg_filename=pkg_filename,
                 components=components,
                 pkg_public_deps=pkg_public_deps_filenames,
-                config_suffix=config_suffix
+                config_suffix=self.config_suffix
             )
             # Check if the XXConfig.cmake exists to keep the first generated configuration
             # to only include the build_modules from the first conan install. The rest of the
