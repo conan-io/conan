@@ -244,6 +244,7 @@ class GraphBinariesAnalyzer(object):
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
             latest_package = latest_prev_for_pkg_id[0]
+            node.prev = latest_package.revision
             package_layout = self._cache.pkg_layout(latest_package)
             self._evaluate_cache_pkg(node, package_layout, latest_package, remote, remotes, update)
         else:  # Binary does NOT exist locally

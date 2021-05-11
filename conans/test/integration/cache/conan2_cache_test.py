@@ -70,26 +70,27 @@ class TestCache:
 
         client.run("install zlib/1.2.11@ -r conan-center")
 
-        conanfile = GenConanfile().with_exports_sources("source.txt")
-        client.save({"conanfile.py": conanfile,
-                     "source.txt": "sources"})
-        client.run("create . mypkg/1.0@user/channel")
-        client.run("create . mypkg/1.0@user/channel")
-
-        client.run("new mypkg/1.0")
-
-        client.run("create .")
-        client.run("create .")
-
-        client.save({"conanfile.py": conanfile,
-                     "file.txt": ""})
-
-        client.run("create . mypkg/2.0@user/channel")
-        client.run("create . mypkg/3.0@user/channel")
-
-        conanfile = GenConanfile().with_scm({"type": "git", "revision": "auto",
-                                             "url": "auto"})
-        path, _ = create_local_git_repo({"conanfile.py": str(conanfile),
-                                         "source.txt": "somesource"})
-        client.current_folder = path
-        client.run("create . mypkg/3.0@user/channel")
+        client.run("install zlib/1.2.11@ -r conan-center --build")
+        # conanfile = GenConanfile().with_exports_sources("source.txt")
+        # client.save({"conanfile.py": conanfile,
+        #              "source.txt": "sources"})
+        # client.run("create . mypkg/1.0@user/channel")
+        # client.run("create . mypkg/1.0@user/channel")
+        #
+        # client.run("new mypkg/1.0")
+        #
+        # client.run("create .")
+        # client.run("create .")
+        #
+        # client.save({"conanfile.py": conanfile,
+        #              "file.txt": ""})
+        #
+        # client.run("create . mypkg/2.0@user/channel")
+        # client.run("create . mypkg/3.0@user/channel")
+        #
+        # conanfile = GenConanfile().with_scm({"type": "git", "revision": "auto",
+        #                                      "url": "auto"})
+        # path, _ = create_local_git_repo({"conanfile.py": str(conanfile),
+        #                                  "source.txt": "somesource"})
+        # client.current_folder = path
+        # client.run("create . mypkg/3.0@user/channel")
