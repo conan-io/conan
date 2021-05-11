@@ -175,7 +175,7 @@ def rename(conanfile, src, dst):
         process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
                                    stdout=subprocess.PIPE)
         process.communicate()
-        if process.returncode:
+        if process.returncode > 7:  # https://ss64.com/nt/robocopy-exit.html
             raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
         try:
