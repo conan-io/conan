@@ -30,7 +30,7 @@ def check_required_conan_version(cache_folder, out):
     if required_range:
         validate_conan_version(required_range)
 
-    required_range_new = cache.new_config["core"].required_conan_version
+    required_range_new = cache.new_config["core:required_conan_version"]
     if required_range_new:
         if six.PY2 and not isinstance(required_range_new, str):
             required_range_new = required_range_new.encode()

@@ -65,7 +65,7 @@ class GeneratorManager(object):
                             "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
-        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MakeToolchain", "MSBuildToolchain",
+        self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
 
@@ -93,9 +93,6 @@ class GeneratorManager(object):
         elif generator_name == "CMakeDeps":
             from conan.tools.cmake import CMakeDeps
             return CMakeDeps
-        elif generator_name == "MakeToolchain":
-            from conan.tools.gnu import MakeToolchain
-            return MakeToolchain
         elif generator_name == "AutotoolsDeps":
             from conan.tools.gnu import AutotoolsDeps
             return AutotoolsDeps
@@ -210,7 +207,7 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualenv import VirtualEnv
             env = VirtualEnv(conanfile)

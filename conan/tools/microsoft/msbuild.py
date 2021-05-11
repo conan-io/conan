@@ -4,7 +4,7 @@ from conans.errors import ConanException
 
 
 def msbuild_verbosity_cmd_line_arg(conanfile):
-    verbosity = conanfile.conf["tools.microsoft.msbuild"].verbosity
+    verbosity = conanfile.conf["tools.microsoft.msbuild:verbosity"]
     if verbosity:
         if verbosity not in ("Quiet", "Minimal", "Normal", "Detailed", "Diagnostic"):
             raise ConanException("Unknown msbuild verbosity: {}".format(verbosity))
@@ -12,8 +12,8 @@ def msbuild_verbosity_cmd_line_arg(conanfile):
 
 
 def msbuild_max_cpu_count_cmd_line_arg(conanfile):
-    max_cpu_count = conanfile.conf["tools.microsoft.msbuild"].max_cpu_count or \
-                    conanfile.conf["tools.build"].processes
+    max_cpu_count = conanfile.conf["tools.microsoft.msbuild:max_cpu_count"] or \
+                    conanfile.conf["tools.build:processes"]
     if max_cpu_count:
         return "/m:{}".format(max_cpu_count)
 
