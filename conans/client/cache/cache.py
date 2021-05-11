@@ -101,7 +101,7 @@ class ClientCache(object):
         return [ref for ref in self._data_cache.list_references()]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
-        return [ref for ref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
+        return [pref for pref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
 
     @property
     def store(self):
