@@ -99,10 +99,10 @@ class SystemPackageToolTest(unittest.TestCase):
                 sudo_cmd = "sudo " if isatty else "sudo -A "
 
             runner = RunnerOrderedMock()
-            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if gpg_key:
                 runner.commands.append(
                     ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if update:
                 runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
 

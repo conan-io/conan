@@ -333,8 +333,6 @@ class DepsGraphBuilder(object):
         # Assign the profiles depending on the context
         dep_conanfile.settings_build = profile_build.processed_settings.copy()
         context_switch = (current_node.context == CONTEXT_HOST and requirement.build)
-        # Assign the profiles depending on the context, with the new profile build/host
-        dep_conanfile.settings_build = profile_build.processed_settings.copy()
         if not context_switch:
             if populate_settings_target:
                 dep_conanfile.settings_target = current_node.conanfile.settings_target

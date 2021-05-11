@@ -146,9 +146,9 @@ class GraphManagerTest(unittest.TestCase):
         ref = ref or ConanFileReference(None, None, None, None, validate=False)
         app = self._get_app()
 
-        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build, None, ref,
-                                                  build_mode, check_updates, update, remotes,
-                                                  recorder)
+        deps_graph = app.graph_manager.load_graph(path, create_ref, profile_host, profile_build,
+                                                  None, ref, build_mode, check_updates, update,
+                                                  remotes, recorder)
         if install:
             deps_graph.report_graph_error()
             binary_installer = BinaryInstaller(app, recorder)
