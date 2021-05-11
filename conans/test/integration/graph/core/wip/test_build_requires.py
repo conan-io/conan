@@ -371,3 +371,68 @@ class TestTestRequire(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
         _check_transitive(lib, [(gtest, True, True, False, None)])
+
+    def test_lib_build_require_transitive(self):
+        # app -> lib -(tr)-> gtest
+        self._cache_recipe("gtest/0.1", GenConanfile())
+        self._cache_recipe("lib/0.1", GenConanfile().with_test_requires("gtest/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        gtest = lib.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app])
+        self._check_node(gtest, "gtest/0.1#123", deps=[], dependents=[lib])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+        _check_transitive(lib, [(gtest, True, True, False, None)])
+
+    @parameterized.expand([("shared",), ("static",), ("notrun",), ("run",)])
+    def test_test_require_transitive(self, gtestlib_type):
+        # app -> lib -(tr)-> gtest -> gtestlib (gtestlib_type)
+
+        if gtestlib_type in ("notrun", "run"):  # Unknown
+            gtestlib = GenConanfile().with_settings("os")
+        else:
+            gtestlib = GenConanfile().with_settings("os"). \
+                with_shared_option(gtestlib_type == "shared")
+        run = True if gtestlib_type == "run" else None  # Not necessary to specify
+
+        self._cache_recipe("gtestlib/0.1", gtestlib)
+        self._cache_recipe("gtest/0.1", GenConanfile().with_settings("os").
+                           with_requirement("gtestlib/0.1", run=run))
+        self._cache_recipe("lib/0.1", GenConanfile().with_settings("os").
+                           with_test_requires("gtest/0.1"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_settings("os").
+                                      with_require("lib/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        gtest = lib.dependencies[0].dst
+        gtestlib = gtest.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[], settings={"os": "Linux"})
+        self._check_node(lib, "lib/0.1#123", deps=[gtest], dependents=[app],
+                         settings={"os": "Linux"})
+        self._check_node(gtest, "gtest/0.1#123", deps=[gtestlib], dependents=[lib],
+                         settings={"os": "Linux"})
+        self._check_node(gtestlib, "gtestlib/0.1#123", deps=[], dependents=[gtest],
+                         settings={"os": "Linux"})
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, None)])  # TODO: Check run=None
+
+        if gtestlib_type in ("shared", "run"):
+            _check_transitive(lib, [(gtest, True, True, False, None),
+                                    (gtestlib, True, True, False, True)])
+        elif gtestlib_type == "static":
+            _check_transitive(lib, [(gtest, True, True, False, None),
+                                    (gtestlib, True, True, False, False)])
+        elif gtestlib_type == "notrun":
+            _check_transitive(lib, [(gtest, True, True, False, None),
+                                    (gtestlib, True, True, False, None)])

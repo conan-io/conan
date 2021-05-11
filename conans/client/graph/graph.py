@@ -134,32 +134,47 @@ class Node(object):
                 return downstream_require
             return
 
-        downstream_require = None
+        # Regular and test requires
         if up_shared:
             if self_shared:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             elif self_shared is False:  # static
-                # Consumers will need to find it at build time too
                 downstream_require = Requirement(require.ref, include=False, link=True, run=True)
+            else:  # unknown
+                # Consumers will need to find it at build time too
+                downstream_require = Requirement(require.ref, include=True, link=True, run=True)
             # TODO: Header, App
         elif up_shared is False:  # static
             if self_shared:
-                pass
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
             elif self_shared is False:  # static
                 downstream_require = Requirement(require.ref, include=False, link=True, run=False)
-        else:  # Unknown, default
+            else:  # unknown
+                downstream_require = Requirement(require.ref, include=True, link=True, run=False)
+        else:
+            # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
-            downstream_require = Requirement(require.ref)
+            downstream_require = Requirement(require.ref,
+                                             include=require.include,
+                                             link=require.link,
+                                             build=require.build,
+                                             run=require.run,
+                                             public=require.public,
+                                             transitive_headers=require.transitive_headers,
+                                             test=require.test,
+                                             package_id_mode=require.package_id_mode
+                                             )
 
-        if require.public:
-            if downstream_require is None:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+        assert require.public, "at this point require should be public"
 
         if require.transitive_headers:
             downstream_require.include = True
 
         if source_require.public is False:
             downstream_require.public = False
+
+        if source_require.test:
+            downstream_require.test = True
 
         return downstream_require
 
