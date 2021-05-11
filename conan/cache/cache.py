@@ -123,11 +123,11 @@ class DataCache:
         return PackageLayout(pref, cache=self, manager=self._locks_manager,
                              package_folder=package_path, locked=locked), created
 
-    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> str:
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference, remote=None) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
         try:
-            self.db.update_reference(old_ref, new_ref, new_path=new_path)
+            self.db.update_reference(old_ref, new_ref, new_path=new_path, remote=remote)
         except ReferencesDbTable.AlreadyExist:
             self.db.delete_ref_by_path(old_path)
             # TODO: fix this, update timestamp
@@ -173,3 +173,5 @@ class DataCache:
         for it in self.db.get_package_revisions(ref, only_latest_prev):
             yield it
 
+    def get_remote(self, ref):
+        return self.db.get_remote(ref)

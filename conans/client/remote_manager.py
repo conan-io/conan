@@ -100,7 +100,8 @@ class RemoteManager(object):
 
         ref = self._resolve_latest_ref(ref, remote)
 
-        layout.assign_rrev(ConanReference(ref))
+        # TODO: cache2.0 check if we want to pass the remote here
+        layout.assign_rrev(ConanReference(ref), remote=remote.name)
 
         t1 = time.time()
         download_export = layout.download_export()
@@ -121,9 +122,6 @@ class RemoteManager(object):
         rm_conandir(layout.source())
         touch_folder(export_folder)
         conanfile_path = layout.conanfile()
-
-        # TODO: cache2.0: store the remote in the db? In 1.X we stored the remote in the metadata
-        #  at this point
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)

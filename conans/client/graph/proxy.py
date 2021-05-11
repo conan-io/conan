@@ -22,6 +22,7 @@ class ConanProxy(object):
 
     def get_recipe(self, ref, check_updates, update, remotes, recorder):
         layout = self._cache.ref_layout(ref)
+        # TODO: cache2.0 check editables
         if isinstance(layout, PackageEditableLayout):
             conanfile_path = layout.conanfile()
             status = RECIPE_EDITABLE
@@ -108,6 +109,7 @@ class ConanProxy(object):
             output.info("Retrieving from server '%s' " % remote.name)
         else:
             try:
+                # TODO: cache2.0 metadata, check this
                 remote_name = layout.load_metadata().recipe.remote
                 if remote_name:
                     remote = remotes[remote_name]

@@ -72,6 +72,18 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
+    def get_remote(self, conn: sqlite3.Cursor, ref):
+        """ Returns the row matching the reference or fails """
+        where_clause = self._where_clause(ref)
+        query = f'SELECT {self.columns.remote} FROM {self.table_name} ' \
+                f'WHERE {where_clause};'
+        r = conn.execute(query)
+        row = r.fetchone()
+        if not row:
+            raise ReferencesDbTable.DoesNotExist(
+                f"No entry for reference '{ref.full_reference}'")
+        return row[6]
+
     def save(self, conn: sqlite3.Cursor, path, ref, remote=None) -> int:
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])

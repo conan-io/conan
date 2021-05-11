@@ -18,7 +18,7 @@ class RecipeLayout(LockableMixin):
         self._base_folder = base_folder
         super().__init__(resource=self._ref.full_reference, **kwargs)
 
-    def assign_rrev(self, ref: ConanReference):
+    def assign_rrev(self, ref: ConanReference, remote=None):
         assert not self._locked, "You can only change it if it was not assigned at the beginning"
         assert ref.reference == self._ref.reference, "You cannot change reference name here"
         assert ref.rrev, "It only makes sense to change if you are providing a revision"
@@ -31,7 +31,7 @@ class RecipeLayout(LockableMixin):
             self._locked = True
 
             # Move temporal folder contents to final folder
-            new_path = self._cache._move_rrev(old_ref, self._ref)
+            new_path = self._cache._move_rrev(old_ref, self._ref, remote=remote)
             if new_path:
                 self._base_folder = new_path
 
@@ -72,3 +72,6 @@ class RecipeLayout(LockableMixin):
     # TODO: cache2.0: Do we want this method?
     def scm_sources(self):
         return os.path.join(self.base_directory, SCM_SRC_FOLDER)
+
+    def get_remote(self):
+        self._cache.get_remote(self._ref)

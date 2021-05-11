@@ -67,6 +67,7 @@ class TestCache:
         client.run("remote add conan-center https://center.conan.io")
         client.run_command("open '{}'".format(client.cache_folder))
         client.run("install zlib/1.2.11@ -r conan-center")
+        client.run("install zlib/1.2.11@")
 
         # client.run("install zlib/1.2.11@ -r conan-center")
         #
