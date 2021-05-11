@@ -416,10 +416,11 @@ class WinTest(unittest.TestCase):
             """)
         client.save({"myprofile": profile})
         # Build the profile according to the settings provided
-        settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings if v)
+        settings_h = " ".join('-s:h %s="%s"' % (k, v) for k, v in settings if v)
+        settings_b = " ".join('-s:b %s="%s"' % (k, v) for k, v in settings if v)
 
         client.run("new hello/0.1 -m=v2_cmake")
-        client.run("create . hello/0.1@ %s" % (settings, ))
+        client.run("create . hello/0.1@ %s" % settings_h)
 
         # Prepare the actual consumer package
         client.save({"conanfile.py": self.conanfile,
@@ -430,7 +431,7 @@ class WinTest(unittest.TestCase):
                     clean_first=True)
 
         # Run the configure corresponding to this test case
-        client.run("build . %s -if=conan -pr=myprofile" % (settings, ))
+        client.run("build . %s %s -if=conan -pr:h=myprofile " % (settings_h, settings_b))
         self.assertIn("conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props",
                       client.out)
         self.assertIn("Visual Studio 2017", client.out)

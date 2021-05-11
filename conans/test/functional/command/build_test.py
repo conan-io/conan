@@ -277,7 +277,7 @@ class AConan(ConanFile):
 from conans import ConanFile
 
 class AConan(ConanFile):
-    requires = "lib/1.0@lasote/stable"
+    build_requires = "lib/1.0@lasote/stable"
 
     def build(self):
         assert(self.deps_env_info["lib"].MYVAR == "23")

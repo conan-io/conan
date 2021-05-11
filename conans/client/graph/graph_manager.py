@@ -52,9 +52,8 @@ class GraphManager(object):
         # This is very dirty, should be removed for Conan 2.0 (source() method only)
         profile_host = self._cache.default_profile
         profile_host.process_settings(self._cache)
-        profile_build = None
-        name, version, user, channel = None, None, None, None
 
+        name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
             lock_python_requires = None
             conanfile = self._loader.load_consumer(conanfile_path,
@@ -62,10 +61,6 @@ class GraphManager(object):
                                                    name=name, version=version,
                                                    user=user, channel=channel,
                                                    lock_python_requires=lock_python_requires)
-
-            if profile_build:
-                conanfile.settings_build = profile_build.processed_settings.copy()
-                conanfile.settings_target = None
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
@@ -78,6 +73,9 @@ class GraphManager(object):
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
         """ main entry point to compute a full dependency graph
         """
+        assert profile_host is not None
+        assert profile_build is not None
+
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
                                          root_ref, lockfile_node_id)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
@@ -242,7 +240,7 @@ class GraphManager(object):
         """
         :param graph: This is the full dependency graph with all nodes from all recursions
         """
-        default_context = CONTEXT_BUILD if profile_build else CONTEXT_HOST
+        default_context = CONTEXT_BUILD
         self._binary_analyzer.evaluate_graph(graph, build_mode, update, remotes, nodes_subset, root)
         if not apply_build_requires:
             return

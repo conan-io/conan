@@ -27,20 +27,18 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
     written
     @param no_imports: Install specified packages but avoid running imports
     """
+    assert profile_host is not None
+    assert profile_build is not None
 
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
 
     if generators is not False:
         generators = set(generators) if generators else set()
 
-    if profile_build:
-        out.info("Configuration (profile_host):")
-        out.writeln(profile_host.dumps())
-        out.info("Configuration (profile_build):")
-        out.writeln(profile_build.dumps())
-    else:
-        out.info("Configuration:")
-        out.writeln(profile_host.dumps())
+    out.info("Configuration (profile_host):")
+    out.writeln(profile_host.dumps())
+    out.info("Configuration (profile_build):")
+    out.writeln(profile_build.dumps())
 
     deps_graph = graph_manager.load_graph(ref_or_path, create_reference, profile_host, profile_build,
                                           graph_lock, root_ref, build_modes, False, update, remotes,

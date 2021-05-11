@@ -49,6 +49,7 @@ class DepsGraphBuilder(object):
 
     def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
                    graph_lock=None):
+        assert profile_build is not None
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -56,9 +57,8 @@ class DepsGraphBuilder(object):
         root_node.public_closure.add(root_node)
         root_node.public_deps.add(root_node)
         root_node.transitive_closure[root_node.name] = root_node
-        if profile_build:
-            root_node.conanfile.settings_build = profile_build.processed_settings.copy()
-            root_node.conanfile.settings_target = None
+        root_node.conanfile.settings_build = profile_build.processed_settings.copy()
+        root_node.conanfile.settings_target = None
         dep_graph.add_node(root_node)
 
         # enter recursive computation
@@ -400,19 +400,18 @@ class DepsGraphBuilder(object):
                                       remotes, profile, graph_lock)
         new_ref, dep_conanfile, recipe_status, remote, locked_id = result
 
-        # Assign the profiles depending on the context
-        if profile_build:  # Keep existing behavior (and conanfile members) if no profile_build
-            dep_conanfile.settings_build = profile_build.processed_settings.copy()
-            if not context_switch:
-                if populate_settings_target:
-                    dep_conanfile.settings_target = current_node.conanfile.settings_target
-                else:
-                    dep_conanfile.settings_target = None
+        # Assign the profiles depending on the context, with the new profile build/host
+        dep_conanfile.settings_build = profile_build.processed_settings.copy()
+        if not context_switch:
+            if populate_settings_target:
+                dep_conanfile.settings_target = current_node.conanfile.settings_target
             else:
-                if current_node.context == CONTEXT_HOST:
-                    dep_conanfile.settings_target = profile_host.processed_settings.copy()
-                else:
-                    dep_conanfile.settings_target = profile_build.processed_settings.copy()
+                dep_conanfile.settings_target = None
+        else:
+            if current_node.context == CONTEXT_HOST:
+                dep_conanfile.settings_target = profile_host.processed_settings.copy()
+            else:
+                dep_conanfile.settings_target = profile_build.processed_settings.copy()
 
         logger.debug("GRAPH: new_node: %s" % str(new_ref))
         new_node = Node(new_ref, dep_conanfile, context=context)

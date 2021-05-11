@@ -1393,7 +1393,7 @@ class ConanAPIV1(object):
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
                                       profile_host.options, profile_host.env, cwd, self.app.cache)
 
-        if profile_build and not pbuild:
+        if not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
                                        profile_build.options, profile_build.env, cwd, self.app.cache)
@@ -1443,8 +1443,7 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
             raise ConanException("Lockfiles with --base do not contain profile information, "
                                  "cannot be used. Create a full lockfile")
         profile_host.process_settings(cache, preprocess=False)
-        if profile_build is not None:
-            profile_build.process_settings(cache, preprocess=False)
+        profile_build.process_settings(cache, preprocess=False)
         graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
         return profile_host, profile_build, graph_lock, root_ref
@@ -1452,19 +1451,15 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
                               profile_host.env, cwd, cache)
     phost.process_settings(cache)
-    if profile_build:
-        # Only work on the profile_build if something is provided
-        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                   profile_build.options, profile_build.env, cwd, cache)
-        pbuild.process_settings(cache)
-    else:
-        pbuild = None
+    # Only work on the profile_build if something is provided
+    pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                               profile_build.options, profile_build.env, cwd, cache)
+    pbuild.process_settings(cache)
 
     # Preprocess settings and convert to real settings
     # Apply the new_config to the profiles the global one, so recipes get it too
     # TODO: This means lockfiles contain whole copy of the config here?
     # FIXME: Apply to locked graph-info as well
     phost.conf.rebase_conf_definition(cache.new_config)
-    if pbuild is not None:
-        pbuild.conf.rebase_conf_definition(cache.new_config)
+    pbuild.conf.rebase_conf_definition(cache.new_config)
     return phost, pbuild, None, root_ref

@@ -52,7 +52,7 @@ class VirtualEnvGeneratorTestCase(GraphManagerTest):
 
         self._cache_recipe(base_ref, self.base)
         self._cache_recipe(dummy_ref, self.dummy)
-        deps_graph = self.build_graph(GenConanfile().with_requirement(dummy_ref))
+        deps_graph = self.build_graph(GenConanfile().with_build_requires(dummy_ref))
         generator = VirtualEnvGenerator(deps_graph.root.conanfile)
 
         self.assertEqual(generator.env["BASE_LIST"],

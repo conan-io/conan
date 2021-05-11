@@ -112,7 +112,8 @@ class MyPkg(ConanFile):
         self.output.info("Running system requirements!!")
 """})
         client.run("create . Pkg/0.1@lasote/testing")
-        self.assertIn("Configuration:[settings]", "".join(str(client.out).splitlines()))
+        self.assertIn("Configuration (profile_host):[settings]",
+                      "".join(str(client.out).splitlines()))
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Running system requirements!!", client.out)
         client.run("search")

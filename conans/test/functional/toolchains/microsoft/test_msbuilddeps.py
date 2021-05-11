@@ -596,8 +596,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
             from conans import ConanFile, load
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
-                build_requires = "tool/1.0"
                 generators = "MSBuildDeps"
+
+                def build_requirements(self):
+                    self.build_requires("tool/1.0", force_host_context=True)
+
                 def build(self):
                     deps = load("conandeps.props")
                     assert "conan_tool.props" in deps

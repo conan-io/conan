@@ -1,7 +1,5 @@
 import textwrap
 
-from parameterized import parameterized
-
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -38,19 +36,15 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
         self._cache_recipe(self.lib_ref, self.lib)
         self._cache_recipe(self.app_ref, self.application)
 
-    @parameterized.expand([(True,), (False,)])
-    def test_crossbuilding(self, xbuilding):
+    def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"
         profile_host.build_requires["*"] = [ConanFileReference.loads("cmake/testing@user/channel"), ]
         profile_host.process_settings(self.cache)
 
-        if xbuilding:
-            profile_build = Profile()
-            profile_build.settings["os"] = "Build"
-            profile_build.process_settings(self.cache)
-        else:
-            profile_build = None
+        profile_build = Profile()
+        profile_build.settings["os"] = "Build"
+        profile_build.process_settings(self.cache)
 
         deps_graph = self._build_graph(profile_host=profile_host, profile_build=profile_build)
 
@@ -69,13 +63,13 @@ class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
         # Check BUILD packages (default behavior changes if we use profile_build)
         cmake_application_build = application.dependencies[1].dst
         self.assertEqual(cmake_application_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_application_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
+        self.assertEqual(cmake_application_build.context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_application_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+                         profile_build.settings['os'])
 
         cmake_lib_build = lib_host.dependencies[0].dst
         self.assertNotEqual(cmake_application_build, cmake_lib_build)
         self.assertEqual(cmake_lib_build.conanfile.name, "cmake")
-        self.assertEqual(cmake_lib_build.context, CONTEXT_BUILD if xbuilding else CONTEXT_HOST)
+        self.assertEqual(cmake_lib_build.context, CONTEXT_BUILD)
         self.assertEqual(str(cmake_lib_build.conanfile.settings.os),
-                         (profile_build if xbuilding else profile_host).settings['os'])
+                         profile_build.settings['os'])

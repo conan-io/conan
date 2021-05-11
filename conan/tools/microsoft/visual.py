@@ -61,12 +61,8 @@ def vcvars_arch(conanfile):
     :param conanfile:
     :return:
     """
-    # TODO: This comes from conans/client/tools/win.py vcvars_command()
     settings_host = conanfile.settings
-    try:
-        settings_build = conanfile.settings_build
-    except AttributeError:
-        settings_build = settings_host
+    settings_build = conanfile.settings_build
 
     arch_host = str(settings_host.arch)
     arch_build = str(settings_build.arch)

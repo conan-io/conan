@@ -72,12 +72,8 @@ class GraphLockVersionRangeTest(unittest.TestCase):
         # To use the stored graph_info.json, it has to be explicit in "--install-folder"
         client.run("install . -g=cmake --lockfile=conan.lock")
         self._check_lock()
-
         self.assertIn("PkgA/0.1", client.out)
         self.assertNotIn("PkgA/0.2", client.out)
-        cmake = client.load("conanbuildinfo.cmake")
-        self.assertIn("PkgA/0.1", cmake)
-        self.assertNotIn("PkgA/0.2", cmake)
 
     def test_info_lock(self):
         client = self.client
