@@ -18,6 +18,8 @@ DEFAULT_CONFIGURATION = {
     "tools.env.virtualenv:auto_use": "Automatically activate virtualenvs when changing into a directory",
     "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",

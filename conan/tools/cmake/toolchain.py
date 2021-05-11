@@ -388,11 +388,23 @@ class FindConfigFiles(Block):
                 "android_prefix_path": android_prefix}
 
 
-class GenericSystemBlock(Block):
+class UserToolchain(Block):
     template = textwrap.dedent("""
         {% if user_toolchain %}
-        include({{usertoolchain}})
+        include({{user_toolchain}})
         {% endif %}
+        """)
+
+    user_toolchain = None
+
+    def context(self):
+        # This is global [conf] injection of extra toolchain files
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        return {"user_toolchain": user_toolchain or self.user_toolchain}
+
+
+class GenericSystemBlock(Block):
+    template = textwrap.dedent("""
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -468,14 +480,10 @@ class GenericSystemBlock(Block):
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
 
-        # This is global [conf] injection of extra toolchain files
-        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain"].user_toolchain
-
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type,
-                "user_toolchain": user_toolchain}
+                "build_type": build_type}
 
 
 class ToolchainBlocks:
@@ -579,7 +587,8 @@ class CMakeToolchain(object):
         self.preprocessor_definitions = Variables()
 
         self.pre_blocks = ToolchainBlocks(self._conanfile, self,
-                                          [("generic_system", GenericSystemBlock),
+                                          [("user_toolchain", UserToolchain),
+                                           ("generic_system", GenericSystemBlock),
                                            ("android_system", AndroidSystemBlock),
                                            ("ios_system", IOSSystemBlock)])
 
@@ -620,18 +629,20 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
-        save(self.filename, self.content)
+        toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
+        if toolchain_file is None:  # The main toolchain file generated only if user dont define
+            save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
-        self.writebuild()
+        self._writebuild(toolchain_file)
 
-    def writebuild(self):
+    def _writebuild(self, toolchain_file):
         result = {}
         # TODO: Lets do it compatible with presets soon
         if self.generator is not None:
             result["cmake_generator"] = self.generator
-        toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain"].toolchain_file
+
         result["cmake_toolchain_file"] = toolchain_file or self.filename
 
         if result:

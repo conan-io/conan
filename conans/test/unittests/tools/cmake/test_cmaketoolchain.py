@@ -109,3 +109,14 @@ def test_extend_block(conanfile):
     content = toolchain.content
     assert 'Hello ReleaseSuper!!' in content
     assert 'CMAKE_BUILD_TYPE' not in content
+
+
+def test_user_toolchain(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.pre_blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
+    content = toolchain.content
+    assert 'include(myowntoolchain.cmake)' in content
+
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert 'include(' not in content
