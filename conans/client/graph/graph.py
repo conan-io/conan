@@ -176,7 +176,7 @@ class Node(object):
         if source_require.build:  # Build-requires
             print("    Propagating build-require",  self, "<-", require)
             # If the above is shared or the requirement is explicit run=True
-            if up_type is PackageType.SHARED or require.run:
+            if up_type is PackageType.SHARED or up_type is PackageType.RUN or require.run:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
                                                  run=True, public=False,)
                 return downstream_require

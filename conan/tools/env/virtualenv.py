@@ -29,10 +29,14 @@ class VirtualEnv:
             node = transitive.node
             print("PROCESSING ", transitive)
             if require.build:  # build context
+                print("IS A BUILD_REQUIRE")
                 if require.run:
+                    print("IS A RUN REQUIRE")
                     build_env.compose(node.conanfile.buildenv_info)
                     # Second, the implicit self information in build_require.cpp_info
                     build_env.compose(self._runenv_from_cpp_info(node.conanfile.cpp_info))
+                    if node.conanfile.runenv_info:
+                        build_env.compose(node.conanfile.runenv_info)
             else:  # host context can inject any buildenv_info
                 if node.conanfile.buildenv_info:
                     build_env.compose(node.conanfile.buildenv_info)
@@ -115,6 +119,19 @@ class VirtualEnv:
         runenv = Environment()
         # FIXME: Missing profile info
 
+        # FIXME: This will be missing the order
+        # FIXME: Private access
+        for transitive in self._conanfile._conan_node.transitive_deps.values():
+            require = transitive.require
+            node = transitive.node
+            print("PROCESSING ", transitive)
+            if not require.build:  # host context
+                if node.conanfile.runenv_info:
+                    runenv.compose(node.conanfile.runenv_info)
+                    # Then the implicit
+                runenv.compose(self._runenv_from_cpp_info(node.conanfile.cpp_info))
+
+        """
         # Visitor, breadth-first
         self._apply_transitive_runenv(self._conanfile.dependencies.requires, runenv)
         # At the moment we are adding "test-requires" (build_requires in host context)
@@ -122,7 +139,7 @@ class VirtualEnv:
         host_build_requires = [br for br in self._conanfile.dependencies.build_requires
                                if br.context == CONTEXT_HOST]
         self._apply_transitive_runenv(host_build_requires, runenv)
-
+        """
         return runenv
 
     def generate(self):

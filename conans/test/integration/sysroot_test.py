@@ -16,19 +16,19 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": sysroot})
         client.run("create . sysroot/0.1@user/testing")
 
-        # TODO: sysroot is only from host context, not from a build_requires
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "sysroot/0.1@user/testing"
     def build(self):
-        self.output.info("PKG SYSROOT: %s" % self.deps_cpp_info.sysroot)
+        self.output.info("PKG SYSROOT: %s" % self.dependencies.requires["sysroot"].cpp_info.sysroot)
     def package_info(self):
         self.cpp_info.sysroot = "HelloSysRoot"
 """
         test_conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     def build(self):
-        self.output.info("Test SYSROOT: %s" % self.deps_cpp_info.sysroot)
+        self.output.info("Test SYSROOT: %s"
+                          % self.dependencies.transitive_host_requires["sysroot"].cpp_info.sysroot)
     def test(self):
         pass
 """

@@ -91,18 +91,15 @@ def test_conanfile_txt(client):
     # conanfile.txt -(br)-> cmake
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux")
-    print(client.out)
     assert "mycmake/1.0:7d482e961aadd6a15d84aaa43f23d8338e239cf7" in client.out
     assert "openssl/1.0:3475bd55b91ae904ac96fde0f106a136ab951a5e" in client.out
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
     cmd = environment_wrap_command("conanbuildenv", "mycmake.{}".format(ext),
                                    cwd=client.current_folder)
-    print(client.load("conanbuildenv.bat"))
     client.run_command(cmd)
 
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
-
 
 
 def test_complete(client):
@@ -115,7 +112,7 @@ def test_complete(client):
             apply_env = False
 
             def build_requirements(self):
-                self.build_requires("mygtest/1.0", force_host_context=True)
+                self.test_requires("mygtest/1.0")
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
@@ -147,9 +144,6 @@ def test_complete(client):
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
     assert "MYGTEST=Linux!!" in client.out
-
-
-
 
 
 def test_transitive_order():
@@ -205,7 +199,7 @@ def test_transitive_order():
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
     print(client.out)
-    assert "BUILDENV: MYVAR MyCMakeBuildValue!!!" in client.out
+    assert "BUILDENV: MYVAR MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
 
 

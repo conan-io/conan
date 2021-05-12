@@ -173,14 +173,7 @@ class GraphManager(object):
         if not isinstance(test_type, (list, tuple)):
             test_type = (test_type, )
         if "build_requires" in test_type:
-            if getattr(conanfile, "build_requires", None):
-                # Injecting the tested reference
-                existing = conanfile.build_requires
-                if not isinstance(existing, (list, tuple)):
-                    existing = [existing]
-                conanfile.build_requires = list(existing) + [create_reference]
-            else:
-                conanfile.build_requires = str(create_reference)
+            conanfile.requires.build_require(str(create_reference))
         if "requires" in test_type:
             require = False # conanfile.requires.get(create_reference.name)
             if require:

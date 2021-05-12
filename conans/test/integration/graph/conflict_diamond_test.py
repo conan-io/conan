@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client.tools import environment_append
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, load
@@ -97,3 +99,31 @@ class ConflictDiamondTest(unittest.TestCase):
             self.assertEqual(hello0["reference"], "Hello0/0.1@lasote/stable")
             self.assertListEqual(sorted(hello0["required_by"]),
                                  sorted(["Hello2/0.1@lasote/stable", "Hello1/0.1@lasote/stable"]))
+
+
+@pytest.mark.xfail(reason="UX conflict error to be completed")
+def test_create_werror():
+    client = TestClient()
+    client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+pass
+    """})
+    client.run("export . LibA/0.1@user/channel")
+    client.run("export conanfile.py LibA/0.2@user/channel")
+    client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+requires = "LibA/0.1@user/channel"
+    """})
+    client.run("export ./ LibB/0.1@user/channel")
+    client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+requires = "LibA/0.2@user/channel"
+    """})
+    client.run("export . LibC/0.1@user/channel")
+    client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
+    """})
+    client.run("create ./conanfile.py Consumer/0.1@lasote/testing", assert_error=True)
+    self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
+                  client.out)

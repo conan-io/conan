@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 
 
@@ -66,7 +67,7 @@ class BuildRequirements:
         self._requires = requires
 
     def __call__(self, ref):
-        self._requires(ref, build_require=True)
+        self._requires.build_require(ref)
 
 
 class TestRequirements:
@@ -75,7 +76,7 @@ class TestRequirements:
         self._requires = requires
 
     def __call__(self, ref):
-        self._requires(ref, test_require=True)
+        self._requires.test_require(ref)
 
 
 class Requirements:
@@ -109,18 +110,24 @@ class Requirements:
         assert isinstance(str_ref, str)
         ref = ConanFileReference.loads(str_ref)
         req = Requirement(ref, **kwargs)
+        if self._requires.get(req):
+            raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def build_require(self, ref):
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
                           package_id_mode=None)
+        if self._requires.get(req):
+            raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def test_require(self, ref):
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, include=True, link=True, build=False, run=None, public=False,
                           test=True, package_id_mode=None)
+        if self._requires.get(req):
+            raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def __repr__(self):

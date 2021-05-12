@@ -5,6 +5,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.fixture(scope="module")
@@ -15,6 +16,7 @@ def client():
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
+            package_type = "run library"
             def package(self):
                 with chdir(self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
@@ -42,9 +44,11 @@ def client():
 
             def package_info(self):
                 self.env_info.PATH = [self.package_folder]
+                self.buildenv_info.append_path("PATH", self.package_folder)
             """)
 
     client = TestClient()
+    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"tool/conanfile.py": GenConanfile(),
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
@@ -83,14 +87,6 @@ def test_build_require_test_package(existing_br, build_profile, client):
     client.run("create cmake mycmake/1.0@ {} --build=missing".format(build_profile))
 
     def check(out):
-        if "tool" in existing_br:
-            assert "mycmake/1.0 (test package): Applying build-requirement: tool/1.0" in out
-        else:
-            assert "tool/1.0" not in out
-
-        assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in out
-        assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in out
-
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
         assert "MYCMAKE={}!!".format(system) in out
         assert "MYOPENSSL={}!!".format(system) in out
@@ -130,14 +126,6 @@ def test_both_types(existing_br, client):
     client.run("create cmake mycmake/1.0@ -pr:b=default --build=missing")
 
     def check(out):
-        if "tool" in existing_br:
-            assert "mycmake/1.0 (test package): Applying build-requirement: tool/1.0" in out
-        else:
-            assert "tool/1.0" not in out
-
-        assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in out
-        assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in out
-
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
         assert "MYCMAKE={}!!".format(system) in out
         assert "MYOPENSSL={}!!".format(system) in out

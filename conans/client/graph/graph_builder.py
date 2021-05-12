@@ -106,7 +106,7 @@ class DepsGraphBuilder(object):
                     else:
                         existing_provide = provides.get(new_req)
                         if existing_provide is not None:
-                            node.conflict = (GraphError.PROVIDE_CONFLICT, [existing_provide.node,
+                            node.conflict = (GraphError.PROVIDE_CONFLICT, [existing_provide,
                                                                            v.node])
                             dep_graph.error = True
                             return

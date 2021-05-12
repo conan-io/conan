@@ -45,17 +45,3 @@ class CppinfoTestCase(ConanV2ModeTestCase):
         t.run('create . name/version@', assert_error=True)
         self.assertIn("Conan v2 incompatible: Use 'self.cpp_info.build_modules["
                       "\"<generator>\"].append(\"aa\")' instead", t.out)
-
-    def test_deprecate_build_modules_as_list(self):
-        t = self.get_client()
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class Recipe(ConanFile):
-                def package_info(self):
-                    self.cpp_info.build_modules = ["aa", "bb"]
-        """)
-        t.save({'conanfile.py': conanfile})
-        t.run('create . name/version@', assert_error=True)
-        self.assertIn("Conan v2 incompatible: Use 'self.cpp_info.build_modules["
-                      "\"<generator>\"] = ['aa', 'bb']' instead", t.out)

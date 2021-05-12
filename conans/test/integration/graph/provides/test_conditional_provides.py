@@ -1,9 +1,12 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
+@pytest.mark.xfail(reason="To be moved to core graph tests, except some UX reporting tests")
 class ConditionalProvidesTestCase(unittest.TestCase):
     conanfile = textwrap.dedent("""
         from conans import ConanFile

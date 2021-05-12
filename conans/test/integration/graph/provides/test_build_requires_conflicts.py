@@ -1,10 +1,12 @@
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
+@pytest.mark.xfail(reason="To be moved to core graph tests, except some UX reporting tests")
 class BuildRequiresTestCase(unittest.TestCase):
 
     def test_build_require_lib(self):
@@ -48,7 +50,9 @@ class BuildRequiresTestCase(unittest.TestCase):
                                                    .with_build_requires("br_rhs/v1")})
         t.run("create br_lhs.py")
         t.run("create br_rhs.py")
-        t.run("install app.py --profile:host=default --profile:build=default")
+        t.run("install app.py --profile:host=default --profile:build=default", assert_error=True)
+        print(t.out)
+        assert "ERROR: There was a provides conflict building the dependency graph" in t.out
 
     def test_build_require_of_build_require(self):
         # Only makes sense for two profiles
