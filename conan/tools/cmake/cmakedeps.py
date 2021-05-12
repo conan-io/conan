@@ -226,41 +226,8 @@ class DepsCppCmake(object):
 class CMakeDeps(object):
     name = "CMakeDeps"
 
-    config_template = textwrap.dedent("""
-        include(${{CMAKE_CURRENT_LIST_DIR}}/cmakedeps_macros.cmake)
-
-        # Requires CMake > 3.15
-        if(${{CMAKE_VERSION}} VERSION_LESS "3.15")
-            message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
-        endif()
-
-        include(${{CMAKE_CURRENT_LIST_DIR}}/{filename}Targets.cmake)
-
-        {target_props_block}
-        {find_dependencies_block}
-        """)
-
-    targets_template = textwrap.dedent("""
-        if(NOT TARGET {name}::{name})
-            conan_message(STATUS "Target declared: '{{name}}::{{name}}'")
-            add_library({name}::{name} INTERFACE IMPORTED)
-        endif()
-
-        # Load the debug and release library finders
-        get_filename_component(_DIR "${{CMAKE_CURRENT_LIST_FILE}}" PATH)
-        file(GLOB DATA_FILES "${{_DIR}}/{filename}-*-data.cmake")
-
-        foreach(f ${{DATA_FILES}})
-            include(${{f}})
-        endforeach()
-
-        file(GLOB CONFIG_FILES "${{_DIR}}/{filename}Target-*.cmake")
-        foreach(f ${{CONFIG_FILES}})
-            include(${{f}})
-        endforeach()
-        """)
-
     # This template takes the "name" of the target name::name and the current config
+    # Will be at "XXXTarget-Release.cmake"
     target_properties = Template("""
 # Assign target properties
 set_property(TARGET {{name}}::{{name}}
@@ -279,6 +246,7 @@ set_property(TARGET {{name}}::{{name}}
     """)
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
+    # This will be at XXX-config-version.cmake
     config_version_template = textwrap.dedent("""
         set(PACKAGE_VERSION "{version}")
 
@@ -303,6 +271,7 @@ set_property(TARGET {{name}}::{{name}}
         endif()
         """)
 
+    # This will be at: XXX-release-data.cmake
     components_variables_tpl = Template(textwrap.dedent("""\
         ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
         #############################################################################################
@@ -342,6 +311,7 @@ set_property(TARGET {{name}}::{{name}}
         {%- endfor %}
     """))
 
+    # This will be at XXXTarget-Release.cmake
     components_dynamic_variables_tpl = Template(textwrap.dedent("""\
         ########### VARIABLES #######################################################################
         #############################################################################################
@@ -396,6 +366,7 @@ set_property(TARGET {{name}}::{{name}}
 
         """))
 
+    # This will be at XXXTargets.cmake
     components_targets_tpl = Template(textwrap.dedent("""\
         # Load the debug and release variables
         get_filename_component(_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
@@ -438,6 +409,7 @@ set_property(TARGET {{name}}::{{name}}
         endif()
         """))
 
+    # This will be at "XXXTargets.cmake"
     components_config_tpl = Template(textwrap.dedent("""\
         ########## MACROS ###########################################################################
         #############################################################################################
