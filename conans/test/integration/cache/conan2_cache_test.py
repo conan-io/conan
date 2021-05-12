@@ -68,7 +68,11 @@ class TestCache:
         client.run_command("open '{}'".format(client.cache_folder))
         client.run("install zlib/1.2.11@ -r conan-center")
         client.run("install zlib/1.2.11@")
-
+        client.run("install zlib/1.2.11@#08c5163c8e302d1482d8fa2be93736af -r conan-center")
+        client.run("install zlib/1.2.11@#514b772abf9c36ad9be48b84cfc6fdc2 -r conan-center")
+        client.run("install zlib/1.2.11@ -r conan-center")
+        client.run("install zlib/1.2.11@ -r conan-center")
+        client.run("install zlib/1.2.11@")
         # client.run("install zlib/1.2.11@ -r conan-center")
         #
         # client.run("install zlib/1.2.11@ -r conan-center --build")
