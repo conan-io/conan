@@ -122,18 +122,17 @@ class DataCache:
             self.db.delete_ref_by_path(old_path)
             # TODO: fix this, update timestamp
             self.db.update_reference(new_ref, new_ref)
-
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
         #  just check the the files in the destination folder are the same so we don't
         #  have to do write operations (maybe other process is reading these files, this could
         #  also be managed by locks anyway)
-        if os.path.exists(self._full_path(new_path)):
-            rmdir(self._full_path(new_path))
-        shutil.move(self._full_path(old_path), self._full_path(new_path))
-        # TODO: cache2.0 for all this methods go back to pass references and check if
-        #  are package or recipes
-        self.db.update_reference_directory(new_path, new_ref)
+        # TODO: cache2.0 probably we should not check this and move to other place or just
+        #  avoid getting here if old and new paths are the same
+        if new_path != old_path:
+            if os.path.exists(self._full_path(new_path)):
+                rmdir(self._full_path(new_path))
+            shutil.move(self._full_path(old_path), self._full_path(new_path))
         return new_path
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference) -> str:
