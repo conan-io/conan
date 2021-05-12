@@ -10,7 +10,6 @@ from typing import Tuple, Iterator
 from conan.cache.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.references import ReferencesDbTable
-from conan.locks.locks_manager import LocksManager
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
 from conans.util.files import rmdir, md5
@@ -18,9 +17,8 @@ from conans.util.files import rmdir, md5
 
 class DataCache:
 
-    def __init__(self, base_folder: str, db_filename: str, locks_directory: str):
+    def __init__(self, base_folder: str, db_filename: str):
         self._base_folder = os.path.realpath(base_folder)
-        self._locks_manager = LocksManager(locks_directory=locks_directory)
         self.db = CacheDatabase(filename=db_filename)
         self.db.initialize(if_not_exists=True)
 
@@ -73,8 +71,7 @@ class DataCache:
         assert ref.revision, "Ask for a reference layout only if the rrev is known"
         from conan.cache.recipe_layout import RecipeLayout
         reference_path = self.db.try_get_reference_directory(ConanReference(ref))
-        return RecipeLayout(ref, cache=self, manager=self._locks_manager, base_folder=reference_path,
-                            locked=True)
+        return RecipeLayout(ref, cache=self, base_folder=reference_path)
 
         # TODO: Should get_or_create_package_layout if not prev?
 
@@ -86,14 +83,11 @@ class DataCache:
         assert pref.revision, "Ask for a package layout only if the prev is known"
         package_path = self.db.try_get_reference_directory(ConanReference(pref))
         from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, manager=self._locks_manager,
-                             package_folder=package_path, locked=True)
+        return PackageLayout(pref, cache=self, package_folder=package_path)
 
     def get_or_create_reference_layout(self, ref: ConanReference) -> Tuple['RecipeLayout', bool]:
         path = self.get_or_create_reference_path(ref)
 
-        # Assign a random (uuid4) revision if not set
-        locked = bool(ref.rrev)
         if not ref.rrev:
             ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, path,
                                  ref.pkgid, ref.prev)
@@ -102,15 +96,12 @@ class DataCache:
         self._create_path(reference_path, remove_contents=created)
 
         from conan.cache.recipe_layout import RecipeLayout
-        return RecipeLayout(ref, cache=self, manager=self._locks_manager,
-                            base_folder=reference_path,
-                            locked=locked), created
+        return RecipeLayout(ref, cache=self, base_folder=reference_path), created
 
     def get_or_create_package_layout(self, pref: ConanReference) -> Tuple['PackageLayout', bool]:
         package_path = self.get_or_create_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
-        locked = bool(pref.prev)
         # if the package revision is not calculated yet, assign the uuid of the path as prev
         if not pref.prev:
             pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, package_path,
@@ -120,8 +111,7 @@ class DataCache:
         self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, manager=self._locks_manager,
-                             package_folder=package_path, locked=locked), created
+        return PackageLayout(pref, cache=self, package_folder=package_path), created
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference, remote=None) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)
