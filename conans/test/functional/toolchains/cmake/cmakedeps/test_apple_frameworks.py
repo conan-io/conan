@@ -1,10 +1,8 @@
-import os
 import platform
 import textwrap
 
 import pytest
 
-from parameterized import parameterized
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
@@ -40,7 +38,7 @@ app_conanfile = textwrap.dedent("""
             cmake.configure()
 """)
 
-
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool_cmake(version="3.19")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
@@ -187,7 +185,7 @@ timer_cpp = textwrap.dedent("""
     }
     """)
 
-
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
                          [('',),
                           ('-s os=iOS -s os.version=10.0 -s arch=armv8',),
@@ -195,13 +193,17 @@ timer_cpp = textwrap.dedent("""
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
+    # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
+    #        cmake_prefix_path to point only to the Frameworks of the system. The only fix found
+    #        would require to introduce something like "set (mylibrary_DIR "${CMAKE_BINARY_DIR}")"
+    #        at the toolchain (but it would require the toolchain to know about the deps)
+    #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
     test_cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         # set(CMAKE_FIND_DEBUG_MODE TRUE)
 
-        # https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
-        set (mylibrary_DIR "${CMAKE_PREFIX_PATH}")
+        set (mylibrary_DIR "${CMAKE_BINARY_DIR}")
         find_package(mylibrary REQUIRED)
 
         add_executable(timer timer.cpp)
@@ -239,7 +241,7 @@ def test_apple_own_framework_cross_build(settings):
     if not len(settings):
         assert "Hello World Release!" in client.out
 
-
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool_cmake(version="3.19")
 def test_apple_own_framework_cmake_deps():
     client = TestClient()
@@ -298,7 +300,7 @@ def test_apple_own_framework_cmake_deps():
         client.run("test . mylibrary/1.0@ -s build_type=Debug")
         assert "Hello World Debug!" in client.out
 
-
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
 
@@ -337,7 +339,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     client.run("create .")
     assert "Hello World Release!" in client.out
 
-
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
 from conans import ConanFile, CMake, tools

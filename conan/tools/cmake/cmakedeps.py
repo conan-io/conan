@@ -56,7 +56,7 @@ conan_package_library_targets = textwrap.dedent("""
                list(APPEND _out_libraries_target ${_LIB_NAME})
                conan_message(DEBUG "Found: ${CONAN_FOUND_LIBRARY}")
            else()
-               conan_message(ERROR "Library ${_LIBRARY_NAME} not found in package")
+               conan_message(FATAL_ERROR "Library '${_LIBRARY_NAME}' not found in package. If '${_LIBRARY_NAME}' is a system library, declare it with 'cpp_info.system_libs' property")
            endif()
            unset(CONAN_FOUND_LIBRARY CACHE)
        endforeach()
@@ -193,10 +193,6 @@ class DepsCppCmake(object):
             """
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
-        def format_link_flags(link_flags):
-            # Trying to mess with - and / => https://github.com/conan-io/conan/issues/8811
-            return link_flags
-
         self.include_paths = join_paths(cpp_info.includedirs)
         self.include_path = join_paths_single_var(cpp_info.includedirs)
         self.lib_paths = join_paths(cpp_info.libdirs)
@@ -216,8 +212,12 @@ class DepsCppCmake(object):
         # Issue: #1251
         self.cxxflags_list = join_flags(";", cpp_info.cxxflags)
         self.cflags_list = join_flags(";", cpp_info.cflags)
-        self.sharedlinkflags_list = join_flags(";", format_link_flags(cpp_info.sharedlinkflags))
-        self.exelinkflags_list = join_flags(";", format_link_flags(cpp_info.exelinkflags))
+
+        # linker flags without magic: trying to mess with - and / =>
+        # https://github.com/conan-io/conan/issues/8811
+        # frameworks should be declared with cppinfo.frameworks not "-framework Foundation"
+        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
+        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         build_modules = cpp_info.get_property("cmake_build_modules", generator_name) or []
         self.build_modules_paths = join_paths(build_modules)
