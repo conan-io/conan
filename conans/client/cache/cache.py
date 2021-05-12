@@ -87,9 +87,8 @@ class ClientCache(object):
         _ = self.config.short_paths_home
 
         mkdir(self._store_folder)
-        locks_directory = os.path.join(self._store_folder, '.locks')
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
-        self._data_cache = DataCache(self._store_folder, db_filename, locks_directory)
+        self._data_cache = DataCache(self._store_folder, db_filename)
 
     def ref_layout(self, ref):
         return self._data_cache.get_or_create_reference_layout(ConanReference(ref))[0]
