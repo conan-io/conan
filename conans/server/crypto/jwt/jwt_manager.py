@@ -1,4 +1,5 @@
 from datetime import datetime
+from calendar import timegm
 
 import jwt
 
@@ -22,7 +23,10 @@ class JWTManager(object):
         if self.expire_time:
             profile_fields["exp"] = datetime.utcnow() + self.expire_time
 
-        return jwt.encode(profile_fields, self.secret, algorithm="HS256")
+        encoded = jwt.encode(profile_fields, self.secret, algorithm="HS256")
+        if self.expire_time and isinstance(profile_fields.get("exp"), datetime):
+            profile_fields["exp"] = timegm(profile_fields.get("exp").utctimetuple())
+        return encoded
 
     def get_profile(self, token):
         """Gets the user from credentials object. None if no credentials.

@@ -31,7 +31,7 @@ class JwtTest(unittest.TestCase):
 
         # Now wait 2 seconds and check if its valid now
         time.sleep(2)
-        self.assertRaises(jwt.ExpiredSignature, manager.get_profile, token)
+        self.assertRaises(jwt.ExpiredSignatureError, manager.get_profile, token)
 
     def test_jwt_credentials_manager(self):
         manager = JWTCredentialsManager(self.secret, self.expire_time)
