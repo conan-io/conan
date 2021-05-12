@@ -68,8 +68,9 @@ class CMake(object):
         self._conanfile = conanfile
         self._parallel = parallel
         self._generator = None
-        if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
-            self._generator = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))["cmake_generator"]
+        args_file = os.path.join(self._conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
+        if os.path.exists(args_file):
+            self._generator = json.loads(load(args_file))["cmake_generator"]
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
