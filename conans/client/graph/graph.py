@@ -170,8 +170,19 @@ class Node(object):
         if require.transitive_headers:
             downstream_require.include = True
 
+        # If non-default, then the consumer requires has priority
         if source_require.public is False:
             downstream_require.public = False
+
+        if source_require.include is False:
+            downstream_require.include = False
+
+        if source_require.link is False:
+            downstream_require.link = False
+
+        # TODO: Automatic assignment invalidates user possibility of overriding default
+        # if source_require.run is not None:
+        #    downstream_require.run = source_require.run
 
         if source_require.test:
             downstream_require.test = True

@@ -1,3 +1,5 @@
+from parameterized import parameterized
+
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING, GraphError
 from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -663,3 +665,81 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[libb, liba])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
+
+
+class TestProjectApp(GraphManagerTest):
+    """
+    Emulating a project that can gather multiple applications and other resources and build a
+    consistent graph, in which dependencies are same versions
+    """
+    def test_project_require_transitive(self):
+        # project -> app1 -> lib
+        #    \---- > app2 --/
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1")
+                                      .with_requirement("app1/0.1", include=False, link=False,
+                                                        build=False, run=True)
+                                      .with_requirement("app2/0.1", include=False, link=False,
+                                                        build=False, run=True)
+                                      )
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        project = deps_graph.root
+        app1 = project.dependencies[0].dst
+        app2 = project.dependencies[1].dst
+        lib = app1.dependencies[0].dst
+        lib2 = app2.dependencies[0].dst
+
+        assert lib is lib2
+
+        self._check_node(project, "project/0.1@", deps=[app1, app2], dependents=[])
+        self._check_node(app1, "app1/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(app2, "app2/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(lib, "lib/0.1#123", deps=[], dependents=[app1, app2])
+
+        # node, include, link, build, run
+        _check_transitive(project, [(app1, False, False, False, True),
+                                    (app2, False, False, False, True),
+                                    (lib, False, False, False, None)])
+
+    def test_project_require_private(self):
+        # project -(private)-> app1 -> lib1
+        #    \----(private)- > app2 -> lib2
+        # This doesn't conflict on project, as lib1, lib2 do not include, link or public
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("lib/0.2", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1")
+                                      .with_requirement("app1/0.1", include=False, link=False,
+                                                        build=False, run=True, public=False)
+                                      .with_requirement("app2/0.1", include=False, link=False,
+                                                        build=False, run=True, public=False)
+                                      )
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        project = deps_graph.root
+        app1 = project.dependencies[0].dst
+        app2 = project.dependencies[1].dst
+        lib1 = app1.dependencies[0].dst
+        lib2 = app2.dependencies[0].dst
+
+        assert lib1 is not lib2
+
+        self._check_node(project, "project/0.1@", deps=[app1, app2], dependents=[])
+        self._check_node(app1, "app1/0.1#123", deps=[lib1], dependents=[project])
+        self._check_node(app2, "app2/0.1#123", deps=[lib2], dependents=[project])
+        self._check_node(lib1, "lib/0.1#123", deps=[], dependents=[app1])
+        self._check_node(lib2, "lib/0.2#123", deps=[], dependents=[app2])
+
+        # node, include, link, build, run
+        _check_transitive(project, [(app1, False, False, False, True),
+                                    (app2, False, False, False, True),
+                                    (lib1, False, False, False, None),
+                                    (lib2, False, False, False, None)])
