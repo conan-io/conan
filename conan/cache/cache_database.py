@@ -81,6 +81,11 @@ class CacheDatabase:
             for it in self._references.get_prevs(conn, ref, only_latest_prev):
                 yield it
 
+    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+        with self.connect() as conn:
+            for it in self._references.get_rrevs(conn, ref, only_latest_rrev):
+                yield it
+
     def get_remote(self, ref):
         with self.connect() as conn:
             return self._references.get_remote(conn, ref)

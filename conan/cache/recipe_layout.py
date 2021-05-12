@@ -74,4 +74,4 @@ class RecipeLayout(LockableMixin):
         return os.path.join(self.base_directory, SCM_SRC_FOLDER)
 
     def get_remote(self):
-        self._cache.get_remote(self._ref)
+        return self._cache.get_remote(self._ref)

@@ -82,7 +82,7 @@ class ReferencesDbTable(BaseDbTable):
         if not row:
             raise ReferencesDbTable.DoesNotExist(
                 f"No entry for reference '{ref.full_reference}'")
-        return row[6]
+        return row[0]
 
     def save(self, conn: sqlite3.Cursor, path, ref, remote=None) -> int:
         timestamp = int(time.time())
@@ -198,6 +198,33 @@ class ReferencesDbTable(BaseDbTable):
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.pkgid} = "{ref.pkgid}"' \
                     f'AND {self.columns.prev} IS NOT NULL '
+        r = conn.execute(query)
+        for row in r.fetchall():
+            yield self._as_ref(self.row_type(*row))
+
+    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False) -> List[ConanFileReference]:
+        if only_latest_rrev:
+            check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
+            query = f'SELECT {self.columns.reference}, ' \
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.pkgid}, ' \
+                    f'{self.columns.prev}, ' \
+                    f'{self.columns.path}, ' \
+                    f'{self.columns.remote}, ' \
+                    f'MAX({self.columns.timestamp}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.reference} = "{ref.reference}" ' \
+                    f'AND {self.columns.prev} IS NULL ' \
+                    f'AND {self.columns.pkgid} IS NULL ' \
+                    f'{check_rrev} ' \
+                    f'GROUP BY {self.columns.pkgid} '
+        else:
+            query = f'SELECT * FROM {self.table_name}' \
+                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
+                    f'AND {self.columns.reference} = "{ref.reference}" ' \
+                    f'AND {self.columns.prev} IS NULL ' \
+                    f'AND {self.columns.pkgid} IS NULL '
+
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))

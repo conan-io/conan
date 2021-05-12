@@ -103,6 +103,12 @@ class ClientCache(object):
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [pref for pref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
 
+    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+        return [rrev for rrev in self._data_cache.get_recipe_revisions(ref, only_latest_rrev)]
+
+    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+        return [rrev for rrev in self._data_cache.get_recipe_revisions(ref, only_latest_rrev)]
+
     @property
     def store(self):
         return self._store_folder

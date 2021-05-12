@@ -2,6 +2,7 @@ import os
 
 from requests.exceptions import RequestException
 
+from conan.cache.conan_reference import ConanReference
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE)
@@ -21,18 +22,18 @@ class ConanProxy(object):
         self._remote_manager = remote_manager
 
     def get_recipe(self, ref, check_updates, update, remotes, recorder):
-        layout = self._cache.ref_layout(ref)
+
         # TODO: cache2.0 check editables
-        if isinstance(layout, PackageEditableLayout):
-            conanfile_path = layout.conanfile()
-            status = RECIPE_EDITABLE
-            # TODO: log_recipe_got_from_editable(reference)
-            # TODO: recorder.recipe_fetched_as_editable(reference)
-            return conanfile_path, status, None, ref
+        # if isinstance(layout, PackageEditableLayout):
+        #     conanfile_path = layout.conanfile()
+        #     status = RECIPE_EDITABLE
+        #     # TODO: log_recipe_got_from_editable(reference)
+        #     # TODO: recorder.recipe_fetched_as_editable(reference)
+        #     return conanfile_path, status, None, ref
 
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
-        result = self._get_recipe(layout, ref, check_updates, update, remotes, recorder)
+        result = self._get_recipe(ref, check_updates, update, remotes, recorder)
         conanfile_path, status, remote, new_ref = result
 
         if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
@@ -41,22 +42,28 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, layout, ref, check_updates, update, remotes, recorder):
+    def _get_recipe(self, ref, check_updates, update, remotes, recorder):
         output = ScopedOutput(str(ref), self._out)
-        # check if it is in disk
-        conanfile_path = layout.conanfile()
+
+        # check if it there's any revision of this recipe in the local cache
+        latest_rrev = self._cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev=True)
 
         # NOT in disk, must be retrieved from remotes
-        if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(layout, ref, output, remotes, remotes.selected,
+        if not latest_rrev:
+            recipe_layout = self._cache.ref_layout(ref)
+            remote, new_ref = self._download_recipe(recipe_layout, ref, output, remotes, remotes.selected,
                                                     recorder)
             status = RECIPE_DOWNLOADED
-            conanfile_path = layout.conanfile()
+            conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
         # TODO: cache2.0: store the remote in the db? In 1.X we took the remote from the metadata
         # TODO: cache2.0: check with new --update flows
-        cur_remote = None
+        ref = latest_rrev[0]
+        recipe_layout = self._cache.ref_layout(ref)
+        conanfile_path = recipe_layout.conanfile()
+        # TODO: cache2.0: check if we want to get the remote through the layout
+        cur_remote = recipe_layout.get_remote()
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
 
