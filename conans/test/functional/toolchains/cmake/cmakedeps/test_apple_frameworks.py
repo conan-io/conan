@@ -3,8 +3,10 @@ import textwrap
 
 import pytest
 
+from conans.client.tools import XCRun, to_apple_arch
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
@@ -442,3 +444,75 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
             'test_package/CMakeLists.txt': test_cmakelists_txt,
             'test_package/test_package.cpp': test_test_package_cpp})
     t.run("create . hello/1.0@")
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+def test_m1():
+    xcrun = XCRun(None, sdk='iphoneos')
+    cflags = " -isysroot " + xcrun.sdk_path
+    cflags += " -arch " + to_apple_arch('armv8')
+    cxxflags = cflags
+    ldflags = cflags
+
+    profile = textwrap.dedent("""
+        include(default)
+        [settings]
+        os=iOS
+        os.version=12.0
+        arch=armv8
+        [env]
+        CC={cc}
+        CXX={cxx}
+        CFLAGS={cflags}
+        CXXFLAGS={cxxflags}
+        LDFLAGS={ldflags}
+    """).format(cc=xcrun.cc, cxx=xcrun.cxx, cflags=cflags, cxxflags=cxxflags, ldflags=ldflags)
+
+    client = TestClient(path_with_spaces=False)
+    client.save({"m1": profile}, clean_first=True)
+    client.run("new hello/0.1 --template=v2_cmake")
+    client.run("create . --profile:build=default --profile:host=m1 -tf None")
+
+    main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
+    #        cmake_prefix_path to point only to the Frameworks of the system. The only fix found
+    #        would require to introduce something like "set (mylibrary_DIR "${CMAKE_BINARY_DIR}")"
+    #        at the toolchain (but it would require the toolchain to know about the deps)
+    #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(MyApp CXX)
+    set(hello_DIR "${CMAKE_BINARY_DIR}")
+    find_package(hello)
+    add_executable(main main.cpp)
+    target_link_libraries(main hello::hello)
+    """)
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+
+        class TestConan(ConanFile):
+            requires = "hello/0.1"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "CMakeLists.txt", "main.cpp"
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "main.cpp": main,
+                 "m1": profile}, clean_first=True)
+    client.run("install . --profile:build=default --profile:host=m1")
+    client.run("build .")
+    main_path = "./main.app/main"
+    client.run_command(main_path, assert_error=True)
+    assert "Bad CPU type in executable" in client.out
+    client.run_command("lipo -info {}".format(main_path))
+    assert "Non-fat file" in client.out
+    assert "is architecture: arm64" in client.out
