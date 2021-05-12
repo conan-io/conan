@@ -33,7 +33,7 @@ apple_frameworks_macro = textwrap.dedent("""
 
 
 conan_package_library_targets = textwrap.dedent("""
-   function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target config package_name)
+   function(conan_package_library_targets libraries package_libdir deps out_libraries out_libraries_target config_suffix package_name)
        unset(_CONAN_ACTUAL_TARGETS CACHE)
 
        foreach(_LIBRARY_NAME ${libraries})
@@ -44,7 +44,7 @@ conan_package_library_targets = textwrap.dedent("""
                list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                # Create a micro-target for each lib/a found
-               set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config})
+               set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
                if(NOT TARGET ${_LIB_NAME})
                    # Create a micro-target for each lib/a found
                    add_library(${_LIB_NAME} UNKNOWN IMPORTED)
@@ -118,7 +118,7 @@ conan_package_library_targets("${{{name}_LIBS{config_suffix}}}"           # libr
                               "${{_{name}_DEPENDENCIES{config_suffix}}}"  # deps
                               {name}_LIBRARIES{config_suffix}             # out_libraries
                               {name}_LIBRARIES_TARGETS{config_suffix}     # out_libraries_targets
-                              "{config_suffix}"                           # build_type
+                              "{config_suffix}"                           # config_suffix
                               "{name}")                                       # package_name
 
 foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{config_suffix}}})
@@ -165,10 +165,15 @@ class DepsCppCmake(object):
             Paths are doubled quoted, and escaped (but spaces)
             e.g: set(LIBFOO_INCLUDE_DIRS "/path/to/included/dir" "/path/to/included/dir2")
             """
-            return "\n\t\t\t".join('"${%s}/%s"' %
-                                   (pfolder_var_name,
-                                    p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"'))
-                                   for p in paths)
+            ret = []
+            for p in paths:
+                norm_path = p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                if os.path.isabs(p):
+                    ret.append('"{}"'.format(norm_path))
+                else:
+                    # Prepend the {{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }}
+                    ret.append('"${%s}/%s"' % (pfolder_var_name, norm_path))
+            return "\n\t\t\t".join(ret)
 
         def join_flags(separator, values):
             # Flags have to be escaped
@@ -451,7 +456,7 @@ set_property(TARGET {{name}}::{{name}}
             endif()
         endforeach()
 
-        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS_' + config_suffix + '}' }} )
+        foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
 

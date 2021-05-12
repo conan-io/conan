@@ -191,7 +191,6 @@ class NewCppInfo(object):
                         self.components[None]._generator_properties.\
                             setdefault(gen_name, {}).update(properties)
 
-
                 if component.requires:
                     if self.components[None].requires is None:
                         self.components[None].requires = []

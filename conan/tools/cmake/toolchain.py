@@ -298,10 +298,10 @@ class IOSSystemBlock(Block):
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
         set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
-        set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }})
+        set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
-        set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }})
+        set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         """)
 
     def _get_architecture(self):
@@ -342,8 +342,8 @@ class IOSSystemBlock(Block):
         host_sdk_name = self._apple_sdk_name()
 
         # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
-        # add a setting? check an option and if not present set a default?
-        # default to os.version?
+        #       add a setting? check an option and if not present set a default?
+        #       default to os.version?
         ctxt_toolchain = {
             "CMAKE_OSX_ARCHITECTURES": host_architecture,
             "CMAKE_SYSTEM_NAME": host_os,
@@ -358,7 +358,7 @@ class FindConfigFiles(Block):
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        # To support the cmake_find_package generators
+        # To support the generators based on find_package()
         {% if cmake_module_path %}
         set(CMAKE_MODULE_PATH "{{ cmake_module_path }}" ${CMAKE_MODULE_PATH})
         {% endif %}
