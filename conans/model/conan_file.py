@@ -108,6 +108,8 @@ class ConanFile(object):
     # layout
     layout = None
 
+    package_type = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)

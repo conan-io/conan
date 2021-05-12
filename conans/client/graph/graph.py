@@ -31,6 +31,15 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
+class PackageType(Enum):
+    LIBRARY = "library"  # abstract type, should contain shared option to define
+    STATIC = "static library"
+    SHARED = "shared library"
+    HEADER = "header library"
+    RUN = "run library"
+    UNKNOWN = "unknown"
+
+
 class _TransitiveRequirement:
     def __init__(self, require, node):
         self.require = require
@@ -105,6 +114,53 @@ class Node(object):
             # TODO: possibly optimize in a bulk propagate
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
+    @property
+    def package_type(self):
+        # This doesnt implement the header_only option without shared one. Users should define
+        # their package_type as they wish in the configure() method
+        conanfile_type = self.conanfile.package_type
+        if conanfile_type is not None:
+            conanfile_type = PackageType(conanfile_type)
+
+        if conanfile_type is None:  # automatic default detection with option shared/header-only
+            try:
+                shared = self.conanfile.options.shared
+            except ConanException:
+                pass
+            else:
+                if shared is not None:
+                    if shared:
+                        return PackageType.SHARED
+                    else:
+                        try:
+                            header = self.conanfile.options.header_only
+                        except ConanException:
+                            pass
+                        else:
+                            if header:
+                                return PackageType.HEADER
+                        return PackageType.STATIC
+            return PackageType.UNKNOWN
+
+        if conanfile_type is PackageType.LIBRARY:
+            try:
+                shared = self.conanfile.options.shared  # MUST exist
+            except ConanException:
+                raise ConanException("Package type is 'library', but no 'shared' option declared")
+            if shared:
+                return PackageType.SHARED
+            else:
+                try:
+                    header = self.conanfile.options.header_only
+                except ConanException:
+                    pass
+                else:
+                    if header:
+                        return PackageType.HEADER
+                return PackageType.STATIC
+
+        return conanfile_type
+
     def _transform_downstream_require(self, require, node, dependant):
         if require.build:  # Build-requires do not propagate anything
             return  # TODO: check this
@@ -114,43 +170,42 @@ class Node(object):
             return
 
         source_require = dependant.require
-
-        if node is not None:
-            up_shared = str(node.conanfile.options.get_safe("shared"))
-        else:
-            up_shared = None
-        self_shared = str(self.conanfile.options.get_safe("shared"))
-        if up_shared is not None:
-            up_shared = eval(up_shared)
-        if self_shared is not None:  # FIXME: ugly
-            self_shared = eval(self_shared)
+        up_type = node.package_type if node is not None else None
+        current_type = self.package_type
 
         if source_require.build:  # Build-requires
             print("    Propagating build-require",  self, "<-", require)
             # If the above is shared or the requirement is explicit run=True
-            if up_shared or require.run:
+            if up_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
                                                  run=True, public=False,)
                 return downstream_require
             return
 
         # Regular and test requires
-        if up_shared:
-            if self_shared:
+        if up_type is PackageType.SHARED or up_type is PackageType.RUN:
+            if current_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
-            elif self_shared is False:  # static
+            elif current_type is PackageType.STATIC:
                 downstream_require = Requirement(require.ref, include=False, link=True, run=True)
+            elif current_type is PackageType.RUN:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             else:  # unknown
+                assert current_type is PackageType.UNKNOWN
                 # Consumers will need to find it at build time too
                 downstream_require = Requirement(require.ref, include=True, link=True, run=True)
-            # TODO: Header, App
-        elif up_shared is False:  # static
-            if self_shared:
+        elif up_type is PackageType.STATIC:
+            if current_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-            elif self_shared is False:  # static
+            elif current_type is PackageType.RUN:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+            elif current_type is PackageType.STATIC:  # static
                 downstream_require = Requirement(require.ref, include=False, link=True, run=False)
             else:  # unknown
+                assert current_type is PackageType.UNKNOWN
                 downstream_require = Requirement(require.ref, include=True, link=True, run=False)
+        elif up_type is PackageType.HEADER:
+            downstream_require = Requirement(require.ref, include=False, link=False, run=False)
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
