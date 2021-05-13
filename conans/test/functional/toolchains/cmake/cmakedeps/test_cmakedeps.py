@@ -58,7 +58,7 @@ def test_transitive_multi(client):
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
-        assert "find_dependency(liba REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
+        assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
             client.run_command('cmake .. -G "Visual Studio 15 Win64" '
@@ -144,21 +144,17 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:;>;"
-                           "$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
+            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                           "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
             target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                           "$<$<CONFIG:Release>:;>;"
-                           "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
         assert "Target libs: %s" % target_libs in client.out
 
 
@@ -199,8 +195,7 @@ def test_do_not_mix_cflags_cxxflags():
     client.save({"conanfile.py": consumer_conanfile,
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("create .")
-    assert "compile options: $<$<CONFIG:Debug>:>;$<$<CONFIG:Release>:" \
-           "$<$<COMPILE_LANGUAGE:CXX>:three;four>;$<$<COMPILE_LANGUAGE:C>:one;two>>;" \
-           "$<$<CONFIG:RelWithDebInfo>:>;$<$<CONFIG:MinSizeRel>:>" in client.out
+    assert "compile options: $<$<CONFIG:Release>:" \
+           "$<$<COMPILE_LANGUAGE:CXX>:three;four>;$<$<COMPILE_LANGUAGE:C>:one;two>>" in client.out
     assert "cflags: one;two" in client.out
     assert "cxxflags: three;four" in client.out

@@ -21,6 +21,7 @@ def conanfile():
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
     c.conf = Conf()
+    c.folders.set_base_generators(".")
     return c
 
 
