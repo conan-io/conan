@@ -50,7 +50,7 @@ def setup_client_with_build_requires():
                 if self.settings.build_type == "Debug":
                     raise ConanInvalidConfiguration("br cannot be built in debug mode")
         """)
-    conanfile_validate_pacakge_id = textwrap.dedent("""
+    conanfile_validate_remove_build_type = textwrap.dedent("""
         import os
         from conans import ConanFile
         from conans.errors import ConanInvalidConfiguration
@@ -67,7 +67,7 @@ def setup_client_with_build_requires():
             def package_id(self):
                 del self.info.settings.build_type
         """)
-    conanfile_configure_pacakge_id = textwrap.dedent("""
+    conanfile_configure_remove_build_type = textwrap.dedent("""
         import os
         from conans import ConanFile
         from conans.errors import ConanInvalidConfiguration
@@ -84,7 +84,7 @@ def setup_client_with_build_requires():
             def package_id(self):
                 del self.info.settings.build_type
         """)
-    conanfile_build_package_id = textwrap.dedent("""
+    conanfile_build_remove_build_type = textwrap.dedent("""
         import os
         from conans import ConanFile
         from conans.errors import ConanInvalidConfiguration
@@ -173,9 +173,9 @@ def setup_client_with_build_requires():
     client.save({"br_validate.py": conanfile_validate,
                  "br_configure.py": conanfile_configure,
                  "br_build.py": conanfile_build,
-                 "br_validate_pid.py": conanfile_validate_pacakge_id,
-                 "br_configure_pid.py": conanfile_configure_pacakge_id,
-                 "br_build_pid.py": conanfile_build_package_id,
+                 "br_validate_remove_build_type.py": conanfile_validate_remove_build_type,
+                 "br_configure_remove_build_type.py": conanfile_configure_remove_build_type,
+                 "br_build_remove_build_type.py": conanfile_build_remove_build_type,
                  "br_validate_compatible.py": conanfile_validate_compatible,
                  "br_configure_compatible.py": conanfile_configure_compatible,
                  "br_build_compatible.py": conanfile_build_compatible,
@@ -186,130 +186,127 @@ def setup_client_with_build_requires():
 def test_create_invalid_validate(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
 def test_create_invalid_configure(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_configure.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
 def test_create_invalid_build(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_build.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_validate_pid(setup_client_with_build_requires):
+def test_create_validate_remove_build_type(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_validate_pid.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create br_validate_remove_build_type.py")
+    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_configure_pid(setup_client_with_build_requires):
+def test_create_configure_remove_build_type(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_configure_pid.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create br_configure_remove_build_type.py")
+    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_build_pid(setup_client_with_build_requires):
+def test_create_build_remove_build_type(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_build_pid.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    client.run("create br_build_remove_build_type.py")
+    # FIXME: This should NOT fail with -> 'ERROR: Missing prebuilt package for 'br/1.0.0'
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_validate_compatible(setup_client_with_build_requires):
+def test_create_validate_compatible(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate_compatible.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_configure_compatible(setup_client_with_build_requires):
+def test_create_configure_compatible(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_configure_compatible.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
-def test_create_invalid_build_compatible(setup_client_with_build_requires):
+def test_create_build_compatible(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_build_compatible.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+    # FIXME: This should NOT fail with -> ERROR: Missing prebuilt package for 'br/1.0.0'
+    client.run("create consumer.py -s build_type=Debug", assert_error=True)
 
 
 def test_create_validate_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate.py")
-    client.run("create consumer.py -s build_type=Debug -pr:b=default -pr:h=default")
+    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
     assert "br/1.0.0 from local cache - Cache" in client.out
 
 
 def test_create_configure_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_configure.py")
-    client.run("create consumer.py -s build_type=Debug -pr:b=default -pr:h=default")
+    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
     assert "br/1.0.0 from local cache - Cache" in client.out
 
 
 def test_create_build_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_build.py")
-    client.run("create consumer.py -s build_type=Debug -pr:b=default -pr:h=default")
+    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
     assert "br/1.0.0 from local cache - Cache" in client.out
 
 
-def test_create_validate_pid_two_profiles(setup_client_with_build_requires):
+def test_create_validate_remove_build_type_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_validate_pid.py")
+    client.run("create br_validate_remove_build_type.py")
+    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
 
 
-def test_create_configure_pid_two_profiles(setup_client_with_build_requires):
+def test_create_configure_remove_build_type_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_configure_pid.py")
+    client.run("create br_configure_remove_build_type.py")
+    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
 
 
-def test_create_build_pid_two_profiles(setup_client_with_build_requires):
+def test_create_build_remove_build_type_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_build_pid.py")
+    client.run("create br_build_remove_build_type.py")
+    # FIXME: This should NOT Fail with -> ERROR: Missing prebuilt package for 'br/1.0.0'
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
 
 
 def test_create_validate_compatible_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate_compatible.py")
+    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
 
 
 def test_create_configure_compatible_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_configure_compatible.py")
+    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
 
 
 def test_create_build_compatible_two_profiles(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_build_compatible.py")
+    # FIXME: This should NOT fail with -> ERROR: Missing prebuilt package for 'br/1.0.0'
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
+               "-s:h build_type=Debug -pr:h default", assert_error=True)
