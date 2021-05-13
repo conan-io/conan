@@ -428,6 +428,7 @@ set_property(TARGET {{name}}::{{name}}
             endif()
         endforeach()
 
+        # Only the first installed configuration is included to avoid the collission
         foreach(_BUILD_MODULE {{ '${' + pkg_name + '_BUILD_MODULES_PATHS' + config_suffix + '}' }} )
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
