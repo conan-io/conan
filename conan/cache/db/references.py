@@ -155,7 +155,12 @@ class ReferencesDbTable(BaseDbTable):
     def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                    f'                {self.columns.rrev}, MAX({self.columns.timestamp}) ' \
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.pkgid}, ' \
+                    f'{self.columns.prev}, ' \
+                    f'{self.columns.path}, ' \
+                    f'{self.columns.remote}, ' \
+                    f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.prev} IS NULL ' \
                     f'GROUP BY {self.columns.reference} ' \

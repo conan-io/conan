@@ -96,8 +96,11 @@ class ClientCache(object):
     def pkg_layout(self, ref):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))[0]
 
+    def update_remote(self, ref, remote):
+        return self._data_cache.update_remote(ConanReference(ref), remote)
+
     def all_refs(self):
-        return [str(ref) for ref in self._data_cache.list_references()]
+        return [ref for ref in self._data_cache.list_references(only_latest_rrev=True)]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [pref for pref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
@@ -120,18 +123,7 @@ class ClientCache(object):
         return os.path.join(self.cache_folder, "config_install.json")
 
     def package_layout(self, ref, short_paths=None):
-        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
-        if edited_ref:
-            conanfile_path = edited_ref["path"]
-            layout_file = edited_ref["layout"]
-            return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
-                                         conanfile_path)
-        else:
-            _check_ref_case(ref, self.store)
-            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
-            return PackageCacheLayout(base_folder=base_folder, ref=ref,
-                                      short_paths=short_paths, no_lock=self._no_locks())
+        raise ConanException("Moving to cache 2.0")
 
     @property
     def remotes_path(self):

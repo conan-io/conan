@@ -100,12 +100,13 @@ class TestCache:
         # client.run("create . mypkg/3.0@user/channel")
 
     def test_conan_upload(self):
-        test_server = TestServer()
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-
+        server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("user", "password")]})
         client.run("new mypkg/1.0 -s")
         client.run("create .")
-        client.run("upload mypkg/1.0 -r default")
-        client.run("new mypkg/2.0 -s")
-        client.run("upload mypkg/2.0")
+        client.run("upload mypkg/1.0#817645706597d1bbfee2b46274fd8cc7 -r default -c")
+        client.run("search -r default")
+        # client.run("upload mypkg/1.0")
+        # client.run("new mypkg/2.0 -s")
+        # client.run("upload mypkg/2.0")

@@ -171,3 +171,6 @@ class DataCache:
 
     def get_remote(self, ref):
         return self.db.get_remote(ref)
+
+    def update_remote(self, ref, remote):
+        self.db.update_reference(ref, ref, remote=remote)

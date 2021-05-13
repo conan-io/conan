@@ -90,8 +90,12 @@ def search_recipes(cache, pattern=None, ignorecase=True):
     refs = cache.all_refs()
     refs.extend(cache.editable_packages.edited_refs.keys())
     if pattern:
-        refs = [r for r in refs if _partial_match(pattern, repr(r))]
-    refs = sorted(refs)
+        _refs = []
+        for r in refs:
+            match_ref = str(r) if not r.revision else repr(r)
+            if _partial_match(pattern, match_ref):
+                _refs.append(r)
+    refs = sorted(_refs)
     return refs
 
 
