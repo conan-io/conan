@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
@@ -65,8 +67,7 @@ class HelloConan(ConanFile):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 """
 
-        self.test_conanfile = str(GenConanfile().with_require("Hello/0.1@lasote/stable")
-                                                .with_test("pass"))
+        self.test_conanfile = str(GenConanfile().with_test("pass"))
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile})
 
@@ -136,6 +137,7 @@ class SayConan(ConanFile):
         self.assertIn("Building userfoo/channelbar", self.client.out)
 
 
+@pytest.mark.xfail(reason="Using env-vars to define user/channel will be removed")
 class BuildRequireUserChannelTest(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/2254

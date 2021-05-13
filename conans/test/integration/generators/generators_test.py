@@ -4,6 +4,8 @@ import re
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
 
@@ -48,6 +50,7 @@ ycm
                                  LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
 
+    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_srcdirs(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
@@ -69,6 +72,7 @@ class TestConan(ConanFile):
         self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)
 
+    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_qmake(self):
         client = TestClient()
         dep = """
@@ -106,6 +110,7 @@ qmake
         self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
         self.assertIn("CONAN_LIBS += -lhello", qmake)
 
+    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
     def test_qmake_hyphen_dot(self):
         client = TestClient()
         dep = """

@@ -77,4 +77,6 @@ class ConanFileDependencies:
                     if transitive not in new_requires:
                         new_requires.append(transitive)
             next_requires = new_requires
+
+        print([(str(r), r.context) for r in result])
         return DependencyOrderedSet(result)

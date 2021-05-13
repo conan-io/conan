@@ -114,11 +114,11 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_require(self, ref):
+    def build_require(self, ref, raise_if_duplicated=True):
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
                           package_id_mode=None)
-        if self._requires.get(req):
+        if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 

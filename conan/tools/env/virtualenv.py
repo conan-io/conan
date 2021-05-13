@@ -27,11 +27,8 @@ class VirtualEnv:
         for transitive in self._conanfile._conan_node.transitive_deps.values():
             require = transitive.require
             node = transitive.node
-            print("PROCESSING ", transitive)
             if require.build:  # build context
-                print("IS A BUILD_REQUIRE")
                 if require.run:
-                    print("IS A RUN REQUIRE")
                     build_env.compose(node.conanfile.buildenv_info)
                     # Second, the implicit self information in build_require.cpp_info
                     build_env.compose(self._runenv_from_cpp_info(node.conanfile.cpp_info))
@@ -124,7 +121,6 @@ class VirtualEnv:
         for transitive in self._conanfile._conan_node.transitive_deps.values():
             require = transitive.require
             node = transitive.node
-            print("PROCESSING ", transitive)
             if not require.build:  # host context
                 if node.conanfile.runenv_info:
                     runenv.compose(node.conanfile.runenv_info)

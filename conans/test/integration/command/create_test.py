@@ -34,26 +34,16 @@ class CreateTest(unittest.TestCase):
     def test_transitive_same_name(self):
         # https://github.com/conan-io/conan/issues/1366
         client = TestClient()
-        conanfile = GenConanfile().with_name("HelloBar").with_version("0.1")
-        test_package = '''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "HelloBar/0.1@lasote/testing"
-    def test(self):
-        pass
-'''
-        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.save({"conanfile.py": GenConanfile("HelloBar", "0.1"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/testing")
-        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                      client.out)
-        conanfile = GenConanfile().with_name("Hello").with_version("0.1")\
-                                  .with_require("HelloBar/0.1@lasote/testing")
+        self.assertIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
+
+        conanfile = GenConanfile("Hello", "0.1").with_require("HelloBar/0.1@lasote/testing")
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . lasote/stable")
-        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
-                         client.out)
+        self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
 
     def test_create(self):
         client = TestClient()

@@ -36,7 +36,7 @@ class GeneratorFromCacheTest(unittest.TestCase):
 
                 @property
                 def content(self):
-                    return json.dumps(list(self.deps_build_info.deps))
+                    return json.dumps(list(e.ref.name for e in self.conanfile.dependencies.transitive_host_requires))
             """)
 
         # Save generator to cache_folder/generators.

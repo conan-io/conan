@@ -2067,6 +2067,7 @@ class Command(object):
                 self._out.error("Exiting with code: %d" % exc.code)
             ret_code = exc.code
         except ConanInvalidConfiguration as exc:
+            print(exc)
             ret_code = ERROR_INVALID_CONFIGURATION
             self._out.error(exc)
         except ConanException as exc:

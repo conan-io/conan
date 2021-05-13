@@ -151,12 +151,17 @@ class _FileImporter(object):
         else:
             real_dst_folder = os.path.normpath(os.path.join(self._dst_folder, dst))
 
-        pkgs = (self._conanfile.deps_cpp_info.dependencies if not root_package else
-                [(pkg, cpp_info) for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
-                 if fnmatch.fnmatch(pkg, root_package)])
+        pkgs = []
+        for dep in self._conanfile.dependencies.transitive_host_requires:
+            if root_package:
+                if fnmatch.fnmatch(dep.ref.name, root_package):
+                    pkgs.append((dep.ref.name, dep.cpp_info))
+            else:
+                pkgs.append((dep.ref.name, dep.cpp_info))
 
         symbolic_dir_name = src[1:] if src.startswith("@") else None
         src_dirs = [src]  # hardcoded src="bin" origin
+        # FIXME: access of cpp_info.rootpath, use package_folder better if possible.
         for pkg_name, cpp_info in pkgs:
             final_dst_path = os.path.join(real_dst_folder, pkg_name) if folder else real_dst_folder
             file_copier = FileCopier([cpp_info.rootpath], final_dst_path)

@@ -1,12 +1,15 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 from conans.client.tools.files import load
 
 
 class MarkDownGeneratorTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Generator markdown to be revisited")
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
                     from conans import ConanFile

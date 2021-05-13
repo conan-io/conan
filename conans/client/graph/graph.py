@@ -209,16 +209,7 @@ class Node(object):
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
-            downstream_require = Requirement(require.ref,
-                                             include=require.include,
-                                             link=require.link,
-                                             build=require.build,
-                                             run=require.run,
-                                             public=require.public,
-                                             transitive_headers=require.transitive_headers,
-                                             test=require.test,
-                                             package_id_mode=require.package_id_mode
-                                             )
+            downstream_require = require.copy()
 
         assert require.public, "at this point require should be public"
 
@@ -246,6 +237,7 @@ class Node(object):
 
     def propagate_downstream(self, require, node, prev_node=None):
         print("  Propagating downstream ", self, "<-", require)
+        assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
@@ -353,7 +345,8 @@ class Edge(object):
         self.src = src
         self.dst = dst
         self.require = require
-        self.build_require = False  # Just to not break, but not user
+        # FIXME: USed in the ConanFileDependencies logic, must avoid
+        self.build_require = require.build  # Just to not break, but not user
         self.private = False
 
 
@@ -460,9 +453,12 @@ class DepsGraph(object):
 
     def report_graph_error(self):
         if self.error:
+            print("REPORTING GRAPH ERRORS")
             conflict_nodes = [n for n in self.nodes if n.conflict]
+            print("PROBLEMATIC NODES ", conflict_nodes)
             for node in conflict_nodes:  # At the moment there should be only 1 conflict at most
                 conflict = node.conflict
+                print("CONFLICT ", conflict)
                 if conflict[0] == GraphError.LOOP:
                     loop_ref = node.ref
                     parent = node.dependants[0]
@@ -478,4 +474,4 @@ class DepsGraph(object):
                     raise ConanException(
                         "There was a provides conflict building the dependency graph")
 
-            raise ConanException(self.error)
+            raise ConanException("Thre was an error in the graph: {}".format(self.error))

@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -11,6 +12,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="layout files will be removed and conan-info command output changes")
 class InfoCommandTest(unittest.TestCase):
 
     def setUp(self):

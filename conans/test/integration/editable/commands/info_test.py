@@ -2,11 +2,14 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="layout files will be removed and conan-info command output changes")
 class LinkedPackageAsProject(unittest.TestCase):
 
     def setUp(self):

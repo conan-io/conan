@@ -5,6 +5,8 @@ import re
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.editable_layout import LAYOUTS_FOLDER
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
@@ -12,6 +14,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save_files, save
 
 
+@pytest.mark.xfail(reason="Layout based on text files will be removed")
 class LayoutTest(unittest.TestCase):
 
     def test_editable_crash(self):
@@ -253,8 +256,10 @@ class LayoutTest(unittest.TestCase):
             mytool/0.1@user/testing
             """)
         client2.save({"conanfile.txt": consumer})
-        client2.run("install . -g cmake")
+        client2.run("install . -g CMakeDeps")
         self.assertIn("mytool/0.1@user/testing from user folder - Editable", client2.out)
-        cmake = client2.load("conanbuildinfo.cmake")
+        print(client2.current_folder)
+        cmake = client2.load("mytool-release-x86_64-data.cmake")
+        assert "${mytool_PACKAGE_FOLDER}/include_abs_path" in cmake
         include_dirs = re.search('set\(CONAN_INCLUDE_DIRS_MYTOOL "(.*)"\)', cmake).group(1)
         self.assertTrue(include_dirs.endswith("include_abs_path"))

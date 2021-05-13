@@ -33,7 +33,9 @@ def setup_client():
             @property
             def content(self):
                 info = []
-                for pkg_name, cpp_info in self.deps_build_info.dependencies:
+                for dep in self.conanfile.dependencies.transitive_host_requires:
+                    pkg_name = dep.ref.name
+                    cpp_info = dep.cpp_info
                     info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name", self.name)))
                     info.extend(self._get_components_custom_names(cpp_info))
                 return os.linesep.join(info)
@@ -61,6 +63,7 @@ def get_files_contents(client, filenames):
     return [client.load(f) for f in filenames]
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -120,6 +123,7 @@ def test_same_results_components(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_without_components(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -179,6 +183,7 @@ def test_same_results_without_components(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_same_results_specific_generators(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""
@@ -240,6 +245,7 @@ def test_same_results_specific_generators(setup_client):
     assert new_approach_contents == old_approach_contents
 
 
+@pytest.mark.xfail(reason="This depends on GeneratorComponentsMixin, which is to be removed")
 def test_pkg_config_names(setup_client):
     client = setup_client
     mypkg = textwrap.dedent("""

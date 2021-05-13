@@ -112,7 +112,6 @@ import os
 from conans import ConanFile, tools
 
 class TestMyLib(ConanFile):
-    requires = "MyLib/0.1@lasote/stable"
 
     def build(self):
         self.run("mytool")
@@ -138,7 +137,6 @@ import os
 from conans import ConanFile, tools
 
 class TestMyLib(ConanFile):
-    requires = "MyLib/0.1@lasote/stable"
 
     def build(self):
         self.run("mytool")

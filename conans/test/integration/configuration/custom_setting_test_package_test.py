@@ -18,7 +18,6 @@ class TestConanLib(ConanFile):
 from conans import ConanFile
 
 class TestConanLib(ConanFile):
-    requires = "Hello/0.1@lasote/testing"
     settings = "os", "build_type", "product"
     def requirements(self):
         self.output.info("Conditional test requirement: %s, %s, %s"

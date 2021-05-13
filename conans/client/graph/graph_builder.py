@@ -84,8 +84,11 @@ class DepsGraphBuilder(object):
                 (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
                 for build_require in build_requires:  # Do the override
+                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
+                        continue  # avoid self-loop of build-requires in build context
                     # FIXME: converting back to string?
-                    node.conanfile.requires.build_require(str(build_require))
+                    node.conanfile.requires.build_require(str(build_require),
+                                                          raise_if_duplicated=False)
 
     @staticmethod
     def _check_provides(dep_graph):
@@ -164,6 +167,7 @@ class DepsGraphBuilder(object):
             self._expand_require(require, node, graph, check_updates, update, remotes,
                                  profile_host, profile_build,
                                  graph_lock)
+        print("Finished Expanding node", node)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -202,12 +206,14 @@ class DepsGraphBuilder(object):
                 graph.add_edge(node, loop_node, require)
                 raise DepsGraphBuilder.StopRecursion("Loop found")
 
-            if prev_node is None:  # Existing override
+            if prev_node is None or prev_node in base_previous.neighbors():  # Existing override
+                # Overrides happen when the conflicting existing was directly defined by consumer
                 print("  Require was an override from ", base_previous, "=", prev_require)
                 print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
                 # TODO: resolve the override, version ranges, etc
                 require = prev_require
             else:
+                print("Checking for possible conflicts!")
                 # self._resolve_cached_alias([require], graph)
                 # As we are closing a diamond, there can be conflicts. This will raise if conflicts
                 conflict = self._conflicting_references(prev_node, require.ref, node.ref)

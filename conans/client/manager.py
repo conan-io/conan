@@ -71,6 +71,9 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
 
     graph_lock.complete_matching_prevs()
 
+    # FIXME: Report non matches not working now
+    # build_modes.report_matches()
+
     if install_folder:
         conanfile.layout.set_base_install_folder(install_folder)
         # Write generators

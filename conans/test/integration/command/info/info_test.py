@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from datetime import datetime
 
+import pytest
 
 from conans import __version__ as client_version
 
@@ -115,6 +116,7 @@ class InfoTest(unittest.TestCase):
                       " JFrog LTD. <a>https://conan.io</a>"
                       .format(client_version, datetime.today().year), html)
 
+    @pytest.mark.xfail(reason="Info command output changed")
     def test_only_names(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -140,6 +142,7 @@ class InfoTest(unittest.TestCase):
         self.assertIn("Invalid --only value", self.client.out)
         self.assertIn("with --path specified, allowed values:", self.client.out)
 
+    @pytest.mark.xfail(reason="Info command output changed")
     def test_info_virtual(self):
         # Checking that "Required by: virtual" doesnt appear in the output
         self.client = TestClient()
@@ -148,6 +151,7 @@ class InfoTest(unittest.TestCase):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
+    @pytest.mark.xfail(reason="Info command output changed")
     def test_reuse(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
