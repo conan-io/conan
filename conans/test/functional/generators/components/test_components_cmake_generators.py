@@ -686,7 +686,6 @@ class TestComponentsCMakeGenerators:
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
         client.run("create . consumer/1.0@")
-        print(client.out)
         # assert False
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out
