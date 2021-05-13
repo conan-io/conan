@@ -74,70 +74,70 @@ conan_package_library_targets = textwrap.dedent("""
 
 
 variables_template = """
-set({name}_PACKAGE_FOLDER{config_suffix} "{package_folder}")
-set({name}_INCLUDE_DIRS{config_suffix} {deps.include_paths})
-set({name}_RES_DIRS{config_suffix} {deps.res_paths})
-set({name}_DEFINITIONS{config_suffix} {deps.defines})
-set({name}_SHARED_LINK_FLAGS{config_suffix} {deps.sharedlinkflags_list})
-set({name}_EXE_LINK_FLAGS{config_suffix} {deps.exelinkflags_list})
-set({name}_COMPILE_DEFINITIONS{config_suffix} {deps.compile_definitions})
-set({name}_COMPILE_OPTIONS_C{config_suffix} {deps.cflags_list})
-set({name}_COMPILE_OPTIONS_CXX{config_suffix} {deps.cxxflags_list})
-set({name}_LIB_DIRS{config_suffix} {deps.lib_paths})
-set({name}_LIBS{config_suffix} {deps.libs})
-set({name}_SYSTEM_LIBS{config_suffix} {deps.system_libs})
-set({name}_FRAMEWORK_DIRS{config_suffix} {deps.framework_paths})
-set({name}_FRAMEWORKS{config_suffix} {deps.frameworks})
-set({name}_BUILD_MODULES_PATHS{config_suffix} {deps.build_modules_paths})
-set({name}_BUILD_DIRS{config_suffix} {deps.build_paths})
+set({pkg_name}_PACKAGE_FOLDER{config_suffix} "{package_folder}")
+set({pkg_name}_INCLUDE_DIRS{config_suffix} {deps.include_paths})
+set({pkg_name}_RES_DIRS{config_suffix} {deps.res_paths})
+set({pkg_name}_DEFINITIONS{config_suffix} {deps.defines})
+set({pkg_name}_SHARED_LINK_FLAGS{config_suffix} {deps.sharedlinkflags_list})
+set({pkg_name}_EXE_LINK_FLAGS{config_suffix} {deps.exelinkflags_list})
+set({pkg_name}_COMPILE_DEFINITIONS{config_suffix} {deps.compile_definitions})
+set({pkg_name}_COMPILE_OPTIONS_C{config_suffix} {deps.cflags_list})
+set({pkg_name}_COMPILE_OPTIONS_CXX{config_suffix} {deps.cxxflags_list})
+set({pkg_name}_LIB_DIRS{config_suffix} {deps.lib_paths})
+set({pkg_name}_LIBS{config_suffix} {deps.libs})
+set({pkg_name}_SYSTEM_LIBS{config_suffix} {deps.system_libs})
+set({pkg_name}_FRAMEWORK_DIRS{config_suffix} {deps.framework_paths})
+set({pkg_name}_FRAMEWORKS{config_suffix} {deps.frameworks})
+set({pkg_name}_BUILD_MODULES_PATHS{config_suffix} {deps.build_modules_paths})
+set({pkg_name}_BUILD_DIRS{config_suffix} {deps.build_paths})
 # Missing the dependencies information here
 """
 
 
 dynamic_variables_template = """
 
-set({name}_COMPILE_OPTIONS{config_suffix}
-        "$<$<COMPILE_LANGUAGE:CXX>:${{{name}_COMPILE_OPTIONS_CXX{config_suffix}}}>"
-        "$<$<COMPILE_LANGUAGE:C>:${{{name}_COMPILE_OPTIONS_C{config_suffix}}}>")
+set({pkg_name}_COMPILE_OPTIONS{config_suffix}
+        "$<$<COMPILE_LANGUAGE:CXX>:${{{pkg_name}_COMPILE_OPTIONS_CXX{config_suffix}}}>"
+        "$<$<COMPILE_LANGUAGE:C>:${{{pkg_name}_COMPILE_OPTIONS_C{config_suffix}}}>")
 
-set({name}_LINKER_FLAGS{config_suffix}
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{config_suffix}}}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{{name}_SHARED_LINK_FLAGS{config_suffix}}}>"
-        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{{name}_EXE_LINK_FLAGS{config_suffix}}}>")
+set({pkg_name}_LINKER_FLAGS{config_suffix}
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:${{{pkg_name}_SHARED_LINK_FLAGS{config_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:${{{pkg_name}_SHARED_LINK_FLAGS{config_suffix}}}>"
+        "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:${{{pkg_name}_EXE_LINK_FLAGS{config_suffix}}}>")
 
-set({name}_FRAMEWORKS_FOUND{config_suffix} "") # Will be filled later
-conan_find_apple_frameworks({name}_FRAMEWORKS_FOUND{config_suffix} "${{{name}_FRAMEWORKS{config_suffix}}}" "${{{name}_FRAMEWORK_DIRS{config_suffix}}}")
+set({pkg_name}_FRAMEWORKS_FOUND{config_suffix} "") # Will be filled later
+conan_find_apple_frameworks({pkg_name}_FRAMEWORKS_FOUND{config_suffix} "${{{pkg_name}_FRAMEWORKS{config_suffix}}}" "${{{pkg_name}_FRAMEWORK_DIRS{config_suffix}}}")
 
 # Gather all the libraries that should be linked to the targets (do not touch existing variables):
-set(_{name}_DEPENDENCIES{config_suffix} "${{{name}_FRAMEWORKS_FOUND{config_suffix}}} ${{{name}_SYSTEM_LIBS{config_suffix}}} {deps_names}")
+set(_{pkg_name}_DEPENDENCIES{config_suffix} "${{{pkg_name}_FRAMEWORKS_FOUND{config_suffix}}} ${{{pkg_name}_SYSTEM_LIBS{config_suffix}}} {deps_names}")
 
-set({name}_LIBRARIES_TARGETS{config_suffix} "") # Will be filled later, if CMake 3
-set({name}_LIBRARIES{config_suffix} "") # Will be filled later
-conan_package_library_targets("${{{name}_LIBS{config_suffix}}}"           # libraries
-                              "${{{name}_LIB_DIRS{config_suffix}}}"       # package_libdir
-                              "${{_{name}_DEPENDENCIES{config_suffix}}}"  # deps
-                              {name}_LIBRARIES{config_suffix}             # out_libraries
-                              {name}_LIBRARIES_TARGETS{config_suffix}     # out_libraries_targets
+set({pkg_name}_LIBRARIES_TARGETS{config_suffix} "") # Will be filled later, if CMake 3
+set({pkg_name}_LIBRARIES{config_suffix} "") # Will be filled later
+conan_package_library_targets("${{{pkg_name}_LIBS{config_suffix}}}"           # libraries
+                              "${{{pkg_name}_LIB_DIRS{config_suffix}}}"       # package_libdir
+                              "${{_{pkg_name}_DEPENDENCIES{config_suffix}}}"  # deps
+                              {pkg_name}_LIBRARIES{config_suffix}             # out_libraries
+                              {pkg_name}_LIBRARIES_TARGETS{config_suffix}     # out_libraries_targets
                               "{config_suffix}"                           # config_suffix
-                              "{name}")                                       # package_name
+                              "{pkg_name}")                                       # package_name
 
-foreach(_FRAMEWORK ${{{name}_FRAMEWORKS_FOUND{config_suffix}}})
-    list(APPEND {name}_LIBRARIES_TARGETS{config_suffix} ${{_FRAMEWORK}})
-    list(APPEND {name}_LIBRARIES{config_suffix} ${{_FRAMEWORK}})
+foreach(_FRAMEWORK ${{{pkg_name}_FRAMEWORKS_FOUND{config_suffix}}})
+    list(APPEND {pkg_name}_LIBRARIES_TARGETS{config_suffix} ${{_FRAMEWORK}})
+    list(APPEND {pkg_name}_LIBRARIES{config_suffix} ${{_FRAMEWORK}})
 endforeach()
 
-foreach(_SYSTEM_LIB ${{{name}_SYSTEM_LIBS{config_suffix}}})
-    list(APPEND {name}_LIBRARIES_TARGETS{config_suffix} ${{_SYSTEM_LIB}})
-    list(APPEND {name}_LIBRARIES{config_suffix} ${{_SYSTEM_LIB}})
+foreach(_SYSTEM_LIB ${{{pkg_name}_SYSTEM_LIBS{config_suffix}}})
+    list(APPEND {pkg_name}_LIBRARIES_TARGETS{config_suffix} ${{_SYSTEM_LIB}})
+    list(APPEND {pkg_name}_LIBRARIES{config_suffix} ${{_SYSTEM_LIB}})
 endforeach()
 
 # We need to add our requirements too
-set({name}_LIBRARIES_TARGETS{config_suffix} "${{{name}_LIBRARIES_TARGETS{config_suffix}}};{deps_names}")
-set({name}_LIBRARIES{config_suffix} "${{{name}_LIBRARIES{config_suffix}}};{deps_names}")
+set({pkg_name}_LIBRARIES_TARGETS{config_suffix} "${{{pkg_name}_LIBRARIES_TARGETS{config_suffix}}};{deps_names}")
+set({pkg_name}_LIBRARIES{config_suffix} "${{{pkg_name}_LIBRARIES{config_suffix}}};{deps_names}")
 
 # FIXME: What is the result of this for multi-config? All configs adding themselves to path?
-set(CMAKE_MODULE_PATH ${{{name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_MODULE_PATH}})
-set(CMAKE_PREFIX_PATH ${{{name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_PREFIX_PATH}})
+set(CMAKE_MODULE_PATH ${{{pkg_name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_MODULE_PATH}})
+set(CMAKE_PREFIX_PATH ${{{pkg_name}_BUILD_DIRS{config_suffix}}} ${{CMAKE_PREFIX_PATH}})
 
 """
 
@@ -230,20 +230,26 @@ class CMakeDeps(object):
     # Will be at "XXXTarget-Release.cmake"
     target_properties = Template("""
 # Assign target properties
-set_property(TARGET {{name}}::{{name}}
+set_property(TARGET {{pkg_name}}::{{pkg_name}}
              PROPERTY INTERFACE_LINK_LIBRARIES
-             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_LIBRARIES_TARGETS{{config_suffix}}}
-                                    ${{'{'}}{{name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
-set_property(TARGET {{name}}::{{name}}
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
+                                    ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
+set_property(TARGET {{pkg_name}}::{{pkg_name}}
              PROPERTY INTERFACE_INCLUDE_DIRECTORIES
-             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
-set_property(TARGET {{name}}::{{name}}
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)
+set_property(TARGET {{pkg_name}}::{{pkg_name}}
              PROPERTY INTERFACE_COMPILE_DEFINITIONS
-             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
-set_property(TARGET {{name}}::{{name}}
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_DEFINITIONS{{config_suffix}}}> APPEND)
+set_property(TARGET {{pkg_name}}::{{pkg_name}}
              PROPERTY INTERFACE_COMPILE_OPTIONS
-             $<$<CONFIG:{{configuration}}>:${{'{'}}{{name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
-    """)
+             $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_COMPILE_OPTIONS{{config_suffix}}}> APPEND)
+
+# Always keep a target with the unique name of the package in case there is some collision
+if(NOT "{{pkg_rename}}" STREQUAL "{{pkg_name}}")
+    add_library({{pkg_rename}}::{{pkg_rename}} ALIAS {{pkg_name}}::{{pkg_name}})
+    conan_message(STATUS "Target ALIAS declared: '{{pkg_rename}}::{{pkg_rename}}' (from {{pkg_name}}::{{pkg_name}})")
+endif()
+""")
 
     # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
     # This will be at XXX-config-version.cmake
@@ -311,7 +317,7 @@ set_property(TARGET {{name}}::{{name}}
         {%- endfor %}
     """))
 
-    # This will be at XXXTarget-Release.cmake
+    # This will be at XXXTarget-release.cmake
     components_dynamic_variables_tpl = Template(textwrap.dedent("""\
         ########### VARIABLES #######################################################################
         #############################################################################################
@@ -378,15 +384,23 @@ set_property(TARGET {{name}}::{{name}}
 
         # Create the targets for all the components
         foreach(_COMPONENT {{ '${' + pkg_name + '_COMPONENT_NAMES' + '}' }} )
-            if(NOT TARGET {{ '${_COMPONENT}' }})
-                conan_message(STATUS "Target declared: '${_COMPONENT}'")
-                add_library({{ '${_COMPONENT}' }} INTERFACE IMPORTED)
+            if(NOT TARGET {{ pkg_name }}::${_COMPONENT})
+                add_library({{ pkg_name }}::${_COMPONENT} INTERFACE IMPORTED)
+                conan_message(STATUS "Target declared: '{{ pkg_name }}::${_COMPONENT}'")
+                if(NOT "{{pkg_rename}}" STREQUAL "{{pkg_name}}")
+                    add_library({{ pkg_rename }}::${_COMPONENT} ALIAS {{ pkg_name }}::${_COMPONENT})
+                    conan_message(STATUS "Target ALIAS declared: '{{ pkg_rename }}::${_COMPONENT}' (from {{pkg_name}}::${_COMPONENT})")
+                endif()
             endif()
         endforeach()
 
         if(NOT TARGET {{ pkg_name }}::{{ pkg_name }})
-            conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ pkg_name }}'")
             add_library({{ pkg_name }}::{{ pkg_name }} INTERFACE IMPORTED)
+            conan_message(STATUS "Target declared: '{{ pkg_name }}::{{ pkg_name }}'")
+            if(NOT "{{pkg_rename}}" STREQUAL "{{pkg_name}}")
+                add_library({{ pkg_rename }}::{{ pkg_rename }} ALIAS {{ pkg_name }}::{{ pkg_name }})
+                conan_message(STATUS "Target ALIAS declared: '{{ pkg_rename }}::{{ pkg_rename }}' (from {{pkg_name}}::{{pkg_name}})")
+            endif()
         endif()
 
         # Load the debug and release library finders
@@ -397,9 +411,10 @@ set_property(TARGET {{name}}::{{name}}
             include(${f})
         endforeach()
 
+        # This is the variable filled by CMake with the requested components in find_package
         if({{ pkg_name }}_FIND_COMPONENTS)
             foreach(_FIND_COMPONENT {{ '${'+pkg_name+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENTS{{ config_suffix }} "{{ pkg_name }}::${_FIND_COMPONENT}" _index)
+                list(FIND {{ pkg_name }}_COMPONENTS{{ config_suffix }} "${_FIND_COMPONENT}" _index)
                 if(${_index} EQUAL -1)
                     conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
                 else()
@@ -452,7 +467,7 @@ set_property(TARGET {{name}}::{{name}}
 
         for comp_name, comp in sorted_comps.items():
             comp_genname = self.get_component_name(req, comp_name)
-            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.get_name(req), self.config_suffix)
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(req.ref.name, self.config_suffix)
             deps_cpp_cmake = DepsCppCmake(comp, self.name, pfolder_var_name)
             public_comp_deps = []
             for require in comp.requires:
@@ -507,12 +522,11 @@ set_property(TARGET {{name}}::{{name}}
 
     @property
     def content(self):
-        ret = {}
-        ret["cmakedeps_macros.cmake"] = "\n".join([
-            conan_message,
-            apple_frameworks_macro,
-            conan_package_library_targets,
-        ])
+        ret = {"cmakedeps_macros.cmake": "\n".join([
+                conan_message,
+                apple_frameworks_macro,
+                conan_package_library_targets,
+            ])}
 
         host_requires = {r.ref.name: r for r in
                          self._conanfile.dependencies.transitive_host_requires}
@@ -520,7 +534,8 @@ set_property(TARGET {{name}}::{{name}}
         # Iterate all the transitive requires
         for req in host_requires.values():
             pkg_filename = self.get_filename(req)
-            pkg_target_name = self.get_name(req)
+            pkg_target_name = req.ref.name
+            pkg_target_rename = self.get_name(req)
 
             _ret = self.get_target_names_and_filenames(req, host_requires)
             dep_target_names, pkg_public_deps_filenames = _ret
@@ -531,13 +546,13 @@ set_property(TARGET {{name}}::{{name}}
 
             components = self._get_components(req, host_requires)
             # Note these are in reversed order, from more dependent to less dependent
-            pkg_components = " ".join(["{p}::{c}".format(p=pkg_target_name, c=comp_findname) for
-                                       comp_findname, _ in reversed(components)])
+            pkg_components = " ".join([comp_findname for comp_findname, _ in reversed(components)])
             global_cppinfo = req.new_cpp_info.copy()
             global_cppinfo.aggregate_components()
             pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(pkg_target_name, self.config_suffix)
             deps = DepsCppCmake(global_cppinfo, self.name, pfolder_var_name)
-            global_variables = variables_template.format(name=pkg_target_name, deps=deps,
+            global_variables = variables_template.format(pkg_rename=pkg_target_rename, deps=deps,
+                                                         pkg_name=pkg_target_name,
                                                          package_folder=pfolder,
                                                          config_suffix=self.config_suffix,
                                                          deps_names=dep_target_names)
@@ -550,13 +565,14 @@ set_property(TARGET {{name}}::{{name}}
             }
             ret.update(variables)
             global_dynamic_variables = dynamic_variables_template.format(
-                                        name=pkg_target_name,
+                                        pkg_name=pkg_target_name,
                                         config_suffix=self.config_suffix,
                                         deps_names=dep_target_names)
 
-            global_targets_props = self.target_properties.render(name=pkg_target_name,
+            global_targets_props = self.target_properties.render(pkg_name=pkg_target_name,
                                                                  configuration=self.configuration,
-                                                                 config_suffix=self.config_suffix)
+                                                                 config_suffix=self.config_suffix,
+                                                                 pkg_rename=pkg_target_rename)
             dynamic_variables = {
                 "{}Target-{}.cmake".format(pkg_filename, self.configuration.lower()):
                 self.components_dynamic_variables_tpl.render(
@@ -568,6 +584,7 @@ set_property(TARGET {{name}}::{{name}}
             ret.update(dynamic_variables)
             targets = self.components_targets_tpl.render(
                 pkg_name=pkg_target_name,
+                pkg_rename=pkg_target_rename,
                 pkg_filename=pkg_filename,
                 components=components,
                 config_suffix=self.config_suffix
