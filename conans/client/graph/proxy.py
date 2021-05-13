@@ -115,16 +115,10 @@ class ConanProxy(object):
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
         else:
-            try:
-                # TODO: cache2.0 metadata, check this
-                remote_name = layout.load_metadata().recipe.remote
-                if remote_name:
-                    remote = remotes[remote_name]
-            except (IOError, RecipeNotFoundException):
-                pass
-            else:
-                if remote:
-                    output.info("Retrieving from predefined remote '%s'" % remote.name)
+            remote_name = layout.get_remote()
+            if remote_name:
+                remote = remotes[remote_name]
+                output.info("Retrieving from predefined remote '%s'" % remote.name)
 
         if remote:
             try:
@@ -146,7 +140,7 @@ class ConanProxy(object):
             raise ConanException("No remote defined")
         for remote in remotes:
             try:
-                new_ref = _retrieve_from_remote(remote)
+                new_ref = _retrieve_from_remote(remote, layout)
                 return remote, new_ref
             # If not found continue with the next, else raise
             except NotFoundException:

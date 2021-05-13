@@ -29,7 +29,7 @@ def retrieve_exports_sources(remote_manager, reference_layout, conanfile, ref, r
     # TODO: cache2.0 check what behaviour for this in 2.0
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = package_layout.load_metadata().recipe.remote
+    current_remote = reference_layout.get_remote()
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
@@ -39,7 +39,7 @@ def retrieve_exports_sources(remote_manager, reference_layout, conanfile, ref, r
         raise ConanException(msg)
 
     try:
-        remote_manager.get_recipe_sources(ref, package_layout, current_remote)
+        remote_manager.get_recipe_sources(ref, reference_layout, current_remote)
     except Exception as e:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"

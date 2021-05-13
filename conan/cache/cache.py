@@ -103,9 +103,12 @@ class DataCache:
 
         # Assign a random (uuid4) revision if not set
         # if the package revision is not calculated yet, assign the uuid of the path as prev
+        # TODO: cache2.0: fix this in the future
+        rrev = pref.rrev or package_path
+        prev = pref.prev or package_path
         if not pref.prev:
-            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, package_path,
-                                  pref.pkgid, pref.prev)
+            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, rrev,
+                                  pref.pkgid, prev)
 
         package_path, created = self.db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
