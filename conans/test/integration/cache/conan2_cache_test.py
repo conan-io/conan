@@ -2,7 +2,7 @@ import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.scm import create_local_git_repo
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class TestCache:
@@ -98,3 +98,14 @@ class TestCache:
         #                                  "source.txt": "somesource"})
         # client.current_folder = path
         # client.run("create . mypkg/3.0@user/channel")
+
+    def test_conan_upload(self):
+        test_server = TestServer()
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        client.run("new mypkg/1.0 -s")
+        client.run("create .")
+        client.run("upload mypkg/1.0 -r default")
+        client.run("new mypkg/2.0 -s")
+        client.run("upload mypkg/2.0")

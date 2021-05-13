@@ -97,7 +97,7 @@ class ClientCache(object):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))[0]
 
     def all_refs(self):
-        return [ref for ref in self._data_cache.list_references()]
+        return [str(ref) for ref in self._data_cache.list_references()]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [pref for pref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
