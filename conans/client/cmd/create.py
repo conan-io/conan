@@ -42,7 +42,8 @@ def create(app, ref, graph_info, remotes, update, build_modes,
             deps_install(app=app,
                          ref_or_path=ref,
                          create_reference=ref,
-                         install_folder=None,  # Not output anything
+                         install_folder=None,  # Not output conaninfo etc
+                         base_folder=None,  # Not output generators
                          manifest_folder=manifest_folder,
                          manifest_verify=manifest_verify,
                          manifest_interactive=manifest_interactive,
@@ -67,7 +68,8 @@ def create(app, ref, graph_info, remotes, update, build_modes,
                                      % (str(ref), str(e)))
 
         else:
-            install_build_and_test(app, test_conanfile_path, ref, graph_info, remotes, update,
+            install_build_and_test(app, test_conanfile_path,
+                                   ref, graph_info, remotes, update,
                                    build_modes=build_modes,
                                    manifest_folder=manifest_folder,
                                    manifest_verify=manifest_verify,
@@ -79,7 +81,8 @@ def create(app, ref, graph_info, remotes, update, build_modes,
         deps_install(app=app,
                      ref_or_path=ref,
                      create_reference=ref,
-                     install_folder=None,  # Not output anything
+                     install_folder=None,  # Not output infos etc
+                     base_folder=None,  # Not output generators
                      manifest_folder=manifest_folder,
                      manifest_verify=manifest_verify,
                      manifest_interactive=manifest_interactive,

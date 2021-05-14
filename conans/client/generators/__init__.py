@@ -124,7 +124,7 @@ class GeneratorManager(object):
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
 
-    def write_generators(self, conanfile, path, output):
+    def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
         for generator_name in set(conanfile.generators):
@@ -144,9 +144,8 @@ class GeneratorManager(object):
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
-                    generator.output_path = path
-                    mkdir(path)
-                    with chdir(path):
+                    mkdir(new_gen_folder)
+                    with chdir(new_gen_folder):
                         generator.generate()
                     continue
                 except Exception as e:
@@ -167,7 +166,7 @@ class GeneratorManager(object):
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
             try:
-                generator.output_path = path
+                generator.output_path = old_gen_folder
                 content = generator.content
                 if isinstance(content, dict):
                     if generator.filename:
@@ -177,11 +176,11 @@ class GeneratorManager(object):
                         if generator.normalize:  # To not break existing behavior, to be removed 2.0
                             v = normalize(v)
                         output.info("Generator %s created %s" % (generator_name, k))
-                        save(join(path, k), v, only_if_modified=True)
+                        save(join(old_gen_folder, k), v, only_if_modified=True)
                 else:
                     content = normalize(content)
                     output.info("Generator %s created %s" % (generator_name, generator.filename))
-                    save(join(path, generator.filename), content, only_if_modified=True)
+                    save(join(old_gen_folder, generator.filename), content, only_if_modified=True)
             except Exception as e:
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     output.error(traceback.format_exc())
@@ -202,12 +201,13 @@ def write_toolchain(conanfile, path, output):
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
+        mkdir(path)
         with chdir(path):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualenv import VirtualEnv
             env = VirtualEnv(conanfile)
