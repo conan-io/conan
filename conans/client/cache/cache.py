@@ -103,13 +103,13 @@ class ClientCache(object):
         return [ref for ref in self._data_cache.list_references(only_latest_rrev=True)]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
-        return [pref for pref in self._data_cache.get_package_revisions(ref, only_latest_prev)]
+        return [pref for pref in self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref):
-        return [pref for pref in self._data_cache.get_package_ids(ref)]
+    def get_package_ids(self, ref, only_latest_prev=False):
+        return [pref for pref in self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev)]
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
-        return [rrev for rrev in self._data_cache.get_recipe_revisions(ref, only_latest_rrev)]
+        return [rrev for rrev in self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
 
     @property
     def store(self):

@@ -1,7 +1,6 @@
 import sqlite3
 import time
 from collections import namedtuple
-from io import StringIO
 from typing import List, Iterator
 
 from conan.cache.db.table import BaseDbTable
@@ -181,7 +180,8 @@ class ReferencesDbTable(BaseDbTable):
         row = r.fetchone()
         return self._as_ref(self.row_type(*row))
 
-    def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[PackageReference]:
+    def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[
+        PackageReference]:
         assert ref.pkgid, "To search for package revisions you must provide a package_id."
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
@@ -207,7 +207,8 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False) -> List[ConanFileReference]:
+    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False) -> List[
+        ConanFileReference]:
         if only_latest_rrev:
             check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
             query = f'SELECT {self.columns.reference}, ' \
@@ -234,13 +235,29 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def get_pkgids(self, conn: sqlite3.Cursor, ref) -> List[PackageReference]:
+    def get_pkgids(self, conn: sqlite3.Cursor, ref, only_latest_prev=False) -> List[
+        PackageReference]:
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
-                f'AND {self.columns.reference} = "{ref.reference}" ' \
-                f'AND {self.columns.pkgid} IS NOT NULL ' \
-                f'AND {self.columns.prev} IS NOT NULL'
+        if only_latest_prev:
+            query = f'SELECT {self.columns.reference}, ' \
+                    f'{self.columns.rrev}, ' \
+                    f'{self.columns.pkgid}, ' \
+                    f'{self.columns.prev}, ' \
+                    f'{self.columns.path}, ' \
+                    f'{self.columns.remote}, ' \
+                    f'MAX({self.columns.timestamp}) ' \
+                    f'FROM {self.table_name} ' \
+                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
+                    f'AND {self.columns.reference} = "{ref.reference}" ' \
+                    f'AND {self.columns.pkgid} IS NOT NULL ' \
+                    f'AND {self.columns.prev} IS NOT NULL ' \
+                    f'GROUP BY {self.columns.pkgid} '
+        else:
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
+                    f'AND {self.columns.reference} = "{ref.reference}" ' \
+                    f'AND {self.columns.pkgid} IS NOT NULL ' \
+                    f'AND {self.columns.prev} IS NOT NULL'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))

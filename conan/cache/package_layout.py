@@ -11,10 +11,14 @@ from conans.util.files import rmdir
 class PackageLayout:
     _random_prev = False
 
-    def __init__(self, pref: PackageReference, cache: DataCache, package_folder: str):
+    def __init__(self, pref: ConanReference, cache: DataCache, package_folder: str):
         self._pref = pref
         self._cache = cache
         self._package_folder = package_folder
+
+    @property
+    def reference(self):
+        return self._pref
 
     def assign_prev(self, pref: ConanReference):
         assert pref.reference == self._pref.reference, "You cannot change the reference here"

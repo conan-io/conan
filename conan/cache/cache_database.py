@@ -81,9 +81,9 @@ class CacheDatabase:
             for it in self._references.get_prevs(conn, ref, only_latest_prev):
                 yield it
 
-    def get_package_ids(self, ref):
+    def get_package_ids(self, ref, only_latest_prev=False):
         with self.connect() as conn:
-            for it in self._references.get_pkgids(conn, ref):
+            for it in self._references.get_pkgids(conn, ref, only_latest_prev):
                 yield it
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):

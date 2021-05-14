@@ -156,7 +156,8 @@ class Printer(object):
                 for conan_item in remote_info["items"]:
                     reference = conan_item["recipe"]["id"]
                     ref = ConanFileReference.loads(reference)
-                    self._print_colored_line(ref.full_str(), indent=0)
+                    # TODO: cache2.0 removing revision from info output will be different in 2.0
+                    self._print_colored_line(ref.copy_clear_rev().full_str(), indent=0)
         else:
             for remote_info in search_info:
                 if all_remotes_search:

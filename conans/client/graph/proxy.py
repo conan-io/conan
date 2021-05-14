@@ -46,7 +46,7 @@ class ConanProxy(object):
         output = ScopedOutput(str(ref), self._out)
 
         # check if it there's any revision of this recipe in the local cache
-        latest_rrev = self._cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev=True)
+        latest_rrev = self._cache.get_recipe_revisions(ref, only_latest_rrev=True)
 
         # NOT in disk, must be retrieved from remotes
         if not latest_rrev:

@@ -3,26 +3,13 @@ import re
 from collections import OrderedDict
 from fnmatch import translate
 
-from conans.errors import ConanException, RecipeNotFoundException
+from conans.errors import ConanException
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.search.query_parse import evaluate_postfix, infix_to_postfix
 from conans.util.files import load
 from conans.util.log import logger
-
-
-def filter_by_revision(metadata, packages_infos):
-    ok = OrderedDict()
-    recipe_revision = metadata.recipe.revision
-    for package_id, info in packages_infos.items():
-        try:
-            rec_rev = metadata.packages[package_id].recipe_revision
-            if rec_rev == recipe_revision:
-                ok[package_id] = info
-        except KeyError:
-            pass
-    return ok
 
 
 def filter_packages(query, package_infos):
@@ -96,8 +83,6 @@ def search_recipes(cache, pattern=None, ignorecase=True):
             if _partial_match(pattern, match_ref):
                 _refs.append(r)
         refs = _refs
-    # TODO: cache2.0 adapting the output temporary, fix this
-    refs = sorted([ConanFileReference.loads(str(ref)) for ref in refs])
     return refs
 
 
@@ -116,7 +101,7 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-def search_packages(package_layout, query):
+def search_packages(package_layouts, query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -124,34 +109,23 @@ def search_packages(package_layout, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
-    if not os.path.exists(package_layout.base_folder()) or (
-            package_layout.ref.revision and
-            package_layout.recipe_revision() != package_layout.ref.revision):
-        raise RecipeNotFoundException(package_layout.ref)
-    infos = _get_local_infos_min(package_layout)
+    infos = _get_local_infos_min(package_layouts)
     return filter_packages(query, infos)
 
 
-def _get_local_infos_min(package_layout):
+def _get_local_infos_min(package_layouts):
     result = OrderedDict()
 
-    package_ids = package_layout.package_ids()
-    for package_id in package_ids:
+    for package_layout in package_layouts:
         # Read conaninfo
-        pref = PackageReference(package_layout.ref, package_id)
-        info_path = os.path.join(package_layout.package(pref), CONANINFO)
+        info_path = os.path.join(package_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
         conan_info_content = load(info_path)
 
         info = ConanInfo.loads(conan_info_content)
-        if package_layout.ref.revision:
-            metadata = package_layout.load_metadata()
-            recipe_revision = metadata.packages[package_id].recipe_revision
-            if recipe_revision and recipe_revision != package_layout.ref.revision:
-                continue
         conan_vars_info = info.serialize_min()
-        result[package_id] = conan_vars_info
+        result[package_layout.reference.pkgid] = conan_vars_info
 
     return result

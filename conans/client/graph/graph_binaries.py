@@ -229,7 +229,7 @@ class GraphBinariesAnalyzer(object):
 
         #package_layout = self._cache.pkg_layout(pref)
 
-        latest_prev_for_pkg_id = self._cache.get_package_revisions(ConanReference(pref), only_latest_prev=True)
+        latest_prev_for_pkg_id = self._cache.get_package_revisions(pref, only_latest_prev=True)
 
         # TODO: cache2.0: remove metadata, move to db
         #metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
