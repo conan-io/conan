@@ -5,6 +5,7 @@ import unittest
 
 from parameterized.parameterized import parameterized
 
+from conan.cache.conan_reference import ConanReference
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
@@ -404,9 +405,12 @@ class MyPkg(ConanFile):
         client.run("create .")
 
         ref = ConanFileReference.loads("Bye/0.1")
-        packages_folder = client.cache.package_layout(ref).packages()
-        p_folder = os.path.join(packages_folder, os.listdir(packages_folder)[0])
-        conaninfo = load(os.path.join(p_folder, "conaninfo.txt"))
+
+        refs = client.cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev=True)
+        pkgs = client.cache.get_package_ids(ConanReference(refs[0]))
+        package_folder = client.cache.pkg_layout(pkgs[0]).package()
+
+        conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
         # The user and channel nor None nor "_/" appears in the conaninfo
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
