@@ -1,5 +1,7 @@
 import textwrap
 
+from jinja2 import Template
+
 from conans.util.files import save
 
 
@@ -16,50 +18,62 @@ class BazelDeps(object):
         self._save_dependencies_file(local_repositories)
 
     def _create_bazel_buildfile(self, dependency):
+        template = textwrap.dedent("""
+            load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+            {% for lib in libs %}
+            cc_import(
+                name = "{{ lib }}_precompiled",
+                static_library = "{{ libdir }}/lib{{ lib }}.a"
+            )
+            {% endfor %}
+
+            cc_library(
+                name = "{{ name }}",
+                {% if headers %}
+                hdrs = glob([{{ headers }}]),
+                {% endif %}
+                {% if includes %}
+                includes = [{{ includes }}],
+                {% endif %}
+                {% if defines %}
+                defines = [{{ defines }}],
+                {% endif %}
+                visibility = ["//visibility:public"]
+            )
+
+        """)
+
         dependency.new_cpp_info.aggregate_components()
 
         if not dependency.new_cpp_info.libs and not dependency.new_cpp_info.includedirs:
             return None
 
-        result = 'load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")\n\n'
+        headers = []
+        includes = []
 
-        for lib in dependency.new_cpp_info.libs:
-            result += 'cc_import(\n'
-            result += '    name = "{0}_precompiled",\n'.format(lib)
-            result += '    static_library = "{0}/lib{1}.a"\n'.format(
-                dependency.new_cpp_info.libdirs[0],
-                lib
-            )
-            result += ')\n\n'
+        for path in dependency.new_cpp_info.includedirs:
+            headers.append('"{}/**"'.format(path))
+            includes.append('"{}"'.format(path))
 
-        result += 'cc_library(\n'
-        result += '    name = "{}",\n'.format(dependency.ref.name)
+        headers = ', '.join(headers)
+        includes = ', '.join(includes)
 
-        if dependency.new_cpp_info.includedirs:
-            headers = []
-            includes = []
-            for path in dependency.new_cpp_info.includedirs:
-                headers.append('"{}/**"'.format(path))
-                includes.append('"{}"'.format(path))
+        defines = ('"{}"'.format(define) for define in dependency.new_cpp_info.defines)
+        defines = ', '.join(defines)
 
-            if headers:
-                headers = ', '.join(headers)
-                result += '    hdrs = glob([{}]),\n'.format(headers)
-
-            if includes:
-                includes = ', '.join(includes)
-                result += '    includes = [{}],\n'.format(includes)
-
-        if dependency.new_cpp_info.defines:
-            defines = ('"{}"'.format(define) for define in dependency.new_cpp_info.defines)
-            defines = ', '.join(defines)
-            result += '    defines = [{}],\n'.format(defines)
-
-        result += '    visibility = ["//visibility:public"]\n'
-        result += ')\n'
+        context = {
+            "name": dependency.ref.name,
+            "libs": dependency.new_cpp_info.libs,
+            "libdir": dependency.new_cpp_info.libdirs[0],
+            "headers": headers,
+            "includes": includes,
+            "defines": defines
+        }
 
         filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
-        save(filename, result)
+        content = Template(template).render(**context)
+        save(filename, content)
 
         return filename
 
@@ -88,8 +102,8 @@ class BazelDeps(object):
         function_content = textwrap.indent(function_content, '    ')
         content = template.format(function_content)
 
-        # A BUILD file must exist, even if it's empty, in order to bazel
-        # detect it as a bazel package and allow to load the .bzl files
+        # A BUILD file must exist, even if it's empty, in order for bazel
+        # to detect it as a bazel package and allow to load the .bzl files
         save("conandeps/BUILD", "")
 
         save("conandeps/dependencies.bzl", content)
