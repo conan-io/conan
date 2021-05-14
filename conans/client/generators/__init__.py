@@ -8,7 +8,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
 from .b2 import B2Generator
 from .cmake import CMakeGenerator
-from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
@@ -29,7 +28,6 @@ class GeneratorManager(object):
     def __init__(self):
         self._generators = {"compiler_args": CompilerArgsGenerator,
                             "cmake": CMakeGenerator,
-                            "cmake_multi": CMakeMultiGenerator,
                             "cmake_paths": CMakePathsGenerator,
                             "qmake": QmakeGenerator,
                             "scons": SConsGenerator,
