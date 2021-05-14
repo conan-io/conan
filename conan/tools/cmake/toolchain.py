@@ -622,7 +622,7 @@ class CMakeToolchain(object):
         conanfile = self._conanfile
 
         # Downstream consumer always higher priority
-        generator_conf = conanfile.conf["tools.cmake.cmaketoolchain"].generator
+        generator_conf = conanfile.conf["tools.cmake.cmaketoolchain:generator"]
         if generator_conf:
             return generator_conf
 
