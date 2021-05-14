@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -22,23 +24,15 @@ def test_local_static_generators_folder():
     client.run("install . -if=my_install")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    conaninfo = os.path.join(old_install_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(old_install_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
     assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    conaninfo = os.path.join(generators_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(conaninfo)
-    assert not os.path.exists(conanbuildinfo)
     assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
@@ -64,23 +58,15 @@ def test_local_dynamic_generators_folder():
     client.run("install . -if=my_install -g cmake")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    conaninfo = os.path.join(old_install_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(old_install_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
     assert os.path.exists(cmake_generator_path)
     assert not os.path.exists(cmake_toolchain_generator_path)
 
     build_folder = os.path.join(client.current_folder, "build-Release")
     generators_folder = os.path.join(build_folder, "generators")
-    conaninfo = os.path.join(generators_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(generators_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(generators_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(generators_folder, "conan_toolchain.cmake")
-    assert not os.path.exists(conaninfo)
-    assert not os.path.exists(conanbuildinfo)
     assert not os.path.exists(cmake_generator_path)
     assert os.path.exists(cmake_toolchain_generator_path)
 
@@ -102,12 +88,9 @@ def test_no_layout_generators_folder():
     client.run("install . -if=my_install -g cmake")
 
     old_install_folder = os.path.join(client.current_folder, "my_install")
-    conaninfo = os.path.join(old_install_folder, "conaninfo.txt")
-    conanbuildinfo = os.path.join(old_install_folder, "conanbuildinfo.txt")
     cmake_generator_path = os.path.join(old_install_folder, "conanbuildinfo.cmake")
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
-    assert os.path.exists(conaninfo)
-    assert os.path.exists(conanbuildinfo)
+
     assert os.path.exists(cmake_generator_path)
     # Not in the install_folder
     assert not os.path.exists(cmake_toolchain_generator_path)
@@ -176,7 +159,7 @@ def test_local_source():
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
     # FIXME: This should change to "source ." when "conan source" computes the graph
-    client.run("source . -if=my_install")
+    client.run("source .")
     header = os.path.join(client.current_folder, "my_source", "downloaded.h")
     assert os.path.exists(header)
 
@@ -196,7 +179,7 @@ def test_local_source_change_base():
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
-    client.run("source . -if=common -sf=common")
+    client.run("source . -sf=common")
     header = os.path.join(client.current_folder, "common", "my_source", "downloaded.h")
     assert os.path.exists(header)
 
@@ -229,9 +212,9 @@ def test_export_pkg():
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
-    client.run("source . -if=my_install")
+    client.run("source .")
     client.run("build . -if=my_install")
-    client.run("export-pkg . lib/1.0@ -if=my_install")
+    client.run("export-pkg . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
     sf = os.path.join(client.current_folder, "my_source")
@@ -247,6 +230,7 @@ def test_export_pkg():
     assert os.path.exists(os.path.join(pf, "library.lib"))
 
 
+@pytest.mark.xfail(reason="the conan package command was removed atm in Conan 2.0")
 def test_export_pkg_local():
     """The export-pkg, without calling "package" method, with local package, follows the layout"""
     client = TestClient()
@@ -276,15 +260,16 @@ def test_export_pkg_local():
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
-    client.run("source . -if=my_install")
+    client.run("source .")
     client.run("build . -if=my_install")
-    client.run("package . -if=my_install")
+    # client.run("package . -if=my_install")
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = os.path.join(client.current_folder, "my_package")
+    # pf = os.path.join(client.current_folder, "my_package")
+    print(client.out)
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
-    assert "WARN: Package folder: {}".format(pf) in client.out
+    # assert "WARN: Package folder: {}".format(pf) in client.out
 
     client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
     ref = ConanFileReference.loads("lib/1.0@")
@@ -342,7 +327,7 @@ def test_imports():
 
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
-    client.run("imports . -if=my_install")
+    client.run("imports .")
 
     imports_folder = os.path.join(client.current_folder, "my_imports")
     dll_path = os.path.join(imports_folder, "library.dll")

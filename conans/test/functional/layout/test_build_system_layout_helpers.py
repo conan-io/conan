@@ -79,7 +79,8 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
     client.run("source .")
     # Check the source folder (release)
     assert os.path.exists(os.path.join(client.current_folder, "myheader.h"))
-    client.run("build .")
+    client.run("build . --name=lib --version=1.0 -s build_type={} -s arch={}".format(build_type,
+                                                                                     arch))
     # Check the build folder (release)
     if layout_helper_name == "clion_layout":
         assert os.path.exists(os.path.join(client.current_folder,
@@ -94,6 +95,6 @@ def test_layout_with_local_methods(conanfile, layout_helper_name, build_type, ar
         assert os.path.exists(path)
 
     # Check the package
-    client.run("package .")
-    assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
+    # client.run("package .")
+    # assert os.path.exists(os.path.join(client.current_folder, "my_package", "lib", "mylib.lib"))
 
