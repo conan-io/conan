@@ -1,5 +1,6 @@
 import os
 import platform
+import uuid
 
 import pytest
 
@@ -136,8 +137,11 @@ def add_tool(request):
             tool_env = _get_tool_environment(tools_environments, tool_name, platform.system())
             if tool_env:
                 tools_env_vars.update(tool_env)
+        # To fix random failures in CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
+        if "visual_studio" in mark.name:
+            tools_env_vars.update({'_MSPDBSRV_ENDPOINT_': str(uuid.uuid4())})
 
-    if tools_paths:
+    if tools_paths or tools_env_vars:
         tools_paths.append(os.environ["PATH"])
         temp_env = {'PATH': os.pathsep.join(tools_paths)}
         old_environ = dict(os.environ)

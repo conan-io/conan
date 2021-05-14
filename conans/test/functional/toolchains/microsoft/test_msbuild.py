@@ -343,6 +343,9 @@ class WinTest(unittest.TestCase):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
 
+            def layout(self):
+                self.folders.generators = "conan"
+
             def generate(self):
                 tc = MSBuildToolchain(self)
                 gen = MSBuildDeps(self)

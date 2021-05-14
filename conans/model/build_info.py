@@ -301,7 +301,8 @@ class Component(_CppInfo):
 
 class CppInfoDefaultValues(object):
 
-    def __init__(self, includedir, libdir, bindir, resdir, builddir, frameworkdir):
+    def __init__(self, includedir=None, libdir=None, bindir=None,
+                 resdir=None, builddir=None, frameworkdir=None):
         self.includedir = includedir
         self.libdir = libdir
         self.bindir = bindir
@@ -388,12 +389,18 @@ class CppInfo(_CppInfo):
 
         # Raise if mixing components
         if self.components and \
-            (self.includedirs != [self._default_values.includedir] or
-             self.libdirs != [self._default_values.libdir] or
-             self.bindirs != [self._default_values.bindir] or
-             self.resdirs != [self._default_values.resdir] or
-             self.builddirs != [self._default_values.builddir] or
-             self.frameworkdirs != [self._default_values.frameworkdir] or
+            (self.includedirs != ([self._default_values.includedir]
+                if self._default_values.includedir is not None else []) or
+             self.libdirs != ([self._default_values.libdir]
+                if self._default_values.libdir is not None else []) or
+             self.bindirs != ([self._default_values.bindir]
+                if self._default_values.bindir is not None else []) or
+             self.resdirs != ([self._default_values.resdir]
+                if self._default_values.resdir is not None else []) or
+             self.builddirs != ([self._default_values.builddir]
+                if self._default_values.builddir is not None else []) or
+             self.frameworkdirs != ([self._default_values.frameworkdir]
+                if self._default_values.frameworkdir is not None  else []) or
              self.libs or
              self.system_libs or
              self.frameworks or
@@ -556,14 +563,29 @@ class DepCppInfo(object):
             attr = self._cpp_info.__getattr__(item)
         return attr
 
-    def _aggregated_values(self, item, agg_func=merge_lists):
+    def _aggregated_dict_values(self, item):
         values = getattr(self, "_%s" % item)
         if values is not None:
             return values
-        values = getattr(self._cpp_info, item)
         if self._cpp_info.components:
+            values = {}
             for component in self._get_sorted_components().values():
-                values = agg_func(values, getattr(component, item))
+                values = merge_dicts(values, getattr(component, item))
+        else:
+            values = getattr(self._cpp_info, item)
+        setattr(self, "_%s" % item, values)
+        return values
+
+    def _aggregated_list_values(self, item):
+        values = getattr(self, "_%s" % item)
+        if values is not None:
+            return values
+        if self._cpp_info.components:
+            values = []
+            for component in self._get_sorted_components().values():
+                values = merge_lists(values, getattr(component, item))
+        else:
+            values = getattr(self._cpp_info, item)
         setattr(self, "_%s" % item, values)
         return values
 
@@ -614,71 +636,71 @@ class DepCppInfo(object):
 
     @property
     def build_modules_paths(self):
-        return self._aggregated_values("build_modules_paths", agg_func=merge_dicts)
+        return self._aggregated_dict_values("build_modules_paths")
 
     @property
     def include_paths(self):
-        return self._aggregated_values("include_paths")
+        return self._aggregated_list_values("include_paths")
 
     @property
     def lib_paths(self):
-        return self._aggregated_values("lib_paths")
+        return self._aggregated_list_values("lib_paths")
 
     @property
     def src_paths(self):
-        return self._aggregated_values("src_paths")
+        return self._aggregated_list_values("src_paths")
 
     @property
     def bin_paths(self):
-        return self._aggregated_values("bin_paths")
+        return self._aggregated_list_values("bin_paths")
 
     @property
     def build_paths(self):
-        return self._aggregated_values("build_paths")
+        return self._aggregated_list_values("build_paths")
 
     @property
     def res_paths(self):
-        return self._aggregated_values("res_paths")
+        return self._aggregated_list_values("res_paths")
 
     @property
     def framework_paths(self):
-        return self._aggregated_values("framework_paths")
+        return self._aggregated_list_values("framework_paths")
 
     @property
     def libs(self):
-        return self._aggregated_values("libs")
+        return self._aggregated_list_values("libs")
 
     @property
     def system_libs(self):
-        return self._aggregated_values("system_libs")
+        return self._aggregated_list_values("system_libs")
 
     @property
     def frameworks(self):
-        return self._aggregated_values("frameworks")
+        return self._aggregated_list_values("frameworks")
 
     @property
     def defines(self):
-        return self._aggregated_values("defines")
+        return self._aggregated_list_values("defines")
 
     @property
     def cxxflags(self):
-        return self._aggregated_values("cxxflags")
+        return self._aggregated_list_values("cxxflags")
 
     @property
     def cflags(self):
-        return self._aggregated_values("cflags")
+        return self._aggregated_list_values("cflags")
 
     @property
     def sharedlinkflags(self):
-        return self._aggregated_values("sharedlinkflags")
+        return self._aggregated_list_values("sharedlinkflags")
 
     @property
     def exelinkflags(self):
-        return self._aggregated_values("exelinkflags")
+        return self._aggregated_list_values("exelinkflags")
 
     @property
     def requires(self):
-        return self._aggregated_values("requires")
+        return self._aggregated_list_values("requires")
 
 
 class DepsCppInfo(_BaseDepsCppInfo):

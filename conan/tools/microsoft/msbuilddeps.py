@@ -99,11 +99,9 @@ class MSBuildDeps(object):
         self.configuration = conanfile.settings.build_type
         self.platform = {'x86': 'Win32',
                          'x86_64': 'x64'}.get(str(conanfile.settings.arch))
-        # TODO: this is ugly, improve this
-        self.output_path = os.getcwd()
         # ca_exclude section
         self.exclude_code_analysis = None
-        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps"].exclude_code_analysis
+        ca_exclude = self._conanfile.conf["tools.microsoft.msbuilddeps:exclude_code_analysis"]
         if ca_exclude is not None:
             # TODO: Accept single strings, not lists
             self.exclude_code_analysis = eval(ca_exclude)
@@ -126,8 +124,7 @@ class MSBuildDeps(object):
             raise ConanException("MSBuildDeps.platform is None, it should have a value")
         generator_files = self._content()
         for generator_file, content in generator_files.items():
-            generator_file_path = os.path.join(self.output_path, generator_file)
-            save(generator_file_path, content)
+            save(generator_file, content)
 
     def _config_filename(self):
         # Default name
@@ -190,7 +187,8 @@ class MSBuildDeps(object):
         return content_multi
 
     def _dep_props_file(self, name, name_general, dep_props_filename, condition):
-        multi_path = os.path.join(self.output_path, name_general)
+        # Current directory is the generators_folder
+        multi_path = name_general
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
@@ -220,7 +218,8 @@ class MSBuildDeps(object):
     def _all_props_file(self, name_general, deps):
         """ this is a .props file including all declared dependencies
         """
-        multi_path = os.path.join(self.output_path, name_general)
+        # Current directory is the generators_folder
+        multi_path = name_general
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:

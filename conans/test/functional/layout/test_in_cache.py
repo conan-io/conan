@@ -1,10 +1,12 @@
 import os
+import textwrap
+
 import pytest
 
 from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient
 
 
 @pytest.fixture
@@ -12,14 +14,12 @@ def conanfile():
     conan_file = str(GenConanfile().with_import("from conans import tools").with_import("import os").
                      with_require("base/1.0"))
 
-    # FIXME: The configure is not valid to change the layout, we need the settings and options
-    #        ready
     conan_file += """
     no_copy_sources = True
 
-    def configure(self):
-        self.layout.source.folder = "my_sources"
-        self.layout.build.folder = "my_build"
+    def layout(self):
+        self.folders.source = "my_sources"
+        self.folders.build = "my_build"
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
@@ -41,6 +41,68 @@ def conanfile():
         self.cpp_info.libdirs = ["lib"]
     """
     return conan_file
+
+
+def test_create_test_package_no_layout(conanfile):
+    """The test package using the new generators work (having the generated files in the build
+    folder)"""
+    client = TestClient()
+    conanfile_test = textwrap.dedent("""
+        import os
+
+        from conans import ConanFile, tools
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeDeps", "CMakeToolchain"
+            def build(self):
+                assert os.path.exists("conan_toolchain.cmake")
+                self.output.warn("hey! building")
+                self.output.warn(os.getcwd())
+
+            def test(self):
+                self.output.warn("hey! testing")
+    """)
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
+    client.run("create . lib/1.0@")
+    assert "hey! building" in client.out
+    assert "hey! testing" in client.out
+
+
+def test_create_test_package_with_layout(conanfile):
+    """The test package using the new generators work (having the generated files in the build
+    folder)"""
+    client = TestClient()
+    conanfile_test = textwrap.dedent("""
+        import os
+
+        from conans import ConanFile, tools
+        from conan.tools.cmake import CMakeToolchain, CMake, CMakeDeps
+
+        class HelloTestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+
+            def layout(self):
+                self.folders.generators = "my_generators"
+
+            def build(self):
+                assert os.path.exists("my_generators/conan_toolchain.cmake")
+                self.output.warn("hey! building")
+                self.output.warn(os.getcwd())
+
+            def test(self):
+                self.output.warn("hey! testing")
+    """)
+    client.save({"conanfile.py": GenConanfile(), "test_package/conanfile.py": conanfile_test})
+    client.run("create . lib/1.0@")
+    assert "hey! building" in client.out
+    assert "hey! testing" in client.out
 
 
 def test_cache_in_layout(conanfile):
@@ -112,3 +174,50 @@ def test_same_conanfile_local(conanfile):
     pf = os.path.join(client.current_folder, "package")
     assert "Package folder: {}".format(pf) in client.out
     assert os.path.exists(os.path.join(pf, "LICENSE"))
+
+
+def test_imports():
+    """The 'conan imports' follows the layout"""
+    client = TestClient()
+    # Hello to be reused
+    conan_file = str(GenConanfile().with_import("from conans import tools"))
+    conan_file += """
+    no_copy_source = True
+
+    def build(self):
+        tools.save("library.dll", "bar")
+        tools.save("generated.h", "bar")
+
+    def package(self):
+        self.copy("*.h")
+        self.copy("*.dll")
+    """
+    client.save({"conanfile.py": conan_file})
+    client.run("create . hello/1.0@")
+
+    # Consumer of the hello importing the shared
+    conan_file = str(GenConanfile().with_import("from conans import tools").with_import("import os"))
+    conan_file += """
+    no_copy_source = True
+    requires = "hello/1.0"
+    settings = "build_type"
+
+    def layout(self):
+        self.folders.build = "cmake-build-{}".format(str(self.settings.build_type).lower())
+        self.folders.imports = os.path.join(self.folders.build, "my_imports")
+
+    def imports(self):
+        self.output.warn("Imports folder: {}".format(self.imports_folder))
+        self.copy("*.dll")
+
+    def build(self):
+        assert self.build_folder != self.imports_folder
+        assert "cmake-build-release" in self.build_folder
+        assert os.path.exists(os.path.join(self.imports_folder, "library.dll"))
+        assert os.path.exists(os.path.join(self.build_folder, "my_imports", "library.dll"))
+        self.output.warn("Built and imported!")
+    """
+
+    client.save({"conanfile.py": conan_file})
+    client.run("create . consumer/1.0@ ")
+    assert "Built and imported!" in client.out

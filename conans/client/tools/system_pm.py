@@ -272,11 +272,11 @@ class NullTool(BaseTool):
 
 class AptTool(BaseTool):
     def add_repository(self, repository, repo_key=None):
-        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository),
-             output=self._output)
         if repo_key:
             _run(self._runner, "wget -qO - %s | %sapt-key add -" % (repo_key, self._sudo_str),
                  output=self._output)
+        _run(self._runner, "%sapt-add-repository %s" % (self._sudo_str, repository),
+             output=self._output)
 
     def update(self):
         _run(self._runner, "%sapt-get update" % self._sudo_str, output=self._output)

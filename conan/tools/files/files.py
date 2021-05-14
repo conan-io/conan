@@ -1,10 +1,10 @@
 import errno
 import os
 
+from conans.client.downloaders.download import run_downloader
+from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
-from conans.client.tools.files import unzip
-from conans.client.downloaders.download import run_downloader
 
 
 def load(conanfile, path, binary=False, encoding="auto"):
@@ -123,9 +123,9 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
     config = conanfile.conf
 
     # It might be possible that users provide their own requester
-    retry = retry if retry is not None else int(config["tools.files.download"].retry)
+    retry = retry if retry is not None else int(config["tools.files.download:retry"])
     retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download"].retry_wait)
+    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download:retry_wait"])
     retry_wait = retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5

@@ -23,6 +23,7 @@ def conanfile():
     c.settings.compiler = "gcc"
     c.settings.compiler.libcxx = "libstdc++"
     c.conf = Conf()
+    c.folders.set_base_generators(".")
     return c
 
 
