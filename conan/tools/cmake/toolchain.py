@@ -146,7 +146,7 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
-        compiler = self._conanfile.settings.compiler
+        compiler = self._conanfile.settings.get_safe("compiler")
         lib = glib = None
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
