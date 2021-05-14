@@ -8,7 +8,6 @@ from conans.test.utils.tools import TestClient, TestServer
 class TestCache:
     def test_conan_export(self):
         client = TestClient()
-        client.run_command("open '{}'".format(client.cache_folder))
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
         client.run("export . mypkg/1.0@user/channel")
