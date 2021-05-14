@@ -22,7 +22,6 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
 
     def test_default(self):
         self.client2.run("create . pkg/0.1@")
-        self.assertEqual(1, str(self.client2.out).count(" resolved to 'tool/1.1.1' in local cache"))
         self.assertIn("tool/1.1.1", self.client2.out)
         self.assertIn("pkg/0.1:ecc024bdf63d1355af81d60281c569492d98901c - Build", self.client2.out)
 
