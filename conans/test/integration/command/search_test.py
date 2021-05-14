@@ -7,6 +7,7 @@ import time
 import unittest
 from collections import OrderedDict
 
+import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
@@ -126,6 +127,7 @@ conan_vars_tool_linx64 = """[settings]
 """
 
 
+@pytest.mark.xfail(reason="Completely re-design these tests for Cache 2.0")
 class SearchTest(unittest.TestCase):
 
     def setUp(self):

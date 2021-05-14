@@ -96,7 +96,8 @@ def search_recipes(cache, pattern=None, ignorecase=True):
             if _partial_match(pattern, match_ref):
                 _refs.append(r)
         refs = _refs
-    refs = sorted(refs)
+    # TODO: cache2.0 adapting the output temporary, fix this
+    refs = sorted([ConanFileReference.loads(str(ref)) for ref in refs])
     return refs
 
 
