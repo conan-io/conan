@@ -2,8 +2,10 @@ import os
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
+from conans.errors import ConanException
 from conans.model.ref import PackageReference
-from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS
+from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, rm_conandir
+from conans.util.files import rmdir
 
 
 class PackageLayout:
@@ -51,3 +53,15 @@ class PackageLayout:
         assert pref.id == self._pref.pkgid
         assert pref.ref.revision == self._pref.rrev
         return os.path.join(self._cache.base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+
+    # TODO: cache2.0 locks
+    def package_remove(self):
+        # Here we could validate and check we own a write lock over this package
+        tgz_folder = self.download_package()
+        rmdir(tgz_folder)
+        try:
+            rmdir(self.package())
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (self.package(), str(e)))
