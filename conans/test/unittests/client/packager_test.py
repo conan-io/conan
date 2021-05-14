@@ -80,10 +80,10 @@ class ExporterTest(unittest.TestCase):
         loader = ConanFileLoader(None, Mock())
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
-        conanfile.layout.set_base_build_folder(build_folder)
-        conanfile.layout.set_base_source_folder(build_folder)
-        conanfile.layout.set_base_package_folder(package_folder)
-        conanfile.layout.set_base_install_folder(install_folder)
+        conanfile.folders.set_base_build(build_folder)
+        conanfile.folders.set_base_source(build_folder)
+        conanfile.folders.set_base_package(package_folder)
+        conanfile.folders.set_base_install(install_folder)
 
         run_package_method(conanfile, None, Mock(), conanfile_path, ref, copy_info=True)
 

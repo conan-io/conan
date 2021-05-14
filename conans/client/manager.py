@@ -14,26 +14,22 @@ from conans.model.ref import ConanFileReference
 from conans.model.graph_lock import GraphLockFile, GraphLock
 
 
-def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, graph_lock, root_ref,
-                 remotes=None, build_modes=None, update=False, generators=None, no_imports=False,
-                 create_reference=None, recorder=None, lockfile_node_id=None):
+def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
+                 graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
+                 no_imports=False, create_reference=None, recorder=None, lockfile_node_id=None):
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
     @param install_folder: where the output files will be saved
     @param build_modes: List of build_modes specified
     @param update: Check for updated in the upstream remotes (and update)
-    @param generators: List of generators from command line. If False, no generator will be
-    written
+    @param generators: List of generators from command line.
     @param no_imports: Install specified packages but avoid running imports
     """
     assert profile_host is not None
     assert profile_build is not None
 
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
-
-    if generators is not False:
-        generators = set(generators) if generators else set()
 
     out.info("Configuration (profile_host):")
     out.writeln(profile_host.dumps())
@@ -69,21 +65,28 @@ def deps_install(app, ref_or_path, install_folder, profile_host, profile_build, 
 
     graph_lock.complete_matching_prevs()
 
+    conanfile.folders.set_base_install(install_folder)
+    conanfile.folders.set_base_imports(install_folder)
+    conanfile.folders.set_base_generators(base_folder)
+
+    output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
+
     if install_folder:
-        conanfile.layout.set_base_install_folder(install_folder)
         # Write generators
-        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
-        if generators is not False:
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            tmp.extend([g for g in generators if g not in tmp])
-            conanfile.generators = tmp
-            app.generator_manager.write_generators(conanfile, install_folder, output)
-            write_toolchain(conanfile, install_folder, output)
+        tmp = list(conanfile.generators)  # Add the command line specified generators
+        generators = set(generators) if generators else set()
+        tmp.extend([g for g in generators if g not in tmp])
+        conanfile.generators = tmp
+        app.generator_manager.write_generators(conanfile, install_folder,
+                                               conanfile.generators_folder,
+                                               output)
+        write_toolchain(conanfile, conanfile.generators_folder, output)
+
         if not isinstance(ref_or_path, ConanFileReference):
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
-            run_imports(conanfile, install_folder)
+            run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile, conanfile.output)
 

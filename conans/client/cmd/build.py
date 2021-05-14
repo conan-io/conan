@@ -1,16 +1,15 @@
 import os
 
 from conans.client.conanfile.build import run_build_method
-from conans.errors import (ConanException, NotFoundException, conanfile_exception_formatter)
+from conans.errors import (ConanException, conanfile_exception_formatter)
 from conans.model.conan_file import get_env_context_manager
-from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.util.files import mkdir
 from conans.util.log import logger
 
 
-def cmd_build(app, conanfile_path, conan_file, source_folder, build_folder, package_folder,
-              install_folder, test=False, should_configure=True, should_build=True, should_install=True,
-              should_test=True):
+def cmd_build(app, conanfile_path, conan_file, base_path, source_folder, build_folder,
+              package_folder, install_folder, test=False, should_configure=True, should_build=True,
+              should_install=True, should_test=True):
     """ Call to build() method saved on the conanfile.py
     param conanfile_path: path to a conanfile.py
     """
@@ -31,10 +30,12 @@ def cmd_build(app, conanfile_path, conan_file, source_folder, build_folder, pack
     try:
         # FIXME: Conan 2.0 all these build_folder, source_folder will disappear
         #  Only base_path and conanfile_path will remain
-        conan_file.layout.set_base_build_folder(build_folder)
-        conan_file.layout.set_base_source_folder(source_folder)
-        conan_file.layout.set_base_package_folder(package_folder)
-        conan_file.layout.set_base_install_folder(install_folder)
+        conan_file.folders.set_base_build(build_folder)
+        conan_file.folders.set_base_source(source_folder)
+        conan_file.folders.set_base_package(package_folder)
+        conan_file.folders.set_base_generators(base_path)
+
+        conan_file.folders.set_base_install(install_folder)
 
         mkdir(conan_file.build_folder)
         os.chdir(conan_file.build_folder)

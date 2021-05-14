@@ -77,25 +77,24 @@ def config_source(export_folder, export_source_folder, scm_sources_folder, conan
     def remove_source():
         output.warn("This can take a while for big packages")
         try:
-            rmdir(conanfile.layout.base_source_folder)
+            rmdir(conanfile.folders.base_source)
         except BaseException as e_rm:
             msg = str(e_rm)
             output.error("Unable to remove source folder %s\n%s"
-                         % (conanfile.layout.base_source_folder, msg))
-
+                         % (conanfile.folders.base_source, msg))
             output.warn("**** Please delete it manually ****")
             raise ConanException("Unable to remove source folder")
 
-    if is_dirty(conanfile.layout.base_source_folder):
+    if is_dirty(conanfile.folders.base_source):
         output.warn("Trying to remove corrupted source folder")
         remove_source()
-        clean_dirty(conanfile.layout.base_source_folder)
+        clean_dirty(conanfile.folders.base_source)
     elif conanfile.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source()
 
-    if not os.path.exists(conanfile.layout.base_source_folder):  # No source folder, need to get it
-        with set_dirty_context_manager(conanfile.layout.base_source_folder):
+    if not os.path.exists(conanfile.folders.base_source):  # No source folder, need to get it
+        with set_dirty_context_manager(conanfile.folders.base_source):
             mkdir(conanfile.source_folder)
 
             def get_sources_from_exports():
@@ -120,7 +119,6 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
         - Executing the recipe source() method
         - Calling post_source hook
     """
-
 
     src_folder = conanfile.source_folder
     mkdir(src_folder)
