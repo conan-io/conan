@@ -3,6 +3,7 @@ import os
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, rm_conandir
 from conans.util.files import rmdir
@@ -69,3 +70,9 @@ class PackageLayout:
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (self.package(), str(e)))
+
+    def package_manifests(self):
+        package_folder = self.package()
+        readed_manifest = FileTreeManifest.load(package_folder)
+        expected_manifest = FileTreeManifest.create(package_folder)
+        return readed_manifest, expected_manifest

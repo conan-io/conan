@@ -11,7 +11,7 @@ from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
 from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
 from conans.client.source import retrieve_exports_sources
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
@@ -104,11 +104,11 @@ class _UploadCollecter(object):
                 if all_packages or query:
                     if all_packages:
                         query = None
-                    # better to do a search, that will retrieve real packages with ConanInfo
-                    # Not only "package_id" folders that could be empty
-                    package_layout = self._cache.package_layout(ref.copy_clear_rev())
-                    packages = search_packages(package_layout, query)
-                    packages_ids = list(packages.keys())
+
+                    # TODO: cache2.0 do we want to upload all package_revisions ? Just the latest
+                    #  upload just the latest for the moment
+                    # TODO: cache2.0 Ignoring the query for the moment
+                    packages_ids = self._cache.get_package_ids(ref, only_latest_prev=True)
                 elif package_id:
                     packages_ids = [package_id, ]
                 else:
@@ -120,21 +120,7 @@ class _UploadCollecter(object):
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package in packages_ids:
-                    package_id, prev = package.split("#") if "#" in package else (package, None)
-                    if package_id not in metadata.packages:
-                        raise ConanException("Binary package %s:%s not found"
-                                             % (str(ref), package_id))
-                    if prev and prev != metadata.packages[package_id].revision:
-                        raise ConanException("Binary package %s:%s#%s not found"
-                                             % (str(ref), package_id, prev))
-                    # Filter packages that don't match the recipe revision
-                    if ref.revision:
-                        rec_rev = metadata.packages[package_id].recipe_revision
-                        if ref.revision != rec_rev:
-                            self._output.warn("Skipping package '%s', it doesn't belong to the"
-                                              " current recipe revision" % package_id)
-                            continue
-                    package_revision = metadata.packages[package_id].revision
+                    package_id, package_revision = package.id, package.revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
                 refs_by_remote[ref_remote].append((ref, conanfile, prefs))
@@ -308,12 +294,14 @@ class _PackagePreparator(object):
 
     def _compress_package_files(self, layout, pref, integrity_check):
         t1 = time.time()
-        if layout.package_is_dirty(pref):
-            raise ConanException("Package %s is corrupted, aborting upload.\n"
-                                 "Remove it with 'conan remove %s -p=%s'"
-                                 % (pref, pref.ref, pref.id))
 
-        download_pkg_folder = layout.download_package(pref)
+        # TODO: cache2.0
+        # if layout.package_is_dirty(pref):
+        #     raise ConanException("Package %s is corrupted, aborting upload.\n"
+        #                          "Remove it with 'conan remove %s -p=%s'"
+        #                          % (pref, pref.ref, pref.id))
+
+        download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
         if is_dirty(package_tgz):
             self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
@@ -322,7 +310,7 @@ class _PackagePreparator(object):
 
         # Get all the files in that directory
         # existing package, will use short paths if defined
-        package_folder = layout.package(pref)
+        package_folder = layout.package()
         files, symlinks = gather_files(package_folder)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
@@ -355,7 +343,7 @@ class _PackagePreparator(object):
 
         # short_paths = None is enough if there exist short_paths
         layout = self._cache.pkg_layout(pref)
-        read_manifest, expected_manifest = layout.package_manifests(pref)
+        read_manifest, expected_manifest = layout.package_manifests()
 
         if read_manifest != expected_manifest:
             self._output.writeln("")
@@ -569,7 +557,8 @@ class CmdUpload(object):
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
         pkg_layout = self._cache.pkg_layout(pref)
-        conanfile_path = pkg_layout.conanfile()
+        ref_layout = self._cache.ref_layout(pref)
+        conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.id,
@@ -596,13 +585,9 @@ class CmdUpload(object):
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
         # Update the package metadata
+        # TODO: cache2.0 what to do with checksums in 2.0?
         checksums = calc_files_checksum(cache_files)
-        with pkg_layout.update_metadata() as metadata:
-            cur_package_remote = metadata.packages[pref.id].remote
-            if not cur_package_remote:
-                metadata.packages[pref.id].remote = p_remote.name
-            metadata.packages[pref.id].checksums = checksums
-
+        self._cache.update_remote(pref, p_remote.name)
         return pref
 
 
