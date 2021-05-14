@@ -3,7 +3,7 @@ import os
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conans.model.ref import PackageReference
-from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER
+from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS
 
 
 class PackageLayout:
@@ -40,3 +40,14 @@ class PackageLayout:
 
     def download_package(self):
         return os.path.join(self._cache.base_folder, self._package_folder, "dl", "pkg")
+
+    # TODO: cache2.0 fix this
+    def system_reqs(self):
+        return os.path.join(self._cache.base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)
+
+    # TODO: cache2.0 fix this
+    def system_reqs_package(self, pref):
+        assert isinstance(pref, PackageReference)
+        assert pref.id == self._pref.pkgid
+        assert pref.ref.revision == self._pref.rrev
+        return os.path.join(self._cache.base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)

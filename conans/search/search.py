@@ -95,7 +95,8 @@ def search_recipes(cache, pattern=None, ignorecase=True):
             match_ref = str(r) if not r.revision else repr(r)
             if _partial_match(pattern, match_ref):
                 _refs.append(r)
-    refs = sorted(_refs)
+        refs = _refs
+    refs = sorted(refs)
     return refs
 
 

@@ -249,7 +249,7 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
-    package_layout = cache.package_layout(pref.ref)
+    package_layout = cache.pkg_layout(pref)
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package(pref)
     if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):

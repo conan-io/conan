@@ -224,12 +224,23 @@ class ReferencesDbTable(BaseDbTable):
                     f'{check_rrev} ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
-            query = f'SELECT * FROM {self.table_name}' \
+            query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.prev} IS NULL ' \
                     f'AND {self.columns.pkgid} IS NULL '
 
+        r = conn.execute(query)
+        for row in r.fetchall():
+            yield self._as_ref(self.row_type(*row))
+
+    def get_pkgids(self, conn: sqlite3.Cursor, ref) -> List[PackageReference]:
+        assert ref.rrev, "To search for package id's you must provide a recipe revision."
+        query = f'SELECT * FROM {self.table_name} ' \
+                f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
+                f'AND {self.columns.reference} = "{ref.reference}" ' \
+                f'AND {self.columns.pkgid} IS NOT NULL ' \
+                f'AND {self.columns.prev} IS NOT NULL'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
