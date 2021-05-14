@@ -446,6 +446,7 @@ class TestPackageInfo(unittest.TestCase):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Package(ConanFile):
+                settings = "build_type"
                 requires = 'gtest/1.0'
 
                 def build(self):
