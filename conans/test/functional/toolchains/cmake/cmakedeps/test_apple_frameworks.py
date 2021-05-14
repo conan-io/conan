@@ -56,7 +56,7 @@ def test_apple_framework_xcode(client):
     with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
         client.run("install . -s build_type=Release")
         client.run("install . -s build_type=Debug")
-        client.run("build .")
+        client.run("build . -s build_type=Debug")
         assert "/System/Library/Frameworks/Foundation.framework;" in client.out
         assert "/System/Library/Frameworks/CoreServices.framework;" in client.out
         assert "/System/Library/Frameworks/CoreFoundation.framework" in client.out
@@ -508,8 +508,7 @@ def test_m1():
                  "CMakeLists.txt": cmakelists,
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
-    client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=m1")
     main_path = "./main.app/main"
     client.run_command(main_path, assert_error=True)
     assert "Bad CPU type in executable" in client.out
