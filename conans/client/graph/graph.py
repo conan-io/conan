@@ -1,9 +1,8 @@
-from collections import OrderedDict
 from enum import Enum
 
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement
+from conans.model.requires import Requirement, RequirementDict
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -40,42 +39,19 @@ class PackageType(Enum):
     UNKNOWN = "unknown"
 
 
-class _TransitiveRequirement:
-    def __init__(self, require, node):
-        self.require = require
-        self.node = node
-
-    def __repr__(self):
-        return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
-
-
 class GraphError(Enum):
     LOOP = "graph loop"
     VERSION_CONFLICT = "version conflict"
     PROVIDE_CONFLICT = "provide conflict"
 
 
-class _TransitiveRequirements:
-    def __init__(self):
-        # The PackageRelation hash function is the key here
-        self._requires = OrderedDict()  # {require: Node}
+class TransitiveRequirement:
+    def __init__(self, require, node):
+        self.require = require
+        self.node = node
 
     def __repr__(self):
-        return repr(self._requires)
-
-    def get(self, relation):
-        return self._requires.get(relation)
-
-    def set(self, transitive):
-        self._requires[transitive.require] = transitive
-
-    def set_empty(self, require):
-        # Necessary to define an override, node doesn't exist yet
-        self._requires[require] = _TransitiveRequirement(require, None)
-
-    def values(self):
-        # No items, as the key might be outdated/incomplete compared to value
-        return self._requires.values()
+        return "Require: {}, Node: {}".format(repr(self.require), repr(self.node))
 
 
 class Node(object):
@@ -99,7 +75,7 @@ class Node(object):
         self.graph_lock_node = None  # the locking information can be None
 
         # real graph model
-        self.transitive_deps = _TransitiveRequirements()
+        self.transitive_deps = RequirementDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.conflict = None
@@ -110,7 +86,8 @@ class Node(object):
 
     def propagate_closing_loop(self, require, prev_node):
         self.propagate_downstream(require, prev_node)
-        for transitive in prev_node.transitive_deps.values():
+        # List to avoid mutating the dict
+        for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
@@ -246,7 +223,7 @@ class Node(object):
             if existing.node is not None and existing.node.ref != node.ref:
                 self.conflict = GraphError.VERSION_CONFLICT, [existing.node, node]
                 return True
-        self.transitive_deps.set(_TransitiveRequirement(require, node))
+        self.transitive_deps.set(require, TransitiveRequirement(require, node))
 
         if not self.dependants:
             print("  No further dependants, stop propagate")

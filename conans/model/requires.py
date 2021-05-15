@@ -51,14 +51,62 @@ class Requirement:
         return hash((self.ref.name, self.build))
 
     def __eq__(self, other):
-        return self.ref.name == other.ref.name and self.build == other.build and \
-               ((self.include and other.include) or
-                (self.link and other.link) or
-                (self.run and other.run) or
-                (self.public and other.public))
+        return (self.ref.name == other.ref.name and self.build == other.build and
+                ((self.include and other.include) or
+                 (self.link and other.link) or
+                 (self.run and other.run) or
+                 (self.public and other.public) or
+                 (self.ref == other.ref)))
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class RequirementDict:
+    def __init__(self):
+        self._requires = OrderedDict()  # {require: XXX}
+
+    def __repr__(self):
+        return repr(self._requires)
+
+    def get(self, require):
+        return self._requires.get(require)
+
+    def set(self, require, value):
+        # TODO: Might need to move to an update() for performance
+        self._requires.pop(require, None)
+        self._requires[require] = value
+
+    def items(self):
+        return self._requires.items()
+
+    def values(self):
+        return self._requires.values()
+
+
+class UserRequirementsDict:
+    """ user facing dict to allow access of dependencies by name
+    """
+    def __init__(self, data):
+        self._data = data  # RequirementDict
+
+    def get(self, ref, **kwargs):
+        assert isinstance(ref, str)
+        if "/" in ref:
+            ref = ConanFileReference.loads(ref)
+        else:
+            ref = ConanFileReference(ref, "unknown", "unknown", "unknown", validate=False)
+        r = Requirement(ref, **kwargs)
+        return self._data.get(r)
+
+    def __getitem__(self, name):
+        result = self.get(name)
+        if result is None:
+            raise ConanException("Require '{}' not existing".format(name))
+        return result
+
+    def items(self):
+        return self._data.items()
 
 
 class BuildRequirements:
@@ -115,6 +163,7 @@ class Requirements:
         self._requires[req] = req
 
     def build_require(self, ref, raise_if_duplicated=True):
+        # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
                           package_id_mode=None)

@@ -19,13 +19,10 @@ def compute_package_id(node):
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
         python_requires = python_requires.all_refs()
-    direct_reqs = [r.pref for r in node.conanfile.dependencies.requires]
+    direct_reqs = [transitive.node.pref for transitive in node.transitive_deps.values()]
     indirect_reqs = []
-    for dep in node.transitive_deps.values():
-        require = dep.require
-        dep_node = dep.node
+    for require, dep_node in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
-
 
     conanfile.info = ConanInfo.create(conanfile.settings.values,
                                       conanfile.options.values,

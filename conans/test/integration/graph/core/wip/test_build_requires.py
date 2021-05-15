@@ -8,10 +8,10 @@ from conans.test.utils.tools import GenConanfile
 
 
 def _check_transitive(node, transitive_deps):
-    # TODO: repeated code
     values = list(node.transitive_deps.values())
-    print(values)
+    print([v.require for v in values])
     print(transitive_deps)
+
     assert len(values) == len(transitive_deps)
 
     for v1, v2 in zip(values, transitive_deps):

@@ -2,7 +2,7 @@ import fnmatch
 
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
-    RECIPE_MISSING, RECIPE_CONSUMER, GraphError
+    RECIPE_MISSING, RECIPE_CONSUMER, GraphError, TransitiveRequirement
 
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
@@ -94,27 +94,29 @@ class DepsGraphBuilder(object):
     def _check_provides(dep_graph):
         for node in dep_graph.nodes:
             provides = {}
-            for v in node.transitive_deps.values():
-                if not v.node.conanfile.provides:
+            for dep in node.transitive_deps.values():
+                dep_node = dep.node
+                dep_require = dep.require
+                if not dep_node.conanfile.provides:
                     continue
-                for provide in v.node.conanfile.provides:
-                    new_req = v.require.copy()
+                for provide in dep_node.conanfile.provides:
+                    new_req = dep_require.copy()
                     new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
                                                      new_req.ref.channel, validate=False)
                     existing = node.transitive_deps.get(new_req)
                     if existing is not None:
-                        node.conflict = (GraphError.PROVIDE_CONFLICT, [existing.node, v.node])
+                        node.conflict = (GraphError.PROVIDE_CONFLICT, [existing.node, dep_node])
                         dep_graph.error = True
                         return
                     else:
                         existing_provide = provides.get(new_req)
                         if existing_provide is not None:
                             node.conflict = (GraphError.PROVIDE_CONFLICT, [existing_provide,
-                                                                           v.node])
+                                                                           dep_node])
                             dep_graph.error = True
                             return
                         else:
-                            provides[new_req] = v.node
+                            provides[new_req] = dep_node
 
     def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
@@ -158,7 +160,7 @@ class DepsGraphBuilder(object):
 
         # Add existing requires to the transitive_deps, so they are there for overrides
         for require in node.conanfile.requires.values():
-            node.transitive_deps.set_empty(require)
+            node.transitive_deps.set(require, TransitiveRequirement(require, None))
 
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():
@@ -206,7 +208,7 @@ class DepsGraphBuilder(object):
                 graph.add_edge(node, loop_node, require)
                 raise DepsGraphBuilder.StopRecursion("Loop found")
 
-            if prev_node is None or prev_node in base_previous.neighbors():  # Existing override
+            if prev_node is None or prev_node in base_previous.neighbors():  # Existing, resolved override
                 # Overrides happen when the conflicting existing was directly defined by consumer
                 print("  Require was an override from ", base_previous, "=", prev_require)
                 print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
