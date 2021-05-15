@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import CONTEXT_HOST
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.requires import UserRequirementsDict
 
@@ -9,8 +8,8 @@ class ConanFileDependencies:
 
     def __init__(self, node):
         self._node = node
-        d = OrderedDict((require, ConanFileInterface(node.conanfile))
-                        for require, node in self._node.transitive_deps.items())
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in self._node.transitive_deps.items())
         self._requires = UserRequirementsDict(d)
 
     @property
@@ -18,9 +17,9 @@ class ConanFileDependencies:
         """
         :return: list of all transitive build_requires
         """
-        d = OrderedDict((require, ConanFileInterface(node.conanfile))
-                        for require, node in self._node.transitive_deps.items()
-                        if node.context != CONTEXT_HOST)
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in self._node.transitive_deps.items()
+                        if require.build)
         return UserRequirementsDict(d)
 
     @property
@@ -35,9 +34,9 @@ class ConanFileDependencies:
         """
         :return: list of immediate direct requires and build_requires in the host context
         """
-        d = OrderedDict((require, ConanFileInterface(node.conanfile))
-                        for require, node in self._node.transitive_deps.items()
-                        if node.context == CONTEXT_HOST)
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in self._node.transitive_deps.items()
+                        if not require.build)
         return UserRequirementsDict(d)
 
     @property

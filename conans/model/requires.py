@@ -108,6 +108,12 @@ class UserRequirementsDict:
     def items(self):
         return self._data.items()
 
+    def __iter__(self):
+        return iter(self._data.values())
+
+    def __next__(self):
+        return next(self._data.values())
+
 
 class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
