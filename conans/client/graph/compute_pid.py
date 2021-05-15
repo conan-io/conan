@@ -12,7 +12,7 @@ def compute_package_id(node):
     :param node: the node to compute the package-ID
     """
     conanfile = node.conanfile
-    default_package_id_mode = "semver_mode"  # self._cache.config.default_package_id_mode
+    default_package_id_mode = conanfile.conf["tools.package_id:default_mode"] or "semver_mode"
     default_python_requires_id_mode = "minor_mode"  # self._cache.config.default_python_requires_id_mode
 
     python_requires = getattr(conanfile, "python_requires", None)

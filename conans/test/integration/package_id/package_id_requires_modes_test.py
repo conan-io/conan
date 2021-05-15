@@ -445,7 +445,7 @@ class PackageIDErrorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=full_package_mode")
-        client.run("config set general.full_transitive_package_id=True")
+
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
         client.save({"conanfile.py": GenConanfile().with_require("dep1/1.0@user/testing")})
@@ -466,7 +466,7 @@ class PackageIDErrorTest(unittest.TestCase):
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
         # This is mandatory, otherwise it doesn't work
-        client.run("config set general.full_transitive_package_id=True")
+
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
@@ -495,7 +495,7 @@ class PackageIDErrorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/6942
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.run("config set general.full_transitive_package_id=True")
+
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . dep1/1.0@user/testing")
@@ -527,7 +527,7 @@ class PackageIDErrorTest(unittest.TestCase):
         # Package revision mode crash when using editables
         client = TestClient()
         client.run("config set general.default_package_id_mode=package_revision_mode")
-        client.run("config set general.full_transitive_package_id=True")
+
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("editable add . dep1/1.0@user/testing")

@@ -20,7 +20,6 @@ class GraphBinariesAnalyzer(object):
         self._remote_manager = remote_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
     def _check_update(upstream_manifest, package_folder, output):
@@ -270,10 +269,8 @@ class GraphBinariesAnalyzer(object):
         assert node.binary == BINARY_UNKNOWN
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
-        default_package_id_mode = self._cache.config.default_package_id_mode
-        default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        self._compute_package_id(node, default_package_id_mode, default_python_requires_id_mode)
+        compute_package_id(node)
         output.info("Updated ID: %s" % node.package_id)
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return

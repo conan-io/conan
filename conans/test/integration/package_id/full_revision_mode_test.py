@@ -1,3 +1,4 @@
+import textwrap
 import unittest
 from textwrap import dedent
 
@@ -315,15 +316,19 @@ class PackageRevisionModeTest(unittest.TestCase):
 def test_package_revision_mode_full_transitive_package_id():
     # https://github.com/conan-io/conan/issues/8310
     client = TestClient()
-    client.run("config set general.default_package_id_mode=package_revision_mode")
-    client.run("config set general.full_transitive_package_id=1")
+    profile = textwrap.dedent("""
+        [build_requires]
+        tool/0.1
+        [conf]
+        tools.package_id:default_mode=package_revision_mode
+        """)
     client.save({"tool/conanfile.py": GenConanfile(),
                  "pkga/conanfile.py": GenConanfile(),
                  "pkgb/conanfile.py": GenConanfile().with_requires("tool/0.1", "pkga/0.1"),
-                 "profile": "[build_requires]\ntool/0.1"})
+                 "profile": profile})
     client.run("export tool tool/0.1@")
     client.run("export pkga pkga/0.1@")
     client.run("create pkgb pkgb/0.1@ -pr=profile --build=missing")
     assert "pkgb/0.1:Package_ID_unknown - Unknown" in client.out
     assert "pkgb/0.1: Unknown binary for pkgb/0.1, computing updated ID" in client.out
-    assert "pkgb/0.1: Package '4af4f9ef444cffdb8dccb7f5148f16690aa6ecc9' created" in client.out
+    assert "pkgb/0.1: Package 'bed92b623792b351f95a68c3eb7d617cf8fcc0ef' created" in client.out

@@ -417,7 +417,6 @@ class BinaryInstaller(object):
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
-                self._propagate_info(node)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, profile_host, profile_build, graph_lock)
                     # Need a temporary package revision for package_revision_mode
@@ -433,9 +432,6 @@ class BinaryInstaller(object):
                             self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
                     self._handle_node_cache(node, processed_package_refs, remotes)
-
-        # Finally, propagate information to root node (ref=None)
-        self._propagate_info(root_node)
 
     def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
         # Get source of information
@@ -552,54 +548,6 @@ class BinaryInstaller(object):
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
         return pref
-
-    def _propagate_info(self, node):
-        # FIXME: Remove this, as propagate info is not done at graph level
-        return
-        # it is necessary to recompute
-        # the node transitive information necessary to compute the package_id
-        # as it will be used by reevaluate_node() when package_revision_mode is used and
-        # PACKAGE_ID_UNKNOWN happens due to unknown revisions
-        # self._binaries_analyzer.package_id_transitive_reqs(node)
-        # Get deps_cpp_info from upstream nodes
-        node_order = [n for n in node.public_closure if n.binary != BINARY_SKIP]
-        # List sort is stable, will keep the original order of the closure, but prioritize levels
-        conan_file = node.conanfile
-        transitive = [it for it in node.transitive_closure.values()]
-
-        br_host = []
-        for it in node.dependencies:
-            if it.require.build_require_context == CONTEXT_HOST:
-                br_host.extend(it.dst.transitive_closure.values())
-
-        # Initialize some members if we are using different contexts
-        conan_file.user_info_build = DepsUserInfo()
-
-        for n in node_order:
-            if n not in transitive:
-                conan_file.output.info("Applying build-requirement: %s" % str(n.ref))
-
-            dep_cpp_info = n.conanfile._conan_dep_cpp_info
-
-            # The new build/host propagation model
-            if n in transitive or n in br_host:
-                conan_file.deps_user_info[n.ref.name] = n.conanfile.user_info
-                conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
-            else:
-                conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
-                env_info = EnvInfo()
-                env_info._values_ = n.conanfile.env_info._values_.copy()
-                # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.framework_paths)
-                env_info.LD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                env_info.PATH.extend(dep_cpp_info.bin_paths)
-                conan_file.deps_env_info.update(env_info, n.ref.name)
-
-        # Update the info but filtering the package values that not apply to the subtree
-        # of this current node and its dependencies.
-        subtree_libnames = [node.ref.name for node in node_order]
-        add_env_conaninfo(conan_file, subtree_libnames)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
