@@ -6,6 +6,7 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
+from conans.model.requires import UserRequirementsDict
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
@@ -161,12 +162,7 @@ class RequirementInfo(object):
         self.package_revision = self.full_package_revision or PREV_UNKNOWN
 
 
-class RequirementsInfo(object):
-
-    def __init__(self, prefs, default_package_id_mode):
-        # {PackageReference: RequirementInfo}
-        self._data = {pref: RequirementInfo(pref, default_package_id_mode=default_package_id_mode)
-                      for pref in prefs}
+class RequirementsInfo(UserRequirementsDict):
 
     def copy(self):
         # For build_id() implementation
@@ -181,33 +177,6 @@ class RequirementsInfo(object):
         for name in args:
             del self._data[self._get_key(name)]
 
-    def add(self, prefs_indirect, default_package_id_mode):
-        """ necessary to propagate from upstream the real
-        package requirements
-        """
-        for r in prefs_indirect:
-            self._data[r] = RequirementInfo(r, indirect=True,
-                                            default_package_id_mode=default_package_id_mode)
-
-    def refs(self):
-        """ used for updating downstream requirements with this
-        """
-        # FIXME: This is a very bad name, it return prefs, not refs
-        return list(self._data.keys())
-
-    def _get_key(self, item):
-        for reference in self._data:
-            if reference.ref.name == item:
-                return reference
-        raise ConanException("No requirement matching for %s" % (item))
-
-    def __getitem__(self, item):
-        """get by package name
-        Necessary to access from conaninfo
-        self.requires["Boost"].version = "2.X"
-        """
-        return self._data[self._get_key(item)]
-
     @property
     def pkg_names(self):
         return [r.ref.name for r in self._data.keys()]
@@ -215,24 +184,22 @@ class RequirementsInfo(object):
     @property
     def sha(self):
         result = []
-        # Remove requirements without a name, i.e. indirect transitive requirements
-        data = {k: v for k, v in self._data.items() if v.name}
-        for key in sorted(data):
-            s = data[key].sha
+        for req_info in self._data.values():
+            s = req_info.sha
             if s is None:
                 return None
             if s == PACKAGE_ID_INVALID:
                 return PACKAGE_ID_INVALID
             result.append(s)
-        return sha1('\n'.join(result).encode())
+        return sha1('\n'.join(sorted(result)).encode())
 
     def dumps(self):
         result = []
-        for ref in sorted(self._data):
-            dumped = self._data[ref].dumps()
+        for req_info in self._data.values():
+            dumped = req_info.dumps()
             if dumped:
                 result.append(dumped)
-        return "\n".join(result)
+        return "\n".join(sorted(result))
 
     def unrelated_mode(self):
         self.clear()
@@ -438,7 +405,7 @@ class ConanInfo(object):
         return result
 
     @staticmethod
-    def create(settings, options, prefs_direct, prefs_indirect, default_package_id_mode,
+    def create(settings, options, reqs_info,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.invalid = None
@@ -447,10 +414,8 @@ class ConanInfo(object):
         result.full_options = options
         result.options = options.copy()
         result.options.clear_indirect()
-        result.full_requires = _PackageReferenceList(prefs_direct)
-        result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
-        result.requires.add(prefs_indirect, default_package_id_mode)
-        result.full_requires.extend(prefs_indirect)
+        result.requires = reqs_info
+        result.full_requires = _PackageReferenceList()
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
@@ -472,7 +437,8 @@ class ConanInfo(object):
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = _PackageReferenceList.loads(parser.full_requires)
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
-        result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
+        # FIXME: remove this uglyness
+        result.requires = RequirementsInfo({})
 
         # TODO: Missing handling paring of requires, but not necessary now
         result.env_values = EnvValues.loads(parser.env)

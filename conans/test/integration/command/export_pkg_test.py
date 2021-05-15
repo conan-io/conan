@@ -60,7 +60,7 @@ class PkgA(ConanFile):
         client.run("build . -bf=build")
         client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
         self.assertIn("PkgA/0.1@user/testing: Package "
-                      "'a498d5cb895dc6993c0bb53c5a6e63b9a216115f' created",
+                      "'2f1a7578223f5103f11beec4353264ab77e486d4' created",
                       client.out)
 
     def test_package_folder_errors(self):

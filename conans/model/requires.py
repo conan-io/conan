@@ -88,7 +88,7 @@ class UserRequirementsDict:
     """ user facing dict to allow access of dependencies by name
     """
     def __init__(self, data):
-        self._data = data  # RequirementDict
+        self._data = data  # dict-like
 
     def get(self, ref, **kwargs):
         assert isinstance(ref, str)

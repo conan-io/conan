@@ -1,5 +1,8 @@
+from collections import OrderedDict
+
+from conans.client.graph.graph import PackageType
 from conans.errors import conanfile_exception_formatter
-from conans.model.info import ConanInfo
+from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
 
@@ -8,27 +11,41 @@ def compute_package_id(node):
     Compute the binary package ID of this node
     :param node: the node to compute the package-ID
     """
-    # TODO Conan 2.0. To separate the propagation of the graph (options) of the package-ID
-    # A bit risky to be done now
     conanfile = node.conanfile
-    neighbors = node.neighbors()
-
     default_package_id_mode = "semver_mode"  # self._cache.config.default_package_id_mode
     default_python_requires_id_mode = "minor_mode"  # self._cache.config.default_python_requires_id_mode
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
         python_requires = python_requires.all_refs()
-    direct_reqs = [transitive.node.pref for transitive in node.transitive_deps.values()]
-    indirect_reqs = []
-    for require, dep_node in node.transitive_deps.items():
+
+    data = OrderedDict()
+    for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
+        dep_node = transitive.node
+        if dep_package_id is None:  # Automatically deducing package_id
+            if require.include or require.link:  # linked
+                if node.package_type is PackageType.SHARED:
+                    if dep_node.package_type is PackageType.SHARED:
+                        dep_package_id = "minor_mode"
+                    else:
+                        dep_package_id = "recipe_revision_mode"
+                elif node.package_type is PackageType.STATIC:
+                    if dep_node.package_type is PackageType.HEADER:
+                        dep_package_id = "recipe_revision_mode"
+                    else:
+                        dep_package_id = "minor_mode"
+                elif node.package_type is PackageType.HEADER:
+                    dep_package_id = "unrelated_mode"
+
+        req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
+        data[require] = req_info
+
+    reqs_info = RequirementsInfo(data)
 
     conanfile.info = ConanInfo.create(conanfile.settings.values,
                                       conanfile.options.values,
-                                      direct_reqs,
-                                      indirect_reqs,
-                                      default_package_id_mode=default_package_id_mode,
+                                      reqs_info,
                                       python_requires=python_requires,
                                       default_python_requires_id_mode=
                                       default_python_requires_id_mode)
