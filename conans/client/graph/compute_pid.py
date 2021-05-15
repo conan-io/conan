@@ -23,7 +23,7 @@ def compute_package_id(node):
     indirect_reqs = []
     for dep in node.transitive_deps.values():
         require = dep.require
-        node = dep.node
+        dep_node = dep.node
         dep_package_id = require.package_id_mode
 
 

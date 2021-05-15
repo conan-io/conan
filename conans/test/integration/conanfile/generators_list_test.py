@@ -49,7 +49,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
                 settings = "build_type"
                 python_requires = "base/1.0"
                 python_requires_extend = "base.BaseConan"
-
+                settings = "build_type"
                 generators = "cmake", "CMakeDeps"
 
                 def init(self):

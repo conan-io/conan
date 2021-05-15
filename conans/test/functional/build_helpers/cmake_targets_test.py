@@ -95,23 +95,6 @@ class Alpha(ConanFile):
         self.assertIn("Configuring done", client.out)
         self.assertIn("Generating done", client.out)
         self.assertIn("Build files have been written", client.out)
-        client.save({"conanfile.txt": conanfile,
-                     "CMakeLists.txt": cmake.replace("conanbuildinfo.cmake",
-                                                     "conanbuildinfo_multi.cmake"),
-                     "main.cpp": main}, clean_first=True)
-
-        if platform.system() == "Windows":
-            debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
-            release_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MD'
-
-            client.run('install . %s -s build_type=Debug -g cmake_multi' % debug_install)
-            client.run('install . %s -s build_type=Release -g cmake_multi' % release_install)
-            client.run_command('cmake . -G "Visual Studio 14 Win64"')
-            self.assertNotIn("WARN: Unknown compiler '", client.out)
-            self.assertNotIn("', skipping the version check...", client.out)
-            self.assertIn("Configuring done", client.out)
-            self.assertIn("Generating done", client.out)
-            self.assertIn("Build files have been written", client.out)
 
     @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
     def test_apple_framework(self):

@@ -28,7 +28,7 @@ class XZTest(TestCase):
         client = TestClient(servers={"default": server},
                             users={"default": [("lasote", "mypass")]})
         client.run("install Pkg/0.1@user/channel", assert_error=True)
-        self.assertIn("ERROR: This Conan version is not prepared to handle "
+        self.assertIn("This Conan version is not prepared to handle "
                       "'conan_export.txz' file format", client.out)
 
     def test_error_sources_xz(self):

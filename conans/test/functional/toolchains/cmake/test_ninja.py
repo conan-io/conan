@@ -5,6 +5,7 @@ import pytest
 
 from conan.tools.cmake import CMakeToolchain
 from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
@@ -160,3 +161,31 @@ def test_locally_build_macos(build_type, shared, client):
     client.run_command(command_str)
     check_exe_run(client.out, ["main", "hello"], "apple-clang", None, build_type, "x86_64",
                   cppstd=None)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.tool_visual_studio
+def test_ninja_conf():
+    conanfile = GenConanfile().with_generator("CMakeToolchain").with_settings("os", "compiler",
+                                                                              "build_type", "arch")
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=19.1
+        compiler.runtime=dynamic
+        compiler.cppstd=14
+        build_type=Release
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr=profile")
+    conanbuild = client.load("conanbuild.json")
+    assert '"cmake_generator": "Ninja"' in conanbuild
+    if platform.system() == "Windows":
+        vcvars = client.load("conanvcvars.bat")
+        assert "2017" in vcvars

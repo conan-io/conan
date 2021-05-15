@@ -10,7 +10,6 @@ from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
     msbuild_max_cpu_count_cmd_line_arg
 from conans.client import tools
-
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
@@ -62,17 +61,17 @@ class CMake(object):
     are passed to the command line, plus the ``--config Release`` for builds in multi-config
     """
 
-    def __init__(self, conanfile, build_folder=None, parallel=True):
+    def __init__(self, conanfile, parallel=True):
         _validate_recipe(conanfile)
 
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
-
         self._generator = None
-        if os.path.exists(CONAN_TOOLCHAIN_ARGS_FILE):
-            self._generator = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))["cmake_generator"]
-        self._build_folder = build_folder
+        args_file = os.path.join(self._conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
+        if os.path.exists(args_file):
+            self._generator = json.loads(load(args_file))["cmake_generator"]
+
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
     def configure(self, source_folder=None):
@@ -85,12 +84,11 @@ class CMake(object):
             source = os.path.join(self._conanfile.source_folder, source_folder)
 
         build_folder = self._conanfile.build_folder
-        if self._build_folder:
-            build_folder = os.path.join(self._conanfile.build_folder, self._build_folder)
+        generator_folder = self._conanfile.generators_folder
 
         mkdir(build_folder)
         arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            CMakeToolchain.filename,
+            os.path.join(generator_folder, CMakeToolchain.filename).replace("\\", "/"),
             self._conanfile.package_folder.replace("\\", "/"),
             source)
 
@@ -107,9 +105,6 @@ class CMake(object):
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
-        if self._build_folder:
-            bf = os.path.join(self._conanfile.build_folder, self._build_folder)
-
         is_multi = is_multi_configuration(self._generator)
         if build_type and not is_multi:
             self._conanfile.output.error("Don't specify 'build_type' at build time for "

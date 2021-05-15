@@ -346,7 +346,7 @@ class Edge(object):
         self.dst = dst
         self.require = require
         # FIXME: USed in the ConanFileDependencies logic, must avoid
-        self.build_require = require.build  # Just to not break, but not user
+        self.build_require = False  # Just to not break, but not user
         self.private = False
 
 

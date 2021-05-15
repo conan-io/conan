@@ -751,8 +751,7 @@ def test_build_vs_project_with_a():
     new = old + '<Import Project="{props}" />'.format(props=props)
     files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
     client.save(files, clean_first=True)
-    client.run('install . -s compiler="Visual Studio" -s compiler.version=15')
-    client.run("build .")
+    client.run('build . -s compiler="Visual Studio" -s compiler.version=15')
     client.run_command(r"x64\Release\MyProject.exe")
     assert "hello: Release!" in client.out
     # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
