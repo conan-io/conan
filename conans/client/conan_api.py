@@ -484,17 +484,15 @@ class ConanAPIV1(object):
                                                                                self.app.out,
                                                                                lockfile=lockfile)
 
-            if not generators:  # We don't want the default txt
-                generators = False
-
             install_folder = _make_abs_path(install_folder, cwd)
 
             mkdir(install_folder)
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
-            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+            deps_install(self.app, ref_or_path=reference, install_folder=install_folder, base_folder=cwd,
                          remotes=remotes, profile_host=profile_host, profile_build=profile_build,
-                         graph_lock=graph_lock, root_ref=root_ref, build_modes=build, update=update,
-                         generators=generators, recorder=recorder, lockfile_node_id=lockfile_node_id)
+                         graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
+                         update=update, generators=generators, recorder=recorder,
+                         lockfile_node_id=lockfile_node_id)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -535,6 +533,7 @@ class ConanAPIV1(object):
             deps_install(app=self.app,
                          ref_or_path=conanfile_path,
                          install_folder=install_folder,
+                         base_folder=cwd,
                          remotes=remotes,
                          profile_host=profile_host,
                          profile_build=profile_build,
@@ -701,13 +700,12 @@ class ConanAPIV1(object):
                                name=name, version=version, user=user, channel=channel,
                                lockfile=lockfile)
 
-            install_folder = _make_abs_path(install_folder, cwd)
-
             remotes = self.app.load_remotes(remote_name=remote_name, update=update)
 
             deps_info = deps_install(app=self.app,
                                      ref_or_path=conanfile_path,
                                      install_folder=install_folder,
+                                     base_folder=cwd,
                                      remotes=remotes,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
@@ -725,9 +723,9 @@ class ConanAPIV1(object):
                 graph_lock_file.save(lockfile_out)
 
             conanfile = deps_info.root.conanfile
-
-            cmd_build(self.app, conanfile_path, conanfile,
-                      source_folder, build_folder, package_folder, install_folder,
+            cmd_build(self.app, conanfile_path, conanfile, base_path=cwd,
+                      source_folder=source_folder, build_folder=build_folder,
+                      package_folder=package_folder, install_folder=install_folder,
                       should_configure=should_configure, should_build=should_build,
                       should_install=should_install, should_test=should_test)
 
@@ -749,9 +747,9 @@ class ConanAPIV1(object):
 
         # only infos if exist
         conanfile = self.app.graph_manager.load_consumer_conanfile(conanfile_path)
-        conanfile.layout.set_base_source_folder(source_folder)
-        conanfile.layout.set_base_build_folder(None)
-        conanfile.layout.set_base_package_folder(None)
+        conanfile.folders.set_base_source(source_folder)
+        conanfile.folders.set_base_build(None)
+        conanfile.folders.set_base_package(None)
 
         config_source_local(conanfile, conanfile_path, self.app.hook_manager)
 
@@ -766,6 +764,7 @@ class ConanAPIV1(object):
         """
         cwd = cwd or os.getcwd()
         dest = _make_abs_path(dest, cwd)
+
         mkdir(dest)
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=None)
@@ -780,6 +779,7 @@ class ConanAPIV1(object):
             deps_info = deps_install(app=self.app,
                                      ref_or_path=conanfile_path,
                                      install_folder=None,
+                                     base_folder=cwd,
                                      profile_host=profile_host,
                                      profile_build=profile_build,
                                      graph_lock=graph_lock,
@@ -787,7 +787,8 @@ class ConanAPIV1(object):
                                      recorder=recorder,
                                      remotes=remotes)
             conanfile = deps_info.root.conanfile
-            return run_imports(conanfile, dest)
+            conanfile.folders.set_base_imports(dest)
+            return run_imports(conanfile)
         except ConanException as exc:
             recorder.error = True
             exc.info = recorder.get_info()
@@ -1320,6 +1321,7 @@ class ConanAPIV1(object):
             print_graph(graph, self.app.out)
         else:
             deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                         base_folder=cwd,
                          profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
                          root_ref=root_ref, remotes=remotes, build_modes=build,
                          generators=generators, recorder=recorder, lockfile_node_id=root_id)

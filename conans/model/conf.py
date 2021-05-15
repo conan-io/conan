@@ -16,6 +16,7 @@ DEFAULT_CONFIGURATION = {
     "tools.gnu.make:jobs": "Argument for the -j parameter when running Make generator",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.env.virtualenv:auto_use": "Automatically activate virtualenvs when changing into a directory",
+    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",

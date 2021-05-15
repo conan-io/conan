@@ -26,6 +26,7 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  create_reference=reference,
                                  ref_or_path=conanfile_abs_path,
                                  install_folder=test_build_folder,
+                                 base_folder=test_build_folder,
                                  remotes=remotes,
                                  profile_host=profile_host,
                                  profile_build=profile_build,
@@ -35,7 +36,8 @@ def install_build_and_test(app, conanfile_abs_path, reference, profile_host, pro
                                  build_modes=build_modes,
                                  recorder=recorder)
         conanfile = deps_info.root.conanfile
-        cmd_build(app, conanfile_abs_path, conanfile, base_folder, test_build_folder,
+        cmd_build(app, conanfile_abs_path, conanfile, test_build_folder,
+                  source_folder=base_folder, build_folder=test_build_folder,
                   package_folder=os.path.join(test_build_folder, "package"),
                   install_folder=test_build_folder, test=reference)
     finally:

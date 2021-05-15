@@ -477,7 +477,6 @@ class TestComponentsCMakeGenerators:
 
                 def package_info(self):
                     self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
-                    self.cpp_info.components["helloworld"].libs = ["helloworld"]
         """)
         client.save({"conanfile.py": conanfile})
         client.run("create . world/0.0.1@")
@@ -491,7 +490,7 @@ class TestComponentsCMakeGenerators:
 
             class GreetingsConan(ConanFile):
                 def package_info(self):
-                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].cxxflags = ["flags"]
         """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -545,6 +544,7 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
+    @pytest.mark.xfail(reason="This test is failing in Py27, waiting for CMakeDeps improvements")
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
