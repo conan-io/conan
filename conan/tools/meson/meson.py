@@ -32,7 +32,7 @@ class Meson(object):
         if cross_building(self._conanfile):
             cmd += ' --cross-file "{}"'.format(os.path.join(self._conanfile.install_folder, MesonToolchain.cross_filename))
         else:
-            cmd += ' --native-file "{}"'.format(os.path.join(self._conanfile.install_folder, MesonToolchain.cross_filename))
+            cmd += ' --native-file "{}"'.format(os.path.join(self._conanfile.install_folder, MesonToolchain.native_filename))
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
