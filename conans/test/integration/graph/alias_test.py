@@ -13,21 +13,6 @@ from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 @pytest.mark.xfail(reason="To be moved to core graph tests")
 class ConanAliasTest(unittest.TestCase):
 
-    def test_alias_overriden(self):
-        # https://github.com/conan-io/conan/issues/3353
-        client = TestClient()
-
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("export . PkgA/0.1@user/testing")
-        client.run("alias PkgA/latest@user/testing PkgA/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")})
-        client.run("export . PkgB/0.1@user/testing")
-        client.run("alias PkgB/latest@user/testing PkgB/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require("PkgA/latest@user/testing")
-                                                   .with_require("PkgB/latest@user/testing")})
-        client.run("info .")
-        self.assertNotIn("overridden", client.out)
-
     def test_complete_large(self):
         # https://github.com/conan-io/conan/issues/2583
         conanfile0 = """from conans import ConanFile
@@ -356,38 +341,6 @@ class Pkg(ConanFile):
         self.assertIn('"LibC/sha1@user/testing" -> "LibD/sha1@user/testing"', graphfile)
         self.assertIn('"conanfile.txt" -> "LibB/sha1@user/testing"', graphfile)
         self.assertIn('"conanfile.txt" -> "LibA/sha1@user/testing"', graphfile)
-
-    def test_alias_bug(self):
-        # https://github.com/conan-io/conan/issues/2252
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Pkg/0.1@user/testing")
-        client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
-        client.save({"conanfile.py": GenConanfile().with_require("Pkg/latest@user/testing")})
-        client.run("create . Pkg1/0.1@user/testing")
-        client.run("create . Pkg2/0.1@user/testing")
-
-        client.save({"conanfile.py": GenConanfile().with_requires("Pkg1/0.1@user/testing",
-                                                                  "Pkg2/0.1@user/testing")})
-        client.run("create . PkgRoot/0.1@user/testing")
-        self.assertNotIn("Pkg/latest@user/testing", client.out)
-        self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
-        self.assertIn("Pkg1/0.1@user/testing: Already installed!", client.out)
-        self.assertIn("Pkg2/0.1@user/testing: Already installed!", client.out)
-
-    def test_transitive_alias(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . Pkg/0.1@user/testing")
-        client.run("alias Pkg/latest@user/testing Pkg/0.1@user/testing")
-        client.run("alias Pkg/superlatest@user/testing Pkg/latest@user/testing")
-        client.run("alias Pkg/megalatest@user/testing Pkg/superlatest@user/testing")
-
-        client.save({"conanfile.py":
-                     GenConanfile().with_require("Pkg/megalatest@user/testing")})
-        client.run("create . Consumer/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Already installed!", client.out)
-        self.assertNotIn("latest@user", client.out)
 
     def test_basic(self):
         test_server = TestServer()

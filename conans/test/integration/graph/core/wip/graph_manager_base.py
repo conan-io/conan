@@ -113,6 +113,13 @@ class GraphManagerTest(unittest.TestCase):
         save(path, str(conanfile))
         return path
 
+    @staticmethod
+    def consumer_conanfile(conanfile):
+        path = temp_folder()
+        path = os.path.join(path, "conanfile.py")
+        save(path, str(conanfile))
+        return path
+
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         if not isinstance(ref, ConanFileReference):
             ref = ConanFileReference.loads(ref)

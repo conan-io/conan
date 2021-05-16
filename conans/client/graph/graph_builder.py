@@ -3,6 +3,7 @@ import fnmatch
 from conans.client.conanfile.configure import run_configure_method
 from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
     RECIPE_MISSING, RECIPE_CONSUMER, GraphError, TransitiveRequirement
+from conans.client.graph.range_resolver import _parse_versionexpr
 
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
@@ -74,32 +75,24 @@ class DepsGraphBuilder(object):
         return dep_graph
 
     @staticmethod
-    def _add_profile_build_requires(node, profile_host, profile_build):
-        profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        build_requires = profile.build_requires
-        str_ref = str(node.ref)
-
-        for pattern, build_requires in build_requires.items():
-            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
-                for build_require in build_requires:  # Do the override
-                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
-                        continue  # avoid self-loop of build-requires in build context
-                    # FIXME: converting back to string?
-                    node.conanfile.requires.build_require(str(build_require),
-                                                          raise_if_duplicated=False)
-
-    @staticmethod
     def _check_provides(dep_graph):
         for node in dep_graph.nodes:
             provides = {}
+            current_provides = node.conanfile.provides
             for dep in node.transitive_deps.values():
                 dep_node = dep.node
                 dep_require = dep.require
+
                 if not dep_node.conanfile.provides:
                     continue
                 for provide in dep_node.conanfile.provides:
+                    # First check if collides with current node
+                    if current_provides is not None and provide in current_provides:
+                        node.conflict = (GraphError.PROVIDE_CONFLICT, [node, dep_node])
+                        dep_graph.error = True
+                        return
+
+                    # Then, check if collides with other requirements
                     new_req = dep_require.copy()
                     new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
                                                      new_req.ref.channel, validate=False)
@@ -118,7 +111,8 @@ class DepsGraphBuilder(object):
                         else:
                             provides[new_req] = dep_node
 
-    def _prepare_node(self, node, profile_host, profile_build, graph_lock, down_ref, down_options):
+    @staticmethod
+    def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
         if graph_lock:
             graph_lock.pre_lock_node(node)
 
@@ -141,10 +135,20 @@ class DepsGraphBuilder(object):
                 conanfile.test_requires = TestRequirements(conanfile.requires)
                 conanfile.build_requirements()
 
-        # Alias that are cached should be replaced here, bc next requires.update() will warn if not
-        # TODO: self._resolve_cached_alias(node.conanfile.requires.values(), graph)
-
-        self._add_profile_build_requires(node, profile_host, profile_build)
+        # Apply build_requires from profile, overrriding the declared ones
+        profile = profile_host if node.context == CONTEXT_HOST else profile_build
+        build_requires = profile.build_requires
+        str_ref = str(node.ref)
+        for pattern, build_requires in build_requires.items():
+            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
+                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
+                for build_require in build_requires:  # Do the override
+                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
+                        continue  # avoid self-loop of build-requires in build context
+                    # FIXME: converting back to string?
+                    node.conanfile.requires.build_require(str(build_require),
+                                                          raise_if_duplicated=False)
         if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
             graph_lock.lock_node(node, node.conanfile.requires.values())
 
@@ -164,27 +168,9 @@ class DepsGraphBuilder(object):
 
         # Expand each one of the current requirements
         for require in node.conanfile.requires.values():
-            # TODO: if require.override:
-            #     continue
             self._expand_require(require, node, graph, check_updates, update, remotes,
-                                 profile_host, profile_build,
-                                 graph_lock)
+                                 profile_host, profile_build, graph_lock)
         print("Finished Expanding node", node)
-
-    def _resolve_ranges(self, graph, requires, consumer, update, remotes):
-        for require in requires:
-            if require.locked_id:  # if it is locked, nothing to resolved
-                continue
-            self._resolver.resolve(require, consumer, update, remotes)
-        self._resolve_cached_alias(requires, graph)
-
-    @staticmethod
-    def _resolve_cached_alias(requires, graph):
-        if graph.aliased:
-            for require in requires:
-                alias = graph.aliased.get(require.ref)
-                if alias:
-                    require.ref = alias
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
                         profile_build, graph_lock, populate_settings_target=True):
@@ -213,26 +199,44 @@ class DepsGraphBuilder(object):
                 print("  Require was an override from ", base_previous, "=", prev_require)
                 print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
                 # TODO: resolve the override, version ranges, etc
-                require = prev_require
+                # FIXME: Why this fails if require.ref = prev_require.ref???
+                require = prev_require # .ref = prev_require.ref if prev_node is None else node.ref
             else:
-                print("Checking for possible conflicts!")
-                # self._resolve_cached_alias([require], graph)
-                # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-                conflict = self._conflicting_references(prev_node, require.ref, node.ref)
-                if conflict:  # It is possible to get conflict from alias, try to resolve it
-                    result = self._resolve_recipe(node, graph, require.ref, check_updates,
-                                                  update, remotes, profile_host, graph_lock)
-                    _, dep_conanfile, recipe_status, _, _ = result
-                    # Maybe it was an ALIAS, so we can check conflict again
-                    conflict = self._conflicting_references(prev_node, require.ref, node.ref)
-                    if conflict:
-                        conflict_node = Node(require.ref, dep_conanfile, context=prev_node.context)
-                        conflict_node.recipe = recipe_status
+                print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
+                version_range = require.version_range
+                if version_range:
+                    version_range, loose, include_prerelease = _parse_versionexpr(version_range, [])
+                    from semver import satisfies
+                    if satisfies(prev_node.ref.version, version_range,
+                                 loose=loose, include_prerelease=include_prerelease):
+                        require.ref = prev_node.ref
+                    else:
+                        conflict_node = Node(require.ref, None, context=prev_node.context)
                         base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
                                                                                conflict_node]
                         graph.add_node(conflict_node)
                         graph.add_edge(node, conflict_node, require)
-                        raise DepsGraphBuilder.StopRecursion("Unresolved reference")
+                        raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
+                else:
+                    conflict_ref = graph.aliased.get(require.ref, require.ref)
+                    # As we are closing a diamond, there can be conflicts. This will raise if conflicts
+                    conflict = self._conflicting_references(prev_node, conflict_ref, node.ref)
+                    if conflict:  # It is possible to get conflict from alias, try to resolve it
+                        result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
+                                                      update, remotes, profile_host, graph_lock)
+                        _, dep_conanfile, recipe_status, _, _ = result
+                        # Maybe it was an ALIAS, so we can check conflict again
+                        conflict = self._conflicting_references(prev_node, require.ref, node.ref)
+                        if conflict:
+                            conflict_node = Node(require.ref, dep_conanfile, context=prev_node.context)
+                            conflict_node.recipe = recipe_status
+                            base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
+                                                                                   conflict_node]
+                            graph.add_node(conflict_node)
+                            graph.add_edge(node, conflict_node, require)
+                            raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
+                        else:
+                            print("IT IS NOT REALLY A CONFLICT, maaybe it was an ALIAS")
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
@@ -248,7 +252,9 @@ class DepsGraphBuilder(object):
                 #  if not require.locked_id:  # if it is locked, nothing to resolved
                 # TODO: This range-resolve might resolve in a given remote or cache
                 # Make sure next _resolve_recipe use it
-                resolved_ref = self._resolver.resolve(require, str(node.ref), update, remotes)
+                resolved_ref = graph.aliased.get(require.ref)
+                if resolved_ref is None:
+                    resolved_ref = self._resolver.resolve(require, str(node.ref), update, remotes)
 
                 # This accounts for alias too
                 resolved = self._resolve_recipe(node, graph, resolved_ref, check_updates, update,

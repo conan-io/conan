@@ -221,6 +221,7 @@ class Node(object):
         existing = self.transitive_deps.get(require)
         if existing is not None:
             if existing.node is not None and existing.node.ref != node.ref:
+                print("  +++++Runtime conflict!", require, "with", node.ref)
                 self.conflict = GraphError.VERSION_CONFLICT, [existing.node, node]
                 return True
         self.transitive_deps.set(require, TransitiveRequirement(require, node))

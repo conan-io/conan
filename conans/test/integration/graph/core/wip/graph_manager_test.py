@@ -311,6 +311,33 @@ class TestDiamond(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (libc, True, True, False, None),
+                                (liba, True, True, False, None)])
+
+    def test_half_diamond(self):
+        # app -----------> liba0.1
+        #    \-> libc0.1 ->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("libc/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["liba/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        liba = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[liba, libc])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[app, libc])
+
+        # Order seems to be link order
+        _check_transitive(app, [(libc, True, True, False, None),
+                                (liba, True, True, False, None)])
+
     def test_shared_static(self):
         # app -> libb0.1 (shared) -> liba0.1 (static)
         #    \-> libc0.1 (shared) ->/
@@ -424,7 +451,7 @@ class TestDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == 'Unresolved reference'
+        assert deps_graph.error == 'Version conflict in graph'
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -452,7 +479,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == 'Unresolved reference'
+        assert deps_graph.error == 'Version conflict in graph'
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -495,7 +522,7 @@ class TestDiamond(GraphManagerTest):
         liba2 = libc.dependencies[0].dst
 
         assert liba1 is not liba2
-        assert deps_graph.error == 'Unresolved reference'
+        assert deps_graph.error == 'Version conflict in graph'
         assert libd.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
 
         self._check_node(app, "app/0.1", deps=[libd])
