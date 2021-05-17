@@ -148,6 +148,10 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
+class ConanNonBuildableConfiguration(ConanExceptionInUserConanfileMethod):
+    pass
+
+
 class ConanMigrationError(ConanException):
     pass
 

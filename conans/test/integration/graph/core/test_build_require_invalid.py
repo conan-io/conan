@@ -1,4 +1,3 @@
-import os
 import textwrap
 
 import pytest
@@ -58,7 +57,7 @@ def setup_client_with_build_requires():
         """)
     conanfile_validate_remove_build_type = textwrap.dedent("""
         from conans import ConanFile
-        from conans.errors import ConanInvalidConfiguration
+        from conans.errors import ConanNonBuildableConfiguration
 
         class Conan(ConanFile):
             name = "br"
@@ -67,7 +66,7 @@ def setup_client_with_build_requires():
 
             def validate(self):
                 if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
+                    raise ConanNonBuildableConfiguration("br cannot be built in debug mode")
 
             def package_id(self):
                 del self.info.settings.compiler
@@ -191,27 +190,34 @@ def setup_client_with_build_requires():
 
 def test_create_invalid_validate(setup_client_with_build_requires):
     client = setup_client_with_build_requires
-    client.run("create br_validate.py")
+    client.run("create br_validate.py")  # In Release mode, it works
     client.run("create consumer.py -s build_type=Debug", assert_error=True)
+    # Expected, we are telling the br to use Debug mode
+    assert "br/1.0.0: Invalid ID: br cannot be built in debug mode" in client.out
 
 
 def test_create_invalid_configure(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_configure.py")
     client.run("create consumer.py -s build_type=Debug", assert_error=True)
+    # Expected, we are telling the br to use Debug mode
+    assert "ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode" in client.out
 
 
 def test_create_invalid_build(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_build.py")
     client.run("create consumer.py -s build_type=Debug", assert_error=True)
+    assert "ERROR: Missing binary: br/1.0.0" in client.out
+    client.run("create consumer.py -s build_type=Debug --build", assert_error=True)
+    assert "ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode" in client.out
 
 
 def test_create_validate_remove_build_type(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate_remove_build_type.py")
     # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
+    client.run("create consumer.py -s build_type=Debug")
 
 
 def test_create_configure_remove_build_type(setup_client_with_build_requires):
@@ -275,7 +281,7 @@ def test_create_validate_remove_build_type_two_profiles(setup_client_with_build_
     client.run("create br_validate_remove_build_type.py")
     # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
     client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default", assert_error=True)
+               "-s:h build_type=Debug -pr:h default")
 
 
 def test_create_configure_remove_build_type_two_profiles(setup_client_with_build_requires):

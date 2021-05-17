@@ -4,7 +4,7 @@ from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLO
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
                                        BINARY_INVALID)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException, ConanInvalidConfiguration
+    ConanException, ConanInvalidConfiguration, ConanNonBuildableConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -357,6 +357,8 @@ class GraphBinariesAnalyzer(object):
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = str(e)
+                except ConanNonBuildableConfiguration as e:
+                    conanfile._conan_not_buildable = str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
@@ -387,6 +389,8 @@ class GraphBinariesAnalyzer(object):
                 build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
+            if node.binary == BINARY_BUILD and getattr(node.conanfile, "_conan_not_buildable", None):
+                node.binary = BINARY_INVALID
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
