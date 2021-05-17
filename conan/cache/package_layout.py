@@ -76,3 +76,6 @@ class PackageLayout:
         readed_manifest = FileTreeManifest.load(package_folder)
         expected_manifest = FileTreeManifest.create(package_folder)
         return readed_manifest, expected_manifest
+
+    def get_remote(self):
+        return self._cache.get_remote(self._pref)

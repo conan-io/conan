@@ -1232,15 +1232,13 @@ class ConanAPIV1(object):
         if pref.revision:
             raise ConanException("Cannot list the revisions of a specific package revision")
 
+        # TODO: cache2.0 we get the latest package revision for the recipe revision and package id
+        pkg_revs = self.app.cache.get_package_revisions(pref, only_latest_prev=True)
+        pkg_rev = pkg_revs[0] if pkg_revs else None
         if not remote_name:
-            layout = self.app.cache.package_layout(pref.ref)
-            try:
-                rev = layout.package_revision(pref)
-            except (RecipeNotFoundException, PackageNotFoundException) as e:
-                raise e
-
             # Check the time in the associated remote if any
-            remote_name = layout.load_metadata().recipe.remote
+            pkg_layout = self.app.cache.pkg_layout(pkg_rev)
+            remote_name = pkg_layout.get_remote()
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:
@@ -1252,9 +1250,9 @@ class ConanAPIV1(object):
                     rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(rev)
+                    rev_time = tmp.get(pkg_rev.revision)
 
-            return [{"revision": rev, "time": rev_time}]
+            return [{"revision": pkg_rev.revision, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self.app.remote_manager.get_package_revisions(pref, remote=remote)

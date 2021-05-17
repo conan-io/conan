@@ -80,11 +80,16 @@ class _UploadCollecter(object):
         refs_by_remote = defaultdict(list)
 
         for ref in refs:
+            # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
+            #  that we want to upload, check if  we should move this to other place
+            # get the latest revision for the reference
+            refs = self._cache.get_recipe_revisions(ref, only_latest_rrev=True)
+            ref = refs[0] if refs else None
             remote = remotes.selected
             if remote:
                 ref_remote = remote
             else:
-                ref_remote = self._cache.reference_layout(ref).get_remote()
+                ref_remote = self._cache.ref_layout(ref).get_remote()
                 ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
@@ -556,7 +561,6 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        pkg_layout = self._cache.pkg_layout(pref)
         ref_layout = self._cache.ref_layout(pref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
