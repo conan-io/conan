@@ -84,13 +84,14 @@ class ConanProxy(object):
             status = RECIPE_NOT_IN_REMOTE
             return conanfile_path, status, selected_remote, ref
 
-        read_manifest = layout.recipe_manifest()
+        read_manifest = recipe_layout.recipe_manifest()
+        # TODO: cache2.0 check this for 2.0
         if upstream_manifest != read_manifest:
             if upstream_manifest.time > read_manifest.time:
                 if update:
-                    DiskRemover().remove_recipe(layout, output=output)
+                    DiskRemover().remove_recipe(recipe_layout, output=output)
                     output.info("Retrieving from remote '%s'..." % selected_remote.name)
-                    self._download_recipe(layout, ref, output, remotes, selected_remote, recorder)
+                    self._download_recipe(recipe_layout, ref, output, remotes, selected_remote, recorder)
                     status = RECIPE_UPDATED
                     return conanfile_path, status, selected_remote, ref
                 else:
