@@ -1,8 +1,7 @@
-import os
+from os.path import join
 
 from conan.tools.meson import MesonToolchain
 from conans.client.tools.oss import cross_building
-
 
 def ninja_jobs_cmd_line_arg(conanfile):
     njobs = conanfile.conf["tools.ninja:jobs"] or \
@@ -20,23 +19,24 @@ class Meson(object):
     def _build_dir(self):
         build = self._conanfile.build_folder
         if self._build_folder:
-            build = os.path.join(self._conanfile.build_folder, self._build_folder)
+            build = join(self._conanfile.build_folder, self._build_folder)
         return build
 
     def configure(self, source_folder=None):
         source = self._conanfile.source_folder
         if source_folder:
-            source = os.path.join(self._conanfile.source_folder, source_folder)
+            source = join(self._conanfile.source_folder, source_folder)
 
         cmd = "meson setup"
+        gen_folder = self._conanfile.generators_folder
         if cross_building(self._conanfile):
-            cmd += ' --cross-file "{}"'.format(os.path.join(self._conanfile.install_folder, MesonToolchain.cross_filename))
+            cmd += ' --cross-file "{}"'.format(join(gen_folder, MesonToolchain.cross_filename))
         else:
-            cmd += ' --native-file "{}"'.format(os.path.join(self._conanfile.install_folder, MesonToolchain.native_filename))
+            cmd += ' --native-file "{}"'.format(join(gen_folder, MesonToolchain.native_filename))
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        vcvars = join(gen_folder, "conanvcvars")
         self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
 
     def build(self, target=None):
@@ -46,18 +46,18 @@ class Meson(object):
             cmd += " {}".format(njobs)
         if target:
             cmd += " {}".format(target)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        vcvars = join(self._conanfile.generators_folder, "conanvcvars")
         self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
 
     def install(self):
         cmd = 'meson install -C "{}"'.format(self._build_dir)
         # TODO: Do we need vcvars for install?
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        vcvars = join(self._conanfile.generators_folder, "conanvcvars")
         self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
 
     def test(self):
         cmd = 'meson test -v -C "{}"'.format(self._build_dir)
         # TODO: Do we need vcvars for test?
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
+        vcvars = join(self._conanfile.generators_folder, "conanvcvars")
         # TODO: This should use conanrunenv, but what if meson itself is a build-require?
         self._conanfile.run(cmd, env=["conanbuildenv", "conanrunenv", vcvars])

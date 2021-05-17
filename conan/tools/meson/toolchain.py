@@ -178,7 +178,7 @@ class MesonToolchain(object):
             "cpp_args": self._none_if_empty(self._env.get("CPPFLAGS", '') +
                                             self._env.get("CXXFLAGS", '')),
             "cpp_link_args": self._env.get("LDFLAGS", None),
-            "pkg_config_path": "'%s'" % os.getcwd()
+            "pkg_config_path": "'%s'" % self._conanfile.install_folder
         }
         return context
 
