@@ -44,6 +44,7 @@ def test_transitive_multi(client):
 
         [generators]
         CMakeDeps
+        CMakeToolchain
         """)
     example_cpp = gen_function_cpp(name="main", includes=["libb", "liba"],
                                    preprocessor=["MYVARliba", "MYVARlibb"])
@@ -62,7 +63,7 @@ def test_transitive_multi(client):
 
         if platform.system() == "Windows":
             client.run_command('cmake .. -G "Visual Studio 15 Win64" '
-                               '-DCMAKE_PREFIX_PATH="{}"'.format(client.current_folder))
+                               '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
@@ -78,7 +79,7 @@ def test_transitive_multi(client):
         else:
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
+                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
                 client.run_command('cmake --build . --clean-first')
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
