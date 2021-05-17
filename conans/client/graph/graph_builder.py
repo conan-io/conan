@@ -200,7 +200,7 @@ class DepsGraphBuilder(object):
                 print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
                 # TODO: resolve the override, version ranges, etc
                 # FIXME: Why this fails if require.ref = prev_require.ref???
-                require = prev_require # .ref = prev_require.ref if prev_node is None else node.ref
+                require.ref = prev_require.ref if prev_node is None else prev_node.ref
             else:
                 print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
                 version_range = require.version_range
