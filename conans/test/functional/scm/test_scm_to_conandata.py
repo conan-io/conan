@@ -227,10 +227,21 @@ def test_auto_can_be_automated():
     _check(t)
 
     # Now try from another folder, doing a copy and using the env-vars
-    t = TestClient()
+    t = TestClient(default_server_user=True)
     t.run("config set general.scm_to_conandata=1")
     t.save({"conanfile.py": conanfile})
     with environment_append({"USER_EXTERNAL_URL": "https://myrepo.com.git",
                              "USER_EXTERNAL_COMMIT": commit}):
         t.run("export . pkg/1.0@")
     _check(t)
+
+    t.run("upload * -c")
+    t.run("remove * -f")
+    t.run("install pkg/1.0@ --build", assert_error=True)
+    assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out
+
+    with environment_append({"USER_EXTERNAL_URL": "https://other.different.url",
+                             "USER_EXTERNAL_COMMIT": "invalid commit"}):
+        t.run("install pkg/1.0@ --build", assert_error=True)
+        print(t.out)
+        assert "pkg/1.0: SCM: Getting sources from url: 'https://myrepo.com.git'" in t.out
