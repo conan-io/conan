@@ -10,7 +10,8 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.file_copier import report_copied_files
 from conans.client.generators import TXTGenerator, write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
-    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
+    BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
+    BINARY_UNBUILDABLE
 from conans.client.importer import remove_imports, run_imports
 from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING, \
@@ -323,7 +324,7 @@ class BinaryInstaller(object):
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
-                elif node.binary == BINARY_INVALID:
+                elif node.binary in (BINARY_INVALID, BINARY_UNBUILDABLE):
                     invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)
@@ -422,7 +423,8 @@ class BinaryInstaller(object):
         if invalid:
             msg = ["There are invalid packages (packages that cannot exist for this configuration):"]
             for node in invalid:
-                msg.append("{}: Invalid ID: {}".format(node.conanfile, node.conanfile.info.invalid))
+                binary, reason = node.conanfile.info.invalid
+                msg.append("{}: {} ID: {}".format(node.conanfile, binary, reason))
             raise ConanInvalidConfiguration("\n".join(msg))
         self._raise_missing(missing)
         processed_package_refs = {}

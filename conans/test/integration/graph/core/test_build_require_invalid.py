@@ -57,7 +57,7 @@ def setup_client_with_build_requires():
         """)
     conanfile_validate_remove_build_type = textwrap.dedent("""
         from conans import ConanFile
-        from conans.errors import ConanNonBuildableConfiguration
+        from conans.errors import ConanUnbuildableConfiguration
 
         class Conan(ConanFile):
             name = "br"
@@ -66,7 +66,7 @@ def setup_client_with_build_requires():
 
             def validate(self):
                 if self.settings.build_type == "Debug":
-                    raise ConanNonBuildableConfiguration("br cannot be built in debug mode")
+                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
 
             def package_id(self):
                 del self.info.settings.compiler

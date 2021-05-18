@@ -2,9 +2,9 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
-                                       BINARY_INVALID)
+                                       BINARY_INVALID, BINARY_UNBUILDABLE)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException, ConanInvalidConfiguration, ConanNonBuildableConfiguration
+    ConanException, ConanInvalidConfiguration, ConanUnbuildableConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -208,6 +208,10 @@ class GraphBinariesAnalyzer(object):
                 # package_id was not locked, this means a base lockfile that is being completed
                 locked.complete_base_node(node.package_id, node.prev)
 
+        if (node.binary == BINARY_BUILD and node.conanfile.info.invalid and
+                node.conanfile.info.invalid[0] == BINARY_UNBUILDABLE):
+            node.binary = BINARY_UNBUILDABLE
+
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):
@@ -356,9 +360,9 @@ class GraphBinariesAnalyzer(object):
                 try:
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
-                    conanfile.info.invalid = str(e)
-                except ConanNonBuildableConfiguration as e:
-                    conanfile._conan_not_buildable = str(e)
+                    conanfile.info.invalid = BINARY_INVALID, str(e)
+                except ConanUnbuildableConfiguration as e:
+                    conanfile.info.invalid = BINARY_UNBUILDABLE, str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
@@ -389,8 +393,6 @@ class GraphBinariesAnalyzer(object):
                 build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-            if node.binary == BINARY_BUILD and getattr(node.conanfile, "_conan_not_buildable", None):
-                node.binary = BINARY_INVALID
         deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
