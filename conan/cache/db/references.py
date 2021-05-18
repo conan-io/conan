@@ -1,6 +1,7 @@
 import sqlite3
 import time
 from collections import namedtuple
+from io import StringIO
 from typing import List, Iterator
 
 from conan.cache.db.table import BaseDbTable
@@ -27,6 +28,17 @@ class ReferencesDbTable(BaseDbTable):
 
     class AlreadyExist(ConanException):
         pass
+
+    def _as_dict(self, row: namedtuple):
+        return {
+            "reference": row.reference,
+            "rrev": row.rrev,
+            "pkgid": row.pkgid,
+            "prev": row.prev,
+            "path": row.path,
+            "timestamp": row.timestamp,
+            "remote": row.remote
+        }
 
     def _as_ref(self, row: namedtuple):
         if row.prev:
@@ -209,8 +221,9 @@ class ReferencesDbTable(BaseDbTable):
 
     def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False) -> List[
         ConanFileReference]:
+
+        check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
-            check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
                     f'{self.columns.pkgid}, ' \
@@ -226,14 +239,14 @@ class ReferencesDbTable(BaseDbTable):
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
-                    f'AND {self.columns.reference} = "{ref.reference}" ' \
+                    f'WHERE {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.prev} IS NULL ' \
+                    f'{check_rrev} ' \
                     f'AND {self.columns.pkgid} IS NULL '
 
         r = conn.execute(query)
         for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
+            yield self._as_dict(self.row_type(*row))
 
     def get_pkgids(self, conn: sqlite3.Cursor, ref, only_latest_prev=False) -> List[
         PackageReference]:

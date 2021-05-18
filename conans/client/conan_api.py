@@ -63,6 +63,7 @@ from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.util.conan_v2_mode import conan_v2_error
+from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
@@ -1197,29 +1198,21 @@ class ConanAPIV1(object):
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
 
+        # TODO: cache2.0 in 1.X we checked for the remote associated with the reference
+        #  then if we had a remote there we listed all the revisions associated with that remote
+        #  check which behaviour we want here, for the moment just listing the revisions in the
+        #  local cache an forgetting about remotes if no remote is specified
         if not remote_name:
-            layout = self.app.cache.package_layout(ref)
-            try:
-                rev = layout.recipe_revision()
-            except RecipeNotFoundException as e:
-                raise e
-
-            # Check the time in the associated remote if any
-            remote_name = layout.load_metadata().recipe.remote
-            remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
-            rev_time = None
-            if remote:
-                try:
-                    revisions = self.app.remote_manager.get_recipe_revisions(ref, remote)
-                except RecipeNotFoundException:
-                    pass
-                except NotFoundException:
-                    rev_time = None
-                else:
-                    tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(rev)
-
-            return [{"revision": rev, "time": rev_time}]
+            rrevs = self.app.cache.get_recipe_revisions(ref)
+            # TODO: cache2.0 fix this, just adapting the return value for the moment
+            ret = []
+            for rev in rrevs:
+                rev_dict = {
+                    "revision": rev["rrev"],
+                    "time": from_timestamp_to_iso8601(rev["timestamp"])
+                }
+                ret.append(rev_dict)
+            return ret
         else:
             remote = self.get_remote_by_name(remote_name)
             return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)

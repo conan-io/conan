@@ -1265,7 +1265,7 @@ class Test(ConanFile):
 
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
 
         # test that the pattern search with --revisions enabled works
         client.run("search li* --revisions")
