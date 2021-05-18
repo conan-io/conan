@@ -146,7 +146,7 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
-        compiler = self._conanfile.settings.compiler
+        compiler = self._conanfile.settings.get_safe("compiler")
         lib = glib = None
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
@@ -564,7 +564,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
-        self.generator = generator or self._get_generator()
+        self.generator = self._get_generator(generator)
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
@@ -617,10 +617,20 @@ class CMakeToolchain(object):
         if self.generator is not None:
             save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps({"cmake_generator": self.generator}))
 
-    def _get_generator(self):
+    def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
         conanfile = self._conanfile
 
+        # Downstream consumer always higher priority
+        generator_conf = conanfile.conf["tools.cmake.cmaketoolchain:generator"]
+        if generator_conf:
+            return generator_conf
+
+        # second priority: the recipe one:
+        if recipe_generator:
+            return recipe_generator
+
+        # if not defined, deduce automatically the default one
         compiler = conanfile.settings.get_safe("compiler")
         compiler_version = conanfile.settings.get_safe("compiler.version")
 
