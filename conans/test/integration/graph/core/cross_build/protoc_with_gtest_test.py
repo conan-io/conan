@@ -38,44 +38,6 @@ class ProtocWithGTestExample(ClassicProtocExampleBase):
         self._cache_recipe(self.gtest_ref, self.gtest)
         self._cache_recipe(self.app_ref, self.application)
 
-    def test_not_crossbuilding(self):
-        """ Build_requires uses 'force_host_context=False', but no profile for build_machine """
-        profile_host = Profile()
-        profile_host.settings["os"] = "Host"
-        profile_host.process_settings(self.cache)
-
-        try:
-            deps_graph = self._build_graph(profile_host=profile_host, profile_build=None, install=True)
-        except Exception as e:
-            self.fail("ERROR! Although the recipe specifies 'force_host_context=False', as we"
-                      " are not providing a profile for the build_machine, the context will be"
-                      " host for this build_require.\n Exception has been: {}".format(e))
-        else:
-            # Check packages (all are HOST packages)
-            application = deps_graph.root.dependencies[0].dst
-            self.assertEqual(len(application.dependencies), 3)
-            self.assertEqual(application.conanfile.name, "app")
-            self.assertEqual(application.context, CONTEXT_HOST)
-            self.assertEqual(application.conanfile.settings.os, profile_host.settings['os'])
-
-            protobuf_host = application.dependencies[0].dst
-            self.assertEqual(protobuf_host.conanfile.name, "protobuf")
-            self.assertEqual(protobuf_host.context, CONTEXT_HOST)
-            self.assertEqual(protobuf_host.conanfile.settings.os, profile_host.settings['os'])
-
-            protoc_host = application.dependencies[1].dst
-            self.assertEqual(protoc_host.conanfile.name, "protoc")
-            self.assertEqual(protoc_host.context, CONTEXT_HOST)
-            self.assertEqual(protoc_host.conanfile.settings.os, profile_host.settings['os'])
-
-            protoc_protobuf_host = protoc_host.dependencies[0].dst
-            self.assertEqual(protoc_protobuf_host, protobuf_host)
-
-            gtest_host = application.dependencies[2].dst
-            self.assertEqual(gtest_host.conanfile.name, "gtest")
-            self.assertEqual(gtest_host.context, CONTEXT_HOST)
-            self.assertEqual(gtest_host.conanfile.settings.os, profile_host.settings['os'])
-
     def test_crossbuilding(self):
         profile_host = Profile()
         profile_host.settings["os"] = "Host"

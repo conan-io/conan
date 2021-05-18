@@ -57,6 +57,7 @@ int main(){
 """
 
 
+@pytest.mark.xfail(reason="It is not possible to inject a host-build_require from profiles")
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 class BuildRequiresTest(unittest.TestCase):
@@ -82,7 +83,7 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertNotIn("Test0/0.1@lasote/stable", client.out)
         self.assertNotIn("Test1/0.1@lasote/stable", client.out)
 
-        client.run("install MyLib/0.1@lasote/stable -pr=./profile.txt --build")
+        client.run("install MyLib/0.1@lasote/stable -pr:h=./profile.txt -pr:b=./profile.txt --build")
         self.assertIn("MyLib/0.1@lasote/stable: Generating the package", client.out)
         self.assertIn("Test0/0.1@lasote/stable", client.out)
         self.assertIn("Test1/0.1@lasote/stable", client.out)

@@ -91,7 +91,7 @@ def check_valid_ref(reference, strict_mode=True):
 class ConanName(object):
     _max_chars = 51
     _min_chars = 2
-    _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
+    _validation_pattern = re.compile(r"^[a-zA-Z0-9_][a-zA-Z0-9_+.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars - 1))
 
     _validation_revision_pattern = re.compile("^[a-zA-Z0-9]{1,%s}$" % _max_chars)

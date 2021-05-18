@@ -1,8 +1,6 @@
 import traceback
 from os.path import join
 
-from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
-from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException, conanfile_exception_formatter
@@ -10,14 +8,11 @@ from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
 from .b2 import B2Generator
 from .cmake import CMakeGenerator
-from .cmake_multi import CMakeMultiGenerator
 from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
-from .make import MakeGenerator
 from .markdown import MarkdownGenerator
 from .premake import PremakeGenerator
-from .qbs import QbsGenerator
 from .qmake import QmakeGenerator
 from .scons import SConsGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
@@ -33,12 +28,8 @@ class GeneratorManager(object):
     def __init__(self):
         self._generators = {"compiler_args": CompilerArgsGenerator,
                             "cmake": CMakeGenerator,
-                            "cmake_multi": CMakeMultiGenerator,
                             "cmake_paths": CMakePathsGenerator,
-                            "cmake_find_package": CMakeFindPackageGenerator,
-                            "cmake_find_package_multi": CMakeFindPackageMultiGenerator,
                             "qmake": QmakeGenerator,
-                            "qbs": QbsGenerator,
                             "scons": SConsGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
@@ -50,7 +41,6 @@ class GeneratorManager(object):
                             "json": JsonGenerator,
                             "b2": B2Generator,
                             "premake": PremakeGenerator,
-                            "make": MakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
@@ -112,7 +102,7 @@ class GeneratorManager(object):
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
 
-    def write_generators(self, conanfile, path, output):
+    def write_generators(self, conanfile, old_gen_folder, new_gen_folder, output):
         """ produces auxiliary files, required to build a project or a package.
         """
         for generator_name in set(conanfile.generators):
@@ -121,9 +111,8 @@ class GeneratorManager(object):
                 try:
                     generator = generator_class(conanfile)
                     output.highlight("Generator '{}' calling 'generate()'".format(generator_name))
-                    generator.output_path = path
-                    mkdir(path)
-                    with chdir(path):
+                    mkdir(new_gen_folder)
+                    with chdir(new_gen_folder):
                         generator.generate()
                     continue
                 except Exception as e:
@@ -144,7 +133,7 @@ class GeneratorManager(object):
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
             try:
-                generator.output_path = path
+                generator.output_path = old_gen_folder
                 content = generator.content
                 if isinstance(content, dict):
                     if generator.filename:
@@ -154,11 +143,11 @@ class GeneratorManager(object):
                         if generator.normalize:  # To not break existing behavior, to be removed 2.0
                             v = normalize(v)
                         output.info("Generator %s created %s" % (generator_name, k))
-                        save(join(path, k), v, only_if_modified=True)
+                        save(join(old_gen_folder, k), v, only_if_modified=True)
                 else:
                     content = normalize(content)
                     output.info("Generator %s created %s" % (generator_name, generator.filename))
-                    save(join(path, generator.filename), content, only_if_modified=True)
+                    save(join(old_gen_folder, generator.filename), content, only_if_modified=True)
             except Exception as e:
                 if get_env("CONAN_VERBOSE_TRACEBACK", False):
                     output.error(traceback.format_exc())
@@ -185,7 +174,7 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv"].auto_use and conanfile.virtualenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualenv import VirtualEnv
             env = VirtualEnv(conanfile)

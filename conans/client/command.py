@@ -1705,48 +1705,6 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
-    def workspace(self, *args):
-        """
-        Manages a workspace (a set of packages consumed from the user workspace that
-        belongs to the same project).
-
-        Use this command to manage a Conan workspace, use the subcommand 'install' to
-        create the workspace from a file.
-        """
-        parser = argparse.ArgumentParser(description=self.workspace.__doc__,
-                                         prog="conan workspace",
-                                         formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
-        subparsers.required = True
-
-        install_parser = subparsers.add_parser('install',
-                                               help='same as a "conan install" command'
-                                                    ' but using the workspace data from the file. '
-                                                    'If no file is provided, it will look for a '
-                                                    'file named "conanws.yml"')
-        install_parser.add_argument('path', help='path to workspace definition file (it will look'
-                                                 ' for a "conanws.yml" inside if a directory is'
-                                                 ' given)')
-        _add_common_install_arguments(install_parser,
-                                      build_help=_help_build_policies.format("never"))
-        install_parser.add_argument("-if", "--install-folder", action=OnceArgument,
-                                    help="Folder where the workspace files will be created"
-                                         " (default to current working directory)")
-
-        args = parser.parse_args(*args)
-        if args.lockfile_out and not args.lockfile:
-            raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
-
-        profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
-
-        if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings_host, args.options_host,
-                                          args.env_host, args.remote, args.build,
-                                          args.profile_host, args.update,
-                                          profile_build=profile_build,
-                                          install_folder=args.install_folder)
-
     def editable(self, *args):
         """
         Manages editable packages (packages that reside in the user workspace, but
@@ -1934,7 +1892,7 @@ class Command(object):
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
-                ("Package development commands", ("source", "build", "editable", "workspace")),
+                ("Package development commands", ("source", "build", "editable")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download", "inspect", "help", "lock", "frogarian"))]
 

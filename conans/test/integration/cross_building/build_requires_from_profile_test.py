@@ -121,7 +121,7 @@ class BuildRequiresContextHostFromProfileTest(unittest.TestCase):
         t.run("create mytoolchain.py --profile=profile_host")
 
         # old way, the toolchain will have the same profile (profile_host=Linux) only
-        t.run("create gtest.py --profile=profile_host")
+        t.run("create gtest.py --profile:host=profile_host --profile:build=profile_host")
         self.assertIn("gtest/1.0: Building with: MYTOOLCHAIN_VALUE-Linux", t.out)
         self.assertIn("gtest/1.0: Build OS=Linux", t.out)
 
@@ -226,8 +226,8 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                 'creator.py': self.toolchain_creator,
                 'mytoolchain.py': self.toolchain,
                 "gtest.py": self.gtest})
-        t.run("create creator.py --profile=profile_build")
-        t.run("create mytoolchain.py --profile=profile_build")
+        t.run("create creator.py --profile=profile_build -pr:b=profile_build")
+        t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
         self.assertIn("mytoolchain/1.0: Building with: MYCREATOR_VALUE-Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
 
@@ -262,7 +262,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
                     self.env_info.MYTOOLCHAIN_VAR = "MYTOOLCHAIN_VALUE-" + str(self.settings.os)
             """)
         t.save({'mytoolchain.py': toolchain})
-        t.run("create mytoolchain.py --profile=profile_build")
+        t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
         self.assertIn("mytoolchain/1.0: Building with: MYCREATOR_VALUE-Windows", t.out)
         self.assertIn("mytoolchain/1.0: Build OS=Windows", t.out)
 

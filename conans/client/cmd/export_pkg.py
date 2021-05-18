@@ -51,9 +51,10 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
 
     dest_package_folder = layout.package()
     conanfile.develop = True
-    conanfile.layout.set_base_build_folder(build_folder)
-    conanfile.layout.set_base_source_folder(source_folder)
-    conanfile.layout.set_base_package_folder(dest_package_folder)
+
+    conanfile.folders.set_base_build(build_folder)
+    conanfile.folders.set_base_source(source_folder)
+    conanfile.folders.set_base_package(dest_package_folder)
 
     # TODO: cache2.0 check dirty management locks
     #with layout.set_dirty_context_manager(pref):

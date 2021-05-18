@@ -1,8 +1,10 @@
+import pytest
 
 from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 
 
+@pytest.mark.xfail(reason="The new build_requires scope make alias not conflict")
 class AliasTest(GraphManagerTest):
 
     def test_non_conflicting_alias(self):

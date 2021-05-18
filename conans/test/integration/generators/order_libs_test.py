@@ -11,62 +11,6 @@ class OrderLibsTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
-    def test_private_order(self):
-        # https://github.com/conan-io/conan/issues/3006
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class LibBConan(ConanFile):
-    def package_info(self):
-        self.cpp_info.libs = ["LibC"]
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . LibC/0.1@user/channel")
-
-        conanfile = """from conans import ConanFile
-class LibCConan(ConanFile):
-    requires = "LibC/0.1@user/channel"
-    def package_info(self):
-        self.cpp_info.libs = ["LibB"]
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . LibB/0.1@user/channel")
-
-        conanfile = """from conans import ConanFile
-class LibCConan(ConanFile):
-    requires = [("LibB/0.1@user/channel", "private"), "LibC/0.1@user/channel"]
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install . -g cmake")
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
-        # Change private
-        conanfile = """from conans import ConanFile
-class LibCConan(ConanFile):
-    requires = "LibB/0.1@user/channel", ("LibC/0.1@user/channel", "private")
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install . -g cmake")
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
-        # Change order
-        conanfile = """from conans import ConanFile
-class LibCConan(ConanFile):
-    requires = ("LibC/0.1@user/channel", "private"), "LibB/0.1@user/channel"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install . -g cmake")
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
-        # Change order
-        conanfile = """from conans import ConanFile
-class LibCConan(ConanFile):
-    requires = "LibC/0.1@user/channel", ("LibB/0.1@user/channel", "private")
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install . -g cmake")
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        self.assertIn("set(CONAN_LIBS LibB LibC ${CONAN_LIBS})", conanbuildinfo)
-
     def _export(self, name, deps=None, export=True):
         def _libs():
             if name == "LibPNG":

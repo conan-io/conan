@@ -29,6 +29,9 @@ def _get_test_conanfile_path(tf, conanfile_path):
 def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
            test_build_folder, test_folder, conanfile_path, recorder):
     assert isinstance(ref, ConanFileReference), "ref needed"
+    assert profile_host is not None
+    assert profile_build is not None
+
     test_conanfile_path = _get_test_conanfile_path(test_folder, conanfile_path)
 
     if test_conanfile_path:
@@ -41,7 +44,8 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
             deps_install(app=app,
                          ref_or_path=ref,
                          create_reference=ref,
-                         install_folder=None,  # Not output anything
+                         install_folder=None,  # Not output conaninfo etc
+                         base_folder=None,  # Not output generators
                          remotes=remotes,
                          profile_host=profile_host,
                          profile_build=profile_build,
@@ -74,7 +78,8 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
         deps_install(app=app,
                      ref_or_path=ref,
                      create_reference=ref,
-                     install_folder=None,  # Not output anything
+                     install_folder=None,  # Not output infos etc
+                     base_folder=None,  # Not output generators
                      remotes=remotes,
                      profile_host=profile_host,
                      profile_build=profile_build,
