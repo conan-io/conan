@@ -1,6 +1,8 @@
 import jinja2
 from jinja2 import Template
 
+from conans.errors import ConanException
+
 
 class CMakeDepsFileTemplate(object):
 
@@ -10,6 +12,8 @@ class CMakeDepsFileTemplate(object):
             self.pkg_name = req.ref.name
             self.package_folder = req.package_folder.\
                 replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+            self.target_namespace = get_target_namespace(self.conanfile)
+            self.file_name = get_file_name(self.conanfile)
         self.configuration = configuration
 
     def render(self):
@@ -34,13 +38,36 @@ class CMakeDepsFileTemplate(object):
     def config_suffix(self):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
-    def get_dependency_names(self):
-        """Get a list of the targets file names (not alias) required by req"""
-        ret = []
-        if self.conanfile.new_cpp_info.required_components:
-            for dep_name, _ in self.conanfile.new_cpp_info.required_components:
-                if dep_name and dep_name not in ret:  # External dep
-                    ret.append(dep_name)
-        elif self.conanfile.dependencies.host_requires:
-            ret = [r.ref.name for r in self.conanfile.dependencies.host_requires]
-        return ret
+    def get_target_namespace(self):
+        return get_target_namespace(self.conanfile)
+
+    def get_file_name(self):
+        return get_file_name(self.conanfile)
+
+
+def get_target_namespace(req):
+    ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
+    if not ret:
+        ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
+    return ret or req.ref.name
+
+
+def get_file_name(req):
+    ret = req.new_cpp_info.get_property("cmake_file_name", "CMakeDeps")
+    if not ret:
+        ret = req.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
+    return ret or req.ref.name
+
+
+def get_component_alias(req, comp_name):
+    if comp_name not in req.new_cpp_info.components:
+        # foo::foo might be referencing the root cppinfo
+        if req.ref.name == comp_name:
+            return comp_name
+        raise ConanException("Component '{name}::{cname}' not found in '{name}' "
+                             "package requirement".format(name=req.ref.name, cname=comp_name))
+    ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
+    if not ret:
+        ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
+                                                          default_name=False)
+    return ret or comp_name

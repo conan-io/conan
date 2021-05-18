@@ -565,8 +565,7 @@ class TestComponentsCMakeGenerators:
             find_package(variant)
 
             add_library(middle middle.cpp)
-            # If you have ambiguous renamed targets you better specify the explicit name
-            target_link_libraries(middle expected::expected variant::variant)
+            target_link_libraries(middle nonstd::nonstd)
             """)
         middle_h = gen_function_h(name="middle")
         middle_cpp = gen_function_cpp(name="middle", includes=["middle", "expected", "variant"],
@@ -636,15 +635,6 @@ class TestComponentsCMakeGenerators:
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
         client.run("create . consumer/1.0@")
-
-        assert "Target declared 'middle::middle'" in client.out
-        assert "Target declared 'expected::foo'" in client.out
-        assert "Target ALIAS declared 'nonstd::foo' (from expected::foo)" in client.out
-        assert "Target declared 'expected::expected'" in client.out
-        assert "Target ALIAS declared 'nonstd::nonstd' (from expected::expected)" in client.out
-        assert "Target declared 'variant::foo'" in client.out
-        assert "CMake Warning"
-        assert "Target 'nonstd::foo' already declared! Skipping!" in client.out
 
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out

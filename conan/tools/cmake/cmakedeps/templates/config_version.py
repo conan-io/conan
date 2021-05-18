@@ -12,10 +12,10 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        if self.pkg_name == self.pkg_name.lower():
-            return "{}-config-version.cmake".format(self.pkg_name)
+        if self.file_name == self.file_name.lower():
+            return "{}-config-version.cmake".format(self.file_name)
         else:
-            return "{}ConfigVersion.cmake".format(self.pkg_name)
+            return "{}ConfigVersion.cmake".format(self.file_name)
 
     @property
     def context(self):
@@ -31,8 +31,8 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
             if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
                 set(PACKAGE_VERSION_COMPATIBLE FALSE)
             else()
-                if("{version}" MATCHES "^([0-9]+)\\\\.")
-                    set(CVF_VERSION_MAJOR {{ '${{CMAKE_MATCH_1}}' }})
+                if("{{ version }}" MATCHES "^([0-9]+)\\\\.")
+                    set(CVF_VERSION_MAJOR {{ '${CMAKE_MATCH_1}' }})
                 else()
                     set(CVF_VERSION_MAJOR "{{ version }}")
                 endif()

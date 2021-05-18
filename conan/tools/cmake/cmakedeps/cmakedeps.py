@@ -1,7 +1,6 @@
 import os
 
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
-from conan.tools.cmake.cmakedeps.templates.config_alias import ConfigAliasTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
 from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetConfigurationTemplate
@@ -40,8 +39,8 @@ class CMakeDeps(object):
             data_target = ConfigDataTemplate(req, self.configuration, self.arch)
             ret[data_target.filename] = data_target.render()
 
-            target_config = TargetConfigurationTemplate(req, self.configuration)
-            ret[target_config.filename] = target_config.render()
+            target_configuration = TargetConfigurationTemplate(req, self.configuration)
+            ret[target_configuration.filename] = target_configuration.render()
 
             targets = TargetsTemplate(req)
             ret[targets.filename] = targets.render()
@@ -52,16 +51,4 @@ class CMakeDeps(object):
             # file is common for the different configurations.
             if not os.path.exists(config.filename):
                 ret[config.filename] = config.render()
-                # Generate the file also for the ALIAS
-                if self.get_file_rename(req) != req.ref.name:
-                    config_alias = ConfigAliasTemplate(req, self.configuration,
-                                                       alias_name=self.get_file_rename(req))
-                    ret[config_alias.filename] = config_alias.render()
-
         return ret
-
-    def get_file_rename(self, req):
-        ret = req.new_cpp_info.get_property("cmake_file_name", "CMakeDeps")
-        if not ret:
-            ret = req.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
-        return ret or req.ref.name

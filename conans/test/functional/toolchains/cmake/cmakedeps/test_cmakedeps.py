@@ -1,8 +1,10 @@
+import os
 import platform
 import textwrap
 
 import pytest
 
+from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
@@ -77,10 +79,14 @@ def test_transitive_multi(client):
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
         else:
+            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
+            replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
+                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
                                    '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
                 client.run_command('cmake --build . --clean-first')
+
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
                 assert "MYVARliba: {}".format(bt) in client.out

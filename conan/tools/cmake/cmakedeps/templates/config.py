@@ -14,14 +14,15 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        if self.pkg_name == self.pkg_name.lower():
-            return "{}-config.cmake".format(self.pkg_name)
+        if self.file_name == self.file_name.lower():
+            return "{}-config.cmake".format(self.file_name)
         else:
-            return "{}Config.cmake".format(self.pkg_name)
+            return "{}Config.cmake".format(self.file_name)
 
     @property
     def context(self):
-        return {"pkg_name": self.pkg_name,
+        return {"file_name": self.file_name,
+                "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix}
 
     @property
@@ -35,7 +36,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         endif()
 
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
-        include(${CMAKE_CURRENT_LIST_DIR}/{{ pkg_name }}Targets.cmake)
+        include(${CMAKE_CURRENT_LIST_DIR}/{{ file_name }}Targets.cmake)
         include(CMakeFindDependencyMacro)
 
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )

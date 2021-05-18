@@ -1,6 +1,7 @@
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
+    get_file_name, get_target_namespace
 from conan.tools.cmake.cmakedeps.utils import DepsCppCmake
 from conans.errors import ConanException
 
@@ -10,6 +11,7 @@ foo-release-x86_64-data.cmake
 
 """
 
+
 class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     def __init__(self, req, configuration, arch):
@@ -18,7 +20,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "{}-{}".format(self.pkg_name, self.configuration.lower())
+        data_fname = "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
@@ -28,16 +30,16 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     def context(self):
         global_cpp = self.get_global_cpp_cmake()
         components_cpp = self.get_required_components_cpp()
-        components_names = " ".join([comp_findname for comp_findname, _, _ in
-                                     reversed(components_cpp)])
-        dependency_names = self.get_dependency_names()
+        components_renames = " ".join([component_rename for component_rename, _ in
+                                       reversed(components_cpp)])
+        dependency_filenames = self.get_dependency_filenames()
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
                 "package_folder": self.package_folder,
                 "config_suffix": self.config_suffix,
-                "components_names": components_names,
+                "components_renames": components_renames,
                 "components_cpp": components_cpp,
-                "dependency_names": " ".join(dependency_names)}
+                "dependency_filenames": " ".join(dependency_filenames)}
 
     @property
     def template(self):
@@ -46,15 +48,14 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               ########### AGGREGATED COMPONENTS AND DEPENDENCIES FOR THE MULTI CONFIG #####################
               #############################################################################################
 
-              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_names }})
+              set({{ pkg_name }}_COMPONENT_NAMES {{ '${'+ pkg_name }}_COMPONENT_NAMES} {{ components_renames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_COMPONENT_NAMES)
-              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_names }})
+              set({{ pkg_name }}_FIND_DEPENDENCY_NAMES {{ '${'+ pkg_name }}_FIND_DEPENDENCY_NAMES} {{ dependency_filenames }})
               list(REMOVE_DUPLICATES {{ pkg_name }}_FIND_DEPENDENCY_NAMES)
 
               ########### VARIABLES #######################################################################
               #############################################################################################
-
-              set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{  package_folder }}")
+              set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
               set({{ pkg_name }}_INCLUDE_DIRS{{ config_suffix }} {{ global_cpp.include_paths }})
               set({{ pkg_name }}_RES_DIRS{{ config_suffix }} {{ global_cpp.res_paths }})
               set({{ pkg_name }}_DEFINITIONS{{ config_suffix }} {{ global_cpp.defines }})
@@ -71,14 +72,11 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_BUILD_MODULES_PATHS{{ config_suffix }} {{ global_cpp.build_modules_paths }})
               set({{ pkg_name }}_BUILD_DIRS{{ config_suffix }} {{ global_cpp.build_paths }})
 
-              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
+              set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_renames }})
 
-              {%- for comp_name, comp_alias, cpp in components_cpp %}
+              {%- for comp_name, cpp in components_cpp %}
 
               ########### COMPONENT {{ comp_name }} VARIABLES #############################################
-              set({{ pkg_name }}_PACKAGE_FOLDER{{ config_suffix }} "{{ package_folder }}")
-              set({{ pkg_name }}_{{ comp_name }}_ALIAS "{{ comp_alias }}")
-
               set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS{{ config_suffix }} {{ cpp.include_paths }})
               set({{ pkg_name }}_{{ comp_name }}_LIB_DIRS{{ config_suffix }} {{ cpp.lib_paths }})
               set({{ pkg_name }}_{{ comp_name }}_RES_DIRS{{ config_suffix }} {{ cpp.res_paths }})
@@ -112,32 +110,32 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
 
         for comp_name, comp in sorted_comps.items():
-            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.conanfile.ref.name,
-                                                            self.config_suffix)
+            pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
             deps_cpp_cmake = DepsCppCmake(comp, pfolder_var_name)
             public_comp_deps = []
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
-                    public_comp_deps.append("{}::{}".format(pkg, cmp_name))
+                    req = self.conanfile.dependencies.host_requires[pkg]
+                    public_comp_deps.append("{}::{}".format(get_target_namespace(req),
+                                                            get_component_alias(req, cmp_name)))
                 else:  # Points to a component of same package
-                    public_comp_deps.append("{}::{}".format(self.pkg_name, require))
+                    public_comp_deps.append("{}::{}".format(self.target_namespace,
+                                                            get_component_alias(self.conanfile,
+                                                                                 require)))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
-            component_alias = self.get_component_rename(comp_name)
-            ret.append((comp_name, component_alias, deps_cpp_cmake))
+            component_rename = get_component_alias(self.conanfile, comp_name)
+            ret.append((component_rename, deps_cpp_cmake))
         ret.reverse()
         return ret
 
-    def get_component_rename(self, comp_name):
-        if comp_name not in self.conanfile.new_cpp_info.components:
-            if self.conanfile.ref.name == comp_name:  # foo::foo might be referencing the root cppinfo
-                return comp_name
-            raise ConanException("Component '{name}::{cname}' not found in '{name}' "
-                                 "package requirement".format(name=self.conanfile.ref.name,
-                                                              cname=comp_name))
-        ret = self.conanfile.new_cpp_info.components[comp_name].get_property("cmake_target_name",
-                                                                             "CMakeDeps")
-        if not ret:
-            ret = self.conanfile.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
-                                                              default_name=False)
-        return ret or comp_name
+    def get_dependency_filenames(self):
+        ret = []
+        if self.conanfile.new_cpp_info.required_components:
+            for dep_name, _ in self.conanfile.new_cpp_info.required_components:
+                if dep_name and dep_name not in ret:  # External dep
+                    req = self.conanfile.dependencies.host_requires[dep_name]
+                    ret.append(get_file_name(req))
+        elif self.conanfile.dependencies.host_requires:
+            ret = [get_file_name(r) for r in self.conanfile.dependencies.host_requires]
+        return ret

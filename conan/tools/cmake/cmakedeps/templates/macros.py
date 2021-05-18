@@ -86,4 +86,3 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            set(${out_libraries_target} ${_out_libraries_target} PARENT_SCOPE)
        endfunction()
         """)
-
