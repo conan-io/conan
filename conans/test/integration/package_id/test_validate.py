@@ -37,7 +37,7 @@ class TestValidate(unittest.TestCase):
         client.run("info pkg/0.1@ -s os=Windows --json=myjson")
         myjson = json.loads(client.load("myjson"))
         self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
-        self.assertEqual(myjson[0]["id"], 'INVALID')
+        self.assertEqual(myjson[0]["id"], '3475bd55b91ae904ac96fde0f106a136ab951a5e')
 
     def test_validate_compatible(self):
         client = TestClient()
@@ -65,12 +65,12 @@ class TestValidate(unittest.TestCase):
                       client.out)
 
         client.run("create . pkg/0.1@ -s os=Windows")
-        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+        self.assertIn("pkg/0.1: Main binary package '3475bd55b91ae904ac96fde0f106a136ab951a5e' missing. "
                       "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
                       client.out)
         self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
+        self.assertIn("pkg/0.1: Main binary package '3475bd55b91ae904ac96fde0f106a136ab951a5e' missing. "
                       "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
                       client.out)
         self.assertIn("ID: cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
@@ -241,9 +241,9 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
-        self.assertIn("dep/0.1:INVALID - Invalid", client.out)
-        self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
+        self.assertIn("dep/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e - Invalid", client.out)
+        self.assertIn("pkg/0.1:c8f8169f23d1529b3e39d4e5cb1ae030f667e7a9 - Build", client.out)
         self.assertIn("ERROR: There are invalid packages (packages that cannot "
                       "exist for this configuration):", client.out)
         self.assertIn("dep/0.1: Invalid ID: Windows not supported", client.out)
-        self.assertIn("pkg/0.1: Invalid ID: Invalid transitive dependencies", client.out)
+
