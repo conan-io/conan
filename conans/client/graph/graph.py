@@ -22,7 +22,6 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
-BINARY_UNBUILDABLE = "Unbuildable"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"

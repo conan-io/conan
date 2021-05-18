@@ -15,7 +15,6 @@ from conans.util.sha import sha1
 
 PREV_UNKNOWN = "PREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
-PACKAGE_ID_INVALID = "INVALID"
 
 
 class RequirementInfo(object):
@@ -67,8 +66,6 @@ class RequirementInfo(object):
     def sha(self):
         if self.package_id == PACKAGE_ID_UNKNOWN or self.package_revision == PREV_UNKNOWN:
             return None
-        if self.package_id == PACKAGE_ID_INVALID:
-            return PACKAGE_ID_INVALID
         vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
         # This is done later to NOT affect existing package-IDs (before revisions)
         if self.recipe_revision:
@@ -222,8 +219,6 @@ class RequirementsInfo(object):
             s = data[key].sha
             if s is None:
                 return None
-            if s == PACKAGE_ID_INVALID:
-                return PACKAGE_ID_INVALID
             result.append(s)
         return sha1('\n'.join(result).encode())
 
@@ -543,8 +538,6 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        if self.invalid and self.invalid[0] == BINARY_INVALID:
-            return PACKAGE_ID_INVALID
         result = [self.settings.sha]
         # Only are valid requires for OPtions those Non-Dev who are still in requires
         self.options.filter_used(self.requires.pkg_names)
@@ -552,9 +545,6 @@ class ConanInfo(object):
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
-        if requires_sha == PACKAGE_ID_INVALID:
-            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
-            return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)

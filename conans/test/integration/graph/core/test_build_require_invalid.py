@@ -57,7 +57,7 @@ def setup_client_with_build_requires():
         """)
     conanfile_validate_remove_build_type = textwrap.dedent("""
         from conans import ConanFile
-        from conans.errors import ConanUnbuildableConfiguration
+        from conans.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             name = "br"
@@ -66,7 +66,7 @@ def setup_client_with_build_requires():
 
             def validate(self):
                 if self.settings.build_type == "Debug":
-                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
+                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
 
             def package_id(self):
                 del self.info.settings.compiler
@@ -128,7 +128,7 @@ def setup_client_with_build_requires():
             """)
     conanfile_validate_compatible_unbuildable = textwrap.dedent("""
         from conans import ConanFile
-        from conans.errors import ConanUnbuildableConfiguration
+        from conans.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
             name = "br"
@@ -137,7 +137,7 @@ def setup_client_with_build_requires():
 
             def validate(self):
                 if self.settings.build_type == "Debug":
-                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
+                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
 
             def package_id(self):
                 del self.info.settings.compiler
@@ -214,6 +214,7 @@ def test_create_invalid_validate(setup_client_with_build_requires):
     client.run("create br_validate.py")  # In Release mode, it works
     client.run("create consumer.py -s build_type=Debug", assert_error=True)
     # Expected, we are telling the br to use Debug mode
+    print(client.out)
     assert "br/1.0.0: Invalid ID: br cannot be built in debug mode" in client.out
 
 

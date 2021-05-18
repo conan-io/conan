@@ -33,7 +33,7 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
+        self.assertIn("Binary: Invalid", client.out)
         client.run("info pkg/0.1@ -s os=Windows --json=myjson")
         myjson = json.loads(client.load("myjson"))
         self.assertEqual(myjson[0]["binary"], BINARY_INVALID)
@@ -109,7 +109,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid ID: Windows not supported", client.out)
 
         client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
+        self.assertIn("Binary: Invalid", client.out)
 
     def test_validate_compatible_also_invalid_fail(self):
         client = TestClient()
@@ -163,9 +163,9 @@ class TestValidate(unittest.TestCase):
 
         # info
         client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("ID: INVALID", client.out)
+        self.assertIn("Binary: Invalid", client.out)
         client.run("info pkg/0.1@ -s os=Windows -s build_type=Debug")
-        self.assertIn("ID: INVALID", client.out)
+        self.assertIn("Binary: Invalid", client.out)
 
     def test_validate_options(self):
         client = TestClient()

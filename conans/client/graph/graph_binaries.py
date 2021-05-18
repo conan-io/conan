@@ -2,10 +2,10 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
-                                       BINARY_INVALID, BINARY_UNBUILDABLE)
+                                       BINARY_INVALID)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException, ConanInvalidConfiguration, ConanUnbuildableConfiguration
-from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
+    ConanException, ConanInvalidConfiguration
+from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
@@ -174,7 +174,8 @@ class GraphBinariesAnalyzer(object):
             assert node.binary is None, "Node.binary should be None if not locked"
             pref = PackageReference(node.ref, node.package_id)
             self._process_node(node, pref, build_mode, update, remotes)
-            if node.binary in (BINARY_MISSING, BINARY_INVALID):
+            if node.binary == BINARY_MISSING or (node.binary == BINARY_BUILD and
+                                                 node.conanfile.info.invalid):
                 if node.conanfile.compatible_packages:
                     compatible_build_mode = BuildMode(None, self._out)
                     for compatible_package in node.conanfile.compatible_packages:
@@ -199,8 +200,6 @@ class GraphBinariesAnalyzer(object):
                             node.conanfile.settings.values = compatible_package.settings
                             node.conanfile.options.values = compatible_package.options
                             break
-                    if node.binary == BINARY_MISSING and node.package_id == PACKAGE_ID_INVALID:
-                        node.binary = BINARY_INVALID
                 if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                     node.binary = BINARY_BUILD
 
@@ -208,9 +207,8 @@ class GraphBinariesAnalyzer(object):
                 # package_id was not locked, this means a base lockfile that is being completed
                 locked.complete_base_node(node.package_id, node.prev)
 
-        if (node.binary == BINARY_BUILD and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_UNBUILDABLE):
-            node.binary = BINARY_UNBUILDABLE
+        if node.conanfile.info.invalid and node.binary in (BINARY_BUILD, BINARY_MISSING):
+            node.binary = BINARY_INVALID
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
@@ -220,12 +218,6 @@ class GraphBinariesAnalyzer(object):
         conanfile = node.conanfile
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
-            return
-
-        if pref.id == PACKAGE_ID_INVALID:
-            # annotate pattern, so unused patterns in --build are not displayed as errors
-            build_mode.forced(node.conanfile, node.ref)
-            node.binary = BINARY_INVALID
             return
 
         if self._evaluate_build(node, build_mode):
@@ -360,9 +352,7 @@ class GraphBinariesAnalyzer(object):
                 try:
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
-                    conanfile.info.invalid = BINARY_INVALID, str(e)
-                except ConanUnbuildableConfiguration as e:
-                    conanfile.info.invalid = BINARY_UNBUILDABLE, str(e)
+                    conanfile.info.invalid = str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
