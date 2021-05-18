@@ -126,6 +126,26 @@ def setup_client_with_build_requires():
                         compatible_pkg.settings.build_type = "Release"
                         self.compatible_packages.append(compatible_pkg)
             """)
+    conanfile_validate_compatible_unbuildable = textwrap.dedent("""
+        from conans import ConanFile
+        from conans.errors import ConanUnbuildableConfiguration
+
+        class Conan(ConanFile):
+            name = "br"
+            version = "1.0.0"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def validate(self):
+                if self.settings.build_type == "Debug":
+                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
+
+            def package_id(self):
+                del self.info.settings.compiler
+                if self.settings.build_type == "Debug":
+                    compatible_pkg = self.info.clone()
+                    compatible_pkg.settings.build_type = "Release"
+                    self.compatible_packages.append(compatible_pkg)
+        """)
     conanfile_configure_compatible = textwrap.dedent("""
             from conans import ConanFile
             from conans.errors import ConanInvalidConfiguration
@@ -182,6 +202,7 @@ def setup_client_with_build_requires():
                  "br_configure_remove_build_type.py": conanfile_configure_remove_build_type,
                  "br_build_remove_build_type.py": conanfile_build_remove_build_type,
                  "br_validate_compatible.py": conanfile_validate_compatible,
+                 "br_validate_compatible_unbuildable.py": conanfile_validate_compatible_unbuildable,
                  "br_configure_compatible.py": conanfile_configure_compatible,
                  "br_build_compatible.py": conanfile_build_compatible,
                  "consumer.py": conanfile_consumer})
@@ -238,6 +259,14 @@ def test_create_validate_compatible(setup_client_with_build_requires):
     client = setup_client_with_build_requires
     client.run("create br_validate_compatible.py")
     client.run("create consumer.py -s build_type=Debug")
+    assert "Using compatible package" in client.out
+
+
+def test_create_validate_compatible_unbuildable(setup_client_with_build_requires):
+    client = setup_client_with_build_requires
+    client.run("create br_validate_compatible_unbuildable.py")
+    client.run("create consumer.py -s build_type=Debug")
+    print(client.out)
     assert "Using compatible package" in client.out
 
 
