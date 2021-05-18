@@ -21,7 +21,7 @@ class ConanLib(ConanFile):
     default_options= "use_lib=False"
     def requirements(self):
         if self.options.use_lib:
-            self.requires("optional/0.1@user/testing")
+            self.requires("optional/0.1@user/testing", public=False)
     def package_id(self):
         if self.options.use_lib:
             self.info.requires.remove("optional")
@@ -30,7 +30,7 @@ class ConanLib(ConanFile):
         client.run("create . pkgA/0.1@user/testing")
         self.assertIn(NO_SETTINGS_PACKAGE_ID, client.out)
         client.run("create . pkgA/0.1@user/testing -o pkgA:use_lib=True")
-        self.assertIn("b3485d1af719b8ddc636d57800186fc73cefff8d", client.out)
+        self.assertIn("30b83bef2eb3dc4ba0692e15c29f09c5953a7735", client.out)
         conanfile = '''from conans import ConanFile
 class ConanLib(ConanFile):
     requires = "pkgA/0.1@user/testing"
@@ -38,21 +38,22 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create . pkgB/0.1@user/testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:4778d500bd98ecb57d331d591aa43a7b4788d870", client.out)
+        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgB")})
         client.run("create . pkgC/0.1@user/testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:4778d500bd98ecb57d331d591aa43a7b4788d870", client.out)
-        self.assertIn("pkgC/0.1@user/testing:4866ff85840783bec107794cce1bc12b7b8df188", client.out)
+        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgC")})
         client.run("install .")
+        print(client.out)
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:4778d500bd98ecb57d331d591aa43a7b4788d870", client.out)
-        self.assertIn("pkgC/0.1@user/testing:4866ff85840783bec107794cce1bc12b7b8df188", client.out)
+        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)
 
         client.run("install . -o pkgA:use_lib=True")
-        self.assertIn("pkgA/0.1@user/testing:b3485d1af719b8ddc636d57800186fc73cefff8d", client.out)
-        self.assertIn("pkgB/0.1@user/testing:4778d500bd98ecb57d331d591aa43a7b4788d870", client.out)
-        self.assertIn("pkgC/0.1@user/testing:4866ff85840783bec107794cce1bc12b7b8df188", client.out)
+        self.assertIn("pkgA/0.1@user/testing:30b83bef2eb3dc4ba0692e15c29f09c5953a7735", client.out)
+        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)

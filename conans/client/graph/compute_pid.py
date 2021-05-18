@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conans.client.graph.graph import PackageType
-from conans.errors import conanfile_exception_formatter
+from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
@@ -37,7 +37,6 @@ def compute_package_id(node):
                         dep_package_id = "minor_mode"
                 elif node.package_type is PackageType.HEADER:
                     dep_package_id = "unrelated_mode"
-
         req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
         data[require] = req_info
 
@@ -50,7 +49,7 @@ def compute_package_id(node):
                                       default_python_requires_id_mode=
                                       default_python_requires_id_mode)
 
-    msvc_incomp = False  # self._cache.new_config["core.package_id"].msvc_visual_incompatible
+    msvc_incomp = False  # self._cache.new_config["core.package_id:msvc_visual_incompatible"]
     if not msvc_incomp:
         msvc_compatible = conanfile.info.msvc_compatible()
         if msvc_compatible:
@@ -61,6 +60,14 @@ def compute_package_id(node):
         with conan_v2_property(conanfile, 'cpp_info',
                                "'self.cpp_info' access in package_id() method is deprecated"):
             conanfile.package_id()
+
+    # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
+    if hasattr(conanfile, "validate") and callable(conanfile.validate):
+        with conanfile_exception_formatter(str(conanfile), "validate"):
+            try:
+                conanfile.validate()
+            except ConanInvalidConfiguration as e:
+                conanfile.info.invalid = str(e)
 
     info = conanfile.info
     node.package_id = info.package_id()

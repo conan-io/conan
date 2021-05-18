@@ -243,6 +243,10 @@ class GraphBinariesAnalyzer(object):
 
         node.binary_remote = remote
 
+    @staticmethod
+    def _evaluate_package_id(node):
+        compute_package_id(node)  # TODO: revise compute_package_id()
+
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         build_mode = BuildMode(build_mode, self._output)
 
@@ -251,6 +255,7 @@ class GraphBinariesAnalyzer(object):
         default_package_id_mode = self._cache.config.default_package_id_mode
         default_python_requires_id_mode = self._cache.config.default_python_requires_id_mode
         for node in deps_graph.ordered_iterate(nodes_subset=nodes_subset):
+            self._evaluate_package_id(node)
             if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
                 continue
             if node.package_id == PACKAGE_ID_UNKNOWN:
@@ -270,7 +275,7 @@ class GraphBinariesAnalyzer(object):
         output = node.conanfile.output
         node._package_id = None  # Invalidate it, so it can be re-computed
         output.info("Unknown binary for %s, computing updated ID" % str(node.ref))
-        compute_package_id(node)
+        self._evaluate_package_id(node)
         output.info("Updated ID: %s" % node.package_id)
         if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
             return

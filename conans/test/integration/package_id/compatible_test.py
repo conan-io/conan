@@ -2,6 +2,8 @@ import textwrap
 import time
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
@@ -338,17 +340,21 @@ class CompatibleIDsTest(unittest.TestCase):
         c2 = GenConanfile().with_name("BB").with_version("1.0").with_require("AA/1.0")
         client = TestClient()
         # Recipe revision mode
-        client.run("config set general.default_package_id_mode=recipe_revision_mode")
-
+        # client.run("config set general.default_package_id_mode=recipe_revision_mode")
+        profile = textwrap.dedent("""
+            [conf]
+            tools.package_id:default_mode=recipe_revision_mode
+            """)
         # Create binaries with recipe revision mode for both
-        client.save({"conanfile.py": c1})
-        client.run("create .")
+        client.save({"conanfile.py": c1,
+                     "profile": profile})
+        client.run("create . -pr=profile")
 
         client.save({"conanfile.py": c2})
-        client.run("create .")
+        client.run("create . -pr=profile")
 
         # Back to semver default
-        client.run("config set general.default_package_id_mode=semver_direct_mode")
+        # client.run("config set general.default_package_id_mode=semver_direct_mode")
         client.run("install BB/1.0@", assert_error=True)
         self.assertIn("Missing prebuilt package for 'BB/1.0'", client.out)
 
@@ -368,23 +374,22 @@ class CompatibleIDsTest(unittest.TestCase):
         # Create the packages, now with the recipe mode declared as compatible package
         time.sleep(1)  # new timestamp
         client.save({"conanfile.py": c1})
-        client.run("create .")
+        client.run("create . -pr=profile")
 
         client.save({"conanfile.py": c2})
-        client.run("create .")
-        self.assertIn("Package 'ce6719c914d00372f1a2ae66543c0d135a684951' created", client.out)
+        client.run("create . -pr=profile")
+        self.assertIn("Package '9bca74896cc4db04ff0bc77b70200d44cd502f80' created", client.out)
 
         # Back to semver mode
-        client.run("config set general.default_package_id_mode=semver_direct_mode")
+        # client.run("config set general.default_package_id_mode=semver_direct_mode")
         client.run("install BB/1.0@ --update")
-        self.assertIn("Using compatible package 'ce6719c914d00372f1a2ae66543c0d135a684951'",
+        self.assertIn("Using compatible package '9bca74896cc4db04ff0bc77b70200d44cd502f80'",
                       client.out)
 
     def test_package_id_consumers(self):
         # If we fallback to a different binary upstream and we are using a "package_revision_mode"
         # the current package should have a different binary package ID too.
         client = TestClient()
-        client.run("config set general.default_package_id_mode=package_revision_mode")
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             class Pkg(ConanFile):
@@ -403,6 +408,8 @@ class CompatibleIDsTest(unittest.TestCase):
             compiler=gcc
             compiler.version=4.9
             compiler.libcxx=libstdc++
+            [conf]
+            tools.package_id:default_mode=package_revision_mode
             """)
         client.save({"conanfile.py": conanfile,
                      "myprofile": profile})
@@ -418,9 +425,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:22c594d7fed4994c59a1eacb24ff6ff48bc5c51c - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:a17117b3926488291b8cb2df78e31f93e4c4ab4d - Build",
+        self.assertIn("consumer/0.1@user/stable:85099c2bad37fbc81fadccc7bc996c4d9561b2e8 - Build",
                       client.out)
-        self.assertIn("consumer/0.1@user/stable: Package 'a17117b3926488291b8cb2df78e31f93e4c4ab4d'"
+        self.assertIn("consumer/0.1@user/stable: Package '85099c2bad37fbc81fadccc7bc996c4d9561b2e8'"
                       " created", client.out)
 
         # Create package with gcc 4.9
@@ -436,9 +443,9 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable:53f56fbd582a1898b3b9d16efd6d3c0ec71e7cfb - Cache",
                       client.out)
         self.assertIn("pkg/0.1@user/stable: Already installed!", client.out)
-        self.assertIn("consumer/0.1@user/stable:8dceb9cb5a9e262338e2a23e84894811b95a077d - Build",
+        self.assertIn("consumer/0.1@user/stable:26f31d35e2e48eb1d177aa58de3a7eaa05bec36f - Build",
                       client.out)
-        self.assertIn("consumer/0.1@user/stable: Package '8dceb9cb5a9e262338e2a23e84894811b95a077d'"
+        self.assertIn("consumer/0.1@user/stable: Package '26f31d35e2e48eb1d177aa58de3a7eaa05bec36f'"
                       " created", client.out)
 
     def test_build_missing(self):
@@ -495,6 +502,7 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
 
+@pytest.mark.xfail(reason="The conf core.package_id:msvc_visual_incompatible is not passed yet")
 def test_msvc_visual_incompatible():
     conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch")
     client = TestClient()

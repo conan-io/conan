@@ -166,16 +166,15 @@ class RequirementsInfo(UserRequirementsDict):
 
     def copy(self):
         # For build_id() implementation
-        result = RequirementsInfo([], None)
-        result._data = {pref: req_info.copy() for pref, req_info in self._data.items()}
-        return result
+        data = {pref: req_info.copy() for pref, req_info in self._data.items()}
+        return RequirementsInfo(data)
 
     def clear(self):
         self._data = {}
 
     def remove(self, *args):
         for name in args:
-            del self._data[self._get_key(name)]
+            del self[name]
 
     @property
     def pkg_names(self):
@@ -183,7 +182,7 @@ class RequirementsInfo(UserRequirementsDict):
 
     @property
     def sha(self):
-        result = []
+        result = ["[requires]"]
         for req_info in self._data.values():
             s = req_info.sha
             if s is None:
@@ -191,7 +190,7 @@ class RequirementsInfo(UserRequirementsDict):
             if s == PACKAGE_ID_INVALID:
                 return PACKAGE_ID_INVALID
             result.append(s)
-        return sha1('\n'.join(sorted(result)).encode())
+        return '\n'.join(sorted(result))
 
     def dumps(self):
         result = []
@@ -520,6 +519,7 @@ class ConanInfo(object):
             result.append(self.python_requires.sha)
         if hasattr(self, "conf"):
             result.append(self.conf.sha)
+        print("****************HASING ", "\n".join(result), "****************")
         package_id = sha1('\n'.join(result).encode())
         return package_id
 

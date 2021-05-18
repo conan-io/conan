@@ -50,7 +50,7 @@ from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir, save_files
 
-NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+NO_SETTINGS_PACKAGE_ID = "839b50082a785bdd0ebf1c88fef28201af9a9188"
 
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):

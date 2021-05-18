@@ -345,8 +345,7 @@ class MyPkg(ConanFile):
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)
         self.assertNotIn("/_", conaninfo)
-        self.assertIn("[full_requires]\n    Hello/0.1:{}\n".format(NO_SETTINGS_PACKAGE_ID),
-                      conaninfo)
+        self.assertIn("[requires]\n    Hello/0.1\n", conaninfo)
 
     def test_compoents_json_output(self):
         self.client = TestClient()

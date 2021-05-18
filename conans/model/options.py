@@ -157,14 +157,14 @@ class PackageOptionValues(object):
 
     @property
     def sha(self):
-        result = []
+        result = ["[options]"]
         for name, value in self.items():
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
             if value:
                 result.append("%s=%s" % (name, value))
-        return sha1('\n'.join(result).encode())
+        return '\n'.join(result)
 
 
 class OptionsValues(object):
@@ -306,9 +306,9 @@ class OptionsValues(object):
     @property
     def sha(self):
         result = [self._package_values.sha]
-        for key in sorted(list(self._reqs_options.keys())):
-            result.append(self._reqs_options[key].sha)
-        return sha1('\n'.join(result).encode())
+        #for key in sorted(list(self._reqs_options.keys())):
+        #    result.append(self._reqs_options[key].sha)
+        return '\n'.join(result)
 
     def serialize(self):
         ret = {"options": self._package_values.serialize(),

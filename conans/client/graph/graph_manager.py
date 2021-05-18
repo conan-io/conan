@@ -60,18 +60,6 @@ class GraphManager(object):
             self._output.writeln("")
             self._resolver.clear_output()
 
-        if not deps_graph.error:
-            # TODO: Maybe move this to elsewhere
-            for node in deps_graph.ordered_iterate():
-                compute_package_id(node)  # TODO: revise compute_package_id()
-                conanfile = node.conanfile
-                if hasattr(conanfile, "validate") and callable(conanfile.validate):
-                    with conanfile_exception_formatter(str(conanfile), "validate"):
-                        try:
-                            conanfile.validate()
-                        except ConanInvalidConfiguration as e:
-                            conanfile.info.invalid = str(e)
-
         # TODO: Move binary_analyzer elsewhere
         if not deps_graph.error:
             self._binary_analyzer.evaluate_graph(deps_graph, build_mode, update, remotes)
