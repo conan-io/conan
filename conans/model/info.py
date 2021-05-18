@@ -553,7 +553,7 @@ class ConanInfo(object):
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         if requires_sha == PACKAGE_ID_INVALID:
-            self.invalid = "Invalid transitive dependencies"
+            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
             return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
