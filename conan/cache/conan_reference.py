@@ -19,7 +19,7 @@ class ConanReference(namedtuple("ConanReference", "name version user channel rre
         elif len(args) == 7 and all(isinstance(arg, str) or arg is None for arg in args):
             obj = super(cls, ConanReference).__new__(cls, *args)
         else:
-            raise ConanException("Invalid type")
+            raise ConanException("Invalid arguments for ConanReference")
         return obj
 
     @property

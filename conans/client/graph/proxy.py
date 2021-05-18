@@ -10,6 +10,7 @@ from conans.client.output import ScopedOutput
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
+from conans.model.ref import ConanFileReference
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.util.tracer import log_recipe_got_from_local_cache
 
@@ -59,7 +60,7 @@ class ConanProxy(object):
 
         # TODO: cache2.0: store the remote in the db? In 1.X we took the remote from the metadata
         # TODO: cache2.0: check with new --update flows
-        ref = latest_rrev[0]
+        ref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}") if latest_rrev else None
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
         # TODO: cache2.0: check if we want to get the remote through the layout
