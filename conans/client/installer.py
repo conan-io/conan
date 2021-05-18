@@ -206,9 +206,9 @@ class _PackageBuilder(object):
             self._output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
-                    conanfile.layout.set_base_source_folder(base_source)
+                    conanfile.folders.set_base_source(base_source)
                 else:
-                    conanfile.layout.set_base_source_folder(base_build)
+                    conanfile.folders.set_base_source(base_build)
 
                 conanfile.folders.set_base_build(base_build)
                 conanfile.folders.set_base_imports(base_build)
@@ -546,7 +546,7 @@ class BinaryInstaller(object):
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                % (str(pref), package_folder))
         # Call the info method
-        self._call_package_info(conanfile, package_folder, ref=pref.ref)
+        self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
         self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, output, remotes):
