@@ -7,7 +7,6 @@ import textwrap
 import unittest
 
 import pytest
-import six
 from mock import patch
 from requests import ConnectionError
 
@@ -17,10 +16,10 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files, cpp_hello_source_files
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
 from conans.test.utils.tools import (NO_SETTINGS_PACKAGE_ID, TestClient, TestRequester, TestServer,
                                      GenConanfile)
+from conans.util.env_reader import get_env
 from conans.util.files import load, mkdir, save
 
 
@@ -54,7 +53,58 @@ class FailPairFilesUploader(BadConnectionUploader):
             return super(BadConnectionUploader, self).put(*args, **kwargs)
 
 
-@pytest.mark.skipif(TestClient().cache.config.revisions_enabled,
+def test_try_upload_bad_recipe():
+    client = TestClient(default_server_user=True)
+    client.save({"conanfile.py": GenConanfile("Hello0", "1.2.1")})
+    client.run("export . frodo/stable")
+    ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
+    os.unlink(os.path.join(client.cache.package_layout(ref).export(), CONAN_MANIFEST))
+    client.run("upload %s" % str(ref), assert_error=True)
+    assert "Cannot upload corrupted recipe" in client.out
+
+
+def test_upload_with_pattern():
+    client = TestClient(default_server_user=True)
+    for num in range(3):
+        client.save({"conanfile.py": GenConanfile("hello{}".format(num), "1.2.1")})
+        client.run("export . frodo/stable")
+
+    client.run("upload hello* --confirm")
+    for num in range(3):
+        assert "Uploading hello%s/1.2.1@frodo/stable" % num in client.out
+
+    client.run("upload hello0* --confirm")
+    assert "Uploading hello0/1.2.1@frodo/stable" in client.out
+    assert "Recipe is up to date, upload skipped" in client.out
+    assert "Hello1" not in client.out
+    assert "Hello2" not in client.out
+
+
+def test_upload_with_pattern_and_package_error():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
+    client.run("export . frodo/stable")
+    client.run("upload Hello* --confirm -p 234234234", assert_error=True)
+    assert "-p parameter only allowed with a valid recipe reference" in client.out
+
+
+def test_check_upload_confirm_question():
+    client = TestClient(default_server_user=True)
+    client.save({"conanfile.py": GenConanfile("Hello1", "1.2.1")})
+    client.run("export . frodo/stable")
+    with patch.object(sys.stdin, "readline", return_value="y"):
+        client.run("upload Hello*")
+    assert "Uploading Hello1/1.2.1@frodo/stable" in client.out
+
+    client.save({"conanfile.py": GenConanfile("Hello2", "1.2.1")})
+    client.run("export . frodo/stable")
+
+    with patch.object(sys.stdin, "readline", return_value="n"):
+        client.run("upload Hello*")
+    assert "Uploading Hello2/1.2.1@frodo/stable" not in client.out
+
+
+@pytest.mark.skipif(get_env("TESTING_REVISIONS_ENABLED", False),
                     reason="We cannot know the folder of the revision without knowing the hash of "
                            "the contents")
 class UploadTest(unittest.TestCase):
@@ -79,7 +129,7 @@ class UploadTest(unittest.TestCase):
         self.client.run('upload %s' % str(self.ref), assert_error=True)
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
-        files = cpp_hello_source_files(0)
+        files = {}
 
         fake_metadata = PackageMetadata()
         fake_metadata.recipe.revision = DEFAULT_REVISION_V1
@@ -121,35 +171,6 @@ class UploadTest(unittest.TestCase):
         self.server_reg_folder = self.test_server.server_store.export(self.ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
-
-    def test_try_upload_bad_recipe(self):
-        files = cpp_hello_conan_files("Hello0", "1.2.1")
-        self.client.save(files)
-        self.client.run("export . frodo/stable")
-        ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        os.unlink(os.path.join(self.client.cache.package_layout(ref).export(), CONAN_MANIFEST))
-        with six.assertRaisesRegex(self, Exception, "Command failed"):
-            self.client.run("upload %s" % str(ref))
-
-        self.assertIn("Cannot upload corrupted recipe", self.client.out)
-
-    def test_upload_with_pattern(self):
-        for num in range(5):
-            files = cpp_hello_conan_files("Hello%s" % num, "1.2.1")
-            self.client.save(files)
-            self.client.run("export . frodo/stable")
-
-        self.client.run("upload Hello* --confirm")
-        for num in range(5):
-            self.assertIn("Uploading Hello%s/1.2.1@frodo/stable" % num, self.client.out)
-
-        self.client.run("upload Hello0* --confirm")
-        self.assertIn("Uploading Hello0/1.2.1@frodo/stable",
-                      self.client.out)
-        self.assertIn("Recipe is up to date, upload skipped", self.client.out)
-        self.assertNotIn("Hello1", self.client.out)
-        self.assertNotIn("Hello2", self.client.out)
-        self.assertNotIn("Hello3", self.client.out)
 
     def test_upload_error(self):
         """Cause an error in the transfer and see some message"""
@@ -255,32 +276,6 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --all")
         self.assertEqual(str(client.out).count("ERROR: Pair file, error!"), 5)
 
-    def test_upload_with_pattern_and_package_error(self):
-        files = cpp_hello_conan_files("Hello1", "1.2.1")
-        self.client.save(files)
-        self.client.run("export . frodo/stable")
-
-        self.client.run("upload Hello* --confirm -p 234234234", assert_error=True)
-        self.assertIn("-p parameter only allowed with a valid recipe reference",
-                      self.client.out)
-
-    def test_check_upload_confirm_question(self):
-        self.client.users = {"default": [("lasote", "mypass")]}
-        files = cpp_hello_conan_files("Hello1", "1.2.1")
-        self.client.save(files)
-        self.client.run("export . frodo/stable")
-        with patch.object(sys.stdin, "readline", return_value="y"):
-            self.client.run("upload Hello*")
-        self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.out)
-
-        files = cpp_hello_conan_files("Hello2", "1.2.1")
-        self.client.save(files)
-        self.client.run("export . frodo/stable")
-
-        with patch.object(sys.stdin, "readline", return_value="n"):
-            self.client.run("upload Hello*")
-        self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.out)
-
     def test_upload_same_package_dont_compress(self):
         # Create a manifest for the faked package
         pack_path = self.client.cache.package_layout(self.pref.ref).package(self.pref)
@@ -336,13 +331,9 @@ class UploadTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
         # Test the file in the downloaded conans
-        files = ['CMakeLists.txt',
-                 'my_lib/debug/libd.a',
-                 'hello.cpp',
-                 'hello0.h',
+        files = ['my_lib/debug/libd.a',
                  CONANFILE,
                  CONAN_MANIFEST,
-                 'main.cpp',
                  'include/math/lib1.h',
                  'my_data/readme.txt',
                  'my_bin/executable']

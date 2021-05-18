@@ -3,11 +3,10 @@ import os
 import platform
 import subprocess
 
+from conans.client.downloaders.download import run_downloader
+from conans.client.tools.files import unzip
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
-from conans.client.tools import which
-from conans.client.tools.files import unzip
-from conans.client.downloaders.download import run_downloader
 
 
 def load(conanfile, path, binary=False, encoding="auto"):

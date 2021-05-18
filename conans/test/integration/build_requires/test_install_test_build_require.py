@@ -67,7 +67,6 @@ def test_build_require_test_package(existing_br, build_profile, client):
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            generators = "cmake_find_package"  # No find_package should be generated!
             test_type = "build_requires"
             {}
 
@@ -91,8 +90,6 @@ def test_build_require_test_package(existing_br, build_profile, client):
 
         assert "mycmake/1.0 (test package): Applying build-requirement: openssl/1.0" in out
         assert "mycmake/1.0 (test package): Applying build-requirement: mycmake/1.0" in out
-        if build_profile:
-            assert "cmake_find_package" not in out
 
         system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
         assert "MYCMAKE={}!!".format(system) in out
@@ -116,7 +113,6 @@ def test_both_types(existing_br, client):
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            generators = "cmake_find_package"  # No find_package should be generated!
             test_type = "build_requires", "requires"
             {}
 
