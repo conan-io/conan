@@ -194,15 +194,15 @@ class _PackageBuilder(object):
         if not skip_build:
             # TODO: cache2.0 check locks
             # with package_layout.conanfile_write_lock(self._output):
-            set_dirty(build_folder)
+            set_dirty(base_build)
             self._prepare_sources(conanfile, pref, reference_layout, remotes)
             self._copy_sources(conanfile, base_source, base_build)
 
         # BUILD & PACKAGE
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
-        mkdir(build_folder)
-        with tools.chdir(build_folder):
+        mkdir(base_build)
+        with tools.chdir(base_build):
             self._output.info('Building your package in %s' % base_build)
             try:
                 if getattr(conanfile, 'no_copy_source', False):
