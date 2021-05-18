@@ -571,7 +571,7 @@ class ConanClientConfigParser(ConfigParser, object):
             # For explicit cacert files, the file should already exist
             if not os.path.exists(cacert_path):
                 raise ConanException("Configured file for 'cacert_path'"
-                                     " doesn't exists: '{}'".format(cacert_path))
+                                     " doesn't exist: '{}'".format(cacert_path))
         return cacert_path
 
     @property
@@ -586,7 +586,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property
@@ -601,7 +601,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_key_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property
