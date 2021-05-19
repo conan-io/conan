@@ -255,8 +255,7 @@ def test_standard_names(setup_client_with_greetings):
         with client.chdir("test_package"):
             client.run("install . -s build_type=Release")
             client.run("install . -s build_type=Debug")
-            client.run_command('cmake . -G "Visual Studio 15 Win64" '
-                               '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+            client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             client.run_command("cmake --build . --config Debug")
             client.run_command(r".\Debug\example.exe")
             assert "sayhellobye: Debug!" in client.out
