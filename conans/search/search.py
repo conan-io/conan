@@ -101,6 +101,8 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
+# TODO: cache2.0 receive a list of the package layouts for different package ids
+#  FIX better make something different
 def search_packages(package_layouts, query):
     """ Return a dict like this:
 

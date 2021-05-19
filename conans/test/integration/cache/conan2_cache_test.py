@@ -109,3 +109,9 @@ class TestCache:
         # client.run("upload mypkg/1.0")
         # client.run("new mypkg/2.0 -s")
         # client.run("upload mypkg/2.0")
+
+    def test_conan_remove(self):
+        client = TestClient()
+        client.run("new mypkg/1.0 -s")
+        client.run("create .")
+        client.run("remove * -f")
