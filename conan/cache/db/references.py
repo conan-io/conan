@@ -195,6 +195,7 @@ class ReferencesDbTable(BaseDbTable):
     def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[
         PackageReference]:
         assert ref.pkgid, "To search for package revisions you must provide a package_id."
+        assert ref.pkgid, "To search for package revisions you must provide a recipe revision."
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -219,9 +220,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False) -> List[
-        ConanFileReference]:
-
+    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \
