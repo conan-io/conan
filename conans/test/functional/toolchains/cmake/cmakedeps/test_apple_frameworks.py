@@ -261,6 +261,7 @@ def test_apple_own_framework_cmake_deps():
     """)
 
     test_conanfile = textwrap.dedent("""
+        import os
         from conans import ConanFile
         from conan.tools.cmake import CMake
 
@@ -281,7 +282,7 @@ def test_apple_own_framework_cmake_deps():
                 cmake.build()
 
             def test(self):
-                self.run("timer", run_environment=True)
+                self.run(os.path.join(str(self.settings.build_type), "timer"), run_environment=True)
         """)
     client.save({'conanfile.py': conanfile,
                  "src/CMakeLists.txt": cmake,

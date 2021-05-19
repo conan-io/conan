@@ -70,7 +70,7 @@ class CMake(object):
 
         args_file = os.path.join(self._conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
         if os.path.exists(args_file):
-            json_args = json.loads(load(CONAN_TOOLCHAIN_ARGS_FILE))
+            json_args = json.loads(load(args_file))
             self._generator = json_args.get("cmake_generator")
             self._toolchain_file = json_args.get("cmake_toolchain_file")
 
