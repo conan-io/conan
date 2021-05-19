@@ -22,6 +22,12 @@ class ConanReference(namedtuple("ConanReference", "name version user channel rre
             raise ConanException("Invalid arguments for ConanReference")
         return obj
 
+    def as_package_reference(self):
+        return PackageReference.loads(self.full_reference, validate=False)
+
+    def as_conanfile_reference(self):
+        return ConanFileReference.loads(self.full_reference, validate=False)
+
     @property
     # TODO: use coherent names for different parts of name/version@user/channel#rrev:pkgid#prev
     def reference(self):

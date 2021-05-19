@@ -14,6 +14,10 @@ class RecipeLayout:
         self._cache = cache
         self._base_folder = base_folder
 
+    @property
+    def reference(self):
+        return self._ref.as_conanfile_reference()
+
     def assign_rrev(self, ref: ConanReference, remote=None):
         assert ref.reference == self._ref.reference, "You cannot change reference name here"
         assert ref.rrev, "It only makes sense to change if you are providing a revision"

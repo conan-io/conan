@@ -174,14 +174,14 @@ class _PackageBuilder(object):
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
-    def build_package(self, node, recorder, remotes):
+    def build_package(self, node, recorder, remotes, package_layout):
         t1 = time.time()
 
         conanfile = node.conanfile
         pref = node.pref
 
+        # TODO: cache2.0 fix this
         reference_layout = self._cache.ref_layout(pref.ref)
-        package_layout = self._cache.pkg_layout(pref)
 
         base_source = reference_layout.source()
         conanfile_path = reference_layout.conanfile()
@@ -511,7 +511,7 @@ class BinaryInstaller(object):
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
-        layout = self._cache.pkg_layout(pref)
+        pkg_layout = self._cache.pkg_layout(pref)
         # TODO: cache2.0 Check with new locks
         # with layout.package_lock(pref):
         bare_pref = PackageReference(pref.ref, pref.id)
@@ -521,8 +521,8 @@ class BinaryInstaller(object):
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                 # TODO: cache2.0 check remove
                 #layout.package_remove(pref)
-                with layout.set_dirty_context_manager():
-                    pref = self._build_package(node, output, remotes)
+                with pkg_layout.set_dirty_context_manager():
+                    pref = self._build_package(node, output, remotes, pkg_layout)
                 assert node.prev, "Node PREV shouldn't be empty"
                 assert node.pref.revision, "Node PREF revision shouldn't be empty"
                 assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -530,7 +530,7 @@ class BinaryInstaller(object):
                 # this can happen after a re-evaluation of packageID with Package_ID_unknown
                 # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
                 #  move the layout inside the get... method
-                self._download_pkg(layout, node)
+                self._download_pkg(pkg_layout, node)
             elif node.binary == BINARY_CACHE:
                 assert node.prev, "PREV for %s is None" % str(pref)
                 output.success('Already installed!')
@@ -550,7 +550,7 @@ class BinaryInstaller(object):
         self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
         self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _build_package(self, node, output, remotes):
+    def _build_package(self, node, output, remotes, pkg_layout):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
         # Only the legacy python_requires allow this
@@ -564,7 +564,7 @@ class BinaryInstaller(object):
 
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
-        pref = builder.build_package(node, self._recorder, remotes)
+        pref = builder.build_package(node, self._recorder, remotes, pkg_layout)
         if node.graph_lock_node:
             node.graph_lock_node.prev = pref.revision
         return pref

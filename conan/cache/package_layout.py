@@ -19,7 +19,7 @@ class PackageLayout:
 
     @property
     def reference(self):
-        return self._pref
+        return self._pref.as_package_reference()
 
     def assign_prev(self, pref: ConanReference):
         assert pref.reference == self._pref.reference, "You cannot change the reference here"

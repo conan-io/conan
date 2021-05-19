@@ -91,10 +91,10 @@ class ClientCache(object):
         self._data_cache = DataCache(self._store_folder, db_filename)
 
     def ref_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))[0]
+        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
 
     def pkg_layout(self, ref):
-        return self._data_cache.get_or_create_package_layout(ConanReference(ref))[0]
+        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
 
     def update_remote(self, ref, remote):
         return self._data_cache.update_remote(ConanReference(ref), remote)
@@ -116,7 +116,9 @@ class ClientCache(object):
         return self._store_folder
 
     def installed_as_editable(self, ref):
-        return isinstance(self.package_layout(ref), PackageEditableLayout)
+        # TODO: cache2.0 editables not yet managed
+        return False
+        #return isinstance(self.package_layout(ref), PackageEditableLayout)
 
     @property
     def config_install_file(self):

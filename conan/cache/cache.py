@@ -85,7 +85,7 @@ class DataCache:
         from conan.cache.package_layout import PackageLayout
         return PackageLayout(pref, cache=self, package_folder=package_path)
 
-    def get_or_create_reference_layout(self, ref: ConanReference) -> Tuple['RecipeLayout', bool]:
+    def get_or_create_reference_layout(self, ref: ConanReference) -> 'RecipeLayout':
         path = self.get_or_create_reference_path(ref)
 
         if not ref.rrev:
@@ -96,9 +96,9 @@ class DataCache:
         self._create_path(reference_path, remove_contents=created)
 
         from conan.cache.recipe_layout import RecipeLayout
-        return RecipeLayout(ref, cache=self, base_folder=reference_path), created
+        return RecipeLayout(ref, cache=self, base_folder=reference_path)
 
-    def get_or_create_package_layout(self, pref: ConanReference) -> Tuple['PackageLayout', bool]:
+    def get_or_create_package_layout(self, pref: ConanReference) -> 'PackageLayout':
         package_path = self.get_or_create_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
@@ -114,7 +114,7 @@ class DataCache:
         self._create_path(package_path, remove_contents=created)
 
         from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, package_folder=package_path), created
+        return PackageLayout(pref, cache=self, package_folder=package_path)
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference, remote=None) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)

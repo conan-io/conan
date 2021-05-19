@@ -194,8 +194,8 @@ class ReferencesDbTable(BaseDbTable):
 
     def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[
         PackageReference]:
-        assert ref.pkgid, "To search for package revisions you must provide a package_id."
-        assert ref.pkgid, "To search for package revisions you must provide a recipe revision."
+        assert ref.rrev, "To search for package revisions you must provide a recipe revision."
+        check_pkgid = f'AND {self.columns.pkgid} = "{ref.pkgid}" ' if ref.pkgid else ''
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -207,14 +207,14 @@ class ReferencesDbTable(BaseDbTable):
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'AND {self.columns.pkgid} = "{ref.pkgid}" ' \
+                    f'{check_pkgid} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
-            query = f'SELECT * FROM {self.table_name}' \
+            query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'AND {self.columns.pkgid} = "{ref.pkgid}"' \
+                    f'{check_pkgid} ' \
                     f'AND {self.columns.prev} IS NOT NULL '
         r = conn.execute(query)
         for row in r.fetchall():
