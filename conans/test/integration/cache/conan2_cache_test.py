@@ -112,6 +112,7 @@ class TestCache:
 
     def test_conan_remove(self):
         client = TestClient()
-        client.run("new mypkg/1.0 -s")
-        client.run("create .")
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . mypkg/1.0@")
+        client.run("create . mypkg/2.0@")
         client.run("remove * -f")
