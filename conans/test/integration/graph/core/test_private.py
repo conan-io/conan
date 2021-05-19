@@ -3,10 +3,43 @@ from parameterized import parameterized
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.wip.graph_manager_test import _check_transitive
 from conans.test.utils.tools import GenConanfile
 
 
 class PrivateGraphTest(GraphManagerTest):
+
+    def test_private(self):
+        # app -> libb0.1 -(private) -> liba0.1
+        self.recipe_cache("liba/0.1")
+        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
+
+    def test_conflict_private(self):
+        # app -(private)
+        self._cache_recipe("liba/0.1", GenConanfile())
+        self._cache_recipe("liba/0.2", GenConanfile())
+        self._cache_recipe("libb/0.1", GenConanfile().with_require("liba/0.1"))
+        self._cache_recipe("libc/0.1", GenConanfile("libc", "0.1").with_require("liba/0.2"))
+
+        self.build_graph(GenConanfile("app", "0.1").with_require("libb/0.1", private=True)
+                                                   .with_require("libc/0.1", private=True))
 
     def test_consecutive_diamonds_private(self):
         # app -> libe0.1 -------------> libd0.1 -> libb0.1 -------------> liba0.1
@@ -17,19 +50,19 @@ class PrivateGraphTest(GraphManagerTest):
         libd_ref = ConanFileReference.loads("libd/0.1@user/testing")
         libe_ref = ConanFileReference.loads("libe/0.1@user/testing")
         libf_ref = ConanFileReference.loads("libf/0.1@user/testing")
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
+        self._cache_recipe(liba_ref, GenConanfile().with_name("liba", "0.1"))
+        self._cache_recipe(libb_ref, GenConanfile().with_name("libb", "0.1")
                                                    .with_require(liba_ref))
-        self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
+        self._cache_recipe(libc_ref, GenConanfile().with_name("libc", "0.1")
                                                    .with_require(liba_ref))
-        self._cache_recipe(libd_ref, GenConanfile().with_name("libd").with_version("0.1")
+        self._cache_recipe(libd_ref, GenConanfile().with_name("libd", "0.1")
                                                    .with_require(libb_ref)
                                                    .with_require(libc_ref, private=True))
-        self._cache_recipe(libe_ref, GenConanfile().with_name("libe").with_version("0.1")
+        self._cache_recipe(libe_ref, GenConanfile().with_name("libe", "0.1")
                                                    .with_require(libd_ref))
-        self._cache_recipe(libf_ref, GenConanfile().with_name("libf").with_version("0.1")
+        self._cache_recipe(libf_ref, GenConanfile().with_name("libf", "0.1")
                                                    .with_require(libd_ref))
-        deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
+        deps_graph = self.build_graph(GenConanfile().with_name("app", "0.1")
                                                     .with_require(libe_ref)
                                                     .with_require(libf_ref, private=True))
 
@@ -58,26 +91,7 @@ class PrivateGraphTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[libb, libc], closure=[])
 
-    def test_conflict_private(self):
-        liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
-        liba_ref2 = ConanFileReference.loads("liba/0.2@user/testing")
-        libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
-        libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(liba_ref2, GenConanfile().with_name("liba").with_version("0.2"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
-                                                   .with_require(liba_ref))
-        self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
-                                                   .with_require(liba_ref2))
-        with self.assertRaisesRegex(ConanException,
-                                   "Conflict in libc/0.1@user/testing:\n"
-                                   "    'libc/0.1@user/testing' requires 'liba/0.2@user/testing' "
-                                   "while 'libb/0.1@user/testing' requires 'liba/0.1@user/testing'."
-                                   "\n    To fix this conflict you need to override the package "
-                                   "'liba' in your root package."):
-            self.build_graph(GenConanfile().with_name("app").with_version("0.1")
-                                           .with_require(libb_ref, private=True)
-                                           .with_require(libc_ref, private=True))
+
 
     def test_loop_private(self):
         # app -> lib -(private)-> tool ->|
@@ -85,14 +99,14 @@ class PrivateGraphTest(GraphManagerTest):
         lib_ref = ConanFileReference.loads("lib/0.1@user/testing")
         tool_ref = ConanFileReference.loads("tool/0.1@user/testing")
 
-        self._cache_recipe(tool_ref, GenConanfile().with_name("tool").with_version("0.1")
+        self._cache_recipe(tool_ref, GenConanfile().with_name("tool", "0.1")
                                                    .with_require(lib_ref, private=True))
-        self._cache_recipe(lib_ref, GenConanfile().with_name("lib").with_version("0.1")
+        self._cache_recipe(lib_ref, GenConanfile().with_name("lib", "0.1")
                                                   .with_require(tool_ref, private=True))
         with self.assertRaisesRegex(ConanException, "Loop detected in context host:"
                                                          " 'tool/0.1@user/testing'"
                                                          " requires 'lib/0.1@user/testing'"):
-            self.build_graph(GenConanfile().with_name("app").with_version("0.1")
+            self.build_graph(GenConanfile().with_name("app", "0.1")
                                            .with_require(lib_ref))
 
     def test_transitive_private_conflict(self):
@@ -103,9 +117,9 @@ class PrivateGraphTest(GraphManagerTest):
         grass02_ref = ConanFileReference.loads("grass/0.2@user/testing")
         gazelle_ref = ConanFileReference.loads("gazelle/0.1@user/testing")
 
-        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass").with_version("0.1"))
-        self._cache_recipe(grass02_ref, GenConanfile().with_name("grass").with_version("0.2"))
-        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle").with_version("0.1")
+        self._cache_recipe(grass01_ref, GenConanfile().with_name("grass", "0.1"))
+        self._cache_recipe(grass02_ref, GenConanfile().with_name("grass", "0.2"))
+        self._cache_recipe(gazelle_ref, GenConanfile().with_name("gazelle", "0.1")
                                                       .with_require(grass01_ref))
 
         with self.assertRaisesRegex(ConanException,
@@ -114,7 +128,7 @@ class PrivateGraphTest(GraphManagerTest):
             " requires 'grass/0.1@user/testing'.\n"
             "    To fix this conflict you need to override the package 'grass' in your root"
             " package."):
-            self.build_graph(GenConanfile().with_name("cheetah").with_version("0.1")
+            self.build_graph(GenConanfile().with_name("cheetah", "0.1")
                                            .with_require(gazelle_ref)
                                            .with_require(grass02_ref, private=True))
 
@@ -124,21 +138,21 @@ class PrivateGraphTest(GraphManagerTest):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
         libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
 
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
+        self._cache_recipe(liba_ref, GenConanfile().with_name("liba", "0.1"))
+        self._cache_recipe(libb_ref, GenConanfile().with_name("libb", "0.1")
                                                    .with_require(liba_ref))
 
         if private_first:
-            libc = GenConanfile().with_name("libc").with_version("0.1")\
+            libc = GenConanfile().with_name("libc", "0.1")\
                                  .with_require(liba_ref, private=True) \
                                  .with_require(libb_ref)
         else:
-            libc = GenConanfile().with_name("libc").with_version("0.1")\
+            libc = GenConanfile().with_name("libc", "0.1")\
                                  .with_require(libb_ref) \
                                  .with_require(liba_ref, private=True)
 
         self._cache_recipe(libc_ref, libc)
-        deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
+        deps_graph = self.build_graph(GenConanfile().with_name("app", "0.1")
                                                     .with_require(libc_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))
@@ -171,20 +185,20 @@ class PrivateGraphTest(GraphManagerTest):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
         libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
 
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(liba_ref2, GenConanfile().with_name("liba").with_version("0.2"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
+        self._cache_recipe(liba_ref, GenConanfile().with_name("liba", "0.1"))
+        self._cache_recipe(liba_ref2, GenConanfile().with_name("liba", "0.2"))
+        self._cache_recipe(libb_ref, GenConanfile().with_name("libb", "0.1")
                                                    .with_require(liba_ref, private=True))
         if private_first:
-            self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
+            self._cache_recipe(libc_ref, GenConanfile().with_name("libc", "0.1")
                                                        .with_require(liba_ref2, private=True)
                                                        .with_require(libb_ref))
         else:
-            self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
+            self._cache_recipe(libc_ref, GenConanfile().with_name("libc", "0.1")
                                                        .with_require(libb_ref)
                                                        .with_require(liba_ref2, private=True))
 
-        deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
+        deps_graph = self.build_graph(GenConanfile().with_name("app", "0.1")
                                                     .with_require(libc_ref))
 
         self.assertEqual(5, len(deps_graph.nodes))
@@ -215,12 +229,12 @@ class PrivateGraphTest(GraphManagerTest):
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
         libc_ref = ConanFileReference.loads("libc/0.1@user/testing")
 
-        self._cache_recipe(liba_ref, GenConanfile().with_name("liba").with_version("0.1"))
-        self._cache_recipe(libb_ref, GenConanfile().with_name("libb").with_version("0.1")
+        self._cache_recipe(liba_ref, GenConanfile().with_name("liba", "0.1"))
+        self._cache_recipe(libb_ref, GenConanfile().with_name("libb", "0.1")
                                                    .with_require(liba_ref, private=True))
-        self._cache_recipe(libc_ref, GenConanfile().with_name("libc").with_version("0.1")
+        self._cache_recipe(libc_ref, GenConanfile().with_name("libc", "0.1")
                                                    .with_require(libb_ref, private=True))
-        deps_graph = self.build_graph(GenConanfile().with_name("app").with_version("0.1")
+        deps_graph = self.build_graph(GenConanfile().with_name("app", "0.1")
                                                     .with_require(libc_ref))
 
         self.assertEqual(4, len(deps_graph.nodes))

@@ -614,8 +614,9 @@ class BinaryInstaller(object):
                         if not is_editable:
                             # FIXME: The default for the cppinfo from build are not the same
                             #        so this check fails when editable
-                            conanfile.cpp_info._raise_incorrect_components_definition(
-                                conanfile.name, conanfile.requires)
+                            pass
+                            #conanfile.cpp_info._raise_incorrect_components_definition(
+                            #    conanfile.name, conanfile.requires)
                     except ConanException as e:
                         raise ConanException("%s package_info(): %s" % (str(conanfile), e))
                     conanfile._conan_dep_cpp_info = DepCppInfo(conanfile.cpp_info)

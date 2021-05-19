@@ -92,7 +92,6 @@ def setup_client_with_greetings():
         class GreetingsTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "cmake", "CMakeDeps"
-            requires = "greetings/0.0.1"
 
             def build(self):
                 cmake = CMake(self)
@@ -191,7 +190,6 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
         class WorldTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "cmake", "{}"
-            requires = "chat/0.0.1"
 
             def build(self):
                 cmake = CMake(self)

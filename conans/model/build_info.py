@@ -368,6 +368,7 @@ class CppInfo(_CppInfo):
         return self._configs
 
     def __getattr__(self, config):
+        raise Exception("WHO THE HELL IS CALLING ME WITH ", config)
         def _get_cpp_info():
             result = _CppInfo()
             result.filter_empty = self.filter_empty

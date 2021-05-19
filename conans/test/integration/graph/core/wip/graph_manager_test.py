@@ -264,27 +264,7 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
-    def test_private(self):
-        # app -> libb0.1 -(private) -> liba0.1
-        self.recipe_cache("liba/0.1")
-        libb = GenConanfile().with_requirement("liba/0.1", public=False)
-        self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
-        deps_graph = self.build_consumer(consumer)
-
-        self.assertEqual(3, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        # node, include, link, build, run
-        _check_transitive(app, [(libb, True, True, False, None)])
-        _check_transitive(libb, [(liba, True, True, False, None)])
 
 
 class TestDiamond(GraphManagerTest):

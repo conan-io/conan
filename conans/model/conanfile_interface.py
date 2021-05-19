@@ -64,3 +64,7 @@ class ConanFileInterface:
     @property
     def dependencies(self):
         return self._conanfile.dependencies
+
+    @property
+    def folders(self):
+        return self._conanfile.folders
