@@ -243,6 +243,7 @@ def test_apple_own_framework_cross_build(settings):
     if not len(settings):
         assert "Hello World Release!" in client.out
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool_cmake(version="3.19")
 def test_apple_own_framework_cmake_deps():
@@ -291,16 +292,23 @@ def test_apple_own_framework_cmake_deps():
     client.run("create . mylibrary/1.0@ -s build_type=Debug")
     client.run("create . mylibrary/1.0@ -s build_type=Release")
 
+    profile = textwrap.dedent("""
+        include(default)
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Xcode
+        """)
     client.save({"conanfile.py": test_conanfile,
                  'CMakeLists.txt': test_cmake,
-                 "timer.cpp": timer_cpp})
-    with environment_append({"CONAN_CMAKE_GENERATOR": "Xcode"}):
-        client.run("install . -s build_type=Debug")
-        client.run("install . -s build_type=Release")
-        client.run("test . mylibrary/1.0@")
-        assert "Hello World Release!" in client.out
-        client.run("test . mylibrary/1.0@ -s build_type=Debug")
-        assert "Hello World Debug!" in client.out
+                 "timer.cpp": timer_cpp,
+                 "profile": profile})
+
+    client.run("install . -s build_type=Debug -pr=profile")
+    client.run("install . -s build_type=Release -pr=profile")
+    client.run("test . mylibrary/1.0@  -pr=profile")
+    assert "Hello World Release!" in client.out
+    client.run("test . mylibrary/1.0@ -s build_type=Debug  -pr=profile")
+    assert "Hello World Debug!" in client.out
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():

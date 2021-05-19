@@ -98,7 +98,7 @@ class CMake(object):
                 toolpath = self._toolchain_file
             else:
                 toolpath = os.path.join(generator_folder, self._toolchain_file)
-            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath))
+            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath.replace("\\", "/")))
         if self._conanfile.package_folder:
             pkg_folder = self._conanfile.package_folder.replace("\\", "/")
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
