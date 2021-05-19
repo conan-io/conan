@@ -511,7 +511,7 @@ class BinaryInstaller(object):
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
-
+        layout = self._cache.pkg_layout(pref)
         # TODO: cache2.0 Check with new locks
         # with layout.package_lock(pref):
         bare_pref = PackageReference(pref.ref, pref.id)
@@ -519,9 +519,10 @@ class BinaryInstaller(object):
         if processed_prev is None:  # This package-id has not been processed before
             if node.binary == BINARY_BUILD:
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+                # TODO: cache2.0 check remove
                 #layout.package_remove(pref)
-                #with layout.set_dirty_context_manager(pref):
-                pref = self._build_package(node, output, remotes)
+                with layout.set_dirty_context_manager():
+                    pref = self._build_package(node, output, remotes)
                 assert node.prev, "Node PREV shouldn't be empty"
                 assert node.pref.revision, "Node PREF revision shouldn't be empty"
                 assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
