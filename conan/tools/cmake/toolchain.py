@@ -146,7 +146,7 @@ class GLibCXXBlock(Block):
         libcxx = self._conanfile.settings.get_safe("compiler.libcxx")
         if not libcxx:
             return None
-        compiler = self._conanfile.settings.compiler
+        compiler = self._conanfile.settings.get_safe("compiler")
         lib = glib = None
         if compiler == "apple-clang":
             # In apple-clang 2 only values atm are "libc++" and "libstdc++"
@@ -298,10 +298,10 @@ class IOSSystemBlock(Block):
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
         set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
-        set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }})
+        set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
-        set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }})
+        set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         """)
 
     def _get_architecture(self):
@@ -342,8 +342,8 @@ class IOSSystemBlock(Block):
         host_sdk_name = self._apple_sdk_name()
 
         # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
-        # add a setting? check an option and if not present set a default?
-        # default to os.version?
+        #       add a setting? check an option and if not present set a default?
+        #       default to os.version?
         ctxt_toolchain = {
             "CMAKE_OSX_ARCHITECTURES": host_architecture,
             "CMAKE_SYSTEM_NAME": host_os,
@@ -358,12 +358,12 @@ class FindConfigFiles(Block):
         {% if find_package_prefer_config %}
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
-        # To support the cmake_find_package generators
+        # To support the generators based on find_package()
         {% if cmake_module_path %}
-        set(CMAKE_MODULE_PATH {{ cmake_module_path }} ${CMAKE_MODULE_PATH})
+        set(CMAKE_MODULE_PATH "{{ cmake_module_path }}" ${CMAKE_MODULE_PATH})
         {% endif %}
         {% if cmake_prefix_path %}
-        set(CMAKE_PREFIX_PATH {{ cmake_prefix_path }} ${CMAKE_PREFIX_PATH})
+        set(CMAKE_PREFIX_PATH "{{ cmake_prefix_path }}" ${CMAKE_PREFIX_PATH})
         {% endif %}
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
@@ -373,8 +373,6 @@ class FindConfigFiles(Block):
     def context(self):
         # To find the generated cmake_find_package finders
         # TODO: Change this for parameterized output location of CMakeDeps
-        cmake_prefix_path = "${CMAKE_CURRENT_LIST_DIR}"
-        cmake_module_path = "${CMAKE_CURRENT_LIST_DIR}"
         find_package_prefer_config = "ON"  # assume ON by default if not specified in conf
         prefer_config = self._conanfile.conf["tools.cmake.cmaketoolchain:find_package_prefer_config"]
         if prefer_config is not None and prefer_config.lower() in ("false", "0", "off"):
@@ -383,8 +381,8 @@ class FindConfigFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
         return {"find_package_prefer_config": find_package_prefer_config,
-                "cmake_prefix_path": cmake_prefix_path,
-                "cmake_module_path": cmake_module_path,
+                "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR}",
+                "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR}",
                 "android_prefix_path": android_prefix}
 
 
@@ -582,7 +580,7 @@ class CMakeToolchain(object):
 
     def __init__(self, conanfile, generator=None):
         self._conanfile = conanfile
-        self.generator = generator or self._get_generator()
+        self.generator = self._get_generator(generator)
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
@@ -648,10 +646,20 @@ class CMakeToolchain(object):
         if result:
             save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(result))
 
-    def _get_generator(self):
+    def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake
         conanfile = self._conanfile
 
+        # Downstream consumer always higher priority
+        generator_conf = conanfile.conf["tools.cmake.cmaketoolchain:generator"]
+        if generator_conf:
+            return generator_conf
+
+        # second priority: the recipe one:
+        if recipe_generator:
+            return recipe_generator
+
+        # if not defined, deduce automatically the default one
         compiler = conanfile.settings.get_safe("compiler")
         compiler_version = conanfile.settings.get_safe("compiler.version")
 
