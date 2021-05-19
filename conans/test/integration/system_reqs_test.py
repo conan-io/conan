@@ -1,4 +1,5 @@
 import os
+import re
 import stat
 import unittest
 
@@ -58,10 +59,11 @@ class SystemReqsTest(unittest.TestCase):
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
+        package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
-        pref = PackageReference(ref, "f0ba3ca2c218df4a877080ba99b65834b9413798")
+        pref = PackageReference(ref, package_id)
         load_file = load(client.cache.package_layout(ref).system_reqs_package(pref))
         self.assertIn("Installed my stuff", load_file)
 
@@ -85,7 +87,7 @@ class SystemReqsTest(unittest.TestCase):
         layout1 = client.cache.package_layout(pref.ref)
         layout2 = client.cache.package_layout(pref2.ref)
         self.assertTrue(os.path.exists(layout1.system_reqs_package(pref)))
-        client.run("remove Test* -f -p f0ba3ca2c218df4a877080ba99b65834b9413798")
+        client.run(f"remove Test* -f -p {package_id}")
         self.assertFalse(os.path.exists(layout1.system_reqs_package(pref)))
         self.assertTrue(os.path.exists(layout2.system_reqs_package(pref2)))
         client.run("remove Test* -f -p %s" % NO_SETTINGS_PACKAGE_ID)
@@ -139,10 +141,12 @@ class SystemReqsTest(unittest.TestCase):
         client.save(files)
         client.run("export . user/testing")
         client.run("install Test/0.1@user/testing --build missing")
+        package_id = re.search(r"Test/0.1@user/testing:(\S+)", str(client.out)).group(1)
+
         self.assertIn("*+Running system requirements+*", client.out)
         ref = ConanFileReference.loads("Test/0.1@user/testing")
         self.assertFalse(os.path.exists(client.cache.package_layout(ref).system_reqs()))
-        pref = PackageReference(ref, "f0ba3ca2c218df4a877080ba99b65834b9413798")
+        pref = PackageReference(ref, package_id)
         load_file = load(client.cache.package_layout(pref.ref).system_reqs_package(pref))
         self.assertEqual('', load_file)
 

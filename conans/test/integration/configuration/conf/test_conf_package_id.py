@@ -29,6 +29,6 @@ def test_package_id(client):
     client.save({"profile1": profile1,
                  "profile2": profile2})
     client.run("create . pkg/0.1@ -pr=profile1")
-    assert "pkg/0.1:b85ef030da903577bd87d1c92c0524c9c96212b5 - Build" in client.out
+    assert "pkg/0.1:27eb20f75134a24f81db47d2a38d6edca921d123 - Build" in client.out
     client.run("create . pkg/0.1@ -pr=profile2")
-    assert "pkg/0.1:7d2f1590113db99bcd08a4ebd4c841cc0a2e7020 - Build" in client.out
+    assert "pkg/0.1:a1eb1a27682c49deaa60371bf61aa894feed12bd - Build" in client.out

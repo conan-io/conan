@@ -5,7 +5,7 @@ from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.requires import UserRequirementsDict
 from conans.model.values import Values
 from conans.paths import CONANINFO
@@ -69,14 +69,16 @@ class RequirementInfo(object):
             return None
         if self.package_id == PACKAGE_ID_INVALID:
             return PACKAGE_ID_INVALID
-        vals = [str(n) for n in (self.name, self.version, self.user, self.channel, self.package_id)]
-        # This is done later to NOT affect existing package-IDs (before revisions)
-        if self.recipe_revision:
-            vals.append(self.recipe_revision)
-        if self.package_revision:
-            # A package revision is required = True, but didn't get a real value
-            vals.append(self.package_revision)
-        return "/".join(vals)
+
+        ref = ConanFileReference(self.name, self.version, self.user, self.channel,
+                                 self.recipe_revision, validate=False)
+        pref = repr(ref)
+        if self.package_id:
+            pref += ":{}".format(self.package_id)
+            if self.package_revision:
+                pref += "#{}".format(self.package_revision)
+
+        return pref
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None
@@ -182,7 +184,7 @@ class RequirementsInfo(UserRequirementsDict):
 
     @property
     def sha(self):
-        result = ["[requires]"]
+        result = []
         for req_info in self._data.values():
             s = req_info.sha
             if s is None:
@@ -190,7 +192,9 @@ class RequirementsInfo(UserRequirementsDict):
             if s == PACKAGE_ID_INVALID:
                 return PACKAGE_ID_INVALID
             result.append(s)
-        return '\n'.join(sorted(result))
+        result.sort()  # Show always in alphabetical order
+        result.insert(0, "[requires]")
+        return '\n'.join(result)
 
     def dumps(self):
         result = []
@@ -267,9 +271,9 @@ class PythonRequireInfo(object):
 
     @property
     def sha(self):
-        vals = [n for n in (self._name, self._version, self._user, self._channel, self._revision)
-                if n]
-        return "/".join(vals)
+        ref = ConanFileReference(self._name, self._version, self._user, self._channel,
+                                 self._revision, validate=False)
+        return repr(ref)
 
     def semver_mode(self):
         self._name = self._ref.name
@@ -342,8 +346,9 @@ class PythonRequiresInfo(object):
 
     @property
     def sha(self):
-        result = [r.sha for r in self._refs]
-        return sha1('\n'.join(result).encode())
+        result = ['[python_requires]']
+        result.extend(r.sha for r in self._refs)
+        return '\n'.join(result)
 
     def unrelated_mode(self):
         self._refs = None
@@ -504,10 +509,8 @@ class ConanInfo(object):
         """
         if self.invalid:
             return PACKAGE_ID_INVALID
-        result = [self.settings.sha]
-        # Only are valid requires for OPtions those Non-Dev who are still in requires
-        self.options.filter_used(self.requires.pkg_names)
-        result.append(self.options.sha)
+        result = [self.settings.sha,
+                  self.options.sha]
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
@@ -519,8 +522,9 @@ class ConanInfo(object):
             result.append(self.python_requires.sha)
         if hasattr(self, "conf"):
             result.append(self.conf.sha)
-        print("****************HASING ", "\n".join(result), "****************")
-        package_id = sha1('\n'.join(result).encode())
+        result.append("")  # Append endline so file ends with LF
+        text = '\n'.join(result)
+        package_id = sha1(text.encode())
         return package_id
 
     def serialize_min(self):
@@ -616,13 +620,6 @@ class ConanInfo(object):
 
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
-
-    def shared_library_package_id(self):
-        if "shared" in self.full_options and self.full_options.shared:
-            for dep_name in self.requires.pkg_names:
-                dep_options = self.full_options[dep_name]
-                if "shared" not in dep_options or not dep_options.shared:
-                    self.requires[dep_name].package_revision_mode()
 
     def parent_compatible(self, *_, **kwargs):
         """If a built package for Intel has to be compatible for a Visual/GCC compiler

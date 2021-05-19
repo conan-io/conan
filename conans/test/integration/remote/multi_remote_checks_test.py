@@ -1,3 +1,4 @@
+import re
 import unittest
 from collections import OrderedDict
 
@@ -39,11 +40,13 @@ class Pkg(ConanFile):
     """
         client.save({"conanfile.py": conanfile})
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Release")
+        package_id_release = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server1 --confirm")
 
         # Built type Debug only in server2
         client.run('remove -f "*"')
         client.run("create . Pkg/0.1@lasote/testing -s build_type=Debug")
+        package_id_debug = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server2 --confirm")
 
         # Remove all, install a package for debug
@@ -55,7 +58,7 @@ class Pkg(ConanFile):
 
         # Check registry, recipe should have been found from server1 and binary from server2
         ref = "Pkg/0.1@lasote/testing"
-        pref = "%s:5a67a79dbc25fd0fa149a0eb7a20715189a0d988" % ref
+        pref = f"%s:{package_id_debug}" % ref
         client.run("remote list_ref")
         self.assertIn("%s: server1" % ref, client.out)
 
@@ -78,11 +81,10 @@ class Pkg(ConanFile):
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client2.out)
         # The upload is not done to server2 because in client2 we don't have the registry
         # with the entry
-        self.assertIn("Uploading package 1/1: "
-                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 to 'server1'", client2.out)
+        self.assertIn(f"Uploading package 1/1: {package_id_debug} to 'server1'", client2.out)
 
         ref2 = "Pkg/0.1@lasote/testing"
-        pref2 = "%s:5a67a79dbc25fd0fa149a0eb7a20715189a0d988" % ref
+        pref2 = f"%s:{package_id_debug}" % ref
         # Now the reference is associated with server1
         client2.run("remote list_ref")
         self.assertIn("%s: server1" % ref2, client2.out)
@@ -110,7 +112,7 @@ class Pkg(ConanFile):
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
-                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 from remote 'server2' ", client.out)
+                      f"{package_id_debug} from remote 'server2' ", client.out)
 
         # Export new recipe, it should be non associated
         conanfile = """from conans import ConanFile, tools
@@ -213,6 +215,7 @@ class Pkg(ConanFile):
         client.run("upload Pkg* --all -r=server1 --confirm")
         client.run("remove * -p -f")
         client.run("create . Pkg/0.1@lasote/testing -o Pkg:opt=2")
+        package_id2 = re.search(r"Pkg/0.1@lasote/testing:(\S+)", str(client.out)).group(1)
         client.run("upload Pkg* --all -r=server2 --confirm")
         client.run("remove * -p -f")
         client.run("remote list_ref")
@@ -223,14 +226,14 @@ class Pkg(ConanFile):
         # Trying to install from another remote fails
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2")
         self.assertIn("Pkg/0.1@lasote/testing from 'server1' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Download", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing: Retrieving package b0c3b52601b7e36532a74a37c81bb432898a951b "
+        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Download", client.out)
+        self.assertIn(f"Pkg/0.1@lasote/testing: Retrieving package {package_id2} "
                       "from remote 'server2'", client.out)
 
         # Nothing to update
         client.run("install Pkg/0.1@lasote/testing -o Pkg:opt=2 -r=server2 -u")
         self.assertIn("Pkg/0.1@lasote/testing from 'server2' - Cache", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing:b0c3b52601b7e36532a74a37c81bb432898a951b - Cache",
+        self.assertIn(f"Pkg/0.1@lasote/testing:{package_id2} - Cache",
                       client.out)
 
         # Build missing

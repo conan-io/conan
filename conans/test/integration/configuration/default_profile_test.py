@@ -136,7 +136,7 @@ br/1.0@lasote/stable"""
         client.save({CONANFILE: cf,
                      "profile_host": profile_host}, clean_first=True)
         client.run("export . lasote/stable")
-        client.run('install mypackage/0.1@lasote/stable  -pr=profile_host --build missing')
+        client.run('install mypackage/0.1@lasote/stable  -pr=profile_host --build')
         assert "23" in client.out
 
     def test_env_default_profile(self):

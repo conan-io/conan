@@ -5,7 +5,7 @@ from time import sleep
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class ExportsSourcesMissingTest(unittest.TestCase):
@@ -63,7 +63,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remote list_ref --no-remote")
         self.assertIn("pkg/1.0: None", client.out)
         client.run("remote list_pref pkg/1.0 --no-remote")
-        self.assertIn("pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: None", client.out)
+        self.assertIn(f"pkg/1.0:{NO_SETTINGS_PACKAGE_ID}: None", client.out)
 
     @staticmethod
     def _create(client, number, version, modifier=""):

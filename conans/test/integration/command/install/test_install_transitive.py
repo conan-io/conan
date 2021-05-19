@@ -1,5 +1,5 @@
 import os
-
+import re
 
 import pytest
 
@@ -54,6 +54,7 @@ def test_partials(client):
         assert "No package matching" not in client.out
 
 
+@pytest.mark.xfail(reason="changing package-ids")
 def test_reuse(client):
     # FIXME: package-ids will change
     for lang, id0, id1 in [(0, "3475bd55b91ae904ac96fde0f106a136ab951a5e",
@@ -80,17 +81,18 @@ def test_reuse(client):
 def test_upper_option(client):
     client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 "
                "-o Hello0:language=1 --build missing")
+    package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-    pref = PackageReference(ref, "f43bd822487baa4ed2426c279c27b2811870499a")
+    pref = PackageReference(ref, package_id)
     hello0 = client.cache.package_layout(ref).package(pref)
 
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert 1 == hello0_conan_info.options.language
 
-    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                             "5faecfb46fd09e49f1812d732d6360bc1663e3ab")
+    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.cache.package_layout(pref1.ref).package(pref1)
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)
@@ -99,17 +101,17 @@ def test_upper_option(client):
 
 def test_inverse_upper_option(client):
     client.run("install . -o language=0 -o Hello1:language=1 -o Hello0:language=0 --build missing")
-
+    package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-    pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+    pref = PackageReference(ref, package_id)
     hello0 = client.cache.package_layout(ref).package(pref)
 
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert "language=0" == hello0_conan_info.options.dumps()
 
-    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                             "b96337c5fcdafd6533298017c2ba94812654f8ec")
+    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.cache.package_layout(pref1.ref).package(pref1)
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)
@@ -127,15 +129,16 @@ def test_upper_option_txt(client):
     client.save(files, clean_first=True)
 
     client.run("install . --build missing")
+    package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
+    package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-    pref = PackageReference(ref, "f43bd822487baa4ed2426c279c27b2811870499a")
+    pref = PackageReference(ref, package_id)
     hello0 = client.cache.package_layout(ref).package(pref)
     hello0_info = os.path.join(hello0, CONANINFO)
     hello0_conan_info = ConanInfo.load_file(hello0_info)
     assert 1 == hello0_conan_info.options.language
 
-    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
-                             "5faecfb46fd09e49f1812d732d6360bc1663e3ab")
+    pref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"), package_id2)
     hello1 = client.cache.package_layout(pref1.ref).package(pref1)
     hello1_info = os.path.join(hello1, CONANINFO)
     hello1_conan_info = ConanInfo.load_file(hello1_info)

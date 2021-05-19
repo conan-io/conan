@@ -304,6 +304,7 @@ class MyConanFile(ConanFile):
             self.assertIn("liba/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
                           client.out)
 
+    @pytest.mark.xfail(reason="info.shared_library_package_id() to be removed")
     def test_missing_shared_option_package_id(self):
         client = TestClient()
 

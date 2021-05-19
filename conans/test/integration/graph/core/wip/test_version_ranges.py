@@ -20,8 +20,6 @@ class TestVersionRanges(GraphManagerTest):
         self._check_node(libb, "libb/0.2#123", dependents=[app])
         self._check_node(app, "app/0.1", deps=[libb])
 
-        assert libb.package_id == "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
-
     def test_missing(self):
         # app -> libb[>0.1] (missing)
         consumer = self.recipe_consumer("app/0.1", ["libb/[>=0.0]"])

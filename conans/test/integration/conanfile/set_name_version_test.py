@@ -4,7 +4,7 @@ import unittest
 
 from parameterized import parameterized
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conans.util.files import mkdir
 
 
@@ -27,10 +27,10 @@ class SetVersionNameTest(unittest.TestCase):
                       client.out)
         # installing it doesn't break
         client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build" % user_channel,
+        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Build" % user_channel,
                       client.out)
         client.run("install pkg/2.1%s --build=missing" % (user_channel or "@"))
-        self.assertIn("pkg/2.1%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" % user_channel,
+        self.assertIn(f"pkg/2.1%s:{NO_SETTINGS_PACKAGE_ID} - Cache" % user_channel,
                       client.out)
 
         # Local flow should also work
@@ -53,10 +53,10 @@ class SetVersionNameTest(unittest.TestCase):
         client.run("export . user/testing")
         self.assertIn("pkg/2.1@user/testing: A new conanfile.py version was exported", client.out)
         client.run("install pkg/2.1@user/testing --build=missing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Build",
+        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Build",
                       client.out)
         client.run("install pkg/2.1@user/testing")
-        self.assertIn("pkg/2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache",
+        self.assertIn(f"pkg/2.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Cache",
                       client.out)
         # Local flow should also work
         client.run("install .")

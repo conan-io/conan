@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 import time
 import unittest
@@ -40,6 +41,7 @@ class PyRequiresExtendTest(unittest.TestCase):
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
+        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
@@ -51,8 +53,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Package installed "
-                      "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
+        self.assertIn(f"Pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_dot(self):
         client = TestClient(default_server_user=True)
@@ -267,6 +268,7 @@ class PyRequiresExtendTest(unittest.TestCase):
 
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . Pkg/0.1@user/testing")
+        package_id = re.search(r"Pkg/0.1@user/testing:(\S+)", str(client.out)).group(1)
         self.assertIn("Pkg/0.1@user/testing: My cool source!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool build!", client.out)
         self.assertIn("Pkg/0.1@user/testing: My cool package!", client.out)
@@ -278,8 +280,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: My cool package_info!", client.out)
         client.run("remove * -f")
         client.run("download Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing: Package installed "
-                      "69265e58ddc68274e0c5510905003ff78c9db5de", client.out)
+        self.assertIn(f"Pkg/0.1@user/testing: Package installed {package_id}", client.out)
 
     def test_reuse_class_members(self):
         client = TestClient()
@@ -725,7 +726,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("    python_requires1/1.0@user/test", client.out)
         self.assertIn("    python_requires2/1.0@user/test", client.out)
         #   - packages
-        self.assertIn("    project/1.0@user/test:88cd9e14eae0af6c823ed619608b6883037e5cbc - Build",
+        self.assertIn("    project/1.0@user/test:f9d5c46e6766f3cad7ae39c013485379b7b62e68 - Build",
                       client.out)
 
         #   - no mention to alias

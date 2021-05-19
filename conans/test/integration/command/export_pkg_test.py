@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import textwrap
 import unittest
 from textwrap import dedent
@@ -59,9 +60,8 @@ class PkgA(ConanFile):
         client.run("install . -if=build")
         client.run("build . -bf=build")
         client.run("export-pkg . PkgA/0.1@user/testing -bf=build -pr=default")
-        self.assertIn("PkgA/0.1@user/testing: Package "
-                      "'2f1a7578223f5103f11beec4353264ab77e486d4' created",
-                      client.out)
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        self.assertIn(f"PkgA/0.1@user/testing: Package '{package_id}' created", client.out)
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
@@ -232,8 +232,9 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        pref = PackageReference(ref, package_id)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -282,8 +283,9 @@ class TestConan(ConanFile):
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
                    "--source-folder=src")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        pref = PackageReference(ref, package_id)
         package_folder = client.cache.package_layout(pref.ref).package(pref)
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -505,7 +507,7 @@ class TestConan(ConanFile):
         self.assertIn("Can't build while installing", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
         layout = client.cache.package_layout(ref)
-        pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
         build_folder = layout.build(pref)
         self.assertTrue(is_dirty(build_folder))
         self.assertTrue(layout.package_is_dirty(pref))

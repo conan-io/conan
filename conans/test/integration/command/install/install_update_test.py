@@ -73,11 +73,11 @@ def test_update_not_date():
     client.run("remote list_ref")
     assert "Hello0/1.0@lasote/stable" in client.out
     client.run("remote list_pref Hello0/1.0@lasote/stable")
-    package_reference = "Hello0/1.0@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+    package_reference = f"Hello0/1.0@lasote/stable:{NO_SETTINGS_PACKAGE_ID}"
     assert package_reference in client.out
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-    pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
     export_folder = client.cache.package_layout(ref).export()
     recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
     package_folder = client.cache.package_layout(pref.ref).package(pref)
@@ -101,7 +101,7 @@ def test_update_not_date():
     assert "Hello0/1.0@lasote/stable" in client.out
 
     client.run("remote list_pref Hello0/1.0@lasote/stable")
-    assert "Hello0/1.0@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" in client.out
+    assert f"Hello0/1.0@lasote/stable:{NO_SETTINGS_PACKAGE_ID}" in client.out
 
     rebuild_timestamps = timestamps()
     assert rebuild_timestamps != initial_timestamps
@@ -165,7 +165,7 @@ def test_upload_doesnt_follow_pref():
     client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                 "r2": [("lasote", "mypass")]})
     ref = "Pkg/0.1@lasote/testing"
-    pref = "%s:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" % ref
+    pref = f"%s:{NO_SETTINGS_PACKAGE_ID}" % ref
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload Pkg/0.1@lasote/testing --all -r r2")
