@@ -178,6 +178,7 @@ def test_local_source_change_base():
     assert os.path.exists(header)
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     client = TestClient()
@@ -276,6 +277,7 @@ def test_export_pkg_local():
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_imports():
     """The 'conan imports' follows the layout"""
     client = TestClient()
