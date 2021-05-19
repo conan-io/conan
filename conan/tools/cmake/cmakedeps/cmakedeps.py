@@ -33,19 +33,19 @@ class CMakeDeps(object):
         # Iterate all the transitive requires
         for req in host_requires.values():
 
-            config_version = ConfigVersionTemplate(req, self.configuration)
+            config_version = ConfigVersionTemplate(self, req)
             ret[config_version.filename] = config_version.render()
 
-            data_target = ConfigDataTemplate(req, self.configuration, self.arch)
+            data_target = ConfigDataTemplate(self, req)
             ret[data_target.filename] = data_target.render()
 
-            target_configuration = TargetConfigurationTemplate(req, self.configuration)
+            target_configuration = TargetConfigurationTemplate(self, req)
             ret[target_configuration.filename] = target_configuration.render()
 
-            targets = TargetsTemplate(req)
+            targets = TargetsTemplate(self, req)
             ret[targets.filename] = targets.render()
 
-            config = ConfigTemplate(req, self.configuration)
+            config = ConfigTemplate(self, req)
             # Check if the XXConfig.cmake exists to keep the first generated configuration
             # to only include the build_modules from the first conan install. The rest of the
             # file is common for the different configurations.

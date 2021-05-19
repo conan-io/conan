@@ -6,7 +6,8 @@ from conans.errors import ConanException
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, req, configuration):
+    def __init__(self, cmakedeps, req):
+        self.cmakedeps = cmakedeps
         if req is not None:
             self.conanfile = req
             self.pkg_name = req.ref.name
@@ -14,7 +15,6 @@ class CMakeDepsFileTemplate(object):
                 replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
             self.target_namespace = get_target_namespace(self.conanfile)
             self.file_name = get_file_name(self.conanfile)
-        self.configuration = configuration
 
     def render(self):
         context = self.context
@@ -36,7 +36,8 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def config_suffix(self):
-        return "_{}".format(self.configuration.upper()) if self.configuration else ""
+        return "_{}".format(self.cmakedeps.configuration.upper()) \
+            if self.cmakedeps.configuration else ""
 
     def get_target_namespace(self):
         return get_target_namespace(self.conanfile)

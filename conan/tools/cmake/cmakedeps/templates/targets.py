@@ -11,9 +11,6 @@ FooTargets.cmake
 
 class TargetsTemplate(CMakeDepsFileTemplate):
 
-    def __init__(self, req):
-        super(TargetsTemplate, self).__init__(req, configuration=None)
-
     @property
     def filename(self):
         return "{}Targets.cmake".format(self.file_name)

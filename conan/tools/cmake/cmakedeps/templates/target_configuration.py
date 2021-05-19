@@ -14,7 +14,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        return "{}Target-{}.cmake".format(self.file_name, self.configuration.lower())
+        return "{}Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
 
     @property
     def context(self):
@@ -24,7 +24,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "config_suffix": self.config_suffix,
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names":  self.get_required_components_names(),
-                "configuration": self.configuration}
+                "configuration": self.cmakedeps.configuration}
 
     @property
     def template(self):
