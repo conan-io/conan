@@ -675,14 +675,20 @@ class TurboTestClient(TestClient):
         self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+
+        latest_rrev = self.cache.get_recipe_revisions(ref, only_latest_rrev=True)
+        ref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}")
+
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
+
+        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        prev = prevs[0]
+
+        return prev
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]

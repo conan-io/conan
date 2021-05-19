@@ -46,8 +46,8 @@ def test_layout_in_cache(conanfile, layout_helper_name, build_type, arch):
     ref = ConanFileReference.loads("lib/1.0")
     pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
                          conanfile=conanfile.format(ly=layout_helper_name))
-    bf = client.cache.package_layout(pref.ref).build(pref)
-    pf = client.cache.package_layout(pref.ref).package(pref)
+    bf = client.cache.pkg_layout(pref).build()
+    pf = client.cache.pkg_layout(pref).package()
 
     build_folder = None
     if layout_helper_name == "clion_layout":
