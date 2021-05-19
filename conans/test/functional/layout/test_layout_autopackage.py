@@ -5,6 +5,14 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+def get_latest_prev(cache, ref, pkgid):
+    latest_rrev = cache.get_recipe_revisions(ref, only_latest_rrev=True)
+    ref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}")
+    pref = PackageReference(ref, pkgid)
+    prevs = cache.get_package_revisions(pref, only_latest_prev=True)
+    return prevs[0]
+
+
 def test_auto_package_no_components():
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type")
@@ -86,9 +94,12 @@ def test_auto_package_no_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
+
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
-    p_folder = client.cache.package_layout(ref).package(pref)
+
+    prev = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+
+    p_folder = client.cache.pkg_layout(prev).package()
     def p_path(path):
         return os.path.join(p_folder, path)
 
@@ -175,8 +186,8 @@ def test_auto_package_with_components():
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
-    p_folder = client.cache.package_layout(ref).package(pref)
+    pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+    p_folder = client.cache.pkg_layout(pref).package()
     def p_path(path):
         return os.path.join(p_folder, path)
 
@@ -270,8 +281,8 @@ def test_auto_package_default_patterns():
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
-    p_folder = client.cache.package_layout(ref).package(pref)
+    pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
+    p_folder = client.cache.pkg_layout(pref).package()
 
     assert set(os.listdir(os.path.join(p_folder, "lib"))) == {"mylib.a", "mylib.so", "mylib.so.0",
                                                               "mylib.dylib", "mylib.lib"}
