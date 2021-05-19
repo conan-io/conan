@@ -56,13 +56,12 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
     conanfile.folders.set_base_source(source_folder)
     conanfile.folders.set_base_package(dest_package_folder)
 
-    # TODO: cache2.0 check dirty management locks
-    #with layout.set_dirty_context_manager(pref):
-    if package_folder:
-        prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
-                                   conan_file_path, ref)
-    else:
-        prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
+    with layout.set_dirty_context_manager():
+        if package_folder:
+            prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
+                                       conan_file_path, ref)
+        else:
+            prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     pref = PackageReference(pref.ref, pref.id, prev)
     layout.assign_prev(ConanReference(pref))

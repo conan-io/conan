@@ -300,11 +300,10 @@ class _PackagePreparator(object):
     def _compress_package_files(self, layout, pref, integrity_check):
         t1 = time.time()
 
-        # TODO: cache2.0
-        # if layout.package_is_dirty(pref):
-        #     raise ConanException("Package %s is corrupted, aborting upload.\n"
-        #                          "Remove it with 'conan remove %s -p=%s'"
-        #                          % (pref, pref.ref, pref.id))
+        if layout.package_is_dirty():
+            raise ConanException("Package %s is corrupted, aborting upload.\n"
+                                 "Remove it with 'conan remove %s -p=%s'"
+                                 % (pref, pref.ref, pref.id))
 
         download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)

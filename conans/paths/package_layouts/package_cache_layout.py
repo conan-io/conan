@@ -119,10 +119,7 @@ class PackageCacheLayout(object):
 
     @contextmanager
     def set_dirty_context_manager(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        set_dirty(pkg_folder)
-        yield
-        clean_dirty(pkg_folder)
+        raise("set_dirty_context_manager moved to cache2.0")
 
     def download_package(self, pref):
         return os.path.join(self._base_folder, "dl", "pkg", pref.id)
@@ -131,8 +128,7 @@ class PackageCacheLayout(object):
         return os.path.join(self._base_folder, "dl", "export")
 
     def package_is_dirty(self, pref):
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        return is_dirty(pkg_folder)
+        raise("package_is_dirty moved to cache2.0")
 
     def package_id_exists(self, package_id):
         # The package exists if the folder exists, also for short_paths case

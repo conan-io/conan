@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
@@ -6,12 +7,11 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, rm_conandir
-from conans.util.files import rmdir
+from conans.util.files import rmdir, set_dirty, clean_dirty, is_dirty
 
 
+# TODO: cache2.0 create an unique layout class
 class PackageLayout:
-    _random_prev = False
-
     def __init__(self, pref: ConanReference, cache: DataCache, package_folder: str):
         self._pref = pref
         self._cache = cache
@@ -29,7 +29,6 @@ class PackageLayout:
         # Assign the new revision
         old_pref = self._pref
         self._pref = pref
-        self._random_prev = False
 
         # Reassign PACKAGE folder in the database (BUILD is not moved)
         new_directory = self._cache._move_prev(old_pref, self._pref)
@@ -79,3 +78,14 @@ class PackageLayout:
 
     def get_remote(self):
         return self._cache.get_remote(self._pref)
+
+    # TODO: cache2.0 check this
+    @contextmanager
+    def set_dirty_context_manager(self):
+        set_dirty(self.package())
+        yield
+        clean_dirty(self.package())
+
+    # TODO: cache2.0 check this
+    def package_is_dirty(self):
+        return is_dirty(self.package())

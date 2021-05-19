@@ -6,6 +6,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANFILE, SCM_SRC_FOLDER
 
 
+# TODO: cache2.0 create an unique layout class
 class RecipeLayout:
 
     def __init__(self, ref: ConanReference, cache: DataCache, base_folder: str):
