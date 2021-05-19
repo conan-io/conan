@@ -19,7 +19,7 @@ def client():
         from conans.tools import save
         import os
         class Pkg(ConanFile):
-            settings = "build_type"
+            settings = "build_type", "os", "arch", "compiler"
             {}
             def package(self):
                 save(os.path.join(self.package_folder, "include", "%s.h" % self.name),
@@ -64,8 +64,7 @@ def test_transitive_multi(client):
         assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
-            client.run_command('cmake .. -G "Visual Studio 15 Win64" '
-                               '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
