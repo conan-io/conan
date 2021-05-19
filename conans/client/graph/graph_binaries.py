@@ -243,9 +243,8 @@ class GraphBinariesAnalyzer(object):
 
         node.binary_remote = remote
 
-    @staticmethod
-    def _evaluate_package_id(node):
-        compute_package_id(node)  # TODO: revise compute_package_id()
+    def _evaluate_package_id(self, node):
+        compute_package_id(node, self._cache.new_config)  # TODO: revise compute_package_id()
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         build_mode = BuildMode(build_mode, self._output)

@@ -2,10 +2,13 @@ import json
 import textwrap
 import unittest
 
+import pytest
+
 from conans.cli.exit_codes import ERROR_INVALID_CONFIGURATION
 from conans.client.graph.graph import BINARY_INVALID
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 class TestValidate(unittest.TestCase):
@@ -26,7 +29,7 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux")
-        self.assertIn("pkg/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
+        self.assertIn("pkg/0.1: Package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8' created",
                       client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
@@ -61,19 +64,19 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux")
-        self.assertIn("pkg/0.1: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31' created",
+        self.assertIn("pkg/0.1: Package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8' created",
                       client.out)
 
         client.run("create . pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
-                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      "Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
-        self.assertIn("pkg/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Cache", client.out)
+        self.assertIn("pkg/0.1:02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8 - Cache", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("pkg/0.1: Main binary package 'INVALID' missing. "
-                      "Using compatible package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'",
+                      "Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
-        self.assertIn("ID: cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31", client.out)
+        self.assertIn("ID: 02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", client.out)
 
     def test_validate_compatible_also_invalid(self):
         client = TestClient()
@@ -97,11 +100,11 @@ class TestValidate(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
 
         client.run("create . pkg/0.1@ -s os=Linux -s build_type=Release")
-        self.assertIn("pkg/0.1: Package '24c3aa2d6c5929d53bd86b31e020c55d96b265c7' created",
+        self.assertIn("pkg/0.1: Package '139ed6a9c0b2338ce5c491c593f88a5c328ea9e4' created",
                       client.out)
         # compatible_packges fallback works
         client.run("install pkg/0.1@ -s os=Linux -s build_type=Debug")
-        self.assertIn("pkg/0.1:24c3aa2d6c5929d53bd86b31e020c55d96b265c7 - Cache", client.out)
+        self.assertIn("pkg/0.1:139ed6a9c0b2338ce5c491c593f88a5c328ea9e4 - Cache", client.out)
 
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
@@ -132,12 +135,13 @@ class TestValidate(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
 
+        package_id = "139ed6a9c0b2338ce5c491c593f88a5c328ea9e4"
         client.run("create . pkg/0.1@ -s os=Linux -s build_type=Release")
-        self.assertIn("pkg/0.1: Package '24c3aa2d6c5929d53bd86b31e020c55d96b265c7' created",
+        self.assertIn(f"pkg/0.1: Package '{package_id}' created",
                       client.out)
         # compatible_packges fallback works
         client.run("install pkg/0.1@ -s os=Linux -s build_type=Debug")
-        self.assertIn("pkg/0.1:24c3aa2d6c5929d53bd86b31e020c55d96b265c7 - Cache", client.out)
+        self.assertIn(f"pkg/0.1:{package_id} - Cache", client.out)
 
         # Windows invalid configuration
         error = client.run("create . pkg/0.1@ -s os=Windows -s build_type=Release",
@@ -167,6 +171,7 @@ class TestValidate(unittest.TestCase):
         client.run("info pkg/0.1@ -s os=Windows -s build_type=Debug")
         self.assertIn("ID: INVALID", client.out)
 
+    @pytest.mark.xfail(reason="The way to check options of transitive deps has changed")
     def test_validate_options(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])
@@ -193,9 +198,11 @@ class TestValidate(unittest.TestCase):
 
         client.save({"conanfile.py": GenConanfile().with_requires("pkg1/0.1", "pkg2/0.1")})
         error = client.run("install .", assert_error=True)
+        print(client.out)
         self.assertEqual(error, ERROR_INVALID_CONFIGURATION)
         self.assertIn("pkg1/0.1: Invalid ID: Option 2 of 'dep' not supported", client.out)
 
+    @pytest.mark.xfail(reason="The way to check versions of transitive deps has changed")
     def test_validate_requires(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
@@ -224,7 +231,8 @@ class TestValidate(unittest.TestCase):
 
     def test_validate_package_id_mode(self):
         client = TestClient()
-        client.run("config set general.default_package_id_mode=full_package_mode")
+        # client.run("config set general.default_package_id_mode=full_package_mode")
+        save(client.cache.new_config_path, "core.package_id:default_mode=full_package_mode")
         conanfile = textwrap.dedent("""
           from conans import ConanFile
           from conans.errors import ConanInvalidConfiguration

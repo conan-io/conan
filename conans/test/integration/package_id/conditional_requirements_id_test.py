@@ -1,19 +1,19 @@
 import unittest
 
+import pytest
+
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 
 
 class ConditionalRequirementsIdTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Now dependencies are transitive for package id by default")
     def test_basic(self):
         # https://github.com/conan-io/conan/issues/3792
         # Default might be improved 2.0 in https://github.com/conan-io/conan/issues/3762
         client = TestClient()
-        conanfile = '''from conans import ConanFile
-class ConanLib(ConanFile):
-    pass
-'''
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . optional/0.1@user/testing")
         conanfile = '''from conans import ConanFile
 class ConanLib(ConanFile):
@@ -30,30 +30,27 @@ class ConanLib(ConanFile):
         client.run("create . pkgA/0.1@user/testing")
         self.assertIn(NO_SETTINGS_PACKAGE_ID, client.out)
         client.run("create . pkgA/0.1@user/testing -o pkgA:use_lib=True")
-        self.assertIn("30b83bef2eb3dc4ba0692e15c29f09c5953a7735", client.out)
-        conanfile = '''from conans import ConanFile
-class ConanLib(ConanFile):
-    requires = "pkgA/0.1@user/testing"
-'''
-        client.save({"conanfile.py": conanfile})
+        self.assertIn("9824b101f894df7e2b106af5055272fc083f3008", client.out)
+
+        client.save({"conanfile.py": GenConanfile().with_requires("pkgA/0.1@user/testing")})
         client.run("create . pkgB/0.1@user/testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgB")})
         client.run("create . pkgC/0.1@user/testing")
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
         self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)
 
         client.save({"conanfile.py": conanfile.replace("pkgA", "pkgC")})
         client.run("install .")
         print(client.out)
         self.assertIn("pkgA/0.1@user/testing:%s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
         self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)
 
         client.run("install . -o pkgA:use_lib=True")
         self.assertIn("pkgA/0.1@user/testing:30b83bef2eb3dc4ba0692e15c29f09c5953a7735", client.out)
-        self.assertIn("pkgB/0.1@user/testing:5858e6dc7a216040dfdccc8eb00e80711e56f5ea", client.out)
+        self.assertIn("pkgB/0.1@user/testing:6d027ca5b485c4bb8d95034b659613b57e5192d6", client.out)
         self.assertIn("pkgC/0.1@user/testing:51ac26b3b7f3497f8e15e77491c4d1fcc8bb58dd", client.out)

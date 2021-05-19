@@ -79,10 +79,10 @@ class PackageIDTest(unittest.TestCase):
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
         self.assertIn("WARN: The package Hello2/2.3.8@lasote/stable:"
-                      "e0d17b497b58c730aac949f374cf0bdb533549ab doesn't belong to the "
+                      "dce86675f75d209098577f160da7413aed767d0d doesn't belong to the "
                       "installed recipe revision, removing folder",
                       self.client.out)
-        self.assertIn("- Package ID: e0d17b497b58c730aac949f374cf0bdb533549ab",
+        self.assertIn("- Package ID: dce86675f75d209098577f160da7413aed767d0d",
                       self.client.out)
 
         # Try to change user and channel too, should be the same, not rebuilt needed
@@ -97,7 +97,7 @@ class PackageIDTest(unittest.TestCase):
                          clean_first=True)
 
         self.client.run("install .", assert_error=True)
-        self.assertIn("Hello2/2.3.8@lasote/stable:e0d17b497b58c730aac949f374cf0bdb533549ab",
+        self.assertIn("Hello2/2.3.8@lasote/stable:dce86675f75d209098577f160da7413aed767d0d",
                       self.client.out)
 
     def test_version_full_version_schema(self):
@@ -124,7 +124,7 @@ class PackageIDTest(unittest.TestCase):
         # As we have changed Hello2, the binary is not valid anymore so it won't find it
         # but will look for the same package_id
         self.client.run("install .", assert_error=True)
-        self.assertIn("- Package ID: 3ec60bb399a8bcb937b7af196f6685ba878aab02",
+        self.assertIn("- Package ID: d5d0eee18cd94846c5c42773267949ca9c05e0de",
                       self.client.out)
 
         # Now change the Hello version and build it, if we install out requires is
@@ -152,7 +152,7 @@ class PackageIDTest(unittest.TestCase):
                          clean_first=True)
         self.client.run("install . --build missing")
 
-        pkg_id = "586c42dfdef8986cde85cda46b44133db925baae"
+        pkg_id = "e40e4e325977c9f91694ed4c7108979a2d24666d"
         self.assertIn("Hello2/2.3.8@lasote/stable:{} - Build".format(pkg_id),
                       self.client.out)
 
@@ -231,11 +231,12 @@ class PackageIDTest(unittest.TestCase):
         # Not needed to rebuild Hello2, it doesn't matter its requires
         # We have changed hello2, so a new binary is required, but same id
         self.client.run("install .", assert_error=True)
+        package_id = "cc0975391fddf13e161a63ef63999445df98fb0c"
         self.assertIn("The package "
-                      "Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 "
+                      f"Hello2/2.3.8@lasote/stable:{package_id} "
                       "doesn't belong to the installed recipe revision, removing folder",
                       self.client.out)
-        self.assertIn("Hello2/2.3.8@lasote/stable:0c8b5ebf2790dd989f84360c366965b731a9bfc8 -"
+        self.assertIn(f"Hello2/2.3.8@lasote/stable:{package_id} -"
                       " Missing", self.client.out)
 
     def test_toolset_visual_compatibility(self):
@@ -427,14 +428,14 @@ class PackageIDTest(unittest.TestCase):
         self._export("libd", "0.1.0", channel=channel, package_id_text=None,
                      requires=["libc/0.1.0@user/testing"])
         self.client.run("create . libd/0.1.0@user/testing", assert_error=True)
-        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
+        self.assertIn("""ERROR: Missing binary: libc/0.1.0@user/testing:d4d0d064f89ab22de34fe7d99476736a87c1e254
 
 libc/0.1.0@user/testing: WARN: Can't find a 'libc/0.1.0@user/testing' package for the specified settings, options and dependencies:
 - Settings:%s
-- Options: an_option=off, liba:an_option=off, libb:an_option=off, libbar:an_option=off, libfoo:an_option=off
+- Options: an_option=off
 - Dependencies: libb/0.1.0@user/testing, libfoo/0.1.0@user/testing
 - Requirements: liba/0.1.0, libb/0.1.0, libbar/0.1.0, libfoo/0.1.0
-- Package ID: e12c9d31fa508340bb8d0c4f9dd4c98a5d0ac082
+- Package ID: d4d0d064f89ab22de34fe7d99476736a87c1e254
 
 ERROR: Missing prebuilt package for 'libc/0.1.0@user/testing'""" % " ", self.client.out)
 
@@ -562,15 +563,15 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we only build pkg1, we get a new packageID for pkg3
         t.run("create package3.py pkg3/1.0@ --build=pkg1", assert_error=True)
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: ffba90d1c0b46dce02239f621ede0aa8027d39f2", t.out)
-        self.assertIn("ERROR: Missing binary: pkg3/1.0:ffba90d1c0b46dce02239f621ede0aa8027d39f2",
+        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
+        self.assertIn("ERROR: Missing binary: pkg3/1.0:734676dcb7c757f2d195f35a67e363ce850783df",
                       t.out)
 
         # If we build both, we get the new package
         t.run("create package3.py pkg3/1.0@ --build=pkg1 --build=pkg3")
         self.assertIn("pkg3/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0: Updated ID: ffba90d1c0b46dce02239f621ede0aa8027d39f2", t.out)
-        self.assertIn("pkg3/1.0: Package 'ffba90d1c0b46dce02239f621ede0aa8027d39f2' created", t.out)
+        self.assertIn("pkg3/1.0: Updated ID: 734676dcb7c757f2d195f35a67e363ce850783df", t.out)
+        self.assertIn("pkg3/1.0: Package '734676dcb7c757f2d195f35a67e363ce850783df' created", t.out)
 
     def test_package_revision_mode_download(self):
         t = TestClient(default_server_user=True)
@@ -594,9 +595,9 @@ class PackageRevisionModeTestCase(unittest.TestCase):
         # If we build pkg1, we need a new packageID for pkg2
         t.run("install pkg3/1.0@ --build=pkg1")
         self.assertIn("pkg2/1.0:Package_ID_unknown - Unknown", t.out)
-        self.assertIn("pkg3/1.0:3ea4b5f291451dab54b09abbf324d99d1f4f8cd7 - Download", t.out)
+        self.assertIn("pkg3/1.0:ad2a3c63a3adc6721aeaac45b34f80f0e1b72827 - Download", t.out)
         self.assertIn("pkg2/1.0: Unknown binary for pkg2/1.0, computing updated ID", t.out)
-        self.assertIn("pkg2/1.0: Updated ID: ac9203e9ca51551d014c60ae4291cc635dceefb6", t.out)
+        self.assertIn("pkg2/1.0: Updated ID: ffaddbda5ec0ebae68de80c88ab23b40ed72912b", t.out)
         self.assertIn("pkg2/1.0: Binary for updated ID from: Download", t.out)
-        self.assertIn("pkg2/1.0: Retrieving package ac9203e9ca51551d014c60ae4291cc635dceefb6 "
+        self.assertIn("pkg2/1.0: Retrieving package ffaddbda5ec0ebae68de80c88ab23b40ed72912b "
                       "from remote 'default'", t.out)

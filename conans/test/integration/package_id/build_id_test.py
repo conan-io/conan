@@ -49,12 +49,17 @@ class MyTest(ConanFile):
         self.copy("*")
 """
 
+package_id_windows_release = "e3ae2a66a27043e92d6c3a54fca88b876036e4cf"
+package_id_windows_debug = "200b27f2d62a075edd25b8313648f6f53c619bfe"
+package_id_linux_release = "139ed6a9c0b2338ce5c491c593f88a5c328ea9e4"
+package_id_linux_debug = "38a0dd7a521153484cfb0cc06f11658dddccf92e"
+
 
 class BuildIdTest(unittest.TestCase):
+
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                            "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
+        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel:{package_id_windows_debug}")
         layout = client.cache.package_layout(pref_debug.ref)
         conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
@@ -62,21 +67,21 @@ class BuildIdTest(unittest.TestCase):
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                              "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
+                                              f"{package_id_windows_release}")
         conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
         pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
-                                            "322de4b4a41f905f6b18f454ab5f498690b39c2a")
+                                            f"{package_id_linux_debug}")
         conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
         pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
-                                              "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
+                                              f"{package_id_linux_release}")
         conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
@@ -92,10 +97,12 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
         client.run("create . user/channel -s os=Windows -s build_type=Debug")
+
         self.assertNotIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Packaging Debug!", client.out)
 
         client.run("create . user/channel -s os=Linux -s build_type=Release")
+
         self.assertIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.out)
         self.assertIn("Packaging Release!", client.out)
@@ -237,7 +244,7 @@ class BuildIdTest(unittest.TestCase):
         client.run("info . -s os=Windows -s build_type=Release")
 
         def _check():
-            build_ids = str(client.out).count("BuildID: 427f426a482a2b22a1744e9e949aa7f2544f5b7c")
+            build_ids = str(client.out).count("BuildID: 509127386afe264490c1c3484e6949f3b86d95f6")
             build_nones = str(client.out).count("BuildID: None")
             if python_consumer:
                 self.assertEqual(2, build_ids)
@@ -247,24 +254,24 @@ class BuildIdTest(unittest.TestCase):
                 self.assertEqual(1, build_nones)
 
         _check()
-        self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-        self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+        self.assertIn(f"ID: {package_id_windows_release}", client.out)
+        self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
 
         client.run("info . -s os=Windows -s build_type=Debug")
         _check()
-        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.out)
-        self.assertIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+        self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
+        self.assertIn(f"ID: {package_id_windows_debug}", client.out)
 
         if python_consumer:
             client.run("export . user/channel")
             client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Debug")
             _check()
-            self.assertNotIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-            self.assertIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+            self.assertNotIn(f"ID: {package_id_windows_release}", client.out)
+            self.assertIn(f"ID: {package_id_windows_debug}", client.out)
             client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Release")
             _check()
-            self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
-            self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
+            self.assertIn(f"ID: {package_id_windows_release}", client.out)
+            self.assertNotIn(f"ID: {package_id_windows_debug}", client.out)
 
     def test_failed_build(self):
         # Repeated failed builds keep failing

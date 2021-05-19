@@ -2,6 +2,7 @@ import textwrap
 import unittest
 
 from conans.test.utils.tools import TestClient, GenConanfile
+from conans.util.files import save
 
 
 class PythonRequiresPackageIDTest(unittest.TestCase):
@@ -23,31 +24,32 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
     def test_default(self):
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.assertIn("pkg/0.1:ecc024bdf63d1355af81d60281c569492d98901c - Build", self.client2.out)
+        self.assertIn("pkg/0.1:eda9a39e318258650fd92c53c544261297e11514 - Build", self.client2.out)
 
         self.client.run("export . tool/1.1.2@")
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.assertIn("pkg/0.1:ecc024bdf63d1355af81d60281c569492d98901c - Build", self.client2.out)
+        self.assertIn("pkg/0.1:eda9a39e318258650fd92c53c544261297e11514 - Build", self.client2.out)
 
         # With a minor change, it fires a rebuild
         self.client.run("export . tool/1.2.0@")
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.2.0", self.client2.out)
-        self.assertIn("pkg/0.1:2f471d7bec8ea131369a4b683cd1aeea65a18861 - Build", self.client2.out)
+        self.assertIn("pkg/0.1:cc0b4f4392034760802175c1b51bfaabc1d743d2 - Build", self.client2.out)
 
     def test_change_mode_conf(self):
         # change the policy in conan.conf
-        self.client2.run("config set general.default_python_requires_id_mode=patch_mode")
+        # self.client2.run("config set general.default_python_requires_id_mode=patch_mode")
+        save(self.client2.cache.new_config_path, "core.package_id:python_default_mode=patch_mode")
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.assertIn("pkg/0.1:f3161fafc8273fe3c8afa3b51dcc198c33f66033 - Build", self.client2.out)
+        self.assertIn("pkg/0.1:4001d4ba359a3f3d6583a134d38a3462fe936733 - Build", self.client2.out)
 
         # with a patch change, new ID
         self.client.run("export . tool/1.1.2@")
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.assertIn("pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8 - Build", self.client2.out)
+        self.assertIn("pkg/0.1:0fdcb8439123abfc619b4221353d9fabb87d8fba - Build", self.client2.out)
 
     def test_change_mode_package_id(self):
         # change the policy in package_id
@@ -61,20 +63,21 @@ class PythonRequiresPackageIDTest(unittest.TestCase):
         self.client2.save({"conanfile.py": conanfile})
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.1", self.client2.out)
-        self.assertIn("pkg/0.1:f3161fafc8273fe3c8afa3b51dcc198c33f66033 - Build", self.client2.out)
+        self.assertIn("pkg/0.1:4001d4ba359a3f3d6583a134d38a3462fe936733 - Build", self.client2.out)
 
         # with a patch change, new ID
         self.client.run("export . tool/1.1.2@")
         self.client2.run("create . pkg/0.1@")
         self.assertIn("tool/1.1.2", self.client2.out)
-        self.assertIn("pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8 - Build", self.client2.out)
+        self.assertIn("pkg/0.1:0fdcb8439123abfc619b4221353d9fabb87d8fba - Build", self.client2.out)
 
 
 class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
 
     def test(self):
         client = TestClient()
-        client.run("config set general.default_python_requires_id_mode=full_version_mode")
+        #client.run("config set general.default_python_requires_id_mode=full_version_mode")
+        save(client.cache.new_config_path, "core.package_id:python_default_mode=full_version_mode")
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . tool/1.1.1@")
 
@@ -90,17 +93,17 @@ class PythonRequiresForBuildRequiresPackageIDTest(unittest.TestCase):
 
         client2.run("create . pkg/0.1@ -pr=myprofile")
         self.assertIn("tool/1.1.1", client2.out)
-        self.assertIn("pkg/0.1: Package 'f3161fafc8273fe3c8afa3b51dcc198c33f66033' created",
+        self.assertIn("pkg/0.1: Package '4001d4ba359a3f3d6583a134d38a3462fe936733' created",
                       client2.out)
 
         client.run("create . tool/1.1.2@")
         client2.run("install pkg/0.1@ -pr=myprofile", assert_error=True)
-        self.assertIn("ERROR: Missing binary: pkg/0.1:387c1c797a011d426ecb25a1e01b28251e443ec8",
+        self.assertIn("ERROR: Missing binary: pkg/0.1:0fdcb8439123abfc619b4221353d9fabb87d8fba",
                       client2.out)
         self.assertIn("tool/1.1.2", client2.out)
         self.assertNotIn("tool/1.1.1", client2.out)
 
         client2.run("create . pkg/0.1@ -pr=myprofile")
-        self.assertIn("pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
-        self.assertIn("pkg/0.1: Package '387c1c797a011d426ecb25a1e01b28251e443ec8' created",
+        # self.assertIn("pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
+        self.assertIn("pkg/0.1: Package '0fdcb8439123abfc619b4221353d9fabb87d8fba' created",
                       client2.out)

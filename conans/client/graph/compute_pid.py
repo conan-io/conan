@@ -6,14 +6,13 @@ from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
 
-def compute_package_id(node):
+def compute_package_id(node, new_config):
     """
     Compute the binary package ID of this node
-    :param node: the node to compute the package-ID
     """
     conanfile = node.conanfile
-    default_package_id_mode = conanfile.conf["tools.package_id:default_mode"] or "semver_mode"
-    default_python_requires_id_mode = "minor_mode"  # self._cache.config.default_python_requires_id_mode
+    default_package_id_mode = new_config["core.package_id:default_mode"] or "semver_mode"
+    default_python_requires_id_mode = new_config["core.package_id:python_default_mode"] or "minor_mode"
 
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
@@ -23,6 +22,8 @@ def compute_package_id(node):
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
+        if require.build:  # by default, not in the package_id
+            continue
         if dep_package_id is None:  # Automatically deducing package_id
             if require.include or require.link:  # linked
                 if node.package_type is PackageType.SHARED:
