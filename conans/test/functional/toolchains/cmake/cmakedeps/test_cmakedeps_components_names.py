@@ -90,7 +90,8 @@ def setup_client_with_greetings():
                 cmake.build()
 
             def test(self):
-                self.run(".%sexample" % os.sep)
+                path = "{}".format(self.settings.build_type) if self.settings.os == "Windows" else "."
+                self.run("{}{}example".format(path, os.sep))
         """)
     test_package_greetings_cpp = gen_function_cpp(name="main", includes=["hello", "bye"],
                                                   calls=["hello", "bye"])
@@ -100,7 +101,7 @@ def setup_client_with_greetings():
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(PackageTest CXX)
-
+        
         find_package(greetings)
 
         add_executable(example example.cpp)
@@ -184,8 +185,9 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
                 cmake.build()
 
             def test(self):
-                self.run(".%sexample" % os.sep)
-                self.run(".%sexample2" % os.sep)
+                path = "{}".format(self.settings.build_type) if self.settings.os == "Windows" else "."
+                self.run("{}{}example".format(path, os.sep))
+                self.run("{}{}example2".format(path, os.sep))
         """)
     test_example_cpp = gen_function_cpp(name="main", includes=["sayhellobye"], calls=["sayhellobye"])
 
@@ -255,13 +257,13 @@ def test_standard_names(setup_client_with_greetings):
             client.run("install . -s build_type=Debug")
             client.run_command('cmake . -G "Visual Studio 15 Win64"')
             client.run_command("cmake --build . --config Debug")
-            client.run_command(r".\bin\example.exe")
+            client.run_command(r".\Debug\example.exe")
             assert "sayhellobye: Debug!" in client.out
             assert "sayhello: Debug!" in client.out
             assert "hello: Debug!" in client.out
             assert "bye: Debug!" in client.out
             client.run_command("cmake --build . --config Release")
-            client.run_command(r".\bin\example.exe")
+            client.run_command(r".\Release\example.exe")
             assert "sayhellobye: Release!" in client.out
             assert "sayhello: Release!" in client.out
             assert "hello: Release!" in client.out
@@ -395,7 +397,8 @@ def test_same_names():
                 cmake.build()
 
             def test(self):
-                self.run(".%sexample" % os.sep)
+                path = "{}".format(self.settings.build_type) if self.settings.os == "Windows" else "."
+                self.run("{}{}example".format(path, os.sep))
         """)
     test_package_greetings_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
@@ -468,7 +471,7 @@ class TestComponentsCMakeGenerators:
             from conan.tools.cmake import CMake
 
             class ConsumerConan(ConanFile):
-                settings = "build_type"
+                settings = "build_type", "os", "arch", "compiler"
                 generators = "CMakeDeps", "CMakeToolchain"
                 requires = "greetings/0.0.1"
 
