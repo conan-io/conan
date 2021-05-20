@@ -50,6 +50,10 @@ class CacheDatabase:
         with self.connect() as conn:
             self._references.delete_by_path(conn, path)
 
+    def remove(self, ref):
+        with self.connect() as conn:
+            self._references.remove(conn, ref)
+
     def update_reference_directory(self, path, ref):
         with self.connect() as conn:
             ref_pk, *_ = self._references.pk(conn, ref)

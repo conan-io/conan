@@ -1,4 +1,5 @@
 import os
+from io import StringIO
 
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
@@ -126,6 +127,20 @@ class ConanRemover(object):
         if not src and build_ids is None and package_ids is None:
             remover.remove(package_layout, output=self._user_io.out)
 
+    # TODO: cache2.0 remove everything for the moment and consider other arguments
+    #  in the future in case they remain
+    def _simple_local_remove(self, ref, packages):
+        if self._cache.installed_as_editable(ref):
+            self._user_io.out.warn(self._message_removing_editable(ref))
+            return
+
+        for package in packages:
+            package_layout = self._cache.pkg_layout(package)
+            package_layout.remove()
+
+        ref_layout = self._cache.ref_layout(ref)
+        ref_layout.remove()
+
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
@@ -199,7 +214,7 @@ class ConanRemover(object):
                     if remote_name:
                         self._remote_remove(ref, package_ids, remote)
                     else:
-                        self._local_remove(ref, src, build_ids, package_ids)
+                        self._simple_local_remove(ref, package_ids)
                 except NotFoundException:
                     # If we didn't specify a pattern but a concrete ref, fail if there is no
                     # ref to remove

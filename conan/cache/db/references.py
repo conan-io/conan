@@ -118,6 +118,13 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query, (path,))
         return r.lastrowid
 
+    def remove(self, conn: sqlite3.Cursor, ref):
+        where_clause = self._where_clause(ref)
+        query = f"DELETE FROM {self.table_name} " \
+                f"WHERE {where_clause};"
+        r = conn.execute(query)
+        return r.lastrowid
+
     def update_path_ref(self, conn: sqlite3.Cursor, pk: int, new_path):
         timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
         setters = ', '.join([f"{it} = ?" for it in ("path", "timestamp")])

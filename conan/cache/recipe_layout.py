@@ -2,11 +2,15 @@ import os
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
+from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANFILE, SCM_SRC_FOLDER
 
 
 # TODO: cache2.0 create an unique layout class
+from conans.util.files import rmdir
+
+
 class RecipeLayout:
 
     def __init__(self, ref: ConanReference, cache: DataCache, base_folder: str):
@@ -61,3 +65,10 @@ class RecipeLayout:
 
     def get_remote(self):
         return self._cache.get_remote(self._ref)
+
+    def remove(self):
+        try:
+            rmdir(self.base_directory)
+            self._cache.remove(self._ref)
+        except OSError as e:
+            raise ConanException(f"Couldn't remove folder {self.base_directory}: {str(e)}")

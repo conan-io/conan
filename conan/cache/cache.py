@@ -180,3 +180,6 @@ class DataCache:
 
     def update_remote(self, ref, remote):
         self.db.update_reference(ref, ref, remote=remote)
+
+    def remove(self, ref):
+        self.db.remove(ref)

@@ -89,3 +89,10 @@ class PackageLayout:
     # TODO: cache2.0 check this
     def package_is_dirty(self):
         return is_dirty(self.package())
+
+    def remove(self):
+        try:
+            rmdir(os.path.join(self._cache.base_folder, self._package_folder))
+            self._cache.remove(self._pref)
+        except OSError as e:
+            raise ConanException(f"Couldn't remove folder {self._package_folder}: {str(e)}")
