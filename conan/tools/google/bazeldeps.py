@@ -12,12 +12,21 @@ class BazelDeps(object):
     def generate(self):
         local_repositories = []
         for dependency in self._conanfile.dependencies.transitive_host_requires:
-            filename = self._create_bazel_buildfile(dependency)
-            local_repositories.append(self._create_new_local_repository(dependency, filename))
+            content = self._get_dependency_buildfile_content(dependency)
+            filename = self._save_dependendy_buildfile(dependency, content)
 
-        self._save_dependencies_file(local_repositories)
+            local_repository = self._create_new_local_repository(dependency, filename)
+            local_repositories.append(local_repository)
 
-    def _create_bazel_buildfile(self, dependency):
+        content = self._get_main_buildfile_content(local_repositories)
+        self._save_main_buildfiles(content)
+
+    def _save_dependendy_buildfile(self, dependency, buildfile_content):
+        filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
+        save(filename, buildfile_content)
+        return filename
+
+    def _get_dependency_buildfile_content(self, dependency):
         template = textwrap.dedent("""
             load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
@@ -71,11 +80,8 @@ class BazelDeps(object):
             "defines": defines
         }
 
-        filename = 'conandeps/{}/BUILD'.format(dependency.ref.name)
         content = Template(template).render(**context)
-        save(filename, content)
-
-        return filename
+        return content
 
     def _create_new_local_repository(self, dependency, dependency_buildfile_name):
         snippet = textwrap.dedent("""
@@ -92,16 +98,19 @@ class BazelDeps(object):
 
         return snippet
 
-    def _save_dependencies_file(self, local_repositories):
+    def _get_main_buildfile_content(self, local_repositories):
         template = textwrap.dedent("""
             def load_conan_dependencies():
-              {}
+                {}
         """)
 
         function_content = "\n".join(local_repositories)
         function_content = textwrap.indent(function_content, '    ')
         content = template.format(function_content)
 
+        return content
+
+    def _save_main_buildfiles(self, content):
         # A BUILD file must exist, even if it's empty, in order for bazel
         # to detect it as a bazel package and allow to load the .bzl files
         save("conandeps/BUILD", "")
