@@ -164,7 +164,7 @@ class GraphManagerTest(unittest.TestCase):
                                      profile_build=profile_build, graph_lock=None)
         return deps_graph
 
-    def _check_node(self, node, ref, deps=None, dependents=None, settings=None):
+    def _check_node(self, node, ref, deps=None, dependents=None, settings=None, options=None):
         dependents = dependents or []
         deps = deps or []
 
@@ -185,5 +185,8 @@ class GraphManagerTest(unittest.TestCase):
 
         if settings is not None:
             for k, v in settings.items():
-                print(node, k, v, conanfile.settings.get_safe(k))
                 assert conanfile.settings.get_safe(k) == v
+
+        if options is not None:
+            for k, v in options.items():
+                assert conanfile.options.get_safe(k) == v

@@ -238,6 +238,17 @@ class DepsGraphBuilder(object):
                         else:
                             print("IT IS NOT REALLY A CONFLICT, maaybe it was an ALIAS")
 
+                # Even if the version matches, there still can be a configuration conflict
+                # we can ignore it, and let "validate()" discard invalid configs
+                upstream_options = node.conanfile.options[require.ref.name]
+                for k, v in upstream_options.items():
+                    prev_option = prev_node.conanfile.options.get_safe(k)
+                    if prev_option is not None:
+                        if prev_option != v:
+                            base_previous.conflict = GraphError.CONFIG_CONFLICT, [prev_node,
+                                                                                   prev_node]
+                            raise DepsGraphBuilder.StopRecursion("Configuration conflict in graph")
+
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
             if require.build:

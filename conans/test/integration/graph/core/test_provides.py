@@ -4,8 +4,8 @@ import pytest
 from parameterized import parameterized
 
 from conans.client.graph.graph import GraphError
-from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
-from conans.test.integration.graph.core.wip.graph_manager_test import _check_transitive
+from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.graph_manager_test import _check_transitive
 from conans.test.utils.tools import GenConanfile, TestClient
 
 

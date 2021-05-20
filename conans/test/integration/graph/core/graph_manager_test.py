@@ -1,7 +1,7 @@
 from parameterized import parameterized
 
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING, GraphError
-from conans.test.integration.graph.core.wip.graph_manager_base import GraphManagerTest
+from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 
@@ -264,7 +264,27 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
+    def test_private(self):
+        # app -> libb0.1 -(private) -> liba0.1
+        self.recipe_cache("liba/0.1")
+        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
 
 
 class TestDiamond(GraphManagerTest):
@@ -543,6 +563,53 @@ class TestDiamondMultiple(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[libd])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libd])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        _check_transitive(app, [(libe, True, True, False, None),
+                                (libf, True, True, False, None),
+                                (libd, True, True, False, None),
+                                (libb, True, True, False, None),
+                                (libc, True, True, False, None),
+                                (liba, True, True, False, None)])
+
+    def test_consecutive_diamonds_private(self):
+        # app -> libe0.1 ---------> libd0.1 ---> libb0.1 ---> liba0.1
+        #    \-> (private)->libf0.1 ->/    \-private-> libc0.1 ->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/0.1"])
+        self._cache_recipe("libd/0.1", GenConanfile().with_require("libb/0.1")
+                           .with_requirement("libc/0.1", public=False))
+        self.recipe_cache("libe/0.1", ["libd/0.1"])
+        self.recipe_cache("libf/0.1", ["libd/0.1"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libe/0.1")
+                                           .with_requirement("libf/0.1", public=False))
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(7, len(deps_graph.nodes))
+        app = deps_graph.root
+        libe = app.dependencies[0].dst
+        libf = app.dependencies[1].dst
+        libd = libe.dependencies[0].dst
+        libb = libd.dependencies[0].dst
+        libc = libd.dependencies[1].dst
+        liba = libc.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libe, libf])
+        self._check_node(libe, "libe/0.1#123", deps=[libd], dependents=[app])
+        self._check_node(libf, "libf/0.1#123", deps=[libd], dependents=[app])
+        self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[libe, libf])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libd])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        # FIXME: In this case the order seems a bit broken
+        _check_transitive(app, [(libe, True, True, False, None),
+                                (liba, True, True, False, None),
+                                (libf, True, True, False, None),
+                                (libd, True, True, False, None),
+                                (libb, True, True, False, None),
+                                ])
 
     def test_parallel_diamond(self):
         # app -> libb0.1 -> liba0.1
