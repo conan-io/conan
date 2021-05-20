@@ -135,23 +135,6 @@ class ReferencesDbTable(BaseDbTable):
         row = r.fetchone()
         return self._as_ref(self.row_type(*row))
 
-    def filter(self, conn: sqlite3.Cursor, pattern: str,
-               only_latest_rrev: bool) -> Iterator[ConanFileReference]:
-        """ Returns the references that match a given pattern (sql style) """
-        if only_latest_rrev:
-            query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                    f'                {self.columns.rrev}, MAX({self.columns.timestamp}) ' \
-                    f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.reference} LIKE ? ' \
-                    f'GROUP BY {self.columns.reference} ' \
-                    f'ORDER BY MAX({self.columns.timestamp}) ASC'
-        else:
-            query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.reference} LIKE ?;'
-        r = conn.execute(query, [pattern, ])
-        for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
-
     def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
