@@ -22,9 +22,9 @@ def filter_packages(query, package_infos):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
-        for package_id, info in package_infos.items():
+        for package_reference, info in package_infos.items():
             if _evaluate_postfix_with_info(postfix, info):
-                result[package_id] = info
+                result[package_reference] = info
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
@@ -101,9 +101,9 @@ def _partial_match(pattern, reference):
     return any(map(pattern.match, list(partial_sums(tokens))))
 
 
-# TODO: cache2.0 receive a list of the package layouts for different package ids
-#  FIX better make something different
-def search_packages(package_layouts, query):
+# TODO: cache2.0 for the moment we are passing here a list of layouts to later get the conaninfos
+#  we should refactor this to something better
+def search_packages(packages_layouts, packages_query):
     """ Return a dict like this:
 
             {package_ID: {name: "OpenCV",
@@ -111,18 +111,17 @@ def search_packages(package_layouts, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
-    raise ConanException("Use filter_packages")
 
-    infos = _get_local_infos_min(package_layouts)
-    return filter_packages(query, infos)
+    infos = _get_local_infos_min(packages_layouts)
+    return filter_packages(packages_query, infos)
 
 
-def _get_local_infos_min(package_layouts):
+def _get_local_infos_min(packages_layouts):
     result = OrderedDict()
 
-    for package_layout in package_layouts:
+    for pkg_layout in packages_layouts:
         # Read conaninfo
-        info_path = os.path.join(package_layout.package(), CONANINFO)
+        info_path = os.path.join(pkg_layout.package(), CONANINFO)
         if not os.path.exists(info_path):
             logger.error("There is no ConanInfo: %s" % str(info_path))
             continue
@@ -130,6 +129,6 @@ def _get_local_infos_min(package_layouts):
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
-        result[package_layout.reference.pkgid] = conan_vars_info
+        result[pkg_layout.reference] = conan_vars_info
 
     return result

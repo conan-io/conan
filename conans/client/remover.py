@@ -199,7 +199,8 @@ class ConanRemover(object):
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
                     all_package_revs = self._cache.get_package_revisions(ref)
-                    packages = filter_packages(packages_query, all_package_revs)
+                    packages_layouts = [self._cache.pkg_layout(pref) for pref in all_package_revs]
+                    packages = search_packages(packages_layouts, packages_query)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:
