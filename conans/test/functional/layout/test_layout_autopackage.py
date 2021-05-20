@@ -6,8 +6,8 @@ from conans.test.utils.tools import TestClient
 
 
 def get_latest_prev(cache, ref, pkgid):
-    latest_rrev = cache.get_recipe_revisions(ref, only_latest_rrev=True)
-    ref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}")
+    latest_rrev = cache.get_latest_rrev(ref)
+    ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
     pref = PackageReference(ref, pkgid)
     prevs = cache.get_package_revisions(pref, only_latest_prev=True)
     return prevs[0]

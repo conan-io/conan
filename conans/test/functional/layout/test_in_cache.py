@@ -120,9 +120,9 @@ def test_cache_in_layout(conanfile):
 
     ref = ConanFileReference.loads("lib/1.0@")
 
-    # TODO: cache2.0 this is ugly, fix it
-    latest_rrev = client.cache.get_recipe_revisions(ref, only_latest_rrev=True)
-    ref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}")
+    latest_rrev = client.cache.get_latest_rrev(ref)
+
+    ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
 
     pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
 

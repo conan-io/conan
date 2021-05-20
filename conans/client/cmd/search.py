@@ -55,12 +55,12 @@ class Search(object):
         return self._search_packages_in(remote_name, ref, query)
 
     def _search_packages_in_local(self, ref=None, query=None):
-        latest_rrev = self._cache.get_recipe_revisions(ref, only_latest_rrev=True)
+        latest_rrev = self._cache.get_latest_rrev(ref)
 
         if not latest_rrev:
             raise RecipeNotFoundException(ref)
 
-        conanfileref = ConanFileReference.loads(f"{latest_rrev[0]['reference']}#{latest_rrev[0]['rrev']}")
+        conanfileref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
 
         pkg_ids = self._cache.get_package_ids(conanfileref, only_latest_prev=True)
         package_layouts = [self._cache.pkg_layout(pkg_ref) for pkg_ref in pkg_ids]

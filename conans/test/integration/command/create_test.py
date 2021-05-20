@@ -407,8 +407,8 @@ class MyPkg(ConanFile):
 
         ref = ConanFileReference.loads("Bye/0.1")
 
-        refs = client.cache.get_recipe_revisions(ref, only_latest_rrev=True)
-        pkgs = client.cache.get_package_ids(refs[0])
+        refs = client.cache.get_latest_rrev(ref)
+        pkgs = client.cache.get_package_ids(refs)
         package_folder = client.cache.pkg_layout(pkgs[0]).package()
 
         conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
