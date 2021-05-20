@@ -55,7 +55,7 @@ class Search(object):
 
     def _search_packages_in_local(self, ref=None, query=None):
         latest_rrev = self._cache.get_recipe_revisions(ref, only_latest_rrev=True)
-        pkg_ids = self._cache.get_package_ids(latest_rrev[0], only_latest_prev=True)
+        pkg_ids = self._cache.get_package_ids(latest_rrev[0], only_latest_prev=True) if latest_rrev else None
 
         if not pkg_ids:
             raise RecipeNotFoundException(ref)

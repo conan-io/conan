@@ -199,7 +199,7 @@ class ConanRemover(object):
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
                     all_package_revs = self._cache.get_package_revisions(ref)
-                    packages = filter_packages(package_ids, all_package_revs)
+                    packages = filter_packages(packages_query, all_package_revs)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:
@@ -222,9 +222,6 @@ class ConanRemover(object):
                         raise
                 else:
                     deleted_refs.append(ref)
-
-        if not remote_name:
-            self._cache.delete_empty_dirs(deleted_refs)
 
     def _ask_permission(self, ref, src, build_ids, package_ids_filter, force):
         def stringlist(alist):
