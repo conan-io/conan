@@ -111,6 +111,8 @@ def search_packages(package_layouts, query):
                            settings: {os: Windows}}}
     param package_layout: Layout for the given reference
     """
+    raise ConanException("Use filter_packages")
+
     infos = _get_local_infos_min(package_layouts)
     return filter_packages(query, infos)
 

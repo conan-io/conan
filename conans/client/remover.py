@@ -5,7 +5,7 @@ from conans.errors import ConanException, PackageNotFoundException, RecipeNotFou
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import SYSTEM_REQS, rm_conandir
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_packages, search_recipes, filter_packages
 from conans.util.log import logger
 
 
@@ -161,38 +161,34 @@ class ConanRemover(object):
                 refs = self._remote_manager.search_recipes(remote, pattern)
         else:
             if input_ref:
-                refs = []
-                if self._cache.installed_as_editable(input_ref):
-                    raise ConanException(self._message_removing_editable(input_ref))
-                if not self._cache.package_layout(input_ref).recipe_exists():
-                    raise RecipeNotFoundException(input_ref)
-                refs.append(input_ref)
+                # TODO: cache2.0 do we want to get all revisions or just the latest?
+                #  remove all for the moment
+                refs_dicts = self._cache.get_recipe_revisions(input_ref)
+                refs = [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in refs_dicts]
+                for ref in refs:
+                    if self._cache.installed_as_editable(ref):
+                        raise ConanException(self._message_removing_editable(ref))
             else:
                 refs = search_recipes(self._cache, pattern)
                 if not refs:
                     self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
                     return
 
-        if input_ref and not input_ref.revision:
-            # Ignore revisions for deleting if the input was not with a revision
-            # (Removing all the recipe revisions from a reference)
-            refs = [r.copy_clear_rev() for r in refs]
-
         deleted_refs = []
         for ref in refs:
             assert isinstance(ref, ConanFileReference)
-            package_layout = self._cache.package_layout(ref)
             package_ids = package_ids_filter
             if packages_query:
                 # search packages
                 if remote_name:
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
-                    packages = search_packages(package_layout, packages_query)
+                    all_package_revs = self._cache.get_package_revisions(ref)
+                    packages = filter_packages(package_ids, all_package_revs)
                 if package_ids_filter:
                     package_ids = [p for p in packages if p in package_ids_filter]
                 else:
-                    package_ids = list(packages.keys())
+                    package_ids = packages
                 if not package_ids:
                     self._user_io.out.warn("No matching packages to remove for %s"
                                            % ref.full_str())
