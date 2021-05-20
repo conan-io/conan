@@ -119,13 +119,16 @@ class DataCache:
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference, remote=None) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
+
         try:
             self.db.update_reference(old_ref, new_ref, new_path=new_path, remote=remote)
         except ReferencesDbTable.AlreadyExist:
-            # TODO: cache2.0 fix this, we should not do this but update the existing reference
+            # This happens when we create a recipe revision but we already had that one in the cache
+            # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
-            # TODO: fix this, update timestamp
+            # TODO: cache2.0 should we update the timestamp here?
             self.db.update_reference(new_ref, new_ref)
+
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
         #  just check the the files in the destination folder are the same so we don't
@@ -145,9 +148,9 @@ class DataCache:
         try:
             self.db.update_reference(old_pref, new_pref, new_path=new_path)
         except ReferencesDbTable.AlreadyExist:
-            # TODO: cache2.0 fix this, we should not do this but update the existing reference
+            # This happens when we create a recipe revision but we already had that one in the cache
+            # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
-            # TODO: fix this, update timestamp
             self.db.update_reference(new_pref, new_pref)
 
         if os.path.exists(self._full_path(new_path)):
