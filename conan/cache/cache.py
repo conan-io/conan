@@ -121,13 +121,13 @@ class DataCache:
         new_path = self.get_or_create_reference_path(new_ref)
 
         try:
-            self.db.update_reference(old_ref, new_ref, new_path=new_path, remote=remote)
+            self.db.update_reference(old_ref, new_ref, new_path=new_path, new_remote=remote)
         except ReferencesDbTable.AlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
             # TODO: cache2.0 should we update the timestamp here?
-            self.db.update_reference(new_ref, new_ref)
+            self.db.update_reference(new_ref)
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -151,7 +151,7 @@ class DataCache:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
-            self.db.update_reference(new_pref, new_pref)
+            self.db.update_reference(new_pref)
 
         if os.path.exists(self._full_path(new_path)):
             rmdir(self._full_path(new_path))
@@ -182,7 +182,7 @@ class DataCache:
         return self.db.get_remote(ref)
 
     def update_remote(self, ref, remote):
-        self.db.update_reference(ref, ref, remote=remote)
+        self.db.update_reference(ref, new_remote=remote)
 
     def remove(self, ref):
         self.db.remove(ref)

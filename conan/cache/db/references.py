@@ -103,13 +103,16 @@ class ReferencesDbTable(BaseDbTable):
                          [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, pk: int, ref, path=None, remote=None):
-        timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
-        set_clause = self._set_clause(ref, path=path, timestamp=timestamp, remote=remote)
+    def update(self, conn: sqlite3.Cursor, old_ref, new_ref=None, new_path=None, new_remote=None):
+        if not new_ref:
+            new_ref = old_ref
+        timestamp = int(time.time())
+        where_clause = self._where_clause(old_ref)
+        set_clause = self._set_clause(new_ref, path=new_path, timestamp=timestamp, remote=new_remote)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
-                f"WHERE rowid = ?;"
-        r = conn.execute(query, (pk,))
+                f"WHERE {where_clause};"
+        r = conn.execute(query)
         return r.lastrowid
 
     def delete_by_path(self, conn: sqlite3.Cursor, path):
@@ -124,27 +127,6 @@ class ReferencesDbTable(BaseDbTable):
                 f"WHERE {where_clause};"
         r = conn.execute(query)
         return r.lastrowid
-
-    def update_path_ref(self, conn: sqlite3.Cursor, pk: int, new_path):
-        timestamp = int(time.time())  # TODO: TBD: I will update the revision here too
-        setters = ', '.join([f"{it} = ?" for it in ("path", "timestamp")])
-        query = f"UPDATE {self.table_name} " \
-                f"SET {setters} " \
-                f"WHERE rowid = ?;"
-        r = conn.execute(query, (new_path, timestamp, pk,))
-        return r.lastrowid
-
-    def pk(self, conn: sqlite3.Cursor, ref):
-        """ Returns the row matching the reference or fails """
-        where_clause = self._where_clause(ref)
-        query = f'SELECT rowid, * FROM {self.table_name} ' \
-                f'WHERE {where_clause};'
-        r = conn.execute(query)
-        row = r.fetchone()
-        if not row:
-            raise ReferencesDbTable.DoesNotExist(
-                f"No entry for reference '{ref.full_reference}'")
-        return row
 
     def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:
         query = f'SELECT * FROM {self.table_name} ' \
