@@ -1,8 +1,10 @@
+import os
 import platform
 import textwrap
 
 import pytest
 
+from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
@@ -17,7 +19,7 @@ def client():
         from conans.tools import save
         import os
         class Pkg(ConanFile):
-            settings = "build_type"
+            settings = "build_type", "os", "arch", "compiler"
             {}
             def package(self):
                 save(os.path.join(self.package_folder, "include", "%s.h" % self.name),
@@ -44,6 +46,7 @@ def test_transitive_multi(client):
 
         [generators]
         CMakeDeps
+        CMakeToolchain
         """)
     example_cpp = gen_function_cpp(name="main", includes=["libb", "liba"],
                                    preprocessor=["MYVARliba", "MYVARlibb"])
@@ -61,8 +64,7 @@ def test_transitive_multi(client):
         assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
-            client.run_command('cmake .. -G "Visual Studio 15 Win64" '
-                               '-DCMAKE_PREFIX_PATH="{}"'.format(client.current_folder))
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
@@ -76,10 +78,14 @@ def test_transitive_multi(client):
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
         else:
+            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
+            replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
+                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
+                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
                 client.run_command('cmake --build . --clean-first')
+
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
                 assert "MYVARliba: {}".format(bt) in client.out

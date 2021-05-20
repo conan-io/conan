@@ -4,7 +4,7 @@ import unittest
 from requests.exceptions import ConnectionError
 
 from conans.model.ref import ConanFileReference
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 
@@ -15,8 +15,7 @@ class BrokenDownloadTest(unittest.TestCase):
         server = TestServer()
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        files = cpp_hello_conan_files()
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("export . lasote/stable")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.cache.package_layout(ref).export()))
