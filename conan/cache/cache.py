@@ -122,6 +122,7 @@ class DataCache:
         try:
             self.db.update_reference(old_ref, new_ref, new_path=new_path, remote=remote)
         except ReferencesDbTable.AlreadyExist:
+            # TODO: cache2.0 fix this, we should not do this but update the existing reference
             self.db.delete_ref_by_path(old_path)
             # TODO: fix this, update timestamp
             self.db.update_reference(new_ref, new_ref)
@@ -144,6 +145,7 @@ class DataCache:
         try:
             self.db.update_reference(old_pref, new_pref, new_path=new_path)
         except ReferencesDbTable.AlreadyExist:
+            # TODO: cache2.0 fix this, we should not do this but update the existing reference
             self.db.delete_ref_by_path(old_path)
             # TODO: fix this, update timestamp
             self.db.update_reference(new_pref, new_pref)
