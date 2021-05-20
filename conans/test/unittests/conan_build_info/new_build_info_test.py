@@ -71,8 +71,11 @@ def test_component_aggregation():
     assert ret.frameworkdirs == ["frameworkdir_c1", "frameworkdir_c2"]
     assert ret.cxxflags == ["cxxflags_c1", "cxxflags_c2"]
     assert ret.defines == ["defines_c1", "defines_c2"]
-    assert ret.get_property("my_foo") == ['bar', 'bar2']
-    assert ret.get_property("my_foo2", "other_gen") == "bar2"
+    # The properties are not aggregated because we cannot generalize the meaning of a property
+    # that belongs to a component, it could make sense to aggregate it or not, "cmake_target_name"
+    # for example, cannot be aggregated
+    assert ret.get_property("my_foo") is None
+    assert ret.get_property("my_foo2", "other_gen") is None
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []

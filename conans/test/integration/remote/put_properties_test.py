@@ -5,7 +5,7 @@ import unittest
 from urllib.parse import unquote
 
 from conans import MATRIX_PARAMS
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestRequester, TestServer
 from conans.util.files import save
 
@@ -13,12 +13,8 @@ from conans.util.files import save
 class PutPropertiesTest(unittest.TestCase):
 
     def test_create_empty_property_file(self):
-        test_server = TestServer()
-        servers = {"default": test_server}
-
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        client.save(files)
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("export . lasote/stable")
         props_file = client.cache.artifacts_properties_path
         self.assertTrue(os.path.exists(props_file))
@@ -54,8 +50,7 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, users={"default": [("lasote", "mypass")]})
         _create_property_files(client, wanted_vars)
 
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable -c")
 
@@ -95,8 +90,7 @@ class PutPropertiesTest(unittest.TestCase):
                             servers=servers, users={"default": [("lasote", "mypass")]})
         _create_property_files(client, wanted_vars)
 
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable -c")
 

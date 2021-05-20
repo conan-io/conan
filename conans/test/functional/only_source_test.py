@@ -1,42 +1,27 @@
 import os
 import unittest
 
-import pytest
-
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient
 
 
 class OnlySourceTest(unittest.TestCase):
 
-    def setUp(self):
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-
-    def _create(self, client, number, version, deps=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps, build=False, config=False)
-
-        client.save(files, clean_first=True)
-        if export:
-            client.run("export . lasote/stable")
-
-    @pytest.mark.tool_cmake
     def test_conan_test(self):
         # Checks --build in test command
         client = TestClient()
-        self._create(client, "Hello0", "0.0")
-        self._create(client, "Hello1", "1.1", ["Hello0/0.0@lasote/stable"])
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.0")})
+        client.run("export . lasote/stable")
+        client.save({"conanfile.py": GenConanfile("Hello1", "1.1").
+                    with_require("Hello0/0.0@lasote/stable")})
+        client.run("export . lasote/stable")
 
         # Now test out Hello2
-        self._create(client, "Hello2", "2.2", ["Hello1/1.1@lasote/stable"], export=True)
-        hello2conanfile = client.load(CONANFILE)
-        client.save({CONANFILE: hello2conanfile})
-
-        conanfile = GenConanfile().with_test("pass").with_require("Hello2/2.2@lasote/stable")
-        client.save({"test/conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile("Hello2", "2.2").
+                    with_require("Hello1/1.1@lasote/stable"),
+                     "test/conanfile.py": GenConanfile().with_test("pass")})
 
         # Should recognize the hello package
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
@@ -64,7 +49,7 @@ class OnlySourceTest(unittest.TestCase):
         self.assertIn('Hello2/2.2@lasote/stable: Forced build from source', client.out)
 
     def test_build_policies_update(self):
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(default_server_user=True)
         conanfile = """
 from conans import ConanFile
 
@@ -92,16 +77,11 @@ class MyPackage(ConanFile):
                       client.out)
         client.run("upload test/1.9@lasote/stable")
 
-    @pytest.mark.tool_cmake
     def test_build_policies_in_conanfile(self):
-
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files = cpp_hello_conan_files("Hello0", "1.0", [], config=False, build=False)
-
-        #  --- Build policy to missing ---
-        files[CONANFILE] = files[CONANFILE].replace("exports = '*'",
-                                                    "exports = '*'\n    build_policy = 'missing'")
-        client.save(files, clean_first=True)
+        client = TestClient(default_server_user=True)
+        base = GenConanfile("Hello0", "1.0").with_exports("*")
+        conanfile = str(base) + "\n    build_policy = 'missing'"
+        client.save({"conanfile.py": conanfile})
         client.run("export . lasote/stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
@@ -116,9 +96,8 @@ class MyPackage(ConanFile):
         client.run("upload Hello0/1.0@lasote/stable --all")
 
         #  --- Build policy to always ---
-        files[CONANFILE] = files[CONANFILE].replace("build_policy = 'missing'",
-                                                    "build_policy = 'always'")
-        client.save(files, clean_first=True)
+        conanfile = str(base) + "\n    build_policy = 'always'"
+        client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("export . lasote/stable")
 
         # Install, it will build automatically if missing (without the --build missing option)
@@ -137,14 +116,10 @@ class MyPackage(ConanFile):
         client.run("upload Hello0/1.0@lasote/stable --all", assert_error=True)
         self.assertIn("no packages can be uploaded", client.out)
 
-    @pytest.mark.tool_cmake
     def test_reuse(self):
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(default_server_user=True)
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace("build", "build2")
-
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
 
@@ -155,26 +130,26 @@ class MyPackage(ConanFile):
         client.run("upload %s --all" % str(ref))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build missing" % str(ref))
         self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
         self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build" % str(ref))
         self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).builds()))
         self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
 
         # Use an invalid pattern and check that its not builded from source
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build HelloInvalid" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
         self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
         # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).packages()))
 
         # Use another valid pattern and check that its not builded from source
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build HelloInvalid -b Hello" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
         # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
