@@ -129,17 +129,20 @@ class ConanRemover(object):
 
     # TODO: cache2.0 remove everything for the moment and consider other arguments
     #  in the future in case they remain
-    def _simple_local_remove(self, ref, packages):
+    def _simple_local_remove(self, ref, packages, remove_recipe=False):
         if self._cache.installed_as_editable(ref):
             self._user_io.out.warn(self._message_removing_editable(ref))
             return
 
         for package in packages:
-            package_layout = self._cache.pkg_layout(package)
-            package_layout.remove()
+            all_package_revs = self._cache.get_package_revisions(PackageReference(ref, package))
+            for package_rev in all_package_revs:
+                package_layout = self._cache.pkg_layout(package_rev)
+                package_layout.remove()
 
-        ref_layout = self._cache.ref_layout(ref)
-        ref_layout.remove()
+        if remove_recipe:
+            ref_layout = self._cache.ref_layout(ref)
+            ref_layout.remove()
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None):
@@ -215,7 +218,9 @@ class ConanRemover(object):
                     if remote_name:
                         self._remote_remove(ref, package_ids, remote)
                     else:
-                        self._simple_local_remove(ref, package_ids)
+                        remove_recipe = False if package_ids else True
+                        package_ids = package_ids or self._cache.get_package_revisions(ref)
+                        self._simple_local_remove(ref, package_ids, remove_recipe=remove_recipe)
                 except NotFoundException:
                     # If we didn't specify a pattern but a concrete ref, fail if there is no
                     # ref to remove

@@ -22,9 +22,11 @@ def filter_packages(query, package_infos):
             raise ConanException("'not' operator is not allowed")
         postfix = infix_to_postfix(query) if query else []
         result = OrderedDict()
-        for package_reference, info in package_infos.items():
+        for package_id, info in package_infos.items():
             if _evaluate_postfix_with_info(postfix, info):
-                result[package_reference] = info
+                # TODO: cache2.0 maybe it would be better to make the key the full reference
+                #  but the remote will return a dict with the pkgid as the key so maintain this
+                result[package_id] = info
         return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
@@ -129,6 +131,8 @@ def _get_local_infos_min(packages_layouts):
 
         info = ConanInfo.loads(conan_info_content)
         conan_vars_info = info.serialize_min()
-        result[pkg_layout.reference] = conan_vars_info
+        # TODO: cache2.0 use the full ref or package rev as key
+        # FIXME: cache2.0 there will be several prevs with same package id
+        result[pkg_layout.reference.id] = conan_vars_info
 
     return result
