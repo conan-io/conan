@@ -1,5 +1,6 @@
 from enum import Enum
 
+from conans.client.graph.graph_error import GraphError
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.model.requires import Requirement, RequirementDict
@@ -37,13 +38,6 @@ class PackageType(Enum):
     HEADER = "header library"
     RUN = "run library"
     UNKNOWN = "unknown"
-
-
-class GraphError(Enum):
-    LOOP = "graph loop"
-    VERSION_CONFLICT = "version conflict"
-    PROVIDE_CONFLICT = "provide conflict"
-    CONFIG_CONFLICT = "configuration conflict"
 
 
 class TransitiveRequirement:
@@ -223,8 +217,8 @@ class Node(object):
         if existing is not None:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
-                self.conflict = GraphError.VERSION_CONFLICT, [existing.node, node]
                 return True
+
         self.transitive_deps.set(require, TransitiveRequirement(require, node))
 
         if not self.dependants:
@@ -432,25 +426,4 @@ class DepsGraph(object):
 
     def report_graph_error(self):
         if self.error:
-            # print("REPORTING GRAPH ERRORS")
-            conflict_nodes = [n for n in self.nodes if n.conflict]
-            # print("PROBLEMATIC NODES ", conflict_nodes)
-            for node in conflict_nodes:  # At the moment there should be only 1 conflict at most
-                conflict = node.conflict
-                # print("CONFLICT ", conflict)
-                if conflict[0] == GraphError.LOOP:
-                    loop_ref = node.ref
-                    parent = node.dependants[0]
-                    parent_ref = parent.src.ref
-                    msg = "Loop detected in context host: '{}' requires '{}' which "\
-                          "is an ancestor too"
-                    msg = msg.format(parent_ref, loop_ref)
-                    raise ConanException(msg)
-                elif conflict[0] == GraphError.VERSION_CONFLICT:
-                    raise ConanException(
-                        "There was a version conflict building the dependency graph")
-                elif conflict[0] == GraphError.PROVIDE_CONFLICT:
-                    raise ConanException(
-                        "There was a provides conflict building the dependency graph")
-
-            raise ConanException("Thre was an error in the graph: {}".format(self.error))
+            raise self.error

@@ -1,6 +1,7 @@
 from parameterized import parameterized
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING, GraphError
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING
+from conans.client.graph.graph_error import GraphError
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
@@ -46,14 +47,11 @@ class TestLinear(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
 
         # TODO: Better error handling
-        assert deps_graph.error == 'No remote defined'
+        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
 
+        self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-
-        self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1", deps=[], dependents=[app])
-        assert libb.recipe == RECIPE_MISSING
+        self._check_node(app, "app/0.1", deps=[])
 
     def test_transitive(self):
         # app -> libb0.1 -> liba0.1
@@ -451,22 +449,18 @@ class TestDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == 'Version conflict in graph'
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
 
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[], dependents=[app])
         self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
 
     def test_shared_conflict_shared(self):
         # app -> libb0.1 (shared) -> liba0.1 (shared)
@@ -479,23 +473,18 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == 'Version conflict in graph'
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert liba1 is not liba2
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[], dependents=[app])
         self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
 
     def test_private_conflict(self):
         # app -> libd0.1 -(private)-> libb0.1 -> liba0.1
@@ -513,22 +502,19 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+
+        self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
         libd = app.dependencies[0].dst
         libb = libd.dependencies[0].dst
         libc = libd.dependencies[1].dst
         liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert liba1 is not liba2
-        assert deps_graph.error == 'Version conflict in graph'
-        assert libd.conflict == (GraphError.VERSION_CONFLICT, [liba1, liba2])
 
         self._check_node(app, "app/0.1", deps=[libd])
         self._check_node(libd, "libd/0.1#123", deps=[libb, libc], dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[libd])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[libd])
+        self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libd])
         self._check_node(liba1, "liba/0.1#123", dependents=[libb])
 
 
@@ -697,24 +683,19 @@ class TestDiamondMultiple(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
         # TODO: Better error modeling
-        assert deps_graph.error == 'Loop found'
+        assert deps_graph.error.kind == GraphError.LOOP
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
 
         app = deps_graph.root
         libc = app.dependencies[0].dst
         libb = libc.dependencies[0].dst
         liba = libb.dependencies[0].dst
-        libc2 = liba.dependencies[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
-        self._check_node(liba, "liba/0.1#123", deps=[libc2], dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(libc2, "libc/0.1", dependents=[liba])
-
-        assert libc2.conflict == (GraphError.LOOP, libc)
+        self._check_node(liba, "liba/0.1#123", deps=[], dependents=[libb])
 
 
 class TransitiveOverridesGraphTest(GraphManagerTest):
@@ -752,20 +733,15 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Version conflict in graph"
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        # TODO: Improve conflict information
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, liba])
 
         # TODO: No Revision??? Because of consumer?
         self._check_node(app, "app/0.1", deps=[libb])
-        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
-        self._check_node(liba, "liba/0.1", dependents=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
 
     def test_diamond_reverse_order(self):
         # foo ---------------------------------> dep1/2.0
@@ -796,9 +772,9 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["dep1/2.0", "dep2/1.0"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Version conflict in graph"
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
         dep1 = app.dependencies[0].dst
         dep2 = app.dependencies[1].dst

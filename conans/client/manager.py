@@ -1,7 +1,8 @@
 import os
 
 from conans.client.graph.build_mode import BuildMode
-from conans.client.graph.graph import RECIPE_VIRTUAL, GraphError
+from conans.client.graph.graph import RECIPE_VIRTUAL
+from conans.client.graph.graph_error import GraphError
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements

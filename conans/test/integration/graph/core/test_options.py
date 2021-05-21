@@ -1,4 +1,4 @@
-from conans.client.graph.graph import GraphError
+from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
@@ -66,6 +66,6 @@ class TestOptions(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == 'Configuration conflict in graph'
+        assert deps_graph.error.kind == GraphError.CONFIG_CONFLICT
 
         self.assertEqual(4, len(deps_graph.nodes))

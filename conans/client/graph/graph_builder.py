@@ -1,51 +1,20 @@
 import fnmatch
+from collections import deque
 
 from conans.client.conanfile.configure import run_configure_method
-from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, CONTEXT_BUILD, \
-    RECIPE_MISSING, RECIPE_CONSUMER, GraphError, TransitiveRequirement
-from conans.client.graph.range_resolver import _parse_versionexpr
-
-from conans.errors import ConanException, conanfile_exception_formatter
+from conans.client.graph.graph import DepsGraph, Node, RECIPE_EDITABLE, CONTEXT_HOST, \
+    CONTEXT_BUILD, RECIPE_CONSUMER, TransitiveRequirement
+from conans.client.graph.graph_error import GraphError
+from conans.client.graph.provides import check_graph_provides
+from conans.client.graph.range_resolver import range_satisfies
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.model.requires import BuildRequirements, TestRequirements
 
 
 class DepsGraphBuilder(object):
-    """
-    This is a summary, in pseudo-code of the execution and structure of the graph
-    resolution algorithm
 
-    load_graph(root_node)
-        init root_node
-        expand_node(root_node)
-            # 1. Evaluate requirements(), overrides, and version ranges
-            get_node_requirements(node)
-                node.conanfile.requirements()                         # call the requirements()
-                resolve_cached_alias(node.conanfile.requires)         # replace cached alias
-                update_requires_from_downstream(down_requires)        # process overrides
-                resolve_ranges(node)                                  # resolve version-ranges
-                    resolve_cached_alias(node.conanfile.requires)     # replace cached alias again
-
-            # 2. Process each requires of this node
-            for req in node.conanfile.requires:
-                expand_require(req)
-                    if req.name not in graph:                         # New node
-                        new_node = create_new_node(req)               # fetch and load conanfile.py
-                            if alias => create_new_node(alias)        # recurse alias
-                        expand_node(new_node)                         # recursion
-                    else:                                             # Node exists, closing diamond
-                        resolve_cached_alias(req)
-                        check_conflicts(req)                          # diamonds can cause conflicts
-                        if need_recurse:                              # check for conflicts upstream
-                            expand_node(previous_node)                # recursion
-    """
-
-    class StopRecursion(Exception):
-        pass
-
-    def __init__(self, proxy, output, loader, resolver):
+    def __init__(self, proxy, loader, resolver):
         self._proxy = proxy
-        self._output = output
         self._loader = loader
         self._resolver = resolver
 
@@ -53,7 +22,7 @@ class DepsGraphBuilder(object):
                    graph_lock=None):
         assert profile_host is not None
         assert profile_build is not None
-        #print("Loading graph")
+        # print("Loading graph")
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -61,116 +30,24 @@ class DepsGraphBuilder(object):
         # TODO: Why assign here the settings_build and settings_target?
         root_node.conanfile.settings_build = profile_build.processed_settings.copy()
         root_node.conanfile.settings_target = None
+
         self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
         dep_graph.add_node(root_node)
 
-        # enter recursive computation
+        open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
         try:
-            self._expand_node(root_node, dep_graph, check_updates,
-                              update, remotes, profile_host, profile_build, graph_lock)
-        except DepsGraphBuilder.StopRecursion as e:
-            dep_graph.error = str(e)
-        else:
-            self._check_provides(dep_graph)
+            while open_requires:
+                # Fetch the first waiting to be expanded (depth-first)
+                (require, node) = open_requires.popleft()
+                new_node = self._expand_require(require, node, dep_graph, check_updates, update,
+                                                remotes, profile_host, profile_build, graph_lock)
+                if new_node:
+                    open_requires.extendleft((r, new_node)
+                                             for r in reversed(new_node.conanfile.requires.values()))
+            check_graph_provides(dep_graph)
+        except GraphError as e:
+            dep_graph.error = e
         return dep_graph
-
-    @staticmethod
-    def _check_provides(dep_graph):
-        for node in dep_graph.nodes:
-            provides = {}
-            current_provides = node.conanfile.provides
-            for dep in node.transitive_deps.values():
-                dep_node = dep.node
-                dep_require = dep.require
-
-                if not dep_node.conanfile.provides:
-                    continue
-                for provide in dep_node.conanfile.provides:
-                    # First check if collides with current node
-                    if current_provides is not None and provide in current_provides:
-                        node.conflict = (GraphError.PROVIDE_CONFLICT, [node, dep_node])
-                        dep_graph.error = True
-                        return
-
-                    # Then, check if collides with other requirements
-                    new_req = dep_require.copy()
-                    new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
-                                                     new_req.ref.channel, validate=False)
-                    existing = node.transitive_deps.get(new_req)
-                    if existing is not None:
-                        node.conflict = (GraphError.PROVIDE_CONFLICT, [existing.node, dep_node])
-                        dep_graph.error = True
-                        return
-                    else:
-                        existing_provide = provides.get(new_req)
-                        if existing_provide is not None:
-                            node.conflict = (GraphError.PROVIDE_CONFLICT, [existing_provide,
-                                                                           dep_node])
-                            dep_graph.error = True
-                            return
-                        else:
-                            provides[new_req] = dep_node
-
-    @staticmethod
-    def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
-        if graph_lock:
-            graph_lock.pre_lock_node(node)
-
-        # basic node configuration: calling configure() and requirements()
-        conanfile, ref = node.conanfile, node.ref
-
-        run_configure_method(conanfile, down_options, down_ref, ref)
-
-        # Update requirements (overwrites), computing new upstream
-        if hasattr(conanfile, "requirements"):
-            with conanfile_exception_formatter(str(conanfile), "requirements"):
-                conanfile.requirements()
-
-        # TODO: Maybe this could be integrated in one single requirements() method
-        # Update requirements (overwrites), computing new upstream
-        if hasattr(conanfile, "build_requirements"):
-            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
-                # This calls "self.build_requires("")
-                conanfile.build_requires = BuildRequirements(conanfile.requires)
-                conanfile.test_requires = TestRequirements(conanfile.requires)
-                conanfile.build_requirements()
-
-        # Apply build_requires from profile, overrriding the declared ones
-        profile = profile_host if node.context == CONTEXT_HOST else profile_build
-        build_requires = profile.build_requires
-        str_ref = str(node.ref)
-        for pattern, build_requires in build_requires.items():
-            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
-                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
-                    fnmatch.fnmatch(str_ref, pattern)):
-                for build_require in build_requires:  # Do the override
-                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
-                        continue  # avoid self-loop of build-requires in build context
-                    # FIXME: converting back to string?
-                    node.conanfile.requires.build_require(str(build_require),
-                                                          raise_if_duplicated=False)
-        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
-            graph_lock.lock_node(node, node.conanfile.requires.values())
-
-    def _expand_node(self, node, graph, check_updates, update,
-                     remotes, profile_host, profile_build, graph_lock):
-
-        #print("Expanding node", node)
-
-        # if there are version-ranges, resolve them before expanding each of the requirements
-        # Resolve possible version ranges of the current node requirements
-        # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
-        # RangeResolver are also done in new_reqs, and then propagated!
-
-        # Add existing requires to the transitive_deps, so they are there for overrides
-        for require in node.conanfile.requires.values():
-            node.transitive_deps.set(require, TransitiveRequirement(require, None))
-
-        # Expand each one of the current requirements
-        for require in node.conanfile.requires.values():
-            self._expand_require(require, node, graph, check_updates, update, remotes,
-                                 profile_host, profile_build, graph_lock)
-        #print("Finished Expanding node", node)
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
                         profile_build, graph_lock, populate_settings_target=True):
@@ -179,87 +56,54 @@ class DepsGraphBuilder(object):
         #    node -(require)-> previous (creates a diamond with a previously existing node)
 
         # TODO: allow bootstrapping, use references instead of names
-        #print("  Expanding require ", node, "->", require)
-        # If the requirement is found in the node public dependencies, it is a diamond
+        # print("  Expanding require ", node, "->", require)
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous:
             prev_require, prev_node, base_previous = previous
-            #print("  Existing previous requirements from ", base_previous, "=>", prev_require)
+            # print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
-            if prev_require is None:  # Loop
-                loop_node = Node(require.ref, None, context=prev_node.context)
-                loop_node.conflict = GraphError.LOOP, prev_node
-                graph.add_node(loop_node)
-                graph.add_edge(node, loop_node, require)
-                raise DepsGraphBuilder.StopRecursion("Loop found")
+            if prev_require is None:
+                raise GraphError.loop(node, require, prev_node)
 
+            prev_ref = prev_node.ref if prev_node else prev_require.ref
             if prev_require.force:  # override
-                # prev_node is None:  # Unresolved override
-                require.ref = prev_require.ref if prev_node is None else prev_node.ref
+                require.ref = prev_ref
             else:
-                #print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
-                prev_ref = prev_node.ref if prev_node else prev_require.ref
+                # print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
                 version_range = require.version_range
                 prev_version_range = prev_require.version_range if prev_node is None else None
                 if version_range:
                     if prev_version_range:
                         raise Exception("INTERVAL!!!!!")
                     else:
-                        rang, loose, include_prerelease = _parse_versionexpr(version_range, [])
-                        from semver import satisfies
-                        if satisfies(prev_ref.version, rang,
-                                     loose=loose, include_prerelease=include_prerelease):
+                        if range_satisfies(version_range, prev_ref.version):
                             require.ref = prev_ref
                         else:
-                            conflict_node = Node(require.ref, None, context=node.context)
-                            base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
-                                                                                   conflict_node]
-                            graph.add_node(conflict_node)
-                            graph.add_edge(node, conflict_node, require)
-                            raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
+                            raise GraphError.conflict(node, require, prev_node, prev_require,
+                                                      base_previous)
+
                 elif prev_version_range:
-                    rang, loose, include_prerelease = _parse_versionexpr(prev_version_range, [])
-                    from semver import satisfies
-                    if satisfies(require.ref.version, rang,
-                                 loose=loose, include_prerelease=include_prerelease):
-                        pass # require.ref = prev_ref
-                    else:
-                        conflict_node = Node(require.ref, None, context=node.context)
-                        base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
-                                                                               conflict_node]
-                        graph.add_node(conflict_node)
-                        graph.add_edge(node, conflict_node, require)
-                        raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
+                    if not range_satisfies(prev_version_range, require.ref.version):
+                        raise GraphError.conflict(node, require, prev_node, prev_require,
+                                                  base_previous)
                 else:
                     conflict_ref = graph.aliased.get(require.ref, require.ref)
-                    # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-                    conflict = self._conflicting_references(prev_ref, conflict_ref, node.ref)
+                    # As we are closing a diamond, there can be conflicts. This will raise if so
+                    conflict = self._conflicting_references(prev_ref, conflict_ref)
                     if conflict:  # It is possible to get conflict from alias, try to resolve it
                         try:
                             result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
                                                           update, remotes, profile_host, graph_lock)
                             new_ref, dep_conanfile, recipe_status, _, _ = result
                         except ConanException as e:
-                            error_node = Node(require.ref, conanfile=None, context=node.context)
-                            error_node.recipe = RECIPE_MISSING
-                            graph.add_node(error_node)
-                            graph.add_edge(node, error_node, require)
-                            raise DepsGraphBuilder.StopRecursion(str(e))
+                            raise GraphError.missing(node, require, str(e))
                         # Maybe it was an ALIAS, so we can check conflict again
                         conflict_ref = new_ref
-                        conflict = self._conflicting_references(prev_ref, conflict_ref, node.ref)
+                        conflict = self._conflicting_references(prev_ref, conflict_ref)
                         if conflict:
-                            conflict_node = Node(require.ref, dep_conanfile, context=node.context)
-                            conflict_node.recipe = recipe_status
-                            base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
-                                                                                   conflict_node]
-                            graph.add_node(conflict_node)
-                            graph.add_edge(node, conflict_node, require)
-                            raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
-                        else:
-                            pass
-                            #print("IT IS NOT REALLY A CONFLICT, maaybe it was an ALIAS")
+                            raise GraphError.conflict(node, require, prev_node, prev_require,
+                                                      base_previous)
 
                 # Even if the version matches, there still can be a configuration conflict
                 # we can ignore it, and let "validate()" discard invalid configs
@@ -269,9 +113,9 @@ class DepsGraphBuilder(object):
                     prev_option = prev_node.conanfile.options.get_safe(k)
                     if prev_option is not None:
                         if prev_option != v:
-                            base_previous.conflict = GraphError.CONFIG_CONFLICT, [prev_node,
-                                                                                   prev_node]
-                            raise DepsGraphBuilder.StopRecursion("Configuration conflict in graph")
+                            raise GraphError.conflict_config(node, require,
+                                                             prev_node, prev_require, base_previous,
+                                                             k, prev_option, v)
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
@@ -295,11 +139,7 @@ class DepsGraphBuilder(object):
                 resolved = self._resolve_recipe(node, graph, resolved_ref, check_updates, update,
                                                 remotes, profile, graph_lock)
             except ConanException as e:
-                error_node = Node(require.ref, conanfile=None, context=context)
-                error_node.recipe = RECIPE_MISSING
-                graph.add_node(error_node)
-                graph.add_edge(node, error_node, require)
-                raise DepsGraphBuilder.StopRecursion(str(e))
+                raise GraphError.missing(node, require, str(e))
 
             new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
             new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
@@ -314,35 +154,54 @@ class DepsGraphBuilder(object):
             graph.add_node(new_node)
             graph.add_edge(node, new_node, require)
             if node.propagate_downstream(require, new_node):
-                raise DepsGraphBuilder.StopRecursion("Conflict in runtime")
+                raise GraphError.runtime(node, new_node)
 
-            # RECURSION, keep expanding (depth-first) the new node
-            return self._expand_node(new_node, graph, check_updates,
-                                     update, remotes, profile_host, profile_build, graph_lock)
+            return new_node
         else:  # a public node already exist with this name
-            #print("Closing a loop from ", node, "=>", prev_node)
+            # print("Closing a loop from ", node, "=>", prev_node)
             require.compute_run(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
     @staticmethod
-    def _conflicting_references(prev_ref, new_ref, consumer_ref=None):
+    def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
+        if graph_lock:
+            graph_lock.pre_lock_node(node)
+
+        # basic node configuration: calling configure() and requirements()
+        conanfile, ref = node.conanfile, node.ref
+
+        run_configure_method(conanfile, down_options, down_ref, ref)
+
+        # Apply build_requires from profile, overrriding the declared ones
+        profile = profile_host if node.context == CONTEXT_HOST else profile_build
+        build_requires = profile.build_requires
+        str_ref = str(node.ref)
+        for pattern, build_requires in build_requires.items():
+            if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
+                (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
+                for build_require in build_requires:  # Do the override
+                    if str(build_require) == str(node.ref):  # FIXME: Ugly str comparison
+                        continue  # avoid self-loop of build-requires in build context
+                    # FIXME: converting back to string?
+                    node.conanfile.requires.build_require(str(build_require),
+                                                          raise_if_duplicated=False)
+        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
+            graph_lock.lock_node(node, node.conanfile.requires.values())
+
+        # Introduce the current requires to define overrides
+        for require in node.conanfile.requires.values():
+            node.transitive_deps.set(require, TransitiveRequirement(require, None))
+
+    @staticmethod
+    def _conflicting_references(prev_ref, new_ref):
         if prev_ref.copy_clear_rev() != new_ref.copy_clear_rev():
-            if consumer_ref:
-                return ("Conflict in %s:\n"
-                        "    '%s' requires '%s' while other requires '%s'.\n"
-                        "    To fix this conflict you need to override the package '%s' "
-                        "in your root package."
-                        % (consumer_ref, consumer_ref, new_ref, prev_ref, new_ref.name))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
         if prev_ref.revision and new_ref.revision and prev_ref.revision != new_ref.revision:
-            if consumer_ref:
-                raise ConanException("Conflict in %s\n"
-                                     "    Different revisions of %s has been requested"
-                                     % (consumer_ref, new_ref))
             return True
         return False
 

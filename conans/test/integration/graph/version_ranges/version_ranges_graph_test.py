@@ -38,8 +38,7 @@ class GraphTest(unittest.TestCase):
         self.remote_manager = MockRemoteManager()
         self.remotes = Remotes()
         self.resolver = RangeResolver(paths, self.remote_manager)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        self.resolver)
+        self.builder = DepsGraphBuilder(self.retriever, self.loader, self.resolver)
         cache = Mock()
         cache.config.default_package_id_mode = "semver_direct_mode"
         cache.new_config = defaultdict(Mock)

@@ -3,7 +3,7 @@ import textwrap
 import pytest
 from parameterized import parameterized
 
-from conans.client.graph.graph import GraphError
+from conans.client.graph.graph_error import GraphError
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
 from conans.test.utils.tools import GenConanfile, TestClient
@@ -18,14 +18,13 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [app, libb])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
 
     def test_transitive_conflict(self):
@@ -36,7 +35,7 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -44,7 +43,6 @@ class TestProvidesTest(GraphManagerTest):
         libc = libb.dependencies[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [app, libc])
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libb])
 
@@ -63,7 +61,7 @@ class TestProvidesTest(GraphManagerTest):
                                                with_requires("libb/0.1", "libc/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(3, len(deps_graph.nodes))
         app = deps_graph.root
@@ -71,7 +69,6 @@ class TestProvidesTest(GraphManagerTest):
         libc = app.dependencies[1].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[app])
 
@@ -109,7 +106,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(5, len(deps_graph.nodes))
         app = deps_graph.root
@@ -118,7 +115,6 @@ class TestProvidesTest(GraphManagerTest):
         liba1 = libb.dependencies[0].dst
         libd2 = libc.dependencies[0].dst
         self._check_node(app, "app/0.1", deps=[libb, libc])
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [liba1, libd2])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[libd2], dependents=[app])
 
@@ -136,7 +132,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(4, len(deps_graph.nodes))
 
@@ -149,8 +145,6 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
-
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [libc, liba])
 
 
 class ProvidesBuildRequireTest(GraphManagerTest):
@@ -207,15 +201,13 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(path, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
         br = app.dependencies[0].dst
         br_lib = br.dependencies[0].dst
-
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [app, br_lib])
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -230,15 +222,13 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                                                                       "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
-        assert deps_graph.error is True
+        assert deps_graph.error.kind == GraphError.PROVIDE_CONFLICT
 
         self.assertEqual(3, len(deps_graph.nodes))
 
         app = deps_graph.root
         br1 = app.dependencies[0].dst
         br2 = app.dependencies[1].dst
-
-        assert app.conflict == (GraphError.PROVIDE_CONFLICT, [br1, br2])
 
         self._check_node(app, "app/0.1", deps=[br1, br2])
         self._check_node(br1, "br1/0.1#123", deps=[], dependents=[app])
@@ -268,4 +258,4 @@ def test_conditional():
     t.run("install app.py app/version@")
     t.run("install app.py app/version@ -o app:conflict=True", assert_error=True)
     # TODO: Improve the error diagnostics
-    assert "ERROR: There was a provides conflict building the dependency graph" in t.out
+    assert "ERROR: provide conflict" in t.out

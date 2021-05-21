@@ -1,7 +1,7 @@
 import pytest
 from parameterized import parameterized
 
-from conans.client.graph.graph import GraphError
+from conans.client.graph.graph_error import GraphError
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -252,6 +252,8 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
 
+        assert deps_graph.error.kind == GraphError.RUNTIME
+
         self.assertEqual(6, len(deps_graph.nodes))
         app = deps_graph.root
         lib = app.dependencies[0].dst
@@ -268,8 +270,6 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._check_node(zlib1, "zlib/0.1#123", deps=[], dependents=[cmake])
         self._check_node(mingw, "mingw/0.1#123", deps=[zlib2], dependents=[lib])
         self._check_node(zlib2, "zlib/0.2#123", deps=[], dependents=[mingw])
-
-        assert lib.conflict == (GraphError.VERSION_CONFLICT, [zlib1, zlib2])
 
     @pytest.mark.xfail(reason="Not updated yet")
     def test_build_require_conflict(self):

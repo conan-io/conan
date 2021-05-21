@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 import pytest
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_MISSING, GraphError
+from conans.client.graph.graph_error import GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
@@ -54,14 +54,11 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Cannot resolve version range libb/[>=0.0]"
+        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-
-        self._check_node(libb, "libb/[>=0.0]", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[])
 
     def test_userchannel_no_match(self):
         # app -> libb[>0.1] (missing)
@@ -70,14 +67,12 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Cannot resolve version range libb/[>=0.0]"
+        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
 
-        self._check_node(libb, "libb/[>=0.0]", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[])
 
     def test_required_userchannel_no_match(self):
         # app -> libb[>0.1] (missing)
@@ -86,14 +81,12 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Cannot resolve version range libb/[>=0.0]@user/channel"
+        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
 
-        self._check_node(libb, "libb/[>=0.0]@user/channel", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(app, "app/0.1", deps=[])
 
     def test_transitive_out_range(self):
         # app -> libb[>0.1] (missing)
@@ -102,13 +95,12 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Cannot resolve version range libb/[>1.0]"
+        assert deps_graph.error.kind == GraphError.MISSING_RECIPE
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        self.assertEqual(1, len(deps_graph.nodes))
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        self._check_node(libb, "libb/[>1.0]", dependents=[app])
-        self._check_node(app, "app/0.1", deps=[libb])
+
+        self._check_node(app, "app/0.1", deps=[])
 
 
 class TestVersionRangesDiamond(GraphManagerTest):
@@ -185,21 +177,17 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Version conflict in graph"
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba, liba2])
-        assert liba is not liba2
 
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba2])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[])
         self._check_node(app, "app/0.1", deps=[libb, libc])
 
     def test_transitive_fixed_conflict(self):
@@ -211,21 +199,17 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Version conflict in graph"
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        self.assertEqual(4, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba, liba2])
-        assert liba is not liba2
 
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
-        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba2])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[])
         self._check_node(app, "app/0.1", deps=[libb, libc])
 
 
@@ -293,14 +277,11 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>1.0]"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert deps_graph.error == "Version conflict in graph"
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        self.assertEqual(2, len(deps_graph.nodes))
         app = deps_graph.root
         libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
-
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, liba])
 
     def test_transitive_fixed_conflict_forced(self):
         # app ---> libb/0.1 -----------> liba/1.2
