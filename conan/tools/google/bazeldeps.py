@@ -104,8 +104,12 @@ class BazelDeps(object):
                 {}
         """)
 
-        function_content = "\n".join(local_repositories)
-        function_content = textwrap.indent(function_content, '    ')
+        if local_repositories:
+            function_content = "\n".join(local_repositories)
+            function_content = textwrap.indent(function_content, '    ')
+        else:
+            function_content = '    pass'
+
         content = template.format(function_content)
 
         return content
