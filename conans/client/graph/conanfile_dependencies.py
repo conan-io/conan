@@ -26,6 +26,9 @@ class DependencyOrderedSet:
             raise ConanException("No dependency found")
         return result[0]
 
+    def __add__(self, other):
+        return DependencyOrderedSet(self._deps + other._deps)
+
 
 class ConanFileDependencies:
 

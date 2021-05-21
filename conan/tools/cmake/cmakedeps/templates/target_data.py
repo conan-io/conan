@@ -24,6 +24,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     @property
     def context(self):
         global_cpp = self.get_global_cpp_cmake()
+        if not self.build_modules_activated:
+            global_cpp.build_modules_paths = ""
+
         components_cpp = self.get_required_components_cpp()
         components_renames = " ".join([component_rename for component_rename, _ in
                                        reversed(components_cpp)])
