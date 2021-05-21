@@ -47,8 +47,7 @@ class CMakeDeps(object):
                                      "generator.".format(name))
 
         # Iterate all the transitive requires
-        requires = host_req + build_req
-        for req in requires:
+        for req in host_req + build_req:
 
             config_version = ConfigVersionTemplate(self, req)
             ret[config_version.filename] = config_version.render()
