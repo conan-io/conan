@@ -35,7 +35,7 @@ class CMakeDeps(object):
         ret = {macros.filename: macros.render()}
 
         host_req = self._conanfile.dependencies.transitive_host_requires
-        build_req = self._conanfile.dependencies.build_requires
+        build_req = self._conanfile.dependencies.build_requires_build_context
 
         # Check if the same package is at host and build and the same time
         common = {r.ref.name for r in host_req}.intersection({r.ref.name for r in build_req})
