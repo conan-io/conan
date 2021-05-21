@@ -68,17 +68,4 @@ class TestOptions(GraphManagerTest):
 
         assert deps_graph.error == 'Configuration conflict in graph'
 
-        self.assertEqual(5, len(deps_graph.nodes))
-        app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
-        self._check_node(app, "app/0.1", deps=[libb, libc])
-        assert app.conflict == (GraphError.CONFIG_CONFLICT, [liba1, liba2])
-        self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
-        self._check_node(libc, "libc/0.1#123", deps=[liba2], dependents=[app])
-
-        self._check_node(liba1, "liba/0.1#123", dependents=[libb])
-        # TODO: Conflicted without revision
-        self._check_node(liba2, "liba/0.2", dependents=[libc])
+        self.assertEqual(4, len(deps_graph.nodes))

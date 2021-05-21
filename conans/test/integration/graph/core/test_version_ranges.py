@@ -300,7 +300,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         libb = app.dependencies[0].dst
         liba = libb.dependencies[0].dst
 
-        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, None])
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, liba])
 
     def test_transitive_fixed_conflict_forced(self):
         # app ---> libb/0.1 -----------> liba/1.2

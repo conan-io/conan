@@ -28,14 +28,16 @@ class CMakeDeps(object):
         macros = MacrosTemplate()
         ret = {macros.filename: macros.render()}
 
-        host_requires = {r.ref.name: r for r in
-                         self._conanfile.dependencies.transitive_host_requires}
-        # Iterate all the transitive requires
-        for req in host_requires.values():
+        for require, transitive in self._conanfile._conan_node.transitive_deps.items():
+            if require.build:
+                continue
+
+            req = transitive.node.conanfile
 
             config_version = ConfigVersionTemplate(self, req)
             ret[config_version.filename] = config_version.render()
 
+            self.require = require
             data_target = ConfigDataTemplate(self, req)
             ret[data_target.filename] = data_target.render()
 
