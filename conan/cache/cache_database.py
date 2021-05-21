@@ -56,7 +56,8 @@ class CacheDatabase:
     def try_get_reference_directory(self, ref):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
-            return self._references.get_path_ref(conn, ref)
+            ref_data = self._references.get(conn, ref)
+            return ref_data["path"]
 
     def get_or_create_reference(self, path, ref) -> Tuple[str, bool]:
         """ Returns the path for the given reference. If the reference doesn't exist in the
@@ -64,7 +65,8 @@ class CacheDatabase:
         """
         with self.connect() as conn:
             try:
-                return self._references.get_path_ref(conn, ref), False
+                ref_data = self._references.get(conn, ref)
+                return ref_data["path"], False
             except ReferencesDbTable.DoesNotExist:
                 self._references.save(conn, path, ref)
                 return path, True

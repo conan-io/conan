@@ -2,7 +2,7 @@ import sqlite3
 import time
 from collections import namedtuple
 from io import StringIO
-from typing import List, Iterator
+from typing import List, Iterator, Dict, Any
 
 from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanException
@@ -21,9 +21,6 @@ class ReferencesDbTable(BaseDbTable):
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     class DoesNotExist(ConanException):
-        pass
-
-    class MultipleObjectsReturned(ConanException):
         pass
 
     class AlreadyExist(ConanException):
@@ -71,17 +68,17 @@ class ReferencesDbTable(BaseDbTable):
         set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         return set_expr
 
-    def get_path_ref(self, conn: sqlite3.Cursor, ref) -> str:
+    def get(self, conn: sqlite3.Cursor, ref) -> Dict[str, Any]:
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
-        query = f'SELECT {self.columns.path} FROM {self.table_name} ' \
+        query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
         r = conn.execute(query)
         row = r.fetchone()
         if not row:
             raise ReferencesDbTable.DoesNotExist(
                 f"No entry for reference '{ref.full_reference}'")
-        return row[0]
+        return self._as_dict(self.row_type(*row))
 
     def get_remote(self, conn: sqlite3.Cursor, ref):
         """ Returns the row matching the reference or fails """
@@ -128,13 +125,6 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         return r.lastrowid
 
-    def get(self, conn: sqlite3.Cursor, pk: int) -> ConanFileReference:
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE rowid = ?;'
-        r = conn.execute(query, [pk, ])
-        row = r.fetchone()
-        return self._as_ref(self.row_type(*row))
-
     def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
@@ -153,16 +143,6 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
-
-    def latest_rrev(self, conn: sqlite3.Cursor, ref: ConanFileReference) -> ConanFileReference:
-        """ Returns the latest ref according to rrev """
-        query = f'SELECT * FROM {self.table_name} ' \
-                f'WHERE {self.columns.reference} = ? ' \
-                f'ORDER BY {self.columns.rrev} ' \
-                f'LIMIT 1;'
-        r = conn.execute(query, [str(ref), ])
-        row = r.fetchone()
-        return self._as_ref(self.row_type(*row))
 
     def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[
         PackageReference]:
