@@ -550,7 +550,7 @@ class CmdUpload(object):
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote_name:
-            self._cache.update_remote(ref, remote.name)
+            self._cache.set_remote(ref, remote.name)
 
         return ref
 
@@ -590,7 +590,7 @@ class CmdUpload(object):
         # Update the package metadata
         # TODO: cache2.0 what to do with checksums in 2.0?
         checksums = calc_files_checksum(cache_files)
-        self._cache.update_remote(pref, p_remote.name)
+        self._cache.set_remote(pref, p_remote.name)
         return pref
 
 

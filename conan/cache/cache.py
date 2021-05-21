@@ -69,9 +69,9 @@ class DataCache:
             References.DoesNotExist exception.
         """
         assert ref.revision, "Ask for a reference layout only if the rrev is known"
-        from conan.cache.recipe_layout import RecipeLayout
+        from conan.cache.conan_reference_layout import ReferenceLayout
         reference_path = self.db.try_get_reference_directory(ConanReference(ref))
-        return RecipeLayout(ref, cache=self, base_folder=reference_path)
+        return ReferenceLayout(ref, cache=self, base_folder=reference_path)
 
         # TODO: Should get_or_create_package_layout if not prev?
 
@@ -82,8 +82,8 @@ class DataCache:
         assert pref.ref.revision, "Ask for a package layout only if the rrev is known"
         assert pref.revision, "Ask for a package layout only if the prev is known"
         package_path = self.db.try_get_reference_directory(ConanReference(pref))
-        from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, package_folder=package_path)
+        from conan.cache.conan_reference_layout import ReferenceLayout
+        return ReferenceLayout(pref, cache=self, package_folder=package_path)
 
     def get_or_create_reference_layout(self, ref: ConanReference) -> 'RecipeLayout':
         path = self.get_or_create_reference_path(ref)
@@ -95,8 +95,8 @@ class DataCache:
         reference_path, created = self.db.get_or_create_reference(path, ref)
         self._create_path(reference_path, remove_contents=created)
 
-        from conan.cache.recipe_layout import RecipeLayout
-        return RecipeLayout(ref, cache=self, base_folder=reference_path)
+        from conan.cache.conan_reference_layout import ReferenceLayout
+        return ReferenceLayout(ref, cache=self, base_folder=reference_path)
 
     def get_or_create_package_layout(self, pref: ConanReference) -> 'PackageLayout':
         package_path = self.get_or_create_package_path(pref)
@@ -113,15 +113,15 @@ class DataCache:
         package_path, created = self.db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
 
-        from conan.cache.package_layout import PackageLayout
-        return PackageLayout(pref, cache=self, package_folder=package_path)
+        from conan.cache.conan_reference_layout import ReferenceLayout
+        return ReferenceLayout(pref, cache=self, base_folder=package_path)
 
-    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference, remote=None) -> str:
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> str:
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
 
         try:
-            self.db.update_reference(old_ref, new_ref, new_path=new_path, new_remote=remote)
+            self.db.update_reference(old_ref, new_ref, new_path=new_path)
         except ReferencesDbTable.AlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
@@ -181,8 +181,8 @@ class DataCache:
     def get_remote(self, ref):
         return self.db.get_remote(ref)
 
-    def update_remote(self, ref, remote):
-        self.db.update_reference(ref, new_remote=remote)
+    def set_remote(self, ref, new_remote):
+        self.db.update_reference(ref, new_remote=new_remote)
 
     def remove(self, ref):
         self.db.remove(ref)

@@ -100,8 +100,8 @@ class RemoteManager(object):
 
         ref = self._resolve_latest_ref(ref, remote)
 
-        # TODO: cache2.0 check if we want to pass the remote here
-        layout.assign_rrev(ConanReference(ref), remote=remote.name)
+        layout.assign_rrev(ConanReference(ref))
+        layout.set_remote(remote.name)
 
         t1 = time.time()
         download_export = layout.download_export()

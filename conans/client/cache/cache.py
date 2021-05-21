@@ -96,8 +96,8 @@ class ClientCache(object):
     def pkg_layout(self, ref):
         return self._data_cache.get_or_create_package_layout(ConanReference(ref))
 
-    def update_remote(self, ref, remote):
-        return self._data_cache.update_remote(ConanReference(ref), remote)
+    def set_remote(self, ref, remote):
+        return self._data_cache.set_remote(ConanReference(ref), remote)
 
     def all_refs(self):
         return [ref for ref in self._data_cache.list_references(only_latest_rrev=True)]

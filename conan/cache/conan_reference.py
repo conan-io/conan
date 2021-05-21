@@ -29,7 +29,6 @@ class ConanReference(namedtuple("ConanReference", "name version user channel rre
         return ConanFileReference.loads(self.full_reference, validate=False)
 
     @property
-    # TODO: use coherent names for different parts of name/version@user/channel#rrev:pkgid#prev
     def reference(self):
         if self.user is None and self.channel is None:
             return f'{self.name}/{self.version}'
@@ -41,30 +40,3 @@ class ConanReference(namedtuple("ConanReference", "name version user channel rre
             return f'{self.reference}#{self.rrev}:{self.pkgid}#{self.prev}'
         else:
             return f'{self.reference}#{self.rrev}'
-
-    @staticmethod
-    def loads(text):
-        def get_field(reference, start, index):
-            try:
-                found = re.findall(f'{start}(.*?)(:|@|#|/|$)', reference)
-                try:
-                    ret = found[index][0]
-                except IndexError:
-                    return None
-            except AttributeError:
-                return None
-            return ret
-
-        name = get_field(text, "", 0)
-        version = get_field(text, "/", 0)
-        if "@" in text:
-            user = get_field(text, "@", 0)
-            channel = get_field(text, "/", 1)
-        else:
-            user = None
-            channel = None
-        rrev = get_field(text, "#", 0)
-        pkgid = get_field(text, ":", 0)
-        prev = get_field(text, "#", 1)
-        ref = ConanReference(name, version, user, channel, rrev, pkgid, prev)
-        return ref
