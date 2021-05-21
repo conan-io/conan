@@ -91,7 +91,8 @@ consumer_conanfile = textwrap.dedent("""
                 cmake = CMake(self)
                 cmake.configure()
                 cmake.build()
-                self.run(os.sep.join([".", "app"]))
+                folder = self.settings.build_require if self.settings.os == "Windows" else "."
+                self.run(os.sep.join([folder, "app"]))
         """)
 
 
