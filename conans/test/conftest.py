@@ -54,6 +54,7 @@ tools_available = [
     'gcc', 'clang', 'visual_studio', 'xcode',
     'msys2', 'cygwin', 'mingw32', 'mingw64',
     'autotools', 'pkg_config', 'premake', 'meson', 'ninja',
+    'bazel',
     'file',
     'git', 'svn',
     'compiler',
