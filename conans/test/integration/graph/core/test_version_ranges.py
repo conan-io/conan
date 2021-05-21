@@ -1,7 +1,12 @@
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_MISSING
+from collections import OrderedDict
+
+import pytest
+
+from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_MISSING, GraphError
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.util.files import save
 
 
 class TestVersionRanges(GraphManagerTest):
@@ -19,6 +24,29 @@ class TestVersionRanges(GraphManagerTest):
 
         self._check_node(libb, "libb/0.2#123", dependents=[app])
         self._check_node(app, "app/0.1", deps=[libb])
+
+    def test_transitive_local_conditions(self):
+        for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+            self.recipe_cache(f"libb/{v}")
+
+        for expr, solution in [(">0.0", "2.2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
+                               ("", "2.2.1"),
+                               ("~0", "0.3"),
+                               ("~=1", "1.2.1"),
+                               ("~1.1", "1.1.2"),
+                               ("~=2", "2.2.1"),
+                               ("~=2.1", "2.1"),
+                               ]:
+            consumer = self.recipe_consumer("app/0.1", [f"libb/[{expr}]"])
+            deps_graph = self.build_consumer(consumer)
+            self.assertEqual(2, len(deps_graph.nodes))
+            app = deps_graph.root
+            libb = app.dependencies[0].dst
+
+            self._check_node(libb, f"libb/{solution}#123", dependents=[app])
+            self._check_node(app, "app/0.1", deps=[libb])
 
     def test_missing(self):
         # app -> libb[>0.1] (missing)
@@ -85,8 +113,8 @@ class TestVersionRanges(GraphManagerTest):
 
 class TestVersionRangesDiamond(GraphManagerTest):
     def test_transitive(self):
-        # app -> libb/0.1 -(range >1)-> liba/0.2
-        #   \ -> libc/0.1 -(range <2)---/
+        # app -> libb/0.1 -(range >0)-> liba/0.2
+        #   \ -> libc/0.1 -(range <1)---/
         self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
@@ -100,9 +128,198 @@ class TestVersionRangesDiamond(GraphManagerTest):
         libc = app.dependencies[1].dst
         liba = libb.dependencies[0].dst
 
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, libc], deps=[])
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, libc])
+
+    def test_transitive_interval(self):
+        # app -> libb/0.1 -(range >0 <0.3)-> liba/0.2
+        #   \ -> libc/0.1 -(range <1)--------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("liba/0.3")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0 <0.3]"])
+        self.recipe_cache("libc/0.1", ["liba/[<1.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, libc], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+    def test_transitive_fixed(self):
+        # app -> libb/0.1 --------> liba/0.1
+        #   \ -> libc/0.1 -(range <1)---/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        self.recipe_cache("libc/0.1", ["liba/[<1.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+    def test_transitive_conflict(self):
+        # app -> libb/0.1 -(range >0)-> liba/0.2
+        #   \ -> libc/0.1 -(range >1)---/
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        self.recipe_cache("libc/0.1", ["liba/[>1.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error == "Version conflict in graph"
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba, liba2])
+        assert liba is not liba2
+
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba2])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+    def test_transitive_fixed_conflict(self):
+        # app -> libb/0.1 ---------> liba/0.2
+        #   \ -> libc/0.1 -(range >1)---/
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        self.recipe_cache("libc/0.1", ["liba/[>1.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error == "Version conflict in graph"
+
+        self.assertEqual(5, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+        liba2 = libc.dependencies[0].dst
+
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [liba, liba2])
+        assert liba is not liba2
+
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(libc, "libc/0.1#123", dependents=[app], deps=[liba2])
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+
+
+class TestVersionRangesOverridesDiamond(GraphManagerTest):
+    def test_transitive(self):
+        # app -> libb/0.1 -(range >0)-> liba/0.2
+        #   \ ---------------------------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.2#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+
+    def test_transitive_overriden(self):
+        # app -> libb/0.1 -(range >0)-> liba/0.1
+        #   \ ---------liba/0.1-------------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.1"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+
+    def test_transitive_fixed(self):
+        # app ---> libb/0.1 -----------> liba/0.1
+        #   \ --------(range<1)----------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[<1.0]"])
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+
+    def test_transitive_fixed_conflict(self):
+        # app ---> libb/0.1 -----------> liba/0.1
+        #   \ --------(range>1)----------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/1.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>1.0]"])
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error == "Version conflict in graph"
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, None])
+
+    def test_transitive_fixed_conflict_forced(self):
+        # app ---> libb/0.1 -----------> liba/1.2
+        #   \ --------(range>1)----------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/1.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/[>1.0]", force=True))
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/1.2#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
 
 
 def test_mixed_user_channel():
@@ -122,3 +339,58 @@ def test_mixed_user_channel():
     assert "pkg/1.1 from 'default' - Downloaded" in t.out
     t.run('install "pkg/[>0 <2]@user/testing"')
     assert "pkg/1.1@user/testing from 'default' - Downloaded" in t.out
+
+
+def test_remote_version_ranges():
+    t = TestClient(default_server_user=True)
+    save(t.cache.default_profile_path, "")
+    save(t.cache.settings_path, "")
+    t.save({"conanfile.py": GenConanfile()})
+    for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
+        t.run(f"create . dep/{v}@")
+    t.run("upload * --all --confirm")
+    # TODO: Deprecate the comma separator for expressions
+    for expr, solution in [(">0.0", "2.2.1"),
+                           (">0.1,<1", "0.3"),
+                           (">0.1,<1||2.1", "2.1"),
+                           ("", "2.2.1"),
+                           ("~0", "0.3"),
+                           ("~=1", "1.2.1"),
+                           ("~1.1", "1.1.2"),
+                           ("~=2", "2.2.1"),
+                           ("~=2.1", "2.1"),
+                           ]:
+        t.run("remove * -f")
+        t.save({"conanfile.py": GenConanfile().with_requires(f"dep/[{expr}]")})
+        t.run("install .")
+        assert str(t.out).count("Not found in local cache, looking in remotes") == 1
+        assert f"dep/{solution}:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Download" in t.out
+
+
+@pytest.mark.skip(reason="TODO: Test that the server is only hit once for dep/*@user/channel")
+def test_remote_version_ranges_optimized():
+    server = TestServer()
+    t = TestClient(default_server_user=True)
+    save(t.cache.default_profile_path, "")
+    save(t.cache.settings_path, "")
+
+
+def test_different_user_channel_resolved_correctly():
+    server1 = TestServer()
+    server2 = TestServer()
+    servers = OrderedDict([("server1", server1), ("server2", server2)])
+
+    client = TestClient(servers=servers, users={"server1": [("conan", "password")],
+                                                "server2": [("conan", "password")]})
+    save(client.cache.default_profile_path, "")
+    save(client.cache.settings_path, "")
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . lib/1.0@conan/stable")
+    client.run("create . lib/1.0@conan/testing")
+    client.run("upload lib/1.0@conan/stable -r=server1 --all")
+    client.run("upload lib/1.0@conan/testing -r=server2 --all")
+
+    client2 = TestClient(servers=servers)
+    client2.run("install lib/[>=1.0]@conan/testing")
+    assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
+           f"from remote 'server2' " in client2.out

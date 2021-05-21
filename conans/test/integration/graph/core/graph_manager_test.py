@@ -722,10 +722,11 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
     def test_diamond(self):
         # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
         #    \-> --------- ->/
+        self.recipe_cache("liba/0.1")
         self.recipe_cache("liba/0.2")
         self.recipe_cache("libb/0.1", ["liba/0.1"])
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
-
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/0.2", force=True))
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -741,13 +742,40 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb, app])
 
+    def test_diamond_conflict(self):
+        # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
+        #    \-> --------- ->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/0.2"])
+
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error == "Version conflict in graph"
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        # TODO: Improve conflict information
+        assert app.conflict == (GraphError.VERSION_CONFLICT, [None, liba])
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1", dependents=[libb])
+
     def test_diamond_reverse_order(self):
         # foo ---------------------------------> dep1/2.0
         #   \ -> dep2/1.0--(dep1/1.0 overriden)-->/
         self.recipe_cache("dep1/1.0")
         self.recipe_cache("dep1/2.0")
         self.recipe_cache("dep2/1.0", ["dep1/1.0"])
-        consumer = self.recipe_consumer("app/0.1", ["dep1/2.0", "dep2/1.0"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                           .with_requirement("dep1/2.0", force=True)
+                                           .with_requirement("dep2/1.0"))
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -758,6 +786,22 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         self._check_node(app, "app/0.1", deps=[dep1, dep2])
         self._check_node(dep1, "dep1/2.0#123", deps=[], dependents=[app, dep2])
         self._check_node(dep2, "dep2/1.0#123", deps=[dep1], dependents=[app])
+
+    def test_diamond_reverse_order_conflict(self):
+        # foo ---------------------------------> dep1/2.0
+        #   \ -> dep2/1.0--(dep1/1.0 overriden)-->/
+        self.recipe_cache("dep1/1.0")
+        self.recipe_cache("dep1/2.0")
+        self.recipe_cache("dep2/1.0", ["dep1/1.0"])
+        consumer = self.recipe_consumer("app/0.1", ["dep1/2.0", "dep2/1.0"])
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error == "Version conflict in graph"
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        dep1 = app.dependencies[0].dst
+        dep2 = app.dependencies[1].dst
 
 
 class TestProjectApp(GraphManagerTest):

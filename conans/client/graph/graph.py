@@ -214,7 +214,7 @@ class Node(object):
         return downstream_require
 
     def propagate_downstream(self, require, node, prev_node=None):
-        print("  Propagating downstream ", self, "<-", require)
+        # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
         # Take into account that while propagating we can find RUNTIME shared conflicts we
@@ -222,13 +222,13 @@ class Node(object):
         existing = self.transitive_deps.get(require)
         if existing is not None:
             if existing.node is not None and existing.node.ref != node.ref:
-                print("  +++++Runtime conflict!", require, "with", node.ref)
+                # print("  +++++Runtime conflict!", require, "with", node.ref)
                 self.conflict = GraphError.VERSION_CONFLICT, [existing.node, node]
                 return True
         self.transitive_deps.set(require, TransitiveRequirement(require, node))
 
         if not self.dependants:
-            print("  No further dependants, stop propagate")
+            # print("  No further dependants, stop propagate")
             return
 
         if prev_node:
@@ -241,7 +241,7 @@ class Node(object):
 
         # Check if need to propagate downstream
         if downstream_require is None:
-            print("  No downstream require, stopping propagate")
+            # print("  No downstream require, stopping propagate")
             return
 
         return d.src.propagate_downstream(downstream_require, node)
@@ -255,8 +255,8 @@ class Node(object):
 
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(require)
-        print("    Transitive deps", self.transitive_deps)
-        print("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
+        # print("    Transitive deps", self.transitive_deps)
+        # ("    THERE IS A PREV ", prev, "in node ", self, " for require ", require)
         # Overrides: The existing require could be itself, that was just added
         if prev and (prev.require is not require or prev.node is not None):
             return prev.require, prev.node, self
@@ -272,10 +272,10 @@ class Node(object):
         d = self.dependants[0]
 
         # TODO: Implement an optimization where the requires is checked against a graph global
-        print("    Lets check_downstream one more")
+        # print("    Lets check_downstream one more")
         downstream_require = self._transform_downstream_require(require, None, d)
         if downstream_require is None:
-            print("    No need to check dowstream more")
+            # print("    No need to check dowstream more")
             return
 
         source_node = d.src
@@ -432,12 +432,12 @@ class DepsGraph(object):
 
     def report_graph_error(self):
         if self.error:
-            print("REPORTING GRAPH ERRORS")
+            # print("REPORTING GRAPH ERRORS")
             conflict_nodes = [n for n in self.nodes if n.conflict]
-            print("PROBLEMATIC NODES ", conflict_nodes)
+            # print("PROBLEMATIC NODES ", conflict_nodes)
             for node in conflict_nodes:  # At the moment there should be only 1 conflict at most
                 conflict = node.conflict
-                print("CONFLICT ", conflict)
+                # print("CONFLICT ", conflict)
                 if conflict[0] == GraphError.LOOP:
                     loop_ref = node.ref
                     parent = node.dependants[0]

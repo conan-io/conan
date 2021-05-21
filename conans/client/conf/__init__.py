@@ -156,7 +156,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # sysrequires_mode = enabled          # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
     # vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
     # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
-    # error_on_override = False           # environment CONAN_ERROR_ON_OVERRIDE
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
     # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
@@ -251,7 +250,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_USER_HOME_SHORT", "user_home_short", None),
             ("CONAN_USE_ALWAYS_SHORT_PATHS", "use_always_short_paths", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
-            ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", False),
             # http://www.vtk.org/Wiki/CMake_Cross_Compiling
             ("CONAN_CMAKE_GENERATOR", "cmake_generator", None),
             ("CONAN_CMAKE_GENERATOR_PLATFORM", "cmake_generator_platform", None),

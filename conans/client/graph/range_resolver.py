@@ -86,7 +86,7 @@ class RangeResolver(object):
     def __init__(self, cache, remote_manager):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._cached_remote_found = {}
+        self._cached_remote_found = {}  # TODO: This needs to cache per-remote
         self._result = []
 
     @property

@@ -53,7 +53,7 @@ class DepsGraphBuilder(object):
                    graph_lock=None):
         assert profile_host is not None
         assert profile_build is not None
-        print("Loading graph")
+        #print("Loading graph")
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
@@ -155,7 +155,7 @@ class DepsGraphBuilder(object):
     def _expand_node(self, node, graph, check_updates, update,
                      remotes, profile_host, profile_build, graph_lock):
 
-        print("Expanding node", node)
+        #print("Expanding node", node)
 
         # if there are version-ranges, resolve them before expanding each of the requirements
         # Resolve possible version ranges of the current node requirements
@@ -170,7 +170,7 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             self._expand_require(require, node, graph, check_updates, update, remotes,
                                  profile_host, profile_build, graph_lock)
-        print("Finished Expanding node", node)
+        #print("Finished Expanding node", node)
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
                         profile_build, graph_lock, populate_settings_target=True):
@@ -179,13 +179,13 @@ class DepsGraphBuilder(object):
         #    node -(require)-> previous (creates a diamond with a previously existing node)
 
         # TODO: allow bootstrapping, use references instead of names
-        print("  Expanding require ", node, "->", require)
+        #print("  Expanding require ", node, "->", require)
         # If the requirement is found in the node public dependencies, it is a diamond
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous:
             prev_require, prev_node, base_previous = previous
-            print("  Existing previous requirements from ", base_previous, "=>", prev_require)
+            #print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
             if prev_require is None:  # Loop
                 loop_node = Node(require.ref, None, context=prev_node.context)
@@ -194,24 +194,38 @@ class DepsGraphBuilder(object):
                 graph.add_edge(node, loop_node, require)
                 raise DepsGraphBuilder.StopRecursion("Loop found")
 
-            if prev_node is None or prev_node in base_previous.neighbors():  # Existing, resolved override
-                # Overrides happen when the conflicting existing was directly defined by consumer
-                print("  Require was an override from ", base_previous, "=", prev_require)
-                print("  Require equality: \n", require, "\n", prev_require, "\n", prev_require == require)
-                # TODO: resolve the override, version ranges, etc
-                # FIXME: Why this fails if require.ref = prev_require.ref???
+            if prev_require.force:  # override
+                # prev_node is None:  # Unresolved override
                 require.ref = prev_require.ref if prev_node is None else prev_node.ref
             else:
-                print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
+                #print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
+                prev_ref = prev_node.ref if prev_node else prev_require.ref
                 version_range = require.version_range
+                prev_version_range = prev_require.version_range if prev_node is None else None
                 if version_range:
-                    version_range, loose, include_prerelease = _parse_versionexpr(version_range, [])
-                    from semver import satisfies
-                    if satisfies(prev_node.ref.version, version_range,
-                                 loose=loose, include_prerelease=include_prerelease):
-                        require.ref = prev_node.ref
+                    if prev_version_range:
+                        raise Exception("INTERVAL!!!!!")
                     else:
-                        conflict_node = Node(require.ref, None, context=prev_node.context)
+                        rang, loose, include_prerelease = _parse_versionexpr(version_range, [])
+                        from semver import satisfies
+                        if satisfies(prev_ref.version, rang,
+                                     loose=loose, include_prerelease=include_prerelease):
+                            require.ref = prev_ref
+                        else:
+                            conflict_node = Node(require.ref, None, context=node.context)
+                            base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
+                                                                                   conflict_node]
+                            graph.add_node(conflict_node)
+                            graph.add_edge(node, conflict_node, require)
+                            raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
+                elif prev_version_range:
+                    rang, loose, include_prerelease = _parse_versionexpr(prev_version_range, [])
+                    from semver import satisfies
+                    if satisfies(require.ref.version, rang,
+                                 loose=loose, include_prerelease=include_prerelease):
+                        pass # require.ref = prev_ref
+                    else:
+                        conflict_node = Node(require.ref, None, context=node.context)
                         base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
                                                                                conflict_node]
                         graph.add_node(conflict_node)
@@ -220,15 +234,23 @@ class DepsGraphBuilder(object):
                 else:
                     conflict_ref = graph.aliased.get(require.ref, require.ref)
                     # As we are closing a diamond, there can be conflicts. This will raise if conflicts
-                    conflict = self._conflicting_references(prev_node, conflict_ref, node.ref)
+                    conflict = self._conflicting_references(prev_ref, conflict_ref, node.ref)
                     if conflict:  # It is possible to get conflict from alias, try to resolve it
-                        result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
-                                                      update, remotes, profile_host, graph_lock)
-                        _, dep_conanfile, recipe_status, _, _ = result
+                        try:
+                            result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
+                                                          update, remotes, profile_host, graph_lock)
+                            new_ref, dep_conanfile, recipe_status, _, _ = result
+                        except ConanException as e:
+                            error_node = Node(require.ref, conanfile=None, context=node.context)
+                            error_node.recipe = RECIPE_MISSING
+                            graph.add_node(error_node)
+                            graph.add_edge(node, error_node, require)
+                            raise DepsGraphBuilder.StopRecursion(str(e))
                         # Maybe it was an ALIAS, so we can check conflict again
-                        conflict = self._conflicting_references(prev_node, require.ref, node.ref)
+                        conflict_ref = new_ref
+                        conflict = self._conflicting_references(prev_ref, conflict_ref, node.ref)
                         if conflict:
-                            conflict_node = Node(require.ref, dep_conanfile, context=prev_node.context)
+                            conflict_node = Node(require.ref, dep_conanfile, context=node.context)
                             conflict_node.recipe = recipe_status
                             base_previous.conflict = GraphError.VERSION_CONFLICT, [prev_node,
                                                                                    conflict_node]
@@ -236,10 +258,12 @@ class DepsGraphBuilder(object):
                             graph.add_edge(node, conflict_node, require)
                             raise DepsGraphBuilder.StopRecursion("Version conflict in graph")
                         else:
-                            print("IT IS NOT REALLY A CONFLICT, maaybe it was an ALIAS")
+                            pass
+                            #print("IT IS NOT REALLY A CONFLICT, maaybe it was an ALIAS")
 
                 # Even if the version matches, there still can be a configuration conflict
                 # we can ignore it, and let "validate()" discard invalid configs
+                # TODO: Check this
                 upstream_options = node.conanfile.options[require.ref.name]
                 for k, v in upstream_options.items():
                     prev_option = prev_node.conanfile.options.get_safe(k)
@@ -296,26 +320,25 @@ class DepsGraphBuilder(object):
             return self._expand_node(new_node, graph, check_updates,
                                      update, remotes, profile_host, profile_build, graph_lock)
         else:  # a public node already exist with this name
-            print("Closing a loop from ", node, "=>", prev_node)
+            #print("Closing a loop from ", node, "=>", prev_node)
             require.compute_run(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
     @staticmethod
-    def _conflicting_references(previous, new_ref, consumer_ref=None):
-        if previous.ref.copy_clear_rev() != new_ref.copy_clear_rev():
+    def _conflicting_references(prev_ref, new_ref, consumer_ref=None):
+        if prev_ref.copy_clear_rev() != new_ref.copy_clear_rev():
             if consumer_ref:
                 return ("Conflict in %s:\n"
-                        "    '%s' requires '%s' while '%s' requires '%s'.\n"
+                        "    '%s' requires '%s' while other requires '%s'.\n"
                         "    To fix this conflict you need to override the package '%s' "
                         "in your root package."
-                        % (consumer_ref, consumer_ref, new_ref, next(iter(previous.dependants)).src,
-                           previous.ref, new_ref.name))
+                        % (consumer_ref, consumer_ref, new_ref, prev_ref, new_ref.name))
             return True
         # Computed node, if is Editable, has revision=None
         # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
         # a revision, so it's ok any previous_ref
-        if previous.ref.revision and new_ref.revision and previous.ref.revision != new_ref.revision:
+        if prev_ref.revision and new_ref.revision and prev_ref.revision != new_ref.revision:
             if consumer_ref:
                 raise ConanException("Conflict in %s\n"
                                      "    Different revisions of %s has been requested"

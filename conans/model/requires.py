@@ -8,7 +8,7 @@ class Requirement:
     """ A user definition of a requires in a conanfile
     """
     def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
-                 transitive_headers=None, test=False, package_id_mode=None):
+                 transitive_headers=None, test=False, package_id_mode=None, force=None):
         # By default this is a generic library requirement
         self.ref = ref
         self.include = include  # This dependent node has headers that must be -I<include-path>
@@ -19,6 +19,7 @@ class Requirement:
         self.transitive_headers = transitive_headers
         self.test = test
         self.package_id_mode = package_id_mode
+        self.force = force
 
     def __repr__(self):
         return repr(self.__dict__)
