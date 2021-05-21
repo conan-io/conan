@@ -1,8 +1,4 @@
-import sqlite3
 import time
-from collections import namedtuple
-from io import StringIO
-from typing import List, Iterator, Dict, Any
 
 from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanException
@@ -26,7 +22,7 @@ class ReferencesDbTable(BaseDbTable):
     class AlreadyExist(ConanException):
         pass
 
-    def _as_dict(self, row: namedtuple):
+    def _as_dict(self, row):
         return {
             "reference": row.reference,
             "rrev": row.rrev,
@@ -37,7 +33,7 @@ class ReferencesDbTable(BaseDbTable):
             "remote": row.remote
         }
 
-    def _as_ref(self, row: namedtuple):
+    def _as_ref(self, row):
         if row.prev:
             return PackageReference.loads(f'{row.reference}#{row.rrev}:{row.pkgid}#{row.prev}',
                                           validate=False)
@@ -68,7 +64,7 @@ class ReferencesDbTable(BaseDbTable):
         set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         return set_expr
 
-    def get(self, conn: sqlite3.Cursor, ref) -> Dict[str, Any]:
+    def get(self, conn, ref):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
         query = f'SELECT * FROM {self.table_name} ' \
@@ -80,7 +76,7 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def get_remote(self, conn: sqlite3.Cursor, ref):
+    def get_remote(self, conn, ref):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
         query = f'SELECT {self.columns.remote} FROM {self.table_name} ' \
@@ -92,7 +88,7 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
-    def save(self, conn: sqlite3.Cursor, path, ref, remote=None) -> int:
+    def save(self, conn, path, ref, remote=None):
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
@@ -100,7 +96,7 @@ class ReferencesDbTable(BaseDbTable):
                          [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
         return r.lastrowid
 
-    def update(self, conn: sqlite3.Cursor, old_ref, new_ref=None, new_path=None, new_remote=None):
+    def update(self, conn, old_ref, new_ref=None, new_path=None, new_remote=None):
         if not new_ref:
             new_ref = old_ref
         timestamp = int(time.time())
@@ -112,20 +108,20 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         return r.lastrowid
 
-    def delete_by_path(self, conn: sqlite3.Cursor, path):
+    def delete_by_path(self, conn, path):
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE path = ?;"
         r = conn.execute(query, (path,))
         return r.lastrowid
 
-    def remove(self, conn: sqlite3.Cursor, ref):
+    def remove(self, conn, ref):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
         r = conn.execute(query)
         return r.lastrowid
 
-    def all(self, conn: sqlite3.Cursor, only_latest_rrev: bool) -> List[ConanFileReference]:
+    def all(self, conn, only_latest_rrev: bool):
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -144,8 +140,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def get_prevs(self, conn: sqlite3.Cursor, ref, only_latest_prev: bool = False) -> List[
-        PackageReference]:
+    def get_prevs(self, conn, ref, only_latest_prev: bool = False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
         check_pkgid = f'AND {self.columns.pkgid} = "{ref.pkgid}" ' if ref.pkgid else ''
         if only_latest_prev:
@@ -172,7 +167,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_ref(self.row_type(*row))
 
-    def get_rrevs(self, conn: sqlite3.Cursor, ref, only_latest_rrev: bool = False):
+    def get_rrevs(self, conn, ref, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \
@@ -199,8 +194,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_pkgids(self, conn: sqlite3.Cursor, ref, only_latest_prev=False) -> List[
-        PackageReference]:
+    def get_pkgids(self, conn, ref, only_latest_prev=False):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
