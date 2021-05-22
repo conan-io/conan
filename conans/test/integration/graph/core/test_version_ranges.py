@@ -302,6 +302,48 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
         self._check_node(app, "app/0.1", deps=[libb, liba])
 
+    def test_two_ranges_overriden(self):
+        # app -> libb/0.1 -(range >0)-> liba/0.1
+        #   \ ---------liba/[<0.3>]-------------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("liba/0.3")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/[<0.4]"))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.3#123", dependents=[libb, app], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb, liba])
+
+    def test_two_ranges_overriden_conflict(self):
+        # app -> libb/0.1 -(range >0)-> liba/0.1
+        #   \ ---------liba/[<0.3>]-------------/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("liba/0.3")
+        self.recipe_cache("libb/0.1", ["liba/[>=0.0]"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/[<0.3]"))
+        deps_graph = self.build_consumer(consumer, install=False)
+
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(liba, "liba/0.3#123", dependents=[libb], deps=[])
+        self._check_node(libb, "libb/0.1#123", dependents=[app], deps=[liba])
+        self._check_node(app, "app/0.1", deps=[libb])
+
 
 def test_mixed_user_channel():
     # https://github.com/conan-io/conan/issues/7846

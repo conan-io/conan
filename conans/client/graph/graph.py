@@ -1,6 +1,5 @@
 from enum import Enum
 
-from conans.client.graph.graph_error import GraphError
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.model.requires import Requirement, RequirementDict
@@ -63,7 +62,6 @@ class Node(object):
         self.recipe = recipe
         self.remote = None
         self.binary_remote = None
-        self.revision_pinned = False  # The revision has been specified by the user
         self.context = context
 
         self.id = None  # Unique ID (uuid at the moment) of a node in the graph
@@ -245,7 +243,10 @@ class Node(object):
         # This is equivalent as the Requirement hash and eq methods
         # TODO: Make self.ref always exist, but with name=None if name not defined
         if self.ref is not None and require.ref.name == self.ref.name:
-            return None, self, self  # First is the require, as it is a loop => None
+            if require.build and require.ref.version != self.ref.version:
+                pass  # Allow bootstrapping
+            else:
+                return None, self, self  # First is the require, as it is a loop => None
 
         # First do a check against the current node dependencies
         prev = self.transitive_deps.get(require)

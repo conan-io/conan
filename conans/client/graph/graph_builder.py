@@ -70,98 +70,78 @@ class DepsGraphBuilder(object):
             if prev_require.force:  # override
                 require.ref = prev_ref
             else:
-                # print("  +++++Checking for possible conflicts!", require, "with", prev_node.ref)
-                version_range = require.version_range
-                prev_version_range = prev_require.version_range if prev_node is None else None
-                if version_range:
-                    if prev_version_range:
-                        raise Exception("INTERVAL!!!!!")
-                    else:
-                        if range_satisfies(version_range, prev_ref.version):
-                            require.ref = prev_ref
-                        else:
-                            raise GraphError.conflict(node, require, prev_node, prev_require,
-                                                      base_previous)
-
-                elif prev_version_range:
-                    if not range_satisfies(prev_version_range, require.ref.version):
-                        raise GraphError.conflict(node, require, prev_node, prev_require,
-                                                  base_previous)
-                else:
-                    conflict_ref = graph.aliased.get(require.ref, require.ref)
-                    # As we are closing a diamond, there can be conflicts. This will raise if so
-                    conflict = self._conflicting_references(prev_ref, conflict_ref)
-                    if conflict:  # It is possible to get conflict from alias, try to resolve it
-                        try:
-                            result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
-                                                          update, remotes, profile_host, graph_lock)
-                            new_ref, dep_conanfile, recipe_status, _, _ = result
-                        except ConanException as e:
-                            raise GraphError.missing(node, require, str(e))
-                        # Maybe it was an ALIAS, so we can check conflict again
-                        conflict_ref = new_ref
-                        conflict = self._conflicting_references(prev_ref, conflict_ref)
-                        if conflict:
-                            raise GraphError.conflict(node, require, prev_node, prev_require,
-                                                      base_previous)
-
-                # Even if the version matches, there still can be a configuration conflict
-                # we can ignore it, and let "validate()" discard invalid configs
-                # TODO: Check this
-                upstream_options = node.conanfile.options[require.ref.name]
-                for k, v in upstream_options.items():
-                    prev_option = prev_node.conanfile.options.get_safe(k)
-                    if prev_option is not None:
-                        if prev_option != v:
-                            raise GraphError.conflict_config(node, require,
-                                                             prev_node, prev_require, base_previous,
-                                                             k, prev_option, v)
+                self._conflicting_version(require, node, graph, update, check_updates, remotes,
+                                          profile_host, graph_lock, prev_require, prev_node,
+                                          prev_ref, base_previous)
+                self._conflicting_options(require, node, prev_node, prev_require, base_previous)
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
-            if require.build:
-                profile = profile_build
-                context = CONTEXT_BUILD
-            else:
-                profile = profile_host if node.context == CONTEXT_HOST else profile_build
-                context = node.context
-
-            try:
-                # TODO: If it is locked not resolve range
-                #  if not require.locked_id:  # if it is locked, nothing to resolved
-                # TODO: This range-resolve might resolve in a given remote or cache
-                # Make sure next _resolve_recipe use it
-                resolved_ref = graph.aliased.get(require.ref)
-                if resolved_ref is None:
-                    resolved_ref = self._resolver.resolve(require, str(node.ref), update, remotes)
-
-                # This accounts for alias too
-                resolved = self._resolve_recipe(node, graph, resolved_ref, check_updates, update,
-                                                remotes, profile, graph_lock)
-            except ConanException as e:
-                raise GraphError.missing(node, require, str(e))
-
-            new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
-            new_node = self._create_new_node(node, dep_conanfile, require, new_ref, context,
-                                             recipe_status, remote, locked_id, profile_host,
-                                             profile_build, populate_settings_target)
-
-            down_options = node.conanfile.options.deps_package_values
-            self._prepare_node(new_node, profile_host, profile_build, graph_lock,
-                               node.ref, down_options)
-
-            require.compute_run(new_node)
-            graph.add_node(new_node)
-            graph.add_edge(node, new_node, require)
-            if node.propagate_downstream(require, new_node):
-                raise GraphError.runtime(node, new_node)
-
+            new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
+                                             graph_lock, update, check_updates, remotes,
+                                             populate_settings_target)
             return new_node
-        else:  # a public node already exist with this name
+        else:
             # print("Closing a loop from ", node, "=>", prev_node)
             require.compute_run(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
+
+    def _conflicting_version(self, require, node, graph, update, check_updates, remotes,
+                             profile_host, graph_lock,
+                             prev_require, prev_node, prev_ref, base_previous):
+        version_range = require.version_range
+        prev_version_range = prev_require.version_range if prev_node is None else None
+        if version_range:
+            # TODO: Check user/channel conflicts first
+            if prev_version_range:
+                pass  # Do nothing, evaluate current as it were a fixed one
+            else:
+                if range_satisfies(version_range, prev_ref.version):
+                    require.ref = prev_ref
+                else:
+                    raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+
+        elif prev_version_range:
+            # TODO: CHeck user/channel conflicts first
+            if not range_satisfies(prev_version_range, require.ref.version):
+                raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+        else:
+            def _conflicting_refs(ref1, ref2):
+                if ref1.copy_clear_rev() != ref2.copy_clear_rev():
+                    return True
+                # Computed node, if is Editable, has revision=None
+                # If new_ref.revision is None we cannot assume any conflict, user hasn't specified
+                # a revision, so it's ok any previous_ref
+                if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
+                    return True
+
+            conflict_ref = graph.aliased.get(require.ref, require.ref)
+            # As we are closing a diamond, there can be conflicts. This will raise if so
+            conflict = _conflicting_refs(prev_ref, conflict_ref)
+            if conflict:  # It is possible to get conflict from alias, try to resolve it
+                try:
+                    result = self._resolve_recipe(node, graph, conflict_ref, check_updates,
+                                                  update, remotes, profile_host, graph_lock)
+                    new_ref, dep_conanfile, recipe_status, _, _ = result
+                except ConanException as e:
+                    raise GraphError.missing(node, require, str(e))
+                # Maybe it was an ALIAS, so we can check conflict again
+                conflict_ref = new_ref
+                conflict = _conflicting_refs(prev_ref, conflict_ref)
+                if conflict:
+                    raise GraphError.conflict(node, require, prev_node, prev_require, base_previous)
+
+    @staticmethod
+    def _conflicting_options(require, node, prev_node, prev_require, base_previous):
+        # Even if the version matches, there still can be a configuration conflict
+        upstream_options = node.conanfile.options[require.ref.name]
+        for k, v in upstream_options.items():
+            prev_option = prev_node.conanfile.options.get_safe(k)
+            if prev_option is not None:
+                if prev_option != v:
+                    raise GraphError.conflict_config(node, require, prev_node, prev_require,
+                                                     base_previous, k, prev_option, v)
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
@@ -194,17 +174,6 @@ class DepsGraphBuilder(object):
         for require in node.conanfile.requires.values():
             node.transitive_deps.set(require, TransitiveRequirement(require, None))
 
-    @staticmethod
-    def _conflicting_references(prev_ref, new_ref):
-        if prev_ref.copy_clear_rev() != new_ref.copy_clear_rev():
-            return True
-        # Computed node, if is Editable, has revision=None
-        # If new_ref.revision is None we cannot assume any conflict, the user hasn't specified
-        # a revision, so it's ok any previous_ref
-        if prev_ref.revision and new_ref.revision and prev_ref.revision != new_ref.revision:
-            return True
-        return False
-
     def _resolve_recipe(self, current_node, dep_graph, ref, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
         result = self._proxy.get_recipe(ref, check_updates, update, remotes)
@@ -230,33 +199,64 @@ class DepsGraphBuilder(object):
 
         return new_ref, dep_conanfile, recipe_status, remote, locked_id
 
-    @staticmethod
-    def _create_new_node(current_node, dep_conanfile, requirement, new_ref, context,
-                         recipe_status, remote, locked_id, profile_host, profile_build,
-                         populate_settings_target):
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock,
+                         update, check_updates, remotes, populate_settings_target):
+
+        if require.build:
+            profile = profile_build
+            context = CONTEXT_BUILD
+        else:
+            profile = profile_host if node.context == CONTEXT_HOST else profile_build
+            context = node.context
+
+        try:
+            # TODO: If it is locked not resolve range
+            #  if not require.locked_id:  # if it is locked, nothing to resolved
+            # TODO: This range-resolve might resolve in a given remote or cache
+            # Make sure next _resolve_recipe use it
+            resolved_ref = graph.aliased.get(require.ref)
+            if resolved_ref is None:
+                resolved_ref = self._resolver.resolve(require, str(node.ref), update, remotes)
+
+            # This accounts for alias too
+            resolved = self._resolve_recipe(node, graph, resolved_ref, check_updates, update,
+                                            remotes, profile, graph_lock)
+        except ConanException as e:
+            raise GraphError.missing(node, require, str(e))
+
+        new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
 
         # TODO: This should be out of here
         # If there is a context_switch, it is because it is a BR-build
         # Assign the profiles depending on the context
         dep_conanfile.settings_build = profile_build.processed_settings.copy()
-        context_switch = (current_node.context == CONTEXT_HOST and requirement.build)
+        context_switch = (node.context == CONTEXT_HOST and require.build)
         if not context_switch:
             if populate_settings_target:
-                dep_conanfile.settings_target = current_node.conanfile.settings_target
+                dep_conanfile.settings_target = node.conanfile.settings_target
             else:
                 dep_conanfile.settings_target = None
         else:
-            if current_node.context == CONTEXT_HOST:
+            if node.context == CONTEXT_HOST:
                 dep_conanfile.settings_target = profile_host.processed_settings.copy()
             else:
                 dep_conanfile.settings_target = profile_build.processed_settings.copy()
 
         new_node = Node(new_ref, dep_conanfile, context=context)
-        new_node.revision_pinned = requirement.ref.revision is not None
         new_node.recipe = recipe_status
         new_node.remote = remote
 
         if locked_id is not None:
             new_node.id = locked_id
+
+        down_options = node.conanfile.options.deps_package_values
+        self._prepare_node(new_node, profile_host, profile_build, graph_lock,
+                           node.ref, down_options)
+
+        require.compute_run(new_node)
+        graph.add_node(new_node)
+        graph.add_edge(node, new_node, require)
+        if node.propagate_downstream(require, new_node):
+            raise GraphError.runtime(node, new_node)
 
         return new_node

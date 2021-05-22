@@ -107,6 +107,29 @@ class BuildRequiresGraphTest(GraphManagerTest):
             _check_transitive(lib, [(cmake, False, False, True, True),
                                     (cmakelib, False, False, True, True)])
 
+    def test_build_require_bootstrap(self):
+        # app -> lib -(br)-> cmake/2 -(br)-> cmake/1
+        self._cache_recipe("cmake/0.1", GenConanfile())
+        self._cache_recipe("cmake/0.2", GenConanfile().with_build_requires("cmake/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_build_requires("cmake/0.2"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        cmake2 = lib.dependencies[0].dst
+        cmake1 = cmake2.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[cmake2], dependents=[app])
+        self._check_node(cmake2, "cmake/0.2#123", deps=[cmake1], dependents=[lib])
+        self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[cmake2])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(lib, True, True, False, None)])
+        _check_transitive(lib, [(cmake2, False, False, True, True)])
+        _check_transitive(cmake2, [(cmake1, False, False, True, True)])
+
 
 
 
