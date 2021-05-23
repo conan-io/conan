@@ -264,7 +264,6 @@ class GraphBinariesAnalyzer(object):
                 build_mode.forced(node.conanfile, node.ref)
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
-        deps_graph.mark_private_skippable(nodes_subset=nodes_subset, root=root)
 
     def reevaluate_node(self, node, remotes, build_mode, update):
         """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to

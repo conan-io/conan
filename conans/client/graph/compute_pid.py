@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import PackageType
+from conans.model.pkg_type import PackageType
 from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property

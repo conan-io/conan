@@ -1,8 +1,6 @@
-from enum import Enum
-
-from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 from conans.model.ref import PackageReference
-from conans.model.requires import Requirement, RequirementDict
+from conans.model.requires import RequirementDict
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -30,15 +28,6 @@ CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
 
 
-class PackageType(Enum):
-    LIBRARY = "library"  # abstract type, should contain shared option to define
-    STATIC = "static library"
-    SHARED = "shared library"
-    HEADER = "header library"
-    RUN = "run library"
-    UNKNOWN = "unknown"
-
-
 class TransitiveRequirement:
     def __init__(self, require, node):
         self.require = require
@@ -64,14 +53,14 @@ class Node(object):
         self.binary_remote = None
         self.context = context
 
-        self.id = None  # Unique ID (uuid at the moment) of a node in the graph
+        self.id = None  # Unique ID (incremental integer assigned by Graph) of a node in the graph
         self.graph_lock_node = None  # the locking information can be None
 
         # real graph model
         self.transitive_deps = RequirementDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
-        self.conflict = None
+        self.error = None
 
     def __lt__(self, other):
         # TODO: Remove this order, shouldn't be necessary
@@ -86,126 +75,10 @@ class Node(object):
 
     @property
     def package_type(self):
-        # This doesnt implement the header_only option without shared one. Users should define
-        # their package_type as they wish in the configure() method
-        conanfile_type = self.conanfile.package_type
-        if conanfile_type is not None:
-            conanfile_type = PackageType(conanfile_type)
+        # TODO: immutable, can be cached
+        return PackageType.from_conanfile(self.conanfile)
 
-        if conanfile_type is None:  # automatic default detection with option shared/header-only
-            try:
-                shared = self.conanfile.options.shared
-            except ConanException:
-                pass
-            else:
-                if shared is not None:
-                    if shared:
-                        return PackageType.SHARED
-                    else:
-                        try:
-                            header = self.conanfile.options.header_only
-                        except ConanException:
-                            pass
-                        else:
-                            if header:
-                                return PackageType.HEADER
-                        return PackageType.STATIC
-            return PackageType.UNKNOWN
-
-        if conanfile_type is PackageType.LIBRARY:
-            try:
-                shared = self.conanfile.options.shared  # MUST exist
-            except ConanException:
-                raise ConanException("Package type is 'library', but no 'shared' option declared")
-            if shared:
-                return PackageType.SHARED
-            else:
-                try:
-                    header = self.conanfile.options.header_only
-                except ConanException:
-                    pass
-                else:
-                    if header:
-                        return PackageType.HEADER
-                return PackageType.STATIC
-
-        return conanfile_type
-
-    def _transform_downstream_require(self, require, node, dependant):
-        if require.build:  # Build-requires do not propagate anything
-            return  # TODO: check this
-
-        if require.public is False:
-            # TODO: We could implement checks in case private is violated (e.g shared libs)
-            return
-
-        source_require = dependant.require
-        up_type = node.package_type if node is not None else None
-        current_type = self.package_type
-
-        if source_require.build:  # Build-requires
-            print("    Propagating build-require",  self, "<-", require)
-            # If the above is shared or the requirement is explicit run=True
-            if up_type is PackageType.SHARED or up_type is PackageType.RUN or require.run:
-                downstream_require = Requirement(require.ref, include=False, link=False, build=True,
-                                                 run=True, public=False,)
-                return downstream_require
-            return
-
-        # Regular and test requires
-        if up_type is PackageType.SHARED or up_type is PackageType.RUN:
-            if current_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
-            elif current_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, include=False, link=True, run=True)
-            elif current_type is PackageType.RUN:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
-            else:  # unknown
-                assert current_type is PackageType.UNKNOWN
-                # Consumers will need to find it at build time too
-                downstream_require = Requirement(require.ref, include=True, link=True, run=True)
-        elif up_type is PackageType.STATIC:
-            if current_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-            elif current_type is PackageType.RUN:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-            elif current_type is PackageType.STATIC:  # static
-                downstream_require = Requirement(require.ref, include=False, link=True, run=False)
-            else:  # unknown
-                assert current_type is PackageType.UNKNOWN
-                downstream_require = Requirement(require.ref, include=True, link=True, run=False)
-        elif up_type is PackageType.HEADER:
-            downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-        else:
-            # Unknown, default. This happens all the time while check_downstream as shared is unknown
-            # FIXME
-            downstream_require = require.copy()
-
-        assert require.public, "at this point require should be public"
-
-        if require.transitive_headers:
-            downstream_require.include = True
-
-        # If non-default, then the consumer requires has priority
-        if source_require.public is False:
-            downstream_require.public = False
-
-        if source_require.include is False:
-            downstream_require.include = False
-
-        if source_require.link is False:
-            downstream_require.link = False
-
-        # TODO: Automatic assignment invalidates user possibility of overriding default
-        # if source_require.run is not None:
-        #    downstream_require.run = source_require.run
-
-        if source_require.test:
-            downstream_require.test = True
-
-        return downstream_require
-
-    def propagate_downstream(self, require, node, prev_node=None):
+    def propagate_downstream(self, require, node, src_node=None):
         # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
@@ -219,24 +92,21 @@ class Node(object):
 
         self.transitive_deps.set(require, TransitiveRequirement(require, node))
 
+        # Check if need to propagate downstream
         if not self.dependants:
-            # print("  No further dependants, stop propagate")
             return
 
-        if prev_node:
-            d = [d for d in self.dependants if d.src is prev_node][0]  # TODO: improve ugly
+        if src_node is not None:  # This happens when closing a loop, and we need to know the edge
+            d = [d for d in self.dependants if d.src is src_node][0]  # TODO: improve ugly
         else:
             assert len(self.dependants) == 1
             d = self.dependants[0]
 
-        downstream_require = self._transform_downstream_require(require, node, d)
-
-        # Check if need to propagate downstream
-        if downstream_require is None:
-            # print("  No downstream require, stopping propagate")
+        down_require = d.require.transform_downstream(self.package_type, require, node.package_type)
+        if down_require is None:
             return
 
-        return d.src.propagate_downstream(downstream_require, node)
+        return d.src.propagate_downstream(down_require, node)
 
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
@@ -268,13 +138,14 @@ class Node(object):
 
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
-        downstream_require = self._transform_downstream_require(require, None, d)
-        if downstream_require is None:
+        down_require = d.require.transform_downstream(self.package_type, require, None)
+
+        if down_require is None:
             # print("    No need to check dowstream more")
             return
 
         source_node = d.src
-        return source_node.check_downstream_exists(downstream_require)
+        return source_node.check_downstream_exists(down_require)
 
     @property
     def package_id(self):
@@ -296,8 +167,8 @@ class Node(object):
 
     def add_edge(self, edge):
         if edge.src == self:
-            if edge not in self.dependencies:
-                self.dependencies.append(edge)
+            assert edge not in self.dependencies
+            self.dependencies.append(edge)
         else:
             self.dependants.append(edge)
 
@@ -319,9 +190,6 @@ class Edge(object):
         self.src = src
         self.dst = dst
         self.require = require
-        # FIXME: USed in the ConanFileDependencies logic, must avoid
-        self.build_require = False  # Just to not break, but not user
-        self.private = False
 
 
 class DepsGraph(object):
@@ -392,31 +260,6 @@ class DepsGraph(object):
             opened = opened.difference(current_level)
 
         return result
-
-    def mark_private_skippable(self, nodes_subset=None, root=None):
-        """ check which nodes are reachable from the root, mark the non reachable as BINARY_SKIP.
-        Used in the GraphBinaryAnalyzer"""
-        public_nodes = set()
-        root = root if root is not None else self.root
-        nodes = nodes_subset if nodes_subset is not None else self.nodes
-        current = [root]
-        while current:
-            new_current = set()
-            public_nodes.update(current)
-            for n in current:
-                if n.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE, BINARY_SKIP):
-                    # Might skip deps
-                    to_add = [d.dst for d in n.dependencies if not d.private]
-                else:
-                    # sure deps doesn't skip
-                    to_add = set(n.neighbors()).difference(public_nodes)
-                new_current.update(to_add)
-            current = new_current
-
-        for node in nodes:
-            if node not in public_nodes:
-                node.binary_non_skip = node.binary
-                node.binary = BINARY_SKIP
 
     def build_time_nodes(self):
         """ return all the nodes in the graph that are build-requires (either directly or

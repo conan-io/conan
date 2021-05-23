@@ -279,7 +279,7 @@ class GraphLock(object):
             requires = []
             build_requires = []
             for edge in graph_node.dependencies:
-                if edge.build_require:
+                if edge.require.build:
                     build_requires.append(edge.dst.id)
                 else:
                     requires.append(edge.dst.id)

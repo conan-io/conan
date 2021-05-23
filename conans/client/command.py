@@ -728,6 +728,10 @@ class Command(object):
             if not args.graph and not args.json:
                 self._outputer.info(deps_graph, only, args.package_filter, args.paths)
 
+            # TODO: Check this UX or flow
+            if deps_graph.error:
+                raise deps_graph.error
+
     def source(self, *args):
         """
         Calls your local conanfile.py 'source()' method.

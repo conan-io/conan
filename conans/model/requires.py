@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conans.errors import ConanException
+from conans.model.pkg_type import PackageType
 from conans.model.ref import ConanFileReference
 
 
@@ -61,6 +62,81 @@ class Requirement:
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def transform_downstream(self, pkg_type, require, dep_pkg_type):
+        """
+        consumer(not known type) -> requires(self) -> pkg_type -> require -> dep_pkg_type
+        compute new Requirement to be applied to "consumer" translating the effect of the dependency
+        to such "consumer".
+        Result can be None if nothing is to be propagated
+        """
+        if require.build:  # Build-requires do not propagate anything
+            return  # TODO: check this
+
+        if require.public is False:
+            # TODO: We could implement checks in case private is violated (e.g shared libs)
+            return
+
+        if self.build:  # Build-requires
+            # If the above is shared or the requirement is explicit run=True
+            if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.RUN or require.run:
+                downstream_require = Requirement(require.ref, include=False, link=False, build=True,
+                                                 run=True, public=False,)
+                return downstream_require
+            return
+
+        # Regular and test requires
+        if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.RUN:
+            if pkg_type is PackageType.SHARED:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
+            elif pkg_type is PackageType.STATIC:
+                downstream_require = Requirement(require.ref, include=False, link=True, run=True)
+            elif pkg_type is PackageType.RUN:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
+            else:  # unknown
+                assert pkg_type is PackageType.UNKNOWN
+                # Consumers will need to find it at build time too
+                downstream_require = Requirement(require.ref, include=True, link=True, run=True)
+        elif dep_pkg_type is PackageType.STATIC:
+            if pkg_type is PackageType.SHARED:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+            elif pkg_type is PackageType.RUN:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+            elif pkg_type is PackageType.STATIC:  # static
+                downstream_require = Requirement(require.ref, include=False, link=True, run=False)
+            else:  # unknown
+                assert pkg_type is PackageType.UNKNOWN
+                downstream_require = Requirement(require.ref, include=True, link=True, run=False)
+        elif dep_pkg_type is PackageType.HEADER:
+            downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+        else:
+            # Unknown, default. This happens all the time while check_downstream as shared is unknown
+            # FIXME
+            downstream_require = require.copy()
+
+        assert require.public, "at this point require should be public"
+
+        if require.transitive_headers:
+            downstream_require.include = True
+
+        # If non-default, then the consumer requires has priority
+        if self.public is False:
+            downstream_require.public = False
+
+        if self.include is False:
+            downstream_require.include = False
+
+        if self.link is False:
+            downstream_require.link = False
+
+        # TODO: Automatic assignment invalidates user possibility of overriding default
+        # if required.run is not None:
+        #    downstream_require.run = required.run
+
+        if self.test:
+            downstream_require.test = True
+
+        return downstream_require
 
 
 class RequirementDict:

@@ -30,7 +30,7 @@ class InstallMissingDependency(unittest.TestCase):
         # Bump version of one dependency
         # foo -------------> dep1/2.0
         #   \ -> dep2/1.0---->/
-        conanfile = GenConanfile("foo", "1.0").with_require("dep1/2.0@lasote/testing") \
+        conanfile = GenConanfile("foo", "1.0").with_requirement("dep1/2.0@lasote/testing", force=True) \
                                               .with_require("dep2/1.0@lasote/testing")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . lasote/testing", assert_error=True)

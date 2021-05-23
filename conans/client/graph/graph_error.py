@@ -14,6 +14,8 @@ class GraphError(ConanException):
 
     def __str__(self):
         # TODO: Nicer error reporting
+        if self.kind == GraphError.MISSING_RECIPE:
+            return f"Package '{self.require.ref}' not resolved: {self.missing_error}"
         return self.kind
 
     @staticmethod
@@ -81,6 +83,7 @@ class GraphError(ConanException):
         return result
 
     def report_graph_error(self):
+        # FIXME: THis is completely broken and useless
         # print("REPORTING GRAPH ERRORS")
         conflict_nodes = [n for n in self.nodes if n.conflict]
         # print("PROBLEMATIC NODES ", conflict_nodes)

@@ -25,7 +25,7 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . libd/1.0@")
         # The consumer forces to depend on liba/2, instead of liba/1
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
-                                                   .with_require("liba/1.1")})
+                                                   .with_requirement("liba/1.1", force=True)})
         client.run("create . libd/1.0@", assert_error=True)
         # both B and C require a new binary
         self.assertIn("liba/1.1:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
@@ -61,7 +61,7 @@ class TransitiveIdsTest(unittest.TestCase):
         client.run("create . libd/1.0@")
         # LibE -> LibD, LibA/2.0
         client.save({"conanfile.py": GenConanfile().with_require("libd/1.0")
-                                                   .with_require("liba/1.1")})
+                                                   .with_requirement("liba/1.1", force=True)})
         client.run("create . libe/1.0@", assert_error=True)
         self.assertIn("liba/1.1:357add7d387f11a959f3ee7d4fc9c2487dbaa604 - Cache", client.out)
         self.assertIn("libb/1.0:46c8f4521a594111030a345f3e9226be694a7af9 - Missing", client.out)
@@ -153,7 +153,7 @@ class TransitiveIdsTest(unittest.TestCase):
                                                    .with_require("liba/1.0")})
         client.run("create . libd/1.0@")
         client.save({"conanfile.py": GenConanfile().with_require("libc/1.0")
-                                                   .with_require("liba/2.0")})
+                                                   .with_requirement("liba/2.0", force=True)})
 
         # USE THE NEW FIXED PACKAGE_ID
         # client.run("config set general.full_transitive_package_id=1")
