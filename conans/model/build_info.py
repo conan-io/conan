@@ -350,17 +350,6 @@ class CppInfo(_CppInfo):
 
     def get_name(self, generator, default_name=True):
         name = super(CppInfo, self).get_name(generator, default_name=default_name)
-
-        # Legacy logic for pkg_config generator
-        from conans.client.generators.pkg_config import PkgConfigGenerator
-        if generator == PkgConfigGenerator.name:
-            fallback = self._name.lower() if self._name != self._ref_name else self._ref_name
-            if PkgConfigGenerator.name not in self.names and self._name != self._name.lower():
-                conan_v2_error("Generated file and name for {gen} generator will change in"
-                               " Conan v2 to '{name}'. Use 'self.cpp_info.names[\"{gen}\"]"
-                               " = \"{fallback}\"' in your recipe to continue using current name."
-                               .format(gen=PkgConfigGenerator.name, name=name, fallback=fallback))
-            name = self.names.get(generator, fallback)
         return name
 
     @property
