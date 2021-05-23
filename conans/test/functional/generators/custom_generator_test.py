@@ -5,7 +5,7 @@ import pytest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANFILE_TXT
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 generator = """
@@ -76,10 +76,9 @@ class CustomGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_compiler  # Needed only because it assume that a settings.compiler is detected
     def test_reuse(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("upload %s" % str(ref))
 

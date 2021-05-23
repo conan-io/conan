@@ -10,7 +10,7 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -168,15 +168,12 @@ class ProfileTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler
     def test_install_profile_env(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = conanfile_scope_env
-
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"),
                             ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("PREPEND_VAR",
@@ -204,8 +201,6 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
     def test_install_profile_settings(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-
         # Create a profile and use it
         profile_settings = OrderedDict([("compiler", "Visual Studio"),
                                         ("compiler.version", "12"),
@@ -220,7 +215,7 @@ class ProfileTest(unittest.TestCase):
                               "compiler.libcxx", "#compiler.libcxx", strict=False,
                               output=TestBufferConanOutput())
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.load("conaninfo.txt")
@@ -276,8 +271,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler.libcxx=libstdc++", info)
 
     def test_install_profile_package_settings(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
 
         # Create a profile and use it
         profile_settings = OrderedDict([("os", "Windows"),
@@ -341,13 +335,12 @@ class ProfileTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler
     def test_install_profile_options(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        options=[("Hello0:language", 1),
                                 ("Hello0:static", False)])
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "1").with_option("language", [1, 2])
+                          .with_option("static", [True, False])})
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.load("conaninfo.txt")
         self.assertIn("language=1", info)
