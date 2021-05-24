@@ -215,8 +215,9 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref):
-        self._requires.build_require(ref)
+    def __call__(self, ref, package_id_mode=None):
+        # TODO: Check which arguments could be user-defined
+        self._requires.build_require(ref, package_id_mode=package_id_mode)
 
 
 class TestRequirements:
@@ -263,11 +264,11 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_require(self, ref, raise_if_duplicated=True):
+    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None):
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
-                          package_id_mode=None)
+                          package_id_mode=package_id_mode)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req

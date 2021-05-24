@@ -19,33 +19,39 @@ def compute_package_id(node, new_config):
         python_requires = python_requires.all_refs()
 
     data = OrderedDict()
+    build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
-        if require.build:  # by default, not in the package_id
-            continue
-        if dep_package_id is None:  # Automatically deducing package_id
-            if require.include or require.link:  # linked
-                if node.package_type is PackageType.SHARED:
-                    if dep_node.package_type is PackageType.SHARED:
-                        dep_package_id = "minor_mode"
-                    else:
-                        dep_package_id = "recipe_revision_mode"
-                elif node.package_type is PackageType.STATIC:
-                    if dep_node.package_type is PackageType.HEADER:
-                        dep_package_id = "recipe_revision_mode"
-                    else:
-                        dep_package_id = "minor_mode"
-                elif node.package_type is PackageType.HEADER:
-                    dep_package_id = "unrelated_mode"
-        req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
-        data[require] = req_info
+        if require.build:
+            if dep_package_id:
+                req_info = RequirementInfo(dep_node.pref, dep_package_id)
+                build_data[require] = req_info
+        else:
+            if dep_package_id is None:  # Automatically deducing package_id
+                if require.include or require.link:  # linked
+                    if node.package_type is PackageType.SHARED:
+                        if dep_node.package_type is PackageType.SHARED:
+                            dep_package_id = "minor_mode"
+                        else:
+                            dep_package_id = "recipe_revision_mode"
+                    elif node.package_type is PackageType.STATIC:
+                        if dep_node.package_type is PackageType.HEADER:
+                            dep_package_id = "recipe_revision_mode"
+                        else:
+                            dep_package_id = "minor_mode"
+                    elif node.package_type is PackageType.HEADER:
+                        dep_package_id = "unrelated_mode"
+            req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
+            data[require] = req_info
 
     reqs_info = RequirementsInfo(data)
+    build_requires_info = RequirementsInfo(build_data)
 
     conanfile.info = ConanInfo.create(conanfile.settings.values,
                                       conanfile.options.values,
                                       reqs_info,
+                                      build_requires_info,
                                       python_requires=python_requires,
                                       default_python_requires_id_mode=
                                       default_python_requires_id_mode)

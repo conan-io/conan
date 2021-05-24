@@ -171,6 +171,9 @@ class RequirementsInfo(UserRequirementsDict):
         data = {pref: req_info.copy() for pref, req_info in self._data.items()}
         return RequirementsInfo(data)
 
+    def __bool__(self):
+        return bool(self._data)
+
     def clear(self):
         self._data = {}
 
@@ -405,11 +408,12 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
+        result.build_requires = self.build_requires.copy()
         result.python_requires = self.python_requires.copy()
         return result
 
     @staticmethod
-    def create(settings, options, reqs_info,
+    def create(settings, options, reqs_info, build_requires_info,
                python_requires, default_python_requires_id_mode):
         result = ConanInfo()
         result.invalid = None
@@ -419,6 +423,7 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.requires = reqs_info
+        result.build_requires = build_requires_info
         result.full_requires = _PackageReferenceList()
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
@@ -443,6 +448,7 @@ class ConanInfo(object):
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         # FIXME: remove this uglyness
         result.requires = RequirementsInfo({})
+        result.build_requires = RequirementsInfo({})
 
         # TODO: Missing handling paring of requires, but not necessary now
         result.env_values = EnvValues.loads(parser.env)
@@ -520,11 +526,13 @@ class ConanInfo(object):
         result.append(requires_sha)
         if self.python_requires:
             result.append(self.python_requires.sha)
+        if self.build_requires:
+            result.append(self.build_requires.sha.replace("[requires]", "[build_requires]"))
         if hasattr(self, "conf"):
             result.append(self.conf.sha)
         result.append("")  # Append endline so file ends with LF
         text = '\n'.join(result)
-        # print("HASING ", text)
+        print("HASING ", text)
         package_id = sha1(text.encode())
         return package_id
 

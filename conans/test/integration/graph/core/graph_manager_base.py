@@ -87,6 +87,16 @@ class GraphManagerTest(unittest.TestCase):
         manifest = FileTreeManifest.create(layout.export())
         manifest.save(layout.export())
 
+    def _cache_recipe(self, ref, test_conanfile, revision=None):
+        # FIXME: This seems duplicated
+        if not isinstance(ref, ConanFileReference):
+            ref = ConanFileReference.loads(ref)
+        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
+        with self.cache.package_layout(ref).update_metadata() as metadata:
+            metadata.recipe.revision = revision or "123"
+        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
+        manifest.save(self.cache.package_layout(ref).export())
+
     def alias_cache(self, alias, target):
         ref = ConanFileReference.loads(alias)
         conanfile = textwrap.dedent("""
@@ -119,15 +129,6 @@ class GraphManagerTest(unittest.TestCase):
         path = os.path.join(path, "conanfile.py")
         save(path, str(conanfile))
         return path
-
-    def _cache_recipe(self, ref, test_conanfile, revision=None):
-        if not isinstance(ref, ConanFileReference):
-            ref = ConanFileReference.loads(ref)
-        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
-        with self.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
-        manifest.save(self.cache.package_layout(ref).export())
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
                     install=True):

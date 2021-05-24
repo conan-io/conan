@@ -4,7 +4,7 @@ from parameterized import parameterized
 from conans.client.graph.graph_error import GraphError
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
-from conans.test.utils.tools import GenConanfile
+from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID
 
 
 def _check_transitive(node, transitive_deps):
@@ -459,3 +459,59 @@ class TestTestRequire(GraphManagerTest):
         elif gtestlib_type == "notrun":
             _check_transitive(lib, [(gtest, True, True, False, None),
                                     (gtestlib, True, True, False, None)])
+
+
+class BuildRequiresPackageIDTest(GraphManagerTest):
+
+    def test_default_no_affect(self,):
+        # app -> lib -(br)-> cmake
+        self.recipe_conanfile("cmake/0.1", GenConanfile())
+        self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requires("cmake/0.1"))
+        self._cache_recipe("cmake/0.1", GenConanfile())
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        cmake = lib.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
+        assert lib.package_id == NO_SETTINGS_PACKAGE_ID
+        self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
+
+    def test_minor_mode(self,):
+        # app -> lib -(br)-> cmake
+        self.recipe_conanfile("cmake/0.1", GenConanfile())
+        self.recipe_conanfile("cmake/0.2", GenConanfile())
+        self.recipe_conanfile("lib/0.1", GenConanfile().
+                              with_build_requirement("cmake/0.1", package_id_mode="minor_mode"))
+        self._cache_recipe("cmake/0.1", GenConanfile())
+
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        cmake = lib.dependencies[0].dst
+
+        self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
+        self._check_node(lib, "lib/0.1#123", deps=[cmake], dependents=[app])
+        assert lib.package_id == "7758859d93870e39affdbe5cd5f3dff28c9bc2a7"
+        assert lib.package_id != NO_SETTINGS_PACKAGE_ID
+        self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
+
+        # Change the dependency to next minor
+        self.recipe_conanfile("lib/0.1", GenConanfile().
+                              with_build_requirement("cmake/0.2", package_id_mode="minor_mode"))
+        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
+
+        # Build requires always apply to the consumer
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        lib = app.dependencies[0].dst
+        assert lib.package_id == "be05cd51bae13fdd52ffeedb4efa6ae9d75c48f4"
+        assert lib.package_id != NO_SETTINGS_PACKAGE_ID

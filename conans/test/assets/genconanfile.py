@@ -122,10 +122,10 @@ class GenConanfile(object):
             self._test_requires.append(ref_str)
         return self
 
-    def with_build_requirement(self, ref, force_host_context=False):
+    def with_build_requirement(self, ref, **kwargs):
         self._build_requirements = self._build_requirements or []
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._build_requirements.append((ref_str, force_host_context))
+        self._build_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, i):
@@ -255,9 +255,10 @@ class GenConanfile(object):
     @property
     def _build_requirements_render(self):
         lines = []
-        for ref, force_host_context in self._build_requirements:
-            force_host = ", force_host_context=True" if force_host_context else ""
-            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        for ref, kwargs in self._build_requirements:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
         return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
