@@ -33,13 +33,6 @@ class ReferencesDbTable(BaseDbTable):
             "remote": row.remote
         }
 
-    def _as_ref(self, row):
-        if row.prev:
-            return PackageReference.loads(f'{row.reference}#{row.rrev}:{row.pkgid}#{row.prev}',
-                                          validate=False)
-        else:
-            return ConanFileReference.loads(f'{row.reference}#{row.rrev}', validate=False)
-
     def _where_clause(self, ref):
         where_dict = {
             self.columns.reference: ref.reference,
@@ -138,7 +131,7 @@ class ReferencesDbTable(BaseDbTable):
             query = f'SELECT * FROM {self.table_name} WHERE {self.columns.prev} IS NULL;'
         r = conn.execute(query)
         for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
+            yield self._as_dict(self.row_type(*row))
 
     def get_prevs(self, conn, ref, only_latest_prev: bool = False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
@@ -165,7 +158,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'AND {self.columns.prev} IS NOT NULL '
         r = conn.execute(query)
         for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
+            yield self._as_dict(self.row_type(*row))
 
     def get_rrevs(self, conn, ref, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
@@ -218,4 +211,4 @@ class ReferencesDbTable(BaseDbTable):
                     f'AND {self.columns.prev} IS NOT NULL'
         r = conn.execute(query)
         for row in r.fetchall():
-            yield self._as_ref(self.row_type(*row))
+            yield self._as_dict(self.row_type(*row))

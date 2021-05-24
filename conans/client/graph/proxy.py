@@ -43,16 +43,16 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, ref, check_updates, update, remotes, recorder):
-        output = ScopedOutput(str(ref), self._out)
+    def _get_recipe(self, reference, check_updates, update, remotes, recorder):
+        output = ScopedOutput(str(reference), self._out)
 
         # check if it there's any revision of this recipe in the local cache
-        latest_rrev = self._cache.get_latest_rrev(ref)
+        ref = self._cache.get_latest_rrev(reference)
 
         # NOT in disk, must be retrieved from remotes
-        if not latest_rrev:
-            recipe_layout = self._cache.ref_layout(ref)
-            remote, new_ref = self._download_recipe(recipe_layout, ref, output, remotes, remotes.selected,
+        if not ref:
+            recipe_layout = self._cache.ref_layout(reference)
+            remote, new_ref = self._download_recipe(recipe_layout, reference, output, remotes, remotes.selected,
                                                     recorder)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -60,7 +60,6 @@ class ConanProxy(object):
 
         # TODO: cache2.0: store the remote in the db? In 1.X we took the remote from the metadata
         # TODO: cache2.0: check with new --update flows
-        ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
         # TODO: cache2.0: check if we want to get the remote through the layout

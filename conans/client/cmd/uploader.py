@@ -83,8 +83,7 @@ class _UploadCollecter(object):
             # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
             #  that we want to upload, check if  we should move this to other place
             # get the latest revision for the reference
-            refs = self._cache.get_recipe_revisions(ref, only_latest_rrev=True)
-            ref = ConanFileReference.loads(f"{refs[0]['reference']}#{refs[0]['rrev']}") if refs else None
+            ref = self._cache.get_latest_rrev(ref)
             remote = remotes.selected
             if remote:
                 ref_remote = remote

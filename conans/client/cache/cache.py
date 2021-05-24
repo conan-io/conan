@@ -19,7 +19,7 @@ from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
@@ -100,20 +100,28 @@ class ClientCache(object):
         return self._data_cache.set_remote(ConanReference(ref), remote)
 
     def all_refs(self):
-        return [ref for ref in self._data_cache.list_references(only_latest_rrev=True)]
+        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in
+                self._data_cache.list_references(only_latest_rrev=True)]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
-        return [pref for pref in self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+        return [
+            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
+                                   validate=False) for pref in
+            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
     def get_package_ids(self, ref, only_latest_prev=False):
-        return [pref for pref in self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev)]
+        return [
+            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
+                                   validate=False) for pref in
+            self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev)]
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
-        return [rrev for rrev in self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
+        return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
+                self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
 
     def get_latest_rrev(self, ref):
         rrevs = [rrev for rrev in self._data_cache.get_recipe_revisions(ConanReference(ref), True)]
-        return rrevs[0] if rrevs else None
+        return ConanFileReference.loads(f"{rrevs[0]['reference']}#{rrevs[0]['rrev']}") if rrevs else None
 
     @property
     def store(self):
