@@ -2,7 +2,6 @@ import os
 import shutil
 import uuid
 from io import StringIO
-from typing import Tuple, Iterator
 
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: Add timestamp for LRU
@@ -10,14 +9,13 @@ from typing import Tuple, Iterator
 from conan.cache.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.references import ReferencesDbTable
-from conans.model.ref import ConanFileReference, PackageReference
 from conans.util import files
 from conans.util.files import rmdir, md5
 
 
 class DataCache:
 
-    def __init__(self, base_folder: str, db_filename: str):
+    def __init__(self, base_folder, db_filename):
         self._base_folder = os.path.realpath(base_folder)
         self.db = CacheDatabase(filename=db_filename)
         self.db.initialize(if_not_exists=True)
@@ -28,27 +26,25 @@ class DataCache:
         output.write(f"\nBase folder: {self._base_folder}\n\n")
         self.db.dump(output)
 
-    def _create_path(self, relative_path: str, remove_contents=True):
+    def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
         if os.path.exists(path) and remove_contents:
             self._remove_path(relative_path)
         os.makedirs(path, exist_ok=True)
 
-    def _remove_path(self, relative_path: str):
+    def _remove_path(self, relative_path):
         files.rmdir(self._full_path(relative_path))
 
-    def _full_path(self, relative_path: str) -> str:
+    def _full_path(self, relative_path):
         path = os.path.realpath(os.path.join(self._base_folder, relative_path))
-        assert path.startswith(self._base_folder), f"Path '{relative_path}' isn't contained inside" \
-                                                   f" the cache '{self._base_folder}'"
         return path
 
     @property
-    def base_folder(self) -> str:
+    def base_folder(self):
         return self._base_folder
 
     @staticmethod
-    def get_or_create_reference_path(item: ConanReference) -> str:
+    def get_or_create_reference_path(item: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.rrev:
             return md5(item.full_reference)
@@ -56,36 +52,14 @@ class DataCache:
             return str(uuid.uuid4())
 
     @staticmethod
-    def get_or_create_package_path(item: ConanReference) -> str:
+    def get_or_create_package_path(item: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if item.prev:
             return md5(item.full_reference)
         else:
             return str(uuid.uuid4())
 
-    def get_reference_layout(self, ref: ConanFileReference) -> 'RecipeLayout':
-        """ Returns the layout for a reference. The recipe revision is a requirement, only references
-            with rrev are stored in the database. If it doesn't exists, it will raise
-            References.DoesNotExist exception.
-        """
-        assert ref.revision, "Ask for a reference layout only if the rrev is known"
-        from conan.cache.conan_reference_layout import ReferenceLayout
-        reference_path = self.db.try_get_reference_directory(ConanReference(ref))
-        return ReferenceLayout(ref, cache=self, base_folder=reference_path)
-
-        # TODO: Should get_or_create_package_layout if not prev?
-
-    def get_package_layout(self, pref: PackageReference) -> 'PackageLayout':
-        """ Returns the layout for a package. The recipe revision and the package revision are a
-            requirement, only packages with rrev and prev are stored in the database.
-        """
-        assert pref.ref.revision, "Ask for a package layout only if the rrev is known"
-        assert pref.revision, "Ask for a package layout only if the prev is known"
-        package_path = self.db.try_get_reference_directory(ConanReference(pref))
-        from conan.cache.conan_reference_layout import ReferenceLayout
-        return ReferenceLayout(pref, cache=self, package_folder=package_path)
-
-    def get_or_create_reference_layout(self, ref: ConanReference) -> 'RecipeLayout':
+    def get_or_create_reference_layout(self, ref: ConanReference):
         path = self.get_or_create_reference_path(ref)
 
         if not ref.rrev:
@@ -98,7 +72,7 @@ class DataCache:
         from conan.cache.conan_reference_layout import ReferenceLayout
         return ReferenceLayout(ref, cache=self, base_folder=reference_path)
 
-    def get_or_create_package_layout(self, pref: ConanReference) -> 'PackageLayout':
+    def get_or_create_package_layout(self, pref: ConanReference):
         package_path = self.get_or_create_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
@@ -142,7 +116,7 @@ class DataCache:
             shutil.move(self._full_path(old_path), self._full_path(new_path))
         return new_path
 
-    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference) -> str:
+    def _move_prev(self, old_pref, new_pref):
         old_path = self.db.try_get_reference_directory(old_pref)
         new_path = self.get_or_create_reference_path(new_pref)
         try:
@@ -159,7 +133,7 @@ class DataCache:
 
         return new_path
 
-    def list_references(self, only_latest_rrev: bool = False) -> Iterator[ConanFileReference]:
+    def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
             can be used to filter and return only the latest recipe revision for each reference.
         """

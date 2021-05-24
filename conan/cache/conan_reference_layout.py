@@ -1,11 +1,9 @@
 import os
 from contextlib import contextmanager
 
-from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import PackageReference
 from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS
 from conans.paths import CONANFILE, SCM_SRC_FOLDER
 from conans.util.files import rmdir
@@ -13,7 +11,7 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty
 
 
 class ReferenceLayout:
-    def __init__(self, ref: ConanReference, cache: DataCache, base_folder: str):
+    def __init__(self, ref, cache, base_folder):
         self._ref = ref
         self._cache = cache
         self._base_folder = base_folder
@@ -76,7 +74,8 @@ class ReferenceLayout:
     # TODO: cache2.0 fix this
     def system_reqs_package(self):
         assert self._ref.pkgid, "Must be a reference of a package"
-        return os.path.join(self._cache.base_folder, self._base_folder, SYSTEM_REQS_FOLDER, self._pref.pkgid, SYSTEM_REQS)
+        return os.path.join(self._cache.base_folder, self._base_folder, SYSTEM_REQS_FOLDER,
+                            self._pref.pkgid, SYSTEM_REQS)
 
     # TODO: cache2.0 locks
     def package_remove(self):

@@ -1,9 +1,7 @@
 import sqlite3
 from contextlib import contextmanager
 from io import StringIO
-from typing import Tuple, Iterator
 
-from conans.model.ref import ConanFileReference
 from .db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
@@ -59,7 +57,7 @@ class CacheDatabase:
             ref_data = self._references.get(conn, ref)
             return ref_data["path"]
 
-    def get_or_create_reference(self, path, ref) -> Tuple[str, bool]:
+    def get_or_create_reference(self, path, ref):
         """ Returns the path for the given reference. If the reference doesn't exist in the
             database, it will create the entry for the reference using the path given as argument.
         """
@@ -71,7 +69,7 @@ class CacheDatabase:
                 self._references.save(conn, path, ref)
                 return path, True
 
-    def list_references(self, only_latest_rrev: bool) -> Iterator[ConanFileReference]:
+    def list_references(self, only_latest_rrev):
         with self.connect() as conn:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it

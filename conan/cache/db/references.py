@@ -2,7 +2,6 @@ import time
 
 from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference, PackageReference
 
 
 class ReferencesDbTable(BaseDbTable):

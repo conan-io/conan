@@ -1,4 +1,3 @@
-import sqlite3
 from collections import namedtuple
 from io import StringIO
 from typing import Tuple, List, Optional
@@ -16,7 +15,7 @@ class BaseDbTable:
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
 
-    def create_table(self, conn: sqlite3.Cursor, if_not_exists: bool = True):
+    def create_table(self, conn, if_not_exists=True):
         def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None,
                       unique=False):
             field_str = name
@@ -46,7 +45,7 @@ class BaseDbTable:
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
         conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
 
-    def dump(self, conn: sqlite3.Cursor, output: StringIO):
+    def dump(self, conn, output: StringIO):
         r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
         for it in r.fetchall():
             output.write(str(it) + '\n')
