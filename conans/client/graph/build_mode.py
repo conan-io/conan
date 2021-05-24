@@ -62,6 +62,9 @@ class BuildMode(object):
                 conan_file.output.info("Excluded build from source")
                 return False
 
+        if conan_file.build_policy == "never":  # this package has been export-pkg
+            return False
+
         if self.never:
             return False
         if self.all:

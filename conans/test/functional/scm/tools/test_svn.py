@@ -1,6 +1,7 @@
 # coding=utf-8
 
 import os
+import re
 import shutil
 import subprocess
 import unittest
@@ -55,7 +56,9 @@ compiled Apr  5 2019, 18:59:58 on x86_64-apple-darwin17.0.0"""
         project_url, _ = self.create_project(files={'myfile': "contents"})
         tmp_folder = self.gimme_tmp()
         svn = SVN(folder=tmp_folder)
-        with self.assertRaisesRegex(ConanException, "Not a valid 'svn' repository"):
+
+        msg = "'{0}' is not a valid 'svn' repository".format(re.escape(tmp_folder))
+        with self.assertRaisesRegex(ConanException, msg):
             svn.check_repo()
         svn.checkout(url=project_url)
         try:
