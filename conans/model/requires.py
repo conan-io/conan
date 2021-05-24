@@ -81,12 +81,16 @@ class Requirement:
         to such "consumer".
         Result can be None if nothing is to be propagated
         """
-        if require.build:  # Build-requires do not propagate anything
-            return  # TODO: check this
 
         if require.public is False:
             # TODO: We could implement checks in case private is violated (e.g shared libs)
             return
+
+        if require.build:  # public!
+            # TODO: To discuss if this way of conflicting build_requires is actually useful or not
+            downstream_require = Requirement(require.ref, include=False, link=False, build=True,
+                                             run=False, public=True)
+            return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
@@ -215,9 +219,9 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None):
+    def __call__(self, ref, package_id_mode=None, public=False):
         # TODO: Check which arguments could be user-defined
-        self._requires.build_require(ref, package_id_mode=package_id_mode)
+        self._requires.build_require(ref, package_id_mode=package_id_mode, public=public)
 
 
 class TestRequirements:
@@ -264,10 +268,10 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None):
+    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, public=False):
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = ConanFileReference.loads(ref)
-        req = Requirement(ref, include=False, link=False, build=True, run=True, public=False,
+        req = Requirement(ref, include=False, link=False, build=True, run=True, public=public,
                           package_id_mode=package_id_mode)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
