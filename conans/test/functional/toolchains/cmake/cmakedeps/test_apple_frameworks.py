@@ -311,7 +311,7 @@ def test_apple_own_framework_cmake_deps():
     client.run("install . -s build_type=Release -pr=profile")
     client.run("test . mylibrary/1.0@  -pr=profile")
     assert "Hello World Release!" in client.out
-    client.run("test . mylibrary/1.0@ -s build_type=Debug  -pr=profile")
+    client.run("test . mylibrary/1.0@ -s:b build_type=Debug  -pr=profile")
     assert "Hello World Debug!" in client.out
 
 
