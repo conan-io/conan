@@ -70,11 +70,12 @@ _t_default_settings_yml = Template(textwrap.dedent("""
                       "7", "7.1", "7.2", "7.3", "7.4", "7.5",
                       "8", "8.1", "8.2", "8.3", "8.4",
                       "9", "9.1", "9.2", "9.3",
-                      "10", "10.1"]
+                      "10", "10.1", "10.2", "10.3",
+                      "11", "11.1"]
             libcxx: [libstdc++, libstdc++11]
             threads: [None, posix, win32] #  Windows MinGW
             exception: [None, dwarf2, sjlj, seh] # Windows MinGW
-            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+            cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
         Visual Studio: &visual_studio
             runtime: [MD, MT, MTd, MDd]
             version: ["8", "9", "10", "11", "12", "14", "15", "16"]
@@ -570,7 +571,7 @@ class ConanClientConfigParser(ConfigParser, object):
             # For explicit cacert files, the file should already exist
             if not os.path.exists(cacert_path):
                 raise ConanException("Configured file for 'cacert_path'"
-                                     " doesn't exists: '{}'".format(cacert_path))
+                                     " doesn't exist: '{}'".format(cacert_path))
         return cacert_path
 
     @property
@@ -585,7 +586,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property
@@ -600,7 +601,7 @@ class ConanClientConfigParser(ConfigParser, object):
             path = os.path.join(cache_folder, path)
             if not os.path.exists(path):
                 raise ConanException("Configured file for 'client_cert_key_path'"
-                                     " doesn't exists: '{}'".format(path))
+                                     " doesn't exist: '{}'".format(path))
         return os.path.normpath(path)
 
     @property

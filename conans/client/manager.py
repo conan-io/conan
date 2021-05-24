@@ -18,11 +18,12 @@ from conans.paths import CONANINFO
 from conans.util.files import normalize, save
 
 
-def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, build_modes=None,
-                 update=False, manifest_folder=None, manifest_verify=False,
+def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remotes=None,
+                 build_modes=None, update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
-                 is_build_require=False):
+                 is_build_require=False, add_txt_generator=True):
+
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
     @param ref_or_path: ConanFileReference or path to user space conanfile
@@ -33,18 +34,16 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
     @param manifest_verify: Verify dependencies manifests against stored ones
     @param manifest_interactive: Install deps manifests in folder for later verify, asking user
     for confirmation
-    @param generators: List of generators from command line. If False, no generator will be
-    written
+    @param generators: List of generators from command line.
     @param no_imports: Install specified packages but avoid running imports
+    @param add_txt_generator: Add the txt to the list of generators
+
     """
 
     out, user_io, graph_manager, cache = app.out, app.user_io, app.graph_manager, app.cache
     remote_manager, hook_manager = app.remote_manager, app.hook_manager
-    profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
 
-    if generators is not False:
-        generators = set(generators) if generators else set()
-        generators.add("txt")  # Add txt generator by default
+    profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
 
     if profile_build:
         out.info("Configuration (profile_host):")
@@ -94,16 +93,25 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
                                      interactive=manifest_interactive)
         manifest_manager.print_log()
 
+    conanfile.folders.set_base_install(install_folder)
+    conanfile.folders.set_base_imports(install_folder)
+    conanfile.folders.set_base_generators(base_folder)
+
+    output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
+
     if install_folder:
-        conanfile.layout.set_base_install_folder(install_folder)
         # Write generators
-        output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
-        if generators is not False:
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            tmp.extend([g for g in generators if g not in tmp])
-            conanfile.generators = tmp
-            app.generator_manager.write_generators(conanfile, install_folder, output)
-            write_toolchain(conanfile, install_folder, output)
+        tmp = list(conanfile.generators)  # Add the command line specified generators
+        generators = set(generators) if generators else set()
+        tmp.extend([g for g in generators if g not in tmp])
+        if add_txt_generator:
+            tmp.append("txt")
+        conanfile.generators = tmp
+        app.generator_manager.write_generators(conanfile, install_folder,
+                                               conanfile.generators_folder,
+                                               output)
+        write_toolchain(conanfile, conanfile.generators_folder, output)
+
         if not isinstance(ref_or_path, ConanFileReference):
             # Write conaninfo
             content = normalize(conanfile.info.dumps())
@@ -114,7 +122,7 @@ def deps_install(app, ref_or_path, install_folder, graph_info, remotes=None, bui
             graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
             graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
-            run_imports(conanfile, install_folder)
+            run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:
             call_system_requirements(conanfile, conanfile.output)
 

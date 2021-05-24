@@ -121,7 +121,7 @@ int main() {{
 """
 
 
-def get_files(name, version, user, channel, package_name):
+def get_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_sources_v2.format(name=name, version=version,
                                                          package_name=package_name,
                                                          configure=""),
@@ -130,8 +130,6 @@ def get_files(name, version, user, channel, package_name):
              "src/CMakeLists.txt": cmake_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_v2.format(name=name,
                                                                    version=version,
-                                                                   user=user,
-                                                                   channel=channel,
                                                                    package_name=package_name),
              "test_package/example.cpp": test_main.format(name=name),
              "test_package/CMakeLists.txt": test_cmake_v2.format(name=name)}

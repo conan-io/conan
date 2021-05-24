@@ -420,6 +420,7 @@ def dos2unix(filepath):
 
 
 def rename(src, dst):
+    # FIXME: Deprecated, use new interface from conan.tools
     """
     rename a file or folder to avoid "Access is denied" error on Windows
     :param src: Source file or folder
@@ -436,7 +437,7 @@ def rename(src, dst):
         process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
                                    stdout=subprocess.PIPE)
         process.communicate()
-        if process.returncode != 1:
+        if process.returncode > 7:  # https://ss64.com/nt/robocopy-exit.html
             raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
         try:

@@ -5,8 +5,8 @@ import unittest
 
 import pytest
 
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.assets.visual_project_files import get_vs_project_files
 from conans.test.utils.tools import TestClient
@@ -404,14 +404,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_cmake
     def test_msbuild_generator(self):
         client = TestClient()
-        files = cpp_hello_conan_files("Hello0", "1.0")
-        client.save(files)
+        client.save(pkg_cmake("Hello0", "1.0"))
         client.run("create . ")
-        files = cpp_hello_conan_files("Hello3", "1.0")
-        client.save(files, clean_first=True)
+        client.save(pkg_cmake("Hello3", "1.0"), clean_first=True)
         client.run("create . ")
-        files = cpp_hello_conan_files("Hello1", "1.0", deps=["Hello0/1.0"])
-        client.save(files, clean_first=True)
+        client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
         client.run("create . ")
 
         conanfile = textwrap.dedent("""
@@ -425,9 +422,9 @@ class MSBuildGeneratorTest(unittest.TestCase):
                     msbuild.build("MyProject.sln")
             """)
         myapp_cpp = gen_function_cpp(name="main", msg="MyApp",
-                                     includes=["helloHello1"], calls=["helloHello1"])
-        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["helloHello3"],
-                                         calls=["helloHello3"])
+                                     includes=["Hello1"], calls=["Hello1"])
+        myproject_cpp = gen_function_cpp(name="main", msg="MyProject", includes=["Hello3"],
+                                         calls=["Hello3"])
         files = {"MyProject.sln": sln_file,
                  "MyProject/MyProject.vcxproj": myproject_vcxproj,
                  "MyProject/MyProject.cpp": myproject_cpp,
@@ -441,11 +438,11 @@ class MSBuildGeneratorTest(unittest.TestCase):
         self.assertNotIn("warning MSB4011", client.out)
         client.run_command(r"x64\Release\MyProject.exe")
         self.assertIn("MyProject: Release!", client.out)
-        self.assertIn("Hello Hello3", client.out)
+        self.assertIn("Hello3: Release!", client.out)
         client.run_command(r"x64\Release\MyApp.exe")
         self.assertIn("MyApp: Release!", client.out)
-        self.assertIn("Hello Hello1", client.out)
-        self.assertIn("Hello Hello0", client.out)
+        self.assertIn("Hello0: Release!", client.out)
+        self.assertIn("Hello1: Release!", client.out)
 
     def test_install_reference(self):
         client = TestClient()

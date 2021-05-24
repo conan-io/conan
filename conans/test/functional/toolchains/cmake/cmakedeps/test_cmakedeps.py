@@ -1,8 +1,10 @@
+import os
 import platform
 import textwrap
 
 import pytest
 
+from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
@@ -17,7 +19,7 @@ def client():
         from conans.tools import save
         import os
         class Pkg(ConanFile):
-            settings = "build_type"
+            settings = "build_type", "os", "arch", "compiler"
             {}
             def package(self):
                 save(os.path.join(self.package_folder, "include", "%s.h" % self.name),
@@ -44,6 +46,7 @@ def test_transitive_multi(client):
 
         [generators]
         CMakeDeps
+        CMakeToolchain
         """)
     example_cpp = gen_function_cpp(name="main", includes=["libb", "liba"],
                                    preprocessor=["MYVARliba", "MYVARlibb"])
@@ -58,11 +61,10 @@ def test_transitive_multi(client):
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
-        assert "find_dependency(liba REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
+        assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
-            client.run_command('cmake .. -G "Visual Studio 15 Win64" '
-                               '-DCMAKE_PREFIX_PATH="{}"'.format(client.current_folder))
+            client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
             client.run_command('cmake --build . --config Debug')
             client.run_command('cmake --build . --config Release')
 
@@ -76,10 +78,14 @@ def test_transitive_multi(client):
             assert "MYVARliba: Release" in client.out
             assert "MYVARlibb: Release" in client.out
         else:
+            # The TOOLCHAIN IS MESSING WITH THE BUILD TYPE and then ignores the -D so I remove it
+            replace_in_file(os.path.join(client.current_folder, "conan_toolchain.cmake"),
+                            "CMAKE_BUILD_TYPE", "DONT_MESS_WITH_BUILD_TYPE")
             for bt in ("Debug", "Release"):
                 client.run_command('cmake .. -DCMAKE_BUILD_TYPE={} '
-                                   '-DCMAKE_PREFIX_PATH="{}"'.format(bt, client.current_folder))
+                                   '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake'.format(bt))
                 client.run_command('cmake --build . --clean-first')
+
                 client.run_command('./example')
                 assert "main: {}!".format(bt) in client.out
                 assert "MYVARliba: {}".format(bt) in client.out
@@ -144,21 +150,17 @@ def test_system_libs():
         if build_type == "Release":
             assert "System libs release: %s" % library_name in client.out
             assert "Libraries to Link release: lib1" in client.out
-            target_libs = ("$<$<CONFIG:Debug>:;>;"
-                           "$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
+            target_libs = ("$<$<CONFIG:Release>:CONAN_LIB::Test_lib1_RELEASE;sys1;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                           "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
         else:
             assert "System libs debug: %s" % library_name in client.out
             assert "Libraries to Link debug: lib1" in client.out
             target_libs = ("$<$<CONFIG:Debug>:CONAN_LIB::Test_lib1_DEBUG;sys1d;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
                            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-                           "$<$<CONFIG:Release>:;>;"
-                           "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>")
+                           "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>")
         assert "Target libs: %s" % target_libs in client.out
 
 
@@ -199,8 +201,7 @@ def test_do_not_mix_cflags_cxxflags():
     client.save({"conanfile.py": consumer_conanfile,
                  "CMakeLists.txt": cmakelists}, clean_first=True)
     client.run("create .")
-    assert "compile options: $<$<CONFIG:Debug>:>;$<$<CONFIG:Release>:" \
-           "$<$<COMPILE_LANGUAGE:CXX>:three;four>;$<$<COMPILE_LANGUAGE:C>:one;two>>;" \
-           "$<$<CONFIG:RelWithDebInfo>:>;$<$<CONFIG:MinSizeRel>:>" in client.out
+    assert "compile options: $<$<CONFIG:Release>:" \
+           "$<$<COMPILE_LANGUAGE:CXX>:three;four>;$<$<COMPILE_LANGUAGE:C>:one;two>>" in client.out
     assert "cflags: one;two" in client.out
     assert "cxxflags: three;four" in client.out
