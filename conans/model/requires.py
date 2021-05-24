@@ -60,6 +60,17 @@ class Requirement:
                  (self.public and other.public) or
                  (self.ref == other.ref)))
 
+    def aggregate(self, other):
+        """ when closing loop and finding the same dependency on a node, the information needs
+        to be aggregated
+        """
+        assert self.build == other.build
+        self.include |= other.include
+        self.link |= other.link
+        self.run = self.run or other.run
+        self.public |= other.public
+        # TODO: self.package_id_mode => Choose more restrictive?
+
     def __ne__(self, other):
         return not self.__eq__(other)
 

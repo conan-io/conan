@@ -313,6 +313,38 @@ class TestDiamond(GraphManagerTest):
                                 (libc, True, True, False, None),
                                 (liba, True, True, False, None)])
 
+    @parameterized.expand([(True, ), (False, )])
+    def test_diamond_additive(self, order):
+        # app -> libb0.1 ---------> liba0.1
+        #    \-> libc0.1 (run=True)->/
+        self.recipe_cache("liba/0.1")
+        if order:
+            self.recipe_cache("libb/0.1", ["liba/0.1"])
+            self.recipe_conanfile("libc/0.1", GenConanfile().with_requirement("liba/0.1", run=True))
+        else:
+            self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1", run=True))
+            self.recipe_cache("libc/0.1", ["liba/0.1"])
+
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        libc = app.dependencies[1].dst
+        liba = libb.dependencies[0].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb, libc])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(libc, "libc/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (libc, True, True, False, None),
+                                (liba, True, True, False, True)])
+
     def test_half_diamond(self):
         # app -----------> liba0.1
         #    \-> libc0.1 ->/
@@ -591,10 +623,10 @@ class TestDiamondMultiple(GraphManagerTest):
 
         # FIXME: In this case the order seems a bit broken
         _check_transitive(app, [(libe, True, True, False, None),
-                                (liba, True, True, False, None),
                                 (libf, True, True, False, None),
                                 (libd, True, True, False, None),
                                 (libb, True, True, False, None),
+                                (liba, True, True, False, None),
                                 ])
 
     def test_parallel_diamond(self):

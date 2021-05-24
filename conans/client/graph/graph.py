@@ -85,10 +85,11 @@ class Node(object):
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
         existing = self.transitive_deps.get(require)
-        if existing is not None:
+        if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
                 return True
+            require.aggregate(existing.require)
 
         self.transitive_deps.set(require, TransitiveRequirement(require, node))
 
