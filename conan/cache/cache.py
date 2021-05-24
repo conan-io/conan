@@ -44,18 +44,18 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def get_or_create_reference_path(item: ConanReference):
+    def get_or_create_reference_path(ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
-        if item.rrev:
-            return md5(item.full_reference)
+        if ref.rrev:
+            return md5(ref.full_reference)
         else:
             return str(uuid.uuid4())
 
     @staticmethod
-    def get_or_create_package_path(item: ConanReference):
+    def get_or_create_package_path(ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
-        if item.prev:
-            return md5(item.full_reference)
+        if ref.prev:
+            return md5(ref.full_reference)
         else:
             return str(uuid.uuid4())
 
@@ -90,7 +90,7 @@ class DataCache:
         from conan.cache.conan_reference_layout import ReferenceLayout
         return ReferenceLayout(pref, cache=self, base_folder=package_path)
 
-    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference) -> str:
+    def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
 
@@ -116,7 +116,7 @@ class DataCache:
             shutil.move(self._full_path(old_path), self._full_path(new_path))
         return new_path
 
-    def _move_prev(self, old_pref, new_pref):
+    def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_pref)
         new_path = self.get_or_create_reference_path(new_pref)
         try:
@@ -140,23 +140,23 @@ class DataCache:
         for it in self.db.list_references(only_latest_rrev):
             yield it
 
-    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         for it in self.db.get_recipe_revisions(ref, only_latest_rrev):
             yield it
 
-    def get_package_ids(self, ref, only_latest_prev=False):
+    def get_package_ids(self, ref: ConanReference, only_latest_prev=False):
         for it in self.db.get_package_ids(ref, only_latest_prev):
             yield it
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         for it in self.db.get_package_revisions(ref, only_latest_prev):
             yield it
 
-    def get_remote(self, ref):
+    def get_remote(self, ref: ConanReference):
         return self.db.get_remote(ref)
 
-    def set_remote(self, ref, new_remote):
+    def set_remote(self, ref: ConanReference, new_remote):
         self.db.update_reference(ref, new_remote=new_remote)
 
-    def remove(self, ref):
+    def remove(self, ref: ConanReference):
         self.db.remove(ref)

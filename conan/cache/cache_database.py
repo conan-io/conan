@@ -2,6 +2,7 @@ import sqlite3
 from contextlib import contextmanager
 from io import StringIO
 
+from .conan_reference import ConanReference
 from .db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
@@ -13,7 +14,7 @@ class CacheDatabase:
 
     timeout = CONNECTION_TIMEOUT_SECONDS
 
-    def __init__(self, filename: str):
+    def __init__(self, filename):
         self._filename = filename
 
     @contextmanager
@@ -35,7 +36,8 @@ class CacheDatabase:
             output.write(f"\nReferencesDbTable (table '{self._references.table_name}'):\n")
             self._references.dump(conn, output)
 
-    def update_reference(self, old_ref, new_ref=None, new_path=None, new_remote=None):
+    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_remote=None):
         with self.connect() as conn:
             try:
                 self._references.update(conn, old_ref, new_ref, new_path, new_remote)
@@ -47,17 +49,17 @@ class CacheDatabase:
         with self.connect() as conn:
             self._references.delete_by_path(conn, path)
 
-    def remove(self, ref):
+    def remove(self, ref: ConanReference):
         with self.connect() as conn:
             self._references.remove(conn, ref)
 
-    def try_get_reference_directory(self, ref):
+    def try_get_reference_directory(self, ref: ConanReference):
         """ Returns the directory where the given reference is stored (or fails) """
         with self.connect() as conn:
             ref_data = self._references.get(conn, ref)
             return ref_data["path"]
 
-    def get_or_create_reference(self, path, ref):
+    def get_or_create_reference(self, path, ref: ConanReference):
         """ Returns the path for the given reference. If the reference doesn't exist in the
             database, it will create the entry for the reference using the path given as argument.
         """
@@ -74,21 +76,21 @@ class CacheDatabase:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         with self.connect() as conn:
             for it in self._references.get_prevs(conn, ref, only_latest_prev):
                 yield it
 
-    def get_package_ids(self, ref, only_latest_prev=False):
+    def get_package_ids(self, ref: ConanReference, only_latest_prev=False):
         with self.connect() as conn:
             for it in self._references.get_pkgids(conn, ref, only_latest_prev):
                 yield it
 
-    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         with self.connect() as conn:
             for it in self._references.get_rrevs(conn, ref, only_latest_rrev):
                 yield it
 
-    def get_remote(self, ref):
+    def get_remote(self, ref: ConanReference):
         with self.connect() as conn:
             return self._references.get_remote(conn, ref)

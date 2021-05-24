@@ -1,5 +1,6 @@
 import time
 
+from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
 from conans.errors import ConanException
 
@@ -32,7 +33,7 @@ class ReferencesDbTable(BaseDbTable):
             "remote": row.remote
         }
 
-    def _where_clause(self, ref):
+    def _where_clause(self, ref: ConanReference):
         where_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -43,7 +44,7 @@ class ReferencesDbTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def _set_clause(self, ref, path=None, timestamp=None, remote=None):
+    def _set_clause(self, ref: ConanReference, path=None, timestamp=None, remote=None):
         set_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -56,7 +57,7 @@ class ReferencesDbTable(BaseDbTable):
         set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         return set_expr
 
-    def get(self, conn, ref):
+    def get(self, conn, ref: ConanReference):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
         query = f'SELECT * FROM {self.table_name} ' \
@@ -68,7 +69,7 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def get_remote(self, conn, ref):
+    def get_remote(self, conn, ref: ConanReference):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
         query = f'SELECT {self.columns.remote} FROM {self.table_name} ' \
@@ -80,7 +81,7 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
-    def save(self, conn, path, ref, remote=None):
+    def save(self, conn, path, ref: ConanReference, remote=None):
         timestamp = int(time.time())
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
@@ -88,7 +89,8 @@ class ReferencesDbTable(BaseDbTable):
                          [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
         return r.lastrowid
 
-    def update(self, conn, old_ref, new_ref=None, new_path=None, new_remote=None):
+    def update(self, conn, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
+               new_remote=None):
         if not new_ref:
             new_ref = old_ref
         timestamp = int(time.time())
@@ -106,7 +108,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query, (path,))
         return r.lastrowid
 
-    def remove(self, conn, ref):
+    def remove(self, conn, ref: ConanReference):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
@@ -132,7 +134,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_prevs(self, conn, ref, only_latest_prev: bool = False):
+    def get_prevs(self, conn, ref: ConanReference, only_latest_prev: bool = False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
         check_pkgid = f'AND {self.columns.pkgid} = "{ref.pkgid}" ' if ref.pkgid else ''
         if only_latest_prev:
@@ -159,7 +161,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_rrevs(self, conn, ref, only_latest_rrev=False):
+    def get_rrevs(self, conn, ref: ConanReference, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \
@@ -186,7 +188,7 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_pkgids(self, conn, ref, only_latest_prev=False):
+    def get_pkgids(self, conn, ref: ConanReference, only_latest_prev=False):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
