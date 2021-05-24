@@ -528,3 +528,23 @@ class TestConan(ConanFile):
                        assert_error=True)
             self.assertIn("ERROR: The {} folder '{}' does not exist."
                           .format(folder, os.path.join(client.current_folder, folder)), client.out)
+
+
+def test_build_policy_never():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class TestConan(ConanFile):
+            build_policy = "never"
+
+            def package(self):
+                self.copy("*.h", src="src", dst="include")
+        """)
+    client.save({CONANFILE: conanfile,
+                 "src/header.h": "contents"})
+    client.run("export-pkg . pkg/1.0@")
+    assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
+
+    client.run("install pkg/1.0@ --build")
+    assert "pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
+    assert "pkg/1.0: Calling build()" not in client.out

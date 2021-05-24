@@ -386,6 +386,21 @@ class FindConfigFiles(Block):
                 "android_prefix_path": android_prefix}
 
 
+class UserToolchain(Block):
+    template = textwrap.dedent("""
+        {% if user_toolchain %}
+        include({{user_toolchain}})
+        {% endif %}
+        """)
+
+    user_toolchain = None
+
+    def context(self):
+        # This is global [conf] injection of extra toolchain files
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        return {"user_toolchain": user_toolchain or self.user_toolchain}
+
+
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
         {% if generator_platform %}
@@ -462,6 +477,7 @@ class GenericSystemBlock(Block):
 
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
+
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
@@ -569,7 +585,8 @@ class CMakeToolchain(object):
         self.preprocessor_definitions = Variables()
 
         self.pre_blocks = ToolchainBlocks(self._conanfile, self,
-                                          [("generic_system", GenericSystemBlock),
+                                          [("user_toolchain", UserToolchain),
+                                           ("generic_system", GenericSystemBlock),
                                            ("android_system", AndroidSystemBlock),
                                            ("ios_system", IOSSystemBlock)])
 
@@ -610,12 +627,24 @@ class CMakeToolchain(object):
         return content
 
     def generate(self):
-        save(self.filename, self.content)
+        toolchain_file = self._conanfile.conf["tools.cmake.cmaketoolchain:toolchain_file"]
+        if toolchain_file is None:  # The main toolchain file generated only if user dont define
+            save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
             write_conanvcvars(self._conanfile)
+        self._writebuild(toolchain_file)
+
+    def _writebuild(self, toolchain_file):
+        result = {}
+        # TODO: Lets do it compatible with presets soon
         if self.generator is not None:
-            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps({"cmake_generator": self.generator}))
+            result["cmake_generator"] = self.generator
+
+        result["cmake_toolchain_file"] = toolchain_file or self.filename
+
+        if result:
+            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(result))
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

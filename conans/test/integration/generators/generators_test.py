@@ -26,8 +26,6 @@ unknown
         base = '''
 [generators]
 cmake
-qmake
-scons
 virtualenv
 xcode
 ycm
@@ -43,8 +41,6 @@ ycm
             venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
-                                 'conanbuildinfo.pri',
-                                 'SConscript_conan',
                                  'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
                                  LOCKFILE] + venv_files),
@@ -71,79 +67,3 @@ class TestConan(ConanFile):
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
         self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
                       src_dirs)
-
-    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
-    def test_qmake(self):
-        client = TestClient()
-        dep = """
-from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-
-    def package_info(self):
-        self.cpp_info.libs = ["hello"]
-        self.cpp_info.debug.includedirs = []
-        self.cpp_info.debug.libs = ["hellod"]
-        self.cpp_info.release.libs = ["hellor"]
-
-"""
-        base = '''
-[requires]
-Pkg/0.1@lasote/testing
-[generators]
-qmake
-    '''
-        client.save({"conanfile.py": dep})
-        client.run("export . lasote/testing")
-        client.save({"conanfile.txt": base}, clean_first=True)
-        client.run("install . --build")
-
-        qmake = client.load("conanbuildinfo.pri")
-        self.assertIn("CONAN_RESDIRS += ", qmake)
-        self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
-        self.assertIn("CONAN_LIBS_PKG_RELEASE += -lhellor", qmake)
-        self.assertIn("CONAN_LIBS_PKG_DEBUG += -lhellod", qmake)
-        self.assertIn("CONAN_LIBS_PKG += -lhello", qmake)
-        self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
-        self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
-        self.assertIn("CONAN_LIBS += -lhello", qmake)
-
-    @pytest.mark.xfail(reason="Generator qmake generator to be revisited")
-    def test_qmake_hyphen_dot(self):
-        client = TestClient()
-        dep = """
-from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "Pkg-Name.World"
-    version = "0.1"
-
-    def package_info(self):
-        self.cpp_info.libs = ["hello"]
-        self.cpp_info.debug.includedirs = []
-        self.cpp_info.debug.libs = ["hellod"]
-        self.cpp_info.release.libs = ["hellor"]
-
-"""
-        base = '''
-[requires]
-Pkg-Name.World/0.1@lasote/testing
-[generators]
-qmake
-    '''
-        client.save({"conanfile.py": dep})
-        client.run("export . lasote/testing")
-        client.save({"conanfile.txt": base}, clean_first=True)
-        client.run("install . --build")
-
-        qmake = client.load("conanbuildinfo.pri")
-        self.assertIn("CONAN_RESDIRS += ", qmake)
-        self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
-        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_RELEASE += -lhellor", qmake)
-        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD_DEBUG += -lhellod", qmake)
-        self.assertIn("CONAN_LIBS_PKG_NAME_WORLD += -lhello", qmake)
-        self.assertIn("CONAN_LIBS_RELEASE += -lhellor", qmake)
-        self.assertIn("CONAN_LIBS_DEBUG += -lhellod", qmake)
-        self.assertIn("CONAN_LIBS += -lhello", qmake)

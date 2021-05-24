@@ -1,20 +1,14 @@
 import traceback
 from os.path import join
 
-from conans.client.generators.compiler_args import CompilerArgsGenerator
-from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException, conanfile_exception_formatter
 from conans.util.env_reader import get_env
 from conans.util.files import normalize, save, mkdir
-from .b2 import B2Generator
 from .cmake import CMakeGenerator
 from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
-from .premake import PremakeGenerator
-from .qmake import QmakeGenerator
-from .scons import SConsGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualenv_python import VirtualEnvPythonGenerator
@@ -26,21 +20,15 @@ from ..tools import chdir
 
 class GeneratorManager(object):
     def __init__(self):
-        self._generators = {"compiler_args": CompilerArgsGenerator,
-                            "cmake": CMakeGenerator,
+        self._generators = {"cmake": CMakeGenerator,
                             "cmake_paths": CMakePathsGenerator,
-                            "qmake": QmakeGenerator,
-                            "scons": SConsGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "virtualenv": VirtualEnvGenerator,
                             "virtualenv_python": VirtualEnvPythonGenerator,
                             "virtualbuildenv": VirtualBuildEnvGenerator,
                             "virtualrunenv": VirtualRunEnvGenerator,
-                            "pkg_config": PkgConfigGenerator,
                             "json": JsonGenerator,
-                            "b2": B2Generator,
-                            "premake": PremakeGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
