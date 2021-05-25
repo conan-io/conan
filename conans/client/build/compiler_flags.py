@@ -11,7 +11,7 @@
 """
 import os
 
-from conans.client.tools.apple import is_apple_os
+from conans.client.tools.apple import to_apple_arch
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import unix_path
 
@@ -48,8 +48,10 @@ def architecture_flag(settings):
         return ""
 
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst' and str(arch) == 'x86_64':
-            return '--target=x86_64-apple-ios-macabi'
+        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
+            apple_arch = to_apple_arch(arch)
+            if apple_arch:
+                return '--target=%s-apple-ios-macabi' % apple_arch
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:

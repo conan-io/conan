@@ -1,3 +1,6 @@
+from conans.client.tools.apple import to_apple_arch
+
+
 def architecture_flag(settings):
     """
     returns flags specific to the target architecture and compiler
@@ -10,10 +13,15 @@ def architecture_flag(settings):
     if not compiler or not arch:
         return ""
 
+    if the_os == "Android":
+        return ""
+
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
-        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst' and str(arch) == 'x86_64':
+        if str(the_os) == 'Macos' and str(subsystem) == 'catalyst':
             # FIXME: This might be conflicting with Autotools --target cli arg
-            return '--target=x86_64-apple-ios-macabi'
+            apple_arch = to_apple_arch(arch)
+            if apple_arch:
+                return '--target=%s-apple-ios-macabi' % apple_arch
         elif str(arch) in ['x86_64', 'sparcv9', 's390x']:
             return '-m64'
         elif str(arch) in ['x86', 'sparc']:

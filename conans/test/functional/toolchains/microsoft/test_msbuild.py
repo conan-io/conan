@@ -343,6 +343,9 @@ class WinTest(unittest.TestCase):
             options = {"shared": [True, False]}
             default_options = {"shared": False}
 
+            def layout(self):
+                self.folders.generators = "conan"
+
             def generate(self):
                 tc = MSBuildToolchain(self)
                 gen = MSBuildDeps(self)
@@ -443,7 +446,9 @@ class WinTest(unittest.TestCase):
         check_exe_run(client.out, "main", "msvc", compiler_version, "Release", "x86", cppstd,
                       {"DEFINITIONS_BOTH": "True",
                        "DEFINITIONS_CONFIG": "Release"})
-        check_vs_runtime("Release/MyApp.exe", client, "15", static=True, build_type="Release")
+        static_runtime = True if runtime == "static" or "MT" in runtime else False
+        check_vs_runtime("Release/MyApp.exe", client, "15", build_type="Release",
+                         static_runtime=static_runtime)
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_debug(self):
@@ -480,7 +485,7 @@ class WinTest(unittest.TestCase):
         check_exe_run(client.out, "main", "msvc", "19.0", "Debug", "x86_64", "14",
                       {"DEFINITIONS_BOTH": "True",
                        "DEFINITIONS_CONFIG": "Debug"})
-        check_vs_runtime("x64/Debug/MyApp.exe", client, "15", static=False, build_type="Debug")
+        check_vs_runtime("x64/Debug/MyApp.exe", client, "15", build_type="Debug")
 
     @pytest.mark.tool_cmake
     def test_toolchain_win_multi(self):

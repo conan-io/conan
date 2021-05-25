@@ -22,7 +22,8 @@ def setup_client_with_greetings():
     bye_cpp = gen_function_cpp(name="bye", includes=["bye"])
 
     conanfile_greetings = textwrap.dedent("""
-        from conans import ConanFile, CMake
+        import os
+        from conans import ConanFile, CMake, tools
 
         class GreetingsConan(ConanFile):
             name = "greetings"
@@ -42,24 +43,38 @@ def setup_client_with_greetings():
                 self.copy("*.h", dst="include", src="src")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
+                tools.save(os.path.join(self.package_folder,
+                                        "my_cmake_functions.cmake"), "set(MY_CMAKE_VAR 99)")
 
             def package_info(self):
+
                 if self.options.components == "standard":
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+                    self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
                 elif self.options.components == "custom":
                     self.cpp_info.filenames["cmake_find_package_multi"] = "MYG"
                     self.cpp_info.filenames["cmake_find_package"] = "MYG"
+                    self.cpp_info.set_property("cmake_file_name", "MYG")
+
                     self.cpp_info.names["cmake_find_package_multi"] = "MyGreetings"
                     self.cpp_info.names["cmake_find_package"] = "MyGreetings"
+                    self.cpp_info.set_property("cmake_target_name", "MyGreetings")
+
                     self.cpp_info.components["hello"].names["cmake_find_package_multi"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package_multi"] = "MyBye"
                     self.cpp_info.components["hello"].names["cmake_find_package"] = "MyHello"
                     self.cpp_info.components["bye"].names["cmake_find_package"] = "MyBye"
-                    self.cpp_info.components["hello"].names["CMakeDeps"] = "MyHello"
-                    self.cpp_info.components["bye"].names["CMakeDeps"] = "MyBye"
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "MyHello")
+                    self.cpp_info.components["bye"].set_property("cmake_target_name", "MyBye")
+
                     self.cpp_info.components["hello"].libs = ["hello"]
                     self.cpp_info.components["bye"].libs = ["bye"]
+
+                    # Duplicated on purpose to check that it doesn't break
+                    self.cpp_info.components["bye"].build_modules = ["my_cmake_functions.cmake"]
+                    self.cpp_info.components["hello"].build_modules = ["my_cmake_functions.cmake"]
+
                 else:
                     self.cpp_info.libs = ["hello", "bye"]
 
@@ -235,8 +250,7 @@ def create_chat(client, generator, components, package_info, cmake_find, test_cm
     assert "bye: Debug!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 def test_standard_names(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
@@ -287,8 +301,7 @@ def test_standard_names(setup_client_with_greetings, generator):
             assert "bye: Release!" in client.out
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 def test_custom_names(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
@@ -296,15 +309,19 @@ def test_custom_names(setup_client_with_greetings, generator):
         self.cpp_info.names["cmake_find_package_multi"] = "MyChat"
         self.cpp_info.names["cmake_find_package"] = "MyChat"
         # NOTE: For the new CMakeDeps only filenames mean filename, it is not using the "names" field
-        self.cpp_info.filenames["CMakeDeps"] = "MyChat"
+        self.cpp_info.set_property("cmake_target_name", "MyChat")
+        self.cpp_info.set_property("cmake_file_name", "MyChat")
+
         self.cpp_info.components["sayhello"].names["cmake_find_package_multi"] = "MySay"
         self.cpp_info.components["sayhello"].names["cmake_find_package"] = "MySay"
-        self.cpp_info.components["sayhello"].names["CMakeDeps"] = "MySay"
+        self.cpp_info.components["sayhello"].set_property("cmake_target_name", "MySay")
+
         self.cpp_info.components["sayhello"].requires = ["greetings::hello"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
         self.cpp_info.components["sayhellobye"].names["cmake_find_package_multi"] ="MySayBye"
         self.cpp_info.components["sayhellobye"].names["cmake_find_package"] ="MySayBye"
-        self.cpp_info.components["sayhellobye"].names["CMakeDeps"] ="MySayBye"
+        self.cpp_info.components["sayhellobye"].set_property("cmake_target_name", "MySayBye")
+
         self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::bye"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
         """)
@@ -331,16 +348,14 @@ def test_custom_names(setup_client_with_greetings, generator):
     create_chat(client, generator, "custom", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 def test_no_components(setup_client_with_greetings, generator):
     client = setup_client_with_greetings
 
     package_info = textwrap.dedent("""
         self.cpp_info.components["sayhello"].requires = ["greetings::greetings"]
         self.cpp_info.components["sayhello"].libs = ["sayhello"]
-        self.cpp_info.components["sayhellobye"].requires = ["sayhello",
-                                                            "greetings::greetings"]
+        self.cpp_info.components["sayhellobye"].requires = ["sayhello", "greetings::greetings"]
         self.cpp_info.components["sayhellobye"].libs = ["sayhellobye"]
         """)
 
@@ -366,8 +381,7 @@ def test_no_components(setup_client_with_greetings, generator):
     create_chat(client, generator, "none", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                       "CMakeDeps"])
+@pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
 @pytest.mark.slow
 @pytest.mark.tool_cmake
 def test_same_names(generator):
@@ -457,8 +471,7 @@ def test_same_names(generator):
 @pytest.mark.tool_cmake
 class TestComponentsCMakeGenerators:
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
     def test_component_not_found(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -487,8 +500,7 @@ class TestComponentsCMakeGenerators:
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
     def test_component_not_found_cmake(self, generator):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -528,8 +540,7 @@ class TestComponentsCMakeGenerators:
         assert "Conan: Component 'hello' found in package 'greetings'" in client.out
         assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
 
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
     def test_component_not_found_same_name_as_pkg_require(self, generator):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator(generator)
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator(generator)
@@ -551,8 +562,7 @@ class TestComponentsCMakeGenerators:
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
     @pytest.mark.slow
-    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package",
-                                           "CMakeDeps"])
+    @pytest.mark.parametrize("generator", ["cmake_find_package_multi", "cmake_find_package"])
     def test_same_name_global_target_collision(self, generator):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""
@@ -578,7 +588,12 @@ class TestComponentsCMakeGenerators:
                 def package_info(self):
                     self.cpp_info.names["{generator}"] = "nonstd"
                     self.cpp_info.filenames["{generator}"] = "{name}"
+                    self.cpp_info.set_property("cmake_target_name", "nonstd", "{generator}")
+                    self.cpp_info.set_property("cmake_file_name", "{name}", "{generator}")
+
                     self.cpp_info.components["1"].names["{generator}"] = "{name}"
+                    self.cpp_info.components["1"].set_property("cmake_target_name",
+                                                               "{name}", "{generator}")
                     self.cpp_info.components["1"].libs = ["{name}"]
             """)
         client = TestClient()
@@ -671,7 +686,7 @@ class TestComponentsCMakeGenerators:
                      "src/CMakeLists.txt": cmakelists,
                      "src/main.cpp": main_cpp}, clean_first=True)
         client.run("create . consumer/1.0@")
-
+        # assert False
         assert 'main: Release!' in client.out
         assert 'middle: Release!' in client.out
         assert 'expected/1.0: Hello World Release!' in client.out

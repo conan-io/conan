@@ -13,7 +13,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import touch
 
 
-@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Autotools")
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
 @pytest.mark.tool_autotools()
 def test_autotools():
     client = TestClient(path_with_spaces=False)
@@ -50,7 +50,8 @@ def test_autotools():
     client.run("install .")
     client.run("build .")
     client.run_command("./main")
-    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=0)
+    cxx11_abi = 0 if platform.system() == "Linux" else None
+    check_exe_run(client.out, "main", "gcc", None, "Release", "x86_64", None, cxx11_abi=cxx11_abi)
     assert "hello/0.1: Hello World Release!" in client.out
 
 

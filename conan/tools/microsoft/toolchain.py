@@ -8,16 +8,23 @@ from conans.errors import ConanException
 from conans.util.files import save, load
 
 
+CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
 def write_conanvcvars(conanfile):
     """
     write a conanvcvars.bat file with the good args from settings
     """
+    os_ = conanfile.settings.get_safe("os")
+    if os_ != "Windows":
+        return
+
     compiler = conanfile.settings.get_safe("compiler")
     cvars = None
     if compiler == "intel":
         cvars = intel_compilervars_command(conanfile)
     elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = _vs_ide_version(conanfile)
+        vs_version = vs_ide_version(conanfile)
         vcvarsarch = vcvars_arch(conanfile)
         cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
                                winsdk_version=None, vcvars_ver=None)
@@ -26,15 +33,15 @@ def write_conanvcvars(conanfile):
             @echo off
             {}
             """.format(cvars))
-        save("conanvcvars.bat", content)
+        save(os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE), content)
 
 
-def _vs_ide_version(conanfile):
+def vs_ide_version(conanfile):
     compiler = conanfile.settings.get_safe("compiler")
     compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
                         conanfile.settings.get_safe("compiler.version"))
     if compiler == "msvc":
-        toolset_override = conanfile.conf["tools.microsoft.msbuild"].vs_version
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
         if toolset_override:
             visual_version = toolset_override
         else:
@@ -153,7 +160,7 @@ class MSBuildToolchain(object):
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset
-        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain"].compile_options
+        compile_options = self._conanfile.conf["tools.microsoft.msbuildtoolchain:compile_options"]
         if compile_options is not None:
             compile_options = eval(compile_options)
             self.compile_options.update(compile_options)
@@ -161,12 +168,12 @@ class MSBuildToolchain(object):
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
                                              compile_options, toolset)
-        config_filepath = os.path.abspath(config_filename)
+        config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
 
     def _write_main_toolchain(self, config_filename, condition):
-        main_toolchain_path = os.path.abspath(self.filename)
+        main_toolchain_path = os.path.join(self._conanfile.generators_folder, self.filename)
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:
