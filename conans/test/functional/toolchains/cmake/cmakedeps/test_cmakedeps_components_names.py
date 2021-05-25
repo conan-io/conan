@@ -176,6 +176,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
         class WorldTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
+            requires = "chat/0.0.1"
 
             def build(self):
                 cmake = CMake(self)
