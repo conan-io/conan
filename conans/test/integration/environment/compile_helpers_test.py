@@ -16,7 +16,7 @@ class AConan(ConanFile):
     generators = "VirtualEnv"
 
     def build(self):
-        self.run("SET" if self.settings.os=="Windows" else "printenv")
+        self.run("SET" if self.settings.os=="Windows" else "export")
 """
 
 conanfile_dep = """
