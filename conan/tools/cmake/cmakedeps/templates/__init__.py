@@ -15,11 +15,6 @@ class CMakeDepsFileTemplate(object):
         return self.conanfile.ref.name + self.suffix
 
     @property
-    def package_folder(self):
-        return self.conanfile.package_folder.\
-            replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-
-    @property
     def target_namespace(self):
         return get_target_namespace(self.conanfile) + self.suffix
 

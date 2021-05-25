@@ -104,7 +104,7 @@ def test_build_modules_from_build_context(client):
         project(MyApp CXX)
 
         find_package(protobuff)
-        find_package(protobuff_KK)
+        find_package(protobuff_BUILD)
         add_executable(app main.cpp)
         foo_generate()
         target_link_libraries(app protobuff::protobuff)
@@ -112,7 +112,7 @@ def test_build_modules_from_build_context(client):
 
     cmake_deps_conf = """
         deps.build_context_build_modules = ["protobuff"]
-        deps.build_context_suffix = {"protobuff": "_KK"}
+        deps.build_context_suffix = {"protobuff": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -132,15 +132,15 @@ def test_build_modules_and_target_from_build_context(client):
         project(MyApp CXX)
 
         find_package(protobuff)
-        find_package(protobuff_KK)
+        find_package(protobuff_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff_KK::protobuff_KK)
+        target_link_libraries(app protobuff_BUILD::protobuff_BUILD)
         """)
 
     cmake_deps_conf = """
         deps.build_context_build_modules = ["protobuff"]
-        deps.build_context_suffix = {"protobuff": "_KK"}
+        deps.build_context_suffix = {"protobuff": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -160,14 +160,14 @@ def test_build_modules_from_host_and_target_from_build_context(client):
         project(MyApp CXX)
 
         find_package(protobuff)
-        find_package(protobuff_KK)
+        find_package(protobuff_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff_KK::protobuff_KK)
+        target_link_libraries(app protobuff_BUILD::protobuff_BUILD)
         """)
 
     cmake_deps_conf = """
-        deps.build_context_suffix = {"protobuff": "_KK"}
+        deps.build_context_suffix = {"protobuff": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -187,7 +187,7 @@ def test_build_modules_and_target_from_host_context(client):
         project(MyApp CXX)
 
         find_package(protobuff)
-        find_package(protobuff_KK)
+        find_package(protobuff_BUILD)
         add_executable(app main.cpp)
         foo_generate()
         target_link_libraries(app protobuff::protobuff)
@@ -195,7 +195,7 @@ def test_build_modules_and_target_from_host_context(client):
 
     cmake_deps_conf = """
         deps.build_context_build_modules = []
-        deps.build_context_suffix = {"protobuff": "_KK"}
+        deps.build_context_suffix = {"protobuff": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
