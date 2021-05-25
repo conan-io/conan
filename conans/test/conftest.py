@@ -13,7 +13,8 @@ tools_default_version = {
     'cygwin': 'default',
     'mingw32': 'default',
     'mingw64': 'default',
-    'ninja': '1.10.2'
+    'ninja': '1.10.2',
+    'bazel': 'default'
 }
 
 tools_locations = {
@@ -41,7 +42,8 @@ tools_locations = {
             '3.19': '/usr/share/cmake-3.19.7/bin'
         }
     },
-    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}}
+    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}},
+    'bazel': {'Darwin': {'default': '/Users/jenkins/bin'}}
 }
 
 tools_environments = {
@@ -90,6 +92,8 @@ if not which("svn"):
 
 if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
+if not which("bazel"):
+    tools_available.remove("bazel")
 if not which("meson"):
     tools_available.remove("meson")
 if not which("pkg-config"):
