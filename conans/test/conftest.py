@@ -43,7 +43,10 @@ tools_locations = {
         }
     },
     'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}},
-    'bazel': {'Darwin': {'default': '/Users/jenkins/bin'}}
+    'bazel': {
+        'Darwin': {'default': '/Users/jenkins/bin'},
+        'Windows': {'default': 'C:/bazel/bin'},
+    }
 }
 
 tools_environments = {
