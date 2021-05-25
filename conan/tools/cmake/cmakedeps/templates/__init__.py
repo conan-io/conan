@@ -8,13 +8,32 @@ class CMakeDepsFileTemplate(object):
 
     def __init__(self, cmakedeps, req):
         self.cmakedeps = cmakedeps
-        if req is not None:
-            self.conanfile = req
-            self.pkg_name = req.ref.name
-            self.package_folder = req.package_folder.\
-                replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
-            self.target_namespace = get_target_namespace(self.conanfile)
-            self.file_name = get_file_name(self.conanfile)
+        self.conanfile = req
+
+    @property
+    def pkg_name(self):
+        return self.conanfile.ref.name + self.suffix
+
+    @property
+    def target_namespace(self):
+        return get_target_namespace(self.conanfile) + self.suffix
+
+    @property
+    def file_name(self):
+        return get_file_name(self.conanfile) + self.suffix
+
+    @property
+    def suffix(self):
+        if not self.conanfile.is_build_context:
+            return ""
+        return self.cmakedeps.build_context_suffix.get(self.conanfile.ref.name, "")
+
+    @property
+    def build_modules_activated(self):
+        if self.conanfile.is_build_context:
+            return self.conanfile.ref.name in self.cmakedeps.build_context_build_modules
+        else:
+            return self.conanfile.ref.name not in self.cmakedeps.build_context_build_modules
 
     def render(self):
         context = self.context

@@ -24,13 +24,18 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
     @property
     def context(self):
         global_cpp = self.get_global_cpp_cmake()
+        if not self.build_modules_activated:
+            global_cpp.build_modules_paths = ""
+
         components_cpp = self.get_required_components_cpp()
         components_renames = " ".join([component_rename for component_rename, _ in
                                        reversed(components_cpp)])
         dependency_filenames = self.get_dependency_filenames()
+        package_folder = self.conanfile.package_folder.replace('\\', '/')\
+                                                      .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
-                "package_folder": self.package_folder,
+                "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
                 "components_renames": components_renames,
                 "components_cpp": components_cpp,

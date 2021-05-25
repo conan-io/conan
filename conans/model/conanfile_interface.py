@@ -1,3 +1,4 @@
+from conans.client.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:
@@ -60,3 +61,7 @@ class ConanFileInterface:
     @property
     def dependencies(self):
         return self._conanfile.dependencies
+
+    @property
+    def is_build_context(self):
+        return self._conanfile.context == CONTEXT_BUILD
