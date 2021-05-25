@@ -108,6 +108,8 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
+        result._remotes["ConanCenter"] = Remote("ConanCenter", "https://center.conan.io", True,
+                                                False)
         result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True,
                                                  False)
         return result
