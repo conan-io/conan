@@ -272,16 +272,11 @@ class GenConanfile(object):
 
     @property
     def _requirements_render(self):
-        lines = []
-        for ref, private, override in self._requirements:
-            private_str = ", private=True" if private else ""
-            override_str = ", override=True" if override else ""
-            lines.append('        self.requires("{}"{}{})'.format(ref, private_str, override_str))
-
-        return """
-    def requirements(self):
-{}
-        """.format("\n".join(lines))
+        lines = ["", "    def requirements(self):"]
+        for ref, kwargs in self._requirements:
+            args = ", ".join("{}={}".format(k, v) for k, v in kwargs.items())
+            lines.append('        self.requires("{}", {})'.format(ref, args))
+        return "\n".join(lines)
 
     @property
     def _package_method(self):
