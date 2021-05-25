@@ -44,7 +44,7 @@ class UploadTest(unittest.TestCase):
         set_dirty(pkg_folder)
 
         client.run("upload * --all --confirm", assert_error=True)
-        self.assertIn("ERROR: Hello/0.1@lasote/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+        self.assertIn(f"ERROR: Hello/0.1@lasote/testing:{NO_SETTINGS_PACKAGE_ID}: "
                       "Upload package to 'default' failed: Package %s is corrupted, aborting upload"
                       % str(pref), client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
@@ -245,7 +245,7 @@ class UploadTest(unittest.TestCase):
             return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
-            self.assertIn("ERROR: Hello0/1.2.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+            self.assertIn(f"ERROR: Hello/0.1@lasote/testing:{NO_SETTINGS_PACKAGE_ID}: "
                           ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
@@ -276,7 +276,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.out)
         self.assertIn("WARN: Mismatched checksum 'include/hello.h'", client.out)
-        self.assertIn("ERROR: Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: "
+        self.assertIn(f"ERROR: Hello/0.1@lasote/testing:{NO_SETTINGS_PACKAGE_ID}: "
                       "Upload package to 'default' failed: Cannot upload corrupted package",
                       client.out)
 
@@ -708,8 +708,8 @@ class MyPkg(ConanFile):
         self.assertIn("/lib/1.0/_/_/0/package", path.replace("\\", "/"))
 
         # Should be possible with explicit package
-        client.run('upload lib/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9')
-        self.assertIn("Uploading package 1/1: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 to 'default'",
+        client.run(f'upload lib/1.0:{NO_SETTINGS_PACKAGE_ID}')
+        self.assertIn(f"Uploading package 1/1: {NO_SETTINGS_PACKAGE_ID} to 'default'",
                       client.out)
 
     def test_checksums_metadata(self):

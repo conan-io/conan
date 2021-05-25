@@ -418,12 +418,12 @@ class RemoteTest(unittest.TestCase):
 
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . Hello/0.1@user/testing")
-        package_id0 = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
+        package_id0 = NO_SETTINGS_PACKAGE_ID
         self.client.save({"conanfile.py": GenConanfile().with_option("myoption", '"ANY"')})
         self.client.run("create . Hello1/0.1@user/testing -o Hello1:myoption=1")
-        package_id1 = "11997e24a862625b5e4753858f71aaf81a58a9b4"
+        package_id1 = re.search(r"Hello1/0.1@user/testing:(\S+)", str(self.client.out)).group(1)
         self.client.run("create . Hello1/0.1@user/testing -o Hello1:myoption=2")
-        package_id2 = "74ca4e392408c388db596b086fca5ebf64d825c0"
+        package_id2 = re.search(r"Hello1/0.1@user/testing:(\S+)", str(self.client.out)).group(1)
 
         self.client.run("remote add_pref Hello/0.1@user/testing:{} remote0".format(package_id0))
         self.client.run("remote list_pref Hello/0.1@user/testing")

@@ -46,6 +46,10 @@ class ConanFileInterface:
         return self._conanfile.cpp_info
 
     @property
+    def user_info(self):
+        return self._conanfile.user_info
+
+    @property
     def new_cpp_info(self):
         return self._conanfile.new_cpp_info
 
@@ -60,3 +64,7 @@ class ConanFileInterface:
     @property
     def dependencies(self):
         return self._conanfile.dependencies
+
+    @property
+    def folders(self):
+        return self._conanfile.folders

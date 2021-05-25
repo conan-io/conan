@@ -100,10 +100,10 @@ class GenConanfile(object):
             self.with_require(ref)
         return self
 
-    def with_requirement(self, ref, private=False, override=False):
+    def with_requirement(self, ref, **kwargs):
         self._requirements = self._requirements or []
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._requirements.append((ref_str, private, override))
+        self._requirements.append((ref_str, kwargs))
         return self
 
     def with_build_requires(self, *refs):
@@ -113,10 +113,10 @@ class GenConanfile(object):
             self._build_requires.append(ref_str)
         return self
 
-    def with_build_requirement(self, ref, force_host_context=False):
+    def with_build_requirement(self, ref, **kwargs):
         self._build_requirements = self._build_requirements or []
         ref_str = ref.full_str() if isinstance(ref, ConanFileReference) else ref
-        self._build_requirements.append((ref_str, force_host_context))
+        self._build_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, i):
@@ -143,6 +143,9 @@ class GenConanfile(object):
         self._default_options = self._default_options or {}
         self._default_options[option_name] = value
         return self
+
+    def with_shared_option(self, default=False):
+        return self.with_option("shared", [True, False]).with_default_option("shared", default)
 
     def with_package_file(self, file_name, contents=None, env_var=None, link=None):
         if not contents and not env_var:
@@ -243,9 +246,10 @@ class GenConanfile(object):
     @property
     def _build_requirements_render(self):
         lines = []
-        for ref, force_host_context in self._build_requirements:
-            force_host = ", force_host_context=True" if force_host_context else ""
-            lines.append('        self.build_requires("{}"{})'.format(ref, force_host))
+        for ref, kwargs in self._build_requirements:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, bool) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.build_requires("{}", {})'.format(ref, args))
         return "def build_requirements(self):\n{}\n".format("\n".join(lines))
 
     @property
@@ -264,8 +268,7 @@ class GenConanfile(object):
                 items.append('("{}"{}{})'.format(ref, private_str, override_str))
             else:
                 items.append('"{}"'.format(ref))
-        tmp = "requires = ({}, )".format(", ".join(items))
-        return tmp
+        return "requires = ({}, )".format(", ".join(items))
 
     @property
     def _requirements_render(self):
