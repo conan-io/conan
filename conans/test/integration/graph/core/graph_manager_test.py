@@ -874,6 +874,73 @@ class TestProjectApp(GraphManagerTest):
                                     (app2, False, False, False, True),
                                     (lib, False, False, False, None)])
 
+    def test_project_require_transitive_conflict(self):
+        # project -> app1 -> lib/0.1
+        #    \---- > app2 -> lib/0.2
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("lib/0.2", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1")
+                                      .with_requirement("app1/0.1", include=False, link=False,
+                                                        build=False, run=True)
+                                      .with_requirement("app2/0.1", include=False, link=False,
+                                                        build=False, run=True),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+
+    def test_project_require_apps_transitive(self):
+        # project -> app1 (app type) -> lib
+        #    \---- > app2 (app type) --/
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_package_type("application").
+                           with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_package_type("application").
+                           with_requirement("lib/0.1"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1").with_requires("app1/0.1",
+                                                                                   "app2/0.1"))
+
+        self.assertEqual(4, len(deps_graph.nodes))
+        project = deps_graph.root
+        app1 = project.dependencies[0].dst
+        app2 = project.dependencies[1].dst
+        lib = app1.dependencies[0].dst
+        lib2 = app2.dependencies[0].dst
+
+        assert lib is lib2
+
+        self._check_node(project, "project/0.1@", deps=[app1, app2], dependents=[])
+        self._check_node(app1, "app1/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(app2, "app2/0.1#123", deps=[lib], dependents=[project])
+        self._check_node(lib, "lib/0.1#123", deps=[], dependents=[app1, app2])
+
+        # node, include, link, build, run
+        _check_transitive(project, [(app1, False, False, False, True),
+                                    (app2, False, False, False, True),
+                                    (lib, False, False, False, None)])
+
+    def test_project_require_apps_transitive_conflict(self):
+        # project -> app1 (app type) -> lib/0.1
+        #    \---- > app2 (app type) -> lib/0.2
+
+        self._cache_recipe("lib/0.1", GenConanfile())
+        self._cache_recipe("lib/0.2", GenConanfile())
+        self._cache_recipe("app1/0.1", GenConanfile().with_package_type("application").
+                           with_requirement("lib/0.1"))
+        self._cache_recipe("app2/0.1", GenConanfile().with_package_type("application").
+                           with_requirement("lib/0.2"))
+
+        deps_graph = self.build_graph(GenConanfile("project", "0.1").with_requires("app1/0.1",
+                                                                                   "app2/0.1"),
+                                      install=False)
+
+        assert deps_graph.error.kind == GraphError.VERSION_CONFLICT
+
     def test_project_require_private(self):
         # project -(private)-> app1 -> lib1
         #    \----(private)- > app2 -> lib2

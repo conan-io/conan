@@ -13,6 +13,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 @pytest.mark.tool_cmake
 def test_transitive_headers_not_public():
     c = TestClient()
@@ -54,6 +55,7 @@ def test_transitive_headers_not_public():
     assert "Cannot open include file: 'liba.h'" in c.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 @pytest.mark.tool_cmake
 def test_shared_requires_static():
     c = TestClient()

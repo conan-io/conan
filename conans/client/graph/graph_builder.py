@@ -61,7 +61,7 @@ class DepsGraphBuilder(object):
         # print("  Expanding require ", node, "->", require)
         previous = node.check_downstream_exists(require)
         prev_node = None
-        if previous:
+        if previous is not None:
             prev_require, prev_node, base_previous = previous
             # print("  Existing previous requirements from ", base_previous, "=>", prev_require)
 
@@ -85,7 +85,7 @@ class DepsGraphBuilder(object):
             return new_node
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
-            require.compute_run(prev_node)
+            require.process_package_type(prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node)
 
@@ -255,7 +255,7 @@ class DepsGraphBuilder(object):
         self._prepare_node(new_node, profile_host, profile_build, graph_lock,
                            node.ref, down_options)
 
-        require.compute_run(new_node)
+        require.process_package_type(new_node)
         graph.add_node(new_node)
         graph.add_edge(node, new_node, require)
         if node.propagate_downstream(require, new_node):

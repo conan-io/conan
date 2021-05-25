@@ -40,15 +40,20 @@ class Requirement:
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
-    def compute_run(self, node):
+    def process_package_type(self, node):
         """ if the run=None, it means it can be deduced from the shared option of the dependency
         """
         if self.run is not None:
             return
-        up_shared = str(node.conanfile.options.get_safe("shared"))
-        if up_shared == "True":
+        pkg_type = node.package_type
+        if pkg_type is PackageType.APP:
+            # Change the default requires include&link to False for APPS
+            self.include = False
+            self.link = False
             self.run = True
-        elif up_shared == "False":
+        elif pkg_type in (PackageType.SHARED, PackageType.RUN):
+            self.run = True
+        elif pkg_type in (PackageType.STATIC, PackageType.HEADER):
             self.run = False
 
     def __hash__(self):
@@ -110,7 +115,9 @@ class Requirement:
                 downstream_require = Requirement(require.ref, include=False, link=True, run=True)
             elif pkg_type is PackageType.RUN:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
-            else:  # unknown
+            elif pkg_type is PackageType.APP:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
+            else:
                 assert pkg_type is PackageType.UNKNOWN
                 # Consumers will need to find it at build time too
                 downstream_require = Requirement(require.ref, include=True, link=True, run=True)
@@ -119,9 +126,11 @@ class Requirement:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
             elif pkg_type is PackageType.RUN:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-            elif pkg_type is PackageType.STATIC:  # static
+            elif pkg_type is PackageType.STATIC:
                 downstream_require = Requirement(require.ref, include=False, link=True, run=False)
-            else:  # unknown
+            elif pkg_type is PackageType.APP:
+                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+            else:
                 assert pkg_type is PackageType.UNKNOWN
                 downstream_require = Requirement(require.ref, include=True, link=True, run=False)
         elif dep_pkg_type is PackageType.HEADER:

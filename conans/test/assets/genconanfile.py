@@ -19,6 +19,7 @@ class GenConanfile(object):
         self._imports = ["from conans import ConanFile"]
         self._name = name
         self._version = version
+        self._package_type = None
         self._settings = None
         self._options = None
         self._generators = None
@@ -43,6 +44,10 @@ class GenConanfile(object):
         self._short_paths = None
         self._exports_sources = None
         self._exports = None
+
+    def with_package_type(self, value):
+        self._package_type = value
+        return self
 
     def with_short_paths(self, value):
         self._short_paths = value
@@ -210,6 +215,10 @@ class GenConanfile(object):
     @property
     def _version_render(self):
         return "version = '{}'".format(self._version)
+
+    @property
+    def _package_type_render(self):
+        return "package_type = '{}'".format(self._package_type)
 
     @property
     def _provides_render(self):
@@ -391,7 +400,7 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        for member in ("name", "version", "provides", "deprecated", "short_paths", "exports_sources",
+        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths", "exports_sources",
                        "exports", "generators", "requires", "build_requires", "test_requires",
                        "requirements", "build_requirements", "scm", "revision_mode", "settings",
                        "options", "default_options", "build_messages", "package_method",
