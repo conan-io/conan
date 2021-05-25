@@ -95,8 +95,6 @@ if not which("svn"):
 
 if not which("autoconf") or not which("automake"):
     tools_available.remove("autotools")
-if not which("bazel"):
-    tools_available.remove("bazel")
 if not which("meson"):
     tools_available.remove("meson")
 if not which("pkg-config"):
