@@ -546,5 +546,5 @@ def test_build_policy_never():
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install pkg/1.0@ --build")
-    assert "pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache" in client.out
+    assert f"pkg/1.0:{NO_SETTINGS_PACKAGE_ID} - Cache" in client.out
     assert "pkg/1.0: Calling build()" not in client.out

@@ -9,7 +9,7 @@ from conans.client.tools.files import load
 
 class MarkDownGeneratorTest(unittest.TestCase):
 
-    @pytest.mark.xfail(reason="Generator markdown to be revisited")
+    @pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
     def test_cmake_find_filename(self):
         conanfile = textwrap.dedent("""
                     from conans import ConanFile
@@ -29,6 +29,7 @@ class MarkDownGeneratorTest(unittest.TestCase):
         self.assertIn("Generates the file FindFooBar.cmake", content)
         self.assertIn("find_package(FooBar)", content)
 
+    @pytest.mark.xfail(reason="Generator markdown to be updated with new transitive_deps visit")
     def test_with_build_modules(self):
         conanfile = textwrap.dedent("""
                     import os
