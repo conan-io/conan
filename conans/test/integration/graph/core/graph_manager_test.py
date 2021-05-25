@@ -812,6 +812,29 @@ class TransitiveOverridesGraphTest(GraphManagerTest):
         dep2 = app.dependencies[1].dst
 
 
+class PureOverrideTest(GraphManagerTest):
+
+    def test_diamond(self):
+        # app -> libb0.1 -> liba0.2 (overriden to lib0.2)
+        #    \-> ---(override)------ ->/
+        self.recipe_cache("liba/0.1")
+        self.recipe_cache("liba/0.2")
+        self.recipe_cache("libb/0.1", ["liba/0.1"])
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libb/0.1")
+                                           .with_requirement("liba/0.2", override=True))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.2#123", dependents=[libb])
+
+
 class TestProjectApp(GraphManagerTest):
     """
     Emulating a project that can gather multiple applications and other resources and build a

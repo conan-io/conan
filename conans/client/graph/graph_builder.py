@@ -39,6 +39,8 @@ class DepsGraphBuilder(object):
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
                 (require, node) = open_requires.popleft()
+                if require.override:
+                    continue
                 new_node = self._expand_require(require, node, dep_graph, check_updates, update,
                                                 remotes, profile_host, profile_build, graph_lock)
                 if new_node:
@@ -67,7 +69,7 @@ class DepsGraphBuilder(object):
                 raise GraphError.loop(node, require, prev_node)
 
             prev_ref = prev_node.ref if prev_node else prev_require.ref
-            if prev_require.force:  # override
+            if prev_require.force or prev_require.override:  # override
                 require.ref = prev_ref
             else:
                 self._conflicting_version(require, node, graph, update, check_updates, remotes,
