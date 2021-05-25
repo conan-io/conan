@@ -13,6 +13,7 @@ from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
 
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 class HeaderOnlyLibTestClient(TestClient):
     header = """
         #include <iostream>
@@ -77,6 +78,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
         self.save(files)
 
 
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
 class SettingsAndOptionsTest(unittest.TestCase):
 

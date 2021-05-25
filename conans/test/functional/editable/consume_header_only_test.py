@@ -13,6 +13,7 @@ from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
 
 
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
 class HeaderOnlyLibTestClient(TestClient):
     header = textwrap.dedent("""\
@@ -82,6 +83,8 @@ class HeaderOnlyLibTestClient(TestClient):
                    "src/include-local/hello.hpp": self.header.format(word=hello_word,
                                                                      origin='local')})
 
+
+@pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
 class EditableReferenceTest(unittest.TestCase):
 
