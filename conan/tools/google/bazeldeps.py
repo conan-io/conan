@@ -106,7 +106,7 @@ class BazelDeps(object):
 
         if local_repositories:
             function_content = "\n".join(local_repositories)
-            function_content = textwrap.indent(function_content, '    ')
+            function_content = '    '.join(line for line in function_content.splitlines(True))
         else:
             function_content = '    pass'
 
