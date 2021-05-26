@@ -298,7 +298,7 @@ class GenConanfile(object):
     def _requirements_render(self):
         lines = ["", "    def requirements(self):"]
         for ref, kwargs in self._requirements:
-            args = ", ".join("{}={}".format(k,  f'"{v}"' if not isinstance(v, bool) else v)
+            args = ", ".join("{}={}".format(k, f'"{v}"' if isinstance(v, str) else v)
                              for k, v in kwargs.items())
             lines.append('        self.requires("{}", {})'.format(ref, args))
         return "\n".join(lines)
@@ -401,10 +401,10 @@ class GenConanfile(object):
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
-        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths", "exports_sources",
-                       "exports", "generators", "requires", "build_requires", "test_requires",
-                       "requirements", "build_requirements", "scm", "revision_mode", "settings",
-                       "options", "default_options", "build_messages", "package_method",
+        for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
+                       "exports_sources", "exports", "generators", "requires", "build_requires",
+                       "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
+                       "settings", "options", "default_options", "build_messages", "package_method",
                        "package_info", "package_id_lines", "test_lines"
                        ):
             v = getattr(self, "_{}".format(member), None)
