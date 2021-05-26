@@ -446,4 +446,4 @@ class RemoveWithoutUserChannel(unittest.TestCase):
         # Now remove remotely
         self.client.run("remove lib/1.0 -f -r default")
         self.client.run("install lib/1.0@", assert_error=True)
-        self.assertIn("ERROR: Unable to find 'lib/1.0' in remotes", self.client.out)
+        self.assertIn("Unable to find 'lib/1.0' in remotes", self.client.out)

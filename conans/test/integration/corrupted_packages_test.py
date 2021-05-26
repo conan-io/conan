@@ -2,7 +2,6 @@ import os
 import unittest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.env_reader import get_env
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
 
@@ -49,7 +48,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing",
                       self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
@@ -60,7 +59,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
@@ -81,8 +80,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
-                      self.client.out)
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")
@@ -109,7 +107,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         os.unlink(self.manifest_path)
         # Try search
         self.client.run("search Pkg/0.1@user/testing -r default")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", self.client.out)
+        self.assertIn(f"Package_ID: {NO_SETTINGS_PACKAGE_ID}", self.client.out)
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
@@ -130,8 +128,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn("Pkg/0.1@user/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Missing",
-                      self.client.out)
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm")

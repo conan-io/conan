@@ -82,7 +82,6 @@ def setup_client_with_greetings():
         class GreetingsTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "CMakeDeps", "CMakeToolchain"
-            requires = "greetings/0.0.1"
 
             def build(self):
                 cmake = CMake(self)
@@ -101,7 +100,7 @@ def setup_client_with_greetings():
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(PackageTest CXX)
-        
+
         find_package(greetings)
 
         add_executable(example example.cpp)

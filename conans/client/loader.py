@@ -265,8 +265,7 @@ class ConanFileLoader(object):
         except Exception as e:
             raise ConanException("%s:\n%s" % (path, str(e)))
         for reference in parser.requirements:
-            ref = ConanFileReference.loads(reference)  # Raise if invalid
-            conanfile.requires.add_ref(ref)
+            conanfile.requires(reference)
         for build_reference in parser.build_requirements:
             ConanFileReference.loads(build_reference)
             if not hasattr(conanfile, "build_requires"):
@@ -298,7 +297,7 @@ class ConanFileLoader(object):
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         for reference in references:
-            conanfile.requires.add_ref(reference)
+            conanfile.requires(repr(reference))
 
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True

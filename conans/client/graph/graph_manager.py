@@ -193,7 +193,7 @@ class GraphManager(object):
             if require:
                 require.ref = require.range_ref = create_reference
             else:
-                conanfile.requires.add_ref(create_reference)
+                conanfile.requires(repr(create_reference))
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)

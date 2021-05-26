@@ -17,6 +17,8 @@ def pkg_cmake(name, version, requires=None):
             exports = "*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
+            options = {{"shared": [True, False]}}
+            default_options = {{"shared": False}}
             generators = "CMakeToolchain", "CMakeDeps"
 
             def build(self):
