@@ -1,10 +1,12 @@
 import errno
 import os
+import platform
+import subprocess
 
+from conans.client.downloaders.download import run_downloader
+from conans.client.tools.files import unzip, which
 from conans.errors import ConanException
 from conans.util.files import decode_text, to_file_bytes
-from conans.client.tools.files import unzip
-from conans.client.downloaders.download import run_downloader
 
 
 def load(conanfile, path, binary=False, encoding="auto"):
@@ -123,9 +125,9 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
     config = conanfile.conf
 
     # It might be possible that users provide their own requester
-    retry = retry if retry is not None else int(config["tools.files.download"].retry)
+    retry = retry if retry is not None else int(config["tools.files.download:retry"])
     retry = retry if retry is not None else 1
-    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download"].retry_wait)
+    retry_wait = retry_wait if retry_wait is not None else int(config["tools.files.download:retry_wait"])
     retry_wait = retry_wait if retry_wait is not None else 5
 
     checksum = sha256 or sha1 or md5
@@ -150,3 +152,32 @@ def download(conanfile, url, filename, verify=True, out=None, retry=None, retry_
                 out.warn(message + " Trying another mirror.")
         else:
             raise ConanException("All downloads from ({}) URLs have failed.".format(len(url)))
+
+
+def rename(conanfile, src, dst):
+    """
+    rename a file or folder to avoid "Access is denied" error on Windows
+    :param conanfile: conanfile object
+    :param src: Source file or folder
+    :param dst: Destination file or folder
+    :return: None
+    """
+    # FIXME: This function has been copied from legacy. Needs to fix: which() call and wrap subprocess call.
+    if os.path.exists(dst):
+        raise ConanException("rename {} to {} failed, dst exists.".format(src, dst))
+
+    if platform.system() == "Windows" and which("robocopy") and os.path.isdir(src):
+        # /move Moves files and directories, and deletes them from the source after they are copied.
+        # /e Copies subdirectories. Note that this option includes empty directories.
+        # /ndl Specifies that directory names are not to be logged.
+        # /nfl Specifies that file names are not to be logged.
+        process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
+                                   stdout=subprocess.PIPE)
+        process.communicate()
+        if process.returncode > 7:  # https://ss64.com/nt/robocopy-exit.html
+            raise ConanException("rename {} to {} failed.".format(src, dst))
+    else:
+        try:
+            os.rename(src, dst)
+        except Exception as err:
+            raise ConanException("rename {} to {} failed: {}".format(src, dst, err))

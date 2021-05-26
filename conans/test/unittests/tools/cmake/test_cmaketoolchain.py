@@ -15,12 +15,15 @@ def conanfile():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
     c.initialize(Settings({"os": ["Windows"],
-                           "compiler": ["gcc"],
+                           "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]}), EnvValues())
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.libcxx = "libstdc++"
     c.conf = Conf()
+    c.folders.set_base_generators(".")
     return c
 
 
@@ -109,3 +112,14 @@ def test_extend_block(conanfile):
     content = toolchain.content
     assert 'Hello ReleaseSuper!!' in content
     assert 'CMAKE_BUILD_TYPE' not in content
+
+
+def test_user_toolchain(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.pre_blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
+    content = toolchain.content
+    assert 'include(myowntoolchain.cmake)' in content
+
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert 'include(' not in content
