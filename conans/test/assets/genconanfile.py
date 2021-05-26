@@ -298,7 +298,8 @@ class GenConanfile(object):
     def _requirements_render(self):
         lines = ["", "    def requirements(self):"]
         for ref, kwargs in self._requirements:
-            args = ", ".join("{}={}".format(k, v) for k, v in kwargs.items())
+            args = ", ".join("{}={}".format(k,  f'"{v}"' if not isinstance(v, bool) else v)
+                             for k, v in kwargs.items())
             lines.append('        self.requires("{}", {})'.format(ref, args))
         return "\n".join(lines)
 

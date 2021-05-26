@@ -245,8 +245,8 @@ class UploadTest(unittest.TestCase):
             return gzopen_without_timestamps(name, mode, fileobj, **kwargs)
         with patch('conans.client.cmd.uploader.gzopen_without_timestamps', new=gzopen_patched):
             client.run("upload * --confirm --all", assert_error=True)
-            self.assertIn(f"ERROR: Hello0/1.2.1@user/testing:{NO_SETTINGS_PACKAGE_ID}"
-                          ": Upload package to 'default' failed: Error gzopen conan_package.tgz",
+            self.assertIn(f"ERROR: Hello0/1.2.1@user/testing:{NO_SETTINGS_PACKAGE_ID}: "
+                          "Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
             download_folder = client.cache.package_layout(pref.ref).download_package(pref)

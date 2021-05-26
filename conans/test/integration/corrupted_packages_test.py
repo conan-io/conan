@@ -48,7 +48,8 @@ class CorruptedPackagesTest(unittest.TestCase):
         # Try fresh install
         self.client.run("remove * -f")
         self.client.run("install Pkg/0.1@user/testing", assert_error=True)
-        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing", self.client.out)
+        self.assertIn(f"Pkg/0.1@user/testing:{NO_SETTINGS_PACKAGE_ID} - Missing",
+                      self.client.out)
         # Try upload of fresh package
         self.client.run("create . Pkg/0.1@user/testing")
         self.client.run("upload * --all --confirm -r default")
