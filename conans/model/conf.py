@@ -71,7 +71,9 @@ class Conf(object):
         :param other: other has less priority than current one
         :type other: Conf
         """
-        self._values = {**other._values, **self._values}
+        for k, v in other._values.items():
+            if k not in self._values:
+                self._values[k] = v
 
     @property
     def sha(self):
