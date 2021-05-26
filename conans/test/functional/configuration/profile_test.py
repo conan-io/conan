@@ -393,7 +393,7 @@ class DefaultNameConan(ConanFile):
     name = "DefaultName"
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
-    requires = "Hello0/0.1@lasote/stable"
+    generators = "VirtualEnv"
 
     def build(self):
         # Print environment vars
@@ -471,9 +471,9 @@ class DefaultNameConan(ConanFile):
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
 
-    def config(self):
+    def requirements(self):
         if self.settings.os == "Windows":
-            self.requires.add("WinRequire/0.1@lasote/stable")
+            self.requires("WinRequire/0.1@lasote/stable")
 
 '''
         files = {"conanfile.py": conanfile}
@@ -570,7 +570,7 @@ class ProfileAggregationTest(unittest.TestCase):
 
         self.client.save({CONANFILE: self.consumer})
         self.client.run("info . --profile profile1 --profile profile2")
-        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
@@ -599,7 +599,7 @@ class ProfileAggregationTest(unittest.TestCase):
     def test_export_pkg(self):
         self.client.run("export-pkg . lib/1.0@user/channel -pr profile1 -pr profile2")
         # ID for the expected settings applied: x86, Visual Studio 15,...
-        self.assertIn("b786e9ece960c3a76378ca4d5b0d0e922f4cedc1", self.client.out)
+        self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
     def test_profile_crazy_inheritance(self):
         profile1 = dedent("""
