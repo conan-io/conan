@@ -174,6 +174,7 @@ class NewCppInfo(object):
             for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 setattr(self.components[None], n, [])
 
+            self.components[None]._generator_properties = {}
             for name in cnames:
                 component = components[name]
                 for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
@@ -185,17 +186,14 @@ class NewCppInfo(object):
 
                 # NOTE: The properties are not aggregated because they might refer only to the
                 # component like "cmake_target_name" describing the target name FOR THE component
-                # not the namespace. The build_modules should be declared in the global one.
+                # not the namespace.
                 # We only aggregate manually the "cmake_build_modules" that is the one replacing
                 # the old cpp_info.components["foo"].build_modules
                 if component._generator_properties:
                     for gen_name, props in component._generator_properties.items():
-                        if props["cmake_build_modules"]:
+                        if props.get("cmake_build_modules"):
                             dest = self.components[None]._generator_properties
-                            if dest.get(gen_name) is None:
-                                dest[gen_name] = {}
-                            if dest[gen_name].get("cmake_build_modules") is None:
-                                dest[gen_name]["cmake_build_modules"] = []
+                            dest.setdefault(gen_name, {}).setdefault("cmake_build_modules", [])
                             for new_value in props["cmake_build_modules"]:
                                 if new_value not in dest[gen_name]["cmake_build_modules"]:
                                     dest[gen_name]["cmake_build_modules"].append(new_value)
