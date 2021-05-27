@@ -688,11 +688,15 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a():
     client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . updep.pkg.team/0.1@")
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             exports = '*'
+            requires = "updep.pkg.team/0.1@"
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -721,7 +725,7 @@ def test_build_vs_project_with_a():
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . mydep/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
+    client.run('create . mydep.pkg.team/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -729,7 +733,7 @@ def test_build_vs_project_with_a():
 
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
-            requires = "mydep/0.1@"
+            requires = "mydep.pkg.team/0.1@"
             generators = "MSBuildDeps", "MSBuildToolchain"
             def build(self):
                 msbuild = MSBuild(self)
