@@ -59,7 +59,7 @@ class Block(object):
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
 
     def context(self):
-        raise NotImplementedError()
+        return {}
 
     @property
     def template(self):
@@ -414,6 +414,25 @@ class UserToolchain(Block):
         return {"user_toolchain": user_toolchain or self.user_toolchain}
 
 
+class CMakeFlagsInitBlock(Block):
+    template = textwrap.dedent("""
+        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        """)
+
+
+class TryCompileBlock(Block):
+    template = textwrap.dedent("""
+        get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
+        if(_CMAKE_IN_TRY_COMPILE)
+            message(STATUS "Running toolchain IN_TRY_COMPILE")
+            return()
+        endif()
+        """)
+
+
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
         {% if generator_platform %}
@@ -556,24 +575,9 @@ class CMakeToolchain(object):
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
-        {% for conan_block in conan_pre_blocks %}
+        {% for conan_block in conan_blocks %}
         {{ conan_block }}
         {% endfor %}
-
-        get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
-        if(_CMAKE_IN_TRY_COMPILE)
-            message(STATUS "Running toolchain IN_TRY_COMPILE")
-            return()
-        endif()
-
-        {% for conan_block in conan_main_blocks %}
-        {{ conan_block }}
-        {% endfor %}
-
-        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
 
         # Variables
         {% for it, value in variables.items() %}
@@ -597,38 +601,34 @@ class CMakeToolchain(object):
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
-        self.pre_blocks = ToolchainBlocks(self._conanfile, self,
-                                          [("user_toolchain", UserToolchain),
-                                           ("generic_system", GenericSystemBlock),
-                                           ("android_system", AndroidSystemBlock),
-                                           ("ios_system", AppleSystemBlock)])
-
-        self.main_blocks = ToolchainBlocks(self._conanfile, self,
-                                           [("find_paths", FindConfigFiles),
-                                            ("fpic", FPicBlock),
-                                            ("rpath", SkipRPath),
-                                            ("arch_flags", ArchitectureBlock),
-                                            ("libcxx", GLibCXXBlock),
-                                            ("vs_runtime", VSRuntimeBlock),
-                                            ("cppstd", CppStdBlock),
-                                            ("shared", SharedLibBock),
-                                            ("parallel", ParallelBlock)])
+        self.blocks = ToolchainBlocks(self._conanfile, self,
+                                      [("user_toolchain", UserToolchain),
+                                       ("generic_system", GenericSystemBlock),
+                                       ("android_system", AndroidSystemBlock),
+                                       ("apple_system", AppleSystemBlock),
+                                       ("fpic", FPicBlock),
+                                       ("arch_flags", ArchitectureBlock),
+                                       ("libcxx", GLibCXXBlock),
+                                       ("vs_runtime", VSRuntimeBlock),
+                                       ("cppstd", CppStdBlock),
+                                       ("parallel", ParallelBlock),
+                                       ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("try_compile", TryCompileBlock),
+                                       ("find_paths", FindConfigFiles),
+                                       ("rpath", SkipRPath),
+                                       ("shared", SharedLibBock)])
 
     def _context(self):
         """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
-
-        pre_blocks = self.pre_blocks.process_blocks()
-        main_blocks = self.main_blocks.process_blocks()
-
+        blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "conan_pre_blocks": pre_blocks,
-            "conan_main_blocks": main_blocks,
+            "conan_blocks": blocks,
         }
 
         return ctxt_toolchain
