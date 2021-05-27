@@ -3,12 +3,16 @@ import textwrap
 
 import pytest
 
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 """
 If we have a BR with transitive requires we won't generate 'xxx-config.cmake' files for them
 but neither will be included as find_dependencies()
 """
+
 
 @pytest.fixture
 def client():
@@ -47,32 +51,13 @@ def client():
 
 def test_zlib_not_included(client):
 
-    main = textwrap.dedent("""
-    #include "doxygen.h"
-    int main(){
-        return foo;
-    }
-    """)
-    cmake = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(foo)
-    set(CMAKE_CXX_COMPILER_WORKS 1)
-    set(CMAKE_CXX_ABI_COMPILED 1)
-    find_package(doxygen)
-    add_executable(main main.cpp)
-    """)
+    main = gen_function_cpp(name="main", include="doxygen.h")
+    cmake = gen_cmakelists(find_package=["doxygen"], appsources=["main.cpp"], appname="main")
 
-    conanfile_consumer = textwrap.dedent('''
-    from conans import ConanFile
-    from conans.tools import save, chdir
-    import os
+    conanfile_consumer = GenConanfile().with_build_requirement(ref="doxygen/1.0")\
+        .with_generator("CMakeDeps").with_generator("CMakeToolchain")\
+        .with_settings("arch", "os", "build_type", "compiler")
 
-    class Consumer(ConanFile):
-        settings = "build_type", "os", "arch", "compiler"
-        build_requires = "doxygen/1.0"
-        generators = "CMakeDeps", "CMakeToolchain"
-
-    ''')
     client.save({"main.cpp": main, "CMakeLists.txt": cmake, "conanfile.py": conanfile_consumer},
                 clean_first=True)
     client.run("install . -pr:h=default -pr:b=default")

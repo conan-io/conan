@@ -231,14 +231,19 @@ class GraphBinariesAnalyzer(object):
         metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
+
+        metadata = metadata or package_layout.load_metadata()
         if not remote:
             # If the remote_name is not given, follow the binary remote, or the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            metadata = metadata or package_layout.load_metadata()
-            remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+            if pref.id in metadata.packages:
+                remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+            else:
+                remote_name = metadata.recipe.remote
             remote = remotes.get(remote_name)
 
-        if package_layout.package_id_exists(pref.id):  # Binary already in cache, check for updates
+        if package_layout.package_id_exists(pref.id) and pref.id in metadata.packages:
+            # Binary already in cache, check for updates
             self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
             recipe_hash = None
         else:  # Binary does NOT exist locally

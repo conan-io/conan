@@ -16,6 +16,13 @@ class CMakeDeps(object):
         self._conanfile = conanfile
         self.arch = self._conanfile.settings.get_safe("arch")
         self.configuration = str(self._conanfile.settings.build_type)
+        if hasattr(self._conanfile, "settings_build"):
+            self.configuration_build = str(self._conanfile.settings_build.get_safe("build_type"))
+            self.arch_build = str(self._conanfile.settings_build.get_safe("arch"))
+        else:
+            self.configuration_build = self.configuration
+            self.arch_build = self.arch
+
         self.configurations = [v for v in conanfile.settings.build_type.values_range if v != "None"]
         # By default, the build modules are generated for host context only
         self.build_context_build_modules = []

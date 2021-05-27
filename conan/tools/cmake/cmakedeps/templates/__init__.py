@@ -54,9 +54,24 @@ class CMakeDepsFileTemplate(object):
         raise NotImplementedError()
 
     @property
+    def configuration(self):
+        if not self.conanfile.is_build_context:
+            return self.cmakedeps.configuration \
+                if self.cmakedeps.configuration else None
+        else:
+            return self.cmakedeps.configuration_build\
+                if self.cmakedeps.configuration_build else None
+
+    @property
+    def arch(self):
+        if not self.conanfile.is_build_context:
+            return self.cmakedeps.arch if self.cmakedeps.arch else None
+        else:
+            return self.cmakedeps.arch_build if self.cmakedeps.arch_build else None
+
+    @property
     def config_suffix(self):
-        return "_{}".format(self.cmakedeps.configuration.upper()) \
-            if self.cmakedeps.configuration else ""
+        return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
     def get_target_namespace(self):
         return get_target_namespace(self.conanfile)
