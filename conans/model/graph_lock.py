@@ -510,6 +510,12 @@ class GraphLock(object):
         the lockfile. Requires remove their version ranges.
         """
         if not node.graph_lock_node:
+            # For --build-require case, this is the moment the build require can be locked
+            if build_requires and node.recipe == RECIPE_VIRTUAL:
+                for require in requires:
+                    node_id = self._find_node_by_requirement(require.ref)
+                    locked_ref = self._nodes[node_id].ref
+                    require.lock(locked_ref, node_id)
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
             # If it is a test_package, with a build_require, it shouldn't even try to find it in
