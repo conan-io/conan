@@ -294,8 +294,12 @@ class AndroidSystemBlock(Block):
 
 class IOSSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if CMAKE_SYSTEM_NAME is defined %}
         set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
+        {% endif %}
+        {% if CMAKE_SYSTEM_VERSION is defined %}
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
+        {% endif %}
         set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
@@ -304,12 +308,13 @@ class IOSSystemBlock(Block):
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         """)
 
-    def _get_architecture(self):
+    def _get_architecture(self, host_context=True):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device
         # can be generated if multiple archs are specified:
         # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        arch = self._conanfile.settings.get_safe("arch")
+        arch = self._conanfile.settings.get_safe("arch") \
+            if host_context else self._conanfile.settings_build.get_safe("arch")
         return {"x86": "i386",
                 "x86_64": "x86_64",
                 "armv8": "arm64",
@@ -334,9 +339,12 @@ class IOSSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if os_ not in ('iOS', "watchOS", "tvOS"):
-            return
         host_architecture = self._get_architecture()
+        build_architecture = self._get_architecture(host_context=False)
+
+        if os_ not in ('iOS', "watchOS", "tvOS") and host_architecture == build_architecture:
+            return
+
         host_os = self._conanfile.settings.get_safe("os")
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
@@ -346,10 +354,12 @@ class IOSSystemBlock(Block):
         #       default to os.version?
         ctxt_toolchain = {
             "CMAKE_OSX_ARCHITECTURES": host_architecture,
-            "CMAKE_SYSTEM_NAME": host_os,
-            "CMAKE_SYSTEM_VERSION": host_os_version,
             "CMAKE_OSX_SYSROOT": host_sdk_name
         }
+        if os_ in ('iOS', "watchOS", "tvOS"):
+            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
+            ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
+
         return ctxt_toolchain
 
 

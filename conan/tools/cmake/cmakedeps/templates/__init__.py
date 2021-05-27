@@ -83,7 +83,7 @@ def get_component_alias(req, comp_name):
     if comp_name not in req.new_cpp_info.components:
         # foo::foo might be referencing the root cppinfo
         if req.ref.name == comp_name:
-            return comp_name
+            return get_target_namespace(req)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=req.ref.name, cname=comp_name))
     ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")

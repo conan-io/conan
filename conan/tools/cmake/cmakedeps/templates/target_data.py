@@ -30,7 +30,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         components_cpp = self.get_required_components_cpp()
         components_renames = " ".join([component_rename for component_rename, _ in
                                        reversed(components_cpp)])
-        dependency_filenames = self.get_dependency_filenames()
+        # For the build requires, we don't care about the transitive (only runtime for the br)
+        # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
+        dependency_filenames = self.get_dependency_filenames() \
+            if not self.conanfile.is_build_context else []
         package_folder = self.conanfile.package_folder.replace('\\', '/')\
                                                       .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
