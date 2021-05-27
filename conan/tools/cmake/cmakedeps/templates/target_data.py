@@ -32,6 +32,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                                        reversed(components_cpp)])
         # For the build requires, we don't care about the transitive (only runtime for the br)
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
+        # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
+        # for example a framework test won't be a build require but a "test/not public" require.
         dependency_filenames = self.get_dependency_filenames() \
             if not self.conanfile.is_build_context else []
         package_folder = self.conanfile.package_folder.replace('\\', '/')\

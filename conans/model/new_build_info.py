@@ -174,7 +174,6 @@ class NewCppInfo(object):
             for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
                 setattr(self.components[None], n, [])
 
-            self.components[None]._generator_properties = {}
             for name in cnames:
                 component = components[name]
                 for n in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
