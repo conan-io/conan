@@ -158,8 +158,6 @@ class ConanFile(object):
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
-        self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
-
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
 
         # layout() method related variables:
@@ -238,6 +236,9 @@ class ConanFile(object):
 
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
+
+        if not hasattr(self, "virtualenv"):  # Allow the user to override it with True or False
+            self.virtualenv = True
 
     @property
     def new_cpp_info(self):
