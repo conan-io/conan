@@ -61,7 +61,6 @@ def test_component_aggregation():
     cppinfo.components["c1"].defines = ["defines_c1"]
     cppinfo.components["c1"].set_property("my_foo", "jander")
     cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
-    cppinfo.components["c1"].set_property("cmake_build_modules", ["build_module_c1"])
 
 
     ret = cppinfo.copy()
@@ -80,8 +79,7 @@ def test_component_aggregation():
     # for example, cannot be aggregated. But "cmake_build_modules" is aggregated.
     assert ret.get_property("my_foo") is None
     assert ret.get_property("my_foo2", "other_gen") is None
-    assert ret.get_property("cmake_build_modules") == ["build_module_c1", "build_module_c2",
-                                                       "build_module_c22"]
+    assert ret.get_property("cmake_build_modules") == None
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
@@ -165,11 +163,14 @@ def test_from_old_cppinfo_components():
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
                                                           "var2_{}_2".format(n)]
 
-    assert cppinfo.components["foo"].get_property("cmake_build_modules") == \
-           ["foo_my_scripts.cmake", "foo.cmake"]
+    # The .build_modules are assigned to the root cppinfo because it is something
+    # global that make no sense to set as a component property
+    assert cppinfo.components["foo"].get_property("cmake_build_modules") is None
     assert cppinfo.components["foo"].requires == ["my_req::my_component"]
-    assert cppinfo.components["foo2"].get_property("cmake_build_modules") == \
-           ["foo2_my_scripts.cmake"]
+    assert cppinfo.components["foo2"].get_property("cmake_build_modules") is None
+
+    assert cppinfo.get_property("cmake_build_modules") == \
+           ["foo_my_scripts.cmake", "foo.cmake", "foo2_my_scripts.cmake"]
 
 
 def test_from_old_cppinfo_no_components():

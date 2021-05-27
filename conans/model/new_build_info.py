@@ -187,16 +187,6 @@ class NewCppInfo(object):
                 # NOTE: The properties are not aggregated because they might refer only to the
                 # component like "cmake_target_name" describing the target name FOR THE component
                 # not the namespace.
-                # We only aggregate manually the "cmake_build_modules" that is the one replacing
-                # the old cpp_info.components["foo"].build_modules
-                if component._generator_properties:
-                    for gen_name, props in component._generator_properties.items():
-                        if props.get("cmake_build_modules"):
-                            dest = self.components[None]._generator_properties
-                            dest.setdefault(gen_name, {}).setdefault("cmake_build_modules", [])
-                            for new_value in props["cmake_build_modules"]:
-                                if new_value not in dest[gen_name]["cmake_build_modules"]:
-                                    dest[gen_name]["cmake_build_modules"].append(new_value)
 
                 if component.requires:
                     if self.components[None].requires is None:
@@ -276,7 +266,9 @@ def from_old_cppinfo(old):
 
     for cname, c in old.components.items():
         if c.build_modules:
-            _copy_build_modules_to_property(c, ret.components[cname])
+            # The build modules properties are applied to the root cppinfo, not per component
+            # because it is something global that makes no sense to be set at a component
+            _copy_build_modules_to_property(c, ret)
     return ret
 
 
