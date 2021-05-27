@@ -313,6 +313,8 @@ class AppleSystemBlock(Block):
         # for iOS a FAT library valid for simulator and device
         # can be generated if multiple archs are specified:
         # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
+        if not host_context and not hasattr(self._conanfile, 'settings_build'):
+            return None
         arch = self._conanfile.settings.get_safe("arch") \
             if host_context else self._conanfile.settings_build.get_safe("arch")
         return {"x86": "i386",
@@ -342,7 +344,8 @@ class AppleSystemBlock(Block):
         host_architecture = self._get_architecture()
         # We could be cross building from Macos x64 to Macos armv8 (m1)
         build_architecture = self._get_architecture(host_context=False)
-        if os_ not in ('iOS', "watchOS", "tvOS") and host_architecture == build_architecture:
+        if os_ not in ('iOS', "watchOS", "tvOS") and \
+            (not build_architecture or host_architecture == build_architecture):
             return
 
         host_os = self._conanfile.settings.get_safe("os")
