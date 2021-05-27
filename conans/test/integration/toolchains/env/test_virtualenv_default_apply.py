@@ -6,6 +6,7 @@ import pytest
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.tools import save
 
 
 @pytest.fixture
@@ -18,12 +19,15 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create . foo/1.0@")
+    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     return client
 
 
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
 def test_virtualenv_deactivated(client, default_virtualenv):
-    format_str = {True: "virtualenv = True", False: "virtualenv = False", None: ""}[default_virtualenv]
+    format_str = {True: "virtualenv = True",
+                  False: "virtualenv = False",
+                  None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conans import ConanFile
     from conans.client.runner import ConanRunner
