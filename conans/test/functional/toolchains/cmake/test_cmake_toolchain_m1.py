@@ -4,6 +4,7 @@ import platform
 
 import pytest
 
+from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
@@ -26,14 +27,9 @@ def test_m1(op_system):
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    cmakelists = textwrap.dedent("""
-    cmake_minimum_required(VERSION 3.15)
-    project(MyApp CXX)
-    set(hello_DIR "${CMAKE_BINARY_DIR}")
-    find_package(hello)
-    add_executable(main main.cpp)
-    target_link_libraries(main hello::hello)
-    """)
+    cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"] )
+    # Cross building for iOS needs this trick to look outside the system frameworks dirs
+    cmakelists = 'set(hello_DIR "${CMAKE_BINARY_DIR}")\n' + cmakelists
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
