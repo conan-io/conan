@@ -292,7 +292,7 @@ class AndroidSystemBlock(Block):
         return ctxt_toolchain
 
 
-class IOSSystemBlock(Block):
+class AppleSystemBlock(Block):
     template = textwrap.dedent("""
         {% if CMAKE_SYSTEM_NAME is defined %}
         set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
@@ -598,7 +598,7 @@ class CMakeToolchain(object):
                                           [("user_toolchain", UserToolchain),
                                            ("generic_system", GenericSystemBlock),
                                            ("android_system", AndroidSystemBlock),
-                                           ("ios_system", IOSSystemBlock)])
+                                           ("ios_system", AppleSystemBlock)])
 
         self.main_blocks = ToolchainBlocks(self._conanfile, self,
                                            [("find_paths", FindConfigFiles),
