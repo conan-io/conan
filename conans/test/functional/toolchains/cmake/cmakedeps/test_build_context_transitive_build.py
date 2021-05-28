@@ -54,9 +54,20 @@ def test_zlib_not_included(client):
     main = gen_function_cpp(name="main", include="doxygen.h")
     cmake = gen_cmakelists(find_package=["doxygen"], appsources=["main.cpp"], appname="main")
 
-    conanfile_consumer = GenConanfile().with_build_requirement(ref="doxygen/1.0")\
-        .with_generator("CMakeDeps").with_generator("CMakeToolchain")\
-        .with_settings("arch", "os", "build_type", "compiler")
+    conanfile_consumer = textwrap.dedent('''
+        from conans import ConanFile
+        from conan.tools.cmake import CMakeDeps
+
+        class Consumer(ConanFile):
+            settings = "build_type", "os", "arch", "compiler"
+            build_requires = ["doxygen/1.0"]
+            generators = "CMakeToolchain"
+
+            def generate(self):
+                d = CMakeDeps(self)
+                d.build_context_activated = ["doxygen"]
+                d.generate()
+        ''')
 
     client.save({"main.cpp": main, "CMakeLists.txt": cmake, "conanfile.py": conanfile_consumer},
                 clean_first=True)
@@ -72,4 +83,3 @@ def test_zlib_not_included(client):
 
     # The -config files for zlib are not there
     assert not os.path.exists(os.path.join(client.current_folder, "zlib-config.cmake"))
-

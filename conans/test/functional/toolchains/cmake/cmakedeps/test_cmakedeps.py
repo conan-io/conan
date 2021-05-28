@@ -223,13 +223,14 @@ def test_custom_configuration(client):
 
            def generate(self):
                cmake = CMakeDeps(self)
-               cmake.configuration_build = "RelWithDebInfo"
+               cmake.configuration = "Debug"
+               cmake.build_context_activated = ["liba"]
                cmake.build_context_suffix["liba"] = "_build"
                cmake.generate()
        """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("install . -pr:h default -s:h build_type=Debug"
+    client.run("install . -pr:h default -s:b build_type=RelWithDebInfo"
                " -pr:b default -s:b arch=x86 --build missing")
     curdir = client.current_folder
     data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
