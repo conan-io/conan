@@ -15,7 +15,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "{}-{}".format(self.file_name, self.configuration)
+        data_fname = "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
