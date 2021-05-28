@@ -783,16 +783,16 @@ class CIBuildRequiresTwoProfilesTest(unittest.TestCase):
         json_file = client.load("build_order.json")
         to_build = json.loads(json_file)
         if client.cache.config.revisions_enabled:
-            build_order = [[['br/0.1@#f3367e0e7d170aa12abccb175fee5f97',
-                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '5']],
-                           [['PkgA/0.1@#189390ce059842ce984e0502c52cf736',
-                             '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9', 'host', '4']],
-                           [['PkgB/0.1@#fa97c46bf83849a5db4564327b3cfada',
-                             '096f747d204735584fa0115bcbd7482d424094bc', 'host', '3']],
-                           [['PkgC/0.1@#c6f95948619d28d9d96b0ae86c46a482',
-                             'f6d5dbb6f309dbf8519278bae8d07d3b739b3dec', 'host', '2']],
-                           [['PkgD/0.1@#fce78c934bc0de73eeb05eb4060fc2b7',
-                             'de4467a3fa6ef01b09b7464e85553fb4be2d2096', 'host', '1']]]
+            build_order = [[['br/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                             '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '5']],
+                           [['PkgA/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                             'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '4']],
+                           [['PkgB/0.1@#4b1da86739946fe16a9545d1f6bc9022',
+                             '4a87f1e30266a1c1c685c0904cfb137a3dba11c7', 'host', '3']],
+                           [['PkgC/0.1@#3e1048668b2a795f6742d04971f11a7d',
+                             '50ad117314ca51a58e427a26f264e27e79b94cd4', 'host', '2']],
+                           [['PkgD/0.1@#e6cc0ca095ca32bba1a6dff0af6f4eb3',
+                             'e66cc39a683367fdd17218bdbab7d6e95c0414e1', 'host', '1']]]
         else:
             build_order = [[['br/0.1@', '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '5']],
                            [['PkgA/0.1@', 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '4']],
