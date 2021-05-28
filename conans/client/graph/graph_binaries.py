@@ -166,15 +166,18 @@ class GraphBinariesAnalyzer(object):
                 locked.unlock_prev()
 
             if node.package_id != locked.package_id:  # It was a compatible package
-                node._package_id = locked.package_id  # FIXME: Ugly definition of private
                 # https://github.com/conan-io/conan/issues/9002
                 # We need to iterate to search the compatible combination
                 for compatible_package in node.conanfile.compatible_packages:
                     comp_package_id = compatible_package.package_id()
                     if comp_package_id == locked.package_id:
+                        node._package_id = locked.package_id  # FIXME: Ugly definition of private
                         node.conanfile.settings.values = compatible_package.settings
                         node.conanfile.options.values = compatible_package.options
                         break
+                else:
+                    raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
+                                         % (repr(locked.ref), node.package_id, locked.package_id))
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
