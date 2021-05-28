@@ -36,12 +36,12 @@ class MSBuildDeps(object):
     _conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="ConanDependencies">
+          <ImportGroup Label="PropertySheets">
             {% for dep in deps %}
             <Import Condition="'$(conan_{{dep}}_props_imported)' != 'True'" Project="conan_{{dep}}.props"/>
             {% endfor %}
           </ImportGroup>
-          <ImportGroup Label="ConanPackageVariables">
+          <ImportGroup Label="PropertySheets">
             <Import Project="{{vars_filename}}"/>
           </ImportGroup>
           <PropertyGroup>
@@ -78,7 +78,7 @@ class MSBuildDeps(object):
     _dep_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="Configurations">
+          <ImportGroup Label="PropertySheets">
           </ImportGroup>
           <PropertyGroup>
             <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
@@ -89,7 +89,7 @@ class MSBuildDeps(object):
     _all_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="ConanDependencies">
+          <ImportGroup Label="PropertySheets">
           </ImportGroup>
         </Project>
         """)
