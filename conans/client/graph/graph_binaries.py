@@ -61,7 +61,10 @@ class GraphBinariesAnalyzer(object):
 
             if self._cache.config.revisions_enabled:
                 metadata = package_layout.load_metadata()
-                rec_rev = metadata.packages[pref.id].recipe_revision
+
+                rec_rev = metadata.packages[
+                    pref.id].recipe_revision if pref.id in metadata.packages else None
+
                 if rec_rev and rec_rev != node.ref.revision:
                     node.conanfile.output.warn("The package {} doesn't belong to the installed "
                                                "recipe revision, removing folder".format(pref))
