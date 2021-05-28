@@ -19,7 +19,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        deps_targets_names = self.get_deps_targets_names()
+        deps_targets_names = self.get_deps_targets_names() \
+            if not self.conanfile.is_build_context else []
         return {"pkg_name": self.pkg_name,
                 "target_namespace": self.target_namespace,
                 "config_suffix": self.config_suffix,

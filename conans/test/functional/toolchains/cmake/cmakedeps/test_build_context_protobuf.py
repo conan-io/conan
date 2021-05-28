@@ -24,8 +24,8 @@ def client():
             """
 
             with chdir(self.package_folder):
-                save("include_build/protobuff.h", "int protubuff_stuff(){ return 1; }")
-                save("include_host/protobuff.h", "int protubuff_stuff(){ return 2; }")
+                save("include_build/protobuf.h", "int protubuff_stuff(){ return 1; }")
+                save("include_host/protobuf.h", "int protubuff_stuff(){ return 2; }")
                 save("build/my_tools_build.cmake", my_cmake_module % "1")
                 save("build/my_tools_host.cmake", my_cmake_module % "2")
 
@@ -37,13 +37,13 @@ def client():
 
     ''')
     c.save({"conanfile.py": conanfile})
-    c.run("create . protobuff/1.0@")
+    c.run("create . protobuf/1.0@")
     return c
 
 
 main = textwrap.dedent("""
     #include <iostream>
-    #include "protobuff.h"
+    #include "protobuf.h"
     #include "foo_generated.h"
 
 
@@ -76,8 +76,8 @@ consumer_conanfile = textwrap.dedent("""
         class Consumer(ConanFile):
             settings = "build_type", "os", "arch", "compiler"
             exports_sources = "CMakeLists.txt", "main.cpp"
-            requires = "protobuff/1.0"
-            build_requires = "protobuff/1.0"
+            requires = "protobuf/1.0"
+            build_requires = "protobuf/1.0"
 
             def generate(self):
                 toolchain = CMakeToolchain(self)
@@ -103,16 +103,17 @@ def test_build_modules_from_build_context(client):
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(protobuff)
-        find_package(protobuff_BUILD)
+        find_package(protobuf)
+        find_package(protobuf_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff::protobuff)
+        target_link_libraries(app protobuf::protobuf)
         """)
 
     cmake_deps_conf = """
-        deps.build_context_build_modules = ["protobuff"]
-        deps.build_context_suffix = {"protobuff": "_BUILD"}
+        deps.build_context_activated = ["protobuf"]
+        deps.build_context_build_modules = ["protobuf"]
+        deps.build_context_suffix = {"protobuf": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -131,16 +132,17 @@ def test_build_modules_and_target_from_build_context(client):
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(protobuff)
-        find_package(protobuff_BUILD)
+        find_package(protobuf)
+        find_package(protobuf_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff_BUILD::protobuff_BUILD)
+        target_link_libraries(app protobuf_BUILD::protobuf_BUILD)
         """)
 
     cmake_deps_conf = """
-        deps.build_context_build_modules = ["protobuff"]
-        deps.build_context_suffix = {"protobuff": "_BUILD"}
+        deps.build_context_activated = ["protobuf"]
+        deps.build_context_build_modules = ["protobuf"]
+        deps.build_context_suffix = {"protobuf": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -159,15 +161,16 @@ def test_build_modules_from_host_and_target_from_build_context(client):
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(protobuff)
-        find_package(protobuff_BUILD)
+        find_package(protobuf)
+        find_package(protobuf_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff_BUILD::protobuff_BUILD)
+        target_link_libraries(app protobuf_BUILD::protobuf_BUILD)
         """)
 
     cmake_deps_conf = """
-        deps.build_context_suffix = {"protobuff": "_BUILD"}
+        deps.build_context_activated = ["protobuf"]
+        deps.build_context_suffix = {"protobuf": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -186,16 +189,16 @@ def test_build_modules_and_target_from_host_context(client):
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(protobuff)
-        find_package(protobuff_BUILD)
+        find_package(protobuf)
+        find_package(protobuf_BUILD)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff::protobuff)
+        target_link_libraries(app protobuf::protobuf)
         """)
 
     cmake_deps_conf = """
         deps.build_context_build_modules = []
-        deps.build_context_suffix = {"protobuff": "_BUILD"}
+        deps.build_context_suffix = {"protobuf": "_BUILD"}
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
@@ -214,10 +217,10 @@ def test_exception_when_not_prefix_specified(client):
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
-        find_package(protobuff)
+        find_package(protobuf)
         add_executable(app main.cpp)
         foo_generate()
-        target_link_libraries(app protobuff::protobuff)
+        target_link_libraries(app protobuf::protobuf)
         """)
 
     cmake_deps_conf = """
@@ -228,6 +231,6 @@ def test_exception_when_not_prefix_specified(client):
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default", assert_error=True)
-    assert "The package 'protobuff' exists both as 'require' and as 'build require'. " \
+    assert "The package 'protobuf' exists both as 'require' and as 'build require'. " \
            "You need to specify a suffix using the 'build_context_suffix' attribute at the " \
            "CMakeDeps generator." in client.out

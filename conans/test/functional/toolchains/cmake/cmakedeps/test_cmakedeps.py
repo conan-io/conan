@@ -205,3 +205,40 @@ def test_do_not_mix_cflags_cxxflags():
            "$<$<COMPILE_LANGUAGE:CXX>:three;four>;$<$<COMPILE_LANGUAGE:C>:one;two>>" in client.out
     assert "cflags: one;two" in client.out
     assert "cxxflags: three;four" in client.out
+
+
+def test_custom_configuration(client):
+    """  The configuration may differ from the build context and the host context"""
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conan.tools.cmake import CMakeDeps
+
+       class Consumer(ConanFile):
+           name = "consumer"
+           version = "1.0"
+           settings = "os", "compiler", "arch", "build_type"
+           requires = "liba/0.1"
+           build_requires = "liba/0.1"
+           generators = "CMakeToolchain"
+
+           def generate(self):
+               cmake = CMakeDeps(self)
+               cmake.configuration = "Debug"
+               cmake.build_context_activated = ["liba"]
+               cmake.build_context_suffix["liba"] = "_build"
+               cmake.generate()
+       """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -pr:h default -s:b build_type=RelWithDebInfo"
+               " -pr:b default -s:b arch=x86 --build missing")
+    curdir = client.current_folder
+    data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
+    data_name_context_host = "liba-debug-x86_64-data.cmake"
+    assert os.path.exists(os.path.join(curdir, data_name_context_build))
+    assert os.path.exists(os.path.join(curdir, data_name_context_host))
+
+    assert "set(liba_build_INCLUDE_DIRS_RELWITHDEBINFO" in \
+           open(os.path.join(curdir, data_name_context_build)).read()
+    assert "set(liba_INCLUDE_DIRS_DEBUG" in \
+           open(os.path.join(curdir, data_name_context_host)).read()
