@@ -157,18 +157,27 @@ class GraphBinariesAnalyzer(object):
 
         # If it has lock
         locked = node.graph_lock_node
-        if locked and locked.package_id:  # if package_id = None, nothing to lock here
-            # First we update the package_id, just in case there are differences or something
-            if locked.package_id != node.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
-                raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
-                                     % (repr(locked.ref), node.package_id, locked.package_id))
-            locked.package_id = node.package_id  # necessary for PACKAGE_ID_UNKNOWN
+        if locked and locked.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD:
                 locked.unlock_prev()
+
+            if node.package_id != locked.package_id:  # It was a compatible package
+                # https://github.com/conan-io/conan/issues/9002
+                # We need to iterate to search the compatible combination
+                for compatible_package in node.conanfile.compatible_packages:
+                    comp_package_id = compatible_package.package_id()
+                    if comp_package_id == locked.package_id:
+                        node._package_id = locked.package_id  # FIXME: Ugly definition of private
+                        node.conanfile.settings.values = compatible_package.settings
+                        node.conanfile.options.values = compatible_package.options
+                        break
+                else:
+                    raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
+                                         % (repr(locked.ref), node.package_id, locked.package_id))
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
