@@ -516,7 +516,6 @@ class CompatibleIDsTest(unittest.TestCase):
         self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
                       " created", client.out)
 
-        # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("lock create conanfile.py -s os=Windows --lockfile-out=deps.lock")
         client.run("install conanfile.py --lockfile=deps.lock")
