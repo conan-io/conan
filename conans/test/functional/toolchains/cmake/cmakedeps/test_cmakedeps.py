@@ -232,8 +232,8 @@ def test_custom_configuration(client):
     client.run("install . -pr:h default -s:h build_type=Debug"
                " -pr:b default -s:b arch=x86 --build missing")
     curdir = client.current_folder
-    data_name_context_build = "liba_build-RelWithDebInfo-x86-data.cmake"
-    data_name_context_host = "liba-Debug-x86_64-data.cmake"
+    data_name_context_build = "liba_build-relwithdebinfo-x86-data.cmake"
+    data_name_context_host = "liba-debug-x86_64-data.cmake"
     assert os.path.exists(os.path.join(curdir, data_name_context_build))
     assert os.path.exists(os.path.join(curdir, data_name_context_host))
 
