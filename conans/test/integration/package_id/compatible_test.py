@@ -511,7 +511,6 @@ class CompatibleIDsTest(unittest.TestCase):
             """)
 
         client.save({"conanfile.py": conanfile})
-        # Create package with gcc 4.8
         client.run("create . pkg/0.1@user/stable -s os=Linux")
         self.assertIn("pkg/0.1@user/stable: PackageInfo!: OS: Linux!", client.out)
         self.assertIn("pkg/0.1@user/stable: Package 'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31'"
