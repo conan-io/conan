@@ -36,12 +36,12 @@ class MSBuildDeps(object):
     _conf_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="ConanDependencies">
+          <ImportGroup Label="PropertySheets">
             {% for dep in deps %}
             <Import Condition="'$(conan_{{dep}}_props_imported)' != 'True'" Project="conan_{{dep}}.props"/>
             {% endfor %}
           </ImportGroup>
-          <ImportGroup Label="ConanPackageVariables">
+          <ImportGroup Label="PropertySheets">
             <Import Project="{{vars_filename}}"/>
           </ImportGroup>
           <PropertyGroup>
@@ -78,7 +78,7 @@ class MSBuildDeps(object):
     _dep_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="Configurations">
+          <ImportGroup Label="PropertySheets">
           </ImportGroup>
           <PropertyGroup>
             <conan_{{name}}_props_imported>True</conan_{{name}}_props_imported>
@@ -89,7 +89,7 @@ class MSBuildDeps(object):
     _all_props = textwrap.dedent("""\
         <?xml version="1.0" encoding="utf-8"?>
         <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-          <ImportGroup Label="ConanDependencies">
+          <ImportGroup Label="PropertySheets">
           </ImportGroup>
         </Project>
         """)
@@ -230,7 +230,8 @@ class MSBuildDeps(object):
         import_group = dom.getElementsByTagName('ImportGroup')[0]
         children = import_group.getElementsByTagName("Import")
         for dep in deps:
-            conf_props_name = "conan_%s.props" % dep.ref.name
+            dep_name = dep.ref.name.replace(".", "_")
+            conf_props_name = "conan_%s.props" % dep_name
             for node in children:
                 if conf_props_name == node.getAttribute("Project"):
                     # the import statement already exists
@@ -238,7 +239,7 @@ class MSBuildDeps(object):
             else:
                 # create a new import statement
                 import_node = dom.createElement('Import')
-                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep.ref.name
+                dep_imported = "'$(conan_%s_props_imported)' != 'True'" % dep_name
                 import_node.setAttribute('Project', conf_props_name)
                 import_node.setAttribute('Condition', dep_imported)
                 # add it to the import group
@@ -262,8 +263,9 @@ class MSBuildDeps(object):
         result[general_name] = self._all_props_file(general_name, direct_deps)
         for dep in self._conanfile.dependencies.transitive_host_requires:
             dep_name = dep.ref.name
+            dep_name = dep_name.replace(".", "_")
             cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
-            public_deps = [d.ref.name for d in dep.dependencies.requires]
+            public_deps = [d.ref.name.replace(".", "_") for d in dep.dependencies.requires]
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
             result[vars_props_name] = self._vars_props_file(dep_name, cpp_info, public_deps)
