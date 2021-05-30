@@ -68,7 +68,8 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen",
+                                "BazelDeps", "BazelToolchain"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -121,6 +122,12 @@ class GeneratorManager(object):
         elif generator_name == "VirtualEnv":
             from conan.tools.env.virtualenv import VirtualEnv
             return VirtualEnv
+        elif generator_name == "BazelDeps":
+            from conan.tools.google import BazelDeps
+            return BazelDeps
+        elif generator_name == "BazelToolchain":
+            from conan.tools.google import BazelToolchain
+            return BazelToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
