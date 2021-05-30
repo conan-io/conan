@@ -18,6 +18,8 @@ def pkg_cmake(name, version, requires=None):
             exports = "*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
+            options = {{"shared": [True, False]}}
+            default_options = {{"shared": False}}
             generators = "CMakeToolchain", "CMakeDeps"
 
             def build(self):
@@ -72,8 +74,8 @@ def pkg_cmake_app(name, version, requires=None):
                 cmake.build()
 
             def package(self):
-                self.copy("*.exe", dst="bin", keep_path=False)
-                self.copy("app", dst="bin", keep_path=False)
+                self.copy("*/app.exe", dst="bin", keep_path=False)
+                self.copy("*app", dst="bin", keep_path=False)
 
         """)
     deps = "requires = " + ", ".join('"{}"'.format(r) for r in requires) if requires else ""
