@@ -175,16 +175,18 @@ class GLibCXXBlock(Block):
 
 class SkipRPath(Block):
     template = textwrap.dedent("""
+        {% if skip_rpath %}
         set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
         # Policy CMP0068
         # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
         set(CMAKE_INSTALL_NAME_DIR "")
+        {% endif %}
         """)
 
+    skip_rpath = False
+
     def context(self):
-        if self._conanfile.settings.get_safe("os") != "Macos":
-            return
-        return {"skip_rpath": True}
+        return {"skip_rpath": self.skip_rpath}
 
 
 class ArchitectureBlock(Block):
