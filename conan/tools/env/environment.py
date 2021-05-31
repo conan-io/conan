@@ -3,6 +3,7 @@ import os
 import textwrap
 from collections import OrderedDict
 
+from conans.client.tools.env import _environment_add
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -223,6 +224,16 @@ class Environment:
                         new_value = new_value[:-1]
                     self._values[k] = new_value
         return self
+
+    def to_dict(self):
+        ret = OrderedDict()
+        for varname, varvalues in self._values.items():
+            value = self._format_value(varname, varvalues, "", os.pathsep)
+            ret[varname] = value
+        return ret
+
+    def apply(self):
+        return _environment_add(self.to_dict())
 
 
 class ProfileEnvironment:

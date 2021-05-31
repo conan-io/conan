@@ -282,3 +282,21 @@ def test_windows_case_insensitive():
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
+
+
+def test_to_dict():
+    env = Environment()
+    env.append("MyVar", "MyValue", separator="@")
+    ret = env.to_dict()
+    assert dict(ret) == {"MyVar": "@MyValue"}
+
+    env = Environment()
+    env.prepend("MyVar", "MyValue", separator="@")
+    ret = env.to_dict()
+    assert dict(ret) == {"MyVar": "MyValue@"}
+
+    env2 = Environment()
+    env2.define("MyVar", "MyValue2")
+    env.compose(env2)
+    ret = env.to_dict()
+    assert dict(ret) == {"MyVar": "MyValue@MyValue2"}
