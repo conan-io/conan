@@ -193,17 +193,10 @@ timer_cpp = textwrap.dedent("""
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
-    # FIXME: The crossbuild for iOS etc is failing with find_package because cmake ignore the
-    #        cmake_prefix_path to point only to the Frameworks of the system. The only fix found
-    #        would require to introduce something like "set (mylibrary_DIR "${CMAKE_BINARY_DIR}")"
-    #        at the toolchain (but it would require the toolchain to know about the deps)
-    #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
     test_cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
-        # set(CMAKE_FIND_DEBUG_MODE TRUE)
 
-        set (mylibrary_DIR "${CMAKE_BINARY_DIR}")
         find_package(mylibrary REQUIRED)
 
         add_executable(timer timer.cpp)

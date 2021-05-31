@@ -9,7 +9,7 @@ from jinja2 import Template
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, use_win_mingw
-from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration, get_file_name
 from conan.tools.microsoft.toolchain import write_conanvcvars, vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
@@ -223,6 +223,20 @@ class CppStdBlock(Block):
             cppstd = compiler_cppstd
             cppstd_extensions = "OFF"
         return {"cppstd": cppstd, "cppstd_extensions": cppstd_extensions}
+
+
+class FindPackageDirVarsBlock(Block):
+    template = textwrap.dedent("""
+        # Help locating the find_package config files
+        {% for name in find_names %}
+        set({{ name }}_DIR "${CMAKE_BINARY_DIR}")
+        {% endfor %}
+        """)
+
+    def context(self):
+        host_req = self._conanfile.dependencies.transitive_host_requires
+        names = [get_file_name(req) for req in host_req]
+        return {"find_names": names}
 
 
 class SharedLibBock(Block):
@@ -618,7 +632,8 @@ class CMakeToolchain(object):
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindConfigFiles),
                                        ("rpath", SkipRPath),
-                                       ("shared", SharedLibBock)])
+                                       ("shared", SharedLibBock),
+                                       ("find_package_dir_vars", FindPackageDirVarsBlock)])
 
     def _context(self):
         """ Returns dict, the context for the template
