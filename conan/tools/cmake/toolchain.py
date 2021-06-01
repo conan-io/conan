@@ -225,20 +225,6 @@ class CppStdBlock(Block):
         return {"cppstd": cppstd, "cppstd_extensions": cppstd_extensions}
 
 
-class FindPackageDirVarsBlock(Block):
-    template = textwrap.dedent("""
-        # Help locating the find_package config files
-        {% for name in find_names %}
-        set({{ name }}_DIR "${CMAKE_BINARY_DIR}")
-        {% endfor %}
-        """)
-
-    def context(self):
-        host_req = self._conanfile.dependencies.transitive_host_requires
-        names = [get_file_name(req) for req in host_req]
-        return {"find_names": names}
-
-
 class SharedLibBock(Block):
     template = textwrap.dedent("""
         message(STATUS "Conan toolchain: Setting BUILD_SHARED_LIBS= {{ shared_libs }}")
@@ -397,6 +383,12 @@ class FindConfigFiles(Block):
         {% if android_prefix_path %}
         set(CMAKE_FIND_ROOT_PATH {{ android_prefix_path }} ${CMAKE_FIND_ROOT_PATH})
         {% endif %}
+
+        # To support cross building to iOS, watchOS and tvOS where CMake looks for config files
+        # only in the system frameworks unless you declare the XXX_DIR variables
+        {% for name in find_names %}
+        set({{ name }}_DIR "{{ generators_folder }}")
+        {% endfor %}
         """)
 
     def context(self):
@@ -409,10 +401,17 @@ class FindConfigFiles(Block):
 
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
+
+        host_req = self._conanfile.dependencies.transitive_host_requires
+        find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
+        find_names = [get_file_name(req) for req in host_req] if find_names_needed else []
+
         return {"find_package_prefer_config": find_package_prefer_config,
                 "cmake_prefix_path": "${CMAKE_CURRENT_LIST_DIR}",
                 "cmake_module_path": "${CMAKE_CURRENT_LIST_DIR}",
-                "android_prefix_path": android_prefix}
+                "android_prefix_path": android_prefix,
+                "find_names": find_names,
+                "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
 
 
 class UserToolchain(Block):
@@ -632,8 +631,7 @@ class CMakeToolchain(object):
                                        ("try_compile", TryCompileBlock),
                                        ("find_paths", FindConfigFiles),
                                        ("rpath", SkipRPath),
-                                       ("shared", SharedLibBock),
-                                       ("find_package_dir_vars", FindPackageDirVarsBlock)])
+                                       ("shared", SharedLibBock)])
 
     def _context(self):
         """ Returns dict, the context for the template
