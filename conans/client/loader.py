@@ -295,7 +295,8 @@ class ConanFileLoader(object):
         conanfile.settings = profile_host.processed_settings.copy_values()
 
         if is_build_require:
-            conanfile.build_requires = [str(r) for r in references]
+            for reference in references:
+                conanfile.requires.build_require(repr(reference))
         else:
             for reference in references:
                 conanfile.requires(repr(reference))

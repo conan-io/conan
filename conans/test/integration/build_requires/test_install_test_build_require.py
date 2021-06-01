@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -150,7 +151,7 @@ def test_create_build_requires():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . br/0.1@  --build-require -s:h os=Linux -s:b os=Windows")
-    assert "br/0.1:3475bd55b91ae904ac96fde0f106a136ab951a5e" in client.out
+    assert "br/0.1:cf2e4ff978548fafd099ad838f9ecb8858bf25cb" in client.out
     assert "br/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31" not in client.out
     assert "br/0.1: MYOS=Windows!!!" in client.out
     assert "br/0.1: MYTARGET=Linux!!!" in client.out
@@ -159,9 +160,8 @@ def test_create_build_requires():
 
 def test_build_require_conanfile_text(client):
     client.save({"conanfile.txt": "[build_requires]\nmycmake/1.0"}, clean_first=True)
-    client.run("install . -g virtualenv")
-    cmd = ". ./activate.sh && mycmake.sh" if platform.system() != "Windows" else \
-        "activate.bat && mycmake.bat"
+    client.run("install . -g VirtualEnv")
+    cmd = environment_wrap_command("conanbuildenv", "mycmake.bat", cwd=client.current_folder)
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
@@ -169,9 +169,8 @@ def test_build_require_conanfile_text(client):
 
 
 def test_build_require_command_line_build_context(client):
-    client.run("install mycmake/1.0@ --build-require -g virtualenv -pr:b=default")
-    cmd = ". ./activate.sh && mycmake.sh" if platform.system() != "Windows" else \
-        "activate.bat && mycmake.bat"
+    client.run("install mycmake/1.0@ --build-require -g VirtualEnv -pr:b=default")
+    cmd = environment_wrap_command("conanbuildenv", "mycmake.bat", cwd=client.current_folder)
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out

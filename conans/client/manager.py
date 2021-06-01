@@ -18,7 +18,7 @@ from conans.model.graph_lock import GraphLockFile, GraphLock
 def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, profile_build,
                  graph_lock, root_ref, remotes=None, build_modes=None, update=False, generators=None,
                  no_imports=False, create_reference=None, recorder=None, lockfile_node_id=None,
-                 is_build_require=False, add_txt_generator=True):
+                 is_build_require=False):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators

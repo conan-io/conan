@@ -495,8 +495,7 @@ class ConanAPIV1(object):
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          update=update, generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id,
-                         is_build_require=is_build_require,
-                         add_txt_generator=False)
+                         is_build_require=is_build_require)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
