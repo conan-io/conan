@@ -207,8 +207,8 @@ def test_build_modules_and_target_from_host_context(client):
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default")
-    assert "-- Conan: Target declared 'protobuf::protobuf'" in client.out
-    assert "-- Conan: Target declared 'protobuf_BUILD::protobuf_BUILD'" in client.out
+    assert "Conan: Target declared 'protobuf::protobuf'" in client.out
+    assert "Conan: Target declared 'protobuf_BUILD::protobuf_BUILD'" in client.out
     assert "Library from host context!" in client.out
     assert "Generated code in host context!" in client.out
 
