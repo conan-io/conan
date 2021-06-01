@@ -59,7 +59,7 @@ class Block(object):
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
 
     def context(self):
-        raise NotImplementedError()
+        return {}
 
     @property
     def template(self):
@@ -175,16 +175,18 @@ class GLibCXXBlock(Block):
 
 class SkipRPath(Block):
     template = textwrap.dedent("""
+        {% if skip_rpath %}
         set(CMAKE_SKIP_RPATH 1 CACHE BOOL "rpaths" FORCE)
         # Policy CMP0068
         # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect install_name in OSX
         set(CMAKE_INSTALL_NAME_DIR "")
+        {% endif %}
         """)
 
+    skip_rpath = False
+
     def context(self):
-        if self._conanfile.settings.get_safe("os") != "Macos":
-            return
-        return {"skip_rpath": True}
+        return {"skip_rpath": self.skip_rpath}
 
 
 class ArchitectureBlock(Block):
@@ -292,10 +294,14 @@ class AndroidSystemBlock(Block):
         return ctxt_toolchain
 
 
-class IOSSystemBlock(Block):
+class AppleSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if CMAKE_SYSTEM_NAME is defined %}
         set(CMAKE_SYSTEM_NAME {{ CMAKE_SYSTEM_NAME }})
+        {% endif %}
+        {% if CMAKE_SYSTEM_VERSION is defined %}
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
+        {% endif %}
         set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
@@ -304,12 +310,15 @@ class IOSSystemBlock(Block):
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         """)
 
-    def _get_architecture(self):
+    def _get_architecture(self, host_context=True):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device
         # can be generated if multiple archs are specified:
         # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        arch = self._conanfile.settings.get_safe("arch")
+        if not host_context and not hasattr(self._conanfile, 'settings_build'):
+            return None
+        arch = self._conanfile.settings.get_safe("arch") \
+            if host_context else self._conanfile.settings_build.get_safe("arch")
         return {"x86": "i386",
                 "x86_64": "x86_64",
                 "armv8": "arm64",
@@ -334,9 +343,13 @@ class IOSSystemBlock(Block):
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        if os_ not in ('iOS', "watchOS", "tvOS"):
-            return
         host_architecture = self._get_architecture()
+        # We could be cross building from Macos x64 to Macos armv8 (m1)
+        build_architecture = self._get_architecture(host_context=False)
+        if os_ not in ('iOS', "watchOS", "tvOS") and \
+            (not build_architecture or host_architecture == build_architecture):
+            return
+
         host_os = self._conanfile.settings.get_safe("os")
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
@@ -346,10 +359,12 @@ class IOSSystemBlock(Block):
         #       default to os.version?
         ctxt_toolchain = {
             "CMAKE_OSX_ARCHITECTURES": host_architecture,
-            "CMAKE_SYSTEM_NAME": host_os,
-            "CMAKE_SYSTEM_VERSION": host_os_version,
             "CMAKE_OSX_SYSROOT": host_sdk_name
         }
+        if os_ in ('iOS', "watchOS", "tvOS"):
+            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
+            ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
+
         return ctxt_toolchain
 
 
@@ -399,6 +414,25 @@ class UserToolchain(Block):
         # This is global [conf] injection of extra toolchain files
         user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
         return {"user_toolchain": user_toolchain or self.user_toolchain}
+
+
+class CMakeFlagsInitBlock(Block):
+    template = textwrap.dedent("""
+        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
+        """)
+
+
+class TryCompileBlock(Block):
+    template = textwrap.dedent("""
+        get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
+        if(_CMAKE_IN_TRY_COMPILE)
+            message(STATUS "Running toolchain IN_TRY_COMPILE")
+            return()
+        endif()
+        """)
 
 
 class GenericSystemBlock(Block):
@@ -543,24 +577,9 @@ class CMakeToolchain(object):
 
         message("Using Conan toolchain through ${CMAKE_TOOLCHAIN_FILE}.")
 
-        {% for conan_block in conan_pre_blocks %}
+        {% for conan_block in conan_blocks %}
         {{ conan_block }}
         {% endfor %}
-
-        get_property( _CMAKE_IN_TRY_COMPILE GLOBAL PROPERTY IN_TRY_COMPILE )
-        if(_CMAKE_IN_TRY_COMPILE)
-            message(STATUS "Running toolchain IN_TRY_COMPILE")
-            return()
-        endif()
-
-        {% for conan_block in conan_main_blocks %}
-        {{ conan_block }}
-        {% endfor %}
-
-        set(CMAKE_CXX_FLAGS_INIT "${CONAN_CXX_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_C_FLAGS_INIT "${CONAN_C_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CONAN_SHARED_LINKER_FLAGS}" CACHE STRING "" FORCE)
-        set(CMAKE_EXE_LINKER_FLAGS_INIT "${CONAN_EXE_LINKER_FLAGS}" CACHE STRING "" FORCE)
 
         # Variables
         {% for it, value in variables.items() %}
@@ -584,38 +603,34 @@ class CMakeToolchain(object):
         self.variables = Variables()
         self.preprocessor_definitions = Variables()
 
-        self.pre_blocks = ToolchainBlocks(self._conanfile, self,
-                                          [("user_toolchain", UserToolchain),
-                                           ("generic_system", GenericSystemBlock),
-                                           ("android_system", AndroidSystemBlock),
-                                           ("ios_system", IOSSystemBlock)])
-
-        self.main_blocks = ToolchainBlocks(self._conanfile, self,
-                                           [("find_paths", FindConfigFiles),
-                                            ("fpic", FPicBlock),
-                                            ("rpath", SkipRPath),
-                                            ("arch_flags", ArchitectureBlock),
-                                            ("libcxx", GLibCXXBlock),
-                                            ("vs_runtime", VSRuntimeBlock),
-                                            ("cppstd", CppStdBlock),
-                                            ("shared", SharedLibBock),
-                                            ("parallel", ParallelBlock)])
+        self.blocks = ToolchainBlocks(self._conanfile, self,
+                                      [("user_toolchain", UserToolchain),
+                                       ("generic_system", GenericSystemBlock),
+                                       ("android_system", AndroidSystemBlock),
+                                       ("apple_system", AppleSystemBlock),
+                                       ("fpic", FPicBlock),
+                                       ("arch_flags", ArchitectureBlock),
+                                       ("libcxx", GLibCXXBlock),
+                                       ("vs_runtime", VSRuntimeBlock),
+                                       ("cppstd", CppStdBlock),
+                                       ("parallel", ParallelBlock),
+                                       ("cmake_flags_init", CMakeFlagsInitBlock),
+                                       ("try_compile", TryCompileBlock),
+                                       ("find_paths", FindConfigFiles),
+                                       ("rpath", SkipRPath),
+                                       ("shared", SharedLibBock)])
 
     def _context(self):
         """ Returns dict, the context for the template
         """
         self.preprocessor_definitions.quote_preprocessor_strings()
-
-        pre_blocks = self.pre_blocks.process_blocks()
-        main_blocks = self.main_blocks.process_blocks()
-
+        blocks = self.blocks.process_blocks()
         ctxt_toolchain = {
             "variables": self.variables,
             "variables_config": self.variables.configuration_types,
             "preprocessor_definitions": self.preprocessor_definitions,
             "preprocessor_definitions_config": self.preprocessor_definitions.configuration_types,
-            "conan_pre_blocks": pre_blocks,
-            "conan_main_blocks": main_blocks,
+            "conan_blocks": blocks,
         }
 
         return ctxt_toolchain

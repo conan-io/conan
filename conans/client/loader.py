@@ -287,7 +287,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None):
+                     build_requires_options=None, is_build_require=False):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
@@ -296,8 +296,11 @@ class ConanFileLoader(object):
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
-        for reference in references:
-            conanfile.requires(repr(reference))
+        if is_build_require:
+            conanfile.build_requires = [str(r) for r in references]
+        else:
+            for reference in references:
+                conanfile.requires(repr(reference))
 
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True

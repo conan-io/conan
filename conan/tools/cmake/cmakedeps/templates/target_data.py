@@ -15,22 +15,32 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "{}-{}".format(self.file_name, self.cmakedeps.configuration.lower())
-        if self.cmakedeps.arch:
-            data_fname += "-{}".format(self.cmakedeps.arch)
+        data_fname = "{}-{}".format(self.file_name, self.configuration.lower())
+        if self.arch:
+            data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
         return data_fname
 
     @property
     def context(self):
         global_cpp = self.get_global_cpp_cmake()
+        if not self.build_modules_activated:
+            global_cpp.build_modules_paths = ""
+
         components_cpp = self.get_required_components_cpp()
         components_renames = " ".join([component_rename for component_rename, _ in
                                        reversed(components_cpp)])
-        dependency_filenames = self.get_dependency_filenames()
+        # For the build requires, we don't care about the transitive (only runtime for the br)
+        # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
+        # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
+        # for example a framework test won't be a build require but a "test/not public" require.
+        dependency_filenames = self.get_dependency_filenames() \
+            if not self.conanfile.is_build_context else []
+        package_folder = self.conanfile.package_folder.replace('\\', '/')\
+                                                      .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
                 "pkg_name": self.pkg_name,
-                "package_folder": self.package_folder,
+                "package_folder": package_folder,
                 "config_suffix": self.config_suffix,
                 "components_renames": components_renames,
                 "components_cpp": components_cpp,

@@ -410,6 +410,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . ")
         client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
         client.run("create . ")
+        print(client.out)
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -692,11 +693,15 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a():
     client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . updep.pkg.team/0.1@")
     conanfile = textwrap.dedent("""
         from conans import ConanFile, CMake
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
             exports = '*'
+            requires = "updep.pkg.team/0.1@"
+
             def build(self):
                 cmake = CMake(self)
                 cmake.configure()
@@ -725,7 +730,7 @@ def test_build_vs_project_with_a():
                  "CMakeLists.txt": cmake,
                  "hello.cpp": hello_cpp,
                  "hello.h": hello_h})
-    client.run('create . mydep/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
+    client.run('create . mydep.pkg.team/0.1@ -s compiler="Visual Studio" -s compiler.version=15')
 
     consumer = textwrap.dedent("""
         from conans import ConanFile
@@ -733,7 +738,7 @@ def test_build_vs_project_with_a():
 
         class HelloConan(ConanFile):
             settings = "os", "build_type", "compiler", "arch"
-            requires = "mydep/0.1@"
+            requires = "mydep.pkg.team/0.1@"
             generators = "MSBuildDeps", "MSBuildToolchain"
             def build(self):
                 msbuild = MSBuild(self)
@@ -753,3 +758,46 @@ def test_build_vs_project_with_a():
     assert "hello: Release!" in client.out
     # TODO: This doesnt' work because get_vs_project_files() don't define NDEBUG correctly
     # assert "main: Release!" in client.out
+
+
+@pytest.mark.tool_visual_studio
+@pytest.mark.tool_cmake
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+def test_build_vs_project_with_test_requires():
+    client = TestClient()
+    client.save(pkg_cmake("updep.pkg.team", "0.1"))
+    client.run("create .  -s compiler.version=15")
+
+    client.save(pkg_cmake("mydep.pkg.team", "0.1", requires=["updep.pkg.team/0.1"]),
+                clean_first=True)
+    client.run("create .  -s compiler.version=15")
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        from conan.tools.microsoft import MSBuild
+
+        class HelloConan(ConanFile):
+            settings = "os", "build_type", "compiler", "arch"
+            generators = "MSBuildDeps", "MSBuildToolchain"
+
+            def build_requirements(self):
+                self.build_requires("mydep.pkg.team/0.1", force_host_context=True)
+
+            def build(self):
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.sln")
+        """)
+    files = get_vs_project_files()
+    main_cpp = gen_function_cpp(name="main", includes=["mydep_pkg_team"], calls=["mydep_pkg_team"])
+    files["MyProject/main.cpp"] = main_cpp
+    files["conanfile.py"] = consumer
+    props = os.path.join(client.current_folder, "conandeps.props")
+    old = r'<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />'
+    new = old + '<Import Project="{props}" />'.format(props=props)
+    files["MyProject/MyProject.vcxproj"] = files["MyProject/MyProject.vcxproj"].replace(old, new)
+    client.save(files, clean_first=True)
+    client.run('install . -s compiler.version=15')
+    client.run("build . -s compiler.version=15")
+    client.run_command(r"x64\Release\MyProject.exe")
+    assert "mydep_pkg_team: Release!" in client.out
+    assert "updep_pkg_team: Release!" in client.out

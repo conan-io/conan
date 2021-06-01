@@ -47,6 +47,8 @@ def test_component_aggregation():
     cppinfo.components["c2"].cxxflags = ["cxxflags_c2"]
     cppinfo.components["c2"].defines = ["defines_c2"]
     cppinfo.components["c2"].set_property("my_foo", ["bar", "bar2"])
+    cppinfo.components["c2"].set_property("cmake_build_modules", ["build_module_c2",
+                                                                  "build_module_c22"])
 
     cppinfo.components["c1"].requires = ["c2", "LIB_A::C1"]
     cppinfo.components["c1"].includedirs = ["includedir_c1"]
@@ -59,6 +61,7 @@ def test_component_aggregation():
     cppinfo.components["c1"].defines = ["defines_c1"]
     cppinfo.components["c1"].set_property("my_foo", "jander")
     cppinfo.components["c1"].set_property("my_foo2", "bar2", "other_gen")
+
 
     ret = cppinfo.copy()
     ret.aggregate_components()
@@ -73,9 +76,10 @@ def test_component_aggregation():
     assert ret.defines == ["defines_c1", "defines_c2"]
     # The properties are not aggregated because we cannot generalize the meaning of a property
     # that belongs to a component, it could make sense to aggregate it or not, "cmake_target_name"
-    # for example, cannot be aggregated
+    # for example, cannot be aggregated. But "cmake_build_modules" is aggregated.
     assert ret.get_property("my_foo") is None
     assert ret.get_property("my_foo2", "other_gen") is None
+    assert ret.get_property("cmake_build_modules") == None
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
@@ -159,11 +163,14 @@ def test_from_old_cppinfo_components():
         assert getattr(cppinfo.components["foo2"], n) == ["var2_{}_1".format(n),
                                                           "var2_{}_2".format(n)]
 
-    assert cppinfo.components["foo"].get_property("cmake_build_modules") == \
-           ["foo_my_scripts.cmake", "foo.cmake"]
+    # The .build_modules are assigned to the root cppinfo because it is something
+    # global that make no sense to set as a component property
+    assert cppinfo.components["foo"].get_property("cmake_build_modules") is None
     assert cppinfo.components["foo"].requires == ["my_req::my_component"]
-    assert cppinfo.components["foo2"].get_property("cmake_build_modules") == \
-           ["foo2_my_scripts.cmake"]
+    assert cppinfo.components["foo2"].get_property("cmake_build_modules") is None
+
+    assert cppinfo.get_property("cmake_build_modules") == \
+           ["foo_my_scripts.cmake", "foo.cmake", "foo2_my_scripts.cmake"]
 
 
 def test_from_old_cppinfo_no_components():

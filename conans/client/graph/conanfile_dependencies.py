@@ -1,4 +1,4 @@
-from conans.client.graph.graph import CONTEXT_HOST
+from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.errors import ConanException
 from conans.model.conanfile_interface import ConanFileInterface
 
@@ -26,6 +26,9 @@ class DependencyOrderedSet:
             raise ConanException("No dependency found")
         return result[0]
 
+    def __add__(self, other):
+        return DependencyOrderedSet(self._deps + other._deps)
+
 
 class ConanFileDependencies:
 
@@ -39,6 +42,18 @@ class ConanFileDependencies:
         """
         return DependencyOrderedSet([ConanFileInterface(edge.dst.conanfile)
                                      for edge in self._node.dependencies if edge.build_require])
+
+    @property
+    def build_requires_build_context(self):
+        """
+        :return: list of immediate direct build_requires, on build context.
+        FIXME: Why this method? To overcome the legacy use case without 2 profiles where everthing
+               is host, otherwise we can receive the same build require twice, one in
+               .transitive_host_requires and one in .build_requires
+        """
+        return DependencyOrderedSet([ConanFileInterface(edge.dst.conanfile)
+                                     for edge in self._node.dependencies if edge.build_require and
+                                     edge.dst.context == CONTEXT_BUILD])
 
     @property
     def requires(self):
