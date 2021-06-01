@@ -44,7 +44,7 @@ def test_basic():
     client.save({"conanfile.py": consumer,
                  "linux": linux_profile,
                  "android": android_profile}, clean_first=True)
-    client.run("install .")
+    client.run("install . -pr=linux")
     assert "conanfile.py: NDK: MY-NDK!!!" in client.out
 
     client.run("install . -pr=android")
