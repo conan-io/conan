@@ -2,8 +2,8 @@ import fnmatch
 import os
 import textwrap
 from collections import OrderedDict
+from contextlib import contextmanager
 
-from conans.client.tools.env import _environment_add
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -232,8 +232,16 @@ class Environment:
             ret[varname] = value
         return ret
 
+    @contextmanager
     def apply(self):
-        return _environment_add(self.to_dict())
+        apply_vars = self.to_dict()
+        old_env = dict(os.environ)
+        os.environ.update(apply_vars)
+        try:
+            yield
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
 
 
 class ProfileEnvironment:
