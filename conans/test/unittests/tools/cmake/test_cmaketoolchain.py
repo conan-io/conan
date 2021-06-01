@@ -35,29 +35,29 @@ def test_cmake_toolchain(conanfile):
 
 def test_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.pre_blocks.remove("generic_system")
+    toolchain.blocks.remove("generic_system")
     content = toolchain.content
     assert 'CMAKE_BUILD_TYPE' not in content
 
 
 def test_template_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.pre_blocks["generic_system"].template = ""
+    toolchain.blocks["generic_system"].template = ""
     content = toolchain.content
     assert 'CMAKE_BUILD_TYPE' not in content
 
 
 def test_template_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.pre_blocks["generic_system"].template
-    toolchain.pre_blocks["generic_system"].template = tmp.replace("CMAKE_BUILD_TYPE", "OTHER_THING")
+    tmp = toolchain.blocks["generic_system"].template
+    toolchain.blocks["generic_system"].template = tmp.replace("CMAKE_BUILD_TYPE", "OTHER_THING")
     content = toolchain.content
     assert 'set(OTHER_THING "Release"' in content
 
 
 def test_context_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.pre_blocks["generic_system"]
+    tmp = toolchain.blocks["generic_system"]
 
     def context(self):
         assert self
@@ -76,7 +76,7 @@ def test_replace_block(conanfile):
         def context(self):
             return {}
 
-    toolchain.pre_blocks["generic_system"] = MyBlock
+    toolchain.blocks["generic_system"] = MyBlock
     content = toolchain.content
     assert 'HelloWorld' in content
     assert 'CMAKE_BUILD_TYPE' not in content
@@ -91,7 +91,7 @@ def test_add_new_block(conanfile):
         def context(self):
             return {"myvar": "World"}
 
-    toolchain.pre_blocks["mynewblock"] = MyBlock
+    toolchain.blocks["mynewblock"] = MyBlock
     content = toolchain.content
     assert 'Hello World!!!' in content
     assert 'CMAKE_BUILD_TYPE' in content
@@ -108,7 +108,7 @@ def test_extend_block(conanfile):
             c["build_type"] = c["build_type"] + "Super"
             return c
 
-    toolchain.pre_blocks["generic_system"] = MyBlock
+    toolchain.blocks["generic_system"] = MyBlock
     content = toolchain.content
     assert 'Hello ReleaseSuper!!' in content
     assert 'CMAKE_BUILD_TYPE' not in content
@@ -116,7 +116,7 @@ def test_extend_block(conanfile):
 
 def test_user_toolchain(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.pre_blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
+    toolchain.blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
     content = toolchain.content
     assert 'include(myowntoolchain.cmake)' in content
 

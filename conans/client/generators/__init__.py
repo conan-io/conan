@@ -16,6 +16,7 @@ from .virtualrunenv import VirtualRunEnvGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
+from conans.model.conf import Conf
 
 
 class GeneratorManager(object):
@@ -33,7 +34,8 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen",
+                                "BazelDeps", "BazelToolchain"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -86,6 +88,12 @@ class GeneratorManager(object):
         elif generator_name == "VirtualEnv":
             from conan.tools.env.virtualenv import VirtualEnv
             return VirtualEnv
+        elif generator_name == "BazelDeps":
+            from conan.tools.google import BazelDeps
+            return BazelDeps
+        elif generator_name == "BazelToolchain":
+            from conan.tools.google import BazelToolchain
+            return BazelToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -144,6 +152,19 @@ class GeneratorManager(object):
                 raise ConanException(e)
 
 
+def _receive_conf(conanfile):
+    """  collect conf_info from the immediate build_requires, aggregate it and injects/update
+    current conf
+    """
+    # TODO: Open question 1: Only build_requires can define config?
+    # TODO: Only direct build_requires?
+    # TODO: Is really the best mechanism to define this info? Better than env-vars?
+    # Conf only for first level build_requires
+    for build_require in conanfile.dependencies.build_requires:
+        if build_require.conf_info:
+            conanfile.conf.compose(build_require.conf_info)
+
+
 def write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
         msg = ("\n*****************************************************************\n"
@@ -153,6 +174,8 @@ def write_toolchain(conanfile, path, output):
                "********************************************************************\n"
                "********************************************************************\n")
         raise ConanException(msg)
+
+    _receive_conf(conanfile)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")

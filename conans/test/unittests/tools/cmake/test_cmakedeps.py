@@ -14,6 +14,8 @@ from conans.model.ref import ConanFileReference
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps(using_properties):
     conanfile = ConanFile(Mock(), None)
+    conanfile._conan_node = Mock()
+    conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
@@ -32,6 +34,8 @@ def test_cpp_info_name_cmakedeps(using_properties):
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.context = "host"
 
     with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
         with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -41,6 +45,7 @@ def test_cpp_info_name_cmakedeps(using_properties):
             conanfile_dep.package_folder = "/path/to/folder_dep"
             conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
             conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+            conanfile.dependencies.build_requires_build_context = []
 
             cmakedeps = CMakeDeps(conanfile)
             files = cmakedeps.content
@@ -54,6 +59,8 @@ def test_cpp_info_name_cmakedeps(using_properties):
 @pytest.mark.parametrize("using_properties", [True, False])
 def test_cpp_info_name_cmakedeps_components(using_properties):
     conanfile = ConanFile(Mock(), None)
+    conanfile._conan_node = Mock()
+    conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
@@ -74,6 +81,8 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.context = "host"
 
     with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
         with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
@@ -83,6 +92,7 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
             conanfile_dep.package_folder = "/path/to/folder_dep"
             conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
             conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+            conanfile.dependencies.build_requires_build_context = []
 
             cmakedeps = CMakeDeps(conanfile)
             files = cmakedeps.content
@@ -99,6 +109,8 @@ def test_cpp_info_name_cmakedeps_components(using_properties):
 def test_cmake_deps_links_flags():
     # https://github.com/conan-io/conan/issues/8703
     conanfile = ConanFile(Mock(), None)
+    conanfile._conan_node = Mock()
+    conanfile._conan_node.context = "host"
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.initialize(Settings({"os": ["Windows"],
                                    "compiler": ["gcc"],
@@ -113,6 +125,8 @@ def test_cmake_deps_links_flags():
     cpp_info.exelinkflags = ["-OPT:NOICF"]
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.context = "host"
 
     with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
         with mock.patch('conans.ConanFile.dependencies',
@@ -125,6 +139,7 @@ def test_cmake_deps_links_flags():
             conanfile_dep.package_folder = "/path/to/folder_dep"
             conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
             conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+            conanfile.dependencies.build_requires_build_context = []
 
             cmakedeps = CMakeDeps(conanfile)
             files = cmakedeps.content

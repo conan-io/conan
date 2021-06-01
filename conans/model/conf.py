@@ -61,9 +61,19 @@ class Conf(object):
 
     def update(self, other):
         """
+        :param other: has more priority than current one
         :type other: Conf
         """
         self._values.update(other._values)
+
+    def compose(self, other):
+        """
+        :param other: other has less priority than current one
+        :type other: Conf
+        """
+        for k, v in other._values.items():
+            if k not in self._values:
+                self._values[k] = v
 
     @property
     def sha(self):

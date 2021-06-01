@@ -3,10 +3,8 @@ import textwrap
 
 import pytest
 
-from conans.client.tools import XCRun, to_apple_arch
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
-from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 

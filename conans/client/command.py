@@ -328,6 +328,8 @@ class Command(object):
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
+        parser.add_argument("--build-require", action='store_true', default=False,
+                            help='The provided reference is a build-require')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
@@ -363,7 +365,8 @@ class Command(object):
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
-                                      profile_build=profile_build)
+                                      profile_build=profile_build,
+                                      is_build_require=args.build_require)
         except ConanException as exc:
             info = exc.info
             raise
@@ -457,6 +460,8 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
+        parser.add_argument("--build-require", action='store_true', default=False,
+                            help='The provided reference is a build-require')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
@@ -512,7 +517,8 @@ class Command(object):
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
-                                                     lockfile_node_id=args.lockfile_node_id)
+                                                     lockfile_node_id=args.lockfile_node_id,
+                                                     is_build_require=args.build_require)
 
         except ConanException as exc:
             info = exc.info
