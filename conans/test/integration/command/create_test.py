@@ -540,3 +540,26 @@ class MyPkg(ConanFile):
         self.assertNotIn("requires", cpp_info_data["components"]["pkg1"])
         self.assertIn("libpkg2", cpp_info_data["components"]["pkg2"]["libs"])
         self.assertListEqual(["pkg1"], cpp_info_data["components"]["pkg2"]["requires"])
+
+    def test_mixing_aliases_and_fix_versions(self):
+        client = TestClient()
+
+        client.save({"conanfile.py": GenConanfile("ca", "1.0")})
+        client.run("create . user/testing")
+        client.run("alias ca/latest@user/testing ca/1.0@user/testing")
+
+        client.save({"conanfile.py": GenConanfile("cb", "1.0")
+                    .with_requirement("ca/1.0@user/testing")})
+        client.run("create . cb/1.0@user/testing")
+        client.run("alias cb/latest@user/testing cb/1.0@user/testing")
+
+        client.save({"conanfile.py": GenConanfile("cc", "1.0")
+                    .with_requirement("cb/latest@user/testing")
+                    .with_requirement("ca/latest@user/testing")})
+        client.run("create . user/testing")
+        client.run("alias cc/latest@user/testing cc/1.0@user/testing")
+
+        client.save({"conanfile.py": GenConanfile("cd", "1.0")
+                    .with_requirement("cb/latest@user/testing")
+                    .with_requirement("cc/latest@user/testing")})
+        client.run("create . user/testing", assert_error=False)
