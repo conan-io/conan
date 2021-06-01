@@ -1,5 +1,7 @@
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
+from conans.test.utils.tools import TestClient
 
 
 class TestAlias(GraphManagerTest):
@@ -9,7 +11,7 @@ class TestAlias(GraphManagerTest):
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
 
-        consumer = self.recipe_consumer("app/0.1", ["liba/latest"])
+        consumer = self.recipe_consumer("app/0.1", ["liba/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(2, len(deps_graph.nodes))
@@ -24,7 +26,7 @@ class TestAlias(GraphManagerTest):
         #   \ -> libb/0.1 -> liba/latest -(alias) ----->/
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
-        self.recipe_cache("libb/0.1", requires=["liba/latest"])
+        self.recipe_cache("libb/0.1", requires=["liba/(latest)"])
         consumer = self.recipe_consumer("app/0.1", ["liba/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
 
@@ -50,10 +52,10 @@ class TestAlias(GraphManagerTest):
 
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
-        self.recipe_cache("libb/0.1", requires=["liba/latest"])
+        self.recipe_cache("libb/0.1", requires=["liba/(latest)"])
         self.alias_cache("libb/latest", "libb/0.1")
 
-        consumer = self.recipe_consumer("app/0.1", ["liba/latest", "libb/latest"])
+        consumer = self.recipe_consumer("app/0.1", ["liba/(latest)", "libb/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -78,12 +80,12 @@ class TestAlias(GraphManagerTest):
 
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
-        self.recipe_cache("libb/0.1", requires=["liba/latest"])
-        self.recipe_cache("libc/0.1", requires=["liba/latest"])
+        self.recipe_cache("libb/0.1", requires=["liba/(latest)"])
+        self.recipe_cache("libc/0.1", requires=["liba/(latest)"])
         self.alias_cache("libb/latest", "libb/0.1")
         self.alias_cache("libc/latest", "libc/0.1")
 
-        consumer = self.recipe_consumer("app/0.1", ["libb/latest", "libc/latest"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/(latest)", "libc/(latest)"])
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(4, len(deps_graph.nodes))
@@ -109,8 +111,8 @@ class TestAlias(GraphManagerTest):
         #   \ -> libc/0.1 ----/
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
-        self.recipe_cache("libb/0.1", requires=["liba/latest"])
-        self.recipe_cache("libc/0.1", requires=["liba/latest"])
+        self.recipe_cache("libb/0.1", requires=["liba/(latest)"])
+        self.recipe_cache("libc/0.1", requires=["liba/(latest)"])
 
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
@@ -137,10 +139,10 @@ class TestAlias(GraphManagerTest):
 
         self.recipe_cache("liba/0.1")
         self.alias_cache("liba/latest", "liba/0.1")
-        self.alias_cache("liba/mega", "liba/latest")
-        self.alias_cache("liba/giga", "liba/mega")
+        self.alias_cache("liba/mega", "liba/(latest)")
+        self.alias_cache("liba/giga", "liba/(mega)")
 
-        consumer = self.recipe_consumer("app/0.1", ["liba/giga"])
+        consumer = self.recipe_consumer("app/0.1", ["liba/(giga)"])
         deps_graph = self.build_consumer(consumer)
 
         self.assertEqual(2, len(deps_graph.nodes))
@@ -164,7 +166,7 @@ class AliasBuildRequiresTest(GraphManagerTest):
         self.recipe_cache("liba/0.2")
         self.alias_cache("liba/latest", "liba/0.2")
         self.recipe_cache("libb/0.1", ["liba/0.1"])
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/latest"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], build_requires=["liba/(latest)"])
 
         deps_graph = self.build_consumer(consumer)
 
@@ -178,3 +180,30 @@ class AliasBuildRequiresTest(GraphManagerTest):
         self._check_node(liba_build, "liba/0.2#123", dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(app, "app/0.1", deps=[libb, liba_build])
+
+
+def test_mixing_aliases_and_fix_versions():
+    # cd/1.0 -----------------------------> cb/latest -(alias)-> cb/1.0 -> ca/1.0
+    #   \-----> cc/latest -(alias)-> cc/1.0 ->/                             /
+    #                                    \------ ca/latest -(alias)------->/
+    client = TestClient()
+
+    client.save({"conanfile.py": GenConanfile("ca", "1.0")})
+    client.run("create . ")
+    client.run("alias ca/latest@ ca/1.0@")
+
+    client.save({"conanfile.py": GenConanfile("cb", "1.0")
+                .with_requirement("ca/1.0@")})
+    client.run("create . cb/1.0@")
+    client.run("alias cb/latest@ cb/1.0@")
+
+    client.save({"conanfile.py": GenConanfile("cc", "1.0")
+                .with_requirement("cb/(latest)")
+                .with_requirement("ca/(latest)")})
+    client.run("create . ")
+    client.run("alias cc/latest@ cc/1.0@")
+
+    client.save({"conanfile.py": GenConanfile("cd", "1.0")
+                .with_requirement("cb/(latest)")
+                .with_requirement("cc/(latest)")})
+    client.run("create . ")

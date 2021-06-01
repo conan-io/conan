@@ -40,6 +40,13 @@ class Requirement:
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
+    @property
+    def alias(self):
+        version = self.ref.version
+        if version.startswith("(") and version.endswith(")"):
+            return ConanFileReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
+                                      self.ref.revision, validate=False)
+
     def process_package_type(self, node):
         """ if the run=None, it means it can be deduced from the shared option of the dependency
         """
