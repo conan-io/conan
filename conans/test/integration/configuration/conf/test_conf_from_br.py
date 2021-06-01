@@ -28,7 +28,12 @@ def test_basic():
                 self.output.info("NDK: %s" % self.conf["tools.android:ndk_path"])
         """)
     android_profile = textwrap.dedent("""
-        include(default)
+        [settings]
+        os = Linux
+        arch = x86_64
+        compiler = gcc
+        compiler.version = 4.9
+        compiler.libcxx = libstdc++
         [conf]
         tools.android:ndk_path=MY-SYSTEM-NDK!!!
         """)
