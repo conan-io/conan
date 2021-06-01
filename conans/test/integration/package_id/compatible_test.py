@@ -505,6 +505,7 @@ class CompatibleIDsTest(unittest.TestCase):
                       client.out)
         self.assertIn("pkg/0.1@user/testing: Already installed!", client.out)
 
+    @pytest.mark.xfail(reason="lockfiles have been deactivated at the moment")
     def test_compatible_lockfile(self):
         # https://github.com/conan-io/conan/issues/9002
         client = TestClient()
