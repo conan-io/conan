@@ -3,8 +3,10 @@ import textwrap
 
 import pytest
 
+from conans.client.tools.apple import XCRun, to_apple_arch
 from conans.client.tools.env import environment_append
 from conans.model.ref import ConanFileReference
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
@@ -212,13 +214,19 @@ def test_apple_own_framework_cross_build(settings):
 
     test_conanfile = textwrap.dedent("""
         from conans import ConanFile, tools
-        from conan.tools.cmake import CMake, CMakeToolchain
+        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 
         class TestPkg(ConanFile):
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
             settings = "os", "arch", "compiler", "build_type"
             # FIXME
             test_type = "build_requires", "requires"
+
+            def generate(self):
+                cmake = CMakeDeps(self)
+                cmake.build_context_activated = ["mylibrary"]
+                cmake.build_context_suffix = {"mylibrary": "_BUILD"}
+                cmake.generate()
 
             def build(self):
                 self.output.warn("Building test package at: {}".format(self.build_folder))
@@ -263,10 +271,10 @@ def test_apple_own_framework_cmake_deps():
     test_conanfile = textwrap.dedent("""
         import os
         from conans import ConanFile
-        from conan.tools.cmake import CMake
+        from conan.tools.cmake import CMake, CMakeDeps
 
         class TestPkg(ConanFile):
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeToolchain"
             name = "app"
             version = "1.0"
             requires = "mylibrary/1.0"
@@ -274,6 +282,12 @@ def test_apple_own_framework_cmake_deps():
             settings = "build_type",
             # FIXME
             test_type = "build_requires"
+
+            def generate(self):
+                cmake = CMakeDeps(self)
+                cmake.build_context_activated = ["mylibrary"]
+                cmake.build_context_suffix = {"mylibrary": "_BUILD"}
+                cmake.generate()
 
             def layout(self):
                 self.folders.build = str(self.settings.build_type)
@@ -414,13 +428,20 @@ install(TARGETS ${PROJECT_NAME}
         """)
     test_conanfile_py = textwrap.dedent("""
 import os
-from conans import ConanFile, CMake, tools
+from conans import ConanFile, tools
+from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 
 class TestPackageConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeDeps", "CMakeToolchain"
+    generators = "CMakeToolchain"
     # FIXME
     test_type = "build_requires", "requires"
+
+    def generate(self):
+        cmake = CMakeDeps(self)
+        cmake.build_context_activated = ["hello"]
+        cmake.build_context_suffix = {"hello": "_BUILD"}
+        cmake.generate()
 
     def build(self):
         cmake = CMake(self)
