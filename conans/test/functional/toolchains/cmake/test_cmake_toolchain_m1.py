@@ -52,7 +52,7 @@ def test_m1(op_system):
                  "main.cpp": main,
                  "m1": profile}, clean_first=True)
     client.run("install . --profile:build=default --profile:host=m1")
-    client.run("build .")
+    client.run("build . --profile:build=default --profile:host=m1")
     main_path = "./main.app/main" if op_system == "iOS" else "./main"
     client.run_command(main_path, assert_error=True)
     assert "Bad CPU type in executable" in client.out
