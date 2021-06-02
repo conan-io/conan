@@ -344,6 +344,8 @@ class AppleSystemBlock(Block):
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
         host_architecture = self._get_architecture()
+        if host_architecture is None:
+            return
         # We could be cross building from Macos x64 to Macos armv8 (m1)
         build_architecture = self._get_architecture(host_context=False)
         if os_ not in ('iOS', "watchOS", "tvOS") and \
