@@ -1,6 +1,9 @@
+import pytest
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
+@pytest.mark.xfail(reason="lockfiles do not work temporarily with new graph, needs to be recovered")
 def test_install():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile("pkga", "0.1").with_package_file("file.h", "0.1")})
@@ -22,6 +25,7 @@ def test_install():
     assert file_h == "0.1"
 
 
+@pytest.mark.xfail(reason="lockfiles do not work temporarily with new graph, needs to be recovered")
 def test_install_recipes():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("pkga", "0.1").with_package_file("file.h", "0.1")})

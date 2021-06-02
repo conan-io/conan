@@ -86,6 +86,7 @@ class Conan(ConanFile):
         self.assertIn("INSTALL=True!", client.out)
         self.assertIn("TEST=True!", client.out)
 
+    @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
@@ -183,6 +184,7 @@ class AConan(ConanFile):
                       client.out)
         self.assertIn("Src folder=>%s" % os.path.join(client.current_folder, "mysrc"), client.out)
 
+    @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build_dots_names(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
@@ -257,6 +259,7 @@ cmake_minimum_required(VERSION 2.8.12)
         header = client.load("mypkg/include/header.h")
         self.assertEqual(header, "my header2 h!!")
 
+    @pytest.mark.xfail(reason="deps_cpp_info access removed")
     def test_build_with_deps_env_info(self):
         client = TestClient()
         conanfile = """

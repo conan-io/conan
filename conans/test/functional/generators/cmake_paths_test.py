@@ -9,6 +9,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, TurboTestClient, GenConanfile
 
 
+@pytest.mark.xfail(reason="cmake_paths generator will be removed")
 @pytest.mark.tool_cmake
 class CMakePathsGeneratorTest(unittest.TestCase):
 

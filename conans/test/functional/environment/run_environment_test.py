@@ -15,6 +15,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
 
+@pytest.mark.xfail(reason="Environment management will be changed")
 @pytest.mark.tool_cmake
 class RunEnvironmentTest(unittest.TestCase):
 
@@ -48,6 +49,7 @@ class RunEnvironmentTest(unittest.TestCase):
         self.assertIn("Hello Hello0", client.out)
 
 
+@pytest.mark.xfail(reason="Environment management will be changed")
 @pytest.mark.tool_cmake
 class RunEnvironmentSharedTest(unittest.TestCase):
 
