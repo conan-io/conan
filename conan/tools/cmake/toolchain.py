@@ -310,15 +310,12 @@ class AppleSystemBlock(Block):
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
         """)
 
-    def _get_architecture(self, host_context=True):
+    def _get_architecture(self):
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device
         # can be generated if multiple archs are specified:
         # "-DCMAKE_OSX_ARCHITECTURES=armv7;armv7s;arm64;i386;x86_64"
-        if not host_context and not hasattr(self._conanfile, 'settings_build'):
-            return None
-        arch = self._conanfile.settings.get_safe("arch") \
-            if host_context else self._conanfile.settings_build.get_safe("arch")
+        arch = self._conanfile.settings.get_safe("arch")
         return {"x86": "i386",
                 "x86_64": "x86_64",
                 "armv8": "arm64",
@@ -344,11 +341,6 @@ class AppleSystemBlock(Block):
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
         host_architecture = self._get_architecture()
-        # We could be cross building from Macos x64 to Macos armv8 (m1)
-        build_architecture = self._get_architecture(host_context=False)
-        if os_ not in ('iOS', "watchOS", "tvOS") and \
-            (not build_architecture or host_architecture == build_architecture):
-            return
 
         host_os = self._conanfile.settings.get_safe("os")
         host_os_version = self._conanfile.settings.get_safe("os.version")
@@ -357,10 +349,12 @@ class AppleSystemBlock(Block):
         # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
         #       add a setting? check an option and if not present set a default?
         #       default to os.version?
-        ctxt_toolchain = {
-            "CMAKE_OSX_ARCHITECTURES": host_architecture,
-            "CMAKE_OSX_SYSROOT": host_sdk_name
-        }
+        ctxt_toolchain = {}
+        if host_sdk_name:
+            ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
+        if host_architecture:
+            ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
+
         if os_ in ('iOS', "watchOS", "tvOS"):
             ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
