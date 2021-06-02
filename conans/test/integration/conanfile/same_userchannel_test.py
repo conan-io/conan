@@ -65,8 +65,7 @@ class HelloConan(ConanFile):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 """
 
-        self.test_conanfile = str(GenConanfile().with_require("Hello/0.1@lasote/stable")
-                                                .with_test("pass"))
+        self.test_conanfile = str(GenConanfile().with_test("pass"))
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile})
 

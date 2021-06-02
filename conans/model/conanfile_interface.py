@@ -1,3 +1,4 @@
+from conans.client.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:
@@ -46,6 +47,10 @@ class ConanFileInterface:
         return self._conanfile.cpp_info
 
     @property
+    def user_info(self):
+        return self._conanfile.user_info
+
+    @property
     def new_cpp_info(self):
         return self._conanfile.new_cpp_info
 
@@ -54,9 +59,25 @@ class ConanFileInterface:
         return self._conanfile.settings
 
     @property
+    def settings_build(self):
+        return self._conanfile.settings_build
+
+    @property
     def context(self):
         return self._conanfile.context
 
     @property
+    def conf_info(self):
+        return self._conanfile.conf_info
+
+    @property
     def dependencies(self):
         return self._conanfile.dependencies
+
+    @property
+    def folders(self):
+        return self._conanfile.folders
+
+    @property
+    def is_build_context(self):
+        return self._conanfile.context == CONTEXT_BUILD

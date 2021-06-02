@@ -228,12 +228,12 @@ def test_install_broken_reference(client):
     # origin remote is lost
     rmdir(os.path.join(client.cache.package_layout(ref).base_folder()))
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
-    assert "ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
+    assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
     # If it was associated, it has to be desasociated
     client.run("remote remove_ref Hello/0.1@lasote/stable")
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
-    assert "ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
+    assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
 
 def test_install_argument_order(client):
@@ -313,7 +313,7 @@ def test_install_disabled_remote(client):
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
     client.run("install Pkg/0.1@lasote/testing --update", assert_error=True)
-    assert "ERROR: Remote 'default' is disabled" in client.out
+    assert "Remote 'default' is disabled" in client.out
 
 
 def test_install_skip_disabled_remote(client):

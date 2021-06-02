@@ -16,7 +16,7 @@ from conans.util.runners import check_output_runner, version_runner, muted_runne
 
 
 def _check_repo(cmd, folder):
-    msg = "Not a valid '{0}' repository or '{0}' not found.".format(cmd[0])
+    msg = "'{0}' is not a valid '{1}' repository or '{1}' not found.".format(folder, cmd[0])
     try:
         ret = muted_runner(cmd, folder=folder)
     except Exception:

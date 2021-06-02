@@ -332,7 +332,8 @@ class ConanAPIV1(object):
                profile_names=None, settings=None,
                options=None, env=None, test_folder=None,
                build_modes=None, remote_name=None, update=False, cwd=None, test_build_folder=None,
-               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None):
+               lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
+               is_build_require=False):
         """
         API method to create a conan package
 
@@ -372,7 +373,8 @@ class ConanAPIV1(object):
             recorder.add_recipe_being_developed(new_ref)
             create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes,
-                   test_build_folder, test_folder, conanfile_path, recorder=recorder)
+                   test_build_folder, test_folder, conanfile_path, recorder=recorder,
+                   is_build_require=is_build_require)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -469,7 +471,7 @@ class ConanAPIV1(object):
                           remote_name=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
-                          lockfile_node_id=None):
+                          lockfile_node_id=None, is_build_require=False):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env)
         recorder = ActionRecorder()
@@ -490,7 +492,9 @@ class ConanAPIV1(object):
                          remotes=remotes, profile_host=profile_host, profile_build=profile_build,
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          update=update, generators=generators, recorder=recorder,
-                         lockfile_node_id=lockfile_node_id)
+                         lockfile_node_id=lockfile_node_id,
+                         is_build_require=is_build_require,
+                         add_txt_generator=False)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)

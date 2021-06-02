@@ -688,6 +688,122 @@ class CIBuildRequiresTest(unittest.TestCase):
         self.assertNotIn("br/0.1", client.out)
 
 
+class CIBuildRequiresTwoProfilesTest(unittest.TestCase):
+    def test_version_ranges(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+        myprofile_host = textwrap.dedent("""
+            [settings]
+            os=Linux
+            [build_requires]
+            br/[>=0.1]
+            """)
+        myprofile_build = textwrap.dedent("""
+           [settings]
+           os=Windows
+           """)
+        conanfile_os = textwrap.dedent("""
+            from conans import ConanFile, load
+            from conans.tools import save
+            import os
+            class Pkg(ConanFile):
+                settings = "os"
+                {requires}
+
+                keep_imports = True
+                def imports(self):
+                    self.copy("myfile.txt", folder=True)
+                def package(self):
+                    save(os.path.join(self.package_folder, "myfile.txt"),
+                         "%s %s" % (self.name, self.settings.os))
+                    self.copy("*myfile.txt")
+                def package_info(self):
+                    self.output.info("MYOS=%s!!!" % self.settings.os)
+                    self.output.info("SELF FILE: %s"
+                        % load(os.path.join(self.package_folder, "myfile.txt")))
+                    for d in os.listdir(self.package_folder):
+                        p = os.path.join(self.package_folder, d, "myfile.txt")
+                        if os.path.isfile(p):
+                            self.output.info("DEP FILE %s: %s" % (d, load(p)))
+                """)
+        files = {
+            "profile_host": myprofile_host,
+            "profile_build": myprofile_build,
+            "br/conanfile.py": conanfile_os.format(requires=""),
+            "pkga/conanfile.py": conanfile_os.format(requires=""),
+            "pkgb/conanfile.py": conanfile_os.format(requires='requires="PkgA/[*]"'),
+            "pkgc/conanfile.py": conanfile_os.format(requires='requires="PkgB/[*]"'),
+            "pkgd/conanfile.py": conanfile_os.format(requires='requires="PkgC/[*]"'),
+        }
+        client.save(files)
+        # Note the creating of BR is in the BUILD profile
+        client.run("create br br/0.1@ --build-require -pr:h=profile_host -pr:b=profile_build")
+        assert "br/0.1: SELF FILE: br Linux" not in client.out
+        client.run("create pkga PkgA/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgb PkgB/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgc PkgC/0.1@ -pr:h=profile_host -pr:b=profile_build")
+        client.run("create pkgd PkgD/0.1@ -pr:h=profile_host -pr:b=profile_build")
+
+        self.assertIn("PkgD/0.1: SELF FILE: PkgD Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgA: PkgA Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgB: PkgB Linux", client.out)
+        self.assertIn("PkgD/0.1: DEP FILE PkgC: PkgC Linux", client.out)
+
+        # Go back to main orchestrator
+        client.run("lock create --reference=PkgD/0.1@ --build -pr:h=profile_host -pr:b=profile_build"
+                   " --lockfile-out=conan.lock")
+
+        # Do a change in br
+        client.run("create br br/0.2@ ")
+
+        client.run("lock build-order conan.lock --json=build_order.json")
+        self.assertIn("br/0.1", client.out)
+        self.assertNotIn("br/0.2", client.out)
+        master_lockfile = client.load("conan.lock")
+
+        json_file = client.load("build_order.json")
+        to_build = json.loads(json_file)
+
+        build_order = [[['br/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                         '3475bd55b91ae904ac96fde0f106a136ab951a5e', 'build', '5']],
+                       [['PkgA/0.1@#583b8302673adce66f12f2bec01fe9c3',
+                         'cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31', 'host', '4']],
+                       [['PkgB/0.1@#4b1da86739946fe16a9545d1f6bc9022',
+                         '4a87f1e30266a1c1c685c0904cfb137a3dba11c7', 'host', '3']],
+                       [['PkgC/0.1@#3e1048668b2a795f6742d04971f11a7d',
+                         '50ad117314ca51a58e427a26f264e27e79b94cd4', 'host', '2']],
+                       [['PkgD/0.1@#e6cc0ca095ca32bba1a6dff0af6f4eb3',
+                         'e66cc39a683367fdd17218bdbab7d6e95c0414e1', 'host', '1']]]
+
+        self.assertEqual(to_build, build_order)
+        lock_fileaux = master_lockfile
+        while to_build:
+            for ref, _, build, _ in to_build[0]:
+                client_aux = TestClient(cache_folder=client.cache_folder)
+                client_aux.save({LOCKFILE: lock_fileaux})
+                is_build_require = "--build-require" if build == "build" else ""
+                client_aux.run("install %s --build=%s --lockfile=conan.lock "
+                               "--lockfile-out=conan.lock %s" % (ref, ref, is_build_require))
+                assert "br/0.1: SELF FILE: br Windows" in client_aux.out
+                self.assertIn("br/0.1", client_aux.out)
+                self.assertNotIn("br/0.2", client_aux.out)
+                lock_fileaux = client_aux.load(LOCKFILE)
+                client.save({"new_lock/%s" % LOCKFILE: lock_fileaux})
+                client.run("lock update conan.lock new_lock/conan.lock")
+
+            client.run("lock build-order conan.lock --json=build_order.json")
+            lock_fileaux = client.load(LOCKFILE)
+            to_build = json.loads(client.load("build_order.json"))
+
+        client.run("install PkgD/0.1@ --lockfile=conan.lock")
+        # No build require at all
+        self.assertNotIn("br/0.", client.out)
+
+        client.run("install PkgD/0.1@ --build  -pr:h=profile_host -pr:b=profile_build")
+        self.assertIn("br/0.2", client.out)
+        self.assertNotIn("br/0.1", client.out)
+
+
 class CIPrivateRequiresTest(unittest.TestCase):
     def test(self):
         # https://github.com/conan-io/conan/issues/7985

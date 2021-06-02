@@ -19,6 +19,8 @@ DEFAULT_CONFIGURATION = {
     "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -59,9 +61,19 @@ class Conf(object):
 
     def update(self, other):
         """
+        :param other: has more priority than current one
         :type other: Conf
         """
         self._values.update(other._values)
+
+    def compose(self, other):
+        """
+        :param other: other has less priority than current one
+        :type other: Conf
+        """
+        for k, v in other._values.items():
+            if k not in self._values:
+                self._values[k] = v
 
     @property
     def sha(self):
