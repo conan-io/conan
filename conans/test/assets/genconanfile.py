@@ -42,6 +42,8 @@ class GenConanfile(object):
         self._short_paths = None
         self._exports_sources = None
         self._exports = None
+        self._cmake_build = False
+        self._class_attributes = None
 
     def with_short_paths(self, value):
         self._short_paths = value
@@ -191,6 +193,20 @@ class GenConanfile(object):
         self._test_lines.append(line)
         return self
 
+    def with_cmake_build(self):
+        self._imports.append("from conan.tools.cmake import CMake")
+        self._generators = self._generators or []
+        self._generators.append("CMakeDeps")
+        self._generators.append("CMakeToolchain")
+        self._cmake_build = True
+        return self
+
+    def with_class_attribute(self, attr):
+        """.with_class_attribute("no_copy_sources=True") """
+        self._class_attributes = self._class_attributes or []
+        self._class_attributes.append(attr)
+        return self
+
     @property
     def _name_render(self):
         return "name = '{}'".format(self._name)
@@ -314,10 +330,16 @@ class GenConanfile(object):
     """.format("\n".join(lines))
 
     @property
-    def _build_messages_render(self):
-        if not self._build_messages:
-            return ""
-        lines = ['        self.output.warn("{}")'.format(m) for m in self._build_messages]
+    def _build_render(self):
+        if not self._build_messages and not self._cmake_build:
+            return None
+        lines = []
+        if self._build_messages:
+            lines = ['        self.output.warn("{}")'.format(m) for m in self._build_messages]
+        if self._cmake_build:
+            lines.extend(['        cmake = CMake(self)',
+                          '        cmake.configure()',
+                          '        cmake.build()'])
         return """
     def build(self):
 {}
@@ -373,21 +395,31 @@ class GenConanfile(object):
         line = ", ".join('"{}"'.format(e) for e in self._exports)
         return "exports = {}".format(line)
 
+    @property
+    def _class_attributes_render(self):
+        self._class_attributes = self._class_attributes or []
+        return ["    {}".format(a) for a in self._class_attributes]
+
     def __repr__(self):
         ret = []
         ret.extend(self._imports)
         ret.append("class HelloConan(ConanFile):")
 
+        # FIXME: This is all a mess. Replace with Jinja2
         for member in ("name", "version", "provides", "deprecated", "short_paths", "exports_sources",
                        "exports", "generators", "requires", "build_requires", "requirements",
                        "build_requirements", "scm", "revision_mode", "settings", "options",
-                       "default_options", "build_messages", "package_method", "package_info",
+                       "default_options", "package_method", "package_info",
                        "package_id_lines", "test_lines"
                        ):
             v = getattr(self, "_{}".format(member), None)
             if v is not None:
                 ret.append("    {}".format(getattr(self, "_{}_render".format(member))))
 
+        ret.extend(self._class_attributes_render)
+        build = self._build_render
+        if build is not None:
+            ret.append("    {}".format(self._build_render))
         if ret[-1] == "class HelloConan(ConanFile):":
             ret.append("    pass")
         return "\n".join(ret)
