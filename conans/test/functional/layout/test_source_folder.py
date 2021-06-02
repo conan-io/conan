@@ -9,7 +9,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 
-app_name = "my_app.exe" if platform.system() == "Windows" else "my_app"
+app_name = "Release/my_app.exe" if platform.system() == "Windows" else "my_app"
 
 
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
