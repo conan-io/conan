@@ -279,6 +279,25 @@ class GraphBinariesAnalyzer(object):
                 continue
             self._evaluate_node(node, build_mode, update, remotes)
 
+        self._skip_binaries(deps_graph)
+
+    @staticmethod
+    def _skip_binaries(graph):
+        required_nodes = set()
+        required_nodes.add(graph.root)
+        for node in graph.nodes:
+            if node.binary != BINARY_BUILD and node is not graph.root:
+                continue
+            for req, dep in node.transitive_deps.items():
+                dep_node = dep.node
+                require = dep.require
+                if require.include or require.link or require.run:
+                    required_nodes.add(dep_node)
+
+        for node in graph.nodes:
+            if node not in required_nodes:
+                node.binary = BINARY_SKIP
+
     def reevaluate_node(self, node, remotes, build_mode, update):
         """ reevaluate the node is necessary when there is some PACKAGE_ID_UNKNOWN due to
         package_revision_mode

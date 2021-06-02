@@ -11,6 +11,20 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load
 
 
+def test_private_skip():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . dep/1.0@")
+    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", public=False)})
+    client.run("create . pkg/1.0@")
+    client.run("remove dep/1.0 -p -f")
+
+    client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
+    client.run("create . app/1.0@")
+    assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Skip" in client.out
+
+
+
 class PrivateBinariesTest(unittest.TestCase):
     def test_transitive_private(self):
         # https://github.com/conan-io/conan/issues/3523
@@ -56,39 +70,6 @@ class Pkg(ConanFile):
         client.run("create . Pkg4/0.1@user/channel")
         client.run("info Pkg4/0.1@user/channel")
         self.assertEqual(3, str(client.out).count("Binary: Skip"))
-
-    def test_private_skip(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class Pkg(ConanFile):
-    def package_info(self):
-        self.cpp_info.libs = ["zlib"]
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . zlib/1.2.11@conan/stable")
-        client.save({"conanfile.py": conanfile.replace("zlib", "bzip2")})
-        client.run("create . bzip2/1.0.6@conan/stable")
-        conanfile = """from conans import ConanFile
-class MyPackage(ConanFile):
-    requires = ('zlib/1.2.11@conan/stable', ('bzip2/1.0.6@conan/stable', 'private'),)
-    def package_info(self):
-        self.cpp_info.libs = ["mypackage"]
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . MyPackage/1.0@testing/testing")
-        client.run("remove bzip2/1.0.6@conan/stable -p -f")
-        conanfile = """from conans import ConanFile
-class V3D(ConanFile):
-    requires = "zlib/1.2.11@conan/stable", "MyPackage/1.0@testing/testing"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install . -g=cmake")
-        self.assertIn("bzip2/1.0.6@conan/stable:%s - Skip" % NO_SETTINGS_PACKAGE_ID, client.out)
-        self.assertIn("zlib/1.2.11@conan/stable:%s - Cache" % NO_SETTINGS_PACKAGE_ID, client.out)
-        conanbuildinfo = client.load("conanbuildinfo.cmake")
-        # The order is dictated by public MyPackage -> zlib dependency
-        self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
-        self.assertNotIn("bzip2", conanbuildinfo)
 
     def test_multiple_private_skip(self):
         client = TestClient()
