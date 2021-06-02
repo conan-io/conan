@@ -1,3 +1,6 @@
+import os
+import platform
+
 import pytest
 
 from conans.test.assets.cmake import gen_cmakelists
@@ -5,6 +8,8 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
+
+app_name = "my_app.exe" if platform.system() == "Windows" else "my_app"
 
 
 @pytest.mark.parametrize("no_copy_source", ["False", "True"])
@@ -33,9 +38,9 @@ def test_exports_source_with_src_subfolder(no_copy_source):
                  "my_src/CMakeLists.txt": cmake})
     client.run("install . -if=install")
     client.run("build . -if=install")
-    assert "Built target my_app" in client.out
+    assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
-    assert "Built target my_app" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_exports():
@@ -90,9 +95,9 @@ def test_exports_source_without_subfolder():
                  "CMakeLists.txt": cmake})
     client.run("install . -if=install")
     client.run("build . -if=install")
-    assert "Built target my_app" in client.out
+    assert os.path.exists(os.path.join(client.current_folder, "Release", app_name))
     client.run("create . ")
-    assert "Built target my_app" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_scm_with_source_layout():
@@ -125,7 +130,6 @@ def test_scm_with_source_layout():
 
     client.run("install . -if=install")
     client.run("build . -if=install")
-    assert "Built target my_app" in client.out
-
+    assert os.path.exists(os.path.join(client.current_folder, "build_Release", app_name))
     client.run("create . ")
-    assert "Built target my_app" in client.out
+    assert "Created package revision" in client.out
