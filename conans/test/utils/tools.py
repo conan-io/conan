@@ -676,8 +676,7 @@ class TurboTestClient(TestClient):
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
 
-        latest_rrev = self.cache.get_latest_rrev(ref)
-        ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
+        ref = self.cache.get_latest_rrev(ref)
 
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:

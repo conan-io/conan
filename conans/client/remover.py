@@ -135,10 +135,8 @@ class ConanRemover(object):
             return
 
         for package in packages:
-            all_package_revs = self._cache.get_package_revisions(PackageReference(ref, package))
-            for package_rev in all_package_revs:
-                package_layout = self._cache.pkg_layout(package_rev)
-                package_layout.remove()
+            package_layout = self._cache.pkg_layout(package)
+            package_layout.remove()
 
         if remove_recipe:
             ref_layout = self._cache.ref_layout(ref)

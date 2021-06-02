@@ -559,7 +559,7 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        ref_layout = self._cache.ref_layout(pref)
+        ref_layout = self._cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,

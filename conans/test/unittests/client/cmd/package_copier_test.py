@@ -3,6 +3,8 @@ import os
 import sys
 import unittest
 
+import pytest
+
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.copy import package_copy
 from conans.client.userio import UserIO
@@ -26,6 +28,7 @@ class MockedBooleanUserIO(UserIO):
 
 class PackageCopierTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_copy(self):
         output = TestBufferConanOutput()
         userio = MockedBooleanUserIO(True, out=output)

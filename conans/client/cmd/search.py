@@ -60,7 +60,7 @@ class Search(object):
         if not latest_rrev:
             raise RecipeNotFoundException(ref)
 
-        conanfileref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
+        conanfileref = latest_rrev
 
         pkg_ids = self._cache.get_package_ids(conanfileref, only_latest_prev=True)
         package_layouts = [self._cache.pkg_layout(pkg_ref) for pkg_ref in pkg_ids]

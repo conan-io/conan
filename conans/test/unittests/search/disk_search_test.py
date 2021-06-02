@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.client.cache.cache import ClientCache
 from conans.client.tools import chdir
 from conans.model.info import ConanInfo
@@ -19,6 +21,7 @@ class SearchTest(unittest.TestCase):
         self.cache = ClientCache(folder, output=TestBufferConanOutput())
         mkdir(self.cache.store)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_basic_2(self):
         with chdir(self.cache.store):
             ref1 = ConanFileReference.loads("opencv/2.4.10@lasote/testing")
@@ -37,6 +40,7 @@ class SearchTest(unittest.TestCase):
             all_artif = [_artif for _artif in sorted(packages)]
             self.assertEqual(all_artif, artifacts)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_pattern(self):
         with chdir(self.cache.store):
             references = ["opencv/2.4.%s@lasote/testing" % ref for ref in ("1", "2", "3")]
@@ -49,6 +53,7 @@ class SearchTest(unittest.TestCase):
             recipes = search_recipes(self.cache, "opencv/*@lasote/testing")
             self.assertEqual(recipes, refs)
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_case_insensitive(self):
         with chdir(self.cache.store):
             root_folder2 = "sdl/1.5/lasote/stable"
