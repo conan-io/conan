@@ -8,6 +8,7 @@ from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="cmake old generator will be removed")
 @pytest.mark.slow
 class ConanTestTest(unittest.TestCase):
 

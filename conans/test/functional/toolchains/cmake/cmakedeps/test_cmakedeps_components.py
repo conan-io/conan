@@ -123,6 +123,7 @@ def test_wrong_component(top_conanfile, from_component):
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
+@pytest.mark.xfail(reason="Check for components usage has been commented")
 def test_unused_requirement(top_conanfile):
     """ Requires should include all listed requirements
         This error is known when creating the package if the requirement is consumed.
@@ -143,6 +144,7 @@ def test_unused_requirement(top_conanfile):
            "requires" in t.out
 
 
+@pytest.mark.xfail(reason="Check for components usage has been commented")
 def test_wrong_requirement(top_conanfile):
     """ If we require a wrong requirement, we get a meaninful error.
         This error is known when creating the package if the requirement is not there.

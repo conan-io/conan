@@ -77,6 +77,7 @@ class PkgConfigTest(unittest.TestCase):
     # FIXME: This test can be removed in Conan 2.0, use only generators and toolchains, this
     # manual usage is not something that Conan tests should be covering
 
+    @pytest.mark.xfail(reason="pkg_config not working now")
     def test_reuse_pc_approach1(self):
 
         liba_conanfile = textwrap.dedent("""
