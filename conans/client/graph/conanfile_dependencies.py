@@ -1,7 +1,7 @@
 
 from collections import OrderedDict
 
-from conans.client.graph.graph import CONTEXT_BUILD
+from conans.client.graph.graph import CONTEXT_BUILD, BINARY_SKIP
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.requires import UserRequirementsDict
 
@@ -25,6 +25,16 @@ class ConanFileDependencies:
         return UserRequirementsDict(d)
 
     @property
+    def non_skipped(self):
+        """
+        :return: list of all transitive build_requires
+        """
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in self._node.transitive_deps.items()
+                        if transitive.node.binary != BINARY_SKIP)
+        return UserRequirementsDict(d)
+
+    @property
     def requires(self):
         """
         :return: list of immediate direct requires, not included build or private ones
@@ -38,7 +48,7 @@ class ConanFileDependencies:
         """
         d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
                         for require, transitive in self._node.transitive_deps.items()
-                        if not require.build)
+                        if not require.build and transitive.node.binary != BINARY_SKIP)
         return UserRequirementsDict(d)
 
     @property

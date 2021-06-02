@@ -86,13 +86,55 @@ def test_shared_requires_static():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    print()
-    print(c.current_folder)
     c.run("build .")
-    print(c.out)
     command = environment_wrap_command("conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
+@pytest.mark.tool_cmake
+def test_transitive_binary_skipped():
+    c = TestClient()
+
+    c.save(pkg_cmake("liba", "0.1"))
+    c.run("create .")
+    c.save(pkg_cmake("libb", "0.1", requires=["liba/0.1"]), clean_first=True)
+    c.run("create . -o libb:shared=True")
+    # IMPORTANT: liba binary can be removed, no longer necessary
+    c.run("remove liba* -p -f")
+
+    conanfile = textwrap.dedent("""\
+       from conans import ConanFile
+       from conan.tools.cmake import CMake
+       class Pkg(ConanFile):
+           exports = "*"
+           requires = "libb/0.1"
+           default_options = {"libb:shared": True}
+           settings = "os", "compiler", "arch", "build_type"
+           generators = "CMakeToolchain", "CMakeDeps"
+
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure(source_folder="src")
+               cmake.build()
+        """)
+    cmake = gen_cmakelists(appsources=["main.cpp"], find_package=["libb"])
+    main = gen_function_cpp(name="main", includes=["libb"], calls=["libb"])
+    c.save({"src/main.cpp": main,
+            "src/CMakeLists.txt": cmake,
+            "conanfile.py": conanfile}, clean_first=True)
+
+    c.run("build . -g VirtualEnv")
+    command = environment_wrap_command("conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    c.run_command(command)
+    assert "liba: Release!" in c.out
+
+    # If we try to include transitivity liba headers, it will fail!!
+    main = gen_function_cpp(name="main", includes=["libb", "liba"], calls=["libb"])
+    c.save({"src/main.cpp": main})
+    c.run("build .", assert_error=True)
+    assert "Cannot open include file: 'liba.h'" in c.out
 
 
 

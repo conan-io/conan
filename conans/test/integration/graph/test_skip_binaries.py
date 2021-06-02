@@ -49,3 +49,19 @@ def test_consumer_no_skip():
 
     assert f"dep/1.0:{NO_SETTINGS_PACKAGE_ID} - Cache" in client.out
     assert f"pkg/1.0:{package_id} - Cache" in client.out
+
+
+def test_shared_link_static_skip():
+    # app -> pkg (shared) -> dep (static)
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_shared_option(False)})
+    client.run("create . dep/1.0@")
+    package_id = re.search(r"dep/1.0:(\S+)", str(client.out)).group(1)
+    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0").
+                with_shared_option(True)})
+    client.run("create . pkg/1.0@")
+    client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
+
+    client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
+    client.run("create . app/1.0@")
+    assert f"dep/1.0:{package_id} - Skip" in client.out

@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 
@@ -205,8 +206,9 @@ def test_export_pkg():
     client.run("source .")
     client.run("build . -if=my_install")
     client.run("export-pkg . lib/1.0@")
+    package_id = re.search(r"lib/1.0: Package '(\S+)' created", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-    pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+    pref = PackageReference(ref, package_id)
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
     pf = client.cache.package_layout(ref).package(pref)
@@ -317,8 +319,9 @@ def test_imports():
 
     # If we do a conan create, the imports folder is used also in the cache
     client.run("create . foo/1.0@")
+    package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("foo/1.0@")
-    pref = PackageReference(ref, "d907e6df55d956f730ed74c2844b3403dc86f97d")
+    pref = PackageReference(ref, package_id)
     bfolder = client.cache.package_layout(ref).build(pref)
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out

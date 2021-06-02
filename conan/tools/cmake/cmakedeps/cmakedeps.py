@@ -6,6 +6,7 @@ from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
 from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetConfigurationTemplate
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
+from conans.client.graph.graph import BINARY_SKIP
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -50,11 +51,12 @@ class CMakeDeps(object):
                                      "generator.".format(name))
 
         # Iterate all the transitive requires
-        for req, dep in self._conanfile.dependencies.requires.items():
+        for req, dep in self._conanfile.dependencies.non_skipped.items():
 
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if dep.is_build_context and req.ref.name not in self.build_context_activated:
                 continue
+
             config_version = ConfigVersionTemplate(self, dep)
             ret[config_version.filename] = config_version.render()
 

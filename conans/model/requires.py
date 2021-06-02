@@ -126,8 +126,8 @@ class Requirement:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             else:
                 assert pkg_type is PackageType.UNKNOWN
-                # Consumers will need to find it at build time too
-                downstream_require = Requirement(require.ref, include=True, link=True, run=True)
+                # TODO: This is undertested, changing it did not break tests
+                downstream_require = require.copy()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
@@ -139,7 +139,8 @@ class Requirement:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
             else:
                 assert pkg_type is PackageType.UNKNOWN
-                downstream_require = Requirement(require.ref, include=True, link=True, run=False)
+                # TODO: This is undertested, changing it did not break tests
+                downstream_require = require.copy()
         elif dep_pkg_type is PackageType.HEADER:
             downstream_require = Requirement(require.ref, include=False, link=False, run=False)
         else:
