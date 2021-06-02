@@ -224,7 +224,7 @@ class BuildRequiresBothContextsTest(unittest.TestCase):
 
         # new way, the toolchain can now run in Windows, but gtest in Linux
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build")
-        self.assertIn("creator/1.0: PackageInfo OS=Windows", t.out)
+        self.assertNotIn("creator/1.0: PackageInfo", t.out)  # Creator is skipped now, not needed
         self.assertIn("gtest/1.0: PackageInfo OS=Linux", t.out)
 
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build")

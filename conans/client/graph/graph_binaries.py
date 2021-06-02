@@ -291,7 +291,7 @@ class GraphBinariesAnalyzer(object):
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node
                 require = dep.require
-                if require.include or require.link or require.run:
+                if require.include or require.link or require.run or require.build:
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:
