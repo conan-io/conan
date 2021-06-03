@@ -179,8 +179,7 @@ class ConanRemover(object):
             if input_ref:
                 # TODO: cache2.0 do we want to get all revisions or just the latest?
                 #  remove all for the moment
-                refs_dicts = self._cache.get_recipe_revisions(input_ref)
-                refs = [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in refs_dicts]
+                refs = self._cache.get_recipe_revisions(input_ref)
                 for ref in refs:
                     if self._cache.installed_as_editable(ref):
                         raise ConanException(self._message_removing_editable(ref))
