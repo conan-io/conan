@@ -832,18 +832,6 @@ class ConanAPIV1(object):
                        packages_query=query)
 
     @api_method
-    def copy(self, reference, user_channel, force=False, packages=None):
-        """
-        param packages: None=No binaries, True=All binaries, else list of IDs
-        """
-        from conans.client.cmd.copy import cmd_copy
-        remotes = self.app.load_remotes()
-        # FIXME: conan copy does not support short-paths in Windows
-        ref = ConanFileReference.loads(reference)
-        cmd_copy(ref, user_channel, packages, self.app.cache,
-                 self.app.user_io, self.app.remote_manager, self.app.loader, remotes, force=force)
-
-    @api_method
     def authenticate(self, name, password, remote_name, skip_auth=False):
         # FIXME: 2.0 rename "name" to "user".
         # FIXME: 2.0 probably we should return also if we have been authenticated or not (skipped)

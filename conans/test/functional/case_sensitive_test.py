@@ -44,14 +44,6 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install hello0/0.1@lasote/stable --build=missing", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 
-    def test_copy(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export . lasote/stable")
-        client.run("install Hello0/0.1@lasote/stable --build=missing")
-        client.run("copy hello0/0.1@lasote/stable otheruser/testing", assert_error=True)
-        self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
-
     def test_remove(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
