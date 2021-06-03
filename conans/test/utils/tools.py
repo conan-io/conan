@@ -513,7 +513,7 @@ class TestClient(object):
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api(self, args):
+    def get_conan_api(self, args=None):
         if self.is_conan_cli_v2_command(args):
             return self.get_conan_api_v2()
         else:
@@ -527,14 +527,11 @@ class TestClient(object):
     def run_cli(self, command_line, assert_error=False):
         args = shlex.split(command_line)
 
-        conan_api = self.get_conan_api(args)
+        self.api = self.get_conan_api(args)
         if self.is_conan_cli_v2_command(args):
-            command = Cli(conan_api)
+            command = Cli(self.api)
         else:
-            command = Command(conan_api)
-
-
-
+            command = Command(self.api)
 
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
