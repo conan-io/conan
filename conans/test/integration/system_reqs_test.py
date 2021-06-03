@@ -2,6 +2,8 @@ import os
 import stat
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
@@ -251,6 +253,8 @@ class SystemReqsTest(unittest.TestCase):
         # restore write permission so the temporal folder can be deleted later
         os.chmod(system_reqs_path, current | stat.S_IWRITE)
 
+    @pytest.mark.xfail(reason="cache2.0: this does not make sense any more. We always create the "
+                              "package in a new folder")
     def test_duplicate_remove_system_reqs(self):
         ref = ConanFileReference.loads("Test/0.1@user/channel")
         client = TestClient()

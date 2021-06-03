@@ -74,7 +74,7 @@ class ReferenceLayout:
     # TODO: cache2.0 fix this
     def system_reqs_package(self):
         assert self._ref.pkgid, "Must be a reference of a package"
-        return os.path.join(self._cache.base_folder, self._base_folder, SYSTEM_REQS_FOLDER,
+        return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER,
                             self._ref.pkgid, SYSTEM_REQS)
 
     # TODO: cache2.0 locks
