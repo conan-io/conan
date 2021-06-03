@@ -20,7 +20,7 @@ from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import load, REVISIONS
-from conans.cli.cli import Cli
+from conans.cli.cli import Cli, CLI_V2_COMMANDS
 from conans.client.api.conan_api import ConanAPIV2
 from conans.client.cache.cache import ClientCache
 from conans.client.cache.remote_registry import Remotes
@@ -513,20 +513,29 @@ class TestClient(object):
                       http_requester=self._http_requester, runner=self.runner)
         return conan
 
-    def get_conan_api(self):
-        if os.getenv("CONAN_V2_CLI"):
+    def get_conan_api(self, args):
+        if self.is_conan_cli_v2_command(args):
             return self.get_conan_api_v2()
         else:
             return self.get_conan_api_v1()
 
+    @staticmethod
+    def is_conan_cli_v2_command(args):
+        conan_command = args[0] if args else None
+        return conan_command in CLI_V2_COMMANDS
+
     def run_cli(self, command_line, assert_error=False):
-        conan = self.get_conan_api()
-        self.api = conan
-        if os.getenv("CONAN_V2_CLI"):
-            command = Cli(conan)
-        else:
-            command = Command(conan)
         args = shlex.split(command_line)
+
+        conan_api = self.get_conan_api(args)
+        if self.is_conan_cli_v2_command(args):
+            command = Cli(conan_api)
+        else:
+            command = Command(conan_api)
+
+
+
+
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]

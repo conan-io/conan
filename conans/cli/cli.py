@@ -19,6 +19,11 @@ from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
+CLI_V2_COMMANDS = [
+    'help',
+]
+
+
 class Cli(object):
     """A single command of the conan application, with all the first level commands. Manages the
     parsing of parameters and delegates functionality to the conan python api. It can also show the
@@ -151,6 +156,12 @@ def main(args):
         5: SIGTERM
         6: Invalid configuration (done)
     """
+
+    command_argument = args[0] if args else None
+    if command_argument not in CLI_V2_COMMANDS:
+        from conans.client.command import main as v1_main
+        return v1_main(args)
+
     try:
         conan_api = Conan(quiet=False)
     except ConanMigrationError:  # Error migrating
