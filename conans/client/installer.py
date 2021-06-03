@@ -505,7 +505,7 @@ class BinaryInstaller(object):
                 copied_files = run_imports(conanfile)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, processed_package_references, remotes):
+    def _handle_node_cache(self, node, processed_package_references, remotes, pkg_layout):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
