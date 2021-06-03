@@ -15,6 +15,13 @@ class ConanFileDependencies:
         self._requires = UserRequirementsDict(d)
 
     @property
+    def direct_host_requires(self):
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+                        for require, transitive in self._node.transitive_deps.items()
+                        if require.direct and not require.build and transitive.node.binary != BINARY_SKIP)
+        return UserRequirementsDict(d)
+
+    @property
     def build_requires(self):
         """
         :return: list of all transitive build_requires

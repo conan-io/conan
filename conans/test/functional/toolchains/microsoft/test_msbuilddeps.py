@@ -597,7 +597,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
                 generators = "MSBuildDeps"
 
                 def build_requirements(self):
-                    self.build_requires("tool/1.0", force_host_context=True)
+                    self.test_requires("tool/1.0")
 
                 def build(self):
                     deps = load("conandeps.props")
@@ -615,13 +615,13 @@ class MSBuildGeneratorTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/8170
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
-        client.run("export . dep/1.0@")
-        client.run("export . tool_build/1.0@")
-        client.run("export . tool_test/1.0@")
+        client.run("create . dep/1.0@")
+        client.run("create . tool_build/1.0@")
+        client.run("create . tool_test/1.0@")
         conanfile = GenConanfile().with_requires("dep/1.0").with_build_requires("tool_build/1.0").\
-            with_build_requirement("tool_test/1.0", force_host_context=True)
+            with_test_requires("tool_test/1.0")
         client.save({"conanfile.py": conanfile})
-        client.run("export . pkg/1.0@")
+        client.run("create . pkg/1.0@")
 
         client.save({"conanfile.py": GenConanfile().
                     with_settings("os", "compiler", "arch", "build_type").
@@ -781,7 +781,7 @@ def test_build_vs_project_with_test_requires():
             generators = "MSBuildDeps", "MSBuildToolchain"
 
             def build_requirements(self):
-                self.build_requires("mydep.pkg.team/0.1", force_host_context=True)
+                self.test_requires("mydep.pkg.team/0.1")
 
             def build(self):
                 msbuild = MSBuild(self)

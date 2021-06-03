@@ -10,7 +10,7 @@ class Requirement:
     """
     def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
                  transitive_headers=None, test=False, package_id_mode=None, force=None,
-                 override=False):
+                 override=False, direct=True):
         # By default this is a generic library requirement
         self.ref = ref
         self.include = include  # This dependent node has headers that must be -I<include-path>
@@ -23,6 +23,7 @@ class Requirement:
         self.package_id_mode = package_id_mode
         self.force = force
         self.override = override
+        self.direct = direct
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -103,14 +104,14 @@ class Requirement:
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
             downstream_require = Requirement(require.ref, include=False, link=False, build=True,
-                                             run=False, public=True)
+                                             run=False, public=True, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
             if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.RUN or require.run:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
-                                                 run=True, public=False,)
+                                                 run=True, public=False, direct=False)
                 return downstream_require
             return
 
@@ -170,6 +171,7 @@ class Requirement:
         if self.test:
             downstream_require.test = True
 
+        downstream_require.direct = False
         return downstream_require
 
 
