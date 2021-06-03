@@ -3,6 +3,8 @@ import re
 import unittest
 from collections import OrderedDict
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
@@ -21,6 +23,7 @@ class RemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_removed_references(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@lasote/channel")
@@ -112,6 +115,7 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_remove_remote(self):
         self.client.run("remote list")
         self.assertIn("remote0: http://", self.client.out)
@@ -145,6 +149,7 @@ class RemoteTest(unittest.TestCase):
         self.assertNotIn("Hello2/0.1@user/testing", registry)
         self.assertNotIn("Hello/0.1@user/testing", registry)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_clean_remote(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
         self.client.run("remote clean")
@@ -153,6 +158,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_clean_remote_no_user(self):
         self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote clean")
@@ -161,6 +167,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_remove_remote_no_user(self):
         self.client.run("remote add_ref Hello/0.1 remote0")
         self.client.run("remote remove remote0")
@@ -169,6 +176,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertEqual("", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_add_force(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
@@ -212,6 +220,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("r4: https://r4", lines[2])
         self.assertIn("r2: https://newr2", lines[3])
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_rename(self):
         client = TestClient()
         client.run("remote add r1 https://r1")
@@ -389,6 +398,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote update remote1 %s" % url, assert_error=True)
         self.assertIn("Remote 'remote0' already exists with same URL", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_basic_refs(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
         self.client.run("remote list_ref")
@@ -414,6 +424,7 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.out)
         self.assertIn("Hello1/0.1@user/testing: remote2", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_package_refs(self):
 
         self.client.save({"conanfile.py": GenConanfile()})
@@ -465,6 +476,7 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         self.assertIn("pepe.org", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit for new cache")
     def test_metadata_editable_packages(self):
         """
         Check that 'conan remote' commands work with editable packages
