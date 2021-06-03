@@ -258,15 +258,18 @@ class ConanFile(object):
 
     @property
     def install_folder(self):
+        # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.base_install
 
     @install_folder.setter
     def install_folder(self, folder):
+        # FIXME: Remove in 2.0, no self.install_folder
         self.folders.set_base_install(folder)
 
     @property
     def generators_folder(self):
-        return self.folders.generators_folder
+        # FIXME: Remove in 2.0, no self.install_folder
+        return self.folders.generators_folder if self.folders.generators else self.install_folder
 
     @property
     def imports_folder(self):
