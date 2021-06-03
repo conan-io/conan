@@ -75,7 +75,7 @@ class ReferenceLayout:
     def system_reqs_package(self):
         assert self._ref.pkgid, "Must be a reference of a package"
         return os.path.join(self._cache.base_folder, self._base_folder, SYSTEM_REQS_FOLDER,
-                            self._pref.pkgid, SYSTEM_REQS)
+                            self._ref.pkgid, SYSTEM_REQS)
 
     # TODO: cache2.0 locks
     def package_remove(self):
