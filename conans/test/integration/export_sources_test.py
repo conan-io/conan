@@ -2,6 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.manifest import FileTreeManifest
@@ -77,10 +78,20 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client = client
         self.ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
         self.pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
-        self.source_folder = self.client.cache.package_layout(self.ref).source()
-        self.package_folder = self.client.cache.package_layout(self.ref).package(self.pref)
-        self.export_folder = self.client.cache.package_layout(self.ref).export()
-        self.export_sources_folder = self.client.cache.package_layout(self.ref).export_sources()
+
+    def _get_folders(self):
+        latest_rrev = self.client.cache.get_latest_rrev(self.ref)
+        ref_layout = self.client.cache.ref_layout(latest_rrev)
+        self.source_folder = ref_layout.source()
+        self.export_folder = ref_layout.export()
+        self.export_sources_folder = ref_layout.export_sources()
+
+        latest_prev = self.client.cache.get_latest_prev(PackageReference(latest_rrev,
+                                                                         NO_SETTINGS_PACKAGE_ID))
+        if latest_prev:
+            pkg_layout = self.client.cache.pkg_layout(latest_prev)
+            self.package_folder = pkg_layout.package()
+
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
@@ -239,6 +250,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
+    @pytest.mark.xfail(reason="cache2.0: copy not yet implemented")
     def test_copy(self, mode):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
@@ -268,11 +280,13 @@ class ExportsSourcesTest(unittest.TestCase):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
+        self._get_folders()
         self._check_export_folder(mode)
 
         # now build package
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         # Source folder and package should be exatly the same
+        self._get_folders()
         self._check_export_folder(mode)
         self._check_source_folder(mode)
         self._check_package_folder(mode)
@@ -298,6 +312,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self._create_code(mode)
 
         self.client.run("export . lasote/testing")
+        self._get_folders()
 
         self.client.run("upload Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
@@ -310,6 +325,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
         # install from remote
         self.client.run("install Hello/0.1@lasote/testing --build")
+        self._get_folders()
         self._check_export_folder(mode)
         self._check_source_folder(mode)
         self._check_package_folder(mode)
@@ -326,6 +342,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
         self.client.run("install Hello/0.1@lasote/testing")
+        self._get_folders()
 
         # upload to remote again, the folder remains as installed
         self.client.run("upload Hello/0.1@lasote/testing --all")
@@ -338,6 +355,7 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
+    @pytest.mark.xfail(reason="cache2.0: check new --update behaviour for 2.0")
     def test_update(self, mode):
         self._create_code(mode)
 
