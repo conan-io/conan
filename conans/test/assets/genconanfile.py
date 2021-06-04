@@ -431,7 +431,7 @@ class GenConanfile(object):
         for member in ("name", "version", "package_type", "provides", "deprecated", "short_paths",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "test_requires", "requirements", "build_requirements", "scm", "revision_mode",
-                       "settings", "options", "default_options", "build_messages", "package_method",
+                       "settings", "options", "default_options", "build", "package_method",
                        "package_info", "package_id_lines", "test_lines"
                        ):
             v = getattr(self, "_{}".format(member), None)
