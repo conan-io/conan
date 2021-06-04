@@ -14,6 +14,7 @@ from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION
 from conans.client.api.conan_api import Conan
+from conans.client.conf.config_installer import is_config_install_scheduled
 from conans.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 from conans.util.files import exception_message_safe
 from conans.util.log import logger
@@ -130,6 +131,14 @@ class Cli(object):
             self._out.info("")
             self._print_similar(command_argument)
             raise ConanException("Unknown command %s" % str(exc))
+
+        if (
+            command != "config"
+            or (
+                command == "config" and len(args[0]) > 1 and args[0][1] != "install"
+            )
+        ) and is_config_install_scheduled(self._conan_api):
+            self._conan_api.config_install(None, None)
 
         command.run(self.conan_api, self.commands[command_argument].parser,
                     args[0][1:], commands=self.commands, groups=self.groups)
