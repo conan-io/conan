@@ -216,8 +216,15 @@ class ConanRemover(object):
                         self._remote_remove(ref, package_ids, remote)
                     else:
                         remove_recipe = False if package_ids else True
-                        package_ids = package_ids or self._cache.get_package_revisions(ref)
-                        self._simple_local_remove(ref, package_ids, remove_recipe=remove_recipe)
+                        package_revisions = []
+                        if not package_ids:
+                            package_revisions = self._cache.get_package_revisions(ref)
+                        else:
+                            for package_id in package_ids:
+                                ref_with_id = PackageReference(ref, package_id)
+                                package_revisions.extend(self._cache.get_package_revisions(ref_with_id))
+
+                        self._simple_local_remove(ref, package_revisions, remove_recipe=remove_recipe)
                 except NotFoundException:
                     # If we didn't specify a pattern but a concrete ref, fail if there is no
                     # ref to remove
