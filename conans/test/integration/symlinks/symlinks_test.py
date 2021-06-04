@@ -125,18 +125,13 @@ class TestConan(ConanFile):
 
         client.run("export . lasote/stable")
         client.run("install conanfile.txt --build")
-        client.run("copy Hello/0.1@lasote/stable team/testing --all")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        team_pref = PackageReference(team_ref, NO_SETTINGS_PACKAGE_ID)
 
         for folder in [client.cache.package_layout(ref).export(),
                        client.cache.package_layout(ref).source(),
                        client.cache.package_layout(ref).build(pref),
-                       client.cache.package_layout(ref).package(pref),
-                       client.cache.package_layout(team_ref).export(),
-                       client.cache.package_layout(team_ref).package(team_pref)]:
+                       client.cache.package_layout(ref).package(pref)]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)

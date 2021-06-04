@@ -73,7 +73,3 @@ class ForbiddenCommandsTest(unittest.TestCase):
     def test_export_pkg(self):
         self.t.run('export-pkg -f . {}'.format(self.ref), assert_error=True)
         self.assertIn("Operation not allowed on a package installed as editable", self.t.out)
-
-    def test_copy(self):
-        self.t.run('copy --force {} ouser/ochannel'.format(self.ref), assert_error=True)
-        self.assertIn("Operation not allowed on a package installed as editable", self.t.out)

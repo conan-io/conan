@@ -380,10 +380,8 @@ class Command(object):
 
         It works specifying the recipe reference and package ID to be
         installed. Not transitive, requirements of the specified reference will
-        NOT be retrieved. Useful together with 'conan copy' to automate the
-        promotion of packages to a different user/channel. Only if a reference
-        is specified, it will download all packages from the specified remote.
-        If no remote is specified, it will use the default remote.
+        NOT be retrieved. Only if a reference is specified, it will download all
+        packages from the specified remote. If no remote is specified, it will use the default remote.
         """
 
         parser = argparse.ArgumentParser(description=self.download.__doc__,
@@ -1095,57 +1093,6 @@ class Command(object):
         return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote)
-
-    def copy(self, *args):
-        """
-        Copies conan recipes and packages to another user/channel.
-
-        Useful to promote packages (e.g. from "beta" to "stable") or transfer
-        them from one user to another.
-        """
-        parser = argparse.ArgumentParser(description=self.copy.__doc__,
-                                         prog="conan copy",
-                                         formatter_class=SmartFormatter)
-        parser.add_argument("reference", default="",
-                            help='package reference. e.g., MyPackage/1.2@user/channel')
-        parser.add_argument("user_channel", default="",
-                            help='Destination user/channel. e.g., lasote/testing')
-        parser.add_argument("-p", "--package", nargs=1, action=Extender,
-                            help='copy specified package ID '
-                            '[DEPRECATED: use full reference instead]')
-        parser.add_argument("--all", action='store_true', default=False,
-                            help='Copy all packages from the specified package recipe')
-        parser.add_argument("--force", action='store_true', default=False,
-                            help='Override destination packages and the package recipe')
-        args = parser.parse_args(*args)
-
-        try:
-            pref = PackageReference.loads(args.reference, validate=True)
-        except ConanException:
-            reference = args.reference
-            packages_list = args.package
-
-            if packages_list:
-                self._out.warn("Usage of `--package` argument is deprecated."
-                               " Use a full reference instead: "
-                               "`conan copy [...] {}:{}`".format(reference, packages_list[0]))
-
-            if args.all and packages_list:
-                raise ConanException("Cannot specify both --all and --package")
-        else:
-            reference = repr(pref.ref)
-            packages_list = [pref.id]
-            if args.package:
-                raise ConanException("Use a full package reference (preferred) or the `--package`"
-                                     " command argument, but not both.")
-
-            if args.all:
-                raise ConanException("'--all' argument cannot be used together with full reference")
-
-        self._warn_python_version()
-
-        return self._conan.copy(reference=reference, user_channel=args.user_channel,
-                                force=args.force, packages=packages_list or args.all)
 
     def user(self, *args):
         """
@@ -1900,7 +1847,7 @@ class Command(object):
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "editable")),
-                ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
+                ("Misc commands", ("profile", "remote", "user", "imports", "remove",
                                    "alias", "download", "inspect", "help", "lock", "frogarian"))]
 
         def check_all_commands_listed():
