@@ -10,25 +10,43 @@ def pkg_cmake(name, version, requires=None):
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
+        import os
         from conans import ConanFile
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
-            exports = "*"
+            exports_sources = "src/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             options = {{"shared": [True, False]}}
             default_options = {{"shared": False}}
             generators = "CMakeToolchain", "CMakeDeps"
 
+            def layout(self):
+                self.folders.source = "src"
+                # Lets wrongly assume that Visual Studio == Multi in all cases
+                if self.settings.compiler == "Visual Studio":
+                    self.folders.build = "build"
+                    self.folders.generators = "build/conan"
+                else:
+                    build_type = str(self.settings.build_type).lower()
+                    self.folders.build = "build-{{}}".format(build_type)
+                    self.folders.generators = os.path.join(self.folders.build, "conan")
+
+                self.cpp.source.includedirs = ["."]
+                if self.settings.compiler == "Visual Studio":
+                    self.cpp.build.libdirs = ["{{}}".format(self.settings.build_type)]
+                else:
+                    self.cpp.build.libdirs = ["."]
+
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
 
             def package(self):
-                self.copy("*.h", dst="include", src="src")
+                self.copy("*.h", dst="include")
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.dll", dst="bin", keep_path=False)
                 self.copy("*.dylib*", dst="lib", keep_path=False)
@@ -58,19 +76,30 @@ def pkg_cmake_app(name, version, requires=None):
     pkg_name = name
     name = name.replace(".", "_")
     conanfile = textwrap.dedent("""\
+        import os
         from conans import ConanFile
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
-            exports = "*"
+            exports_sources = "src/*"
             {deps}
             settings = "os", "compiler", "arch", "build_type"
             generators = "CMakeToolchain", "CMakeDeps"
 
+            def layout(self):
+                self.folders.source = "src"
+                if self.settings.compiler == "Visual Studio":
+                    self.folders.build = "build"
+                    self.folders.generators = "build/conan"
+                else:
+                    build_type = str(self.settings.build_type).lower()
+                    self.folders.build = "build-{{}}".format(build_type)
+                    self.folders.generators = os.path.join(self.folders.build, "conan")
+
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure()
                 cmake.build()
 
             def package(self):
