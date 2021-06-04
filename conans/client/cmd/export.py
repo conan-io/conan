@@ -138,6 +138,9 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
 
     ref = ref.copy_with_rev(revision=revision)
     reference_layout.assign_rrev(ConanReference(ref))
+    # TODO: cache2.0 check if this is the message we want to output
+    output.success('A new %s version was exported' % CONANFILE)
+    output.info('Folder: %s' % reference_layout.export())
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part
