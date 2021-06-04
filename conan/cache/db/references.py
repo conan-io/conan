@@ -12,7 +12,7 @@ class ReferencesDbTable(BaseDbTable):
                            ('pkgid', str, True),
                            ('prev', str, True),
                            ('path', str, False, None, True),
-                           ('timestamp', int),
+                           ('timestamp', float),
                            ('remote', str, True)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
@@ -82,7 +82,7 @@ class ReferencesDbTable(BaseDbTable):
         return row[0]
 
     def save(self, conn, path, ref: ConanReference, remote=None):
-        timestamp = int(time.time())
+        timestamp = time.time()
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
@@ -93,7 +93,7 @@ class ReferencesDbTable(BaseDbTable):
                new_remote=None):
         if not new_ref:
             new_ref = old_ref
-        timestamp = int(time.time())
+        timestamp = time.time()
         where_clause = self._where_clause(old_ref)
         set_clause = self._set_clause(new_ref, path=new_path, timestamp=timestamp, remote=new_remote)
         query = f"UPDATE {self.table_name} " \
