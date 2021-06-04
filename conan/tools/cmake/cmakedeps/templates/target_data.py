@@ -147,9 +147,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             # non-skipped requires.
             # e.g: (consumer => libA => libB) but libA requires libB with .transitive_headers=False
             # in that case libB is skipped for consumer.
+            non_skipped = self.conanfile.dependencies.non_skipped
             ret = [get_file_name(r)
                    for r in self.conanfile.dependencies.host_requires
-                   if r in self.cmakedeps._consumer_non_skipped]
+                   if r in non_skipped]
         return ret
 
 

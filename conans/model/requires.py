@@ -61,9 +61,9 @@ class Requirement:
             self.run = True
         elif pkg_type in (PackageType.SHARED, PackageType.RUN):
             self.run = True
-        elif pkg_type == PackageType.STATIC:
+        elif pkg_type is PackageType.STATIC:
             self.run = False
-        elif pkg_type == PackageType.HEADER:
+        elif pkg_type is PackageType.HEADER:
             self.run = False
             self.link = False
             self.include = True

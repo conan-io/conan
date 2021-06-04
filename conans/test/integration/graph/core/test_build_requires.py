@@ -9,8 +9,6 @@ from conans.test.utils.tools import GenConanfile, NO_SETTINGS_PACKAGE_ID
 
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
-    print([v.require for v in values])
-    print(transitive_deps)
 
     assert len(values) == len(transitive_deps)
 
