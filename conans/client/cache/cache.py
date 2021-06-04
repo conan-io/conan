@@ -100,7 +100,9 @@ class ClientCache(object):
         return self._data_cache.set_remote(ConanReference(ref), remote)
 
     def all_refs(self):
-        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}") for ref in
+        # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
+        #  this part in the future
+        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
                 self._data_cache.list_references(only_latest_rrev=True)]
 
     def get_package_revisions(self, ref, only_latest_prev=False):
