@@ -61,8 +61,12 @@ class Requirement:
             self.run = True
         elif pkg_type in (PackageType.SHARED, PackageType.RUN):
             self.run = True
-        elif pkg_type in (PackageType.STATIC, PackageType.HEADER):
+        elif pkg_type == PackageType.STATIC:
             self.run = False
+        elif pkg_type == PackageType.HEADER:
+            self.run = False
+            self.link = False
+            self.include = True
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
@@ -96,7 +100,6 @@ class Requirement:
         to such "consumer".
         Result can be None if nothing is to be propagated
         """
-
         if require.public is False:
             # TODO: We could implement checks in case private is violated (e.g shared libs)
             return
