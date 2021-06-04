@@ -3,6 +3,8 @@
 import os
 import textwrap
 import unittest
+
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -61,6 +63,8 @@ class ExistingCacheTestMixin(object):
 
 class RelatedToGraphBehavior(object):
 
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
     def test_do_nothing(self):
         self.t.save(files={'conanfile.py': conanfile,
                            "mylayout": conan_package_layout, })
@@ -68,6 +72,8 @@ class RelatedToGraphBehavior(object):
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
     def test_install_requirements(self, update):
         # Create a parent and remove it from cache
         ref_parent = ConanFileReference.loads("parent/version@lasote/channel")
@@ -92,6 +98,8 @@ class RelatedToGraphBehavior(object):
         self.assertTrue(os.path.exists(self.t.cache.package_layout(ref_parent).base_folder()))
 
     @parameterized.expand([(True,), (False,)])
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
     def test_middle_graph(self, update):
         # Create a parent and remove it from cache
         ref_parent = ConanFileReference.loads("parent/version@lasote/channel")

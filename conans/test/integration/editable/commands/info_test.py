@@ -2,6 +2,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -29,6 +31,8 @@ class LinkedPackageAsProject(unittest.TestCase):
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
 
+@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                          "TODO: cache2.0 fix with editables")
 class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
     """ Check that commands info/inspect running over an editable package work"""
 
@@ -54,6 +58,8 @@ class InfoCommandOnLocalWorkspaceTest(LinkedPackageAsProject):
                       "        parent/version@user/name\n", self.t.out)
 
 
+@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                          "TODO: cache2.0 fix with editables")
 class InfoCommandUsingReferenceTest(LinkedPackageAsProject):
 
     def test_no_args(self):
