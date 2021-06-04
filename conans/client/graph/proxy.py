@@ -60,16 +60,10 @@ class ConanProxy(object):
         check_updates = check_updates or update
         requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
         if requested_different_revision:
-            if check_updates:
-                remote, new_ref = self._download_recipe(layout, ref, output, remotes,
-                                                        selected_remote, recorder)
-                status = RECIPE_DOWNLOADED
-                return conanfile_path, status, remote, new_ref
-            else:
-                raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
-                                        "match the requested '%s'."
-                                        " Use '--update' to check in the remote."
-                                        % (cur_revision, repr(ref)))
+            remote, new_ref = self._download_recipe(layout, ref, output, remotes,
+                                                    selected_remote, recorder)
+            status = RECIPE_DOWNLOADED
+            return conanfile_path, status, remote, new_ref
 
         if not check_updates:
             status = RECIPE_INCACHE

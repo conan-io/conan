@@ -11,7 +11,7 @@ from conans import DEFAULT_REVISION_V1, load, ONLY_V2
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
+from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
 
 
@@ -332,10 +332,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             self.assertIn("ERROR: Revisions not enabled in the client, "
                           "specify a reference without revision", client.out)
         else:
-            client.run(command, assert_error=True)
-            self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
-                          "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
-                          "Use '--update' to check in the remote", client.out)
+            client.run(command)
+            self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
             command = "install {}#fakerevision --update".format(ref)
             client.run(command, assert_error=True)
             self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
@@ -346,7 +344,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             new_client.upload_all(self.ref)
 
             # Repeat the install --update pointing to the new reference
-            client.run("install {} --update".format(pref.ref.full_str()))
+            client.run("install {}".format(pref.ref.full_str()))
             self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     @parameterized.expand([(True,), (False,)])
@@ -1576,3 +1574,24 @@ class ServerRevisionsIndexes(unittest.TestCase):
 
         latest = self.server.server_store.get_last_revision(self.ref)
         self.assertEqual(latest.revision, DEFAULT_REVISION_V1)
+
+
+def test_necessary_update():
+    # https://github.com/conan-io/conan/issues/7235
+    c = TestClient(default_server_user=True)
+    c.run("config set general.revisions_enabled=True")
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . pkg/0.1@")
+    rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
+    c.run("upload * --all -c")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create . ")
+    rrev2 = "27ec09effe18a84f465dbc350e496335"
+    c.run("upload * --all -c")
+
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev1))})
+    c.run("install .")
+    assert rrev1 in c.out
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
+    c.run("install .")
+    assert rrev2 in c.out
