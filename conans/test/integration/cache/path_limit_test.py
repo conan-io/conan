@@ -136,29 +136,6 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_folder))
         self.assertEqual(load(os.path.join(package_folder + "/file0.txt")), "file0 content")
 
-    def test_package_copier(self):
-        client = TestClient()
-        files = {"conanfile.py": base}
-        client.save(files)
-        client.run("export . lasote/channel")
-        client.run("install lib/0.1@lasote/channel --build")
-        client.run("copy lib/0.1@lasote/channel memsharded/stable --all")
-        client.run("search")
-        self.assertIn("lib/0.1@lasote/channel", client.out)
-        self.assertIn("lib/0.1@memsharded/stable", client.out)
-        client.run("search lib/0.1@lasote/channel")
-
-        self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-        client.run("search lib/0.1@memsharded/stable")
-        self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
-
-        ref = ConanFileReference.loads("lib/0.1@lasote/channel")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref, short_paths=False).package(pref)
-        if platform.system() == "Windows":
-            package_folder = load(os.path.join(package_folder, ".conan_link"))
-        self.assertTrue(os.path.exists(package_folder))
-
     def test_basic(self):
         client = TestClient()
         files = {"conanfile.py": base}

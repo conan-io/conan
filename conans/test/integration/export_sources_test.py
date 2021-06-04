@@ -250,32 +250,6 @@ class ExportsSourcesTest(unittest.TestCase):
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
                            ("overlap", )])
-    @pytest.mark.xfail(reason="cache2.0: copy not yet implemented")
-    def test_copy(self, mode):
-        # https://github.com/conan-io/conan/issues/943
-        self._create_code(mode)
-
-        self.client.run("export . lasote/testing")
-        self.client.run("install Hello/0.1@lasote/testing --build=missing")
-        self.client.run("upload Hello/0.1@lasote/testing --all")
-        self.client.run('remove Hello/0.1@lasote/testing -f')
-        self.client.run("install Hello/0.1@lasote/testing")
-
-        # new copied package data
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        source_folder = self.client.cache.package_layout(ref).source()
-        export_folder = self.client.cache.package_layout(ref).export()
-
-        self.client.run("copy Hello/0.1@lasote/testing lasote/stable")
-        self._check_export_folder(mode, export_folder)
-
-        self.client.run("upload Hello/0.1@lasote/stable")
-        self.assertFalse(os.path.exists(source_folder))
-        self._check_export_uploaded_folder(mode, export_folder)
-        self._check_server_folder(mode)
-
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
-                           ("overlap", )])
     def test_export(self, mode):
         self._create_code(mode)
 

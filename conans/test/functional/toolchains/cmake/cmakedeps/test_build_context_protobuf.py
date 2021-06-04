@@ -69,31 +69,31 @@ main = textwrap.dedent("""
     """)
 
 consumer_conanfile = textwrap.dedent("""
-        import os
-        from conans import ConanFile
-        from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
+    import os
+    from conans import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps
 
-        class Consumer(ConanFile):
-            settings = "build_type", "os", "arch", "compiler"
-            exports_sources = "CMakeLists.txt", "main.cpp"
-            requires = "protobuf/1.0"
-            build_requires = "protobuf/1.0"
+    class Consumer(ConanFile):
+        settings = "build_type", "os", "arch", "compiler"
+        exports_sources = "CMakeLists.txt", "main.cpp"
+        requires = "protobuf/1.0"
+        build_requires = "protobuf/1.0"
 
-            def generate(self):
-                toolchain = CMakeToolchain(self)
-                toolchain.generate()
+        def generate(self):
+            toolchain = CMakeToolchain(self)
+            toolchain.generate()
 
-                deps = CMakeDeps(self)
-                {}
-                deps.generate()
+            deps = CMakeDeps(self)
+            {}
+            deps.generate()
 
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-                folder = str(self.settings.build_type) if self.settings.os == "Windows" else "."
-                self.run(os.sep.join([folder, "app"]))
-        """)
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+            folder = str(self.settings.build_type) if self.settings.os == "Windows" else "."
+            self.run(os.sep.join([folder, "app"]))
+    """)
 
 
 def test_build_modules_from_build_context(client):
@@ -117,7 +117,7 @@ def test_build_modules_from_build_context(client):
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
-                 "CMakeLists.txt": consumer_cmake.format(cmake_deps_conf),
+                 "CMakeLists.txt": consumer_cmake,
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default")
@@ -146,7 +146,7 @@ def test_build_modules_and_target_from_build_context(client):
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
-                 "CMakeLists.txt": consumer_cmake.format(cmake_deps_conf),
+                 "CMakeLists.txt": consumer_cmake,
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default")
@@ -174,7 +174,7 @@ def test_build_modules_from_host_and_target_from_build_context(client):
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
-                 "CMakeLists.txt": consumer_cmake.format(cmake_deps_conf),
+                 "CMakeLists.txt": consumer_cmake,
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default")
@@ -203,15 +203,30 @@ def test_build_modules_and_target_from_host_context(client):
     """
 
     client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
-                 "CMakeLists.txt": consumer_cmake.format(cmake_deps_conf),
+                 "CMakeLists.txt": consumer_cmake,
                  "main.cpp": main})
 
     client.run("create . app/1.0@ -pr:b default -pr:h default")
+    assert "Conan: Target declared 'protobuf::protobuf'" in client.out
+    assert "Conan: Target declared 'protobuf_BUILD::protobuf_BUILD'" in client.out
     assert "Library from host context!" in client.out
     assert "Generated code in host context!" in client.out
 
 
 def test_exception_when_not_prefix_specified(client):
+    cmake_deps_conf = """
+        deps.build_context_activated = ["protobuf"]
+    """
+    client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
+                 "main.cpp": main})
+
+    client.run("create . app/1.0@ -pr:b default -pr:h default", assert_error=True)
+    assert "The package 'protobuf' exists both as 'require' and as 'build require'. " \
+           "You need to specify a suffix using the 'build_context_suffix' attribute at the " \
+           "CMakeDeps generator." in client.out
+
+
+def test_not_activated_not_fail(client):
     consumer_cmake = textwrap.dedent("""
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
@@ -224,14 +239,11 @@ def test_exception_when_not_prefix_specified(client):
         target_link_libraries(app protobuf::protobuf)
         """)
 
-    cmake_deps_conf = """
-    """
-
-    client.save({"conanfile.py": consumer_conanfile.format(cmake_deps_conf),
-                 "CMakeLists.txt": consumer_cmake.format(cmake_deps_conf),
+    client.save({"conanfile.py": consumer_conanfile.format(""),
+                 "CMakeLists.txt": consumer_cmake,
                  "main.cpp": main})
 
-    client.run("create . app/1.0@ -pr:b default -pr:h default", assert_error=True)
-    assert "The package 'protobuf' exists both as 'require' and as 'build require'. " \
-           "You need to specify a suffix using the 'build_context_suffix' attribute at the " \
-           "CMakeDeps generator." in client.out
+    client.run("create . app/1.0@ -pr:b default -pr:h default")
+    assert "app/1.0: Created package" in client.out
+    assert "Library from host context!" in client.out
+    assert "Generated code in host context!" in client.out
