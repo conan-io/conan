@@ -254,8 +254,9 @@ class ExportTest(unittest.TestCase):
         self.client.run("export . lasote/stable")
 
     def test_basic(self):
-        reg_path = self.client.cache.package_layout(self.ref).export()
-        manif = FileTreeManifest.load(self.client.cache.package_layout(self.ref).export())
+        latest_rrev = self.client.cache.get_latest_rrev(self.ref)
+        reg_path = self.client.cache.ref_layout(latest_rrev).export()
+        manif = FileTreeManifest.load(reg_path)
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
                       self.client.out)
