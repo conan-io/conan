@@ -27,6 +27,8 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
+        self._consumer_non_skipped = None
+
     def generate(self):
         # Current directory is the generators_folder
         generator_files = self.content
@@ -53,7 +55,8 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        for req, dep in self._conanfile.dependencies.non_skipped.items():
+        self._consumer_non_skipped = self._conanfile.dependencies.non_skipped
+        for req, dep in self._consumer_non_skipped.items():
 
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if dep.is_build_context and req.ref.name not in self.build_context_activated:
