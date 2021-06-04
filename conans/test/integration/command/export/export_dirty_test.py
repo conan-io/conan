@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
+@pytest.mark.xfail(reason="cache2.0")
 class SourceDirtyTest(unittest.TestCase):
     def test_keep_failing_source_folder(self):
         # https://github.com/conan-io/conan/issues/4025
