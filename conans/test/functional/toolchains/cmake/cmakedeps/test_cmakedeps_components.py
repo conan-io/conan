@@ -82,8 +82,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertIn("top::cmp1", content)
 
 
-
-
 @pytest.fixture
 def top_conanfile():
     return textwrap.dedent("""

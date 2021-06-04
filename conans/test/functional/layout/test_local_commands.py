@@ -73,8 +73,7 @@ def test_local_dynamic_generators_folder():
 
 def test_no_layout_generators_folder():
     """If we don't configure a generators folder in the layout, the generator files:
-      - all go to the install_folder, EXCEPT the new ones, that NEEDS the generator folder
-        or go to the BASE folder
+      - all go to the install_folder
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_settings("build_type").
@@ -92,11 +91,11 @@ def test_no_layout_generators_folder():
     cmake_toolchain_generator_path = os.path.join(old_install_folder, "conan_toolchain.cmake")
 
     assert os.path.exists(cmake_generator_path)
-    # Not in the install_folder
-    assert not os.path.exists(cmake_toolchain_generator_path)
+    # In the install_folder
+    assert os.path.exists(cmake_toolchain_generator_path)
 
-    # But in the base folder
-    assert os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
+    # But not in the base folder
+    assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
 
 
 def test_local_build():

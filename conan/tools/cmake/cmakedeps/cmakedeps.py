@@ -42,13 +42,15 @@ class CMakeDeps(object):
         build_req = self._conanfile.dependencies.build_requires
 
         # Check if the same package is at host and build and the same time
-        common = {r.ref.name for r in host_req}.intersection({r.ref.name for r in build_req})
-        for name in common:
-            if name not in self.build_context_suffix:
+        activated_br = {r.ref.name for r in build_req if r.ref.name in self.build_context_activated}
+        common_names = {r.ref.name for r in host_req}.intersection(activated_br)
+        for common_name in common_names:
+            suffix = self.build_context_suffix.get(common_name)
+            if not suffix:
                 raise ConanException("The package '{}' exists both as 'require' and as "
                                      "'build require'. You need to specify a suffix using the "
                                      "'build_context_suffix' attribute at the CMakeDeps "
-                                     "generator.".format(name))
+                                     "generator.".format(common_name))
 
         # Iterate all the transitive requires
         for req, dep in self._conanfile.dependencies.non_skipped.items():
