@@ -6,6 +6,7 @@ from tqdm import tqdm
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
 from conans.client.cache.cache import ClientCache
+from conans.client.conf.required_version import check_required_conan_version
 from conans.client.migrations import ClientMigrator
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
@@ -52,6 +53,7 @@ class ConanAPIV2(object):
         # Migration system
         migrator = ClientMigrator(self.cache_folder, Version(client_version), self.out)
         migrator.migrate()
+        check_required_conan_version(self.cache_folder, self.out)
 
     @api_method
     def user_list(self, remote_name=None):
