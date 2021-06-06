@@ -26,7 +26,7 @@ class Requirement(object):
         return not self.__eq__(other)
 
 
-class UserRequirementsDict:
+class UserRequirementsDict(object):
     """ user facing dict to allow access of dependencies by name
     """
     def __init__(self, data):
