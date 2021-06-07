@@ -23,31 +23,35 @@ class ConanProxy(object):
         self._remote_manager = remote_manager
 
     def get_recipe(self, ref, check_updates, update, remotes):
-        layout = self._cache.package_layout(ref)
-        if isinstance(layout, PackageEditableLayout):
-            conanfile_path = layout.conanfile()
-            status = RECIPE_EDITABLE
-            # TODO: log_recipe_got_from_editable(reference)
-            # TODO: recorder.recipe_fetched_as_editable(reference)
-            return conanfile_path, status, None, ref
 
-        with layout.conanfile_write_lock(self._out):
-            result = self._get_recipe(layout, ref, check_updates, update, remotes)
-            conanfile_path, status, remote, new_ref = result
+        # TODO: cache2.0 check editables
+        # if isinstance(layout, PackageEditableLayout):
+        #     conanfile_path = layout.conanfile()
+        #     status = RECIPE_EDITABLE
+        #     # TODO: log_recipe_got_from_editable(reference)
+        #     # TODO: recorder.recipe_fetched_as_editable(reference)
+        #     return conanfile_path, status, None, ref
 
-            if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
-                log_recipe_got_from_local_cache(new_ref)
+        # TODO: cache2.0 Check with new locks
+        # with layout.conanfile_write_lock(self._out):
+        result = self._get_recipe(ref, check_updates, update, remotes)
+        conanfile_path, status, remote, new_ref = result
+
+        if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
+            log_recipe_got_from_local_cache(new_ref)
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, layout, ref, check_updates, update, remotes):
-        output = ScopedOutput(str(ref), self._out)
-        # check if it is in disk
-        conanfile_path = layout.conanfile()
+    def _get_recipe(self, reference, check_updates, update, remotes):
+        output = ScopedOutput(str(reference), self._out)
+
+        # check if it there's any revision of this recipe in the local cache
+        ref = self._cache.get_latest_rrev(reference)
 
         # NOT in disk, must be retrieved from remotes
-        if not os.path.exists(conanfile_path):
-            remote, new_ref = self._download_recipe(layout, ref, output, remotes, remotes.selected)
+        if not ref:
+            remote, new_ref = self._download_recipe(reference, output, remotes, remotes.selected)
+            recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
@@ -64,18 +68,18 @@ class ConanProxy(object):
         check_updates = check_updates or update
 
         # TODO: cache2.0 check this for new update flows
-        requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
-        if requested_different_revision:
-            if check_updates:
-                remote, new_ref = self._download_recipe(layout, ref, output, remotes,
-                                                        selected_remote)
-                status = RECIPE_DOWNLOADED
-                return conanfile_path, status, remote, new_ref
-            else:
-                raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
-                                        "match the requested '%s'."
-                                        " Use '--update' to check in the remote."
-                                        % (cur_revision, repr(ref)))
+        # requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
+        # if requested_different_revision:
+        #     if check_updates:
+        #         remote, new_ref = self._download_recipe(layout, ref, output, remotes,
+        #                                                 selected_remote)
+        #         status = RECIPE_DOWNLOADED
+        #         return conanfile_path, status, remote, new_ref
+        #     else:
+        #         raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
+        #                                 "match the requested '%s'."
+        #                                 " Use '--update' to check in the remote."
+        #                                 % (cur_revision, repr(ref)))
 
         if not check_updates:
             status = RECIPE_INCACHE

@@ -273,6 +273,7 @@ class Project(ConanFile):
         self.assertEqual(conanfile.version, "2.0.11549")
         self.assertEqual(conanfile.name, "other")
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_different_user_channel_resolved_correctly(self):
         server1 = TestServer()
         server2 = TestServer()
