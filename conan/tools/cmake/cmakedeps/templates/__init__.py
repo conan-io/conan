@@ -1,6 +1,7 @@
 import jinja2
 from jinja2 import Template
 
+from conan.tools.cmake.utils import get_file_name
 from conans.errors import ConanException
 
 
@@ -83,13 +84,6 @@ def get_target_namespace(req):
     ret = req.new_cpp_info.get_property("cmake_target_name", "CMakeDeps")
     if not ret:
         ret = req.cpp_info.get_name("cmake_find_package_multi", default_name=False)
-    return ret or req.ref.name
-
-
-def get_file_name(req):
-    ret = req.new_cpp_info.get_property("cmake_file_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.get_filename("cmake_find_package_multi", default_name=False)
     return ret or req.ref.name
 
 
