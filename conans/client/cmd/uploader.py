@@ -83,12 +83,12 @@ class _UploadCollecter(object):
             # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
             #  that we want to upload, check if  we should move this to other place
             # get the latest revision for the reference
-            ref = self._cache.get_latest_rrev(ref)
             remote = remotes.selected
             if remote:
                 ref_remote = remote
             else:
-                ref_remote = self._cache.ref_layout(ref).get_remote()
+                rrev = self._cache.get_latest_rrev(ref)
+                ref_remote = self._cache.ref_layout(rrev).get_remote() if rrev else None
                 ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
