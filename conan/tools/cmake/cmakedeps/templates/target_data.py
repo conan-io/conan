@@ -142,15 +142,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                     req = self.conanfile.dependencies.host_requires[dep_name]
                     ret.append(get_file_name(req))
         elif self.conanfile.dependencies.host_requires:
-            # The consumer might be skipping some node that in the other hand is a valid require for
-            # this node, so we have to check if the require is on the list of the consumer
-            # non-skipped requires.
-            # e.g: (consumer => libA => libB) but libA requires libB with .transitive_headers=False
-            # in that case libB is skipped for consumer.
-            non_skipped = self.conanfile.dependencies.non_skipped
-            ret = [get_file_name(r)
-                   for r in self.conanfile.dependencies.host_requires
-                   if r in non_skipped]
+            ret = [get_file_name(r) for r in self.conanfile.dependencies.non_skipped]
         return ret
 
 
