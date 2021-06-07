@@ -90,6 +90,20 @@ class DataCache:
         from conan.cache.conan_reference_layout import ReferenceLayout
         return ReferenceLayout(pref, cache=self, base_folder=package_path)
 
+    def get_reference_layout(self, ref: ConanReference):
+        assert ref.rrev, "Recipe revision must be known to get the reference layout"
+        path = self.get_or_create_reference_path(ref)
+        from conan.cache.conan_reference_layout import ReferenceLayout
+        return ReferenceLayout(ref, cache=self, base_folder=path)
+
+    def get_package_layout(self, pref: ConanReference):
+        assert pref.rrev, "Recipe revision must be known to get the reference layout"
+        assert pref.prev, "Package revision must be known to get the reference layout"
+        assert pref.pkgid, "Package id must be known to get the reference layout"
+        package_path = self.get_or_create_package_path(pref)
+        from conan.cache.conan_reference_layout import ReferenceLayout
+        return ReferenceLayout(pref, cache=self, base_folder=package_path)
+
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_ref)
         new_path = self.get_or_create_reference_path(new_ref)
