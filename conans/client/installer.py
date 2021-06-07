@@ -433,6 +433,11 @@ class BinaryInstaller(object):
                 ref, conan_file = node.ref, node.conanfile
                 output = conan_file.output
 
+                # Once the node is configured call the layout()
+                with conanfile_exception_formatter(str(conan_file), "layout"):
+                    if hasattr(conan_file, "layout"):
+                        conan_file.layout()
+
                 self._propagate_info(node, using_build_profile)
                 if node.binary == BINARY_EDITABLE:
                     self._handle_node_editable(node, profile_host, profile_build, graph_lock)
@@ -659,11 +664,6 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
-
-                    # Once the node is configured call the layout()
-                    with conanfile_exception_formatter(str(conanfile), "layout"):
-                        if hasattr(conanfile, "layout"):
-                            conanfile.layout()
 
                     if hasattr(conanfile, "layout"):
                         # Old cpp info without defaults (the defaults are in the new one)
