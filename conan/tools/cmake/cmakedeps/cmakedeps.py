@@ -6,7 +6,6 @@ from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
 from conan.tools.cmake.cmakedeps.templates.target_configuration import TargetConfigurationTemplate
 from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
-from conans.client.graph.graph import BINARY_SKIP
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -26,8 +25,6 @@ class CMakeDeps(object):
         # If specified, the files/targets/variables for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
-
-        self._consumer_non_skipped = None
 
     def generate(self):
         # Current directory is the generators_folder
@@ -55,8 +52,7 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        self._consumer_non_skipped = self._conanfile.dependencies.non_skipped
-        for req, dep in self._consumer_non_skipped.items():
+        for req, dep in self._conanfile.dependencies.non_skipped.items():
 
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if dep.is_build_context and req.ref.name not in self.build_context_activated:
@@ -65,7 +61,7 @@ class CMakeDeps(object):
             config_version = ConfigVersionTemplate(self, dep)
             ret[config_version.filename] = config_version.render()
 
-            self.require = req
+            self.require = req  # FIXME: This is the ugly pattern to pass info that should be fixed
             data_target = ConfigDataTemplate(self, dep)
             ret[data_target.filename] = data_target.render()
 

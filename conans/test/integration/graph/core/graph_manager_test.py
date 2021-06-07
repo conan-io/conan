@@ -1,6 +1,5 @@
 from parameterized import parameterized
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE, RECIPE_MISSING
 from conans.client.graph.graph_error import GraphError
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
@@ -8,8 +7,6 @@ from conans.test.utils.tools import GenConanfile
 
 def _check_transitive(node, transitive_deps):
     values = list(node.transitive_deps.values())
-    print([v.require for v in values])
-    print(transitive_deps)
 
     assert len(values) == len(transitive_deps)
 
@@ -283,6 +280,29 @@ class TestLinear(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(app, [(libb, True, True, False, None)])
         _check_transitive(libb, [(liba, True, True, False, None)])
+
+    def test_header_only(self):
+        # app -> libb0.1 -> liba0.1 (header_only)
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header library"))
+        libb = GenConanfile().with_requirement("liba/0.1")
+        self.recipe_conanfile("libb/0.1", libb)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (liba, False, False, False, False)])
+        _check_transitive(libb, [(liba, True, False, False, False)])
 
 
 class TestDiamond(GraphManagerTest):
