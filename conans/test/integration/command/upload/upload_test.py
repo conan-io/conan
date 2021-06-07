@@ -249,7 +249,9 @@ class UploadTest(unittest.TestCase):
                           "Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
-            download_folder = client.cache.package_layout(pref.ref).download_package(pref)
+            latest_rrev = client.cache.get_latest_rrev(pref.ref)
+            latest_prev = client.cache.get_latest_prev(latest_rrev)
+            download_folder = client.cache.pkg_layout(latest_prev).download_package()
             tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
