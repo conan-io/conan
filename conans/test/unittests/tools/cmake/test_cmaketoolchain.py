@@ -24,6 +24,8 @@ def conanfile():
     c.settings.compiler.libcxx = "libstdc++"
     c.conf = Conf()
     c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
     return c
 
 

@@ -6,10 +6,8 @@ from conans.test.utils.tools import TestClient
 @pytest.fixture(scope="module")
 def build_all():
     """ Build a simple graph to test --build option
-
         foobar <- bar <- foo
                <--------|
-
         All packages are built from sources to keep a cache.
     :return: TestClient instance
     """
@@ -118,7 +116,6 @@ def test_install_build_all_with_single_skip(build_arg, bar, foo, foobar, build_a
     """ When --build is passed with a skipped package, not all packages must be built from sources.
         When --build= is passed with another package, only the package must be built from sources.
         When --build=* is passed with another package, not all packages must be built from sources.
-
         The arguments order matter, that's why we need to run twice.
     """
     for argument in ["--build=!foo {}".format(build_arg),
@@ -137,7 +134,6 @@ def test_install_build_all_with_double_skip(build_arg, bar, foo, foobar, build_a
     """ When --build is passed with a skipped package, not all packages must be built from sources.
         When --build= is passed with another package, only the package must be built from sources.
         When --build=* is passed with another package, not all packages must be built from sources.
-
         The arguments order matter, that's why we need to run twice.
     """
     for argument in ["--build=!foo --build=!bar {}".format(build_arg),

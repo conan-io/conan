@@ -2,7 +2,8 @@ import os
 import textwrap
 
 from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
-    get_file_name, get_target_namespace
+    get_target_namespace
+from conan.tools.cmake.utils import get_file_name
 
 """
 

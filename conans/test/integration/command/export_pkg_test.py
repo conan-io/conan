@@ -1,6 +1,7 @@
 import json
 import os
 import re
+
 import textwrap
 import unittest
 from textwrap import dedent
@@ -427,7 +428,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
-    @pytest.mark.xfail(reason="export-pkg json output has changed")
+    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_json_with_dependencies(self):
 
         def _check_json_output(with_error=False):
@@ -546,5 +547,5 @@ def test_build_policy_never():
     assert "pkg/1.0 package(): Packaged 1 '.h' file: header.h" in client.out
 
     client.run("install pkg/1.0@ --build")
-    assert f"pkg/1.0:{NO_SETTINGS_PACKAGE_ID} - Cache" in client.out
+    assert "pkg/1.0:{} - Cache".format(NO_SETTINGS_PACKAGE_ID) in client.out
     assert "pkg/1.0: Calling build()" not in client.out

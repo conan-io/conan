@@ -10,7 +10,7 @@ from conans import load
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
 from conans.util.env_reader import get_env
 
 
@@ -99,7 +99,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
         self.c_v2.run("install {} --update".format(self.ref))
-        self.assertIn(f"lib/1.0@conan/testing:{NO_SETTINGS_PACKAGE_ID} - Cache", self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
         # If we force remote2, it will find an update
         self.c_v2.run("install {} --update -r remote2".format(self.ref))

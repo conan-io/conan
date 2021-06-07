@@ -21,12 +21,6 @@ def test_reuse_uploaded_tgz():
     assert "Compressing recipe" in client.out
     assert "Compressing package" in client.out
 
-    # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
-    client.run("copy %s user/testing --all" % str(ref))
-    client.run("upload Hello0/0.1@user/testing --all")
-    assert "Compressing recipe" not in client.out
-    assert "Compressing package" not in client.out
-
 
 def test_reuse_downloaded_tgz():
     # Download packages from a remote, then copy to another channel

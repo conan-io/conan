@@ -12,7 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save
 
 
-@pytest.mark.xfail(reason="JSon output to be revisited")
+@pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
 class JsonOutputTest(unittest.TestCase):
 
     def setUp(self):

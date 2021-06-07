@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conans import load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -140,7 +139,7 @@ def test_cache_in_layout(conanfile):
 
     # Search the package in the cache
     client.run("search lib/1.0@")
-    assert "Package_ID: 145be0748ac5b42a522030b2d2bcb841392e375e" in client.out
+    assert "Package_ID: {}".format(package_id) in client.out
 
 
 def test_same_conanfile_local(conanfile):

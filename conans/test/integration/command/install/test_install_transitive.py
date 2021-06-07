@@ -84,7 +84,6 @@ def test_upper_option(client):
     package_id = re.search(r"Hello0/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     package_id2 = re.search(r"Hello1/0.1@lasote/stable:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-
     pref = PackageReference(ref, package_id)
     hello0 = client.cache.package_layout(ref).package(pref)
 
