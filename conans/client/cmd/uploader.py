@@ -114,7 +114,10 @@ class _UploadCollecter(object):
                     # TODO: cache2.0 Ignoring the query for the moment
                     packages_ids = self._cache.get_package_ids(ref, only_latest_prev=True)
                 elif package_id:
-                    packages_ids = [package_id, ]
+                    # TODO: cache2.0 if we specify a package id we could have multiple package revisions
+                    #  something like: upload pkg/1.0:pkg_id will upload the package id for the latest prev
+                    packages = self._cache.get_package_ids(ref, only_latest_prev=True)
+                    packages_ids = [pkg for pkg in packages if pkg.id == package_id]
                 else:
                     packages_ids = []
                 if packages_ids:
