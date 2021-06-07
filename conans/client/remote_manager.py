@@ -157,7 +157,8 @@ class RemoteManager(object):
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         # TODO: cache2.0: check
         #layout.package_remove(pref)  # Remove first the destination folder
-        pkg_layout = self._cache.pkg_layout(pref)
+        latest_prev = self.get_latest_package_revision(pref, remote)
+        pkg_layout = self._cache.pkg_layout(latest_prev)
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
             self._get_package(pkg_layout, pref, remote, output, recorder, info=info)
