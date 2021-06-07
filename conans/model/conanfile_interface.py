@@ -23,6 +23,10 @@ class ConanFileInterface:
         return not self.__eq__(other)
 
     @property
+    def options(self):
+        return self._conanfile.options
+
+    @property
     def package_folder(self):
         return self._conanfile.package_folder
 
