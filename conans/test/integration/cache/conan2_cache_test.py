@@ -98,6 +98,14 @@ class TestCache:
         # client.current_folder = path
         # client.run("create . mypkg/3.0@user/channel")
 
+    def test_conan_install_flows(self):
+        # to test the proposed flows with the --update with new cache
+        client = TestClient()
+        client.run("remote add conan-center https://center.conan.io")
+        client.run("install zlib/1.2.11@ -r conan-center")
+        # check the latest revision in the cache --> don't install again if already there
+        client.run("install zlib/1.2.11@")
+
     def test_conan_upload(self):
         server = TestServer(users={"user": "password"}, write_permissions=[("*/*@*/*", "*")])
         servers = {"default": server}
