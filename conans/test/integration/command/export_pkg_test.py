@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from textwrap import dedent
 
+import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
@@ -425,6 +426,7 @@ class MyConan(ConanFile):
         self.client.run("export-pkg . danimtb/testing -pf package --json output.json --force")
         _check_json_output()
 
+    @pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
     def test_json_with_dependencies(self):
 
         def _check_json_output(with_error=False):
