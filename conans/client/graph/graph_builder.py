@@ -356,8 +356,7 @@ class DepsGraphBuilder(object):
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
                         update, remotes, profile, graph_lock, original_ref=None):
         try:
-            result = self._proxy.get_recipe(requirement.ref, check_updates, update,
-                                            remotes, self._recorder)
+            result = self._proxy.get_recipe(requirement.ref, check_updates, update, remotes)
         except ConanException as e:
             if current_node.ref:
                 self._output.error("Failed requirement '%s' from '%s'"

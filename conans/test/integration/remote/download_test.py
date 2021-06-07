@@ -1,6 +1,5 @@
 import unittest
 
-from conans.client.recorder.action_recorder import ActionRecorder
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer
@@ -49,7 +48,7 @@ class DownloadTest(unittest.TestCase):
         remotes = Remotes()
         remotes.add("remotename", "url")
         with self.assertRaises(NotFoundException):
-            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
+            proxy.get_recipe(ref, False, False, remotes)
 
         class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
@@ -59,7 +58,7 @@ class DownloadTest(unittest.TestCase):
         proxy = client2.proxy
 
         try:
-            proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
+            proxy.get_recipe(ref, False, False, remotes)
         except NotFoundException:
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:
