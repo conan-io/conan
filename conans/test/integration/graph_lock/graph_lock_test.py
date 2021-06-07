@@ -301,10 +301,7 @@ class RevisionsUpdateTest(unittest.TestCase):
 
         # Local revisions are not updated, even with a lockfile, unless --update
         client.save({"conanfile.py": GenConanfile("PkgB", "0.1").with_require("PkgA/0.1")})
-        client.run("install . --lockfile=conan.lock", assert_error=True)
-        self.assertIn("ERROR: The 'fa090239f8ba41ad559f8e934494ee2a' revision recipe in the "
-                      "local cache", client.out)
-        client.run("install . --lockfile=conan.lock --update")
+        client.run("install . --lockfile=conan.lock")
         self.assertIn("PkgA/0.1: Downloaded recipe revision 7f1110e1ae8d852b6d55f7f121864de6",
                       client.out)
 

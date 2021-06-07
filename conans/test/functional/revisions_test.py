@@ -332,7 +332,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             self.assertIn("ERROR: Revisions not enabled in the client, "
                           "specify a reference without revision", client.out)
         else:
-            client.run(command)
+            client.run(command, assert_error=True)
             self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
             command = "install {}#fakerevision --update".format(ref)
             client.run(command, assert_error=True)
