@@ -270,9 +270,9 @@ class UploadTest(unittest.TestCase):
                      "include/hello.h": ""})
         client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        packages_folder = client.cache.package_layout(ref).packages()
-        pkg_id = os.listdir(packages_folder)[0]
-        package_folder = os.path.join(packages_folder, pkg_id)
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        package_folder = client.cache.pkg_layout(latest_prev).package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
