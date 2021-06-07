@@ -147,7 +147,7 @@ class RemoteManager(object):
         uncompress_file(tgz_file, export_sources_folder, output=self._output)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, pref, layout, remote, output, recorder):
+    def get_package(self, conanfile, pref, remote, output, recorder):
         ref_layout = self._cache.ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,

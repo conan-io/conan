@@ -1153,9 +1153,10 @@ class ConanAPIV1(object):
             # TODO: cache2.0 fix this, just adapting the return value for the moment
             ret = []
             for rev in rrevs:
+                timestamp = self.app.cache.get_timestamp(rev)
                 rev_dict = {
-                    "revision": rev["rrev"],
-                    "time": from_timestamp_to_iso8601(rev["timestamp"])
+                    "revision": rev.revision,
+                    "time": from_timestamp_to_iso8601(timestamp)
                 }
                 ret.append(rev_dict)
             return ret

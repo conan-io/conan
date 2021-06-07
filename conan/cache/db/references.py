@@ -81,6 +81,18 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
+    def get_timestamp(self, conn, ref: ConanReference):
+        """ Returns the row matching the reference or fails """
+        where_clause = self._where_clause(ref)
+        query = f'SELECT {self.columns.timestamp} FROM {self.table_name} ' \
+                f'WHERE {where_clause};'
+        r = conn.execute(query)
+        row = r.fetchone()
+        if not row:
+            raise ReferencesDbTable.DoesNotExist(
+                f"No entry for reference '{ref.full_reference}'")
+        return row[0]
+
     def save(self, conn, path, ref: ConanReference, remote=None):
         timestamp = time.time()
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])

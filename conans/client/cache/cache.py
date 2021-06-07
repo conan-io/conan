@@ -129,6 +129,9 @@ class ClientCache(object):
         prevs = self.get_package_revisions(ref, True)
         return prevs[0] if prevs else None
 
+    def get_timestamp(self, ref):
+        return self._data_cache.get_timestamp(ConanReference(ref))
+
     @property
     def store(self):
         return self._store_folder

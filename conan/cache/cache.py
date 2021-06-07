@@ -155,6 +155,9 @@ class DataCache:
     def get_remote(self, ref: ConanReference):
         return self.db.get_remote(ref)
 
+    def get_timestamp(self, ref):
+        return self.db.get_timestamp(ref)
+
     def set_remote(self, ref: ConanReference, new_remote):
         self.db.update_reference(ref, new_remote=new_remote)
 
