@@ -18,11 +18,12 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     except NotFoundException:
         raise RecipeNotFoundException(ref)
 
-    conan_file_path = cache.package_layout(ref).conanfile()
+    layout = cache.ref_layout(ref)
+    conan_file_path = layout.conanfile()
     conanfile = loader.load_basic(conan_file_path)
 
     # Download the sources too, don't be lazy
-    retrieve_exports_sources(remote_manager, cache, conanfile, ref, remotes)
+    retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
 
     if not recipe:  # Not only the recipe
         if not package_ids:  # User didn't specify a specific package binary

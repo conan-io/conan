@@ -116,9 +116,9 @@ class ConanProxy(object):
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
         else:
-            latest_rrev = self.client.cache.get_latest_rrev(ref)
+            latest_rrev = self._cache.get_latest_rrev(ref)
             if latest_rrev:
-                remote_name = self.client.cache.ref_layout(ref).get_remote()
+                remote_name = self._cache.ref_layout(ref).get_remote()
                 if remote_name:
                     remote = remotes[remote_name]
                     output.info("Retrieving from predefined remote '%s'" % remote.name)
