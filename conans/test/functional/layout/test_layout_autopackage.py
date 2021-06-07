@@ -1,4 +1,5 @@
 import os
+import re
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -185,6 +186,7 @@ def test_auto_package_with_components():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
+    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
     pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
     p_folder = client.cache.pkg_layout(pref).package()
@@ -280,6 +282,7 @@ def test_auto_package_default_patterns():
     """
     client.save({"conanfile.py": conan_file})
     client.run("create . lib/1.0@")
+    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
     pref = get_latest_prev(client.cache, ref, "4024617540c4f240a6a5e8911b0de9ef38a11a72")
     p_folder = client.cache.pkg_layout(pref).package()

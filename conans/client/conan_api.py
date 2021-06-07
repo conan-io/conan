@@ -282,7 +282,7 @@ class ConanAPIV1(object):
                 else:
                     ref = self.app.remote_manager.get_recipe(ref, remote)
 
-            result = self.app.proxy.get_recipe(ref, False, False, remotes, ActionRecorder())
+            result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result
             conanfile = self.app.loader.load_basic(conanfile_path)
             conanfile.name = ref.name
@@ -493,8 +493,7 @@ class ConanAPIV1(object):
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          update=update, generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id,
-                         is_build_require=is_build_require,
-                         add_txt_generator=False)
+                         is_build_require=is_build_require)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)

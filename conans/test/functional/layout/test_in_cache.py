@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -117,21 +118,12 @@ def test_cache_in_layout(conanfile):
 
     client.save({"conanfile.py": conanfile})
     client.run("create . lib/1.0@")
-
+    package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
-
-    latest_rrev = client.cache.get_latest_rrev(ref)
-
-    ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
-
-    pref = PackageReference(ref, "58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d")
-
-    prevs = client.cache.get_package_revisions(pref, only_latest_prev=True)
-    prev = prevs[0]
-
-    sf = client.cache.ref_layout(ref).source()
-    bf = client.cache.pkg_layout(prev).build()
-    pf = client.cache.pkg_layout(prev).package()
+    pref = PackageReference(ref, package_id)
+    sf = client.cache.package_layout(ref).source()
+    bf = client.cache.package_layout(ref).build(pref)
+    pf = client.cache.package_layout(ref).package(pref)
 
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")
@@ -150,7 +142,7 @@ def test_cache_in_layout(conanfile):
 
     # Search the package in the cache
     client.run("search lib/1.0@")
-    assert "Package_ID: 58083437fe22ef1faaa0ab4bb21d0a95bf28ae3d" in client.out
+    assert "Package_ID: {}".format(package_id) in client.out
 
 
 def test_same_conanfile_local(conanfile):

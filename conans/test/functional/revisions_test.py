@@ -99,8 +99,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
         self.c_v2.run("install {} --update".format(self.ref))
-        self.assertIn("lib/1.0@conan/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - "
-                      "Cache".format(pref.id), self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
         # If we force remote2, it will find an update
         self.c_v2.run("install {} --update -r remote2".format(self.ref))

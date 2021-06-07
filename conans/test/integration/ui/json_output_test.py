@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.build_info import DEFAULT_LIB
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
@@ -10,6 +12,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import save
 
 
+@pytest.mark.xfail(reason="JSon output to be revisited, because based on ActionRecorder")
 class JsonOutputTest(unittest.TestCase):
 
     def setUp(self):
