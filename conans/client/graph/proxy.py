@@ -51,9 +51,9 @@ class ConanProxy(object):
 
         # NOT in disk, must be retrieved from remotes
         if not ref:
-            recipe_layout = self._cache.ref_layout(reference)
-            remote, new_ref = self._download_recipe(recipe_layout, reference, output, remotes, remotes.selected,
+            remote, new_ref = self._download_recipe(reference, output, remotes, remotes.selected,
                                                     recorder)
+            recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
@@ -103,12 +103,12 @@ class ConanProxy(object):
 
         return conanfile_path, status, selected_remote, ref
 
-    def _download_recipe(self, layout, ref, output, remotes, remote, recorder):
+    def _download_recipe(self, ref, output, remotes, remote, recorder):
 
-        def _retrieve_from_remote(the_remote, layout):
+        def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
-            _ref = self._remote_manager.get_recipe(ref, the_remote, layout)
+            _ref = self._remote_manager.get_recipe(ref, the_remote)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             recorder.recipe_downloaded(ref, the_remote.url)
             return _ref
@@ -116,14 +116,16 @@ class ConanProxy(object):
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
         else:
-            remote_name = layout.get_remote()
-            if remote_name:
-                remote = remotes[remote_name]
-                output.info("Retrieving from predefined remote '%s'" % remote.name)
+            latest_rrev = self.client.cache.get_latest_rrev(ref)
+            if latest_rrev:
+                remote_name = self.client.cache.ref_layout(ref).get_remote()
+                if remote_name:
+                    remote = remotes[remote_name]
+                    output.info("Retrieving from predefined remote '%s'" % remote.name)
 
         if remote:
             try:
-                new_ref = _retrieve_from_remote(remote, layout)
+                new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
@@ -141,7 +143,7 @@ class ConanProxy(object):
             raise ConanException("No remote defined")
         for remote in remotes:
             try:
-                new_ref = _retrieve_from_remote(remote, layout)
+                new_ref = _retrieve_from_remote(remote)
                 return remote, new_ref
             # If not found continue with the next, else raise
             except NotFoundException:

@@ -89,7 +89,7 @@ class RemoteManager(object):
         # FIXME Conan 2.0: With revisions, it is not needed to pass headers to this second function
         return self._call_remote(remote, "get_package_info", pref, headers=headers), pref
 
-    def get_recipe(self, ref, remote, layout):
+    def get_recipe(self, ref, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
@@ -100,7 +100,7 @@ class RemoteManager(object):
 
         ref = self._resolve_latest_ref(ref, remote)
 
-        layout.assign_rrev(ConanReference(ref))
+        layout = self._cache.ref_layout(ref)
         layout.set_remote(remote.name)
 
         t1 = time.time()
