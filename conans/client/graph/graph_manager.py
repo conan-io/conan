@@ -192,6 +192,10 @@ class GraphManager(object):
                                                    user=ref.user,
                                                    channel=ref.channel,
                                                    lock_python_requires=lock_python_requires)
+            # Once the node is configured call the layout()
+            with conanfile_exception_formatter(str(conanfile), "layout"):
+                if hasattr(conanfile, "layout"):
+                    conanfile.layout()
 
             ref = ConanFileReference(conanfile.name, conanfile.version,
                                      ref.user, ref.channel, validate=False)
@@ -257,6 +261,11 @@ class GraphManager(object):
                 require.ref = require.range_ref = create_reference
             else:
                 conanfile.requires.add_ref(create_reference)
+
+        with conanfile_exception_formatter(str(conanfile), "layout"):
+            if hasattr(conanfile, "layout"):
+                conanfile.layout()
+
         ref = ConanFileReference(conanfile.name, conanfile.version,
                                  create_reference.user, create_reference.channel, validate=False)
         root_node = Node(ref, conanfile, recipe=RECIPE_CONSUMER, context=CONTEXT_HOST, path=path)

@@ -5,7 +5,7 @@ from conans.client.conanfile.package import run_package_method
 from conans.client.graph.graph import BINARY_SKIP
 from conans.client.graph.graph_manager import load_deps_info
 from conans.client.installer import add_env_conaninfo
-from conans.errors import ConanException
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.model.ref import PackageReference
 
 
@@ -30,6 +30,10 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     nodes = deps_graph.root.neighbors()
     pkg_node = nodes[0]
     conanfile = pkg_node.conanfile
+
+    with conanfile_exception_formatter(str(conanfile), "layout"):
+        if hasattr(conanfile, "layout"):
+            conanfile.layout()
 
     def _init_conanfile_infos():
         node_order = [n for n in pkg_node.public_closure if n.binary != BINARY_SKIP]
