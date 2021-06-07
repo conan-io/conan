@@ -659,6 +659,12 @@ class BinaryInstaller(object):
                 with conanfile_exception_formatter(str(conanfile), "package_info"):
                     self._hook_manager.execute("pre_package_info", conanfile=conanfile,
                                                reference=ref)
+
+                    # Once the node is configured call the layout()
+                    with conanfile_exception_formatter(str(conanfile), "layout"):
+                        if hasattr(conanfile, "layout"):
+                            conanfile.layout()
+
                     if hasattr(conanfile, "layout"):
                         # Old cpp info without defaults (the defaults are in the new one)
                         conanfile.cpp_info = CppInfo(conanfile.name, package_folder,

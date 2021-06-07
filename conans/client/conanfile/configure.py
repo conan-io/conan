@@ -38,7 +38,3 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
                 message += " in favor of '%s'" % conanfile.deprecated
             message += ". Please, consider changing your requirements."
             conanfile.output.warn(message)
-
-        # Once the node is configured call the layout()
-        if hasattr(conanfile, "layout"):
-            conanfile.layout()
