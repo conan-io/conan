@@ -297,9 +297,10 @@ class UploadTest(unittest.TestCase):
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        manifest = client2.cache.package_layout(ref).recipe_manifest()
+        latest_rrev = client2.cache.get_latest_rrev(ref)
+        manifest = client2.cache.ref_layout(latest_rrev).recipe_manifest()
         manifest.time += 10
-        manifest.save(client2.cache.package_layout(ref).export())
+        manifest.save(client2.cache.ref_layout(latest_rrev).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client2.out)
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
