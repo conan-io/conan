@@ -89,12 +89,12 @@ class GraphBinariesAnalyzer(object):
             else:
                 output.warn("Can't update, no remote defined")
 
-        # TODO: cache2.0: remove metadata
-        # if not node.binary:
-        #     node.binary = BINARY_CACHE
-        #     metadata = metadata or package_layout.load_metadata()
-        #     node.prev = metadata.packages[pref.id].revision
-        #     assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
+        if not node.binary:
+            node.binary = BINARY_CACHE
+            # TODO: cache2.0: remove metadata
+            # metadata = metadata or package_layout.load_metadata()
+            # node.prev = metadata.packages[pref.id].revision
+            assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
