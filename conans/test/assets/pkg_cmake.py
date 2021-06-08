@@ -13,6 +13,8 @@ def pkg_cmake(name, version, requires=None):
         import os
         from conans import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.layout import cmake_layout
+
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
@@ -24,21 +26,7 @@ def pkg_cmake(name, version, requires=None):
             generators = "CMakeToolchain", "CMakeDeps"
 
             def layout(self):
-                self.folders.source = "src"
-                # Lets wrongly assume that Visual Studio == Multi in all cases
-                if self.settings.compiler == "Visual Studio":
-                    self.folders.build = "build"
-                    self.folders.generators = "build/conan"
-                else:
-                    build_type = str(self.settings.build_type).lower()
-                    self.folders.build = "build-{{}}".format(build_type)
-                    self.folders.generators = os.path.join(self.folders.build, "conan")
-
-                self.cpp.source.includedirs = ["."]
-                if self.settings.compiler == "Visual Studio":
-                    self.cpp.build.libdirs = ["{{}}".format(self.settings.build_type)]
-                else:
-                    self.cpp.build.libdirs = ["."]
+                cmake_layout(self)
 
             def build(self):
                 cmake = CMake(self)
@@ -79,6 +67,8 @@ def pkg_cmake_app(name, version, requires=None):
         import os
         from conans import ConanFile
         from conan.tools.cmake import CMake
+        from conan.tools.layout import cmake_layout
+
         class Pkg(ConanFile):
             name = "{pkg_name}"
             version = "{version}"
@@ -88,14 +78,7 @@ def pkg_cmake_app(name, version, requires=None):
             generators = "CMakeToolchain", "CMakeDeps"
 
             def layout(self):
-                self.folders.source = "src"
-                if self.settings.compiler == "Visual Studio":
-                    self.folders.build = "build"
-                    self.folders.generators = "build/conan"
-                else:
-                    build_type = str(self.settings.build_type).lower()
-                    self.folders.build = "build-{{}}".format(build_type)
-                    self.folders.generators = os.path.join(self.folders.build, "conan")
+                cmake_layout(self)
 
             def build(self):
                 cmake = CMake(self)
