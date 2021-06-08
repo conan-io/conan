@@ -173,13 +173,14 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
 
-        package_layout = client.cache.package_layout(ref)
-        package_folder = os.path.join(package_layout.packages(),
-                                      os.listdir(package_layout.packages())[0])
+        rrev = client.cache.get_latest_rrev(ref)
+        prev = client.cache.get_latest_prev(rrev)
+        package_folder = client.cache.pkg_layout(prev).package()
+
         # Check not 'No remote binary packages found' warning
         self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
         # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(package_layout.conanfile()))
+        self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 
