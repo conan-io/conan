@@ -64,7 +64,8 @@ class _UploadCollecter(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
-            refs = [ref, ]
+            rrev = self._cache.get_latest_rrev(ref)
+            refs = [rrev, ]
             confirm = True
         else:
             refs = search_recipes(self._cache, reference_or_pattern)
@@ -88,7 +89,7 @@ class _UploadCollecter(object):
                 ref_remote = remote
             else:
                 rrev = self._cache.get_latest_rrev(ref)
-                ref_remote = self._cache.ref_layout(rrev).get_remote() if rrev else None
+                ref_remote = self._cache.get_ref_layout(rrev).get_remote() if rrev else None
                 ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
@@ -97,7 +98,7 @@ class _UploadCollecter(object):
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
-                    conanfile_path = self._cache.ref_layout(ref).conanfile()
+                    conanfile_path = self._cache.get_ref_layout(ref).conanfile()
                     conanfile = self._loader.load_basic(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
@@ -150,7 +151,7 @@ class _PackagePreparator(object):
         - check if the remote recipe is newer, raise
         - compare and decide which files need to be uploaded (and deleted from server)
         """
-        layout = self._cache.ref_layout(ref)
+        layout = self._cache.get_ref_layout(ref)
         current_remote_name = layout.get_remote()
 
         if remote.name != current_remote_name:
@@ -215,7 +216,7 @@ class _PackagePreparator(object):
             self._output.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = load(self._cache.ref_layout(ref).conanfile())
+                contents = load(self._cache.get_ref_layout(ref).conanfile())
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
@@ -291,7 +292,7 @@ class _PackagePreparator(object):
         return result
 
     def prepare_package(self, pref, integrity_check, policy, p_remote):
-        pkg_layout = self._cache.pkg_layout(pref)
+        pkg_layout = self._cache.get_pkg_layout(pref)
         cache_files = self._compress_package_files(pkg_layout, pref, integrity_check)
 
         if policy == UPLOAD_POLICY_SKIP:
@@ -348,7 +349,7 @@ class _PackagePreparator(object):
         self._output.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        layout = self._cache.pkg_layout(pref)
+        layout = self._cache.get_pkg_layout(pref)
         read_manifest, expected_manifest = layout.package_manifests()
 
         if read_manifest != expected_manifest:
@@ -482,7 +483,7 @@ class CmdUpload(object):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
-        conanfile_path = self._cache.ref_layout(ref).conanfile()
+        conanfile_path = self._cache.get_ref_layout(ref).conanfile()
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
@@ -562,7 +563,7 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        ref_layout = self._cache.ref_layout(pref.ref)
+        ref_layout = self._cache.get_ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
