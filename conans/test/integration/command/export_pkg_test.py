@@ -102,8 +102,6 @@ class HelloPythonConan(ConanFile):
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
         manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
@@ -486,8 +484,8 @@ class TestConan(ConanFile):
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
-    @pytest.mark.xfail("cache2.0: we can't test this now, revisit when we move the uuid folders to"
-                       "a temporal location")
+    @pytest.mark.xfail(reason="cache2.0: we can't test this now, revisit when we move the uuid "
+                              "folders to a temporal location")
     def test_export_pkg_clean_dirty(self):
         # https://github.com/conan-io/conan/issues/6449
         client = TestClient()
