@@ -123,8 +123,8 @@ class PrivateGraphTest(GraphManagerTest):
                                            .with_require(gazelle_ref)
                                            .with_require(grass02_ref, private=True))
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_dont_skip_private(self, private_first):
         liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
         libb_ref = ConanFileReference.loads("libb/0.1@user/testing")
@@ -170,8 +170,8 @@ class PrivateGraphTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1@user/testing#123", deps=[], build_deps=[],
                          dependents=[libc, libb], closure=[])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_dont_conflict_private(self, private_first):
         liba_ref = ConanFileReference.loads("liba/0.1@user/testing")
         liba_ref2 = ConanFileReference.loads("liba/0.2@user/testing")
