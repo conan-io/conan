@@ -134,16 +134,16 @@ class PackageCacheLayout(object):
         raise ConanException("cache2.0: package_id_exists removed")
 
     def package_remove(self, pref):
-        raise ConanException("cache2.0: package_id_exists removed")
+        raise ConanException("cache2.0: package_remove removed")
 
     def sources_remove(self):
-        raise ConanException("cache2.0: package_id_exists removed")
+        raise ConanException("cache2.0: sources_remove removed")
 
     def export_remove(self):
-        raise ConanException("cache2.0: package_id_exists removed")
+        raise ConanException("cache2.0: export_remove removed")
 
     def package_metadata(self):
-        raise ConanException("cache2.0: package_id_exists removed")
+        raise ConanException("cache2.0: package_metadata removed")
 
     def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
