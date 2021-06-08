@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
@@ -9,6 +10,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
+@pytest.mark.xfail(reason="cache2.0 alias not yet implemented")
 class ConanAliasTest(unittest.TestCase):
 
     def test_alias_overriden(self):
