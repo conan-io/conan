@@ -365,14 +365,20 @@ class RemoteRegistry(object):
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
-        with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote == remote_name:
-                        metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote == remote_name:
-                            pkg_metadata.remote = None
+
+        # TODO: cache2.0, editables
+        # with self._cache.editable_packages.disable_editables():
+        for ref in self._cache.all_refs():
+            # TODO: cache2.0 revisit this part, maybe implement some methods for remotes
+            self._cache.set_remote(ref, None)
+            for package in self._cache.get_package_revisions(ref):
+                self._cache.set_remote(package, None)
+            # with self._cache.package_layout(ref).update_metadata() as metadata:
+            #     if metadata.recipe.remote == remote_name:
+            #         metadata.recipe.remote = None
+            #     for pkg_metadata in metadata.packages.values():
+            #         if pkg_metadata.remote == remote_name:
+            #             pkg_metadata.remote = None
 
             remotes.save(self._filename)
 
