@@ -5,6 +5,7 @@ from conan.tools.google import BazelDeps
 from conans import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.conanfile_interface import ConanFileInterface
+from conans.model.dependencies import Requirement, ConanFileDependencies
 from conans.model.ref import ConanFileReference
 
 
@@ -15,21 +16,19 @@ def test_bazeldeps_dependency_buildfiles():
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep.package_folder = "/path/to/folder_dep"
 
-    with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
-        with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-            mock_ref.return_value = ConanFileReference.loads("OriginalDepName/1.0")
-            mock_deps.return_value = Mock()
+    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
-            conanfile_dep.package_folder = "/path/to/folder_dep"
-            conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
-            conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+        bazeldeps = BazelDeps(conanfile)
 
-            bazeldeps = BazelDeps(conanfile)
-
-            for dependency in bazeldeps._conanfile.dependencies.transitive_host_requires:
-                dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
-                assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
+        for dependency in bazeldeps._conanfile.dependencies.host_requires.values():
+            dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
+            assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
 
 
 def test_bazeldeps_main_buildfile():
@@ -47,24 +46,23 @@ def test_bazeldeps_main_buildfile():
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.ref = ConanFileReference.loads("OriginalDepName/1.0")
+    conanfile_dep.package_folder = "/path/to/folder_dep"
 
-    with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
-        with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
-            mock_ref.return_value = ConanFileReference.loads("OriginalDepName/1.0")
-            mock_deps.return_value = Mock()
+    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+        req = Requirement(ConanFileReference.loads("OriginalDepName/1.0"))
+        mock_deps.return_value = ConanFileDependencies({req: ConanFileInterface(conanfile_dep)})
 
-            conanfile_dep.package_folder = "/path/to/folder_dep"
-            conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
-            conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+        bazeldeps = BazelDeps(conanfile)
 
-            bazeldeps = BazelDeps(conanfile)
+        local_repositories = []
+        for dependency in bazeldeps._conanfile.dependencies.host_requires.values():
+            content = bazeldeps._create_new_local_repository(dependency,
+                                                             "conandeps/OriginalDepName/BUILD")
+            local_repositories.append(content)
 
-            local_repositories = []
-            for dependency in bazeldeps._conanfile.dependencies.transitive_host_requires:
-                content = bazeldeps._create_new_local_repository(dependency, "conandeps/OriginalDepName/BUILD")
-                local_repositories.append(content)
+        content = bazeldeps._get_main_buildfile_content(local_repositories)
 
-            content = bazeldeps._get_main_buildfile_content(local_repositories)
-
-            for line in expected_content:
-                assert line in content
+        for line in expected_content:
+            assert line in content
