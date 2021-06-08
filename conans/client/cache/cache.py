@@ -151,8 +151,12 @@ class ClientCache(object):
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
+    # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
+    #  that call this directly
     def package_layout(self, ref, short_paths=None):
-        raise ConanException("Moving to cache 2.0")
+        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
+        _check_ref_case(ref, self.store)
+        return PackageCacheLayout(ref, self)
 
     @property
     def remotes_path(self):

@@ -37,64 +37,67 @@ def short_path(func):
         return func
 
 
+# TODO: cache2.0 remove this class, using as an adapter to pass tests from 2.0 that
+#  use the package_layout directly
 class PackageCacheLayout(object):
     """ This is the package layout for Conan cache """
 
-    def __init__(self, base_folder, ref, short_paths, no_lock):
+    def __init__(self, ref, cache):
         assert isinstance(ref, ConanFileReference)
         self._ref = ref
-        self._base_folder = os.path.normpath(base_folder)
-        self._short_paths = short_paths
-        self._no_lock = no_lock
+        self._cache = cache
 
     @property
     def ref(self):
         return self._ref
 
+    @property
+    def ref_layout(self):
+        latest_rrev = self._cache.get_latest_rrev(self._ref)
+        return self._cache.get_ref_layout(latest_rrev)
+
+    @property
+    def pkg_layout(self):
+        latest_rrev = self._cache.get_latest_rrev(self._ref)
+        latest_prev = self._cache.get_latest_rrev(latest_rrev)
+        return self._cache.get_pkg_layout(latest_prev)
+
     def base_folder(self):
-        """ Returns the base folder for this package reference """
-        return self._base_folder
+        return self.ref_layout.base_folder
 
     def export(self):
-        return os.path.join(self._base_folder, EXPORT_FOLDER)
+        return self.ref_layout.export()
 
     def conanfile(self):
-        export = self.export()
-        return os.path.join(export, CONANFILE)
+        return self.ref_layout.conanfile()
 
     def conandata(self):
-        # FIXME : why not use properties?
-        export = self.export()
-        return os.path.join(export, DATA_YML)
+        return self.ref_layout.conandata()
 
     @short_path
     def export_sources(self):
-        return os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+        return self.ref_layout.export_sources()
 
     @short_path
     def source(self):
-        return os.path.join(self._base_folder, SRC_FOLDER)
+        return self.ref_layout.source()
 
     @short_path
     def scm_sources(self):
-        return os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        return self.ref_layout.scm_sources()
 
     def builds(self):
-        return os.path.join(self._base_folder, BUILD_FOLDER)
+        return self.pkg_layout.build()
 
     @short_path
     def build(self, pref):
-        assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
-        return os.path.join(self._base_folder, BUILD_FOLDER, pref.id)
+        return self.pkg_layout.build()
 
     def system_reqs(self):
-        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, SYSTEM_REQS)
+        return self.pkg_layout.system_reqs()
 
     def system_reqs_package(self, pref):
-        assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref
-        return os.path.join(self._base_folder, SYSTEM_REQS_FOLDER, pref.id, SYSTEM_REQS)
+        return self.pkg_layout.system_reqs_package()
 
     def remove_system_reqs(self):
         system_reqs_folder = os.path.join(self._base_folder, SYSTEM_REQS_FOLDER)
@@ -109,81 +112,38 @@ class PackageCacheLayout(object):
                                  % (system_reqs_folder, str(e)))
 
     def packages(self):
-        return os.path.join(self._base_folder, PACKAGES_FOLDER)
+        return self.pkg_layout.package()
 
-    @short_path
     def package(self, pref):
-        assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
-        return os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
+        return self.pkg_layout.package()
 
     @contextmanager
     def set_dirty_context_manager(self, pref):
         raise("set_dirty_context_manager moved to cache2.0")
 
     def download_package(self, pref):
-        return os.path.join(self._base_folder, "dl", "pkg", pref.id)
+        return self.pkg_layout.download_package()
 
     def download_export(self):
-        return os.path.join(self._base_folder, "dl", "export")
+        return self.ref_layout.download_export()
 
     def package_is_dirty(self, pref):
-        raise("package_is_dirty moved to cache2.0")
+        raise ConanException("package_is_dirty moved to cache2.0")
 
     def package_id_exists(self, package_id):
-        # The package exists if the folder exists, also for short_paths case
-        pkg_folder = self.package(PackageReference(self._ref, package_id))
-        return os.path.isdir(pkg_folder)
+        raise ConanException("cache2.0: package_id_exists removed")
 
     def package_remove(self, pref):
-        # Here we could validate and check we own a write lock over this package
-        assert isinstance(pref, PackageReference)
-        assert pref.ref == self._ref, "{!r} != {!r}".format(pref.ref, self._ref)
-        # Remove the tgz storage
-        tgz_folder = self.download_package(pref)
-        rmdir(tgz_folder)
-        # This is NOT the short paths, but the standard cache one
-        pkg_folder = os.path.join(self._base_folder, PACKAGES_FOLDER, pref.id)
-        try:
-            rm_conandir(pkg_folder)  # This will remove the shortened path too if exists
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (pkg_folder, str(e)))
-        if is_dirty(pkg_folder):
-            clean_dirty(pkg_folder)
-        # FIXME: This fails at the moment, but should be fixed
-        # with self.update_metadata() as metadata:
-        #    metadata.clear_package(pref.id)
+        raise ConanException("cache2.0: package_id_exists removed")
 
     def sources_remove(self):
-        src_folder = os.path.join(self._base_folder, SRC_FOLDER)
-        try:
-            rm_conandir(src_folder)  # This will remove the shortened path too if exists
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (src_folder, str(e)))
-        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
-        try:
-            rm_conandir(scm_folder)  # This will remove the shortened path too if exists
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (scm_folder, str(e)))
+        raise ConanException("cache2.0: package_id_exists removed")
 
     def export_remove(self):
-        export_folder = self.export()
-        rmdir(export_folder)
-        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
-        rm_conandir(export_src_folder)
-        download_export = self.download_export()
-        rmdir(download_export)
-        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
-        rm_conandir(scm_folder)
+        raise ConanException("cache2.0: package_id_exists removed")
 
     def package_metadata(self):
-        return os.path.join(self._base_folder, PACKAGE_METADATA)
+        raise ConanException("cache2.0: package_id_exists removed")
 
     def recipe_manifest(self):
         return FileTreeManifest.load(self.export())
