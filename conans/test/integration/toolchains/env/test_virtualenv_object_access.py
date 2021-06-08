@@ -18,7 +18,6 @@ def client():
     def package_info(self):
         self.buildenv_info.define("Foo", "MyVar!")
         self.runenv_info.define("runFoo", "Value!")
-
         self.buildenv_info.append("Hello", "MyHelloValue!")
     """
     client.save({"conanfile.py": conanfile})
@@ -38,8 +37,8 @@ def test_virtualenv_object_access(client):
 
         def build(self):
           env = VirtualEnv(self)
-          build_env = env.build_environment().to_dict()
-          run_env = env.run_environment().to_dict()
+          build_env = env.build_environment()
+          run_env = env.run_environment()
           self.output.warn("Foo: *{}*".format(build_env["Foo"]))
           self.output.warn("runFoo: *{}*".format(run_env["runFoo"]))
           self.output.warn("Hello: *{}*".format(build_env["Hello"]))

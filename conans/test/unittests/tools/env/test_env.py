@@ -284,19 +284,51 @@ def test_windows_case_insensitive():
     assert "MyVar1=!!" in out
 
 
-def test_to_dict():
+def test_dict_access():
     env = Environment()
     env.append("MyVar", "MyValue", separator="@")
-    ret = env.to_dict()
+    ret = env.items()
     assert dict(ret) == {"MyVar": "@MyValue"}
 
     env = Environment()
     env.prepend("MyVar", "MyValue", separator="@")
-    ret = env.to_dict()
+    ret = env.items()
     assert dict(ret) == {"MyVar": "MyValue@"}
+    assert env["MyVar"] == "MyValue@"
 
     env2 = Environment()
     env2.define("MyVar", "MyValue2")
     env.compose(env2)
-    ret = env.to_dict()
+    ret = env.items()
     assert dict(ret) == {"MyVar": "MyValue@MyValue2"}
+
+    with pytest.raises(KeyError):
+        _ = env["Missing"]
+
+    # With previous values in the environment
+    env = Environment()
+    env.prepend("MyVar", "MyValue", separator="@")
+    old_env = dict(os.environ)
+    os.environ.update({"MyVar": "PreviousValue"})
+    try:
+        assert env["MyVar"] == "MyValue@PreviousValue"
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+    env = Environment()
+    env.append_path("MyVar", "MyValue")
+    old_env = dict(os.environ)
+    os.environ.update({"MyVar": "PreviousValue"})
+    try:
+        assert env["MyVar"] == "PreviousValue{}MyValue".format(os.pathsep)
+        with env.apply():
+            assert os.getenv("MyVar") == "PreviousValue{}MyValue".format(os.pathsep)
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+    assert list(env.keys()) == ["MyVar"]
+    assert dict(env.items()) == {"MyVar": ":MyValue".format(os.pathsep)}
+
+
