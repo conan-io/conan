@@ -65,7 +65,10 @@ class _UploadCollecter(object):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
             rrev = self._cache.get_latest_rrev(ref)
-            refs = [rrev, ]
+            if not rrev:
+                raise RecipeNotFoundException(ref)
+            else:
+                refs = [rrev, ]
             confirm = True
         else:
             refs = search_recipes(self._cache, reference_or_pattern)
