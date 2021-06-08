@@ -539,8 +539,10 @@ class BinaryInstaller(object):
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
+            pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
 
-        layout = self._cache.pkg_layout(pref)
+        # at this point the package reference should be complete
+        layout = self._cache.get_pkg_layout(pref)
         package_folder = layout.package()
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                % (str(pref), package_folder))
