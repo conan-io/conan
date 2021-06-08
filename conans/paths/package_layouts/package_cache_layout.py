@@ -59,7 +59,7 @@ class PackageCacheLayout(object):
     @property
     def pkg_layout(self):
         latest_rrev = self._cache.get_latest_rrev(self._ref)
-        latest_prev = self._cache.get_latest_rrev(latest_rrev)
+        latest_prev = self._cache.get_latest_prev(latest_rrev)
         return self._cache.get_pkg_layout(latest_prev)
 
     def base_folder(self):
