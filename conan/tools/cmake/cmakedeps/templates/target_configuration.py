@@ -33,11 +33,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         return textwrap.dedent("""\
 
         {%- macro tvalue(pkg_name, comp_name, var, config_suffix) -%}
-            {%- if comp_name == pkg_name -%}
-                {{'${'+pkg_name+'_'+var+config_suffix+'}'}}
-            {%- else -%}
-                {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
-            {%- endif -%}
+            {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
         {%- endmacro -%}
 
         ########### VARIABLES #######################################################################
