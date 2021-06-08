@@ -143,3 +143,52 @@ def test_cmake_deps_links_flags():
             data_cmake = files["mypkg-release-x86-data.cmake"]
             assert "set(mypkg_SHARED_LINK_FLAGS_RELEASE -NODEFAULTLIB;-OTHERFLAG)" in data_cmake
             assert "set(mypkg_EXE_LINK_FLAGS_RELEASE -OPT:NOICF)" in data_cmake
+
+
+def test_component_name_same_package():
+    """
+    When the package and the component are the same the variables declared in data and linked
+    to the target have to be the same.
+    https://github.com/conan-io/conan/issues/9071"""
+    conanfile = ConanFile(Mock(), None)
+    conanfile._conan_node = Mock()
+    conanfile._conan_node.context = "host"
+    conanfile.settings = "os", "compiler", "build_type", "arch"
+    conanfile.initialize(Settings({"os": ["Windows"],
+                                   "compiler": ["gcc"],
+                                   "build_type": ["Release"],
+                                   "arch": ["x86"]}), EnvValues())
+    conanfile.settings.build_type = "Release"
+    conanfile.settings.arch = "x86"
+
+    cpp_info = CppInfo("mypkg", "dummy_root_folder1")
+
+    # We adjust the component with the same name as the package on purpose
+    cpp_info.components["mypkg"].includedirs = ["includedirs1"]
+
+    conanfile_dep = ConanFile(Mock(), None)
+    conanfile_dep.cpp_info = cpp_info
+    conanfile_dep._conan_node = Mock()
+    conanfile_dep._conan_node.context = "host"
+
+    with mock.patch('conans.ConanFile.ref', new_callable=mock.PropertyMock) as mock_ref:
+        with mock.patch('conans.ConanFile.dependencies',
+                        new_callable=mock.PropertyMock) as mock_deps:
+            mock_ref.return_value = ConanFileReference.loads("mypkg/1.0")
+            mock_deps.return_value = Mock()
+
+            conanfile.dependencies.transitive_host_requires = []
+            conanfile.dependencies.host_requires = []
+            conanfile_dep.package_folder = "/path/to/folder_dep"
+            conanfile.dependencies.transitive_host_requires = [ConanFileInterface(conanfile_dep)]
+            conanfile.dependencies.host_requires = [ConanFileInterface(conanfile_dep)]
+            conanfile.dependencies.build_requires_build_context = []
+
+            cmakedeps = CMakeDeps(conanfile)
+            files = cmakedeps.content
+            target_cmake = files["mypkgTarget-release.cmake"]
+            assert "$<$<CONFIG:Release>:${mypkg_mypkg_INCLUDE_DIRS_RELEASE}> APPEND)" in target_cmake
+
+            data_cmake = files["mypkg-release-x86-data.cmake"]
+            assert 'set(mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
+                   '"${mypkg_PACKAGE_FOLDER_RELEASE}/includedirs1")' in data_cmake
