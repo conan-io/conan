@@ -1,10 +1,13 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient, TestServer
 
 
+@pytest.mark.skip(reason="cache2.0 temporal, to be deleted")
 class TestCache:
     def test_conan_export(self):
         client = TestClient()
