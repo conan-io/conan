@@ -21,12 +21,12 @@ def test_editable_cmake():
 
     def build_pkg(msg):
         c.run("build . -if=install_release")
-        folder = r"build\Release" if platform.system() == "Windows" else "build-release"
+        folder = r"build\Release" if platform.system() == "Windows" else "cmake-build-release"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
         c.run("build . -if=install_debug")
-        folder = r"build\Debug" if platform.system() == "Windows" else "build-debug"
+        folder = r"build\Debug" if platform.system() == "Windows" else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
         assert "{}: Debug!".format(msg) in c.out
