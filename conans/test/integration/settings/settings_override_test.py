@@ -37,16 +37,14 @@ def test_override(client):
     assert "COMPILER=> VisualBuild Visual Studio" in client.out
 
     # CHECK CONANINFO FILE
-    packs_dir = client.cache.package_layout(
+    pack_dir = client.cache.package_layout(
         ConanFileReference.loads("MinGWBuild/0.1@lasote/testing")).packages()
-    pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
     conaninfo = load(os.path.join(pack_dir, CONANINFO))
     assert "compiler=gcc" in conaninfo
 
     # CHECK CONANINFO FILE
-    packs_dir = client.cache.package_layout(
+    pack_dir = client.cache.package_layout(
         ConanFileReference.loads("VisualBuild/0.1@lasote/testing")).packages()
-    pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
     conaninfo = load(os.path.join(pack_dir, CONANINFO))
     assert "compiler=Visual Studio" in conaninfo
     assert "compiler.version=14" in conaninfo
