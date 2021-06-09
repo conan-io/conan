@@ -7,9 +7,10 @@ from conans.errors import ConanException
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, req):
+    def __init__(self, cmakedeps, require, conanfile):
         self.cmakedeps = cmakedeps
-        self.conanfile = req
+        self.require = require
+        self.conanfile = conanfile
 
     @property
     def pkg_name(self):
