@@ -396,7 +396,7 @@ class FindConfigFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
-        host_req = self._conanfile.dependencies.transitive_host_requires
+        host_req = self._conanfile.dependencies.host_requires.values()
         find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
         find_names = [get_file_name(req) for req in host_req] if find_names_needed else []
 

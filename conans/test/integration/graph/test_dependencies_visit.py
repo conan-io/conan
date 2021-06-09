@@ -13,7 +13,7 @@ def test_dependencies_visit():
         class Pkg(ConanFile):
             requires = "dep/0.1"
             def generate(self):
-                dep = self.dependencies.requires["dep"]
+                dep = self.dependencies["dep"]
                 self.output.info("DefRef: {}!!!".format(repr(dep.ref)))
                 self.output.info("DefPRef: {}!!!".format(repr(dep.pref)))
         """)

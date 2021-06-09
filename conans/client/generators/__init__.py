@@ -16,7 +16,6 @@ from .virtualrunenv import VirtualRunEnvGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
-from conans.model.conf import Conf
 
 
 class GeneratorManager(object):
@@ -160,7 +159,7 @@ def _receive_conf(conanfile):
     # TODO: Only direct build_requires?
     # TODO: Is really the best mechanism to define this info? Better than env-vars?
     # Conf only for first level build_requires
-    for build_require in conanfile.dependencies.build_requires:
+    for build_require in conanfile.dependencies.direct_build_requires.values():
         if build_require.conf_info:
             conanfile.conf.compose(build_require.conf_info)
 
