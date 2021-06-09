@@ -1,13 +1,24 @@
 import os
 import platform
 
+import pytest
+
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-def test_editable_cmake():
+@pytest.mark.parametrize("generator", {"Windows": [None, "MinGW Makefiles"],
+                                       "Darwin": [None, "Ninja", "Ninja Multi-Config", "Xcode"],
+                                       "Linux": [None, "Ninja", "Ninja Multi-Config"]}
+                         .get(platform.system()))
+def test_editable_cmake(generator):
+    multi = (generator is None and platform.system() == "Windows") or \
+            generator in ("Ninja Multi-Config", "Xcode")
     c = TestClient()
+    if generator is not None:
+        c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
+               path=os.path.join(c.cache.cache_folder))
     c.save(pkg_cmake("dep", "0.1"), path=os.path.join(c.current_folder, "dep"))
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
@@ -21,12 +32,12 @@ def test_editable_cmake():
 
     def build_pkg(msg):
         c.run("build . -if=install_release")
-        folder = r"build\Release" if platform.system() == "Windows" else "cmake-build-release"
+        folder = r"build/Release" if multi else "cmake-build-release"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
         c.run("build . -if=install_debug")
-        folder = r"build\Debug" if platform.system() == "Windows" else "cmake-build-debug"
+        folder = r"build/Debug" if multi else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
         assert "{}: Debug!".format(msg) in c.out
