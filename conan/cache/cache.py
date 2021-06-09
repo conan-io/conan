@@ -173,7 +173,7 @@ class DataCache:
         return self.db.get_timestamp(ref)
 
     def set_remote(self, ref: ConanReference, new_remote):
-        self.db.update_reference(ref, new_remote=new_remote)
+        self.db.set_remote(ref, new_remote)
 
     def remove(self, ref: ConanReference):
         self.db.remove(ref)

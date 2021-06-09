@@ -101,6 +101,15 @@ class ReferencesDbTable(BaseDbTable):
                          [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
         return r.lastrowid
 
+    def set_remote(self, conn, ref: ConanReference, remote):
+        where_clause = self._where_clause(ref)
+        mew_remote = f'"{remote}"' if remote else 'NULL'
+        query = f"UPDATE {self.table_name} " \
+                f"SET {self.columns.remote}={mew_remote} " \
+                f"WHERE {where_clause};"
+        r = conn.execute(query)
+        return r.lastrowid
+
     def update(self, conn, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
                new_remote=None):
         if not new_ref:

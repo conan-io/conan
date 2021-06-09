@@ -95,6 +95,10 @@ class CacheDatabase:
         with self.connect() as conn:
             return self._references.get_remote(conn, ref)
 
+    def set_remote(self, ref: ConanReference, remote):
+        with self.connect() as conn:
+            return self._references.set_remote(conn, ref, remote)
+
     def get_timestamp(self, ref: ConanReference):
         with self.connect() as conn:
             return self._references.get_timestamp(conn, ref)
