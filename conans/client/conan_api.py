@@ -962,8 +962,8 @@ class ConanAPIV1(object):
         if no_remote:
             result = {}
             for ref in self.app.cache.all_refs():
-                metadata = self.app.cache.package_layout(ref).load_metadata()
-                if not metadata.recipe.remote:
+                remote = self.app.cache.get_remote(ref)
+                if not remote:
                     result[str(ref)] = None
             return result
         else:

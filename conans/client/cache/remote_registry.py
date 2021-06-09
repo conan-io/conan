@@ -418,9 +418,9 @@ class RemoteRegistry(object):
     def refs_list(self):
         result = {}
         for ref in self._cache.all_refs():
-            metadata = self._cache.package_layout(ref).load_metadata()
-            if metadata.recipe.remote:
-                result[ref] = metadata.recipe.remote
+            remote = self._cache.get_remote(ref)
+            if remote:
+                result[ref] = remote
         return result
 
     @property

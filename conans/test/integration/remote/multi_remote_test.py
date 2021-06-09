@@ -2,6 +2,8 @@ import unittest
 from collections import OrderedDict
 from time import sleep
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.assets.genconanfile import GenConanfile
@@ -52,6 +54,7 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers["default"] = TestServer()
         self.servers["local"] = TestServer()
 
+    @pytest.mark.xfail(reason="cache2.0 list_ref not implemented yet")
     def test_list_ref_no_remote(self):
         client = TestClient(servers=self.servers)
         client.save({"conanfile.py": GenConanfile()})
@@ -71,6 +74,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
 
+    @pytest.mark.xfail(reason="cache2.0 conan info and update revisit")
     def test_conan_install_build_flag(self):
         """
         Checks conan install --update works with different remotes and changes the associated ones
@@ -140,6 +144,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
 
+    @pytest.mark.xfail(reason="cache2.0 --update revisit")
     def test_conan_install_update(self):
         """
         Checks conan install --update works only with the remote associated
@@ -188,6 +193,7 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
+    @pytest.mark.xfail(reason="cache2.0 list_ref not implemented yet")
     def test_predefine_remote(self):
         self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         self.client.run("export . lasote/stable")

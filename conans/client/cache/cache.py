@@ -105,6 +105,9 @@ class ClientCache(object):
     def set_remote(self, ref, remote):
         return self._data_cache.set_remote(ConanReference(ref), remote)
 
+    def get_remote(self, ref):
+        return self._data_cache.get_remote(ConanReference(ref))
+
     def all_refs(self):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
         #  this part in the future
