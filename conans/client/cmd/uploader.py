@@ -127,8 +127,8 @@ class _UploadCollecter(object):
                     packages = self._cache.get_package_ids(pref)
                     packages_ids = [pkg for pkg in packages if pkg.id == package_id]
                     if not packages_ids:
-                        raise ConanException("Binary package %s:%s#%s not found"
-                                             % (str(ref), package_id, prev))
+                        prev = f"#{prev}" if prev else ""
+                        raise ConanException(f"Binary package {str(ref)}:{package_id}{prev} not found")
                 else:
                     packages_ids = []
                 if packages_ids:
