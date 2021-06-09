@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO
@@ -523,6 +525,7 @@ class PackageIDErrorTest(unittest.TestCase):
         self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
         self.assertIn("consumer/1.0@user/testing: Created", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_package_revision_mode_editable(self):
         # Package revision mode crash when using editables
         client = TestClient()

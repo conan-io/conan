@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -50,6 +51,7 @@ class MyTest(ConanFile):
 """
 
 
+@pytest.mark.xfail(reason="cache2.0 build_id not considered in new cache")
 class BuildIdTest(unittest.TestCase):
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
