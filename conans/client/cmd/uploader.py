@@ -120,8 +120,15 @@ class _UploadCollecter(object):
                 elif package_id:
                     # TODO: cache2.0 if we specify a package id we could have multiple package revisions
                     #  something like: upload pkg/1.0:pkg_id will upload the package id for the latest prev
-                    packages = self._cache.get_package_ids(ref, only_latest_prev=True)
+                    #  or for all of them
+                    prev = package_id.split("#")[1] if "#" in package_id else ""
+                    package_id = package_id.split("#")[0]
+                    pref = PackageReference(ref, package_id, prev)
+                    packages = self._cache.get_package_ids(pref)
                     packages_ids = [pkg for pkg in packages if pkg.id == package_id]
+                    if not packages_ids:
+                        raise ConanException("Binary package %s:%s#%s not found"
+                                             % (str(ref), package_id, prev))
                 else:
                     packages_ids = []
                 if packages_ids:
@@ -598,18 +605,6 @@ class CmdUpload(object):
         checksums = calc_files_checksum(cache_files)
         self._cache.set_remote(pref, p_remote.name)
         return pref
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def compress_files(files, symlinks, name, dest_dir, output=None):

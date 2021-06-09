@@ -82,7 +82,7 @@ def test_upload_only_tgz_if_needed():
     # If we install the package again will be removed and re tgz
     client.run("install %s --build missing" % str(ref))
     # Upload package
-    client.run("upload %s -p %s" % (str(ref), str(package_ids[0])))
+    client.run("upload %s -p %s" % (str(ref), str(pref.id)))
     assert "Compressing package" not in client.out
 
     # Check library on server
