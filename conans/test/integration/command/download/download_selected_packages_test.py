@@ -30,8 +30,10 @@ def test_download_all(setup):
     new_client = TestClient(servers=client.servers, users=client.users)
     # Should retrieve the three packages
     new_client.run("download Hello0/0.1@lasote/stable")
-    packages = os.listdir(os.path.join(new_client.cache.package_layout(ref).packages()))
-    assert set(packages) == set(package_ids)
+    latest_rrev = new_client.cache.get_latest_rrev(ref)
+    packages = new_client.cache.get_package_ids(latest_rrev)
+    new_package_ids = [package.id for package in packages]
+    assert set(new_package_ids) == set(package_ids)
 
 
 def test_download_some_reference(setup):
