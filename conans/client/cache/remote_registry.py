@@ -380,7 +380,7 @@ class RemoteRegistry(object):
             #         if pkg_metadata.remote == remote_name:
             #             pkg_metadata.remote = None
 
-            remotes.save(self._filename)
+        remotes.save(self._filename)
 
     def define(self, remotes):
         # For definition from conan config install
