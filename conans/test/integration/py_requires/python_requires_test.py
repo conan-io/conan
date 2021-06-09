@@ -793,6 +793,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("conanfile.py: Build: tool header: myheader", client.out)
         self.assertIn("conanfile.py: Build: tool other: otherheader", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_reuse_exports(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
