@@ -204,7 +204,6 @@ def test_transitive_order():
     assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
 
 
-
 tool_conanfile = """from conans import ConanFile
 
 class Tool(ConanFile):
