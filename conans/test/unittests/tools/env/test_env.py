@@ -329,6 +329,6 @@ def test_dict_access():
         os.environ.update(old_env)
 
     assert list(env.keys()) == ["MyVar"]
-    assert dict(env.items()) == {"MyVar": ":MyValue".format(os.pathsep)}
+    assert dict(env.items()) == {"MyVar": "{}MyValue".format(os.pathsep)}
 
 
