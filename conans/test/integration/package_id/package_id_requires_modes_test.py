@@ -55,6 +55,7 @@ class PackageIDTest(unittest.TestCase):
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         self.client.run("export . %s" % (channel or "lasote/stable"))
 
+    @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_semver_schema(self):
         self._export("Hello", "1.2.0")
         self._export("Hello2", "2.3.8",
@@ -143,6 +144,7 @@ class PackageIDTest(unittest.TestCase):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_version_full_recipe_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
@@ -210,6 +212,7 @@ class PackageIDTest(unittest.TestCase):
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.out)
         self.assertIn("Package ID:", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit this for 2.0")
     def test_nameless_mode(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
         self._export("Hello2", "2.3.8",
