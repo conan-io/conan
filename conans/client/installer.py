@@ -528,7 +528,7 @@ class BinaryInstaller(object):
                 # this can happen after a re-evaluation of packageID with Package_ID_unknown
                 # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
                 #  move the layout inside the get... method
-                self._download_pkg(pkg_layout, node)
+                self._download_pkg(node)
             elif node.binary == BINARY_CACHE:
                 assert node.prev, "PREV for %s is None" % str(pref)
                 output.success('Already installed!')
