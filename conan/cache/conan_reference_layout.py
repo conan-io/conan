@@ -120,6 +120,7 @@ class ReferenceLayout:
         return os.path.join(self.base_folder, 'export')
 
     def export_remove(self):
+        assert not self._ref.pkgid, "Must be a reference of a recipe"
         export_folder = self.export()
         rmdir(export_folder)
         export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
