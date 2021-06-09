@@ -1,11 +1,14 @@
 import textwrap
 
+import pytest
+
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
 
 
+@pytest.mark.xfail(reason="cache2.0 will not pass modifying the cache manually, revisit")
 class BuildRequiresInProfileExample(CrossBuildingBaseTestCase):
     """ There is an application with a requirement 'lib', both of them need
         a tool called 'cmake' to build. This tool is defined in profile.
