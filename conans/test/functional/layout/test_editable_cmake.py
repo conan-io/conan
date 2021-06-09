@@ -1,13 +1,22 @@
 import os
 import platform
 
+import pytest
+
 from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-def test_editable_cmake():
+@pytest.mark.parametrize("generator", {"Windows": [None, "MinGW Makefiles"],
+                                       "Darwin": [None, "Ninja", "Ninja Multi-Config", "Xcode"],
+                                       "Linux": [None, "Ninja", "Ninja Multi-Config"]}
+                         .get(platform.system()))
+def test_editable_cmake(generator):
     c = TestClient()
+    if generator is not None:
+        c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
+               path=os.path.join(c.cache.cache_folder))
     c.save(pkg_cmake("dep", "0.1"), path=os.path.join(c.current_folder, "dep"))
     c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
            path=os.path.join(c.current_folder, "pkg"))
