@@ -4,7 +4,8 @@ from contextlib import contextmanager
 from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, DATA_YML
+from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, DATA_YML, \
+    rm_conandir, EXPORT_SRC_FOLDER, SRC_FOLDER
 from conans.paths import CONANFILE, SCM_SRC_FOLDER
 from conans.util.files import rmdir
 from conans.util.files import set_dirty, clean_dirty, is_dirty
@@ -118,6 +119,16 @@ class ReferenceLayout:
         assert not self._ref.pkgid, "Must be a reference of a recipe"
         return os.path.join(self.base_folder, 'export')
 
+    def export_remove(self):
+        export_folder = self.export()
+        rmdir(export_folder)
+        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+        rm_conandir(export_src_folder)
+        download_export = self.download_export()
+        rmdir(download_export)
+        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        rm_conandir(scm_folder)
+
     def export_sources(self):
         assert not self._ref.pkgid, "Must be a reference of a recipe"
         return os.path.join(self.base_folder, 'export_sources')
@@ -128,7 +139,7 @@ class ReferenceLayout:
 
     def source(self):
         assert not self._ref.pkgid, "Must be a reference of a recipe"
-        return os.path.join(self.base_folder, 'source')
+        return os.path.join(self.base_folder, SRC_FOLDER)
 
     def conanfile(self):
         assert not self._ref.pkgid, "Must be a reference of a recipe"

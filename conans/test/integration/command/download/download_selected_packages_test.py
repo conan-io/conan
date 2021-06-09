@@ -68,10 +68,10 @@ def test_download_packages_twice(setup):
     client, ref, package_ids, _ = setup
     new_client = TestClient(servers=client.servers, users=client.users)
     expected_header_contents = "x"
-    pref = PackageReference(ref, package_ids[0])
-    package_folder = new_client.cache.package_layout(ref).package(pref)
 
     new_client.run("download Hello0/0.1@lasote/stable")
+    pref = PackageReference(ref, package_ids[0])
+    package_folder = new_client.cache.package_layout(ref).package(pref)
     got_header = load(os.path.join(package_folder, "helloHello0.h"))
     assert expected_header_contents == got_header
 

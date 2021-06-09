@@ -99,9 +99,8 @@ class RemoteManager(object):
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         ref = self._resolve_latest_ref(ref, remote)
-
         layout = self._cache.ref_layout(ref)
-        layout.set_remote(remote.name)
+        layout.export_remove()
 
         t1 = time.time()
         download_export = layout.download_export()
@@ -122,6 +121,8 @@ class RemoteManager(object):
         rm_conandir(layout.source())
         touch_folder(export_folder)
         conanfile_path = layout.conanfile()
+
+        layout.set_remote(remote.name)
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -181,13 +182,14 @@ class RemoteManager(object):
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
 
             # Compute and update the package metadata
-            package_checksums = calc_files_checksum(zipped_files)
+            #package_checksums = calc_files_checksum(zipped_files)
             # TODO: cache2.0: remove metadata, move to db
             # with layout.update_metadata() as metadata:
             #     metadata.packages[pref.id].revision = pref.revision
             #     metadata.packages[pref.id].recipe_revision = pref.ref.revision
             #     metadata.packages[pref.id].checksums = package_checksums
             #     metadata.packages[pref.id].remote = remote.name
+            layout.set_remote(remote.name)
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
