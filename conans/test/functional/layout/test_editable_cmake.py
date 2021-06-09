@@ -9,7 +9,7 @@ from conans.test.utils.tools import TestClient
 
 
 @pytest.mark.parametrize("generator", {"Windows": [None, "MinGW Makefiles"],
-                                       "Darwin": [None, "Ninja", "Ninja Multi-Config", "Xcode"],
+                                       "Darwin": [None, "Ninja", "Xcode"],
                                        "Linux": [None, "Ninja", "Ninja Multi-Config"]}
                          .get(platform.system()))
 def test_editable_cmake(generator):
@@ -32,12 +32,12 @@ def test_editable_cmake(generator):
 
     def build_pkg(msg):
         c.run("build . -if=install_release")
-        folder = r"build/Release" if multi else "cmake-build-release"
+        folder = os.path.join("build", "Release") if multi else "cmake-build-release"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
         c.run("build . -if=install_debug")
-        folder = r"build/Debug" if multi else "cmake-build-debug"
+        folder = os.path.join("build", "Debug") if multi else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
         assert "{}: Debug!".format(msg) in c.out
