@@ -231,7 +231,7 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.buildenv.compose(buildenv)
 
 
-def profile_from_args(profiles, settings, options, env, cwd, cache):
+def profile_from_args(profiles, settings, options, env, conf, cwd, cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
@@ -245,7 +245,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
             result.compose(tmp)
 
-    args_profile = _profile_parse_args(settings, options, env)
+    args_profile = _profile_parse_args(settings, options, env, conf)
 
     if result:
         result.compose(args_profile)
@@ -254,7 +254,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
     return result
 
 
-def _profile_parse_args(settings, options, envs):
+def _profile_parse_args(settings, options, envs, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):

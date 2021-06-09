@@ -299,12 +299,14 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         return self._conan.test(args.path, args.reference,
                                 args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, remote_name=args.remote, update=args.update,
-                                build_modes=args.build, test_build_folder=args.test_build_folder,
+                                args.env_host, conf=args.conf_host, remote_name=args.remote,
+                                update=args.update, build_modes=args.build,
+                                test_build_folder=args.test_build_folder,
                                 lockfile=args.lockfile, profile_build=profile_build)
 
     def create(self, *args):
@@ -369,14 +371,19 @@ class Command(object):
         info = None
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
 
-            info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder, args.not_export,
-                                      args.build, args.keep_source, args.keep_build, args.verify,
-                                      args.manifests, args.manifests_interactive,
-                                      args.remote, args.update,
+            info = self._conan.create(args.path, name=name, version=version, user=user,
+                                      channel=channel, profile_names=args.profile_host,
+                                      settings=args.settings_host, conf=args.conf_host,
+                                      options=args.options_host, env=args.env_host,
+                                      test_folder=args.test_folder, not_export=args.not_export,
+                                      build_modes=args.build, keep_source=args.keep_source,
+                                      keep_build=args.keep_build, verify=args.verify,
+                                      manifests=args.manifests,
+                                      manifests_interactive=args.manifests_interactive,
+                                      remote_name=args.remote, update=args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
@@ -491,7 +498,9 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         cwd = os.getcwd()
 
@@ -507,6 +516,7 @@ class Command(object):
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings_host, options=args.options_host,
                                            env=args.env_host, profile_names=args.profile_host,
+                                           conf=args.conf_host,
                                            profile_build=profile_build,
                                            remote_name=args.remote,
                                            verify=args.verify, manifests=args.manifests,
@@ -528,6 +538,7 @@ class Command(object):
                                                      settings=args.settings_host,
                                                      options=args.options_host,
                                                      env=args.env_host,
+                                                     conf=args.conf_host,
                                                      profile_names=args.profile_host,
                                                      profile_build=profile_build,
                                                      remote_name=args.remote,
@@ -699,14 +710,15 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
                            " wrong results. Use `conan lock build-order ...` instead.")
 
         if args.install_folder and (args.profile_host or args.settings_host
-                                    or args.options_host or args.env_host):
+                                    or args.options_host or args.env_host or args.conf_host):
             raise ArgumentError(None, "--install-folder cannot be used together with a"
                                       " host profile (-s, -o, -e or -pr)")
 
@@ -720,6 +732,7 @@ class Command(object):
                                                options=args.options_host,
                                                env=args.env_host,
                                                profile_names=args.profile_host,
+                                               conf=args.conf_host,
                                                profile_build=profile_build,
                                                remote_name=args.remote,
                                                build_order=args.build_order,
@@ -739,6 +752,7 @@ class Command(object):
                                                        options=args.options_host,
                                                        env=args.env_host,
                                                        profile_names=args.profile_host,
+                                                       conf=args.conf_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update,
@@ -757,6 +771,7 @@ class Command(object):
                                     options=args.options_host,
                                     env=args.env_host,
                                     profile_names=args.profile_host,
+                                    conf=args.conf_host,
                                     profile_build=profile_build,
                                     update=args.update,
                                     install_folder=args.install_folder,
@@ -1015,7 +1030,8 @@ class Command(object):
 
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
 
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
@@ -1028,6 +1044,7 @@ class Command(object):
                                           env=args.env_host,
                                           settings=args.settings_host,
                                           options=args.options_host,
+                                          conf=args.conf_host,
                                           profile_build=profile_build,
                                           force=args.force,
                                           user=user,
@@ -1812,12 +1829,19 @@ class Command(object):
             raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         if args.subcommand == "install":
-            self._conan.workspace_install(args.path, args.settings_host, args.options_host,
-                                          args.env_host, args.remote, args.build,
-                                          args.profile_host, args.update,
+            self._conan.workspace_install(args.path,
+                                          settings=args.settings_host,
+                                          options=args.options_host,
+                                          env=args.env_host,
+                                          profile_name=args.profile_host,
+                                          conf=args.conf_host,
+                                          remote_name=args.remote,
+                                          build=args.build,
+                                          update=args.update,
                                           profile_build=profile_build,
                                           install_folder=args.install_folder)
 
@@ -1987,9 +2011,11 @@ class Command(object):
             self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
             profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                                       options=args.options_host, env=args.env_host)
+                                       options=args.options_host, env=args.env_host,
+                                       conf=args.conf_host)
 
             self._conan.lock_create(path=args.path,
                                     reference=args.reference,
@@ -2096,7 +2122,7 @@ class Command(object):
             raise ConanException("Cannot use profile, settings, options or env 'build' when "
                                  "using lockfile")
         if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host):
+                              args.env_host or args.conf_host):
             raise ConanException("Cannot use profile, settings, options or env 'host' when "
                                  "using lockfile")
         if args.lockfile_out and not args.lockfile:
@@ -2277,7 +2303,17 @@ def _add_profile_arguments(parser):
                                  ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
                                                                                  short_suffix))
 
-    for item_fn in [environment_args, options_args, profile_args, settings_args]:
+    def conf_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-c{}".format(short_suffix),
+                            "--conf{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='conf_{}'.format(machine),
+                            help='Configuration to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -c{} '
+                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
+                                                                                     short_suffix))
+
+    for item_fn in [environment_args, options_args, profile_args, settings_args, conf_args]:
         item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")
