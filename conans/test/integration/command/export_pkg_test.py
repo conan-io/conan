@@ -177,8 +177,6 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertIn("MYCUSTOMVAR=MYCUSTOMVALUE", conaninfo)
 
