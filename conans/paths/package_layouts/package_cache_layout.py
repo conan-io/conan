@@ -167,16 +167,10 @@ class PackageCacheLayout(object):
                 (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
-        metadata = self.load_metadata()
-        return metadata.recipe.revision
+        return self.ref_layout().reference().revision
 
     def package_revision(self, pref):
-        assert isinstance(pref, PackageReference)
-        assert pref.ref.copy_clear_rev() == self._ref.copy_clear_rev()
-        metadata = self.load_metadata()
-        if pref.id not in metadata.packages:
-            raise PackageNotFoundException(pref)
-        return metadata.packages[pref.id].revision
+        return self.pkg_layout().reference().revision
 
     def conan_builds(self):
         builds_dir = self.builds()
@@ -190,23 +184,13 @@ class PackageCacheLayout(object):
     def package_ids(self):
         """ get a list of all package_ids for this recipe
         """
-        packages_dir = self.packages()
-        try:
-            packages = [dirname for dirname in os.listdir(packages_dir)
-                        if os.path.isdir(os.path.join(packages_dir, dirname))]
-        except OSError:  # if there isn't any package folder
-            packages = []
-        return packages
+        latest_rrev = self._cache.get_latest_rrev(self._ref)
+        packages = self._cache.get_package_ids(latest_rrev)
+        return [package.id for package in packages]
 
     # Metadata
     def load_metadata(self):
-        try:
-            text = load(self.package_metadata())
-        except IOError:
-            raise RecipeNotFoundException(self._ref)
-        return PackageMetadata.loads(text)
-
-    _metadata_locks = {}  # Needs to be shared among all instances
+        raise ConanException("cache2.0: metadata does not exist in 2.0")
 
     @contextmanager
     def update_metadata(self):
