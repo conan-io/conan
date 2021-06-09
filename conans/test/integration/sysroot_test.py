@@ -20,7 +20,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "sysroot/0.1@user/testing"
     def build(self):
-        self.output.info("PKG SYSROOT: %s" % self.dependencies.requires["sysroot"].cpp_info.sysroot)
+        self.output.info("PKG SYSROOT: %s" % self.dependencies["sysroot"].cpp_info.sysroot)
     def package_info(self):
         self.cpp_info.sysroot = "HelloSysRoot"
 """
@@ -28,7 +28,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     def build(self):
         self.output.info("Test SYSROOT: %s"
-                          % self.dependencies.transitive_host_requires["sysroot"].cpp_info.sysroot)
+                          % self.dependencies.host_requires["sysroot"].cpp_info.sysroot)
     def test(self):
         pass
 """

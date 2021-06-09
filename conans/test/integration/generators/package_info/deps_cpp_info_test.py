@@ -19,7 +19,7 @@ class DepsCppInfoTest(unittest.TestCase):
             class Pkg(ConanFile):
                 requires = "dep/0.1@user/testing"
                 def build(self):
-                    self.output.info("DEPS_CPP_INFO_BIN: %s" % self.dependencies.requires["dep"].cpp_info.bin_paths)
+                    self.output.info("DEPS_CPP_INFO_BIN: %s" % self.dependencies["dep"].cpp_info.bin_paths)
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@user/testing")

@@ -3,13 +3,13 @@ import os
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
-from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import NewCppInfo, from_old_cppinfo
@@ -163,7 +163,7 @@ class ConanFile(object):
 
     @property
     def dependencies(self):
-        return ConanFileDependencies(self._conan_node)
+        return ConanFileDependencies.from_node(self._conan_node)
 
     @property
     def ref(self):

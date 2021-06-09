@@ -178,66 +178,6 @@ class Requirement:
         return downstream_require
 
 
-class RequirementDict:
-    def __init__(self):
-        self._requires = OrderedDict()  # {require: XXX}
-
-    def __repr__(self):
-        return repr(self._requires)
-
-    def get(self, require):
-        return self._requires.get(require)
-
-    def set(self, require, value):
-        # TODO: Might need to move to an update() for performance
-        self._requires.pop(require, None)
-        self._requires[require] = value
-
-    def items(self):
-        return self._requires.items()
-
-    def values(self):
-        return self._requires.values()
-
-
-class UserRequirementsDict:
-    """ user facing dict to allow access of dependencies by name
-    """
-    def __init__(self, data):
-        self._data = data  # dict-like
-
-    @staticmethod
-    def _get_require(ref, **kwargs):
-        assert isinstance(ref, str)
-        if "/" in ref:
-            ref = ConanFileReference.loads(ref)
-        else:
-            ref = ConanFileReference(ref, "unknown", "unknown", "unknown", validate=False)
-        r = Requirement(ref, **kwargs)
-        return r
-
-    def get(self, ref, **kwargs):
-        r = self._get_require(ref, **kwargs)
-        return self._data.get(r)
-
-    def __getitem__(self, name):
-        r = self._get_require(name)
-        return self._data[r]
-
-    def __delitem__(self, name):
-        r = self._get_require(name)
-        del self._data[r]
-
-    def items(self):
-        return self._data.items()
-
-    def __iter__(self):
-        return iter(self._data.values())
-
-    def __next__(self):
-        return next(self._data.values())
-
-
 class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):

@@ -1,6 +1,7 @@
+from collections import OrderedDict
+
 from conans.model.pkg_type import PackageType
 from conans.model.ref import PackageReference
-from conans.model.requires import RequirementDict
 
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
@@ -57,7 +58,7 @@ class Node(object):
         self.graph_lock_node = None  # the locking information can be None
 
         # real graph model
-        self.transitive_deps = RequirementDict()  # of _TransitiveRequirement
+        self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
         self.dependencies = []  # Ordered Edges
         self.dependants = []  # Edges
         self.error = None
@@ -91,7 +92,9 @@ class Node(object):
                 return True
             require.aggregate(existing.require)
 
-        self.transitive_deps.set(require, TransitiveRequirement(require, node))
+        # TODO: Might need to move to an update() for performance
+        self.transitive_deps.pop(require, None)
+        self.transitive_deps[require] = TransitiveRequirement(require, node)
 
         # Check if need to propagate downstream
         if not self.dependants:

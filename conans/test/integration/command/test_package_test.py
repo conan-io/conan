@@ -137,7 +137,7 @@ class TestPackageTest(unittest.TestCase):
             class Pkg(ConanFile):
                 requires = "dep/1.1"
                 def build(self):
-                    info = self.dependencies.transitive_host_requires["dep"].cpp_info
+                    info = self.dependencies.host_requires["dep"].cpp_info
                     self.output.info("BUILD Dep %s VERSION %s" %
                         (info.get_name("txt"), info.version))
                 def package_info(self):
@@ -147,11 +147,11 @@ class TestPackageTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 def build(self):
-                    info = self.dependencies.transitive_host_requires["hello"].cpp_info
+                    info = self.dependencies.host_requires["hello"].cpp_info
                     self.output.info("BUILD HELLO %s VERSION %s" %
                         (info.get_name("txt"), info.version))
                 def test(self):
-                    info = self.dependencies.transitive_host_requires["hello"].cpp_info
+                    info = self.dependencies.host_requires["hello"].cpp_info
                     self.output.info("TEST HELLO %s VERSION %s" %
                         (info.get_name("txt"), info.version))
             """)

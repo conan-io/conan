@@ -169,7 +169,7 @@ class DepsGraphBuilder(object):
         # This is the first pass over one recip requires
         for require in node.conanfile.requires.values():
             self._resolve_alias(node, require, graph, check_updates, update, remotes)
-            node.transitive_deps.set(require, TransitiveRequirement(require, None))
+            node.transitive_deps[require] = TransitiveRequirement(require, None)
 
     def _resolve_alias(self, node, require, graph, check_updates, update, remotes):
         alias = require.alias

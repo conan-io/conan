@@ -37,8 +37,8 @@ class CMakeDeps(object):
         macros = MacrosTemplate()
         ret = {macros.filename: macros.render()}
 
-        host_req = self._conanfile.dependencies.transitive_host_requires
-        build_req = self._conanfile.dependencies.build_requires
+        host_req = self._conanfile.dependencies.host_requires.values()
+        build_req = self._conanfile.dependencies.direct_build_requires.values()
 
         # Check if the same package is at host and build and the same time
         activated_br = {r.ref.name for r in build_req if r.ref.name in self.build_context_activated}
@@ -52,8 +52,8 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        for req, dep in self._conanfile.dependencies.non_skipped.items():
-
+        for req, dep in list(self._conanfile.dependencies.host_requires.items()) + \
+                        list(self._conanfile.dependencies.direct_build_requires.items()):
             # Filter the build_requires not activated with cmakedeps.build_context_activated
             if dep.is_build_context and req.ref.name not in self.build_context_activated:
                 continue

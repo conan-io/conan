@@ -629,7 +629,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default --build=missing")
         pkg = client.load("conan_pkg_release_x64.props")
         assert "conan_dep.props" in pkg
-        assert "tool" not in pkg
+        assert "tool_test" in pkg  # test requires are there
+        assert "tool_build" not in pkg
 
 
 @pytest.mark.parametrize("pattern,exclude_a,exclude_b",

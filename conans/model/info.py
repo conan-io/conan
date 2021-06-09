@@ -3,10 +3,10 @@ import os
 from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
+from conans.model.dependencies import UserRequirementsDict
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference, ConanFileReference
-from conans.model.requires import UserRequirementsDict
 from conans.model.values import Values
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser

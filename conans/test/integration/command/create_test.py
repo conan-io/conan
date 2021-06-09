@@ -196,7 +196,7 @@ class MyPkg(ConanFile):
         for r in self.requires.values():
             self.output.info("build() Requires: %s" % str(r.ref))
         import os
-        for dep in self.dependencies.transitive_host_requires:
+        for dep in self.dependencies.host_requires.values():
             self.output.info("build() cpp_info dep: %s" % dep)
 
     def test(self):

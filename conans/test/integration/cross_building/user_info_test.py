@@ -51,8 +51,8 @@ class UserInfoTestCase(unittest.TestCase):
 
             def build(self):
                 _info = self.output.info
-                lib_info = self.dependencies.transitive_host_requires["library"].user_info
-                br_host_info = self.dependencies.transitive_host_requires["br_host"].user_info
+                lib_info = self.dependencies.host_requires["library"].user_info
+                br_host_info = self.dependencies.host_requires["br_host"].user_info
                 _info("[deps] library.DATA={}".format(lib_info.DATA))
                 _info("[deps] br_host.DATA={}".format(br_host_info.DATA))
 

@@ -152,7 +152,7 @@ class _FileImporter(object):
             real_dst_folder = os.path.normpath(os.path.join(self._dst_folder, dst))
 
         pkgs = []
-        for dep in self._conanfile.dependencies.transitive_host_requires:
+        for dep in self._conanfile.dependencies.host_requires.values():
             if root_package:
                 if fnmatch.fnmatch(dep.ref.name, root_package):
                     pkgs.append((dep.ref.name, dep.cpp_info))
