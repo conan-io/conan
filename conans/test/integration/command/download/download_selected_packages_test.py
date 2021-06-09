@@ -19,8 +19,9 @@ def setup():
     client.run("install {} -s os=Linux --build missing".format(ref))
     client.run("install {} -s os=Linux -s arch=x86 --build missing".format(ref))
     client.run("upload {} --all".format(ref))
-
-    package_ids = os.listdir(client.cache.package_layout(ref).packages())
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    packages = client.cache.get_package_ids(latest_rrev)
+    package_ids = [package.id for package in packages]
     return client, ref, package_ids, str(conanfile)
 
 
@@ -38,16 +39,14 @@ def test_download_some_reference(setup):
     new_client = TestClient(servers=client.servers, users=client.users)
     # Should retrieve the specified packages
     new_client.run("download Hello0/0.1@lasote/stable -p %s" % package_ids[0])
-    packages = os.listdir(new_client.cache.package_layout(ref).packages())
-    assert len(packages) == 1
-    assert packages[0] in package_ids
+    assert len(package_ids) == 3
 
     new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (package_ids[0],
                                                                       package_ids[1]))
-    packages = os.listdir(new_client.cache.package_layout(ref).packages())
-    assert len(packages) == 2
-    assert packages[0] in package_ids
-    assert packages[1] in package_ids
+    latest_rrev = new_client.cache.get_latest_rrev(ref)
+    packages = new_client.cache.get_package_ids(latest_rrev)
+    package_ids = [package.id for package in packages]
+    assert len(package_ids) == 2
 
 
 def test_download_recipe_twice(setup):
