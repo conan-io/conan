@@ -24,8 +24,8 @@ class ExceptionsTest(ConanFile):
 """
 
 
-@pytest.mark.xfail(reason="cache2.0 build_id not working, revisit")
 @parameterized.expand([(True,), (False,)])
+@pytest.mark.xfail(reason="cache2.0 build_id not working, revisit")
 def test_all_methods(direct):
     client = TestClient()
     if direct:
