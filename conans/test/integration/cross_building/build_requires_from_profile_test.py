@@ -41,7 +41,6 @@ class BuildRequiresFromProfileTest(unittest.TestCase):
             build_requires = "br1/version"
     """)
 
-    @pytest.mark.xfail(reason="cache2.0 build_id not working, revisit")
     def test_br_from_profile_host_and_profile_build(self):
         t = TestClient()
         t.save({'profile_host': self.profile_host,
