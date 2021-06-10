@@ -21,6 +21,7 @@ conanfile = textwrap.dedent('''
 
 
 @pytest.mark.skipif(platform.system() == 'Linux', reason="Only for case insensitive OS")
+@pytest.mark.xfail(reason="cache2.0 find better approach for _check_ref_case in 2.0")
 class CaseSensitiveTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler
