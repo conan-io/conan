@@ -1196,6 +1196,7 @@ class SearchOrder(unittest.TestCase):
 
 class SearchRevisionsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_recipe_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -1341,6 +1342,7 @@ class Test(ConanFile):
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_not_found(self):
         # Search not found for both package and recipe
         test_server = TestServer(users={"conan": "password"})  # exported users and passwords
