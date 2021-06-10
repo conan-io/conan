@@ -267,9 +267,8 @@ def test_buildirs_working():
                              .with_cmake_build().with_require("my_lib/1.0")
                              .with_settings("os", "arch", "build_type", "compiler")
                              .with_exports_sources("*.txt")
-    cmake = gen_cmakelists()
+    cmake = gen_cmakelists(find_package=["my_lib"])
     cmake += """
-    find_package("my_lib")
     message("CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
     include("my_cmake_script")
     message("MYVAR=>${MYVAR}")
