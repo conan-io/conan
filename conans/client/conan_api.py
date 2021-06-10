@@ -1458,12 +1458,14 @@ class ConanAPIV1(object):
 
         if not phost:
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
-                                      profile_host.options, profile_host.env, cwd, self.app.cache)
+                                      profile_host.options, profile_host.env, profile_host.conf,
+                                      cwd, self.app.cache)
 
         if profile_build and not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, cwd, self.app.cache)
+                                       profile_build.options, profile_build.env, profile_host.conf,
+                                       cwd, self.app.cache)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
@@ -1547,12 +1549,13 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
                         % install_folder)
 
         phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
-                                  profile_host.env, cwd, cache)
+                                  profile_host.env, profile_host.conf, cwd, cache)
         phost.process_settings(cache)
         if profile_build:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, cwd, cache)
+                                       profile_build.options, profile_build.env, profile_host.conf,
+                                       cwd, cache)
             pbuild.process_settings(cache)
         else:
             pbuild = None
