@@ -17,6 +17,7 @@ def client():
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
+            package_type = "run library"
             def package(self):
                 with chdir(self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)
@@ -117,7 +118,7 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
     assert "MYGTESTVAR=MyGTestValueLinux!!" in client.out
 
-    client.run("build .")
+    client.run("build . -s:b os=Windows -s:h os=Linux ")
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
     assert "MYGTEST=Linux!!" in client.out
@@ -231,6 +232,7 @@ def test_transitive_order():
         class Pkg(ConanFile):
             settings = "os"
             build_requires = "gcc/1.0"
+            package_type = "run library"
             def package_info(self):
                 self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
         """)
@@ -267,7 +269,7 @@ def test_transitive_order():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
+    assert "BUILDENV: MYVAR MyGCCValue MyOpenSSLWindowsValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
 
 
