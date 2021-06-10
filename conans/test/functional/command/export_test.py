@@ -25,5 +25,6 @@ class ExportMetadataTest(unittest.TestCase):
         ref = ConanFileReference.loads("name/version@user/channel")
         t.run("export . {}".format(ref))
 
-        meta = t.cache.package_layout(ref, short_paths=False).load_metadata()
-        self.assertEqual(meta.recipe.revision, commit)
+        latest_rev = t.cache.get_latest_rrev(ref)
+
+        self.assertEqual(latest_rev.revision, commit)
