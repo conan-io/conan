@@ -386,12 +386,12 @@ class RemoteRegistry(object):
         # For definition from conan config install
         with self._cache.editable_packages.disable_editables():
             for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote not in remotes:
-                        metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote not in remotes:
-                            pkg_metadata.remote = None
+                if self._cache.get_remote(ref) not in remotes:
+                    self._cache.set_remote(ref, None)
+                packages = self._cache.get_package_revisions(ref)
+                for pref in packages:
+                    if self._cache.get_remote(pref) not in remotes:
+                        self._cache.set_remote(pref, None)
 
             remotes.save(self._filename)
 
