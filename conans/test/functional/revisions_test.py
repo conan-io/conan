@@ -734,25 +734,6 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = items[0]["settings"]["os"]
         self.assertEqual(oss, "Linux")
 
-    def test_search_a_local_package_with_rrev(self):
-        """If we search for the packages of a ref specifying the RREV in the local cache:
-         1. With v2 client it shows the packages for that RREV and only if it is the one
-            in the cache, otherwise it is not returned."""
-
-        client = self.c_v2
-        pref1 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev1"),
-                              args="-s os=Windows")
-
-        pref2 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev2"),
-                              args="-s os=Linux")
-
-        client.run("search {}".format(pref1.ref.full_str()), assert_error=True)
-        self.assertIn("Recipe not found: '{}'".format(pref1.ref.full_str()), client.out)
-
-        client.run("search {}".format(pref2.ref.full_str()))
-        self.assertIn("Existing packages for recipe {}:".format(pref2.ref), client.out)
-        self.assertIn("os: Linux", client.out)
-
     def test_search_recipes_in_local_by_pattern(self):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
