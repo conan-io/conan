@@ -84,6 +84,7 @@ class HelloReuseConan(ConanFile):
         self.assertIn("Pkg/1.2@lasote/testing: Already installed!", client.out)
         self.assertNotIn("Pkg/1.1", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_update_pkg(self):
         server = TestServer()
         client = TestClient(servers={"default": server},
