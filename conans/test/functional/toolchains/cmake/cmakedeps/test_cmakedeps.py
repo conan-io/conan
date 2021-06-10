@@ -263,10 +263,10 @@ def test_buildirs_working():
     c.save({"conanfile.py": conanfile})
     c.run("create .")
 
-    consumer_conanfile = str(GenConanfile().with_name("consumer").with_version("1.0")
+    consumer_conanfile = GenConanfile().with_name("consumer").with_version("1.0")
                              .with_cmake_build().with_require("my_lib/1.0")
                              .with_settings("os", "arch", "build_type", "compiler")
-                             .with_exports_sources("*.txt"))
+                             .with_exports_sources("*.txt")
     cmake = gen_cmakelists()
     cmake += """
     find_package("my_lib")
