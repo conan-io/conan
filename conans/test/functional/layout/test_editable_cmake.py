@@ -8,11 +8,7 @@ from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.parametrize("generator", {"Windows": [None, "MinGW Makefiles"],
-                                       "Darwin": [None, "Ninja", "Xcode"],
-                                       "Linux": [None, "Ninja", "Ninja Multi-Config"]}
-                         .get(platform.system()))
-def test_editable_cmake(generator):
+def editable_cmake(generator):
     multi = (generator is None and platform.system() == "Windows") or \
             generator in ("Ninja Multi-Config", "Xcode")
     c = TestClient()
@@ -64,3 +60,23 @@ def test_editable_cmake(generator):
     c.run("create pkg")
     # print(c.out)
     assert "pkg/0.1: Created package" in c.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
+@pytest.mark.tool_mingw64
+def test_editable_cmake_windows(generator):
+    editable_cmake(generator)
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
+@pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
+def test_editable_cmake_linux(generator):
+    editable_cmake(generator)
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
+@pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
+@pytest.mark.tool_cmake(version="3.19")
+def test_editable_cmake_osx(generator):
+    editable_cmake(generator)
