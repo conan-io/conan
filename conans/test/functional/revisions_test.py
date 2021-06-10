@@ -13,6 +13,7 @@ from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
+from conans.util.files import save
 
 
 @pytest.mark.artifactory_ready
@@ -332,7 +333,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
                           "specify a reference without revision", client.out)
         else:
             client.run(command, assert_error=True)
-            self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
+            self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
+                          "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
+                          "Use '--update' to check in the remote", client.out)
             command = "install {}#fakerevision --update".format(ref)
             client.run(command, assert_error=True)
             self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
@@ -343,7 +346,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             new_client.upload_all(self.ref)
 
             # Repeat the install --update pointing to the new reference
-            client.run("install {}".format(pref.ref.full_str()))
+            client.run("install {} --update".format(pref.ref.full_str()))
             self.assertIn("{} from 'default' - Downloaded".format(self.ref), client.out)
 
     @parameterized.expand([(True,), (False,)])
@@ -1578,6 +1581,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
 def test_necessary_update():
     # https://github.com/conan-io/conan/issues/7235
     c = TestClient(default_server_user=True)
+    save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
     c.run("config set general.revisions_enabled=True")
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . pkg/0.1@")
