@@ -24,7 +24,7 @@ def editable_cmake(generator):
         c.run("install .")
         c.run("build .")
         c.run("install . -s build_type=Debug")
-        c.run("build .")
+        c.run("build . -s build_type=Debug")
 
     def build_pkg(msg):
         c.run("build . -if=install_release")
@@ -32,7 +32,7 @@ def editable_cmake(generator):
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Release!" in c.out
         assert "{}: Release!".format(msg) in c.out
-        c.run("build . -if=install_debug")
+        c.run("build . -if=install_debug -s build_type=Debug")
         folder = os.path.join("build", "Debug") if multi else "cmake-build-debug"
         c.run_command(os.sep.join([".", folder, "pkg"]))
         assert "main: Debug!" in c.out
@@ -49,7 +49,7 @@ def editable_cmake(generator):
         c.run("install .")
         c.run("build .")
         c.run("install . -s build_type=Debug")
-        c.run("build .")
+        c.run("build . -s build_type=Debug")
 
     with c.chdir("pkg"):
         build_pkg("SUPERDEP")
