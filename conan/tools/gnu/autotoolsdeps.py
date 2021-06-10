@@ -43,23 +43,8 @@ class AutotoolsDeps:
             if not self.sysroot:
                 self.sysroot = dep_cpp_info.sysroot
 
-        def _apply_transitive_runenv(next_requires):
-            # TODO: This visitor is same as VirtualEnv runenv_info one, extract
-            all_requires = []
-            while next_requires:
-                new_requires = []
-                for require in next_requires:
-                    # The explicit has more priority
-                    merge(require)
-                    all_requires.append(require)
-
-                    for transitive in require.dependencies.requires:
-                        # Avoid duplication/repetitions
-                        if transitive not in new_requires and transitive not in all_requires:
-                            new_requires.append(transitive)
-                next_requires = new_requires
-
-        _apply_transitive_runenv(self._conanfile.dependencies.requires)
+        for d in self._conanfile.dependencies.host_requires.values():
+            merge(d)
 
     def environment(self):
         # cpp_flags
