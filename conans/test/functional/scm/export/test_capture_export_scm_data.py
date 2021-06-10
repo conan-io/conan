@@ -48,7 +48,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            package_layout=None,
+            reference_layout=None,
             output=output,
             ignore_dirty=True)
 
@@ -74,7 +74,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
             conanfile=conanfile,
             conanfile_dir=self.conanfile_dir,
-            package_layout=None,
+            reference_layout=None,
             output=output,
             ignore_dirty=False)
 
@@ -103,7 +103,7 @@ class CaptureExportSCMDataTest(unittest.TestCase):
         scm_data, _ = _capture_scm_auto_fields(
                     conanfile=conanfile,
                     conanfile_dir=self.conanfile_dir,
-                    package_layout=None,
+                    reference_layout=None,
                     output=output,
                     ignore_dirty=True)
 
