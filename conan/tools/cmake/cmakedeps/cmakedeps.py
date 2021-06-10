@@ -37,12 +37,13 @@ class CMakeDeps(object):
         macros = MacrosTemplate()
         ret = {macros.filename: macros.render()}
 
-        host_req = self._conanfile.dependencies.host_requires.values()
-        build_req = self._conanfile.dependencies.direct_build_requires.values()
+        host_req = self._conanfile.dependencies.host_requires
+        build_req = self._conanfile.dependencies.direct_build_requires
 
         # Check if the same package is at host and build and the same time
-        activated_br = {r.ref.name for r in build_req if r.ref.name in self.build_context_activated}
-        common_names = {r.ref.name for r in host_req}.intersection(activated_br)
+        activated_br = {r.ref.name for r in build_req.values()
+                        if r.ref.name in self.build_context_activated}
+        common_names = {r.ref.name for r in host_req.values()}.intersection(activated_br)
         for common_name in common_names:
             suffix = self.build_context_suffix.get(common_name)
             if not suffix:
@@ -52,26 +53,26 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        for req, dep in list(self._conanfile.dependencies.host_requires.items()) + \
-                        list(self._conanfile.dependencies.direct_build_requires.items()):
+        for require, dep in list(host_req.items()) + list(build_req.items()):
+            # Require is not used at the moment, but its information could be used,
+            # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated
-            if dep.is_build_context and req.ref.name not in self.build_context_activated:
+            if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
-            config_version = ConfigVersionTemplate(self, dep)
+            config_version = ConfigVersionTemplate(self, require, dep)
             ret[config_version.filename] = config_version.render()
 
-            self.require = req  # FIXME: This is the ugly pattern to pass info that should be fixed
-            data_target = ConfigDataTemplate(self, dep)
+            data_target = ConfigDataTemplate(self, require, dep)
             ret[data_target.filename] = data_target.render()
 
-            target_configuration = TargetConfigurationTemplate(self, dep)
+            target_configuration = TargetConfigurationTemplate(self, require, dep)
             ret[target_configuration.filename] = target_configuration.render()
 
-            targets = TargetsTemplate(self, dep)
+            targets = TargetsTemplate(self, require, dep)
             ret[targets.filename] = targets.render()
 
-            config = ConfigTemplate(self, dep)
+            config = ConfigTemplate(self, require, dep)
             # Check if the XXConfig.cmake exists to keep the first generated configuration
             # to only include the build_modules from the first conan install. The rest of the
             # file is common for the different configurations.

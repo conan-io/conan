@@ -464,7 +464,6 @@ class MyConan(ConanFile):
                           "conanfile.py": conanfile + "    requires = \"pkg1/1.0@danimtb/testing\""})
         self.client.run("export conanfile_dep.py pkg1/1.0@danimtb/testing")
         self.client.run("export-pkg conanfile.py pkg2/1.0@danimtb/testing --json output.json")
-        print(self.client.out)
         _check_json_output()
 
         # Error on missing dependency

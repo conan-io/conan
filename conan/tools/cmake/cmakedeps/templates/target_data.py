@@ -108,7 +108,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         global_cppinfo = self.conanfile.new_cpp_info.copy()
         global_cppinfo.aggregate_components()
         pfolder_var_name = "{}_PACKAGE_FOLDER{}".format(self.pkg_name, self.config_suffix)
-        return DepsCppCmake(global_cppinfo, pfolder_var_name, self.cmakedeps.require)
+        return DepsCppCmake(global_cppinfo, pfolder_var_name, self.require)
 
     def get_required_components_cpp(self):
         """Returns a list of (component_name, DepsCppCMake)"""

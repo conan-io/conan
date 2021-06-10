@@ -16,6 +16,11 @@ class UserRequirementsDict(object):
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k, v))
         return UserRequirementsDict(data)
 
+    def __bool__(self):
+        return bool(self._data)
+
+    __nonzero__ = __bool__
+
     @staticmethod
     def _get_require(ref, **kwargs):
         assert isinstance(ref, str)
