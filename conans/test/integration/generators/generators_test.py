@@ -4,6 +4,7 @@ import re
 import textwrap
 import unittest
 
+from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
 
@@ -62,5 +63,10 @@ class TestConan(ConanFile):
 
         cmake = client.load("conanbuildinfo.cmake")
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
-        self.assertIn("mysrc/0.1/user/testing/package/%s/src" % NO_SETTINGS_PACKAGE_ID,
-                      src_dirs)
+
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("mysrc/0.1@user/testing"))
+        prev = client.cache.get_latest_prev(latest_rrev)
+        pkg_layout = client.cache.pkg_layout(prev)
+
+        src_folder = os.path.join(pkg_layout.package(), "src")
+        self.assertIn(f"{src_folder}", src_dirs)
