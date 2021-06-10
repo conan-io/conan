@@ -167,10 +167,10 @@ class PackageCacheLayout(object):
                 (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
-        return self.ref_layout().reference().revision
+        return self.ref_layout.reference.revision
 
     def package_revision(self, pref):
-        return self.pkg_layout().reference().revision
+        return self.pkg_layout.reference.revision
 
     def conan_builds(self):
         builds_dir = self.builds()
