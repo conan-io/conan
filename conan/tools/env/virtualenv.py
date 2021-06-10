@@ -27,10 +27,9 @@ class VirtualEnv:
                 # higher priority, explicit buildenv_info
                 if build_require.buildenv_info:
                     build_env.compose(build_require.buildenv_info)
-            else:
-                # Lower priority, the runenv of all transitive "requires" of the build requires
-                if build_require.runenv_info:
-                    build_env.compose(build_require.runenv_info)
+            # Lower priority, the runenv of all transitive "requires" of the build requires
+            if build_require.runenv_info:
+                build_env.compose(build_require.runenv_info)
             # Then the implicit
             build_env.compose(self._runenv_from_cpp_info(build_require.cpp_info))
 
