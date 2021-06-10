@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
@@ -35,15 +37,17 @@ class ConanFileToolsTest(ConanFile):
         self.assertIn("Source files: myfile.h contents", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        builds = client.cache.package_layout(ref).builds()
-        pid = os.listdir(builds)[0]
-        build_folder = os.path.join(builds, pid)
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        layout = client.cache.get_pkg_layout(latest_prev)
+        build_folder = layout.build()
+        package_folder = layout.package()
+
         self.assertNotIn("file.h", os.listdir(build_folder))
-        packages = client.cache.package_layout(ref).packages()
-        package_folder = os.path.join(packages, pid)
         self.assertIn("file.h", os.listdir(package_folder))
         self.assertIn("myartifact.lib", os.listdir(package_folder))
 
+    @pytest.mark.xfail(reason="cache2.0 create --build not considered yet")
     def test_source_folder(self):
         conanfile = '''
 from conans import ConanFile
@@ -57,7 +61,7 @@ class ConanFileToolsTest(ConanFile):
 
     def source(self):
         save("header.h", "artifact contents!")
-    
+
     def package(self):
         self.copy("*.h", dst="include")
 '''
@@ -66,9 +70,11 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        packages = client.cache.package_layout(ref).packages()
-        pid = os.listdir(packages)[0]
-        package_folder = os.path.join(packages, pid, "include")
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        layout = client.cache.get_pkg_layout(latest_prev)
+        package_folder = layout.package()
+
         self.assertIn("header.h", os.listdir(package_folder))
 
         client = TestClient()
@@ -76,7 +82,9 @@ class ConanFileToolsTest(ConanFile):
         client.run("create . lasote/testing --build")
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
-        packages = client.cache.package_layout(ref).packages()
-        pid = os.listdir(packages)[0]
-        package_folder = os.path.join(packages, pid, "include")
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        layout = client.cache.get_pkg_layout(latest_prev)
+        package_folder = layout.package()
+
         self.assertIn("header.h", os.listdir(package_folder))
