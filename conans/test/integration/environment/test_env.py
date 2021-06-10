@@ -267,7 +267,7 @@ def test_transitive_order():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyCMakeBuildValue!!!" in client.out
+    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
 
 

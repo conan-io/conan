@@ -16,6 +16,7 @@ class VirtualEnv:
         """ collects the buildtime information from dependencies. This is the typical use case
         of build_requires defining information for consumers
         """
+        # FIXME: Cache value?
         build_env = Environment()
         # Top priority: profile
         profile_env = self._conanfile.buildenv
@@ -26,10 +27,9 @@ class VirtualEnv:
                 # higher priority, explicit buildenv_info
                 if build_require.buildenv_info:
                     build_env.compose(build_require.buildenv_info)
-            else:
-                # Lower priority, the runenv of all transitive "requires" of the build requires
-                if build_require.runenv_info:
-                    build_env.compose(build_require.runenv_info)
+            # Lower priority, the runenv of all transitive "requires" of the build requires
+            if build_require.runenv_info:
+                build_env.compose(build_require.runenv_info)
             # Then the implicit
             build_env.compose(self._runenv_from_cpp_info(build_require.cpp_info))
 
@@ -63,6 +63,7 @@ class VirtualEnv:
         """
         runenv = Environment()
         # FIXME: Missing profile info
+        # FIXME: Cache value?
 
         # Visitor, breadth-first
         for require in self._conanfile.dependencies.host_requires.values():

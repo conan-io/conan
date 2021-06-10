@@ -2,6 +2,7 @@ import fnmatch
 import os
 import textwrap
 from collections import OrderedDict
+from contextlib import contextmanager
 
 from conans.errors import ConanException
 from conans.util.files import save
@@ -223,6 +224,41 @@ class Environment:
                         new_value = new_value[:-1]
                     self._values[k] = new_value
         return self
+
+    # Methods to user access to the environment object as a dict, replacing the placeholder with
+    # the current environment value
+    def _get_final_value(self, name):
+        if name not in self._values:
+            raise KeyError("No environment variable: " + name)
+        previous_value = os.getenv(name) or ""
+        return self._format_value(name, self._values[name], previous_value, os.pathsep)
+
+    def __getitem__(self, name):
+        return self._get_final_value(name)
+
+    def keys(self):
+        return self._values.keys()
+
+    def items(self):
+        for k in self._values.keys():
+            yield k, self._get_final_value(k)
+
+    def __eq__(self, other):
+        return other._values == self._values
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @contextmanager
+    def apply(self):
+        apply_vars = self.items()
+        old_env = dict(os.environ)
+        os.environ.update(apply_vars)
+        try:
+            yield
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
 
 
 class ProfileEnvironment:
