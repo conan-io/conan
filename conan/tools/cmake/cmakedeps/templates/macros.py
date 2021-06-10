@@ -13,7 +13,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
     """cmakedeps_macros.cmake"""
 
     def __init__(self):
-        super(MacrosTemplate, self).__init__(req=None, cmakedeps=None)
+        super(MacrosTemplate, self).__init__(cmakedeps=None, require=None, conanfile=None)
 
     @property
     def filename(self):

@@ -30,7 +30,6 @@ def test_virtualenv_deactivated(client, default_virtualenv):
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conans import ConanFile
-    from conans.client.runner import ConanRunner
     import platform
 
     class ConanFileToolsTest(ConanFile):
