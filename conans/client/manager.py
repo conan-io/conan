@@ -2,7 +2,6 @@ import os
 
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_VIRTUAL
-from conans.client.graph.graph_error import GraphError
 from conans.client.graph.printer import print_graph
 from conans.client.importer import run_deploy, run_imports
 from conans.client.installer import BinaryInstaller, call_system_requirements
@@ -52,7 +51,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
         out.highlight("Installing package: %s" % str(ref_or_path))
     else:
         conanfile.output.highlight("Installing package")
-
     print_graph(deps_graph, out)
 
     try:
@@ -70,9 +68,6 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
                       graph_lock)
 
     graph_lock.complete_matching_prevs()
-
-    # FIXME: Report non matches not working now
-    # build_modes.report_matches()
 
     conanfile.folders.set_base_install(install_folder)
     conanfile.folders.set_base_imports(install_folder)
