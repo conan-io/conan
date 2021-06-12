@@ -61,7 +61,8 @@ def test_transitive_multi(client):
 
         # Test that we are using find_dependency with the NO_MODULE option
         # to skip finding first possible FindBye somewhere
-        assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" in client.load("libb-config.cmake")
+        assert "find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)" \
+               in client.load("libb-config.cmake")
 
         if platform.system() == "Windows":
             client.run_command('cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
@@ -248,7 +249,7 @@ def test_buildirs_working():
     """  If a recipe declares cppinfo.buildirs those dirs will be exposed to be consumer
     to allow a cmake "include" function call after a find_package"""
     c = TestClient()
-    conanfile = str(GenConanfile().with_name("my_lib").with_version("1.0")\
+    conanfile = str(GenConanfile().with_name("my_lib").with_version("1.0")
                                   .with_import("import os").with_import("from conans import tools"))
     conanfile += """
     def package(self):
@@ -257,16 +258,15 @@ def test_buildirs_working():
 
     def package_info(self):
         self.cpp_info.builddirs=["my_build_dir"]
-
     """
 
     c.save({"conanfile.py": conanfile})
     c.run("create .")
 
-    consumer_conanfile = GenConanfile().with_name("consumer").with_version("1.0")
-                             .with_cmake_build().with_require("my_lib/1.0")
-                             .with_settings("os", "arch", "build_type", "compiler")
-                             .with_exports_sources("*.txt")
+    consumer_conanfile = GenConanfile().with_name("consumer").with_version("1.0")\
+        .with_cmake_build().with_require("my_lib/1.0") \
+        .with_settings("os", "arch", "build_type", "compiler") \
+        .with_exports_sources("*.txt")
     cmake = gen_cmakelists(find_package=["my_lib"])
     cmake += """
     message("CMAKE_MODULE_PATH: ${CMAKE_MODULE_PATH}")
