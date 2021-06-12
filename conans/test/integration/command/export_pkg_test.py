@@ -435,8 +435,6 @@ class MyConan(ConanFile):
             json_path = os.path.join(self.client.current_folder, "output.json")
             self.assertTrue(os.path.exists(json_path))
             json_content = load(json_path)
-            from pprint import pprint
-            pprint(json_content)
             output = json.loads(json_content)
             self.assertEqual(output["error"], with_error)
             tmp = ConanFileReference.loads(output["installed"][0]["recipe"]["id"])
