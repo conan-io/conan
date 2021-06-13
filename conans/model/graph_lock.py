@@ -6,7 +6,7 @@ from conans import DEFAULT_REVISION_V1
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
 from conans.client.graph.range_resolver import satisfying
-from conans.client.profile_loader import _load_profile
+from conans.client.profile_loader import ProfileValueParser
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.options import OptionsValues
@@ -63,11 +63,10 @@ class GraphLockFile(object):
             # Do something with it, migrate, raise...
         profile_host = graph_json.get("profile_host", None)
         profile_build = graph_json.get("profile_build", None)
-        # FIXME: Reading private very ugly
         if profile_host:
-            profile_host, _ = _load_profile(profile_host, None, None)
+            profile_host = ProfileValueParser.get_profile(profile_host)
         if profile_build:
-            profile_build, _ = _load_profile(profile_build, None, None)
+            profile_build = ProfileValueParser.get_profile(profile_build)
         graph_lock = GraphLock.deserialize(graph_json["graph_lock"], revisions_enabled)
         graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
         return graph_lock_file
