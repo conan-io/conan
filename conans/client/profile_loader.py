@@ -1,5 +1,8 @@
 import os
+import platform
 from collections import OrderedDict, defaultdict
+
+from jinja2 import Template
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
@@ -116,6 +119,11 @@ def read_profile(profile_name, cwd, default_folder):
     profile_path = get_profile_path(profile_name, default_folder, cwd)
     logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
+
+    if profile_name.endswith(".tpl"):
+        context = {"platform": platform,
+                   "os": os}
+        text = Template(text, trim_blocks=True, lstrip_blocks=True).render(context)
 
     try:
         return _load_profile(text, profile_path, default_folder)
