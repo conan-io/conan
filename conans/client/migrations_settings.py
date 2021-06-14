@@ -2304,4 +2304,6 @@ cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20, 23, gnu23]
 """
 
 settings_1_37_1 = settings_1_37_0
-settings_1_38_0 = settings_1_37_1
+settings_1_37_2 = settings_1_37_1
+
+settings_1_38_0 = settings_1_37_2
