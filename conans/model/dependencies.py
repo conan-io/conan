@@ -63,17 +63,17 @@ class ConanFileDependencies(UserRequirementsDict):
         return super(ConanFileDependencies, self).filter(filter_fn)
 
     @property
-    def direct_host_requires(self):
+    def direct_host(self):
         return self.filter(lambda r, c: r.direct and not r.build)
 
     @property
-    def direct_build_requires(self):
+    def direct_build(self):
         return self.filter(lambda r, c: r.direct and r.build)
 
     @property
-    def host_requires(self):
+    def host(self):
         return self.filter(lambda r, c: not r.build)
 
     @property
-    def build_requires(self):
+    def build(self):
         return self.filter(lambda r, c: r.build)

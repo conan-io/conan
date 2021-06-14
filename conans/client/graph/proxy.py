@@ -58,7 +58,7 @@ class ConanProxy(object):
         check_updates = check_updates or update
         requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
         if requested_different_revision:
-            if check_updates:
+            if check_updates or self._cache.new_config["core:allow_explicit_revision_update"]:
                 remote, new_ref = self._download_recipe(layout, ref, output, remotes,
                                                         selected_remote)
                 status = RECIPE_DOWNLOADED

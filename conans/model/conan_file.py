@@ -12,7 +12,7 @@ from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import NewCppInfo, from_old_cppinfo
+from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -136,6 +136,7 @@ class ConanFile(object):
                                      getattr(self, "test_requires", None))
 
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_dependencies = None
 
         # layout() method related variables:
         self.folders = Folders()
@@ -163,7 +164,10 @@ class ConanFile(object):
 
     @property
     def dependencies(self):
-        return ConanFileDependencies.from_node(self._conan_node)
+        # Caching it, this object is requested many times
+        if self._conan_dependencies is None:
+            self._conan_dependencies = ConanFileDependencies.from_node(self._conan_node)
+        return self._conan_dependencies
 
     @property
     def ref(self):

@@ -174,4 +174,3 @@ def test_component_name_same_package():
         data_cmake = files["mypkg-release-x86-data.cmake"]
         assert 'set(mypkg_mypkg_INCLUDE_DIRS_RELEASE ' \
                '"${mypkg_PACKAGE_FOLDER_RELEASE}/includedirs1")' in data_cmake
-

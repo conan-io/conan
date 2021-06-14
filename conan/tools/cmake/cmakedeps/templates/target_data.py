@@ -122,7 +122,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for require in comp.requires:
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
-                    req = self.conanfile.dependencies.direct_host_requires[pkg]
+                    req = self.conanfile.dependencies.direct_host[pkg]
                     public_comp_deps.append("{}::{}".format(get_target_namespace(req),
                                                             get_component_alias(req, cmp_name)))
                 else:  # Points to a component of same package
@@ -140,10 +140,10 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         if self.conanfile.new_cpp_info.required_components:
             for dep_name, _ in self.conanfile.new_cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
-                    req = self.conanfile.dependencies.direct_host_requires[dep_name]
+                    req = self.conanfile.dependencies.direct_host[dep_name]
                     ret.append(get_file_name(req))
-        elif self.conanfile.dependencies.direct_host_requires:
-            ret = [get_file_name(r) for r in self.conanfile.dependencies.direct_host_requires.values()]
+        elif self.conanfile.dependencies.direct_host:
+            ret = [get_file_name(r) for r in self.conanfile.dependencies.direct_host.values()]
         return ret
 
 
