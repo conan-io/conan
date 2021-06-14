@@ -135,17 +135,6 @@ def test_new_config_file_required_version():
             in str(excinfo.value))
 
 
-def test_new_conf_lines_via_cli(client):
-    profile = textwrap.dedent("""\
-        [conf]
-        """)
-    client.save({"profile": profile})
-    client.run("install . -pr=profile -c tools.microsoft.msbuild:verbosity=Minimal "
-               "-c tools.microsoft.msbuild:robustness=High")
-    assert "tools.microsoft.msbuild:verbosity$Minimal" in client.out
-    assert "tools.microsoft.msbuild:robustness$High" in client.out
-
-
 def test_composition_conan_conf_and_cli(client):
     conf = textwrap.dedent("""\
         tools.microsoft.msbuild:verbosity=Quiet
@@ -158,7 +147,9 @@ def test_composition_conan_conf_and_cli(client):
         tools.microsoft.msbuild:robustness=High
         """)
     client.save({"profile": profile})
-    client.run("install . -pr=profile -c tools.microsoft.msbuild:verbosity=Detailed")
+    client.run("install . -pr=profile -c tools.microsoft.msbuild:verbosity=Detailed "
+               "-c tools.meson.meson:verbosity=Super")
     assert "tools.microsoft.msbuild:verbosity$Detailed" in client.out
     assert "tools.microsoft.msbuild:performance$Slow" in client.out
     assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
