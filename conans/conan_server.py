@@ -1,5 +1,4 @@
 import argparse
-from conans import server
 
 from conans.server.launcher import ServerLauncher
 from conans.util.env_reader import get_env
