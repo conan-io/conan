@@ -60,6 +60,10 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
+            if dep.new_cpp_info.get_property("skip_deps_file", "CMakeDeps"):
+                # Skip the generation of config files for this node, it will be located externally
+                continue
+
             config_version = ConfigVersionTemplate(self, require, dep)
             ret[config_version.filename] = config_version.render()
 
