@@ -138,7 +138,7 @@ class ProfileValueParser(object):
                 else:
                     pattern, req_list = tokens
                 refs = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-                result[pattern] = refs
+                result.setdefault(pattern, []).extend(refs)
         return result
 
     @staticmethod
