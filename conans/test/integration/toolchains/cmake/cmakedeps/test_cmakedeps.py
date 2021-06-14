@@ -23,13 +23,13 @@ def test_package_from_system():
     client.run("create .")
 
     dep1 = GenConanfile().with_name("dep1").with_version("1.0").with_require("dep2/1.0")\
-                         .with_settings("os", "arch", "build_type", "compiler")
+                         .with_settings("os", "arch", "build_type")
     client.save({"conanfile.py": dep1})
     client.run("create .")
 
     consumer = GenConanfile().with_name("consumer").with_version("1.0").\
         with_require("dep1/1.0").with_generator("CMakeDeps").\
-        with_settings("os", "arch", "build_type", "compiler")
+        with_settings("os", "arch", "build_type")
     client.save({"conanfile.py": consumer})
     client.run("install .")
     assert os.path.exists(os.path.join(client.current_folder, "dep1-config.cmake"))
