@@ -49,9 +49,9 @@ class CppPackage(object):
 
     def add_component(self, name):
         """
-        appens a new ConanPackage.Configuration into the internal dictionary
+        appens a new CppPackage.Configuration into the internal dictionary
         :param name: name of the given configuration (e.g. Debug)
-        :return: a new ConanPackage.Configuration instance (empty)
+        :return: a new CppPackage.Configuration instance (empty)
         """
         self.components[name] = CppPackage.Component()
         return self.components[name]
