@@ -724,7 +724,7 @@ class Command(object):
         if args.install_folder and (args.profile_host or args.settings_host
                                     or args.options_host or args.env_host or args.conf_host):
             raise ArgumentError(None, "--install-folder cannot be used together with a"
-                                      " host profile (-s, -o, -e or -pr)")
+                                      " host profile (-s, -o, -e, -pr or -c)")
 
         if args.build_order and args.graph:
             raise ArgumentError(None, "--build-order cannot be used together with --graph")
@@ -2125,12 +2125,12 @@ class Command(object):
     @staticmethod
     def _check_lockfile_args(args):
         if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build):
-            raise ConanException("Cannot use profile, settings, options or env 'build' when "
+                              args.env_build or args.conf_build):
+            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
                                  "using lockfile")
         if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
                               args.env_host or args.conf_host):
-            raise ConanException("Cannot use profile, settings, options or env 'host' when "
+            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
                                  "using lockfile")
         if args.lockfile_out and not args.lockfile:
             raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
