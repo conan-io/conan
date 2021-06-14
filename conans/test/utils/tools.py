@@ -714,11 +714,12 @@ class TurboTestClient(TestClient):
         return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
-        latest_rrev = self.cache.get_latest_rrev(ref)
-        return True if latest_rrev else False
+        rrev = self.cache.get_recipe_revisions(ref)
+        return True if rrev else False
 
     def package_exists(self, pref):
-        return self.cache.package_layout(pref.ref).package_exists(pref)
+        prev = self.cache.get_package_revisions(pref)
+        return True if prev else False
 
     def recipe_revision(self, ref):
         return self.cache.package_layout(ref).recipe_revision()

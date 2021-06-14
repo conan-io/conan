@@ -158,6 +158,7 @@ class ReferencesDbTable(BaseDbTable):
     def get_prevs(self, conn, ref: ConanReference, only_latest_prev: bool = False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
         check_pkgid = f'AND {self.columns.pkgid} = "{ref.pkgid}" ' if ref.pkgid else ''
+        check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' if ref.prev else ''
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -170,6 +171,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'{check_pkgid} ' \
+                    f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
@@ -177,6 +179,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'{check_pkgid} ' \
+                    f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL '
         r = conn.execute(query)
         for row in r.fetchall():

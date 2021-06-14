@@ -135,11 +135,11 @@ class ConanRemover(object):
             return
 
         for package in packages:
-            package_layout = self._cache.pkg_layout(package)
+            package_layout = self._cache.get_pkg_layout(package)
             package_layout.remove()
 
         if remove_recipe:
-            ref_layout = self._cache.ref_layout(ref)
+            ref_layout = self._cache.get_ref_layout(ref)
             ref_layout.remove()
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
@@ -179,6 +179,8 @@ class ConanRemover(object):
             if input_ref:
                 # TODO: cache2.0 do we want to get all revisions or just the latest?
                 #  remove all for the moment
+                # TODO: cache2.0 raising the not found exceptions here but we should refactor all
+                #  of this for conan 2.0 now that we only have revisions enabled
                 refs = self._cache.get_recipe_revisions(input_ref)
                 if not refs:
                     raise RecipeNotFoundException(input_ref)
@@ -223,8 +225,12 @@ class ConanRemover(object):
                             package_revisions = self._cache.get_package_revisions(ref)
                         else:
                             for package_id in package_ids:
-                                ref_with_id = PackageReference(ref, package_id)
-                                package_revisions.extend(self._cache.get_package_revisions(ref_with_id))
+                                revision = package_id.split("#")[1] if "#" in package_id else None
+                                pref = PackageReference(ref, package_id, revision=revision)
+                                prev = self._cache.get_package_revisions(pref)
+                                if not prev:
+                                    raise PackageNotFoundException(pref)
+                                package_revisions.extend(prev)
 
                         self._simple_local_remove(ref, package_revisions, remove_recipe=remove_recipe)
                 except NotFoundException:
