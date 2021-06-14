@@ -1,3 +1,6 @@
+import json
+from conans.util.files import load, save
+
 class CppPackage(object):
     """
     models conan_package.json, serializable object
