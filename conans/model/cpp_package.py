@@ -18,7 +18,6 @@ class CppPackage(object):
         :param filename: path to the conan_package.json
         :return: a new instance of ConanPackage
         """
-        from conans.util.files import load
         def from_json(o):
             if "components" in o:
                 return {n: CppPackage.Component(c) for n, c in o["components"].items()}
