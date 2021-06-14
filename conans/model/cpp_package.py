@@ -38,7 +38,7 @@ class CppPackage(object):
     def package_info(self, conanfile):
         """
         performs an automatically generated package_info method on conanfile, populating
-        conanfile.package_info with the information available inside conan_package.json
+        conanfile.package_info with the information available inside cpp_package.json
         :return: None
         """
         for cname, component in self.components.items():
