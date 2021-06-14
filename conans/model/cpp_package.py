@@ -33,8 +33,6 @@ class CppPackage(object):
         :param filename: path to the conan_package.json
         :return: None
         """
-        import json
-        from conans.util.files import save
         save(filename, json.dumps(self, default=lambda o: o.__dict__))
 
     def package_info(self, conanfile):
