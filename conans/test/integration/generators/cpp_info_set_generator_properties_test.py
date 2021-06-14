@@ -33,7 +33,7 @@ def setup_client():
             @property
             def content(self):
                 info = []
-                for dep in self.conanfile.dependencies.transitive_host_requires:
+                for dep in self.conanfile.dependencies.values():
                     pkg_name = dep.ref.name
                     cpp_info = dep.cpp_info
                     info.append("{}:{}".format(pkg_name, cpp_info.get_property("custom_name", self.name)))

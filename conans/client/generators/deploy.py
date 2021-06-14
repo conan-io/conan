@@ -30,7 +30,7 @@ class DeployGenerator(Generator):
     def content(self):
         copied_files = []
 
-        for transitive in self.conanfile.dependencies.host_requires.values():
+        for transitive in self.conanfile.dependencies.host.values():
 
             rootpath = transitive.folders.package_folder
             for root, dirs, files in os.walk(os.path.normpath(rootpath)):

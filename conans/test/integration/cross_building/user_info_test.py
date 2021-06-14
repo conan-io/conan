@@ -51,13 +51,13 @@ class UserInfoTestCase(unittest.TestCase):
 
             def build(self):
                 _info = self.output.info
-                lib_info = self.dependencies.host_requires["library"].user_info
-                br_host_info = self.dependencies.host_requires["br_host"].user_info
+                lib_info = self.dependencies["library"].user_info
+                br_host_info = self.dependencies["br_host"].user_info
                 _info("[deps] library.DATA={}".format(lib_info.DATA))
                 _info("[deps] br_host.DATA={}".format(br_host_info.DATA))
 
-                # lib_info = self.dependencies.build_requires["library"].user_info
-                # br_build = self.dependencies.build_requires["br_build"].user_info
+                # lib_info = self.dependencies.build["library"].user_info
+                # br_build = self.dependencies.build["br_build"].user_info
 
                 #_info("[build] library.DATA={}".format(lib_info.DATA))
                 #_info("[build] br_build.DATA={}".format(br_build.DATA))

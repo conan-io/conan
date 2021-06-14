@@ -2,8 +2,6 @@ import os
 
 from conans.client import packager
 from conans.client.conanfile.package import run_package_method
-from conans.client.graph.graph import BINARY_SKIP
-from conans.client.installer import add_env_conaninfo
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 
@@ -31,9 +29,6 @@ def export_pkg(app, recorder, full_ref, source_folder, build_folder, package_fol
     nodes = deps_graph.root.neighbors()
     pkg_node = nodes[0]
     conanfile = pkg_node.conanfile
-
-    # TODO: Conan 1.X was setting the environment of the conanfile, why not set by the graph?
-    # _init_conanfile_infos()
 
     package_id = pkg_node.package_id
     output.info("Packaging to %s" % package_id)

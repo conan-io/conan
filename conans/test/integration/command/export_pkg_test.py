@@ -167,24 +167,6 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
         self.assertIn("Hello/0.1@lasote/stable: ENV-VALUE: MYCUSTOMVALUE!!!", client.out)
 
-    @pytest.mark.xfail(reason="ENV has not been added to ConanInfo in export-pkg, to be discussed")
-    def test_profile_environment_conaninfo(self):
-        # https://github.com/conan-io/conan/issues/6603
-        profile = dedent("""
-            [env]
-            MYCUSTOMVAR=MYCUSTOMVALUE
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1"),
-                     "myprofile": profile})
-        client.run("export-pkg . Hello/0.1@lasote/stable -pr=myprofile")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
-        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
-        self.assertIn("MYCUSTOMVAR=MYCUSTOMVALUE", conaninfo)
-
     def _consume(self, client, install_args):
         consumer = """
 from conans import ConanFile

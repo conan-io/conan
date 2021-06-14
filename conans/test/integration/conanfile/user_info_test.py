@@ -40,11 +40,11 @@ class UserInfoTest(unittest.TestCase):
                 requires = "LIB_D/0.1@lasote/stable"
 
                 def build(self):
-                    assert self.dependencies.host_requires["LIB_A"].user_info.VAR1=="2"
-                    assert self.dependencies.host_requires["LIB_B"].user_info.VAR1=="2"
-                    assert self.dependencies.host_requires["LIB_B"].user_info.VAR2=="3"
-                    assert self.dependencies.host_requires["LIB_C"].user_info.VAR1=="2"
-                    assert self.dependencies.host_requires["LIB_C"].user_info.VAR1=="2"
+                    assert self.dependencies["LIB_A"].user_info.VAR1=="2"
+                    assert self.dependencies["LIB_B"].user_info.VAR1=="2"
+                    assert self.dependencies["LIB_B"].user_info.VAR2=="3"
+                    assert self.dependencies["LIB_C"].user_info.VAR1=="2"
+                    assert self.dependencies["LIB_C"].user_info.VAR1=="2"
                 """)
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export . reuse/0.1@lasote/stable")
