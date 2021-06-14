@@ -1,7 +1,9 @@
+import json
 import fnmatch
 import os
 
-from conans.util.files import save
+from conans.model.cpp_package import CppPackage
+from conans.util.files import save, load
 
 class CMakeFileAPI(object):
     """
