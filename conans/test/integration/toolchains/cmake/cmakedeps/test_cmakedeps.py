@@ -15,7 +15,7 @@ def test_package_from_system():
                .with_settings("os", "arch", "build_type", "compiler"))
     dep2 += """
     def package_info(self):
-        self.cpp_info.set_property("external_package", True)
+        self.cpp_info.set_property("skip_deps_file", True)
         self.cpp_info.set_property("cmake_file_name", "custom_dep2")
 
     """
