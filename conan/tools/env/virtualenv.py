@@ -22,7 +22,7 @@ class VirtualEnv:
         profile_env = self._conanfile.buildenv
         build_env.compose(profile_env)
 
-        for require, build_require in self._conanfile.dependencies.build_requires.items():
+        for require, build_require in self._conanfile.dependencies.build.items():
             if require.direct:
                 # higher priority, explicit buildenv_info
                 if build_require.buildenv_info:
@@ -34,7 +34,7 @@ class VirtualEnv:
             build_env.compose(self._runenv_from_cpp_info(build_require.cpp_info))
 
         # Requires in host context can also bring some direct buildenv_info
-        for require in self._conanfile.dependencies.host_requires.values():
+        for require in self._conanfile.dependencies.host.values():
             if require.buildenv_info:
                 build_env.compose(require.buildenv_info)
 
@@ -66,7 +66,7 @@ class VirtualEnv:
         # FIXME: Cache value?
 
         # Visitor, breadth-first
-        for require in self._conanfile.dependencies.host_requires.values():
+        for require in self._conanfile.dependencies.host.values():
             if require.runenv_info:
                 runenv.compose(require.runenv_info)
             runenv.compose(self._runenv_from_cpp_info(require.cpp_info))
