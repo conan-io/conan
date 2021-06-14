@@ -7,15 +7,16 @@ from six import string_types
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
-from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
+from conans.model.conf import Conf
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Layout
-from conans.model.new_build_info import NewCppInfo
+from conans.model.layout import Folders, Patterns, Infos
+from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -134,8 +135,9 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
-    # layout
-    layout = None
+    # Folders
+    folders = None
+    patterns = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -150,14 +152,34 @@ class ConanFile(object):
         self._conan_using_build_profile = False
         self._conan_requester = None
 
-        self.layout = Layout()
         self.buildenv_info = Environment()
         self.runenv_info = Environment()
+        # At the moment only for build_requires, others will be ignored
+        self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
-        self.virtualenv = True  # Set to false to opt-out automatic usage of VirtualEnv
+        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_dependencies = None
 
-        self._conan_new_cpp_info = None  # Will be calculated lazy in the getter
+        # layout() method related variables:
+        self.folders = Folders()
+        self.patterns = Patterns()
+        self.cpp = Infos()
+
+        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.source.lib = []
+        self.patterns.source.bin = []
+
+        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
+        self.patterns.build.bin = ["*.exe", "*.dll"]
+
+        self.cpp.package.includedirs = ["include"]
+        self.cpp.package.libdirs = ["lib"]
+        self.cpp.package.bindirs = ["bin"]
+        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.builddirs = [""]
+        self.cpp.package.frameworkdirs = ["Frameworks"]
 
     @property
     def context(self):
@@ -165,7 +187,10 @@ class ConanFile(object):
 
     @property
     def dependencies(self):
-        return ConanFileDependencies(self._conan_node)
+        # Caching it, this object is requested many times
+        if self._conan_dependencies is None:
+            self._conan_dependencies = ConanFileDependencies.from_node(self._conan_node)
+        return self._conan_dependencies
 
     @property
     def ref(self):
@@ -216,43 +241,61 @@ class ConanFile(object):
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
 
+        if not hasattr(self, "virtualenv"):  # Allow the user to override it with True or False
+            self.virtualenv = True
+
     @property
     def new_cpp_info(self):
         if not self._conan_new_cpp_info:
-            self._conan_new_cpp_info = NewCppInfo.from_old_cppinfo(self.cpp_info)
+            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
         return self._conan_new_cpp_info
 
     @property
     def source_folder(self):
-        return self.layout.source_folder
+        return self.folders.source_folder
 
     @source_folder.setter
     def source_folder(self, folder):
-        self.layout.set_base_source_folder(folder)
+        self.folders.set_base_source(folder)
 
     @property
     def build_folder(self):
-        return self.layout.build_folder
+        return self.folders.build_folder
 
     @build_folder.setter
     def build_folder(self, folder):
-        self.layout.set_base_build_folder(folder)
+        self.folders.set_base_build(folder)
 
     @property
     def package_folder(self):
-        return self.layout.base_package_folder
+        return self.folders.package_folder
 
     @package_folder.setter
     def package_folder(self, folder):
-        self.layout.set_base_package_folder(folder)
+        self.folders.set_base_package(folder)
 
     @property
     def install_folder(self):
-        return self.layout.base_install_folder
+        # FIXME: Remove in 2.0, no self.install_folder
+        return self.folders.base_install
 
     @install_folder.setter
     def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
+        # FIXME: Remove in 2.0, no self.install_folder
+        self.folders.set_base_install(folder)
+
+    @property
+    def generators_folder(self):
+        # FIXME: Remove in 2.0, no self.install_folder
+        return self.folders.generators_folder if self.folders.generators else self.install_folder
+
+    @property
+    def imports_folder(self):
+        return self.folders.imports_folder
+
+    @imports_folder.setter
+    def imports_folder(self, folder):
+        self.folders.set_base_imports(folder)
 
     @property
     def env(self):

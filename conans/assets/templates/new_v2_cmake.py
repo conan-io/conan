@@ -5,20 +5,30 @@ from conan.tools.cmake import CMakeToolchain, CMake
 class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
+
+    # Optional metadata
     license = "<Put the package license here>"
     author = "<Put your name here> <And your email here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
+
+    # Binary configuration
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False], "fPIC": [True, False]}}
     default_options = {{"shared": False, "fPIC": True}}
+
+    # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "src/*"
 
-{configure}
     def config_options(self):
         if self.settings.os == "Windows":
             del self.options.fPIC
+
+    def layout(self):
+        self.folders.source = "src"
+        self.folders.build = "build/{{}}".format(self.settings.build_type)
+        self.folders.generators = "build/generators"
 
     def generate(self):
         tc = CMakeToolchain(self)
@@ -26,11 +36,11 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_folder="src")
+        cmake.configure()
         cmake.build()
 
     def package(self):
-        self.copy("*.h", dst="include", src="src")
+        self.copy("*.h", dst="include")
         self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
         self.copy("*.dylib*", dst="lib", keep_path=False)
@@ -121,17 +131,14 @@ int main() {{
 """
 
 
-def get_files(name, version, user, channel, package_name):
+def get_files(name, version, package_name="Pkg"):
     files = {"conanfile.py": conanfile_sources_v2.format(name=name, version=version,
-                                                         package_name=package_name,
-                                                         configure=""),
+                                                         package_name=package_name),
              "src/{}.cpp".format(name): source_cpp.format(name=name, version=version),
              "src/{}.h".format(name): source_h.format(name=name, version=version),
              "src/CMakeLists.txt": cmake_v2.format(name=name, version=version),
              "test_package/conanfile.py": test_conanfile_v2.format(name=name,
                                                                    version=version,
-                                                                   user=user,
-                                                                   channel=channel,
                                                                    package_name=package_name),
              "test_package/example.cpp": test_main.format(name=name),
              "test_package/CMakeLists.txt": test_cmake_v2.format(name=name)}

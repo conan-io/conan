@@ -33,7 +33,7 @@ def write_conanvcvars(conanfile):
             @echo off
             {}
             """.format(cvars))
-        save(CONAN_VCVARS_FILE, content)
+        save(os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE), content)
 
 
 def vs_ide_version(conanfile):
@@ -135,7 +135,7 @@ class MSBuildToolchain(object):
     def _write_config_toolchain(self, config_filename):
 
         def format_macro(key, value):
-            return '%s="%s"' % (key, value) if value is not None else key
+            return '%s=%s' % (key, value) if value is not None else key
 
         toolchain_file = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>
@@ -168,12 +168,12 @@ class MSBuildToolchain(object):
                                   for k, v in self.compile_options.items())
         config_props = toolchain_file.format(preprocessor_definitions, runtime_library, cppstd,
                                              compile_options, toolset)
-        config_filepath = os.path.abspath(config_filename)
+        config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
 
     def _write_main_toolchain(self, config_filename, condition):
-        main_toolchain_path = os.path.abspath(self.filename)
+        main_toolchain_path = os.path.join(self._conanfile.generators_folder, self.filename)
         if os.path.isfile(main_toolchain_path):
             content = load(main_toolchain_path)
         else:

@@ -13,7 +13,8 @@ tools_default_version = {
     'cygwin': 'default',
     'mingw32': 'default',
     'mingw64': 'default',
-    'ninja': '1.10.2'
+    'ninja': '1.10.2',
+    'bazel': 'default'
 }
 
 tools_locations = {
@@ -41,7 +42,11 @@ tools_locations = {
             '3.19': '/usr/share/cmake-3.19.7/bin'
         }
     },
-    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}}
+    'ninja': {'Windows': {'1.10.2': 'C:/Tools/ninja/1.10.2'}},
+    'bazel': {
+        'Darwin': {'default': '/Users/jenkins/bin'},
+        'Windows': {'default': 'C:/bazel/bin'},
+    }
 }
 
 tools_environments = {
@@ -54,6 +59,7 @@ tools_available = [
     'gcc', 'clang', 'visual_studio', 'xcode',
     'msys2', 'cygwin', 'mingw32', 'mingw64',
     'autotools', 'pkg_config', 'premake', 'meson', 'ninja',
+    'bazel',
     'file',
     'git', 'svn',
     'compiler',

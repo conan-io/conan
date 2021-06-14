@@ -56,7 +56,6 @@ class PropagateSpecificComponents(unittest.TestCase):
         client.run('create middle.py middle/version@')
         self.cache_folder = client.cache_folder
 
-    @pytest.mark.xfail(reason="it seems CMakeDeps is not handling components correctly")
     @pytest.mark.tool_compiler
     def test_cmakedeps_app(self):
         t = TestClient(cache_folder=self.cache_folder)
@@ -66,14 +65,16 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertIn('top::cmp1', config)
         self.assertNotIn("top::top", config)
 
-    @pytest.mark.xfail(reason="it seems CMakeDeps is not handling components correctly")
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
         t.run('install middle/version@ -g CMakeDeps')
-        content = t.load('middle-config.cmake')
 
-        self.assertIn("find_dependency(top REQUIRED NO_MODULE)", content)
-        self.assertIn("find_package(top REQUIRED NO_MODULE)", content)
+        content = t.load('middle-release-x86_64-data.cmake')
+        self.assertIn("set(middle_FIND_DEPENDENCY_NAMES ${middle_FIND_DEPENDENCY_NAMES} top)",
+                      content)
+
+        content = t.load('middle-config.cmake')
+        self.assertIn("find_dependency(${_DEPENDENCY} REQUIRED NO_MODULE)", content)
 
         content = t.load('middleTarget-release.cmake')
         self.assertNotIn("top::top", content)
@@ -81,9 +82,9 @@ class PropagateSpecificComponents(unittest.TestCase):
         self.assertIn("top::cmp1", content)
 
 
-class WrongComponentsTestCase(unittest.TestCase):
-
-    top = textwrap.dedent("""
+@pytest.fixture
+def top_conanfile():
+    return textwrap.dedent("""
         from conans import ConanFile
 
         class Recipe(ConanFile):
@@ -94,68 +95,70 @@ class WrongComponentsTestCase(unittest.TestCase):
                 self.cpp_info.components["cmp2"].libs = ["top_cmp2"]
     """)
 
-    @pytest.mark.xfail(reason="it seems CMakeDeps is not raising error for wrong components")
-    def test_wrong_component(self):
-        """ If the requirement doesn't provide the component, it fails.
-            We can only raise this error after the graph is fully resolved, it is when we
-            know the actual components that the requirement is going to provide.
-        """
 
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
+@pytest.mark.parametrize("from_component", [False, True])
+def test_wrong_component(top_conanfile, from_component):
+    """ If the requirement doesn't provide the component, it fails.
+        We can only raise this error after the graph is fully resolved, it is when we
+        know the actual components that the requirement is going to provide.
+    """
 
-            class Recipe(ConanFile):
-                requires = "top/version"
-                def package_info(self):
-                    self.cpp_info.requires = ["top::not-existing"]
-        """)
-        t = TestClient()
-        t.save({'top.py': self.top, 'consumer.py': consumer})
-        t.run('create top.py top/version@')
-        t.run('create consumer.py wrong/version@')
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
 
-        t.run('install wrong/version@ -g CMakeDeps', assert_error=True)
-        self.assertIn("ERROR: Component 'top::not-existing' not found in 'top'"
-                      " package requirement", t.out)
+        class Recipe(ConanFile):
+            requires = "top/version"
+            def package_info(self):
+                self.cpp_info.{}requires = ["top::not-existing"]
+    """).format("components['foo']." if from_component else "")
 
-    def test_unused_requirement(self):
-        """ Requires should include all listed requirements
-            This error is known when creating the package if the requirement is consumed.
-        """
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py top/version@')
+    t.run('create consumer.py wrong/version@')
 
-            class Recipe(ConanFile):
-                requires = "top/version"
-                def package_info(self):
-                    self.cpp_info.requires = ["other::other"]
-        """)
-        t = TestClient()
-        t.save({'top.py': self.top, 'consumer.py': consumer})
-        t.run('create top.py top/version@')
-        t.run('create consumer.py wrong/version@', assert_error=True)
-        self.assertIn("wrong/version package_info(): Package require 'top' not used"
-                      " in components requires", t.out)
+    t.run('install wrong/version@ -g CMakeDeps', assert_error=True)
+    assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
-    @pytest.mark.xfail(reason="it seems CMakeDeps is not raising error for wrong requirements")
-    def test_wrong_requirement(self):
-        """ If we require a wrong requirement, we get a meaninful error.
-            This error is known when creating the package if the requirement is not there.
-        """
-        consumer = textwrap.dedent("""
-            from conans import ConanFile
 
-            class Recipe(ConanFile):
-                requires = "top/version"
-                def package_info(self):
-                    self.cpp_info.requires = ["top::cmp1", "other::other"]
-        """)
-        t = TestClient()
-        t.save({'top.py': self.top, 'consumer.py': consumer})
-        t.run('create top.py top/version@')
-        t.run('create consumer.py wrong/version@', assert_error=True)
-        self.assertIn("wrong/version package_info(): Package require 'other' declared in"
-                      " components requires but not defined as a recipe requirement", t.out)
+def test_unused_requirement(top_conanfile):
+    """ Requires should include all listed requirements
+        This error is known when creating the package if the requirement is consumed.
+    """
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+            requires = "top/version"
+            def package_info(self):
+                self.cpp_info.requires = ["other::other"]
+    """)
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py top/version@')
+    t.run('create consumer.py wrong/version@', assert_error=True)
+    assert "wrong/version package_info(): Package require 'top' not used in components " \
+           "requires" in t.out
+
+
+def test_wrong_requirement(top_conanfile):
+    """ If we require a wrong requirement, we get a meaninful error.
+        This error is known when creating the package if the requirement is not there.
+    """
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Recipe(ConanFile):
+            requires = "top/version"
+            def package_info(self):
+                self.cpp_info.requires = ["top::cmp1", "other::other"]
+    """)
+    t = TestClient()
+    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
+    t.run('create top.py top/version@')
+    t.run('create consumer.py wrong/version@', assert_error=True)
+    assert "wrong/version package_info(): Package require 'other' declared in " \
+           "components requires but not defined as a recipe requirement" in t.out
 
 
 @pytest.mark.tool_cmake
@@ -202,9 +205,10 @@ def test_components_system_libs():
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
 
-    assert ("component libs: $<$<CONFIG:Debug>:;>;"
+    assert ("component libs: "
             "$<$<CONFIG:Release>:system_lib_component;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;"
             "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;"
-            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>;"
-            "$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>") in t.out
+            "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>") in t.out
+    # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
+    #       <CONFIG:Debug>
