@@ -18,14 +18,13 @@ class ServerLauncher(object):
     def __init__(self, force_migration=False, server_dir=None):
         self.force_migration = force_migration
         if server_dir:
-            server_folder = server_dir
+            user_folder = server_folder = server_dir
         else:
             user_folder = conan_expand_user("~")
             server_folder = os.path.join(user_folder, '.conan_server')
 
-        is_custom_path = server_dir is not None
         server_config = migrate_and_get_server_config(
-            user_folder, is_custom_path, self.force_migration
+            user_folder, self.force_migration, server_dir is not None
         )
         custom_auth = server_config.custom_authenticator
         if custom_auth:
