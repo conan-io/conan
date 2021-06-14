@@ -15,12 +15,18 @@ from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 
 
 class ServerLauncher(object):
-    def __init__(self, force_migration=False):
+    def __init__(self, force_migration=False, server_dir=None):
         self.force_migration = force_migration
-        user_folder = conan_expand_user("~")
-        server_folder = os.path.join(user_folder, '.conan_server')
+        if server_dir:
+            server_folder = server_dir
+        else:
+            user_folder = conan_expand_user("~")
+            server_folder = os.path.join(user_folder, '.conan_server')
 
-        server_config = migrate_and_get_server_config(user_folder, self.force_migration)
+        is_custom_path = server_dir is not None
+        server_config = migrate_and_get_server_config(
+            user_folder, is_custom_path, self.force_migration
+        )
         custom_auth = server_config.custom_authenticator
         if custom_auth:
             authenticator = load_authentication_plugin(server_folder, custom_auth)

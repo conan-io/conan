@@ -5,8 +5,8 @@ from conans.server.migrations import ServerMigrator
 from conans.util.log import logger
 
 
-def migrate_and_get_server_config(base_folder, force_migration=False):
-    server_config = ConanServerConfigParser(base_folder)
+def migrate_and_get_server_config(base_folder, force_migration=False, is_custom_path=False):
+    server_config = ConanServerConfigParser(base_folder, is_custom_path)
     storage_path = server_config.disk_storage_path
     migrator = ServerMigrator(server_config.conan_folder, storage_path,
                               Version(SERVER_VERSION), logger, force_migration)
