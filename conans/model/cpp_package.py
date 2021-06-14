@@ -15,8 +15,8 @@ class CppPackage(object):
     def load(cls, filename=DEFAULT_FILENAME):
         """
         loads package model into memory from the conan_package.json file
-        :param filename: path to the conan_package.json
-        :return: a new instance of ConanPackage
+        :param filename: path to the cpp_package.json
+        :return: a new instance of CppPackage
         """
         def from_json(o):
             if "components" in o:
