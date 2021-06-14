@@ -154,10 +154,6 @@ class PackageCacheLayout(object):
         expected_manifest = FileTreeManifest.create(package_folder)
         return readed_manifest, expected_manifest
 
-    def recipe_exists(self):
-        return os.path.exists(self.export()) and \
-               (not self._ref.revision or self.recipe_revision() == self._ref.revision)
-
     def package_exists(self, pref):
         # used only for Remover, to check if package_id provided by users exists
         assert isinstance(pref, PackageReference)
