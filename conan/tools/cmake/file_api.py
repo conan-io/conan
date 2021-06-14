@@ -90,8 +90,6 @@ class CMakeFileAPI(object):
         def __init__(self, api):
 
             def loadjs(filename):
-                from conans.util.files import load
-                import json
                 return json.loads(load(filename))
 
             codemodels = os.listdir(api.reply_dir)
