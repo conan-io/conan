@@ -301,6 +301,7 @@ class Command(object):
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
                                     conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         return self._conan.test(args.path, args.reference,
                                 args.profile_host, args.settings_host, args.options_host,
@@ -373,6 +374,8 @@ class Command(object):
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,
                                         conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
             info = self._conan.create(args.path, name=name, version=version, user=user,
                                       channel=channel, profile_names=args.profile_host,
@@ -712,6 +715,7 @@ class Command(object):
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
                                     conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         if args.build_order:
             self._out.warn("Usage of `--build-order` argument is deprecated and can return"
@@ -1032,6 +1036,8 @@ class Command(object):
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                         options=args.options_build, env=args.env_build,
                                         conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
@@ -1831,6 +1837,7 @@ class Command(object):
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
                                     options=args.options_build, env=args.env_build,
                                     conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         if args.subcommand == "install":
             self._conan.workspace_install(args.path,

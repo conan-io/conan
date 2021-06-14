@@ -1464,7 +1464,7 @@ class ConanAPIV1(object):
         if profile_build and not pbuild:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, profile_host.conf,
+                                       profile_build.options, profile_build.env, profile_build.conf,
                                        cwd, self.app.cache)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
@@ -1554,7 +1554,7 @@ def get_graph_info(profile_host, profile_build, cwd, install_folder, cache, outp
         if profile_build:
             # Only work on the profile_build if something is provided
             pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, profile_host.conf,
+                                       profile_build.options, profile_build.env, profile_build.conf,
                                        cwd, cache)
             pbuild.process_settings(cache)
         else:
