@@ -12,7 +12,7 @@ def test_package_from_system():
     https://github.com/conan-io/conan/issues/8919"""
     client = TestClient()
     dep2 = str(GenConanfile().with_name("dep2").with_version("1.0")
-               .with_settings("os", "arch", "build_type", "compiler"))
+               .with_settings("os", "arch", "build_type"))
     dep2 += """
     def package_info(self):
         self.cpp_info.set_property("skip_deps_file", True)
