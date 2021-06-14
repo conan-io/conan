@@ -247,8 +247,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIsNotNone(prev)
 
     def test_revision_mismatch_packages_in_local(self):
-        """If we have a recipe that doesn't match the local package
-           it is not resolved."""
+        """Test adapted for the new cache: we create a revision but we export again a  recipe
+        to create a new revision, then we won't have a package for the latest recipe revision
+        of the cache.
+        TODO: cache2.0 check this case"""
         client = self.c_v2
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
@@ -259,8 +261,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Now we try to install the self.ref, the binary is missing when using revisions
         command = "install {}".format(self.ref)
         client.run(command, assert_error=True)
-        self.assertIn("The package {} doesn't belong to the installed "
-                      "recipe".format(pref), client.out)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
     @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
