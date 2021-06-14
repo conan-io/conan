@@ -138,7 +138,6 @@ class CMakeFileAPI(object):
             converts codemodel-v2 into conan_package.json object
             :return: ConanPackage instance
             """
-            from conans.model.cpp_package import CppPackage
 
             conan_package = CppPackage()
 
