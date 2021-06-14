@@ -37,8 +37,8 @@ class CMakeDeps(object):
         macros = MacrosTemplate()
         ret = {macros.filename: macros.render()}
 
-        host_req = self._conanfile.dependencies.host_requires
-        build_req = self._conanfile.dependencies.direct_build_requires
+        host_req = self._conanfile.dependencies.host
+        build_req = self._conanfile.dependencies.direct_build
 
         # Check if the same package is at host and build and the same time
         activated_br = {r.ref.name for r in build_req.values()

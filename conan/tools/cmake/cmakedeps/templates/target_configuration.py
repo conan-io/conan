@@ -15,7 +15,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
     @property
     def filename(self):
         return "{}Target-{}.cmake".format(self.file_name,
-                                            self.cmakedeps.configuration.lower())
+                                          self.cmakedeps.configuration.lower())
 
     @property
     def context(self):
@@ -166,13 +166,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                     dep_name = get_target_namespace(self.conanfile)
                     req = self.conanfile
                 else:
-                    req = self.conanfile.dependencies.host_requires[dep_name]
+                    req = self.conanfile.dependencies.host[dep_name]
                     dep_name = get_target_namespace(req)
 
                 component_name = get_component_alias(req, component_name)
                 ret.append("{}::{}".format(dep_name, component_name))
-        elif self.conanfile.dependencies.direct_host_requires:
+        elif self.conanfile.dependencies.direct_host:
             # Regular external "conanfile.requires" declared, not cpp_info requires
             ret = ["{p}::{p}".format(p=get_target_namespace(r))
-                   for r in self.conanfile.dependencies.direct_host_requires.values()]
+                   for r in self.conanfile.dependencies.direct_host.values()]
         return ret

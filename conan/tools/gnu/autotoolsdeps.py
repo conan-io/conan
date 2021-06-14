@@ -43,7 +43,7 @@ class AutotoolsDeps:
             if not self.sysroot:
                 self.sysroot = dep_cpp_info.sysroot
 
-        for d in self._conanfile.dependencies.host_requires.values():
+        for d in self._conanfile.dependencies.host.values():
             merge(d)
 
     def environment(self):
