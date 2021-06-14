@@ -29,8 +29,8 @@ class CppPackage(object):
 
     def save(self, filename=DEFAULT_FILENAME):
         """
-        saves package model from memory into the conan_package.json file
-        :param filename: path to the conan_package.json
+        saves package model from memory into the cpp_package.json file
+        :param filename: path to the cpp_package.json
         :return: None
         """
         save(filename, json.dumps(self, default=lambda o: o.__dict__))
