@@ -102,43 +102,25 @@ class ConanRemover(object):
         return "Package '{r}' is installed as editable, remove it first using " \
                "command 'conan editable remove {r}'".format(r=ref)
 
-    def _local_remove(self, ref, src, build_ids, package_ids):
-        if self._cache.installed_as_editable(ref):
-            self._user_io.out.warn(self._message_removing_editable(ref))
-            return
-
-        # Get the package layout using 'short_paths=False', remover will make use of the
-        #  function 'rm_conandir' which already takes care of the linked folder.
-        package_layout = self._cache.package_layout(ref, short_paths=False)
-
-        package_layout.remove_package_locks()  # Make sure to clean the locks too
-        remover = DiskRemover()
-        if src:
-            remover.remove_src(package_layout)
-        if build_ids is not None:
-            remover.remove_builds(package_layout, build_ids)
-
-        if package_ids is not None:
-            remover.remove_packages(package_layout, package_ids)
-            with package_layout.update_metadata() as metadata:
-                for package_id in package_ids:
-                    metadata.clear_package(package_id)
-
-        if not src and build_ids is None and package_ids is None:
-            remover.remove(package_layout, output=self._user_io.out)
-
     # TODO: cache2.0 remove everything for the moment and consider other arguments
     #  in the future in case they remain
-    def _simple_local_remove(self, ref, packages, remove_recipe=False):
+    def _local_remove(self, ref, packages, src, build_ids, remove_recipe):
         if self._cache.installed_as_editable(ref):
             self._user_io.out.warn(self._message_removing_editable(ref))
             return
+
+        if src:
+            ref_layout = self._cache.get_ref_layout(ref)
+            ref_layout.remove_sources()
+        if build_ids is not None:
+            # TODO: cache2.0 not considered yet
+            pass
 
         for package in packages:
             package_layout = self._cache.get_pkg_layout(package)
             package_layout.remove()
 
-        if remove_recipe:
+        if not src and build_ids is None and remove_recipe:
             ref_layout = self._cache.get_ref_layout(ref)
             ref_layout.remove()
 
@@ -232,7 +214,7 @@ class ConanRemover(object):
                                     raise PackageNotFoundException(pref)
                                 package_revisions.extend(prev)
 
-                        self._simple_local_remove(ref, package_revisions, remove_recipe=remove_recipe)
+                        self._local_remove(ref, package_revisions, src, build_ids, remove_recipe)
                 except NotFoundException:
                     # If we didn't specify a pattern but a concrete ref, fail if there is no
                     # ref to remove

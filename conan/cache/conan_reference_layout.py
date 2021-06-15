@@ -115,6 +115,22 @@ class ReferenceLayout:
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self._package_folder}: {str(e)}")
 
+    def remove_sources(self):
+        src_folder = self.source()
+        try:
+            rm_conandir(src_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (src_folder, str(e)))
+        scm_folder = self.scm_sources()
+        try:
+            rm_conandir(scm_folder)  # This will remove the shortened path too if exists
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (scm_folder, str(e)))
+
     def export(self):
         assert not self._ref.pkgid, "Must be a reference of a recipe"
         return os.path.join(self.base_folder, 'export')
