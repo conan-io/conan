@@ -30,7 +30,8 @@ def test_cross_build():
 
     main = gen_function_cpp(name="main")
     cmakelists = gen_cmakelists(appname="main", appsources=["main.cpp"])
-    cmakelists += 'message(STATUS "SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")'
+    cmakelists += 'message(STATUS "SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}")\n' \
+                  'set(CMAKE_VERBOSE_MAKEFILE ON)'
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile

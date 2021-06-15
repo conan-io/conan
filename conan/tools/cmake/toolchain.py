@@ -166,6 +166,7 @@ class GLibCXXBlock(Block):
             if lib:
                 lib = "-library={}".format(lib)
         elif compiler == "gcc":
+            # we might want to remove this "1", it is the default in most distros
             if libcxx == "libstdc++11":
                 glib = "1"
             elif libcxx == "libstdc++":
@@ -532,7 +533,9 @@ class GenericSystemBlock(Block):
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type}
+                "build_type": build_type,
+                "cmake_system_name": "Linux",
+                "cmake_system_processor": "armv8"}
 
 
 class ToolchainBlocks:
