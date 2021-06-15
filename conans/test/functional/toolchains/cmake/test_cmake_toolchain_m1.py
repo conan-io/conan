@@ -27,9 +27,7 @@ def test_m1(op_system):
     client.run("create . --profile:build=default --profile:host=m1 -tf None")
 
     main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"] )
-    # Cross building for iOS needs this trick to look outside the system frameworks dirs
-    cmakelists = 'set(hello_DIR "${CMAKE_BINARY_DIR}")\n' + cmakelists
+    cmakelists = gen_cmakelists(find_package=["hello"], appname="main", appsources=["main.cpp"])
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
