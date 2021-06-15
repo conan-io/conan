@@ -339,7 +339,6 @@ class AppleSystemBlock(Block):
         os_ = self._conanfile.settings.get_safe("os")
         host_architecture = self._get_architecture()
 
-        host_os = self._conanfile.settings.get_safe("os")
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
@@ -353,7 +352,7 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
 
         if os_ in ('iOS', "watchOS", "tvOS"):
-            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
+            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
 
         return ctxt_toolchain
@@ -441,6 +440,14 @@ class TryCompileBlock(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if cmake_system_name %}
+        # Cross building
+        set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
+        {% endif %}
+        {% if cmake_system_processor %}
+        set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
+        {% endif %}
+
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -500,6 +507,12 @@ class GenericSystemBlock(Block):
                     "armv7": "ARM",
                     "armv8": "ARM64"}.get(arch)
         return None
+
+    def _get_cross_build(self):
+        settings = self._conanfile.settings
+        os_ = settings.get_safe("os")
+        if os_ in ():
+            pass
 
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
