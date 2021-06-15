@@ -1380,7 +1380,7 @@ class ConanAPIV1(object):
             phost = graph_lock_file.profile_host
             pbuild = graph_lock_file.profile_build
             graph_lock = graph_lock_file.graph_lock
-            graph_lock.relax()
+            # graph_lock.relax()
 
         if not phost:
             phost = profile_from_args(profile_host.profiles, profile_host.settings,
@@ -1405,12 +1405,13 @@ class ConanAPIV1(object):
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion
-        graph_lock = graph_lock or GraphLock(deps_graph)
-        # Pure graph_lock, no more graph_info mess
+
+        if lockfile is None:
+            graph_lock = GraphLock(deps_graph)
+        else:
+            graph_lock.update(deps_graph)
+
         graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-        if lockfile:
-            new_graph_lock = GraphLock(deps_graph)
-            graph_lock_file = GraphLockFile(phost, pbuild, new_graph_lock)
         if base:
             graph_lock_file.only_recipes()
 
@@ -1427,26 +1428,23 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
 
     root_ref = ConanFileReference(name, version, user, channel, validate=False)
 
+    graph_lock = phost = pbuild = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile)
-        profile_host = graph_lock_file.profile_host
-        profile_build = graph_lock_file.profile_build
-        if profile_host is None:
-            raise ConanException("Lockfiles with --base do not contain profile information, "
-                                 "cannot be used. Create a full lockfile")
-        profile_host.process_settings(cache, preprocess=False)
-        profile_build.process_settings(cache, preprocess=False)
+        phost = graph_lock_file.profile_host
+        pbuild = graph_lock_file.profile_build
         graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
-        return profile_host, profile_build, graph_lock, root_ref
 
-    phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
-                              profile_host.env, cwd, cache)
+    if phost is None:
+        phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
+                                  profile_host.env, cwd, cache)
     phost.process_settings(cache)
     # Only work on the profile_build if something is provided
-    pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                               profile_build.options, profile_build.env, cwd, cache)
+    if pbuild is None:
+        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                   profile_build.options, profile_build.env, cwd, cache)
     pbuild.process_settings(cache)
 
     # Preprocess settings and convert to real settings
@@ -1455,4 +1453,4 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
     # FIXME: Apply to locked graph-info as well
     phost.conf.rebase_conf_definition(cache.new_config)
     pbuild.conf.rebase_conf_definition(cache.new_config)
-    return phost, pbuild, None, root_ref
+    return phost, pbuild, graph_lock, root_ref

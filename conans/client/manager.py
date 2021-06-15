@@ -67,7 +67,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
     installer.install(deps_graph, remotes, build_modes, update, profile_host, profile_build,
                       graph_lock)
 
-    graph_lock.complete_matching_prevs()
+    # graph_lock.complete_matching_prevs()
 
     conanfile.folders.set_base_install(install_folder)
     conanfile.folders.set_base_imports(install_folder)
@@ -86,9 +86,9 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
                                                output)
         write_toolchain(conanfile, conanfile.generators_folder, output)
 
-        if not isinstance(ref_or_path, ConanFileReference):
-            graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-            graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
+        #if not isinstance(ref_or_path, ConanFileReference):
+        #    graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+        #    graph_lock_file.save(os.path.join(install_folder, "conan.lock"))
         if not no_imports:
             run_imports(conanfile)
         if type(conanfile).system_requirements != ConanFile.system_requirements:

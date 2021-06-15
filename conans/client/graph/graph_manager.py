@@ -127,9 +127,9 @@ class GraphManager(object):
             root_node = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
                              path=path)
 
-        if graph_lock:  # Find the Node ID in the lock of current root
-            node_id = graph_lock.get_consumer(root_node.ref)
-            root_node.id = node_id
+        # if graph_lock:  # Find the Node ID in the lock of current root
+        #    node_id = graph_lock.get_consumer(root_node.ref)
+        #    root_node.id = node_id
 
         return root_node
 

@@ -1932,6 +1932,7 @@ class Command(object):
 
     @staticmethod
     def _check_lockfile_args(args):
+        return
         if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
                               args.env_build):
             raise ConanException("Cannot use profile, settings, options or env 'build' when "

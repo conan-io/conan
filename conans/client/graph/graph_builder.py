@@ -25,7 +25,7 @@ class DepsGraphBuilder(object):
         assert profile_build is not None
         # print("Loading graph")
         check_updates = check_updates or update
-        initial = graph_lock.initial_counter if graph_lock else None
+        initial = 0  # graph_lock.initial_counter if graph_lock else None
         dep_graph = DepsGraph(initial_node_id=initial)
 
         # TODO: Why assign here the settings_build and settings_target?
@@ -33,7 +33,7 @@ class DepsGraphBuilder(object):
         root_node.conanfile.settings_target = None
 
         self._prepare_node(root_node, profile_host, profile_build, graph_lock, None, None)
-        self._initialize_requires(root_node, dep_graph, check_updates, update, remotes)
+        self._initialize_requires(root_node, dep_graph, check_updates, update, remotes, graph_lock)
         dep_graph.add_node(root_node)
 
         open_requires = deque((r, root_node) for r in root_node.conanfile.requires.values())
@@ -46,7 +46,8 @@ class DepsGraphBuilder(object):
                 new_node = self._expand_require(require, node, dep_graph, check_updates, update,
                                                 remotes, profile_host, profile_build, graph_lock)
                 if new_node:
-                    self._initialize_requires(new_node, dep_graph, check_updates, update, remotes)
+                    self._initialize_requires(new_node, dep_graph, check_updates, update, remotes,
+                                              graph_lock)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
             check_graph_provides(dep_graph)
@@ -139,9 +140,6 @@ class DepsGraphBuilder(object):
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, graph_lock, down_ref, down_options):
-        if graph_lock:
-            graph_lock.pre_lock_node(node)
-
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
@@ -161,15 +159,30 @@ class DepsGraphBuilder(object):
                     # FIXME: converting back to string?
                     node.conanfile.requires.build_require(str(build_require),
                                                           raise_if_duplicated=False)
-        if graph_lock:  # No need to evaluate, they are hardcoded in lockfile
-            graph_lock.lock_node(node, node.conanfile.requires.values())
 
-    def _initialize_requires(self, node, graph, check_updates, update, remotes):
+    def _initialize_requires(self, node, graph, check_updates, update, remotes, graph_lock):
         # Introduce the current requires to define overrides
         # This is the first pass over one recip requires
         for require in node.conanfile.requires.values():
+            if graph_lock is not None:
+                self._resolve_lock(node, require, graph_lock)
             self._resolve_alias(node, require, graph, check_updates, update, remotes)
             node.transitive_deps[require] = TransitiveRequirement(require, None)
+
+    def _resolve_lock(self, node, require, graph_lock):
+        ref = require.ref
+        locked_refs = graph_lock.requires
+        version_range = require.version_range
+        if version_range:
+            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
+                       r.channel == ref.channel]
+            for m in matches:
+                if range_satisfies(version_range, m.version):
+                    require.ref = m.get_ref()
+                    break
+        else:
+            # find exact
+            pass
 
     def _resolve_alias(self, node, require, graph, check_updates, update, remotes):
         alias = require.alias
