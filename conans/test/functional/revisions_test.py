@@ -1057,6 +1057,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(revs, [pref4.revision])
 
 
+@pytest.mark.xfail(reason="cache2.0: revisit when --update flows implemented")
 def test_necessary_update():
     # https://github.com/conan-io/conan/issues/7235
     c = TestClient(default_server_user=True)
