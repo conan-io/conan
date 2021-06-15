@@ -8,8 +8,7 @@ from conans.test.utils.tools import TestClient
 
 def get_latest_prev(cache, ref, pkgid):
     latest_rrev = cache.get_latest_rrev(ref)
-    ref = ConanFileReference.loads(f"{latest_rrev['reference']}#{latest_rrev['rrev']}")
-    pref = PackageReference(ref, pkgid)
+    pref = PackageReference(latest_rrev, pkgid)
     prevs = cache.get_package_revisions(pref, only_latest_prev=True)
     return prevs[0]
 
