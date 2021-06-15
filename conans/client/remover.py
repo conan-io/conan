@@ -219,7 +219,7 @@ class ConanRemover(object):
                     if remote_name:
                         self._remote_remove(ref, package_ids, remote)
                     else:
-                        remove_recipe = False if package_ids else True
+                        remove_recipe = False if package_ids is not None else True
                         package_revisions = []
                         if not package_ids:
                             package_revisions = self._cache.get_package_revisions(ref)
