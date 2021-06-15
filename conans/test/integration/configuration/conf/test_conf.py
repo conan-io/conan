@@ -135,7 +135,7 @@ def test_new_config_file_required_version():
             in str(excinfo.value))
 
 
-def test_composition_conan_conf_and_cli(client):
+def test_composition_conan_conf_overwritten_by_cli_arg(client):
     conf = textwrap.dedent("""\
         tools.microsoft.msbuild:verbosity=Quiet
         tools.microsoft.msbuild:performance=Slow
