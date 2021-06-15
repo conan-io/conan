@@ -64,5 +64,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                           "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
         client.save({"conanfile.py": new_conanfile})
         client.run("create . danimtb/testing")
+        pkg_path = client.cache.package_layout(pref.ref).package(pref)
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
         [self.assertNotIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
