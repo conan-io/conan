@@ -46,6 +46,9 @@ class Conf(object):
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._values[name] = value
 
+    def __delitem__(self, name):
+        return self._values.pop(name, None)
+
     def __repr__(self):
         return "Conf: " + repr(self._values)
 
@@ -100,6 +103,11 @@ class ConfDefinition(object):
         """
         return self._pattern_confs.get(None, Conf())[module_name]
 
+    def __delitem__(self, module_name):
+        """ if a module name is requested for this, always goes to the None-Global config
+        """
+        del self._pattern_confs.get(None, Conf())[module_name]
+
     def get_conanfile_conf(self, ref_str):
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
@@ -131,20 +139,28 @@ class ConfDefinition(object):
                 new_v.update(existing)
             self._pattern_confs[k] = new_v
 
-    def dumps(self):
+    def as_list(self):
         result = []
         # It is necessary to convert the None for sorting
         for pattern, conf in sorted(self._pattern_confs.items(),
                                     key=lambda x: ("", x[1]) if x[0] is None else x):
             for name, value in sorted(conf.items()):
                 if pattern:
-                    result.append("{}:{}={}".format(pattern, name, value))
+                    result.append(("{}:{}".format(pattern, name), value))
                 else:
-                    result.append("{}={}".format(name, value))
+                    result.append((name, value))
+        return result
+
+    def dumps(self):
+        result = []
+        for name, value in self.as_list():
+            result.append("{}={}".format(name, value))
         return "\n".join(result)
 
-    def loads(self, text, profile=False):
-        self._pattern_confs = {}
+    def loads(self, text, profile=False, reset=True):
+        # Give the chance to clean the current conf content or not
+        if reset:
+            self._pattern_confs = {}
         for line in text.splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
