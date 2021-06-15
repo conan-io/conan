@@ -324,22 +324,23 @@ class AppleSystemBlock(Block):
         we're building for (considering simulators)"""
         arch = self._conanfile.settings.get_safe('arch')
         os_ = self._conanfile.settings.get_safe('os')
-        if str(arch).startswith('x86'):
+        if arch.startswith('x86'):
             return {'Macos': 'macosx',
                     'iOS': 'iphonesimulator',
                     'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(str(os_))
+                    'tvOS': 'appletvsimulator'}.get(os_)
         else:
             return {'Macos': 'macosx',
                     'iOS': 'iphoneos',
                     'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(str(os_), None)
+                    'tvOS': 'appletvos'}.get(os_)
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        host_architecture = self._get_architecture()
+        if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
+            return None
 
-        host_os = self._conanfile.settings.get_safe("os")
+        host_architecture = self._get_architecture()
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
@@ -353,7 +354,7 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
 
         if os_ in ('iOS', "watchOS", "tvOS"):
-            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
+            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
 
         return ctxt_toolchain
