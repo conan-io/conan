@@ -254,16 +254,13 @@ class ParallelBlock(Block):
 
 
 class AndroidSystemBlock(Block):
-    # TODO: fPIC, fPIE
-    # TODO: RPATH, cross-compiling to Android?
-    # TODO: libcxx, only libc++ https://developer.android.com/ndk/guides/cpp-support
 
     template = textwrap.dedent("""
         # New toolchain things
-        set(ANDROID_PLATFORM {{ CMAKE_SYSTEM_VERSION }})
-        set(ANDROID_STL {{ CMAKE_ANDROID_STL_TYPE }})
-        set(ANDROID_ABI {{ CMAKE_ANDROID_ARCH_ABI }})
-        include({{ CMAKE_ANDROID_NDK }}/build/cmake/android.toolchain.cmake)
+        set(ANDROID_PLATFORM {{ ANDROID_PLATFORM }})
+        set(ANDROID_STL {{ ANDROID_STL }})
+        set(ANDROID_ABI {{ ANDROID_ABI }})
+        include({{ ANDROID_NDK_PATH }}/build/cmake/android.toolchain.cmake)
         """)
 
     def context(self):
@@ -277,19 +274,19 @@ class AndroidSystemBlock(Block):
                        "armv8": "arm64-v8a"}.get(str(self._conanfile.settings.arch))
 
         # TODO: only 'c++_shared' y 'c++_static' supported?
+        #  https://developer.android.com/ndk/guides/cpp-support
         libcxx_str = str(self._conanfile.settings.compiler.libcxx)
 
-        # TODO: Do not use envvar! This has to be provided by the user somehow
-        android_ndk = self._conanfile.conf["tools.android:ndk_path"]
-        if not android_ndk:
+        android_ndk_path = self._conanfile.conf["tools.android:ndk_path"]
+        if not android_ndk_path:
             raise ConanException('CMakeToolchain needs tools.android:ndk_path configuration defined')
-        android_ndk = android_ndk.replace("\\", "/")
+        android_ndk_path = android_ndk_path.replace("\\", "/")
 
         ctxt_toolchain = {
-            'CMAKE_SYSTEM_VERSION': self._conanfile.settings.os.api_level,
-            'CMAKE_ANDROID_ARCH_ABI': android_abi,
-            'CMAKE_ANDROID_STL_TYPE': libcxx_str,
-            'CMAKE_ANDROID_NDK': android_ndk,
+            'ANDROID_PLATFORM': self._conanfile.settings.os.api_level,
+            'ANDROID_ABI': android_abi,
+            'ANDROID_STL': libcxx_str,
+            'ANDROID_NDK_PATH': android_ndk_path,
         }
         return ctxt_toolchain
 
@@ -396,7 +393,7 @@ class FindConfigFiles(Block):
         os_ = self._conanfile.settings.get_safe("os")
         android_prefix = "${CMAKE_CURRENT_LIST_DIR}" if os_ == "Android" else None
 
-        host_req = self._conanfile.dependencies.transitive_host_requires
+        host_req = self._conanfile.dependencies.host.values()
         find_names_needed = os_ in ('iOS', "watchOS", "tvOS")
         find_names = [get_file_name(req) for req in host_req] if find_names_needed else []
 

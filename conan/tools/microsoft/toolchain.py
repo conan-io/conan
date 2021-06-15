@@ -135,7 +135,7 @@ class MSBuildToolchain(object):
     def _write_config_toolchain(self, config_filename):
 
         def format_macro(key, value):
-            return '%s="%s"' % (key, value) if value is not None else key
+            return '%s=%s' % (key, value) if value is not None else key
 
         toolchain_file = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>

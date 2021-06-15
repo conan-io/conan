@@ -259,13 +259,14 @@ class MSBuildDeps(object):
         conf_name = self._config_filename()
         condition = self._condition()
         # Include all direct build_requires for host context. This might change
-        direct_deps = self._conanfile.dependencies.host_requires
+        direct_deps = self._conanfile.dependencies.direct_host.values()
         result[general_name] = self._all_props_file(general_name, direct_deps)
-        for dep in self._conanfile.dependencies.transitive_host_requires:
+        for dep in self._conanfile.dependencies.host.values():
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
             cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation
-            public_deps = [d.ref.name.replace(".", "_") for d in dep.dependencies.requires]
+            public_deps = [d.ref.name.replace(".", "_")
+                           for d in dep.dependencies.direct_host.values()]
             # One file per configuration, with just the variables
             vars_props_name = "conan_%s_vars%s.props" % (dep_name, conf_name)
             result[vars_props_name] = self._vars_props_file(dep_name, cpp_info, public_deps)

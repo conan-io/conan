@@ -11,7 +11,7 @@ class BazelDeps(object):
 
     def generate(self):
         local_repositories = []
-        for dependency in self._conanfile.dependencies.transitive_host_requires:
+        for dependency in self._conanfile.dependencies.host.values():
             content = self._get_dependency_buildfile_content(dependency)
             filename = self._save_dependendy_buildfile(dependency, content)
 

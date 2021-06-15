@@ -3,16 +3,16 @@ import os
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
-from conans.client.graph.conanfile_dependencies import ConanFileDependencies
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import NewCppInfo, from_old_cppinfo
+from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -145,6 +145,7 @@ class ConanFile(object):
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_dependencies = None
 
         # layout() method related variables:
         self.folders = Folders()
@@ -172,7 +173,10 @@ class ConanFile(object):
 
     @property
     def dependencies(self):
-        return ConanFileDependencies(self._conan_node)
+        # Caching it, this object is requested many times
+        if self._conan_dependencies is None:
+            self._conan_dependencies = ConanFileDependencies.from_node(self._conan_node)
+        return self._conan_dependencies
 
     @property
     def ref(self):

@@ -1783,6 +1783,10 @@ class Command(object):
         build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
                                             help="generate output file in json format")
 
+        update_help = ("Update both the bundle information as well as every individual lockfile, "
+                       "from the information that was modified in the individual lockfile. At the "
+                       "end, all lockfiles will have the same package revision for the binary of "
+                       "same package_id")
         update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
         update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 

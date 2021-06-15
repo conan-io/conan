@@ -353,11 +353,16 @@ class WinTest(unittest.TestCase):
                     tc.configuration = "ReleaseShared"
                     gen.configuration = "ReleaseShared"
 
-                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = "True"
+                tc.preprocessor_definitions["DEFINITIONS_BOTH"] = '"True"'
+                tc.preprocessor_definitions["DEFINITIONS_BOTH2"] = 'DEFINITIONS_BOTH'
+                tc.preprocessor_definitions["DEFINITIONS_BOTH_INT"] = 123
                 if self.settings.build_type == "Debug":
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Debug"
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Debug"'
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 234
                 else:
-                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = "Release"
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG"] = '"Release"'
+                    tc.preprocessor_definitions["DEFINITIONS_CONFIG_INT"] = 456
+                tc.preprocessor_definitions["DEFINITIONS_CONFIG2"] = 'DEFINITIONS_CONFIG'
 
                 tc.generate()
                 gen.generate()
@@ -376,7 +381,9 @@ class WinTest(unittest.TestCase):
                 msbuild.build("MyProject.sln")
         """)
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"],
-                           preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_CONFIG"])
+                           preprocessor=["DEFINITIONS_BOTH", "DEFINITIONS_BOTH2",
+                                         "DEFINITIONS_BOTH_INT", "DEFINITIONS_CONFIG",
+                                         "DEFINITIONS_CONFIG2", "DEFINITIONS_CONFIG_INT"])
 
     @staticmethod
     def _run_app(client, arch, build_type, shared=None):
@@ -444,8 +451,12 @@ class WinTest(unittest.TestCase):
         self.assertIn("Hello World Release", client.out)
         compiler_version = version if compiler == "msvc" else "19.1"
         check_exe_run(client.out, "main", "msvc", compiler_version, "Release", "x86", cppstd,
-                      {"DEFINITIONS_BOTH": "True",
-                       "DEFINITIONS_CONFIG": "Release"})
+                      {"DEFINITIONS_BOTH": 'True',
+                       "DEFINITIONS_BOTH2": "True",
+                       "DEFINITIONS_BOTH_INT": "123",
+                       "DEFINITIONS_CONFIG": 'Release',
+                       "DEFINITIONS_CONFIG2": 'Release',
+                       "DEFINITIONS_CONFIG_INT": "456"})
         static_runtime = True if runtime == "static" or "MT" in runtime else False
         check_vs_runtime("Release/MyApp.exe", client, "15", build_type="Release",
                          static_runtime=static_runtime)
@@ -482,8 +493,12 @@ class WinTest(unittest.TestCase):
         self._run_app(client, "x64", "Debug")
         self.assertIn("Hello World Debug", client.out)
         check_exe_run(client.out, "main", "msvc", "19.0", "Debug", "x86_64", "14",
-                      {"DEFINITIONS_BOTH": "True",
-                       "DEFINITIONS_CONFIG": "Debug"})
+                      {"DEFINITIONS_BOTH": 'True',
+                       "DEFINITIONS_BOTH2": "True",
+                       "DEFINITIONS_BOTH_INT": "123",
+                       "DEFINITIONS_CONFIG": 'Debug',
+                       "DEFINITIONS_CONFIG2": 'Debug',
+                       "DEFINITIONS_CONFIG_INT": "234"})
         check_vs_runtime("x64/Debug/MyApp.exe", client, "15", build_type="Debug")
 
     @pytest.mark.tool_cmake
