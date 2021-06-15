@@ -51,9 +51,20 @@ class Block(object):
     def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
         self._toolchain = toolchain
+        self._context_values = None
 
-    def get_block(self):
-        context = self.context()
+    @property
+    def values(self):
+        if self._context_values is None:
+            self._context_values = self.context()
+        return self._context_values
+
+    @values.setter
+    def values(self, context_values):
+        self._context_values = context_values
+
+    def get_rendered_content(self):
+        context = self.values
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
@@ -544,9 +555,9 @@ class ToolchainBlocks:
     def process_blocks(self):
         result = []
         for b in self._blocks.values():
-            block = b.get_block()
-            if block:
-                result.append(block)
+            content = b.get_rendered_content()
+            if content:
+                result.append(content)
         return result
 
 
