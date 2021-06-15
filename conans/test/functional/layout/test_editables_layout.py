@@ -6,8 +6,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
-@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                         "TODO: cache2.0 fix with editables")
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_cpp_info_editable():
 
     client = TestClient()
@@ -96,8 +95,7 @@ def test_cpp_info_editable():
     assert "**frameworkdirs:[]**" in client2.out
 
 
-@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
-                         "TODO: cache2.0 fix with editables")
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_cpp_info_components_editable():
 
     client = TestClient()

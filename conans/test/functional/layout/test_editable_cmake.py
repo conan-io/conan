@@ -65,6 +65,7 @@ def editable_cmake(generator):
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.parametrize("generator", [None, "MinGW Makefiles"])
 @pytest.mark.tool_mingw64
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_editable_cmake_windows(generator):
     editable_cmake(generator)
 
@@ -72,6 +73,7 @@ def test_editable_cmake_windows(generator):
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
 @pytest.mark.tool_cmake(version="3.17")
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_editable_cmake_linux(generator):
     editable_cmake(generator)
 
@@ -79,5 +81,6 @@ def test_editable_cmake_linux(generator):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Macos")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Xcode"])
 @pytest.mark.tool_cmake(version="3.19")
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_editable_cmake_osx(generator):
     editable_cmake(generator)
