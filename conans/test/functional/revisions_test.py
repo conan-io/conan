@@ -67,6 +67,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref), assert_error=True)
         self.assertIn("{} - Missing".format(pref), self.c_v2.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_update_recipe_iterating_remotes(self):
         """We have two servers (remote1 and remote2), both with a recipe but the second one with a
         new RREV. If a client installs without specifying -r remote1, it WONT iterate
@@ -215,6 +216,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev = client.package_revision(pref2)
         self.assertIsNotNone(prev)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_update_on_package_update(self):
         """
         A client v2 upload RREV with PREV1
@@ -343,18 +345,6 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.assertIsNotNone(rev2)
         self.assertIsNotNone(prev2)
 
-    def test_new_exported_recipe_clears_outdated_packages(self):
-        client = self.c_v2
-        conanfile = GenConanfile().with_setting("os")
-        pref_outdated = client.create(self.ref, conanfile=conanfile, args="-s os=Windows")
-        pref_ok = client.create(self.ref, conanfile=conanfile.with_build_msg("rev2"),
-                                args="-s os=Linux")
-
-        msg = "Removing the local binary packages from different recipe revisions"
-        self.assertIn(msg, client.out)
-        self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
-        self.assertTrue(client.package_exists(pref_ok))
-
     def test_export_metadata(self):
         """When a export is executed, the recipe revision is updated in the cache"""
         client = self.c_v2
@@ -379,11 +369,13 @@ class RevisionsInLocalCacheTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref))
 
         self.c_v2.run("remove {} -p {} -f".format(pref.ref, pref.id))
-        self.assertRaises(PackageNotFoundException, self.c_v2.package_revision, pref)
-        rev = self.c_v2.recipe_revision(pref.ref)
-        self.assertIsNotNone(rev)
+        latest_rrev = self.c_v2.cache.get_latest_rrev(pref)
+        assert latest_rrev is not None
+        latest_prev = self.c_v2.cache.get_latest_prev(latest_rrev)
+        assert latest_prev is None
         self.c_v2.remove_all()
-        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, pref.ref)
+        latest_rrev = self.c_v2.cache.get_latest_rrev(pref)
+        assert latest_rrev is None
 
 
 class RemoveWithRevisionsTest(unittest.TestCase):
@@ -510,8 +502,8 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(pref2.ref)
 
         self.assertEqual(pref1.id, pref2.id)
-        # Locally only one revision exists at the same time
-        self.assertFalse(self.c_v2.package_exists(pref1))
+        # Both revisions exist in 2.0 cache
+        self.assertTrue(self.c_v2.package_exists(pref1))
         self.assertTrue(self.c_v2.package_exists(pref2))
 
         remover_client = self.c_v2
@@ -762,8 +754,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search("{}*".format(self.ref.full_str()))
         items = data["results"][0]["items"]
         self.assertEqual(1, len(items))
-        expected = [str(self.ref)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
+        expected = str(self.ref)
+        result = items[0]["recipe"]["id"]
+        self.assertIn(expected, result)
 
     def test_search_recipes_in_remote_by_pattern(self):
         """If we search for recipes with a pattern:

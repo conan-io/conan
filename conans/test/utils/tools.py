@@ -722,10 +722,12 @@ class TurboTestClient(TestClient):
         return True if prev else False
 
     def recipe_revision(self, ref):
-        return self.cache.package_layout(ref).recipe_revision()
+        layout = self.cache.get_ref_layout(ref)
+        return layout.reference.revision
 
     def package_revision(self, pref):
-        return self.cache.package_layout(pref.ref).package_revision(pref)
+        layout = self.cache.get_pkg_layout(pref)
+        return layout.reference.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""
