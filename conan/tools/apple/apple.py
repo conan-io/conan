@@ -57,8 +57,11 @@ def apple_deployment_target_env(os_, os_version):
 
 def apple_min_version_flag(conanfile):
     """compiler flag name which controls deployment target"""
-    os_ = conanfile.settings.get_safe("os")
     os_version = conanfile.settings.get_safe("os.version")
+    if not os_version:
+        return ''
+
+    os_ = conanfile.settings.get_safe("os")
     os_sdk = conanfile.settings.get_safe("os.sdk")
     os_subsystem = conanfile.settings.get_safe("os.subsystem")
     arch = conanfile.settings.get_safe("arch")

@@ -6,7 +6,7 @@ from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.env import Environment
 from conan.tools.files import save
-from conan.tools.gnu.cross_building import cross_building, get_cross_building_settings
+from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.gnu.get_cppstd import cppstd_flag
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 
@@ -41,8 +41,9 @@ class AutotoolsToolchain:
         self._build = None
         self._target = None
 
-        self.apple_min_version_flag = self.apple_arch_flag = self.apple_isysroot_flag = None
+        self.apple_arch_flag = self.apple_isysroot_flag = None
 
+        self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self._host = _get_gnu_triplet(os_host, arch_host)
@@ -53,7 +54,6 @@ class AutotoolsToolchain:
                 sdk_path = apple_sdk_path(conanfile)
                 apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
                 # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-                self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
                 self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
                 # -isysroot makes all includes for your library relative to the build directory
                 self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
