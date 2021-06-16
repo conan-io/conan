@@ -532,7 +532,7 @@ class BinaryInstaller(object):
         # TODO: cache2.0: update the metadata db here?
         #  update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
         if pkg_layout.reference != pref:
-            pkg_layout.assign_prev(ConanReference(pref))
+            self._cache.assign_prev(pkg_layout, ConanReference(pref))
 
         package_folder = pkg_layout.package()
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"

@@ -7,6 +7,7 @@ from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoade
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import ReferenceLayout
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -89,6 +90,12 @@ class ClientCache(object):
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
+
+    def assign_rrev(self, layout: ReferenceLayout, ref: ConanReference):
+        return self._data_cache.assign_rrev(layout, ref)
+
+    def assign_prev(self, layout: ReferenceLayout, ref: ConanReference):
+        return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
         return self._data_cache.get_or_create_reference_layout(ConanReference(ref))

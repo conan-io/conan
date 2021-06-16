@@ -12,9 +12,8 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty
 
 
 class ReferenceLayout:
-    def __init__(self, ref, cache, base_folder):
+    def __init__(self, ref, base_folder):
         self._ref = ref
-        self._cache = cache
         self._base_folder = base_folder
 
     @property
@@ -24,36 +23,9 @@ class ReferenceLayout:
         else:
             return self._ref.as_conanfile_reference()
 
-    def assign_prev(self, ref: ConanReference):
-        assert ref.reference == self._ref.reference, "You cannot change the reference here"
-        assert ref.prev, "It only makes sense to change if you are providing a package revision"
-        assert ref.pkgid, "It only makes sense to change if you are providing a package id"
-
-        old_pref = self._ref
-        self._ref = ref
-
-        new_path = self._cache._move_prev(old_pref, self._ref)
-        if new_path:
-            self._base_folder = new_path
-
-    def assign_rrev(self, ref: ConanReference):
-        assert ref.reference == self._ref.reference, "You cannot change reference name here"
-        assert ref.rrev, "It only makes sense to change if you are providing a revision"
-        assert not ref.prev, "The reference for the recipe should not have package revision"
-        assert not ref.pkgid, "The reference for the recipe should not have package id"
-
-        # TODO: here maybe we should block the recipe and all the packages too
-        old_ref = self._ref
-        self._ref = ref
-
-        # Move temporal folder contents to final folder
-        new_path = self._cache._move_rrev(old_ref, self._ref)
-        if new_path:
-            self._base_folder = new_path
-
     @property
     def base_folder(self):
-        return os.path.join(self._cache.base_folder, self._base_folder)
+        return self._base_folder
 
     def build(self):
         assert self._ref.pkgid, "Must be a reference of a package"
@@ -139,11 +111,11 @@ class ReferenceLayout:
         assert not self._ref.pkgid, "Must be a reference of a recipe"
         export_folder = self.export()
         rmdir(export_folder)
-        export_src_folder = os.path.join(self._base_folder, EXPORT_SRC_FOLDER)
+        export_src_folder = os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
         rm_conandir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
-        scm_folder = os.path.join(self._base_folder, SCM_SRC_FOLDER)
+        scm_folder = os.path.join(self.base_folder, SCM_SRC_FOLDER)
         rm_conandir(scm_folder)
 
     def export_sources(self):

@@ -55,7 +55,7 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
             prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     pref = PackageReference(pref.ref, pref.id, prev)
-    layout.assign_prev(ConanReference(pref))
+    cache.assign_prev(layout, ConanReference(pref))
     if pkg_node.graph_lock_node:
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
