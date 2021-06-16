@@ -24,19 +24,6 @@ from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
 from conans.util.log import logger
 
 
-def short_path(func):
-    if platform.system() == "Windows" or OSInfo().is_cygwin:  # Not for other subsystems
-        from conans.util.windows import path_shortener
-
-        def wrap(self, *args, **kwargs):
-            p = func(self, *args, **kwargs)
-            return path_shortener(p, self._short_paths)
-
-        return wrap
-    else:
-        return func
-
-
 # TODO: cache2.0 remove this class, using as an adapter to pass tests from 2.0 that
 #  use the package_layout directly
 class PackageCacheLayout(object):
@@ -74,22 +61,18 @@ class PackageCacheLayout(object):
     def conandata(self):
         return self.ref_layout.conandata()
 
-    @short_path
     def export_sources(self):
         return self.ref_layout.export_sources()
 
-    @short_path
     def source(self):
         return self.ref_layout.source()
 
-    @short_path
     def scm_sources(self):
         return self.ref_layout.scm_sources()
 
     def builds(self):
         return self.pkg_layout.build()
 
-    @short_path
     def build(self, pref):
         return self.pkg_layout.build()
 
