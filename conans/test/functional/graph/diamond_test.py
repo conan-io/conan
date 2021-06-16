@@ -39,7 +39,7 @@ class DiamondTest(unittest.TestCase):
         output = str(self.client.out)
         latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
         ref_layout = self.client.cache.ref_layout(latest_rrev)
-        self.assertIn(ref_layout.base_folder, output.replace("\\", "/"))
+        self.assertIn(ref_layout.base_folder, output)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))
         self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
                       cmakebuildinfo)
