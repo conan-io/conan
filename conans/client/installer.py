@@ -141,7 +141,7 @@ class _PackageBuilder(object):
             # Now remove all files that were imported with imports()
             remove_imports(conanfile, copied_files, self._output)
 
-    def _package(self, conanfile, pref, package_layout, conanfile_path):
+    def _package(self, conanfile, pref, conanfile_path):
         # FIXME: Is weak to assign here the recipe_hash
         # Creating ***info.txt files
         save(os.path.join(conanfile.folders.base_build, CONANINFO), conanfile.info.dumps())
@@ -154,12 +154,6 @@ class _PackageBuilder(object):
 
         prev = run_package_method(conanfile, package_id, self._hook_manager, conanfile_path,
                                   pref.ref)
-
-        # TODO: cache2.0: remove metadata, move to db
-        #update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
-
-        pref = pref.copy_with_revs(pref.ref.revision, prev)
-        package_layout.assign_prev(ConanReference(pref))
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(conanfile.folders.base_package)
@@ -214,7 +208,7 @@ class _PackageBuilder(object):
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
 
-                prev = self._package(conanfile, pref, package_layout, conanfile_path)
+                prev = self._package(conanfile, pref, conanfile_path)
                 assert prev
                 node.prev = prev
                 log_file = os.path.join(base_build, RUN_LOG_NAME)
@@ -534,8 +528,12 @@ class BinaryInstaller(object):
             pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
 
         # at this point the package reference should be complete
-        layout = self._cache.get_pkg_layout(pref)
-        package_folder = layout.package()
+        # TODO: cache2.0: update the metadata db here?
+        #  update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
+        if pkg_layout.reference != pref:
+            pkg_layout.assign_prev(ConanReference(pref))
+
+        package_folder = pkg_layout.package()
         assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                % (str(pref), package_folder))
         # Call the info method
