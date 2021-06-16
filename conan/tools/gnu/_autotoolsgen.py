@@ -1,4 +1,6 @@
-import platform
+
+"""
+
 
 from conan.tools.env import VirtualEnv
 from conan.tools.gnu import AutotoolsToolchain, AutotoolsDeps
@@ -25,13 +27,8 @@ class AutotoolsGen:
     def generate(self):
         build_env = self.build_environment()
         run_env = self.run_environment()
-        # FIXME: Use settings, not platform Not always defined :(
-        # os_ = self._conanfile.settings_build.get_safe("os")
-        if platform.system() == "Windows":
-            build_env.save_bat("conanbuildenv.bat")
-            run_env.save_bat("conanrunenv.bat")
-        else:
-            build_env.save_sh("conanbuildenv.sh")
-            run_env.save_sh("conanrunenv.sh")
+        build_env.save_script("conanbuildenv")
+        run_env.save_script("conanrunenv")
 
         self.toolchain.generate_args()
+"""

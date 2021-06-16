@@ -2,13 +2,13 @@ import json
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, build_type_flags
+from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
+    apple_sdk_path
 from conan.tools.env import Environment
-from conan.tools.gnu.cross_building import _cross_building
-from conan.tools.gnu.get_cross_building_settings import _get_cross_building_settings
+from conan.tools.files import save
+from conan.tools.gnu.cross_building import cross_building, get_cross_building_settings
+from conan.tools.gnu.get_cppstd import cppstd_flag
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-# FIXME: need to refactor this import and bring to conan.tools
-from conans.client.build.cppstd_flags import cppstd_flag_new
-from conans.util.files import save
 
 
 class AutotoolsToolchain:
@@ -31,28 +31,29 @@ class AutotoolsToolchain:
         self.libcxx = self._libcxx()
         self.fpic = self._conanfile.options.get_safe("fPIC")
 
-        # FIXME: This needs to be imported here into conan.tools
-        self.cppstd = cppstd_flag_new(self._conanfile.settings)
+        self.cppstd = cppstd_flag(self._conanfile.settings)
         self.arch_flag = architecture_flag(self._conanfile.settings)
         # TODO: This is also covering compilers like Visual Studio, necessary to test it (&remove?)
         self.build_type_flags = build_type_flags(self._conanfile.settings)
 
+        # Cross build
         self._host = None
         self._build = None
         self._target = None
 
-        if _cross_building(self._conanfile):
-            os_build, arch_build, os_host, arch_host = _get_cross_building_settings(self._conanfile)
+        if cross_building(self._conanfile):
+            os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self._host = _get_gnu_triplet(os_host, arch_host)
             self._build = _get_gnu_triplet(os_build, arch_build)
 
-    def _rpaths_link(self):
-        # TODO: Not implemented yet
-        pass
-
-    # TODO: Apple: tools.apple_deployment_target_flag,
-    # TODO:  tools.XCRun(self._conanfile.settings).sdk_path
-    # TODO: "-arch", tools.to_apple_arch(self._arch)
+            # Apple Stuff
+            sdk_path = apple_sdk_path(conanfile)
+            apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+            # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
+            self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+            self.apple_arch_flag = "-arch {}".format(apple_arch)
+            # -isysroot makes all includes for your library relative to the build directory
+            self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else ""
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
@@ -115,6 +116,15 @@ class AutotoolsToolchain:
             self.cxxflags.append("-fPIC")
             self.cflags.append("-fPIC")
 
+        # FIXME: Previously these flags where checked if already present at env 'CFLAGS', 'CXXFLAGS'
+        #        and 'self.cxxflags', 'self.cflags' before adding them
+        for f in list(filter(bool, [self.apple_isysroot_flag,
+                                    self.apple_arch_flag,
+                                    self.apple_min_version_flag])):
+            self.cxxflags.append(f)
+            self.cflags.append(f)
+            self.ldflags.append(f)
+
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
@@ -123,8 +133,7 @@ class AutotoolsToolchain:
 
     def generate(self):
         env = self.environment()
-        env.save_sh("conanautotoolstoolchain.sh")
-        env.save_bat("conanautotoolstoolchain.bat")
+        env.save_script("conanautotoolstoolchain")
         self.generate_args()
 
     def generate_args(self):
@@ -132,4 +141,4 @@ class AutotoolsToolchain:
                 "host": self._host,
                 "target": self._target}
         args = {k: v for k, v in args.items() if v is not None}
-        save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(args))
+        save(self._conanfile, CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(args))

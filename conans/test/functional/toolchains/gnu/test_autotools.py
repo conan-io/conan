@@ -32,7 +32,7 @@ def test_autotools():
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
 
             def build(self):
                 self.run("aclocal")
@@ -79,7 +79,7 @@ def build_windows_subsystem(profile, make_program):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "Makefile"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
 
             def build(self):
                 autotools = Autotools(self)

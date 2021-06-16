@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import textwrap
+import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -196,6 +197,13 @@ class Environment:
 
         content = "\n".join(result)
         save(filename, content)
+
+    def save_script(self, name):
+        # FIXME: using platform is not ideal but settings might be incomplete
+        if platform.system() == "Windows":
+            self.save_bat("{}.bat".format(name))
+        else:
+            self.save_sh("{}.sh".format(name))
 
     def compose(self, other):
         """
