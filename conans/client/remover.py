@@ -118,11 +118,11 @@ class ConanRemover(object):
 
         for package in packages:
             package_layout = self._cache.get_pkg_layout(package)
-            package_layout.remove()
+            self._cache.remove_layout(package_layout)
 
         if not src and build_ids is None and remove_recipe:
             ref_layout = self._cache.get_ref_layout(ref)
-            ref_layout.remove()
+            self._cache.remove_layout(ref_layout)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
                force=False, packages_query=None):

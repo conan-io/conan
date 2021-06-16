@@ -1177,7 +1177,7 @@ class ConanAPIV1(object):
         if not remote_name:
             # Check the time in the associated remote if any
             pkg_layout = self.app.cache.pkg_layout(pkg_rev)
-            remote_name = pkg_layout.get_remote()
+            remote_name = self.app.cache.get_remote(pkg_rev)
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:

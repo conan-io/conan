@@ -92,7 +92,7 @@ class _UploadCollecter(object):
                 ref_remote = remote
             else:
                 rrev = self._cache.get_latest_rrev(ref)
-                ref_remote = self._cache.get_ref_layout(rrev).get_remote() if rrev else None
+                ref_remote = self._cache.get_remote(rrev) if rrev else None
                 ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
@@ -162,10 +162,10 @@ class _PackagePreparator(object):
         - compare and decide which files need to be uploaded (and deleted from server)
         """
         layout = self._cache.get_ref_layout(ref)
-        current_remote_name = layout.get_remote()
+        current_remote_name = self._cache.get_remote(ref)
 
         if remote.name != current_remote_name:
-            retrieve_exports_sources(self._remote_manager, layout, conanfile, ref, remotes)
+            retrieve_exports_sources(self._remote_manager, self._cache, layout, conanfile, ref, remotes)
 
         conanfile_path = layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,

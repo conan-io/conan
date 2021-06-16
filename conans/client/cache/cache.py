@@ -109,6 +109,10 @@ class ClientCache(object):
     def get_pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
 
+    def remove_layout(self, layout):
+        layout.remove_folder()
+        self._data_cache.remove(layout._ref)
+
     def set_remote(self, ref, remote):
         return self._data_cache.set_remote(ConanReference(ref), remote)
 

@@ -80,10 +80,9 @@ class ReferenceLayout:
     def package_is_dirty(self):
         return is_dirty(self.package())
 
-    def remove(self):
+    def remove_folder(self):
         try:
             rmdir(self.base_folder)
-            self._cache.remove(self._ref)
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self._package_folder}: {str(e)}")
 
@@ -145,9 +144,3 @@ class ReferenceLayout:
     def recipe_manifest(self):
         assert not self._ref.pkgid, "Must be a reference of a recipe"
         return FileTreeManifest.load(self.export())
-
-    def get_remote(self):
-        return self._cache.get_remote(self._ref)
-
-    def set_remote(self, remote):
-        return self._cache.set_remote(self._ref, remote)

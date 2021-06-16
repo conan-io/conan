@@ -61,7 +61,7 @@ class ConanProxy(object):
         recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
         # TODO: cache2.0: check if we want to get the remote through the layout
-        cur_remote = recipe_layout.get_remote()
+        cur_remote = self._cache.get_remote(recipe_layout.reference)
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
 
@@ -129,7 +129,7 @@ class ConanProxy(object):
         else:
             latest_rrev = self._cache.get_latest_rrev(ref)
             if latest_rrev:
-                remote_name = self._cache.ref_layout(ref).get_remote()
+                remote_name = self._cache.get_remote(latest_rrev)
                 if remote_name:
                     remote = remotes[remote_name]
                     output.info("Retrieving from predefined remote '%s'" % remote.name)

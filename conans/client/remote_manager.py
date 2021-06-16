@@ -122,7 +122,7 @@ class RemoteManager(object):
         touch_folder(export_folder)
         conanfile_path = layout.conanfile()
 
-        layout.set_remote(remote.name)
+        self._cache.set_remote(layout.reference, remote.name)
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -188,7 +188,7 @@ class RemoteManager(object):
             #     metadata.packages[pref.id].recipe_revision = pref.ref.revision
             #     metadata.packages[pref.id].checksums = package_checksums
             #     metadata.packages[pref.id].remote = remote.name
-            layout.set_remote(remote.name)
+            self._cache.set_remote(layout.reference, remote.name)
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)

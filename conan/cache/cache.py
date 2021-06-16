@@ -70,7 +70,7 @@ class DataCache:
         reference_path, created = self.db.get_or_create_reference(path, ref)
         self._create_path(reference_path, remove_contents=created)
 
-        return ReferenceLayout(ref, base_folder=os.path.join(self.base_folder, reference_path))
+        return ReferenceLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def get_or_create_package_layout(self, pref: ConanReference):
         package_path = self.get_or_create_package_path(pref)
@@ -87,19 +87,19 @@ class DataCache:
         package_path, created = self.db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
 
-        return ReferenceLayout(pref, base_folder=os.path.join(self.base_folder, package_path))
+        return ReferenceLayout(pref, os.path.join(self.base_folder, package_path))
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
         path = self.get_or_create_reference_path(ref)
-        return ReferenceLayout(ref, cache=self, base_folder=path)
+        return ReferenceLayout(ref, os.path.join(self.base_folder, path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the reference layout"
         assert pref.prev, "Package revision must be known to get the reference layout"
         assert pref.pkgid, "Package id must be known to get the reference layout"
         package_path = self.get_or_create_package_path(pref)
-        return ReferenceLayout(pref, cache=self, base_folder=package_path)
+        return ReferenceLayout(pref, os.path.join(self.base_folder, package_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_ref)
@@ -176,17 +176,17 @@ class DataCache:
         self.db.remove(ref)
 
     def assign_prev(self, layout: ReferenceLayout, ref: ConanReference):
-        assert ref.reference == layout.reference, "You cannot change the reference here"
+        assert ref.reference == layout._ref.reference, "You cannot change the reference here"
         assert ref.prev, "It only makes sense to change if you are providing a package revision"
         assert ref.pkgid, "It only makes sense to change if you are providing a package id"
-        new_path = self._move_prev(layout.reference, ref)
+        new_path = self._move_prev(layout._ref, ref)
         ## asign new ref to layout
         layout._ref = ref
         if new_path:
-            layout._base_folder = new_path
+            layout._base_folder = os.path.join(self.base_folder, new_path)
 
     def assign_rrev(self, layout: ReferenceLayout, ref: ConanReference):
-        assert ref.reference == layout.reference, "You cannot change reference name here"
+        assert ref.reference == layout._ref.reference, "You cannot change reference name here"
         assert ref.rrev, "It only makes sense to change if you are providing a revision"
         assert not ref.prev, "The reference for the recipe should not have package revision"
         assert not ref.pkgid, "The reference for the recipe should not have package id"
@@ -198,4 +198,4 @@ class DataCache:
         # Move temporal folder contents to final folder
         new_path = self._move_rrev(old_ref, layout._ref)
         if new_path:
-            layout._base_folder = new_path
+            layout._base_folder = os.path.join(self.base_folder, new_path)
