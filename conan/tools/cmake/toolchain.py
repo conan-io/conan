@@ -51,9 +51,20 @@ class Block(object):
     def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
         self._toolchain = toolchain
+        self._context_values = None
 
-    def get_block(self):
-        context = self.context()
+    @property
+    def values(self):
+        if self._context_values is None:
+            self._context_values = self.context()
+        return self._context_values
+
+    @values.setter
+    def values(self, context_values):
+        self._context_values = context_values
+
+    def get_rendered_content(self):
+        context = self.values
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
@@ -325,21 +336,23 @@ class AppleSystemBlock(Block):
         we're building for (considering simulators)"""
         arch = self._conanfile.settings.get_safe('arch')
         os_ = self._conanfile.settings.get_safe('os')
-        if str(arch).startswith('x86'):
+        if arch.startswith('x86'):
             return {'Macos': 'macosx',
                     'iOS': 'iphonesimulator',
                     'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(str(os_))
+                    'tvOS': 'appletvsimulator'}.get(os_)
         else:
             return {'Macos': 'macosx',
                     'iOS': 'iphoneos',
                     'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(str(os_), None)
+                    'tvOS': 'appletvos'}.get(os_)
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        host_architecture = self._get_architecture()
+        if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
+            return None
 
+        host_architecture = self._get_architecture()
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
@@ -445,6 +458,10 @@ class GenericSystemBlock(Block):
         # Cross building
         set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
         {% endif %}
+        {% if cmake_system_version %}
+        # Cross building
+        set(CMAKE_SYSTEM_VERSION {{ cmake_system_version }})
+        {% endif %}
         {% if cmake_system_processor %}
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
         {% endif %}
@@ -510,10 +527,36 @@ class GenericSystemBlock(Block):
         return None
 
     def _get_cross_build(self):
+        system_name = self._conanfile.conf["tools.cmake.cmaketoolchain:system_name"]
+        system_version = self._conanfile.conf["tools.cmake.cmaketoolchain:system_version"]
+        system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
+
         settings = self._conanfile.settings
-        os_ = settings.get_safe("os")
-        if os_ in ():
-            pass
+        if hasattr(self._conanfile, "settings_build"):
+            os_ = settings.get_safe("os")
+            arch = settings.get_safe("arch")
+            settings_build = self._conanfile.settings_build
+            os_build = settings_build.get_safe("os")
+            arch_build = settings_build.get_safe("arch")
+
+            if system_name is None:  # Try to deduce
+                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS'):  # Handled by AppleBlock
+                    if os != os_build:
+                        cmake_system_name_map = {"Neutrino": "QNX",
+                                                 "": "Generic",
+                                                 None: "Generic"}
+                        system_name = cmake_system_name_map.get(os_, os_)
+
+            if system_version is None:
+                os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
+                op_system_version = settings.get_safe(os_ver_str)
+                system_version = op_system_version
+
+            if system_processor is None:
+                if arch != arch_build:
+                    system_processor = arch
+
+        return system_name, system_version, system_processor
 
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
@@ -530,12 +573,14 @@ class GenericSystemBlock(Block):
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
 
+        system_name, system_version, system_processor = self._get_cross_build()
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
                 "build_type": build_type,
-                "cmake_system_name": "Linux",
-                "cmake_system_processor": "armv8"}
+                "cmake_system_name": system_name,
+                "cmake_system_version": system_version,
+                "cmake_system_processor": system_processor}
 
 
 class ToolchainBlocks:
@@ -559,9 +604,9 @@ class ToolchainBlocks:
     def process_blocks(self):
         result = []
         for b in self._blocks.values():
-            block = b.get_block()
-            if block:
-                result.append(block)
+            content = b.get_rendered_content()
+            if content:
+                result.append(content)
         return result
 
 
