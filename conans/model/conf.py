@@ -47,7 +47,7 @@ class Conf(object):
         self._values[name] = value
 
     def __delitem__(self, name):
-        return self._values.pop(name, None)
+        del self._values[name]
 
     def __repr__(self):
         return "Conf: " + repr(self._values)
