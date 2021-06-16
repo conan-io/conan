@@ -495,12 +495,12 @@ class BinaryInstaller(object):
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
-        pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
         # TODO: cache2.0 Check with new locks
         # with layout.package_lock(pref):
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
         if processed_prev is None:  # This package-id has not been processed before
+            pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
             if node.binary == BINARY_BUILD:
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                 # TODO: cache2.0 check remove
@@ -526,6 +526,7 @@ class BinaryInstaller(object):
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
             pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
+            pkg_layout = self._cache.get_pkg_layout(pref)
 
         # at this point the package reference should be complete
         # TODO: cache2.0: update the metadata db here?
