@@ -41,19 +41,22 @@ class AutotoolsToolchain:
         self._build = None
         self._target = None
 
+        self.apple_min_version_flag = self.apple_arch_flag = self.apple_isysroot_flag = None
+
         if cross_building(self._conanfile):
             os_build, arch_build, os_host, arch_host = get_cross_building_settings(self._conanfile)
             self._host = _get_gnu_triplet(os_host, arch_host)
             self._build = _get_gnu_triplet(os_build, arch_build)
 
             # Apple Stuff
-            sdk_path = apple_sdk_path(conanfile)
-            apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
-            # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-            self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
-            self.apple_arch_flag = "-arch {}".format(apple_arch)
-            # -isysroot makes all includes for your library relative to the build directory
-            self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else ""
+            if os_build == "Macos":
+                sdk_path = apple_sdk_path(conanfile)
+                apple_arch = to_apple_arch(self._conanfile.settings.get_safe("arch"))
+                # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
+                self.apple_min_version_flag = apple_min_version_flag(self._conanfile)
+                self.apple_arch_flag = "-arch {}".format(apple_arch) if apple_arch else None
+                # -isysroot makes all includes for your library relative to the build directory
+                self.apple_isysroot_flag = "-isysroot {}".format(sdk_path) if sdk_path else None
 
     def _cxx11_abi_define(self):
         # https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html
