@@ -9,13 +9,12 @@ CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database 
 
 
 class CacheDatabase:
-    """ Abstracts the operations with the database and ensures they run sequentially """
-    _references = ReferencesDbTable()
 
     timeout = CONNECTION_TIMEOUT_SECONDS
 
     def __init__(self, filename):
         self._filename = filename
+        self._references = ReferencesDbTable()
 
     @contextmanager
     def connect(self):

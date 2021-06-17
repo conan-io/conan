@@ -77,9 +77,9 @@ class DataCache:
 
         # Assign a random (uuid4) revision if not set
         # if the package revision is not calculated yet, assign the uuid of the path as prev
-        # TODO: cache2.0: fix this in the future
-        rrev = pref.rrev or package_path
-        prev = pref.prev or package_path
+        # If we don't pass a revision we also generate a random uuid to fill the fields
+        rrev = pref.rrev or str(uuid.uuid4())
+        prev = pref.prev or str(uuid.uuid4())
         if not pref.prev:
             pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, rrev,
                                   pref.pkgid, prev)
@@ -176,26 +176,23 @@ class DataCache:
         self.db.remove(ref)
 
     def assign_prev(self, layout: ReferenceLayout, ref: ConanReference):
-        assert ref.reference == layout._ref.reference, "You cannot change the reference here"
+        layout_conan_reference = ConanReference(layout.reference)
+        assert ref.reference == layout_conan_reference.reference, "You cannot change the reference here"
         assert ref.prev, "It only makes sense to change if you are providing a package revision"
         assert ref.pkgid, "It only makes sense to change if you are providing a package id"
-        new_path = self._move_prev(layout._ref, ref)
-        ## asign new ref to layout
-        layout._ref = ref
+        new_path = self._move_prev(layout_conan_reference, ref)
+        layout.reference = ref
         if new_path:
             layout._base_folder = os.path.join(self.base_folder, new_path)
 
     def assign_rrev(self, layout: ReferenceLayout, ref: ConanReference):
-        assert ref.reference == layout._ref.reference, "You cannot change reference name here"
+        layout_conan_reference = ConanReference(layout.reference)
+        assert ref.reference == layout_conan_reference.reference, "You cannot change reference name here"
         assert ref.rrev, "It only makes sense to change if you are providing a revision"
         assert not ref.prev, "The reference for the recipe should not have package revision"
         assert not ref.pkgid, "The reference for the recipe should not have package id"
-
         # TODO: here maybe we should block the recipe and all the packages too
-        old_ref = layout._ref
-        layout._ref = ref
-
-        # Move temporal folder contents to final folder
-        new_path = self._move_rrev(old_ref, layout._ref)
+        new_path = self._move_rrev(layout_conan_reference, ref)
+        layout.reference = ref
         if new_path:
             layout._base_folder = os.path.join(self.base_folder, new_path)

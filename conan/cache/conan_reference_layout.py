@@ -23,6 +23,13 @@ class ReferenceLayout:
         else:
             return self._ref.as_conanfile_reference()
 
+    # TODO: cache2.0 we are setting _ref with a ConanReference but returning
+    #  ConanFileReference or PackageReference in the getter, this is temporary, in the future
+    #  we won't be mixing both types and both methods will have the same types
+    @reference.setter
+    def reference(self, ref: ConanReference):
+        self._ref = ref
+
     @property
     def base_folder(self):
         return self._base_folder
