@@ -291,9 +291,9 @@ class BuildIdTest(unittest.TestCase):
         client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
 
+    # TODO: don't forget to remove this test!!!
     def test_custom(self):
         client = TestClient()
         client.current_folder = "/Users/carlos/Documents/developer/conan-develop/sandbox/build_id_tests"
-        client.run_command(f"open '{client.cache_folder}'")
         client.run("create . -s build_type=Release")
         client.run("create . -s build_type=Debug")
