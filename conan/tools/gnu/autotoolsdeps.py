@@ -58,6 +58,6 @@ class AutotoolsDeps:
         env.append("CFLAGS", cflags)
         return env
 
-    def generate(self):
-        env = self.environment()
+    def generate(self, env=None):
+        env = env or self.environment()
         env.save_script("conanautotoolsdeps")
