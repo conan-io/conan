@@ -13,7 +13,10 @@ class ConanReference:
             self._rrev = ref.revision
             self._pkgid = None
             self._prev = None
-            self._build_id = self._pkgid
+            # build_id will be None by default, only the package that has build_id method defined
+            # and has been compiled will have this field set, later, we can search for the package
+            # that has this with a defined value to get the build folder
+            self._build_id = None
         elif isinstance(args[0], PackageReference):
             ref = args[0]
             self._name = ref.ref.name
@@ -23,7 +26,7 @@ class ConanReference:
             self._rrev = ref.ref.revision
             self._pkgid = ref.id
             self._prev = ref.revision
-            self._build_id = self._pkgid
+            self._build_id = None
         elif len(args) == 7 and all(isinstance(arg, str) or arg is None for arg in args):
             self._name = args[0]
             self._version = args[1]
@@ -32,7 +35,7 @@ class ConanReference:
             self._rrev = args[4]
             self._pkgid = args[5]
             self._prev = args[6]
-            self._build_id = self._pkgid
+            self._build_id = None
         else:
             raise ConanException("Invalid arguments for ConanReference")
 
