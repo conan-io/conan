@@ -1,25 +1,76 @@
-from collections import namedtuple
-
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class ConanReference(namedtuple("ConanReference", "name version user channel rrev pkgid prev")):
-    def __new__(cls, *args):
+class ConanReference:
+    def __init__(self, *args):
         if isinstance(args[0], ConanFileReference):
             ref = args[0]
-            obj = super(cls, ConanReference).__new__(cls, ref.name, ref.version, ref.user,
-                                                     ref.channel, ref.revision, None, None)
+            self._name = ref.name
+            self._version = ref.version
+            self._user = ref.user
+            self._channel = ref.channel
+            self._rrev = ref.revision
+            self._pkgid = None
+            self._prev = None
+            self._build_id = self._pkgid
         elif isinstance(args[0], PackageReference):
             ref = args[0]
-            obj = super(cls, ConanReference).__new__(cls, ref.ref.name, ref.ref.version,
-                                                     ref.ref.user, ref.ref.channel, ref.ref.revision,
-                                                     ref.id, ref.revision)
+            self._name = ref.ref.name
+            self._version = ref.ref.version
+            self._user = ref.ref.user
+            self._channel = ref.ref.channel
+            self._rrev = ref.ref.revision
+            self._pkgid = ref.id
+            self._prev = ref.revision
+            self._build_id = self._pkgid
         elif len(args) == 7 and all(isinstance(arg, str) or arg is None for arg in args):
-            obj = super(cls, ConanReference).__new__(cls, *args)
+            self._name = args[0]
+            self._version = args[1]
+            self._user = args[2]
+            self._channel = args[3]
+            self._rrev = args[4]
+            self._pkgid = args[5]
+            self._prev = args[6]
+            self._build_id = self._pkgid
         else:
             raise ConanException("Invalid arguments for ConanReference")
-        return obj
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def version(self):
+        return self._version
+
+    @property
+    def user(self):
+        return self._user
+
+    @property
+    def channel(self):
+        return self._channel
+
+    @property
+    def rrev(self):
+        return self._rrev
+
+    @property
+    def pkgid(self):
+        return self._pkgid
+
+    @property
+    def prev(self):
+        return self._prev
+
+    @property
+    def build_id(self):
+        return self._build_id
+
+    @build_id.setter
+    def build_id(self, build_id):
+        self._build_id = build_id
 
     def as_package_reference(self):
         return PackageReference.loads(self.full_reference, validate=False)
