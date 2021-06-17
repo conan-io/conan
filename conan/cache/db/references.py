@@ -13,7 +13,8 @@ class ReferencesDbTable(BaseDbTable):
                            ('prev', str, True),
                            ('path', str, False, None, True),
                            ('timestamp', float),
-                           ('remote', str, True)]
+                           ('remote', str, True),
+                           ('build_id', str, True)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
     class DoesNotExist(ConanException):
@@ -27,6 +28,7 @@ class ReferencesDbTable(BaseDbTable):
             "reference": row.reference,
             "rrev": row.rrev,
             "pkgid": row.pkgid,
+            "build_id": row.build_id,
             "prev": row.prev,
             "path": row.path,
             "timestamp": row.timestamp,
@@ -101,7 +103,7 @@ class ReferencesDbTable(BaseDbTable):
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
-                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote])
+                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, timestamp, remote, None])
         return r.lastrowid
 
     def set_remote(self, conn, ref: ConanReference, remote):
@@ -147,6 +149,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'{self.columns.remote}, ' \
+                    f'{self.columns.build_id}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.prev} IS NULL ' \
@@ -169,6 +172,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'{self.columns.remote}, ' \
+                    f'{self.columns.build_id}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
@@ -197,6 +201,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'{self.columns.remote}, ' \
+                    f'{self.columns.build_id}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.reference} = "{ref.reference}" ' \
@@ -225,6 +230,7 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'{self.columns.remote}, ' \
+                    f'{self.columns.build_id}, ' \
                     f'MAX({self.columns.timestamp}) ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
