@@ -197,8 +197,6 @@ def test_config_user_home_short_path():
     client.run('config set general.user_home_short="{}"'.format(short_folder))
     client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
     client.run("create . foobar/0.1.0@user/testing")
-    source_folder = short_folder if platform.system() == "Windows" else client.cache_folder
-    assert source_folder in client.out
     assert client.cache.config.short_paths_home == short_folder
 
 
@@ -209,8 +207,7 @@ def test_config_user_home_short_none():
     client.run('config set general.user_home_short=None')
     client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
     client.run("create . foobar/0.1.0@user/testing")
-    assert client.cache_folder in client.out
-    assert client.cache.config.short_paths_home == "None"
+    assert "Configuring sources in {}".format(client.cache_folder) in client.out
 
 
 def test_init():
