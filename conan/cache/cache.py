@@ -45,7 +45,7 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def get_or_create_reference_path(ref: ConanReference):
+    def _get_or_create_reference_path(ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if ref.rrev:
             return md5(ref.full_reference)
@@ -53,7 +53,7 @@ class DataCache:
             return str(uuid.uuid4())
 
     @staticmethod
-    def get_or_create_package_path(ref: ConanReference):
+    def _get_or_create_package_path(ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if ref.prev:
             return md5(ref.full_reference)
@@ -61,7 +61,7 @@ class DataCache:
             return str(uuid.uuid4())
 
     def get_or_create_reference_layout(self, ref: ConanReference):
-        path = self.get_or_create_reference_path(ref)
+        path = self._get_or_create_reference_path(ref)
 
         if not ref.rrev:
             ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, path,
@@ -73,7 +73,7 @@ class DataCache:
         return ReferenceLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def get_or_create_package_layout(self, pref: ConanReference):
-        package_path = self.get_or_create_package_path(pref)
+        package_path = self._get_or_create_package_path(pref)
 
         # Assign a random (uuid4) revision if not set
         # if the package revision is not calculated yet, assign the uuid of the path as prev
@@ -91,19 +91,19 @@ class DataCache:
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        path = self.get_or_create_reference_path(ref)
+        path = self._get_or_create_reference_path(ref)
         return ReferenceLayout(ref, os.path.join(self.base_folder, path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the reference layout"
         assert pref.prev, "Package revision must be known to get the reference layout"
         assert pref.pkgid, "Package id must be known to get the reference layout"
-        package_path = self.get_or_create_package_path(pref)
+        package_path = self._get_or_create_package_path(pref)
         return ReferenceLayout(pref, os.path.join(self.base_folder, package_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_ref)
-        new_path = self.get_or_create_reference_path(new_ref)
+        new_path = self._get_or_create_reference_path(new_ref)
 
         try:
             self.db.update_reference(old_ref, new_ref, new_path=new_path)
@@ -129,7 +129,7 @@ class DataCache:
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
         old_path = self.db.try_get_reference_directory(old_pref)
-        new_path = self.get_or_create_reference_path(new_pref)
+        new_path = self._get_or_create_reference_path(new_pref)
         try:
             self.db.update_reference(old_pref, new_pref, new_path=new_path)
         except ReferencesDbTable.AlreadyExist:
