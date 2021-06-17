@@ -160,9 +160,9 @@ class ConfDefinition(object):
     def loads(self, text, profile=False):
         self._pattern_confs = {}
         for line in text.splitlines():
-            self.update_conf(line, profile=profile)
+            self.update_conf_line(line, profile=profile)
 
-    def update_conf(self, line, profile=False):
+    def update_conf_line(self, line, profile=False):
         """
         Validate the given [conf] line, extract the needed information and
         add/update the internal Conf() dictionary
