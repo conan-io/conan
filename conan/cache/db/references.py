@@ -94,7 +94,10 @@ class ReferencesDbTable(BaseDbTable):
         return row[0]
 
     def save(self, conn, path, ref: ConanReference, remote=None):
-        timestamp = time.time()
+        # we set the timestamp to 0 until they get a complete reference, here they
+        # are saved with the temporary uuid one, we don't want to consider these
+        # not yet built packages for search and so on
+        timestamp = 0
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',

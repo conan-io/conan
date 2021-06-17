@@ -56,24 +56,31 @@ class _PackageBuilder(object):
         self._remote_manager = remote_manager
         self._generator_manager = generators
 
-    def _get_build_folder(self, conanfile, package_layout, pref, recorder):
+    def _get_build_folder(self, conanfile, package_layout, pref):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
         # TODO: cache2.0 FIX: we are not taking intto account the conanfile build_id
-        new_id = None #build_id(conanfile)
-        build_pref = PackageReference(pref.ref, new_id) if new_id else pref
-        build_folder = package_layout.build()
-
         skip_build = False
+        build_folder = package_layout.build()
+        if pref.id != build_id(conanfile) and hasattr(conanfile, "build_id"):
+            # We are going to reuse the build folder from other reference
+            # get the latest package revision from this reference
+            latest_prevs = self._cache.get_package_ids(pref, only_latest_prev=True)
+            # If the latest_prev is the same we are building, we don't have packages yet for this recipe
+            # and we have to build
+            if latest_prevs and latest_prevs[0] != package_layout.reference:
+                other_pkg_layout = self._cache.get_pkg_layout(latest_prevs[0])
+                build_folder = other_pkg_layout.build()
+                skip_build = True
+
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
             rmdir(build_folder)
             clean_dirty(build_folder)
 
-        if build_pref != pref and os.path.exists(build_folder) and hasattr(conanfile, "build_id"):
+        if skip_build and os.path.exists(build_folder):
             self._output.info("Won't be built, using previous build folder as defined in build_id()")
-            skip_build = True
 
         return build_folder, skip_build
 
@@ -173,8 +180,7 @@ class _PackageBuilder(object):
         conanfile_path = reference_layout.conanfile()
         base_package = package_layout.package()
 
-        base_build, skip_build = self._get_build_folder(conanfile, package_layout,
-                                                        pref, recorder)
+        base_build, skip_build = self._get_build_folder(conanfile, package_layout, pref)
 
         # PREPARE SOURCES
         if not skip_build:
