@@ -423,7 +423,7 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
                     _handle_system_requirements(conan_file, node.pref, self._cache, output)
-                    self._handle_node_cache(node, processed_package_refs, remotes)
+                    self._handle_node_cache(node, processed_package_refs, remotes, graph_lock)
 
     def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
         # Get source of information
@@ -480,7 +480,7 @@ class BinaryInstaller(object):
                 copied_files = run_imports(conanfile)
                 report_copied_files(copied_files, output)
 
-    def _handle_node_cache(self, node, processed_package_references, remotes):
+    def _handle_node_cache(self, node, processed_package_references, remotes, graph_lock):
         pref = node.pref
         assert pref.id, "Package-ID without value"
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
@@ -497,7 +497,7 @@ class BinaryInstaller(object):
                     assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                     layout.package_remove(pref)
                     with layout.set_dirty_context_manager(pref):
-                        pref = self._build_package(node, output, remotes)
+                        pref = self._build_package(node, output, remotes, graph_lock)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -522,7 +522,7 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _build_package(self, node, output, remotes):
+    def _build_package(self, node, output, remotes, graph_lock):
         conanfile = node.conanfile
         # It is necessary to complete the sources of python requires, which might be used
         # Only the legacy python_requires allow this
@@ -537,8 +537,8 @@ class BinaryInstaller(object):
         builder = _PackageBuilder(self._cache, output, self._hook_manager, self._remote_manager,
                                   self._generator_manager)
         pref = builder.build_package(node, self._recorder, remotes)
-        if node.graph_lock_node:
-            node.graph_lock_node.prev = pref.revision
+        # if graph_lock is not None:
+        #    graph_lock.update_ref(pref)
         return pref
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):

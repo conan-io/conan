@@ -118,7 +118,8 @@ class PyRequireLoader(object):
         ref = ConanFileReference.loads(py_requires_ref)
         if lock_python_requires:
             locked = {r.name: r for r in lock_python_requires}[ref.name]
-            ref = locked
+            # FIXME: Matching by name is not enough, should resolve ranges, etc.
+            ref = ConanFileReference.loads(repr(locked))
         else:
             requirement = Requirement(ref)
             resolved_ref = self._range_resolver.resolve(requirement, "py_require", update=self._update,

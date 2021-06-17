@@ -44,7 +44,11 @@ def deps_install(app, ref_or_path, install_folder, base_folder, profile_host, pr
                                           is_build_require=is_build_require)
 
     deps_graph.report_graph_error()
-    graph_lock = graph_lock or GraphLock(deps_graph)  # After the graph is loaded it is defined
+    if graph_lock is None:
+        graph_lock = GraphLock(deps_graph)
+    else:
+        graph_lock.update(deps_graph)
+
     root_node = deps_graph.root
     conanfile = root_node.conanfile
     if root_node.recipe == RECIPE_VIRTUAL:

@@ -82,8 +82,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
 
     # If we receive lock information, python_requires could have been locked
     if graph_lock:
-        node_id = graph_lock.get_consumer(ref)
-        python_requires = graph_lock.python_requires(node_id)
+        # node_id = graph_lock.get_consumer(ref)
+        python_requires = graph_lock.python_requires
         # TODO: check that the locked python_requires are different from the loaded ones
         app.range_resolver.clear_output()  # invalidate previous version range output
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
@@ -188,8 +188,8 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
 
     ref = ref.copy_with_rev(revision)
     output.info("Exported revision: %s" % revision)
-    if graph_lock:
-        graph_lock.update_exported_ref(node_id, ref)
+    if graph_lock is not None:
+        graph_lock.update_ref(ref)
     return ref
 
 

@@ -236,6 +236,14 @@ class DepsGraph(object):
                     ret.append(node.ref.copy_clear_rev())
         return ret
 
+    def build_order(self):
+        # FIXME: VEry simplification
+        result = []
+        for node in self.ordered_iterate():
+            if node.binary == BINARY_BUILD:
+                result.append([repr(node.ref), node.package_id, node.context])
+        return result
+
     def by_levels(self, nodes_subset=None):
         return self._order_levels(True, nodes_subset)
 

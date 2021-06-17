@@ -103,6 +103,16 @@ class ConanReference:
     def __lt__(self, other):
         return repr(self) < repr(other)
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return self.__dict__ != other.__dict__
+
+    def __hash__(self):
+        return hash((self.name, self.version, self.user, self.channel, self.rrev,
+                     self.package_id, self.prev))
+
     @staticmethod
     def loads(text):
         tokens = text.split(":", 1)
@@ -156,51 +166,73 @@ class ConanReference:
 class GraphLock(object):
 
     def __init__(self, deps_graph):
+        self.root = None
         self.requires = []
+        self.python_requires = []
+        self.build_requires = []
 
         if deps_graph is None:
             return
 
         requires = set()
+        python_requires = set()
+        build_requires = set()
         for graph_node in deps_graph.nodes:
-            if graph_node.recipe == RECIPE_VIRTUAL or graph_node.ref is None:
+            try:
+                python_requires.update(graph_node.conanfile.python_requires.all_refs())
+            except AttributeError:
+                pass
+            if graph_node.recipe in (RECIPE_VIRTUAL, RECIPE_CONSUMER) or graph_node.ref is None:
                 continue
             assert graph_node.conanfile is not None
 
-            requires.add(ConanReference.loads(repr(graph_node.pref)))
+            self.root = self.root or graph_node.ref.name
+            requires.add(ConanReference.loads(repr(graph_node.ref)))
 
         self.requires = sorted(requires)
+        self.python_requires = sorted(python_requires)
+        self.build_requires = sorted(build_requires)
 
     def only_recipes(self):
         for r in self.requires:
-            r.rrev = r.package_id = r.prev = None
+            r.package_id = r.prev = None
 
     def update(self, deps_graph):
+        """ add new things at the beginning, to give more priority
+        """
         requires = set()
         for graph_node in deps_graph.nodes:
             if graph_node.recipe == RECIPE_VIRTUAL or graph_node.ref is None:
                 continue
             assert graph_node.conanfile is not None
 
-            requires.add(ConanReference.loads(repr(graph_node.pref)))
+            requires.add(ConanReference.loads(repr(graph_node.ref)))
 
-        requires.update(self.requires)
-        self.requires = sorted(requires)
+        new_requires = sorted(r for r in requires if r not in self.requires)
+        self.requires = new_requires + self.requires
 
     @staticmethod
     def deserialize(data):
         """ constructs a GraphLock from a json like dict
         """
         graph_lock = GraphLock(deps_graph=None)
+        graph_lock.root = data["root"]
         for r in data["requires"]:
-            graph_lock.requires.append(ConanReference.loads(r) )
+            graph_lock.requires.append(ConanReference.loads(r))
+        for r in data["python_requires"]:
+            graph_lock.python_requires.append(ConanReference.loads(r))
+        for r in data["build_requires"]:
+            graph_lock.build_requires.append(ConanReference.loads(r))
         return graph_lock
 
     def serialize(self):
         """ returns the object serialized as a dict of plain python types
         that can be converted to json
         """
-        return {"requires": [repr(r) for r in self.requires]}
+        return {"root": self.root,
+                "requires": [repr(r) for r in self.requires],
+                "python_requires": [repr(r) for r in self.python_requires],
+                "build_requires": [repr(r) for r in self.build_requires]}
 
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
@@ -386,9 +418,11 @@ class GraphLock(object):
         if not self._relaxed:
             raise ConanException("Couldn't find '%s' in lockfile" % ref.full_str())
 
-    def update_exported_ref(self, node_id, ref):
+    def update_ref(self, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should
         match the existing RREV
         """
-        lock_node = self._nodes[node_id]
-        lock_node.ref = ref
+        # Filter existing matching
+        ref = ConanReference.loads(repr(ref))
+        if ref not in self.requires:
+            self.requires.insert(0, ref)

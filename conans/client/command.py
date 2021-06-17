@@ -1740,6 +1740,10 @@ class Command(object):
         build_order_cmd.add_argument('lockfile', help='lockfile file')
         build_order_cmd.add_argument("--json", action=OnceArgument,
                                      help="generate output file in json format")
+        build_order_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                                     help="Filename of the created lockfile")
+        _add_common_install_arguments(build_order_cmd, build_help="Packages to build from source",
+                                      lockfile=False)
 
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
@@ -1750,6 +1754,10 @@ class Command(object):
                                  help="Install only recipes, not binaries")
         install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
                                  help='Generators to use')
+        install_cmd.add_argument("--lockfile-out", action=OnceArgument, default="conan.lock",
+                                 help="Filename of the created lockfile")
+        _add_common_install_arguments(install_cmd, build_help="Packages to build from source",
+                                      lockfile=False)
 
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
@@ -1803,7 +1811,8 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "install":
-            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
+            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes,
+                                     lockfile_out=args.lockfile_out, build=args.build)
         elif args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "bundle":
@@ -1820,7 +1829,8 @@ class Command(object):
                     json_file = _make_abs_path(args.json)
                     save(json_file, json.dumps(build_order, indent=True))
         elif args.subcommand == "build-order":
-            build_order = self._conan.lock_build_order(args.lockfile)
+            build_order = self._conan.lock_build_order(args.lockfile, build=args.build,
+                                                       lockfile_out=args.lockfile_out)
             self._out.writeln(build_order)
             if args.json:
                 json_file = _make_abs_path(args.json)

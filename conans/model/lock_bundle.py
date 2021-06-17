@@ -56,33 +56,21 @@ class LockBundle(object):
             lockfile = GraphLockFile.load(lockfile_abs)
 
             lock = lockfile.graph_lock
-            for id_, node in lock.nodes.items():
-                ref_str = node.ref.full_str()
-                ref_str = ref_convert(ref_str)
-                ref_node = result._nodes.setdefault(ref_str, {})
+            for require in lock.requires:
+                ref_node = result._nodes.setdefault(repr(require.get_ref()), {})
                 packages_node = ref_node.setdefault("packages", [])
                 # Find existing package_id in the list of packages
                 # This is the equivalent of a setdefault over a dict, but on a list
                 for pkg in packages_node:
-                    if pkg["package_id"] == node.package_id:
+                    if pkg["package_id"] == require.package_id:
                         pid_node = pkg
                         break
                 else:
-                    pid_node = {"package_id": node.package_id}
+                    pid_node = {"package_id": require.package_id}
                     packages_node.append(pid_node)
-                ids = pid_node.setdefault("lockfiles", {})
+                pid_node.setdefault("lockfiles", []).append(lockfile_name)
                 # TODO: Add check that this prev is always the same
-                pid_node["prev"] = node.prev
-                pid_node["modified"] = node.modified
-                ids.setdefault(lockfile_name, []).append(id_)
-                total_requires = node.requires + node.build_requires
-                for require in total_requires:
-                    require_node = lock.nodes[require]
-                    ref = require_node.ref.full_str()
-                    ref = ref_convert(ref)
-                    requires = ref_node.setdefault("requires", [])
-                    if ref not in requires:
-                        requires.append(ref)
+                pid_node["prev"] = require.prev
 
         return result
 

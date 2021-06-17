@@ -3,7 +3,6 @@ import os
 import sys
 from collections import OrderedDict
 from collections import namedtuple
-
 from io import StringIO
 
 import conans
@@ -20,10 +19,8 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
-from conans.client.conanfile.package import run_package_method
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.generators import GeneratorManager
-from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
@@ -32,7 +29,6 @@ from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
-from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
@@ -1258,17 +1254,38 @@ class ConanAPIV1(object):
         old_lock.save(old_lockfile)
 
     @api_method
-    def lock_build_order(self, lockfile, cwd=None):
-        cwd = cwd or os.getcwd()
-        lockfile = _make_abs_path(lockfile, cwd)
+    def lock_build_order(self, lockfile, cwd=None, remote_name=None, build=None,
+                         lockfile_out=None):
+        lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+        graph_info = get_graph_info(None, None, cwd,
+                                    self.app.cache, self.app.out, lockfile=lockfile)
+        phost, pbuild, graph_lock, root_ref = graph_info
 
-        graph_lock_file = GraphLockFile.load(lockfile)
-        if graph_lock_file.profile_host is None:
-            raise ConanException("Lockfiles with --base do not contain profile information, "
-                                 "cannot be used. Create a full lockfile")
+        remotes = self.app.load_remotes(remote_name=remote_name)
+        recorder = ActionRecorder()
+        root = graph_lock.root
+        for r in graph_lock.requires:
+            if root == r.name:
+                reference = ConanFileReference.loads(repr(r))
+                break
+        else:
+            raise ConanException("error")
 
-        graph_lock = graph_lock_file.graph_lock
-        build_order = graph_lock.build_order()
+        graph = self.app.graph_manager.load_graph(reference, create_reference=None,
+                                                  profile_host=phost, profile_build=pbuild,
+                                                  graph_lock=graph_lock,
+                                                  root_ref=root_ref,
+                                                  build_mode=build,
+                                                  check_updates=False, update=None,
+                                                  remotes=remotes, recorder=recorder)
+        print_graph(graph, self.app.out)
+        graph_lock = GraphLock(graph)
+        if lockfile_out:
+            lockfile_out = _make_abs_path(lockfile_out, cwd)
+            graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
+            graph_lock_file.save(lockfile_out)
+
+        build_order = graph.build_order()
         return build_order
 
     @api_method
@@ -1298,24 +1315,31 @@ class ConanAPIV1(object):
         mkdir(install_folder)
         remotes = self.app.load_remotes(remote_name=remote_name)
         recorder = ActionRecorder()
-        root_id = graph_lock.root_node_id()
-        reference = graph_lock.nodes[root_id].ref
+        root = graph_lock.root
+        for r in graph_lock.requires:
+            if root == r.name:
+                reference = ConanFileReference.loads(repr(r))
+                break
+        else:
+            raise ConanException("error")
+
         if recipes:
             graph = self.app.graph_manager.load_graph(reference, create_reference=None,
                                                       profile_host=phost, profile_build=pbuild,
                                                       graph_lock=graph_lock,
                                                       root_ref=root_ref,
-                                                      build_mode=None,
+                                                      build_mode=build,
                                                       check_updates=False, update=None,
-                                                      remotes=remotes, recorder=recorder,
-                                                      lockfile_node_id=root_id)
+                                                      remotes=remotes, recorder=recorder)
             print_graph(graph, self.app.out)
         else:
-            deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
-                         base_folder=cwd,
-                         profile_host=phost, profile_build=pbuild, graph_lock=graph_lock,
-                         root_ref=root_ref, remotes=remotes, build_modes=build,
-                         generators=generators, recorder=recorder, lockfile_node_id=root_id)
+            deps_graph = deps_install(self.app, ref_or_path=reference, install_folder=install_folder,
+                                      base_folder=cwd,
+                                      profile_host=phost, profile_build=pbuild,
+                                      graph_lock=graph_lock,
+                                      root_ref=root_ref, remotes=remotes, build_modes=build,
+                                      generators=generators, recorder=recorder)
+            graph_lock = GraphLock(deps_graph)
 
         if lockfile_out:
             lockfile_out = _make_abs_path(lockfile_out, cwd)
