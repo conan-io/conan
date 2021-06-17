@@ -541,18 +541,18 @@ class GenericSystemBlock(Block):
 
             if system_name is None:  # Try to deduce
                 if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS'):  # Handled by AppleBlock
-                    if os != os_build:
+                    if os_ != os_build:
                         cmake_system_name_map = {"Neutrino": "QNX",
                                                  "": "Generic",
                                                  None: "Generic"}
                         system_name = cmake_system_name_map.get(os_, os_)
 
-            if system_version is None:
+            if system_name is not None and system_version is None:
                 os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
                 op_system_version = settings.get_safe(os_ver_str)
                 system_version = op_system_version
 
-            if system_processor is None:
+            if system_name is not None and system_processor is None:
                 if arch != arch_build:
                     system_processor = arch
 

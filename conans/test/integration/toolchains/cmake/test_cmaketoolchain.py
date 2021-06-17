@@ -34,6 +34,30 @@ def test_cross_build():
     assert "set(CMAKE_SYSTEM_PROCESSOR armv8)" in toolchain
 
 
+def test_no_cross_build():
+    windows_profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "windows": windows_profile})
+    client.run("install . --profile:build=windows --profile:host=windows")
+    toolchain = client.load("conan_toolchain.cmake")
+
+    assert "CMAKE_SYSTEM_NAME " not in toolchain
+    assert "CMAKE_SYSTEM_PROCESSOR" not in toolchain
+
+
 def test_cross_build_conf():
     windows_profile = textwrap.dedent("""
         [settings]
