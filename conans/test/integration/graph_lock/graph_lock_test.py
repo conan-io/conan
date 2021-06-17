@@ -530,3 +530,21 @@ class AddressRootNodetest(unittest.TestCase):
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock")
         self.assertIn("conanfile.py (pkg/0.1): Installing package", client.out)
+
+
+def test_error_test_command():
+    # https://github.com/conan-io/conan/issues/9088
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_requires("dep/[>=1.0]"),
+                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
+    client.run("create dep dep/1.0@")
+    client.run("create pkg pkg/1.0@")
+    client.run("lock create --ref=pkg/1.0@")
+    client.run("create dep dep/1.1@")
+    client.run("test test_package pkg/1.0@ --lockfile=conan.lock")
+    assert "dep/1.0" in client.out
+    assert "dep/1.1" not in client.out
+    client.run("test test_package pkg/1.0@")
+    assert "dep/1.0" not in client.out
+    assert "dep/1.1" in client.out
