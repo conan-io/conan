@@ -22,6 +22,7 @@ from conans.util.log import logger
 
 CLI_V2_COMMANDS = [
     'help',
+    'search'
 ]
 
 
@@ -166,6 +167,7 @@ def main(args):
         6: Invalid configuration (done)
     """
 
+    # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
     if command_argument not in CLI_V2_COMMANDS:
         from conans.client.command import main as v1_main

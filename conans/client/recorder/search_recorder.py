@@ -5,16 +5,27 @@ class _SearchRecipe(namedtuple("SearchRecipe", "ref")):
     with_packages = True
 
     def to_dict(self):
-        data = {"id": repr(self.ref)}
+        try:
+            recipe_name = repr(self.ref).split('/')[0]
+        except Exception:
+            recipe_name = repr(self.ref)
+
+        data = {
+            "name": recipe_name,
+            "id": repr(self.ref)
+        }
         return data
 
 
 class _SearchPackage(namedtuple("SearchPackage",
                                 "package_id, options, settings, requires")):
-
     def to_dict(self):
-        return {"id": self.package_id, "options": self.options, "settings": self.settings,
-                "requires": self.requires}
+        return {
+            "id": self.package_id,
+            "options": self.options,
+            "settings": self.settings,
+            "requires": self.requires
+        }
 
 
 class SearchRecorder(object):
@@ -23,6 +34,9 @@ class SearchRecorder(object):
         self.error = False
         self.keyword = "results"
         self._info = OrderedDict()
+
+    def add_remote(self, remote_name):
+        self._info[remote_name] = OrderedDict()
 
     def add_recipe(self, remote_name, ref, with_packages=True):
         recipe = _SearchRecipe(ref)

@@ -216,11 +216,11 @@ class RemoteManager(object):
             output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
-    def search_recipes(self, remote, pattern=None, ignorecase=True):
+    def search_recipes(self, remote, pattern):
         """
         returns (dict str(ref): {packages_info}
         """
-        return self._call_remote(remote, "search", pattern, ignorecase)
+        return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref, query):
         packages = self._call_remote(remote, "search_packages", ref, query)

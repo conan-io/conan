@@ -76,7 +76,7 @@ class BaseConanCommand(object):
             default_output = "cli" if "cli" in formatters_list else formatters_list[0]
             output_help_message = "Select the output format: {}. '{}' is the default output." \
                 .format(", ".join(formatters_list), default_output)
-            self._parser.add_argument('-o', '--output', default=default_output,
+            self._parser.add_argument('-f', '--format', default=default_output,
                                       choices=formatters_list,
                                       action=OnceArgument, help=output_help_message)
 
@@ -122,7 +122,7 @@ class ConanCommand(BaseConanCommand):
         if not self._subcommands:
             parser_args = self._parser.parse_args(*args)
             if info:
-                self._formatters[parser_args.output](info)
+                self._formatters[parser_args.format](info)
         else:
             subcommand = args[0][0] if args[0] else None
             if subcommand in self._subcommands:
@@ -146,7 +146,7 @@ class ConanSubCommand(BaseConanCommand):
         info = self._method(conan_api, self._parent_parser, self._parser, *args)
         parser_args = self._parent_parser.parse_args(*args)
         if info:
-            self._formatters[parser_args.output](info)
+            self._formatters[parser_args.format](info)
 
     def set_parser(self, parent_parser, subcommand_parser):
         self._parser = subcommand_parser.add_parser(self._name, help=self._doc)
