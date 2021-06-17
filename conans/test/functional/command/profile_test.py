@@ -137,7 +137,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(client.out, "MYVALUe\n")
 
         client.run("profile update conf.tools.ninja:jobs=10 ./MyProfile")
-        self.assertIn("Package:OtherOption=23", load(pr_path))
+        self.assertIn("tools.ninja:jobs=10", load(pr_path))
 
         client.run("profile get conf.tools.ninja:jobs ./MyProfile")
         self.assertEqual(client.out, "10\n")

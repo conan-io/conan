@@ -157,29 +157,36 @@ class ConfDefinition(object):
             result.append("{}={}".format(name, value))
         return "\n".join(result)
 
-    def loads(self, text, profile=False, reset=True):
-        # Give the chance to clean the current conf content or not
-        if reset:
-            self._pattern_confs = {}
+    def loads(self, text, profile=False):
+        self._pattern_confs = {}
         for line in text.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            try:
-                left, value = line.split("=", 1)
-                value = value.strip()
-                left = left.strip()
-                if left.count(":") >= 2:
-                    pattern, name = left.split(":", 1)
-                else:
-                    pattern, name = None, left
-            except Exception:
-                raise ConanException("Error while parsing conf value '{}'".format(line))
+            self.update_conf(line, profile=profile)
 
-            if not _is_profile_module(name):
-                if profile:
-                    raise ConanException("[conf] '{}' not allowed in profiles".format(line))
-                if pattern is not None:
-                    raise ConanException("Conf '{}' cannot have a package pattern".format(line))
-            conf = self._pattern_confs.setdefault(pattern, Conf())
-            conf[name] = value
+    def update_conf(self, line, profile=False):
+        """
+        Validate the given [conf] line, extract the needed information and
+        add/update the internal Conf() dictionary
+        """
+        line = line.strip()
+        if not line or line.startswith("#"):
+            return
+        try:
+            left, value = line.split("=", 1)
+            value = value.strip()
+            left = left.strip()
+            if left.count(":") >= 2:
+                pattern, name = left.split(":", 1)
+            else:
+                pattern, name = None, left
+        except Exception:
+            raise ConanException("Error while parsing conf value '{}'".format(line))
+
+        if not _is_profile_module(name):
+            if profile:
+                raise ConanException("[conf] '{}' not allowed in profiles".format(line))
+            if pattern is not None:
+                raise ConanException("Conf '{}' cannot have a package pattern".format(line))
+
+        conf = self._pattern_confs.setdefault(pattern, Conf())
+        conf[name] = value
+
