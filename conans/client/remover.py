@@ -115,7 +115,7 @@ class ConanRemover(object):
         build_folders_to_remove = []
 
         if package_ids is not None:
-            if len(package_ids) > 0:
+            if len(package_ids) == 0:
                 package_folders_to_remove = all_package_revisions
             for package_id in package_ids:
                 revision = package_id.split("#")[1] if "#" in package_id else None
@@ -126,7 +126,7 @@ class ConanRemover(object):
                 package_folders_to_remove.extend(prev)
 
         if build_ids is not None:
-            if len(build_ids) > 0:
+            if len(build_ids) == 0:
                 build_folders_to_remove = all_package_revisions
             for package_id in build_ids:
                 revision = package_id.split("#")[1] if "#" in package_id else None
@@ -140,7 +140,7 @@ class ConanRemover(object):
             ref_layout = self._cache.get_ref_layout(ref)
             ref_layout.remove_sources()
 
-        if not package_ids and not build_ids:
+        if package_ids is None and build_ids is None:
             for package in all_package_revisions:
                 package_layout = self._cache.get_pkg_layout(package)
                 self._cache.remove_layout(package_layout)
@@ -152,6 +152,8 @@ class ConanRemover(object):
             for package in build_folders_to_remove:
                 package_layout = self._cache.get_pkg_layout(package)
                 package_layout.remove_build_folder()
+                # also remove the build_id from the db if any
+                self._cache.update_reference(package, with_build_id="")
 
         if not src and remove_recipe:
             ref_layout = self._cache.get_ref_layout(ref)
