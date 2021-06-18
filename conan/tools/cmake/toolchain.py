@@ -549,8 +549,7 @@ class GenericSystemBlock(Block):
 
             if system_name is not None and system_version is None:
                 os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
-                op_system_version = settings.get_safe(os_ver_str)
-                system_version = op_system_version
+                system_version = settings.get_safe(os_ver_str)
 
             if system_name is not None and system_processor is None:
                 if arch != arch_build:
