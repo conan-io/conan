@@ -36,10 +36,10 @@ class CacheDatabase:
             self._references.dump(conn, output)
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None):
+                         new_path=None, new_remote=None, new_build_id=None):
         with self.connect() as conn:
             try:
-                self._references.update(conn, old_ref, new_ref, new_path, new_remote)
+                self._references.update(conn, old_ref, new_ref, new_path, new_remote, new_build_id)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.AlreadyExist(
                     f"Reference '{new_ref.full_reference}' already exists")
@@ -75,14 +75,14 @@ class CacheDatabase:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it
 
-    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False, with_build_id=None):
         with self.connect() as conn:
-            for it in self._references.get_prevs(conn, ref, only_latest_prev):
+            for it in self._references.get_prevs(conn, ref, only_latest_prev, with_build_id):
                 yield it
 
-    def get_package_ids(self, ref: ConanReference, only_latest_prev=False):
+    def get_package_ids(self, ref: ConanReference, only_latest_prev=False, with_build_id=None):
         with self.connect() as conn:
-            for it in self._references.get_pkgids(conn, ref, only_latest_prev):
+            for it in self._references.get_pkgids(conn, ref, only_latest_prev, with_build_id):
                 yield it
 
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):

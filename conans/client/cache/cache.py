@@ -2,6 +2,7 @@ import os
 import platform
 import shutil
 from collections import OrderedDict
+from io import StringIO
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
@@ -91,6 +92,17 @@ class ClientCache(object):
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
 
+    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_remote=None, new_build_id=None):
+        new_ref = ConanReference(new_ref) if new_ref else None
+        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
+                                                 new_remote, new_build_id)
+
+    def dump(self):
+        out = StringIO()
+        self._data_cache.dump(out)
+        return out.getvalue()
+
     def assign_rrev(self, layout: ReferenceLayout, ref: ConanReference):
         return self._data_cache.assign_rrev(layout, ref)
 
@@ -126,17 +138,17 @@ class ClientCache(object):
         return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
                 self._data_cache.list_references()]
 
-    def get_package_revisions(self, ref, only_latest_prev=False):
+    def get_package_revisions(self, ref, only_latest_prev=False, with_build_id=None):
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
                                    validate=False) for pref in
-            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev, with_build_id)]
 
-    def get_package_ids(self, ref, only_latest_prev=False):
+    def get_package_ids(self, ref, only_latest_prev=False, with_build_id=None):
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
                                    validate=False) for pref in
-            self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev)]
+            self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev, with_build_id)]
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
         return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in

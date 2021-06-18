@@ -13,7 +13,6 @@ from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID
 from conans.client.importer import remove_imports, run_imports
-from conans.client.packager import update_package_metadata
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
@@ -60,19 +59,27 @@ class _PackageBuilder(object):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
-        # TODO: cache2.0 FIX: we are not taking intto account the conanfile build_id
         skip_build = False
         build_folder = package_layout.build()
-        if pref.id != build_id(conanfile) and hasattr(conanfile, "build_id"):
-            # We are going to reuse the build folder from other reference
-            # get the latest package revision from this reference
-            latest_prevs = self._cache.get_package_ids(pref, only_latest_prev=True)
-            # If the latest_prev is the same we are building, we don't have packages yet for this recipe
-            # and we have to build
-            if latest_prevs and latest_prevs[0] != package_layout.reference:
-                other_pkg_layout = self._cache.get_pkg_layout(latest_prevs[0])
+        recipe_build_id = build_id(conanfile)
+        if pref.id != recipe_build_id and hasattr(conanfile, "build_id"):
+            # check if we already have a package with the calculated build_id
+            remove_this_var = self._cache.dump()
+            build_prev = self._cache.get_package_ids(pref, only_latest_prev=True,
+                                                     with_build_id=recipe_build_id)
+            if not build_prev:
+                build_prev = self._cache.get_package_ids(pref, only_latest_prev=True)
+
+            # If the latest_prev is the same we are building,
+            # we don't have packages yet for this recipe and we have to build
+            # also, if we are trying to build the package id that was assigned with
+            # the build_id number in the db we build again and re-create the build folder
+            if build_prev and build_prev[0].id != package_layout.reference.id:
+                other_pkg_layout = self._cache.get_pkg_layout(build_prev[0])
                 build_folder = other_pkg_layout.build()
                 skip_build = True
+            elif build_prev[0] == package_layout.reference:
+                self._cache.update_reference(build_prev[0], new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
@@ -91,7 +98,8 @@ class _PackageBuilder(object):
         conanfile_path = reference_layout.conanfile()
         source_folder = reference_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, self._cache, reference_layout, conanfile, pref.ref, remotes)
+        retrieve_exports_sources(self._remote_manager, self._cache, reference_layout, conanfile,
+                                 pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_build(None)
@@ -134,7 +142,8 @@ class _PackageBuilder(object):
         try:
             mkdir(conanfile.build_folder)
             with tools.chdir(conanfile.build_folder):
-                run_build_method(conanfile, self._hook_manager, reference=pref.ref, package_id=pref.id)
+                run_build_method(conanfile, self._hook_manager, reference=pref.ref,
+                                 package_id=pref.id)
             self._output.success("Package '%s' built" % pref.id)
             self._output.info("Build folder %s" % conanfile.build_folder)
         except Exception as exc:
@@ -189,11 +198,11 @@ class _PackageBuilder(object):
             set_dirty(base_build)
             self._prepare_sources(conanfile, pref, reference_layout, remotes)
             self._copy_sources(conanfile, base_source, base_build)
+            mkdir(base_build)
 
         # BUILD & PACKAGE
         # TODO: cache2.0 check locks
         # with package_layout.conanfile_read_lock(self._output):
-        mkdir(base_build)
         with tools.chdir(base_build):
             self._output.info('Building your package in %s' % base_build)
             try:
@@ -267,6 +276,7 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     #  to _handle_node_cache
     return package_layout
 
+
 def call_system_requirements(conanfile, output):
     try:
         return conanfile.system_requirements()
@@ -279,6 +289,7 @@ class BinaryInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
+
     def __init__(self, app, recorder):
         self._cache = app.cache
         self._out = app.out
@@ -434,7 +445,8 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                    pkg_layout = _handle_system_requirements(conan_file, node.pref, self._cache, output)
+                    pkg_layout = _handle_system_requirements(conan_file, node.pref, self._cache,
+                                                             output)
                     self._handle_node_cache(node, processed_package_refs, remotes, pkg_layout)
 
         # Finally, propagate information to root node (ref=None)
@@ -484,7 +496,8 @@ class BinaryInstaller(object):
             if build_folder is not None:
                 build_folder = os.path.join(base_path, build_folder)
                 output = conanfile.output
-                self._generator_manager.write_generators(conanfile, build_folder, build_folder, output)
+                self._generator_manager.write_generators(conanfile, build_folder, build_folder,
+                                                         output)
                 write_toolchain(conanfile, build_folder, output)
                 save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
                 output.info("Generated %s" % CONANINFO)
@@ -510,7 +523,7 @@ class BinaryInstaller(object):
             if node.binary == BINARY_BUILD:
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                 # TODO: cache2.0 check remove
-                #layout.package_remove(pref)
+                # layout.package_remove(pref)
                 with pkg_layout.set_dirty_context_manager():
                     pref = self._build_package(node, output, remotes, pkg_layout)
                 assert node.prev, "Node PREV shouldn't be empty"

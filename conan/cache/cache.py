@@ -144,6 +144,10 @@ class DataCache:
 
         return new_path
 
+    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_remote=None, new_build_id=None):
+        self.db.update_reference(old_ref, new_ref, new_path, new_remote, new_build_id)
+
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'
             can be used to filter and return only the latest recipe revision for each reference.
@@ -155,12 +159,13 @@ class DataCache:
         for it in self.db.get_recipe_revisions(ref, only_latest_rrev):
             yield it
 
-    def get_package_ids(self, ref: ConanReference, only_latest_prev=False):
-        for it in self.db.get_package_ids(ref, only_latest_prev):
+    def get_package_ids(self, ref: ConanReference, only_latest_prev=False, with_build_id=None):
+        for it in self.db.get_package_ids(ref, only_latest_prev, with_build_id):
             yield it
 
-    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
-        for it in self.db.get_package_revisions(ref, only_latest_prev):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False,
+                              with_build_id=None):
+        for it in self.db.get_package_revisions(ref, only_latest_prev, with_build_id):
             yield it
 
     def get_remote(self, ref: ConanReference):

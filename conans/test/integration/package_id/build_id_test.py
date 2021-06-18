@@ -54,31 +54,39 @@ class MyTest(ConanFile):
 class BuildIdTest(unittest.TestCase):
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
-        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("Pkg/0.1@user/channel"))
+        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
-        layout = client.cache.package_layout(pref_debug.ref)
-        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
+        prev_debug = client.cache.get_latest_prev(pref_debug)
+        layout = client.cache.get_pkg_layout(prev_debug)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
+        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
-        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
+        prev_release = client.cache.get_latest_prev(pref_release)
+        layout = client.cache.get_pkg_layout(prev_release)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
 
-        pref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
+        pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             "322de4b4a41f905f6b18f454ab5f498690b39c2a")
-        conaninfo = load(os.path.join(layout.package(pref_debug), "conaninfo.txt"))
+        prev_debug = client.cache.get_latest_prev(pref_debug)
+        layout = client.cache.get_pkg_layout(prev_debug)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
         self.assertNotIn("Release", conaninfo)
 
-        pref_release = PackageReference.loads("Pkg/0.1@user/channel:"
+        pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
-        conaninfo = load(os.path.join(layout.package(pref_release), "conaninfo.txt"))
+        prev_release = client.cache.get_latest_prev(pref_release)
+        layout = client.cache.get_pkg_layout(prev_release)
+        conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
@@ -291,9 +299,3 @@ class BuildIdTest(unittest.TestCase):
         client.run("create . pkg/0.1@user/channel", assert_error=True)
         self.assertIn("ERROR: pkg/0.1@user/channel: Error in build() method, line 5", client.out)
 
-    # TODO: don't forget to remove this test!!!
-    def test_custom(self):
-        client = TestClient()
-        client.current_folder = "/Users/carlos/Documents/developer/conan-develop/sandbox/build_id_tests"
-        client.run("create . -s build_type=Release")
-        client.run("create . -s build_type=Debug")
