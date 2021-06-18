@@ -24,7 +24,7 @@ from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.user_info import DepsUserInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, RUN_LOG_NAME
@@ -55,30 +55,31 @@ class _PackageBuilder(object):
         self._remote_manager = remote_manager
         self._generator_manager = generators
 
-    def _get_build_folder(self, conanfile, package_layout, pref):
+    def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
         # This function decides if the build folder should be re-used (not build again)
         # and returns the build folder
         skip_build = False
         build_folder = package_layout.build()
         recipe_build_id = build_id(conanfile)
+        pref = package_layout.reference
         if pref.id != recipe_build_id and hasattr(conanfile, "build_id"):
             # check if we already have a package with the calculated build_id
-            build_prev = self._cache.get_package_ids(pref, only_latest_prev=True,
-                                                     with_build_id=recipe_build_id)
-            if not build_prev:
-                build_prev = self._cache.get_package_ids(pref, only_latest_prev=True)
+            recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
+            prev_with_build_folder = self._cache.get_package_ids(recipe_ref, only_latest_prev=True,
+                                                                 with_build_id=recipe_build_id)
+            build_prev = prev_with_build_folder[0] if prev_with_build_folder else pref
 
             # If the latest_prev is the same we are building,
             # we don't have packages yet for this recipe and we have to build
             # also, if we are trying to build the package id that was assigned with
             # the build_id number in the db we build again and re-create the build folder
-            if build_prev and build_prev[0].id != package_layout.reference.id:
-                other_pkg_layout = self._cache.get_pkg_layout(build_prev[0])
+            if build_prev.id != pref.id:
+                other_pkg_layout = self._cache.get_pkg_layout(build_prev)
                 build_folder = other_pkg_layout.build()
                 skip_build = True
-            elif build_prev[0] == package_layout.reference:
-                self._cache.update_reference(build_prev[0], new_build_id=recipe_build_id)
+            elif build_prev == pref:
+                self._cache.update_reference(build_prev, new_build_id=recipe_build_id)
 
         if is_dirty(build_folder):
             self._output.warn("Build folder is dirty, removing it: %s" % build_folder)
@@ -188,7 +189,7 @@ class _PackageBuilder(object):
         conanfile_path = reference_layout.conanfile()
         base_package = package_layout.package()
 
-        base_build, skip_build = self._get_build_folder(conanfile, package_layout, pref)
+        base_build, skip_build = self._get_build_folder(conanfile, package_layout)
 
         # PREPARE SOURCES
         if not skip_build:

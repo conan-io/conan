@@ -79,3 +79,7 @@ class ConanReference:
             return f'{self.reference}#{self.rrev}:{self.pkgid}#{self.prev}'
         else:
             return f'{self.reference}#{self.rrev}'
+
+    @property
+    def recipe_reference(self):
+        return f'{self.reference}#{self.rrev}'
