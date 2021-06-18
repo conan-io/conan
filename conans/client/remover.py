@@ -89,7 +89,7 @@ class ConanRemover(object):
         self._remotes = remotes
 
     def _remote_remove(self, ref, package_ids, remote):
-        assert(isinstance(remote, Remote))
+        assert (isinstance(remote, Remote))
         if package_ids is None:
             result = self._remote_manager.remove_recipe(ref, remote)
             return result
@@ -104,23 +104,56 @@ class ConanRemover(object):
 
     # TODO: cache2.0 remove everything for the moment and consider other arguments
     #  in the future in case they remain
-    def _local_remove(self, ref, packages, src, build_ids, remove_recipe):
+    def _local_remove(self, ref, src, build_ids, package_ids):
         if self._cache.installed_as_editable(ref):
             self._user_io.out.warn(self._message_removing_editable(ref))
             return
 
+        remove_recipe = False if package_ids is not None or build_ids is not None else True
+        all_package_revisions = self._cache.get_package_revisions(ref)
+        package_folders_to_remove = []
+        build_folders_to_remove = []
+
+        if package_ids is not None:
+            if len(package_ids) > 0:
+                package_folders_to_remove = all_package_revisions
+            for package_id in package_ids:
+                revision = package_id.split("#")[1] if "#" in package_id else None
+                pref = PackageReference(ref, package_id, revision=revision)
+                prev = self._cache.get_package_revisions(pref)
+                if not prev:
+                    raise PackageNotFoundException(pref)
+                package_folders_to_remove.extend(prev)
+
+        if build_ids is not None:
+            if len(build_ids) > 0:
+                build_folders_to_remove = all_package_revisions
+            for package_id in build_ids:
+                revision = package_id.split("#")[1] if "#" in package_id else None
+                pref = PackageReference(ref, package_id, revision=revision)
+                prev = self._cache.get_package_revisions(pref)
+                if not prev:
+                    raise PackageNotFoundException(pref)
+                build_folders_to_remove.extend(prev)
+
         if src:
             ref_layout = self._cache.get_ref_layout(ref)
             ref_layout.remove_sources()
-        if build_ids is not None:
-            # TODO: cache2.0 not considered yet
-            pass
 
-        for package in packages:
-            package_layout = self._cache.get_pkg_layout(package)
-            self._cache.remove_layout(package_layout)
+        if not package_ids and not build_ids:
+            for package in all_package_revisions:
+                package_layout = self._cache.get_pkg_layout(package)
+                self._cache.remove_layout(package_layout)
+        else:
+            for package in package_folders_to_remove:
+                package_layout = self._cache.get_pkg_layout(package)
+                package_layout.remove_package_folder()
 
-        if not src and build_ids is None and remove_recipe:
+            for package in build_folders_to_remove:
+                package_layout = self._cache.get_pkg_layout(package)
+                package_layout.remove_build_folder()
+
+        if not src and remove_recipe:
             ref_layout = self._cache.get_ref_layout(ref)
             self._cache.remove_layout(ref_layout)
 
@@ -201,20 +234,7 @@ class ConanRemover(object):
                     if remote_name:
                         self._remote_remove(ref, package_ids, remote)
                     else:
-                        remove_recipe = False if package_ids is not None else True
-                        package_revisions = []
-                        if not package_ids:
-                            package_revisions = self._cache.get_package_revisions(ref)
-                        else:
-                            for package_id in package_ids:
-                                revision = package_id.split("#")[1] if "#" in package_id else None
-                                pref = PackageReference(ref, package_id, revision=revision)
-                                prev = self._cache.get_package_revisions(pref)
-                                if not prev:
-                                    raise PackageNotFoundException(pref)
-                                package_revisions.extend(prev)
-
-                        self._local_remove(ref, package_revisions, src, build_ids, remove_recipe)
+                        self._local_remove(ref, src, build_ids, package_ids)
                 except NotFoundException:
                     # If we didn't specify a pattern but a concrete ref, fail if there is no
                     # ref to remove

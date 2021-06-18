@@ -93,6 +93,20 @@ class ReferenceLayout:
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self._package_folder}: {str(e)}")
 
+    def remove_package_folder(self):
+        try:
+            rmdir(self.package())
+        except OSError as e:
+            raise ConanException(f"Couldn't remove folder {self.package()}: {str(e)}")
+
+    def remove_build_folder(self):
+        try:
+            rmdir(self.build())
+        except OSError as e:
+            raise ConanException(f"Couldn't remove folder {self.build()}: {str(e)}")
+
+    # TODO: cache2.0 make the method names uniform across the class and divide this class
+    #  in two
     def remove_sources(self):
         src_folder = self.source()
         try:
