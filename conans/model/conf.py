@@ -160,33 +160,32 @@ class ConfDefinition(object):
     def loads(self, text, profile=False):
         self._pattern_confs = {}
         for line in text.splitlines():
-            self.update_conf_line(line, profile=profile)
-
-    def update_conf_line(self, line, profile=False):
-        """
-        Validate the given [conf] line, extract the needed information and
-        add/update the internal Conf() dictionary
-        """
-        line = line.strip()
-        if not line or line.startswith("#"):
-            return
-        try:
-            left, value = line.split("=", 1)
-            value = value.strip()
-            left = left.strip()
-            if left.count(":") >= 2:
-                pattern, name = left.split(":", 1)
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                left, value = line.split("=", 1)
+            except ValueError:
+                raise ConanException("Error while parsing conf value '{}'".format(line))
             else:
-                pattern, name = None, left
-        except Exception:
-            raise ConanException("Error while parsing conf value '{}'".format(line))
+                self.update(left.strip(), value.strip(), profile=profile)
+
+    def update(self, key, value, profile=False):
+        """
+        Add/update a new/existing Conf line
+
+        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        """
+        if key.count(":") >= 2:
+            pattern, name = key.split(":", 1)
+        else:
+            pattern, name = None, key
 
         if not _is_profile_module(name):
             if profile:
-                raise ConanException("[conf] '{}' not allowed in profiles".format(line))
+                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
             if pattern is not None:
-                raise ConanException("Conf '{}' cannot have a package pattern".format(line))
+                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
 
         conf = self._pattern_confs.setdefault(pattern, Conf())
         conf[name] = value
-
