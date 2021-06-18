@@ -102,6 +102,20 @@ class ConanRemover(object):
         return "Package '{r}' is installed as editable, remove it first using " \
                "command 'conan editable remove {r}'".format(r=ref)
 
+    # TODO: cache2.0 refactor this part when we can change the implementation of search_packages
+    def _get_remove_folders(self, pref, ids, all_package_revisions):
+        folders_to_remove = []
+        if len(ids) == 0:
+            folders_to_remove = all_package_revisions
+        for package_id in ids:
+            revision = package_id.split("#")[1] if "#" in package_id else None
+            _pref = PackageReference(pref, package_id, revision=revision)
+            prev = self._cache.get_package_revisions(_pref)
+            if not prev:
+                raise PackageNotFoundException(_pref)
+            folders_to_remove.extend(prev)
+        return folders_to_remove
+
     # TODO: cache2.0 remove everything for the moment and consider other arguments
     #  in the future in case they remain
     def _local_remove(self, ref, src, build_ids, package_ids):
@@ -115,26 +129,10 @@ class ConanRemover(object):
         build_folders_to_remove = []
 
         if package_ids is not None:
-            if len(package_ids) == 0:
-                package_folders_to_remove = all_package_revisions
-            for package_id in package_ids:
-                revision = package_id.split("#")[1] if "#" in package_id else None
-                pref = PackageReference(ref, package_id, revision=revision)
-                prev = self._cache.get_package_revisions(pref)
-                if not prev:
-                    raise PackageNotFoundException(pref)
-                package_folders_to_remove.extend(prev)
+            package_folders_to_remove = self._get_remove_folders(ref, package_ids, all_package_revisions)
 
         if build_ids is not None:
-            if len(build_ids) == 0:
-                build_folders_to_remove = all_package_revisions
-            for package_id in build_ids:
-                revision = package_id.split("#")[1] if "#" in package_id else None
-                pref = PackageReference(ref, package_id, revision=revision)
-                prev = self._cache.get_package_revisions(pref)
-                if not prev:
-                    raise PackageNotFoundException(pref)
-                build_folders_to_remove.extend(prev)
+            build_folders_to_remove = self._get_remove_folders(ref, build_ids, all_package_revisions)
 
         if src:
             ref_layout = self._cache.get_ref_layout(ref)
