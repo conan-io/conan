@@ -70,10 +70,9 @@ class _PackageBuilder(object):
                                                                  with_build_id=recipe_build_id)
             build_prev = prev_with_build_folder[0] if prev_with_build_folder else pref
 
-            # If the latest_prev is the same we are building,
-            # we don't have packages yet for this recipe and we have to build
-            # also, if we are trying to build the package id that was assigned with
-            # the build_id number in the db we build again and re-create the build folder
+            # We are trying to build a package id different from the one that has the
+            # build_folder but belongs to the same recipe revision, so reuse the build_folder
+            # from the one that is already build
             if build_prev.id != pref.id:
                 other_pkg_layout = self._cache.get_pkg_layout(build_prev)
                 build_folder = other_pkg_layout.build()
