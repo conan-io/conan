@@ -49,7 +49,7 @@ def test_ios():
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsToolchain", "AutotoolsDeps"
 
             def build(self):
                 self.run("aclocal")

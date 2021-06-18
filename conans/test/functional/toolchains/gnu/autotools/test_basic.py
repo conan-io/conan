@@ -32,7 +32,7 @@ def test_autotools():
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
 
             def build(self):
                 self.run("aclocal")
@@ -79,7 +79,7 @@ def build_windows_subsystem(profile, make_program):
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "Makefile"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
 
             def build(self):
                 autotools = Autotools(self)
@@ -91,7 +91,9 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command("conanbuildenv", make_program, cwd=client.current_folder)
+    cmd = environment_wrap_command(["conanbuildenv",
+                                    "conanautotoolstoolchain",
+                                    "conanautotoolsdeps"], make_program, cwd=client.current_folder)
     client.run_command(cmd)
     client.run_command("app")
     # TODO: fill compiler version when ready
