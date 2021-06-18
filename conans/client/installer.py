@@ -64,7 +64,6 @@ class _PackageBuilder(object):
         recipe_build_id = build_id(conanfile)
         if pref.id != recipe_build_id and hasattr(conanfile, "build_id"):
             # check if we already have a package with the calculated build_id
-            remove_this_var = self._cache.dump()
             build_prev = self._cache.get_package_ids(pref, only_latest_prev=True,
                                                      with_build_id=recipe_build_id)
             if not build_prev:
