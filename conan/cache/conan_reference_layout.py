@@ -57,19 +57,6 @@ class ReferenceLayout:
         return os.path.join(self.base_folder, SYSTEM_REQS_FOLDER,
                             self._ref.pkgid, SYSTEM_REQS)
 
-    # TODO: cache2.0 locks
-    def package_remove(self):
-        assert self._ref.pkgid, "Must be a reference of a package"
-        # Here we could validate and check we own a write lock over this package
-        tgz_folder = self.download_package()
-        rmdir(tgz_folder)
-        try:
-            rmdir(self.package())
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (self.package(), str(e)))
-
     def package_manifests(self):
         package_folder = self.package()
         readed_manifest = FileTreeManifest.load(package_folder)
@@ -93,21 +80,30 @@ class ReferenceLayout:
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self._package_folder}: {str(e)}")
 
-    def remove_package_folder(self):
-        try:
-            rmdir(self.package())
-        except OSError as e:
-            raise ConanException(f"Couldn't remove folder {self.package()}: {str(e)}")
-
-    def remove_build_folder(self):
+    def build_remove(self):
         try:
             rmdir(self.build())
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self.build()}: {str(e)}")
 
+    # TODO: cache2.0 locks
+    def package_remove(self):
+        assert self._ref.pkgid, "Must be a reference of a package"
+        # Here we could validate and check we own a write lock over this package
+        tgz_folder = self.download_package()
+        rmdir(tgz_folder)
+        try:
+            rmdir(self.package())
+        except OSError as e:
+            raise ConanException("%s\n\nFolder: %s\n"
+                                 "Couldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % (self.package(), str(e)))
+        if is_dirty(self.package()):
+            clean_dirty(self.package())
+
     # TODO: cache2.0 make the method names uniform across the class and divide this class
     #  in two
-    def remove_sources(self):
+    def sources_remove(self):
         src_folder = self.source()
         try:
             rm_conandir(src_folder)  # This will remove the shortened path too if exists
