@@ -231,13 +231,15 @@ class QbsProfile(object):
                 {%- if build_variant %}
                 qbs.buildVariant: "{{ build_variant }}"
                 {%- endif %}
-                {%- if architecture %}
+                {%- if not _profile_values_from_setup["qbs.architecture"] and architecture %}
                 qbs.architecture: "{{ architecture }}"
                 {%- endif %}
+                {%- if not _profile_values_from_setup["qbs.targetPlatform"] %}
                 {%- if target_platform %}
                 qbs.targetPlatform: "{{ target_platform }}"
                 {%- else %}
                 qbs.targetPlatform: undefined
+                {%- endif %}
                 {%- endif %}
                 {%- if optimization %}
                 qbs.optimization: "{{ optimization }}"

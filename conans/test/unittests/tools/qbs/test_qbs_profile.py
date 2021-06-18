@@ -327,42 +327,140 @@ class QbsGenericTest(unittest.TestCase):
         }
         self.assertEqual(flags_from_env, expected_flags)
 
+        @staticmethod
+        def _generate_qbs_config_output():
+            return textwrap.dedent('''\
+                profiles.conan.cpp.cCompilerName: "gcc"
+                profiles.conan.cpp.compilerName: "g++"
+                profiles.conan.cpp.cxxCompilerName: "g++"
+                profiles.conan.cpp.driverFlags: \
+                ["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]
+                profiles.conan.cpp.platformCommonCompilerFlags: undefined
+                profiles.conan.cpp.platformLinkerFlags: undefined
+                profiles.conan.cpp.toolchainInstallPath: "/usr/bin"
+                profiles.conan.cpp.toolchainPrefix: "arm-none-eabi-"
+                profiles.conan.qbs.someBoolProp: "true"
+                profiles.conan.qbs.someIntProp: "13"
+                profiles.conan.qbs.toolchain: ["gcc"]
+                ''')
+
+        def test_read_qbs_toolchain_from_qbs_config_output(self):
+            expected_config = {
+                'cpp.cCompilerName': '"gcc"',
+                'cpp.compilerName': '"g++"',
+                'cpp.cxxCompilerName': '"g++"',
+                'cpp.driverFlags': '["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]',
+                'cpp.platformCommonCompilerFlags': 'undefined',
+                'cpp.platformLinkerFlags': 'undefined',
+                'cpp.toolchainInstallPath': '"/usr/bin"',
+                'cpp.toolchainPrefix': '"arm-none-eabi-"',
+                'qbs.someBoolProp': 'true',
+                'qbs.someIntProp': '13',
+                'qbs.toolchain': '["gcc"]'
+            }
+
+            conanfile = MockConanfileWithFolders(
+                MockSettings({}), runner=RunnerMock(
+                    expectations=[RunnerMock.Expectation(
+                        output=self._generate_qbs_config_output())]))
+            config = qbs._read_qbs_toolchain_from_config(conanfile)
+            self.assertEqual(len(conanfile.runner.command_called), 1)
+            self.assertEqual(conanfile.runner.command_called[0],
+                             'qbs-config --settings-dir "%s" --list' % (
+                                qbs._settings_dir(conanfile)))
+            self.assertEqual(config, expected_config)
+
+        @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
+        def test_toolchain_content(self):
+            expected_content = textwrap.dedent('''\
+                import qbs
+
+                Project {
+                    Profile {
+                        name: "conan_toolchain_profile"
+
+                        /* detected via qbs-setup-toolchains */
+                        cpp.cCompilerName: "gcc"
+                        cpp.compilerName: "g++"
+                        cpp.cxxCompilerName: "g++"
+                        cpp.driverFlags: ["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]
+                        cpp.platformCommonCompilerFlags: undefined
+                        cpp.platformLinkerFlags: undefined
+                        cpp.toolchainInstallPath: "/usr/bin"
+                        cpp.toolchainPrefix: "arm-none-eabi-"
+                        qbs.someBoolProp: true
+                        qbs.someIntProp: 13
+                        qbs.toolchain: ["gcc"]
+
+                        /* deduced from environment */
+                        qbs.sysroot: "/foo/bar/path"
+
+                        /* conan settings */
+                        qbs.buildVariant: "release"
+                        qbs.architecture: "x86_64"
+                        qbs.targetPlatform: "linux"
+                        qbs.optimization: "small"
+                        cpp.cxxLanguageVersion: "c++17"
+
+                        /* package options */
+                        cpp.positionIndependentCode: true
+                    }
+                }''')
+
+            conanfile = MockConanfileWithFolders(
+                MockSettings({
+                    'compiler': 'gcc',
+                    'compiler.cppstd': 17,
+                    'os': 'Linux',
+                    'build_type': 'MinSizeRel',
+                    'arch': 'x86_64'
+                }),
+                options=MockOptions({
+                    'fPIC': True
+                }),
+                runner=RunnerMock(
+                    expectations=[
+                        RunnerMock.Expectation(),
+                        RunnerMock.Expectation(
+                            output=self._generate_qbs_config_output()),
+                    ]))
+
+            with tools.environment_append({'SYSROOT': '/foo/bar/path'}):
+                qbs_toolchain = qbs.QbsProfile(conanfile)
+
+            self.assertEqual(qbs_toolchain.content, expected_content)
+
     @staticmethod
-    def _generate_qbs_config_output():
+    def _generate_qbs_config_output_msvc():
         return textwrap.dedent('''\
-            profiles.conan.cpp.cCompilerName: "gcc"
-            profiles.conan.cpp.compilerName: "g++"
-            profiles.conan.cpp.cxxCompilerName: "g++"
+            profiles.conan.cpp.compilerVersion: "19.28.29333"
+            profiles.conan.cpp.toolchainInstallPath: \
+            "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64"
+            profiles.conan.qbs.architecture: "x86_64"
+            profiles.conan.qbs.targetPlatform: "windows"
+            profiles.conan.qbs.toolchainType: "msvc"
             profiles.conan.cpp.driverFlags: \
             ["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]
-            profiles.conan.cpp.platformCommonCompilerFlags: undefined
-            profiles.conan.cpp.platformLinkerFlags: undefined
-            profiles.conan.cpp.toolchainInstallPath: "/usr/bin"
-            profiles.conan.cpp.toolchainPrefix: "arm-none-eabi-"
             profiles.conan.qbs.someBoolProp: "true"
             profiles.conan.qbs.someIntProp: "13"
-            profiles.conan.qbs.toolchain: ["gcc"]
             ''')
 
-    def test_read_qbs_toolchain_from_qbs_config_output(self):
+    def test_read_qbs_toolchain_from_qbs_config_output_msvc(self):
         expected_config = {
-            'cpp.cCompilerName': '"gcc"',
-            'cpp.compilerName': '"g++"',
-            'cpp.cxxCompilerName': '"g++"',
+            'cpp.compilerVersion': '"19.28.29333"',
+            'cpp.toolchainInstallPath': '"C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64"',
+            'qbs.architecture': '"x86_64"',
+            'qbs.targetPlatform': '"windows"',
+            'qbs.toolchainType': '"msvc"',
             'cpp.driverFlags': '["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]',
-            'cpp.platformCommonCompilerFlags': 'undefined',
-            'cpp.platformLinkerFlags': 'undefined',
-            'cpp.toolchainInstallPath': '"/usr/bin"',
-            'cpp.toolchainPrefix': '"arm-none-eabi-"',
             'qbs.someBoolProp': 'true',
             'qbs.someIntProp': '13',
-            'qbs.toolchain': '["gcc"]'
         }
 
         conanfile = MockConanfileWithFolders(
             MockSettings({}), runner=RunnerMock(
                 expectations=[RunnerMock.Expectation(
-                    output=self._generate_qbs_config_output())]))
+                    output=self._generate_qbs_config_output_msvc())]))
         config = qbs._read_qbs_toolchain_from_config(conanfile)
         self.assertEqual(len(conanfile.runner.command_called), 1)
         self.assertEqual(conanfile.runner.command_called[0],
@@ -371,7 +469,7 @@ class QbsGenericTest(unittest.TestCase):
         self.assertEqual(config, expected_config)
 
     @unittest.skipIf(six.PY2, "Order of qbs output is defined only for PY3")
-    def test_toolchain_content(self):
+    def test_toolchain_content_msvc(self):
         expected_content = textwrap.dedent('''\
             import qbs
 
@@ -380,27 +478,22 @@ class QbsGenericTest(unittest.TestCase):
                     name: "conan_toolchain_profile"
 
                     /* detected via qbs-setup-toolchains */
-                    cpp.cCompilerName: "gcc"
-                    cpp.compilerName: "g++"
-                    cpp.cxxCompilerName: "g++"
+                    cpp.compilerVersion: "19.28.29333"
+                    cpp.toolchainInstallPath: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64"
+                    qbs.architecture: "x86_64"
+                    qbs.targetPlatform: "windows"
+                    qbs.toolchainType: "msvc"
                     cpp.driverFlags: ["-march=armv7e-m", "-mtune=cortex-m4", "--specs=nosys.specs"]
-                    cpp.platformCommonCompilerFlags: undefined
-                    cpp.platformLinkerFlags: undefined
-                    cpp.toolchainInstallPath: "/usr/bin"
-                    cpp.toolchainPrefix: "arm-none-eabi-"
                     qbs.someBoolProp: true
                     qbs.someIntProp: 13
-                    qbs.toolchain: ["gcc"]
 
                     /* deduced from environment */
                     qbs.sysroot: "/foo/bar/path"
 
                     /* conan settings */
                     qbs.buildVariant: "release"
-                    qbs.architecture: "x86_64"
-                    qbs.targetPlatform: "linux"
                     qbs.optimization: "small"
-                    cpp.cxxLanguageVersion: "c++17"
+                    cpp.runtimeLibrary: "dynamic"
 
                     /* package options */
                     cpp.positionIndependentCode: true
@@ -409,11 +502,12 @@ class QbsGenericTest(unittest.TestCase):
 
         conanfile = MockConanfileWithFolders(
             MockSettings({
-                'compiler': 'gcc',
-                'compiler.cppstd': 17,
-                'os': 'Linux',
+                'compiler': 'Visual Studio',
+                'compiler.version': 16,
+                'compiler.runtime': 'MD',
+                'os': 'Windows',
                 'build_type': 'MinSizeRel',
-                'arch': 'x86_64'
+                'arch': 'x86_64',
             }),
             options=MockOptions({
                 'fPIC': True
@@ -422,7 +516,7 @@ class QbsGenericTest(unittest.TestCase):
                 expectations=[
                     RunnerMock.Expectation(),
                     RunnerMock.Expectation(
-                        output=self._generate_qbs_config_output()),
+                        output=self._generate_qbs_config_output_msvc()),
                 ]))
 
         with tools.environment_append({'SYSROOT': '/foo/bar/path'}):
