@@ -153,7 +153,7 @@ class ConanRemover(object):
                 package_layout = self._cache.get_pkg_layout(package)
                 package_layout.remove_build_folder()
                 # also remove the build_id from the db if any
-                self._cache.update_reference(package, with_build_id="")
+                self._cache.update_reference(package, new_build_id="")
 
         if not src and remove_recipe:
             ref_layout = self._cache.get_ref_layout(ref)

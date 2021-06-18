@@ -154,60 +154,57 @@ class BuildIdTest(unittest.TestCase):
         self.assertEqual("Release file1", content)
         self._check_conaninfo(client)
 
+        # TODO: cache2.0 check if we will maintain the remove -p
         # Check that repackaging works, not necessary to re-build
-        # TODO: cache2.0 remove -p and -b is not yet fully implemented
-        #  we are commenting the first part of this until it is
-        client.run("remove Pkg/0.1@user/channel -p -f")
-        # Windows Debug
-        client.run('install . -s os=Windows -s build_type=Debug')
-        #self.assertNotIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        # Windows Release
-        client.run('install . -s os=Windows -s build_type=Release')
-        self.assertNotIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        # Now Linux
-        client.run('install . -s os=Linux -s build_type=Debug')
-        self.assertIn("Building package from source as defined by build_policy='missing'",
-                      client.out)
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Debug!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Debug file1", content)
-        client.run('install . -s os=Linux -s build_type=Release')
-        self.assertIn("Building my code!", client.out)
-        self.assertIn("Packaging Release!", client.out)
-        content = client.load("file1.txt")
-        self.assertEqual("Release file1", content)
-        self._check_conaninfo(client)
+        # client.run("remove Pkg/0.1@user/channel -p -f")
+        # # Windows Debug
+        # client.run('install . -s os=Windows -s build_type=Debug')
+        # self.assertNotIn("Building my code!", client.out)
+        # self.assertIn("Packaging Debug!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Debug file1", content)
+        # # Windows Release
+        # client.run('install . -s os=Windows -s build_type=Release')
+        # self.assertNotIn("Building my code!", client.out)
+        # self.assertIn("Packaging Release!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Release file1", content)
+        # # Now Linux
+        # client.run('install . -s os=Linux -s build_type=Debug')
+        # self.assertIn("Building package from source as defined by build_policy='missing'",
+        #               client.out)
+        # self.assertIn("Building my code!", client.out)
+        # self.assertIn("Packaging Debug!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Debug file1", content)
+        # client.run('install . -s os=Linux -s build_type=Release')
+        # self.assertIn("Building my code!", client.out)
+        # self.assertIn("Packaging Release!", client.out)
+        # content = client.load("file1.txt")
+        # self.assertEqual("Release file1", content)
+        # self._check_conaninfo(client)
 
         # But if the build folder is removed, the packages are there, do nothing
-        # TODO: cache2.0 remove -p and -b is not yet fully implemented
-        #  we are commenting the first part of this until it is
         client.run("remove Pkg/0.1@user/channel -b -f")
         client.run('install . -s os=Windows -s build_type=Debug')
-        #self.assertNotIn("Building my code!", client.out)
-        #self.assertNotIn("Packaging Debug!", client.out)
+        self.assertNotIn("Building my code!", client.out)
+        self.assertNotIn("Packaging Debug!", client.out)
         content = client.load("file1.txt")
         self.assertEqual("Debug file1", content)
         client.run('install . -s os=Windows -s build_type=Release')
-        #self.assertNotIn("Building my code!", client.out)
-        #self.assertNotIn("Packaging Release!", client.out)
+        self.assertNotIn("Building my code!", client.out)
+        self.assertNotIn("Packaging Release!", client.out)
         content = client.load("file1.txt")
         self.assertEqual("Release file1", content)
         # Now Linux
         client.run('install . -s os=Linux -s build_type=Debug')
-        #self.assertNotIn("Building my code!", client.out)
-        #self.assertNotIn("Packaging Debug!", client.out)
+        self.assertNotIn("Building my code!", client.out)
+        self.assertNotIn("Packaging Debug!", client.out)
         content = client.load("file1.txt")
         self.assertEqual("Debug file1", content)
         client.run('install . -s os=Linux -s build_type=Release')
-        #self.assertNotIn("Building my code!", client.out)
-        #self.assertNotIn("Packaging Release!", client.out)
+        self.assertNotIn("Building my code!", client.out)
+        self.assertNotIn("Packaging Release!", client.out)
         content = client.load("file1.txt")
         self.assertEqual("Release file1", content)
         self._check_conaninfo(client)
