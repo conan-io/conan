@@ -35,6 +35,11 @@ int {{name}}(){
     std::cout << "  {{ msg or name }} __x86_64__ defined\n";
     #endif
 
+    // Libstdc++
+    #if defined _GLIBCXX_USE_CXX11_ABI
+    std::cout << "  {{ msg or name }} _GLIBCXX_USE_CXX11_ABI "<< _GLIBCXX_USE_CXX11_ABI << "\n";
+    #endif
+
     // COMPILER VERSIONS
     #if _MSC_VER
     std::cout << "  {{ msg or name }} _MSC_VER" << _MSC_VER<< "\n";

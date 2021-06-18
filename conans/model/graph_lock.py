@@ -510,9 +510,19 @@ class GraphLock(object):
         the lockfile. Requires remove their version ranges.
         """
         if not node.graph_lock_node:
+            # For --build-require case, this is the moment the build require can be locked
+            if build_requires and node.recipe == RECIPE_VIRTUAL:
+                for require in requires:
+                    node_id = self._find_node_by_requirement(require.ref)
+                    locked_ref = self._nodes[node_id].ref
+                    require.lock(locked_ref, node_id)
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
-            if self._relaxed:
+            # If it is a test_package, with a build_require, it shouldn't even try to find it in
+            # lock, build_requires are private, if node is not locked, dont lokk for them
+            # https://github.com/conan-io/conan/issues/8744
+            # TODO: What if a test_package contains extra requires?
+            if self._relaxed and not build_requires:
                 for require in requires:
                     locked_id = self._match_relaxed_require(require.ref)
                     if locked_id:
@@ -555,6 +565,8 @@ class GraphLock(object):
         if self._relaxed:
             return
         locked_node = node.graph_lock_node
+        if locked_node is None:
+            return
         locked_requires = locked_node.build_requires
         if not locked_requires:
             return
@@ -584,7 +596,8 @@ class GraphLock(object):
         if version_range:
             for id_, node in self._nodes.items():
                 root_ref = node.ref
-                if (ref.name == root_ref.name and ref.user == root_ref.user and
+                if (root_ref is not None and ref.name == root_ref.name and
+                        ref.user == root_ref.user and
                         ref.channel == root_ref.channel):
                     output = []
                     result = satisfying([str(root_ref.version)], version_range, output)

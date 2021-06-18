@@ -47,8 +47,8 @@ class ConanFileLoader(object):
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display, user, channel,
-                                  self._requester)
+            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
                     conanfile.init()
@@ -85,7 +85,8 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display, user, channel, self._requester)
+            result = conanfile(self._output, self._runner, display, user, channel)
+            result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
                     result.init()
@@ -297,7 +298,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None):
+                     build_requires_options=None, is_build_require=False):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
@@ -306,8 +307,11 @@ class ConanFileLoader(object):
         conanfile.conf = profile_host.conf.get_conanfile_conf(None)
         conanfile.settings = profile_host.processed_settings.copy_values()
 
-        for reference in references:
-            conanfile.requires.add_ref(reference)
+        if is_build_require:
+            conanfile.build_requires = [str(r) for r in references]
+        else:
+            for reference in references:
+                conanfile.requires.add_ref(reference)
 
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True

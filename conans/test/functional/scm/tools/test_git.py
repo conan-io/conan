@@ -1,5 +1,6 @@
 # coding=utf-8
 import os
+import re
 import subprocess
 import unittest
 
@@ -397,9 +398,11 @@ class GitToolsTests(unittest.TestCase):
 
     def test_get_tag_no_git_repo(self):
         # Try to get tag out of a git repo
-        git = Git(folder=temp_folder())
-        with six.assertRaisesRegex(self, ConanException,
-                                   "Not a valid 'git' repository or 'git' not found"):
+        tmp_folder = temp_folder()
+        git = Git(folder=tmp_folder)
+        pattern = "'{0}' is not a valid 'git' repository or 'git' not found".format(
+            re.escape(tmp_folder))
+        with six.assertRaisesRegex(self, ConanException, pattern):
             git.get_tag()
 
     def test_excluded_files(self):

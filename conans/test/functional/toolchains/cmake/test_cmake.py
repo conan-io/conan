@@ -8,9 +8,11 @@ import pytest
 from parameterized.parameterized import parameterized
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.toolchain
@@ -23,7 +25,7 @@ class Base(unittest.TestCase):
         class App(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
             requires = "hello/0.1"
-            generators = "cmake_find_package_multi"
+            generators = "CMakeDeps"
             options = {"shared": [True, False], "fPIC": [True, False]}
             default_options = {"shared": False, "fPIC": True}
 
@@ -93,7 +95,7 @@ class Base(unittest.TestCase):
         """)
 
     def setUp(self):
-        self.client = TestClient(path_with_spaces=True)
+        self.client = TestClient()
         conanfile = textwrap.dedent("""
             from conans import ConanFile
             from conans.tools import save
@@ -187,12 +189,16 @@ class WinTest(Base):
                     "build_type": build_type,
                     }
         options = {"shared": shared}
+        save(self.client.cache.new_config_path,
+             "tools.cmake.cmaketoolchain:msvc_parallel_compile=1")
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
 
         # FIXME: Hardcoded VS version and partial toolset check
+        toolchain_path = os.path.join(self.client.current_folder, "build",
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('CMake command: cmake -G "Visual Studio 15 2017" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
         if toolset == "v140":
             self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
         else:
@@ -245,7 +251,6 @@ class WinTest(Base):
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_RELEASE"
-
                        })
         self._run_app("Debug", bin_folder=True)
         check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
@@ -255,11 +260,11 @@ class WinTest(Base):
                        "MYDEFINE_CONFIG": "MYDEF_DEBUG"
                        })
 
-        static = (runtime == "static" or "MT" in runtime)
+        static_runtime = True if runtime == "static" or "MT" in runtime else False
         check_vs_runtime("build/Release/app.exe", self.client, "15", build_type="Release",
-                         static=static)
+                         static_runtime=static_runtime)
         check_vs_runtime("build/Debug/app.exe", self.client, "15", build_type="Debug",
-                         static=static)
+                         static_runtime=static_runtime)
 
         self._modify_code()
         time.sleep(1)
@@ -272,6 +277,7 @@ class WinTest(Base):
     @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
                            ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool_mingw64
+    @pytest.mark.tool_cmake(version="3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
         # FIXME: The version and cppstd are wrong, toolchain doesn't enforce it
         settings = {"compiler": "gcc",
@@ -285,8 +291,11 @@ class WinTest(Base):
         install_out = self._run_build(settings, options)
         self.assertIn("WARN: Toolchain: Ignoring fPIC option defined for Windows", install_out)
         self.assertIn("The C compiler identification is GNU", self.client.out)
+        toolchain_path = os.path.join(self.client.current_folder, "build",
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('CMake command: cmake -G "MinGW Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
+        assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
             cmake_vars = {"CMAKE_GENERATOR_PLATFORM": "",
@@ -338,9 +347,10 @@ class LinuxTest(Base):
                     "arch": arch,
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
-
+        toolchain_path = os.path.join(self.client.current_folder, "build",
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         pic_str = "" if shared else "ON"
@@ -395,8 +405,10 @@ class AppleTest(Base):
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
 
+        toolchain_path = os.path.join(self.client.current_folder, "build",
+                                      "conan_toolchain.cmake").replace("\\", "/")
         self.assertIn('CMake command: cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+                      '-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolchain_path), self.client.out)
 
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
@@ -410,7 +422,6 @@ class AppleTest(Base):
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": "-m64",
                 "CMAKE_EXE_LINKER_FLAGS": "-m64",
-                "CMAKE_SKIP_RPATH": "1",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
@@ -435,6 +446,50 @@ class AppleTest(Base):
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
+@pytest.mark.parametrize("version, vs_version",
+                         [("19.0", "15"),
+                          ("19.1", "15")])
+def test_msvc_vs_versiontoolset(version, vs_version):
+    settings = {"compiler": "msvc",
+                "compiler.version": version,
+                "compiler.runtime": "static",
+                "compiler.cppstd": "14",
+                "arch": "x86_64",
+                "build_type": "Release",
+                }
+    client = TestClient()
+    save(client.cache.new_config_path,
+         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+    conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+                options = {"shared": [True, False], "fPIC": [True, False]}
+                default_options = {"shared": False, "fPIC": True}
+                exports_sources = "*"
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+                    self.run("Release\\myapp.exe")
+            """)
+    cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
+    main = gen_function_cpp(name="main")
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "app.cpp": main,
+                 })
+    settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
+    client.run("create . app/1.0@ {}".format(settings))
+    assert '-G "Visual Studio 15 2017"' in client.out
+
+    check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
 
 
 @pytest.mark.toolchain
@@ -528,3 +583,57 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
+
+
+@pytest.mark.toolchain
+@pytest.mark.tool_cmake
+class TestCMakeFindPackagePreferConfig:
+
+    def test_prefer_config(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                generators = "CMakeToolchain"
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+            """)
+
+        cmakelist = textwrap.dedent("""
+            set(CMAKE_C_COMPILER_WORKS 1)
+            set(CMAKE_C_ABI_COMPILED 1)
+            cmake_minimum_required(VERSION 3.15)
+            project(my_project C)
+            find_package(Comandante REQUIRED)
+            """)
+
+        find = 'message(STATUS "using FindComandante.cmake")'
+        config = 'message(STATUS "using ComandanteConfig.cmake")'
+
+        profile = textwrap.dedent("""
+            include(default)
+            [conf]
+            tools.cmake.cmaketoolchain:find_package_prefer_config={}
+            """)
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "CMakeLists.txt": cmakelist,
+                     "FindComandante.cmake": find,
+                     "ComandanteConfig.cmake": config,
+                     "profile_true": profile.format(True),
+                     "profile_false": profile.format(False)})
+
+        client.run("install .")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_true")
+        client.run("build .")
+        assert "using ComandanteConfig.cmake" in client.out
+
+        client.run("install . --profile=profile_false")
+        client.run("build .")
+        assert "using FindComandante.cmake" in client.out

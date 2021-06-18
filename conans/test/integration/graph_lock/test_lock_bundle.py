@@ -103,6 +103,14 @@ def test_basic():
     assert nodes["3"].package_id == "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
     assert nodes["3"].prev == "9e99cfd92d0d7df79d687b01512ce844"
 
+    client.run("lock bundle clean-modified lock1.bundle")
+    bundle = client.load("lock1.bundle")
+    assert '"modified": true' not in bundle
+    lock1 = client.load("app1_windows.lock")
+    assert '"modified": true' not in lock1
+    lock2 = client.load("app2_linux.lock")
+    assert '"modified": true' not in lock2
+
 
 def test_build_requires():
     client = TestClient()

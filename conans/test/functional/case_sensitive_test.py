@@ -5,7 +5,7 @@ import unittest
 import pytest
 
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 conanfile = textwrap.dedent('''
@@ -29,17 +29,11 @@ class CaseSensitiveTest(unittest.TestCase):
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
 
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        client.save(files)
-        client.run("export . lasote/stable")
+        client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
+        client.run("create . lasote/stable")
+        client.run("upload Hello0/0.1@lasote/stable --all")
 
-        client.run("install Hello0/0.1@lasote/stable --build missing")
-        client.run("upload  Hello0/0.1@lasote/stable --all")
-
-        # If we try to install the same package with --build oudated it's already ok
-        files = cpp_hello_conan_files("Hello1", "0.1", deps=["hello0/0.1@lasote/stable"],
-                                      build=False)
-        client.save(files)
+        client.save({"conanfile.py": GenConanfile().with_requires("hello0/0.1@lasote/stable")})
         client.run("install .", assert_error=True)
         self.assertIn("found case incompatible recipe with name 'Hello0' in the cache", client.out)
 

@@ -8,7 +8,9 @@ import pytest
 
 from conans.client import tools
 from conans.paths import CONANFILE
+from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.runners import check_output_runner
 
@@ -53,45 +55,18 @@ class RunEnvironmentSharedTest(unittest.TestCase):
     def setUp(self):
         self.servers = {"default": TestServer()}
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        cmake = textwrap.dedent("""
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            set(CMAKE_CXX_ABI_COMPILED 1)
-            project(MyHello CXX)
-            cmake_minimum_required(VERSION 2.8.12)
-            add_library(hello SHARED hello.cpp)
-            add_executable(say_hello main.cpp)
-            target_link_libraries(say_hello hello)
-        """)
-
-        hello_h = textwrap.dedent("""
-            #ifdef WIN32
-              #define HELLO_EXPORT __declspec(dllexport)
-            #else
-              #define HELLO_EXPORT
-            #endif
-
-            HELLO_EXPORT void hello();
-        """)
-
-        hello_cpp = textwrap.dedent("""
-            #include "hello.h"
-            #include <iostream>
-            void hello(){
-                std::cout << "Hello Tool!\\n";
-            }
-        """)
-
-        main = textwrap.dedent("""
-            #include "hello.h"
-            int main(){
-                hello();
-            }
-        """)
+        cmake = gen_cmakelists(libname="hello", libsources=["hello.cpp"], libtype="SHARED",
+                               appname="say_hello", appsources=["main.cpp"])
+        hello_h = gen_function_h(name="hello")
+        hello_cpp = gen_function_cpp(name="hello", msg="Hello Tool!", includes=["hello"])
+        main = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile, CMake
             class Pkg(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
                 exports_sources = "*"
+
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()

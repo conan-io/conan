@@ -28,35 +28,35 @@ def test_compose():
     env2.define("MyVar5", "MyNewValue5")
 
     env.compose(env2)
-    assert env.value("MyVar") == "MyNewValue"
-    assert env.value("MyVar2") == 'MyValue2 MyNewValue2'
-    assert env.value("MyVar3") == 'MyNewValue3 MyValue3'
-    assert env.value("MyVar4") == ""
-    assert env.value("MyVar5") == 'MyNewValue5'
+    assert env.value("MyVar") == "MyValue"
+    assert env.value("MyVar2") == 'MyValue2'
+    assert env.value("MyVar3") == 'MyValue3'
+    assert env.value("MyVar4") == "MyValue4"
+    assert env.value("MyVar5") == ''
 
 
 @pytest.mark.parametrize("op1, v1, s1, op2, v2, s2, result",
-                         [("define", "Val1", " ", "define", "Val2", " ", "Val2"),
-                          ("define", "Val1", " ", "append", "Val2", " ", "Val1 Val2"),
-                          ("define", "Val1", " ", "prepend", "Val2", " ", "Val2 Val1"),
-                          ("define", "Val1", " ", "unset", "", " ", ""),
-                          ("append", "Val1", " ", "define", "Val2", " ", "Val2"),
-                          ("append", "Val1", " ", "append", "Val2", " ", "MyVar Val1 Val2"),
+                         [("define", "Val1", " ", "define", "Val2", " ", "Val1"),
+                          ("define", "Val1", " ", "append", "Val2", " ", "Val1"),
+                          ("define", "Val1", " ", "prepend", "Val2", " ", "Val1"),
+                          ("define", "Val1", " ", "unset", "", " ", "Val1"),
+                          ("append", "Val1", " ", "define", "Val2", " ", "Val2 Val1"),
+                          ("append", "Val1", " ", "append", "Val2", " ", "MyVar Val2 Val1"),
                           ("append", "Val1", " ", "prepend", "Val2", " ", "Val2 MyVar Val1"),
-                          ("append", "Val1", " ", "unset", "", " ", ""),
-                          ("prepend", "Val1", " ", "define", "Val2", " ", "Val2"),
+                          ("append", "Val1", " ", "unset", "", " ", "Val1"),
+                          ("prepend", "Val1", " ", "define", "Val2", " ", "Val1 Val2"),
                           ("prepend", "Val1", " ", "append", "Val2", " ", "Val1 MyVar Val2"),
-                          ("prepend", "Val1", " ", "prepend", "Val2", " ", "Val2 Val1 MyVar"),
-                          ("prepend", "Val1", " ", "unset", "", " ", ""),
-                          ("unset", "", " ", "define", "Val2", " ", "Val2"),
-                          ("unset", "", " ", "append", "Val2", " ", "Val2"),
-                          ("unset", "", " ", "prepend", "Val2", " ", "Val2"),
+                          ("prepend", "Val1", " ", "prepend", "Val2", " ", "Val1 Val2 MyVar"),
+                          ("prepend", "Val1", " ", "unset", "", " ", "Val1"),
+                          ("unset", "", " ", "define", "Val2", " ", ""),
+                          ("unset", "", " ", "append", "Val2", " ", ""),
+                          ("unset", "", " ", "prepend", "Val2", " ", ""),
                           ("unset", "", " ", "unset", "", " ", ""),
                           # different separators
-                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar+Val1-Val2"),
+                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar-Val2+Val1"),
                           ("append", "Val1", "+", "prepend", "Val2", "-", "Val2-MyVar+Val1"),
-                          ("unset", "", " ", "append", "Val2", "+", "Val2"),
-                          ("unset", "", " ", "prepend", "Val2", "+", "Val2"),
+                          ("unset", "", " ", "append", "Val2", "+", ""),
+                          ("unset", "", " ", "prepend", "Val2", "+", ""),
                           ])
 def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
     env = Environment()
@@ -74,21 +74,21 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
-                         [("define", "/path1", "define", "/path2", "/path2"),
-                          ("define", "/path1", "append", "/path2", "/path1:/path2"),
-                          ("define", "/path1", "prepend", "/path2", "/path2:/path1"),
-                          ("define", "/path1", "unset", "", ""),
-                          ("append", "/path1", "define", "/path2", "/path2"),
-                          ("append", "/path1", "append", "/path2", "MyVar:/path1:/path2"),
+                         [("define", "/path1", "define", "/path2", "/path1"),
+                          ("define", "/path1", "append", "/path2", "/path1"),
+                          ("define", "/path1", "prepend", "/path2", "/path1"),
+                          ("define", "/path1", "unset", "", "/path1"),
+                          ("append", "/path1", "define", "/path2", "/path2:/path1"),
+                          ("append", "/path1", "append", "/path2", "MyVar:/path2:/path1"),
                           ("append", "/path1", "prepend", "/path2", "/path2:MyVar:/path1"),
-                          ("append", "/path1", "unset", "", ""),
-                          ("prepend", "/path1", "define", "/path2", "/path2"),
+                          ("append", "/path1", "unset", "", "/path1"),
+                          ("prepend", "/path1", "define", "/path2", "/path1:/path2"),
                           ("prepend", "/path1", "append", "/path2", "/path1:MyVar:/path2"),
-                          ("prepend", "/path1", "prepend", "/path2", "/path2:/path1:MyVar"),
-                          ("prepend", "/path1", "unset", "", ""),
-                          ("unset", "", "define", "/path2", "/path2"),
-                          ("unset", "", "append", "/path2", "/path2"),
-                          ("unset", "", "prepend", "/path2", "/path2"),
+                          ("prepend", "/path1", "prepend", "/path2", "/path1:/path2:MyVar"),
+                          ("prepend", "/path1", "unset", "", "/path1"),
+                          ("unset", "", "define", "/path2", ""),
+                          ("unset", "", "append", "/path2", ""),
+                          ("unset", "", "prepend", "/path2", ""),
                           ("unset", "", "unset", "", ""),
                           ])
 def test_compose_path_combinations(op1, v1, op2, v2, result):
@@ -282,3 +282,53 @@ def test_windows_case_insensitive():
     assert "MyVar=!!" in out
     assert "MyVar1=MyValue1A MyValue1B!!" in out
     assert "MyVar1=!!" in out
+
+
+def test_dict_access():
+    env = Environment()
+    env.append("MyVar", "MyValue", separator="@")
+    ret = env.items()
+    assert dict(ret) == {"MyVar": "@MyValue"}
+
+    env = Environment()
+    env.prepend("MyVar", "MyValue", separator="@")
+    ret = env.items()
+    assert dict(ret) == {"MyVar": "MyValue@"}
+    assert env["MyVar"] == "MyValue@"
+
+    env2 = Environment()
+    env2.define("MyVar", "MyValue2")
+    env.compose(env2)
+    ret = env.items()
+    assert dict(ret) == {"MyVar": "MyValue@MyValue2"}
+
+    with pytest.raises(KeyError):
+        _ = env["Missing"]
+
+    # With previous values in the environment
+    env = Environment()
+    env.prepend("MyVar", "MyValue", separator="@")
+    old_env = dict(os.environ)
+    os.environ.update({"MyVar": "PreviousValue"})
+    try:
+        assert env["MyVar"] == "MyValue@PreviousValue"
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+    env = Environment()
+    env.append_path("MyVar", "MyValue")
+    old_env = dict(os.environ)
+    os.environ.update({"MyVar": "PreviousValue"})
+    try:
+        assert env["MyVar"] == "PreviousValue{}MyValue".format(os.pathsep)
+        with env.apply():
+            assert os.getenv("MyVar") == "PreviousValue{}MyValue".format(os.pathsep)
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
+
+    assert list(env.keys()) == ["MyVar"]
+    assert dict(env.items()) == {"MyVar": "{}MyValue".format(os.pathsep)}
+
+

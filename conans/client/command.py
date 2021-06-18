@@ -22,6 +22,7 @@ from conans.errors import ConanException, ConanInvalidConfiguration, NoRemoteAva
     ConanMigrationError
 from conans.model.ref import ConanFileReference, PackageReference, get_reference_fields, \
     check_valid_ref
+from conans.model.conf import DEFAULT_CONFIGURATION
 from conans.util.config_parser import get_bool_from_text
 from conans.util.files import exception_message_safe
 from conans.util.files import save
@@ -40,7 +41,7 @@ class Extender(argparse.Action):
           settings = ['cucumber:true']
     """
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
-        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        # Need None here in case `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
         if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
@@ -199,8 +200,13 @@ class Command(object):
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci-upload-url",
                             help='Define URL of the repository to upload')
+        parser.add_argument('-d', '--define', action='append')
 
         args = parser.parse_args(*args)
+
+        defines = args.define or []
+        defines = dict((n, v) for n, v in (d.split('=') for d in defines))
+
         self._warn_python_version()
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
@@ -215,7 +221,8 @@ class Command(object):
                         circleci_gcc_versions=args.ci_circleci_gcc,
                         circleci_clang_versions=args.ci_circleci_clang,
                         circleci_osx_versions=args.ci_circleci_osx,
-                        template=args.template)
+                        template=args.template,
+                        defines=defines)
 
     def inspect(self, *args):
         """
@@ -335,6 +342,8 @@ class Command(object):
         parser.add_argument("--ignore-dirty", default=False, action='store_true',
                             help='When using the "scm" feature with "auto" values, capture the'
                                  ' revision and url even if there are uncommitted changes')
+        parser.add_argument("--build-require", action='store_true', default=False,
+                            help='The provided reference is a build-require')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
@@ -372,7 +381,8 @@ class Command(object):
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
-                                      profile_build=profile_build)
+                                      profile_build=profile_build,
+                                      is_build_require=args.build_require)
         except ConanException as exc:
             info = exc.info
             raise
@@ -467,6 +477,8 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
+        parser.add_argument("--build-require", action='store_true', default=False,
+                            help='The provided reference is a build-require')
         parser.add_argument("-j", "--json", default=None, action=OnceArgument,
                             help='Path to a json file where the install information will be '
                             'written')
@@ -527,7 +539,8 @@ class Command(object):
                                                      install_folder=args.install_folder,
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
-                                                     lockfile_node_id=args.lockfile_node_id)
+                                                     lockfile_node_id=args.lockfile_node_id,
+                                                     is_build_require=args.build_require)
 
         except ConanException as exc:
             info = exc.info
@@ -556,6 +569,7 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='Remove an existing config element')
         set_subparser = subparsers.add_parser('set', help='Set a value for a configuration item')
         init_subparser = subparsers.add_parser('init', help='Initializes Conan configuration files')
+        list_subparser = subparsers.add_parser('list', help='List Conan configuration properties')
 
         get_subparser.add_argument("item", nargs="?", help="Item to print")
         home_subparser.add_argument("-j", "--json", default=None, action=OnceArgument,
@@ -621,6 +635,10 @@ class Command(object):
                                               target_folder=args.target_folder)
         elif args.subcommand == 'init':
             return self._conan.config_init(force=args.force)
+        elif args.subcommand == "list":
+            self._out.info("Supported Conan *experimental* conan.conf properties:")
+            for key, value in DEFAULT_CONFIGURATION.items():
+                self._out.writeln("{}: {}".format(key, value))
 
     def info(self, *args):
         """
@@ -1884,9 +1902,17 @@ class Command(object):
         clean_modified_cmd = subparsers.add_parser('clean-modified', help='Clean modified flags')
         clean_modified_cmd.add_argument('lockfile', help='Path to the lockfile')
 
+        install_cmd = subparsers.add_parser('install', help='Install a lockfile')
+        install_cmd.add_argument('lockfile', help='Path to the lockfile')
+        install_cmd.add_argument("--recipes", action="store_true",
+                                 help="Install only recipes, not binaries")
+        install_cmd.add_argument("-g", "--generator", nargs=1, action=Extender,
+                                 help='Generators to use')
+
         create_cmd = subparsers.add_parser('create',
                                            help='Create a lockfile from a conanfile or a reference')
-        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile")
+        create_cmd.add_argument("path", nargs="?", help="Path to a conanfile, including filename, "
+                                                        "like 'path/conanfile.py'")
         create_cmd.add_argument("--name", action=OnceArgument,
                                 help='Provide a package name if not specified in conanfile')
         create_cmd.add_argument("--version", action=OnceArgument,
@@ -1920,19 +1946,31 @@ class Command(object):
         build_order_bundle_cmd.add_argument("--json", action=OnceArgument,
                                             help="generate output file in json format")
 
+        update_help = ("Update both the bundle information as well as every individual lockfile, "
+                       "from the information that was modified in the individual lockfile. At the "
+                       "end, all lockfiles will have the same package revision for the binary of "
+                       "same package_id")
         update_bundle_cmd = bundle_subparsers.add_parser('update', help=update_help)
         update_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
+
+        clean_modified_bundle_cmd = bundle_subparsers.add_parser('clean-modified',
+                                                                 help='Clean modified flag')
+        clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
         args = parser.parse_args(*args)
         self._warn_python_version()
 
-        if args.subcommand == "update":
+        if args.subcommand == "install":
+            self._conan.lock_install(args.lockfile, generators=args.generator, recipes=args.recipes)
+        elif args.subcommand == "update":
             self._conan.lock_update(args.old_lockfile, args.new_lockfile)
         elif args.subcommand == "bundle":
             if args.bundlecommand == "create":
                 self._conan.lock_bundle_create(args.lockfiles, args.bundle_out)
             elif args.bundlecommand == "update":
                 self._conan.lock_bundle_update(args.bundle)
+            elif args.bundlecommand == "clean-modified":
+                self._conan.lock_bundle_clean_modified(args.bundle)
             elif args.bundlecommand == "build-order":
                 build_order = self._conan.lock_bundle_build_order(args.bundle)
                 self._out.writeln(build_order)
@@ -2260,6 +2298,8 @@ _help_build_policies = '''Optional, specify which packages to build from source.
                        source.
     --build=[pattern]  Build packages from source whose package reference matches the pattern. The
                        pattern uses 'fnmatch' style wildcards.
+    --build=![pattern] Excluded packages, which will not be built from the source, whose package
+                       reference matches the pattern. The pattern uses 'fnmatch' style wildcards.
 
     Default behavior: If you omit the '--build' option, the 'build_policy' attribute in conanfile.py
     will be used if it exists, otherwise the behavior is like '--build={}'.

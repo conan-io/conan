@@ -11,6 +11,8 @@ from conans.util.files import load, save
 from conans.model.ref import PackageReference, ConanFileReference
 
 
+CONAN_CENTER_REMOTE_NAME = "conancenter"
+
 Remote = namedtuple("Remote", "name url verify_ssl disabled")
 
 
@@ -108,6 +110,8 @@ class Remotes(object):
     @classmethod
     def defaults(cls):
         result = Remotes()
+        result._remotes[CONAN_CENTER_REMOTE_NAME] = Remote(CONAN_CENTER_REMOTE_NAME,
+                                                           "https://center.conan.io", True, False)
         result._remotes["conan-center"] = Remote("conan-center", "https://conan.bintray.com", True,
                                                  False)
         return result

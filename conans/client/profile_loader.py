@@ -82,17 +82,17 @@ class ProfileParser(object):
 
 
 def get_profile_path(profile_name, default_folder, cwd, exists=True):
-    def valid_path(_profile_path):
+    def valid_path(_profile_path, _profile_name=None):
         if exists and not os.path.isfile(_profile_path):
-            raise ConanException("Profile not found: %s" % _profile_path)
+            raise ConanException("Profile not found: {}".format(_profile_name or _profile_path))
         return _profile_path
 
     if os.path.isabs(profile_name):
         return valid_path(profile_name)
 
-    if profile_name[:2] in ("./", ".\\"):  # local
+    if profile_name[:2] in ("./", ".\\") or profile_name.startswith(".."):  # local
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        return valid_path(profile_path)
+        return valid_path(profile_path, profile_name)
 
     if not os.path.exists(default_folder):
         mkdir(default_folder)

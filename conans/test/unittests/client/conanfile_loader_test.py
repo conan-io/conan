@@ -323,7 +323,7 @@ class ImportModuleLoaderTest(unittest.TestCase):
         with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "requests", add_subdir_init)
 
-        # File does not exists in already existing module
+        # File does not exist in already existing module
         with six.assertRaisesRegex(self, ConanException, "Unable to load conanfile in"):
             self._create_and_load(myfunc1, value1, "conans", add_subdir_init)
 
