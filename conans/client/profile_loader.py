@@ -231,12 +231,11 @@ def _apply_inner_profile(doc, base_profile):
         base_profile.buildenv.compose(buildenv)
 
 
-def profile_from_args(profiles, settings, options, env, cwd, cache):
+def profile_from_args(profiles, settings, options, env, conf, cwd, cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
     default_profile = cache.default_profile  # Ensures a default profile creating
-
     if profiles is None:
         result = default_profile
     else:
@@ -245,7 +244,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
             tmp, _ = read_profile(p, cwd, cache.profiles_path)
             result.compose(tmp)
 
-    args_profile = _profile_parse_args(settings, options, env)
+    args_profile = _profile_parse_args(settings, options, env, conf)
 
     if result:
         result.compose(args_profile)
@@ -254,7 +253,7 @@ def profile_from_args(profiles, settings, options, env, cwd, cache):
     return result
 
 
-def _profile_parse_args(settings, options, envs):
+def _profile_parse_args(settings, options, envs, conf):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -294,14 +293,20 @@ def _profile_parse_args(settings, options, envs):
                 _env_values.add(name, EnvValues.load_value(value), package)
         return _env_values
 
-    result = Profile()
     options = _get_tuples_list_from_extender_arg(options)
-    result.options = OptionsValues(options)
     env, package_env = _get_simple_and_package_tuples(envs)
     env_values = _get_env_values(env, package_env)
-    result.env_values = env_values
     settings, package_settings = _get_simple_and_package_tuples(settings)
+
+    result = Profile()
+    result.options = OptionsValues(options)
+    result.env_values = env_values
     result.settings = OrderedDict(settings)
+    if conf:
+        result.conf = ConfDefinition()
+        result.conf.loads("\n".join(conf))
+
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
+
     return result

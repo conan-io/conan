@@ -404,7 +404,7 @@ class InfoTest2(unittest.TestCase):
                    assert_error=True)  # Re-uses debug from MyInstall folder
 
         self.assertIn("--install-folder cannot be used together with a"
-                      " host profile (-s, -o, -e or -pr)", client.out)
+                      " host profile (-s, -o, -e, -pr or -c)", client.out)
 
     def test_graph_html_embedded_visj(self):
         client = TestClient()
