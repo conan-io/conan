@@ -33,6 +33,7 @@ class MyPkg(ConanFile):
 
 class UploadTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 will remove -p make sense for 2.0?")
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
@@ -51,6 +52,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
                       % NO_SETTINGS_PACKAGE_ID, client.out)
 
+        # TODO: cache2.0 check if this makes sense for 2.0, xfail test for the moment
         client.run("remove Hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
         client.run("upload * --all --confirm")
 
