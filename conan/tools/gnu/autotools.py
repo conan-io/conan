@@ -15,7 +15,8 @@ class Autotools(object):
         self._build = None
         self._host = None
         self._target = None
-        self.environment_files = ["conanbuildenv", "conanautotoolstoolchain", "conanautotoolsdeps"]
+        self.environment_files = ["conanbuildenv", "conanautotoolstoolchain", "conanautotoolsdeps",
+                                  "conanvcvars"]
 
         args_path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
         if os.path.isfile(args_path):
