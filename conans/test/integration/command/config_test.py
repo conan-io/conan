@@ -1,7 +1,6 @@
 import json
 import os
 import pytest
-import platform
 
 
 from conans.errors import ConanException
@@ -197,6 +196,7 @@ def test_config_user_home_short_path():
     client.run('config set general.user_home_short="{}"'.format(short_folder))
     client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
     client.run("create . foobar/0.1.0@user/testing")
+    assert "Configuring sources in {}".format(short_folder) in client.out
     assert client.cache.config.short_paths_home == short_folder
 
 
