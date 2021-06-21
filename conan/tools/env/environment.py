@@ -38,7 +38,8 @@ def environment_wrap_command(filename, cmd, cwd=None):
         command = " && ".join('"{}"'.format(b) for b in bats)
         return "{} && {}".format(command, cmd)
     elif shs:
-        command = " && ".join(". ./{}".format(f) for f in shs)
+        curdir = "./" if cwd is None else ""
+        command = " && ".join(". {}{}".format(curdir, f) for f in shs)
         return "{} && {}".format(command, cmd)
     else:
         return cmd
