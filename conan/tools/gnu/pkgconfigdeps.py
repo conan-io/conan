@@ -85,8 +85,8 @@ class PkgConfigDeps(object):
                 public_comp_deps.append(
                     (get_target_namespace(req), get_component_alias(req, cmp_name)))
             else:  # Points to a component of same package
-                public_comp_deps.append(get_target_namespace(self._conanfile),
-                                        get_component_alias(self._conanfile, require))
+                public_comp_deps.append((get_target_namespace(self._conanfile),
+                                         get_component_alias(self._conanfile, require)))
         return public_comp_deps
 
     @property
@@ -110,7 +110,7 @@ class PkgConfigDeps(object):
                                                                               comp_gennames)
             else:
                 require_public_deps = [_d for _, _d in self._get_public_require_deps(dep.new_cpp_info)]
-                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info
+                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info,
                                                                    require_public_deps)
         return ret
 
@@ -131,7 +131,8 @@ class PkgConfigDeps(object):
             includedir_vars = varnames
             lines.extend(dir_lines)
 
-        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content", self.name)
+        pkg_config_custom_content = cpp_info.get_property("pkg_config_custom_content",
+                                                          "PkgConfigDeps")
         if pkg_config_custom_content:
             lines.append(pkg_config_custom_content)
 
