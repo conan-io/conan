@@ -137,13 +137,13 @@ class ProfileTest(unittest.TestCase):
         self.assertEqual(client.out, "MYVALUe\n")
 
         client.run("profile update conf.tools.ninja:jobs=10 ./MyProfile")
-        self.assertIn("tools.ninja:jobs=10", load(pr_path))
+        self.assertIn("[conf]\ntools.ninja:jobs=10", load(pr_path))
 
         client.run("profile get conf.tools.ninja:jobs ./MyProfile")
         self.assertEqual(client.out, "10\n")
 
         client.run("profile update conf.tools.gnu.make:jobs=20 ./MyProfile")
-        self.assertIn("[env]\nOneMyEnv=MYVALUe", load(pr_path))
+        self.assertIn("tools.gnu.make:jobs=20", load(pr_path))
 
         client.run("profile get conf.tools.gnu.make:jobs ./MyProfile")
         self.assertEqual(client.out, "20\n")
