@@ -21,6 +21,9 @@ class DataCache:
         self.db = CacheDatabase(filename=db_filename)
         self.db.initialize(if_not_exists=True)
 
+    def closedb(self):
+        self.db.close()
+
     def dump(self, output: StringIO):
         """ Maybe just for debugging purposes """
         output.write("*" * 40)

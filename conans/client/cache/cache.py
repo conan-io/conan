@@ -92,6 +92,9 @@ class ClientCache(object):
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
         self._data_cache = DataCache(self._store_folder, db_filename)
 
+    def closedb(self):
+        self._data_cache.closedb()
+
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
                          new_path=None, new_remote=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
