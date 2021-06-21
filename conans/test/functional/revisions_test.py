@@ -11,8 +11,9 @@ from conans import DEFAULT_REVISION_V1, load, ONLY_V2
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile
+from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
+from conans.util.files import save
 
 
 @pytest.mark.artifactory_ready
@@ -1575,3 +1576,25 @@ class ServerRevisionsIndexes(unittest.TestCase):
 
         latest = self.server.server_store.get_last_revision(self.ref)
         self.assertEqual(latest.revision, DEFAULT_REVISION_V1)
+
+
+def test_necessary_update():
+    # https://github.com/conan-io/conan/issues/7235
+    c = TestClient(default_server_user=True)
+    save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
+    c.run("config set general.revisions_enabled=True")
+    c.save({"conanfile.py": GenConanfile()})
+    c.run("create . pkg/0.1@")
+    rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
+    c.run("upload * --all -c")
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create . ")
+    rrev2 = "27ec09effe18a84f465dbc350e496335"
+    c.run("upload * --all -c")
+
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev1))})
+    c.run("install .")
+    assert rrev1 in c.out
+    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
+    c.run("install .")
+    assert rrev2 in c.out

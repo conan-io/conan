@@ -53,7 +53,7 @@ class SettingsCppStdTests(unittest.TestCase):
             """)
         save(self.cache.settings_path, settings_1_14_0)
         save(fullpath, t)
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with six.assertRaisesRegex(self, ConanException,
                                    "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
             r.process_settings(self.cache)
@@ -61,7 +61,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_no_value(self):
         self._save_profile()
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
         self.assertNotIn("compiler.cppstd", r.settings)
         self.assertNotIn("cppstd", r.settings)
@@ -69,7 +69,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_none(self):
         self._save_profile(compiler_cppstd="None")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "None")
         self.assertNotIn("cppstd", r.settings)
@@ -77,7 +77,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_valid(self):
         self._save_profile(compiler_cppstd="11")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertNotIn("cppstd", r.settings)
@@ -85,7 +85,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_invalid(self):
         self._save_profile(compiler_cppstd="13")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with six.assertRaisesRegex(self, ConanException, "Invalid setting '13' is not a valid "
                                                          "'settings.compiler.cppstd' value"):
             r.process_settings(self.cache)
@@ -94,7 +94,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_duplicated_None(self):
         self._save_profile(compiler_cppstd="None", cppstd="None")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "None")
         self.assertEqual(r.settings["cppstd"], "None")
@@ -102,7 +102,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_duplicated(self):
         self._save_profile(compiler_cppstd="11", cppstd="11")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one."):
@@ -113,7 +113,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_different(self):
         self._save_profile(cppstd="14", compiler_cppstd="11")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         with six.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
                                                          " together with 'cppstd'. Use only the"
                                                          " former one"):
@@ -122,7 +122,7 @@ class SettingsCppStdTests(unittest.TestCase):
     def test_value_from_cppstd(self):
         self._save_profile(cppstd="11")
 
-        r = profile_from_args(["default", ], [], [], [], cwd=self.tmp_folder, cache=self.cache)
+        r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
         r.process_settings(self.cache)
         self.assertNotIn('compiler.cppstd', r.settings)
         self.assertEqual(r.settings["cppstd"], "11")
