@@ -4,17 +4,22 @@ from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, build_type_flags
 from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
+from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
 from conan.tools.files import save
-from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.gnu.get_cppstd import cppstd_flag
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         build_type = self._conanfile.settings.get_safe("build_type")
+
+        self.configure_args = []
+        self.make_args = []
+        self.default_configure_install_args = False
 
         # TODO: compiler.runtime for Visual studio?
         # defines
@@ -140,8 +145,25 @@ class AutotoolsToolchain:
         self.generate_args()
 
     def generate_args(self):
-        args = {"build": self._build,
-                "host": self._host,
-                "target": self._target}
-        args = {k: v for k, v in args.items() if v is not None}
+        configure_args = []
+        configure_args.extend(self.configure_args)
+
+        if self.default_configure_install_args:
+            # If someone want arguments but not the defaults can pass them in args manually
+            configure_args.extend(
+                    ["--prefix=%s" % self._conanfile.package_folder.replace("\\", "/"),
+                     "--bindir=${prefix}/bin",
+                     "--sbindir=${prefix}/bin",
+                     "--libdir=${prefix}/lib",
+                     "--includedir=${prefix}/include",
+                     "--oldincludedir=${prefix}/include",
+                     "--datarootdir=${prefix}/share"])
+        user_args_str = args_to_string(self.configure_args)
+        for flag, var in (("host", self._host), ("build", self._build), ("target", self._target)):
+            if var and flag not in user_args_str:
+                configure_args.append('--{}={}'.format(flag, var))
+
+        args = {"configure_args": args_to_string(configure_args),
+                "make_args":  args_to_string(self.make_args)}
+
         save(self._conanfile, CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(args))
