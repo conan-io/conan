@@ -270,7 +270,7 @@ def test_multi_config_decentralized(client_setup):
     to_build = json.loads(json_file)
     lock_fileaux = pkgd2_lockfile
 
-    for ref, _, _ in to_build:
+    for ref, _, _, _ in to_build:
         print("******************** building: ", ref, "***************************")
         client_aux = TestClient(cache_folder=client.cache_folder)
         client_aux.save({"temp.lock": lock_fileaux})

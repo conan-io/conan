@@ -241,7 +241,13 @@ class DepsGraph(object):
         result = []
         for node in self.ordered_iterate():
             if node.binary == BINARY_BUILD:
-                result.append([repr(node.ref), node.package_id, node.context])
+                options = node.conanfile.options._package_options
+                options = " ".join(["-o {}:{}={}".format(node.ref.name, k, v)
+                                    for k, v in options.items()])
+                ref = repr(node.ref)
+                if "@" not in ref:
+                    ref = ref.replace("#", "@#")
+                result.append([ref, node.package_id, node.context, options])
         return result
 
     def by_levels(self, nodes_subset=None):
