@@ -85,7 +85,7 @@ def test_catalyst(arch):
         include(default)
         [settings]
         os = Macos
-        os.version = 13.0
+        os.version = 11.0
         os.sdk = macosx
         os.subsystem = catalyst
         arch = {arch}
@@ -134,4 +134,4 @@ def test_catalyst(arch):
 
     if arch == "x86_64":
         t.run_command('"%s"' % app)
-        assert "running catalyst 130000" in t.out
+        assert "running catalyst 110000" in t.out
