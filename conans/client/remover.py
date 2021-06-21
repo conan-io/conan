@@ -103,7 +103,7 @@ class ConanRemover(object):
                "command 'conan editable remove {r}'".format(r=ref)
 
     # TODO: cache2.0 refactor this part when we can change the implementation of search_packages
-    def _get_remove_folders(self, pref, ids, all_package_revisions):
+    def _get_revisions_to_remove(self, pref, ids, all_package_revisions):
         folders_to_remove = []
         if len(ids) == 0:
             folders_to_remove = all_package_revisions
@@ -125,14 +125,14 @@ class ConanRemover(object):
 
         remove_recipe = False if package_ids is not None or build_ids is not None else True
         all_package_revisions = self._cache.get_package_revisions(ref)
-        package_folders_to_remove = []
-        build_folders_to_remove = []
+        prev_remove = []
+        prev_remove_build = []
 
         if package_ids is not None:
-            package_folders_to_remove = self._get_remove_folders(ref, package_ids, all_package_revisions)
+            prev_remove = self._get_revisions_to_remove(ref, package_ids, all_package_revisions)
 
         if build_ids is not None:
-            build_folders_to_remove = self._get_remove_folders(ref, build_ids, all_package_revisions)
+            prev_remove_build = self._get_revisions_to_remove(ref, build_ids, all_package_revisions)
 
         if src:
             ref_layout = self._cache.get_ref_layout(ref)
@@ -143,11 +143,12 @@ class ConanRemover(object):
                 package_layout = self._cache.get_pkg_layout(package)
                 self._cache.remove_layout(package_layout)
         else:
-            for package in package_folders_to_remove:
+            # for -p argument we remove the whole package, for -b just the build folder
+            for package in prev_remove:
                 package_layout = self._cache.get_pkg_layout(package)
-                package_layout.package_remove()
+                self._cache.remove_layout(package_layout)
 
-            for package in build_folders_to_remove:
+            for package in prev_remove_build:
                 package_layout = self._cache.get_pkg_layout(package)
                 package_layout.build_remove()
                 # also remove the build_id from the db if any

@@ -90,7 +90,6 @@ class V3D(ConanFile):
         self.assertIn("set(CONAN_LIBS mypackage zlib ${CONAN_LIBS})", conanbuildinfo)
         self.assertNotIn("bzip2", conanbuildinfo)
 
-    @pytest.mark.xfail(reason="cache2.0: revisit remove -p for 2.0")
     def test_multiple_private_skip(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
