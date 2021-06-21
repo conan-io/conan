@@ -527,6 +527,10 @@ class GenericSystemBlock(Block):
         return None
 
     def _get_cross_build(self):
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        if user_toolchain is not None:
+            return None, None, None  # Will be provided by user_toolchain
+
         system_name = self._conanfile.conf["tools.cmake.cmaketoolchain:system_name"]
         system_version = self._conanfile.conf["tools.cmake.cmaketoolchain:system_version"]
         system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
@@ -567,9 +571,10 @@ class GenericSystemBlock(Block):
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
+        compiler = self._conanfile.settings.get_safe("compiler")
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
-                and "Visual" in self._conanfile.settings.compiler):
+                and ("Visual" in compiler or compiler == "msvc")):
             compiler = "cl"
         else:
             compiler = None  # compiler defined by default
@@ -578,6 +583,7 @@ class GenericSystemBlock(Block):
         build_type = build_type if not is_multi_configuration(generator) else None
 
         system_name, system_version, system_processor = self._get_cross_build()
+
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
