@@ -47,7 +47,8 @@ def test_target_triple():
     with open(CONAN_TOOLCHAIN_ARGS_FILE) as f:
         obj = json.load(f)
 
-    assert obj["configure_args"] == "'--host=x86_64-linux-gnu' '--build=i686-solaris'"
+    assert "--host=x86_64-linux-gnu" in obj["configure_args"]
+    assert "--build=i686-solaris" in obj["configure_args"]
     assert obj["make_args"] == "'foo' 'var'"
 
 
