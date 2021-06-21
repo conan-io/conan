@@ -3,7 +3,7 @@ from conans.model.new_build_info import NewCppInfo
 
 class AutoToolsDepsFlags(object):
 
-    def __init__(self, conanfile, cpp_info: NewCppInfo):
+    def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
 
         # From cppinfo, calculated flags
