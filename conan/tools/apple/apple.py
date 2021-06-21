@@ -44,17 +44,6 @@ def apple_sdk_name(settings):
     return os_sdk or _guess_apple_sdk_name(os_, arch)
 
 
-def apple_deployment_target_env(os_, os_version):
-    """environment variable name which controls deployment target"""
-    env_name = {'Macos': 'MACOSX_DEPLOYMENT_TARGET',
-                'iOS': 'IOS_DEPLOYMENT_TARGET',
-                'watchOS': 'WATCHOS_DEPLOYMENT_TARGET',
-                'tvOS': 'TVOS_DEPLOYMENT_TARGET'}.get(str(os_))
-    if not env_name:
-        return {}
-    return {env_name: os_version}
-
-
 def apple_min_version_flag(conanfile):
     """compiler flag name which controls deployment target"""
     os_version = conanfile.settings.get_safe("os.version")
