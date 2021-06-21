@@ -418,6 +418,26 @@ class FindConfigFiles(Block):
                 "generators_folder": "${CMAKE_CURRENT_LIST_DIR}"}
 
 
+class MapImportedConfig(Block):
+    template = textwrap.dedent("""
+        {% if find_package_prefer_config %}
+        kk a da sdset(CMAKE_MAP_IMPORTED_CONFIG_{{build_type}} Release)
+        {% endif %}
+        """)
+
+    def context(self):
+        build_type = self._conanfile.settings.get_safe("build_type")
+        if build_type is None:
+            return
+        mapped_build_types = [build_type]
+        for dep in self._conanfile.dependencies.host.values():
+            dep_build_type = dep.settings.get_safe("build_type")
+            if dep_build_type is not None and dep_build_type not in mapped_build_types:
+                mapped_build_types.append(dep_build_type)
+        return {"build_type": build_type,
+                "mapped_build_types": ";".join(mapped_build_types)}
+
+
 class UserToolchain(Block):
     template = textwrap.dedent("""
         {% if user_toolchain %}
@@ -691,6 +711,7 @@ class CMakeToolchain(object):
                                        ("parallel", ParallelBlock),
                                        ("cmake_flags_init", CMakeFlagsInitBlock),
                                        ("try_compile", TryCompileBlock),
+                                       ("map_imported_config", MapImportedConfig),
                                        ("find_paths", FindConfigFiles),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])

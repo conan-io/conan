@@ -212,31 +212,44 @@ def test_changing_build_type():
         cmake_minimum_required(VERSION 3.15)
         project(App CXX)
 
-        set(CMAKE_MAP_IMPORTED_CONFIG_DEBUG Release)
-
         find_package(dep REQUIRED)
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE dep::dep)
         """)
     app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
-    pkg_conanfile = GenConanfile().with_requires("dep/0.1").\
+    pkg_conanfile = GenConanfile("pkg", "0.1").with_requires("dep/0.1").\
         with_generator("CMakeDeps").with_generator("CMakeToolchain").\
         with_settings("os", "compiler", "arch", "build_type")
     client.save({"conanfile.py": pkg_conanfile,
                  "CMakeLists.txt": cmakelists,
                  "app.cpp": app}, clean_first=True)
 
-    client.run("install . -s build_type=Debug -s dep:build_type=Release")
+    # in MSVC multi-config -s pkg:build_type=Debug is not really necesary, toolchain do nothing
+    client.run("install . -s pkg:build_type=Debug -s build_type=Release")
+    print(client.load("conan_toolchain.cmake"))
+    print(client.current_folder)
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    print(client.out)
     client.run_command("cmake --build . --config Debug")
+    print(client.out)
     cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
     client.run_command(cmd)
     assert "main: Debug!" in client.out
     assert "BUILD_TYPE=Release!!" in client.out
+    return
 
-    client.run("install . -s build_type=Release -s dep:build_type=Release")
+    client.run("install . -s build_type=Release")
     client.run_command("cmake --build . --config Release")
+    print(client.out)
     cmd = os.path.join(".", "Release", "app") if platform.system() == "Windows" else "./app"
     client.run_command(cmd)
     assert "main: Release!" in client.out
     assert "BUILD_TYPE=Release!!" in client.out
+
+    client.run("install . -s build_type=Debug")
+    print(client.out)
+    client.run_command("cmake --build . --config Debug")
+    cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
+    client.run_command(cmd)
+    assert "main: Debug!" in client.out
+    assert "BUILD_TYPE=Debug!!" in client.out
