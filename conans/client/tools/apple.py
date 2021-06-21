@@ -44,17 +44,6 @@ def apple_sdk_name(settings):
     return os_sdk or _guess_apple_sdk_name(os_, arch)
 
 
-def apple_deployment_target_env(os_, os_version):
-    """environment variable name which controls deployment target"""
-    env_name = {'Macos': 'MACOSX_DEPLOYMENT_TARGET',
-                'iOS': 'IOS_DEPLOYMENT_TARGET',
-                'watchOS': 'WATCHOS_DEPLOYMENT_TARGET',
-                'tvOS': 'TVOS_DEPLOYMENT_TARGET'}.get(str(os_))
-    if not env_name:
-        return {}
-    return {env_name: os_version}
-
-
 def apple_deployment_target_flag(os_, os_version, os_sdk=None, os_subsystem=None, arch=None):
     """compiler flag name which controls deployment target"""
     os_sdk = os_sdk if os_sdk else _guess_apple_sdk_name(os_, arch)

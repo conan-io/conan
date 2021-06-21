@@ -3,6 +3,5 @@
 # from conan.tools.apple.apple import apple_dot_clean
 # from conan.tools.apple.apple import is_apple_os
 # from conan.tools.apple.apple import apple_sdk_name
-# from conan.tools.apple.apple import apple_deployment_target_env
 # from conan.tools.apple.apple import apple_deployment_target_flag
 # from conan.tools.apple.apple import to_apple_arch
