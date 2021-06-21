@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import mock
 from mock import Mock
 
@@ -56,8 +58,10 @@ def test_foo():
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req1 = Requirement(ConanFileReference.loads("dep1/1.0"))
         req2 = Requirement(ConanFileReference.loads("dep2/1.0"))
-        mock_deps.return_value = ConanFileDependencies({req1: ConanFileInterface(dep1),
-                                                        req2: ConanFileInterface(dep2)})
+        deps = OrderedDict()
+        deps[req1] = ConanFileInterface(dep1)
+        deps[req2] = ConanFileInterface(dep2)
+        mock_deps.return_value = ConanFileDependencies(deps)
         consumer = ConanFile(Mock(), None)
         consumer.settings = MockSettings(
             {"build_type": "Release",
