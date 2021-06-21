@@ -12,9 +12,6 @@ class Autotools(object):
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._build = None
-        self._host = None
-        self._target = None
         self.environment_files = ["conanbuildenv", "conanautotoolstoolchain", "conanautotoolsdeps",
                                   "conanvcvars"]
 

@@ -7,6 +7,7 @@ import pytest
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools.gnu import AutotoolsToolchain
 from conans.errors import ConanException
+from conans.model.conf import Conf
 from conans.test.utils.mocks import ConanFileMock, MockSettings, MockOptions
 from conans.test.utils.test_files import temp_folder
 
@@ -36,13 +37,18 @@ def test_target_triple():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
+    conanfile.conf = Conf()
+    conanfile.conf["tools.gnu:make_program"] = "my_make"
+    conanfile.conf["tools.gnu.make:jobs"] = "23"
+
     be = AutotoolsToolchain(conanfile)
+    be.make_args = ["foo", "var"]
     be.generate_args()
     with open(CONAN_TOOLCHAIN_ARGS_FILE) as f:
         obj = json.load(f)
 
-    assert obj["host"] == "x86_64-linux-gnu"
-    assert obj["build"] == "i686-solaris"
+    assert obj["configure_args"] == "'--host=x86_64-linux-gnu' '--build=i686-solaris'"
+    assert obj["make_args"] == "'foo' 'var'"
 
 
 def test_invalid_target_triple():
