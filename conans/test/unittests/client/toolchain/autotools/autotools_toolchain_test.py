@@ -49,7 +49,7 @@ def test_target_triple():
 
     assert "--host=x86_64-linux-gnu" in obj["configure_args"]
     assert "--build=i686-solaris" in obj["configure_args"]
-    assert obj["make_args"] == "'foo' 'var'"
+    assert obj["make_args"].replace("'", "") == "foo var"
 
 
 def test_invalid_target_triple():
