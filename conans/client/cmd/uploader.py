@@ -9,14 +9,14 @@ from multiprocessing.pool import ThreadPool
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
-from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
+from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import retrieve_exports_sources
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
@@ -173,10 +173,6 @@ class _PackagePreparator(object):
 
         t1 = time.time()
         cache_files = self._compress_recipe_files(layout, ref)
-
-        # TODO: cache2.0 do we want to store checksums?
-        # with layout.update_metadata() as metadata:
-        #     metadata.recipe.checksums = calc_files_checksum(cache_files)
 
         local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
 
@@ -600,10 +596,9 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        # Update the package metadata
-        # TODO: cache2.0 what to do with checksums in 2.0?
-        checksums = calc_files_checksum(cache_files)
-        self._cache.set_remote(pref, p_remote.name)
+        cur_package_remote = self._cache.get_remote(pref)
+        if not cur_package_remote:
+            self._cache.set_remote(pref, p_remote.name)
         return pref
 
 
