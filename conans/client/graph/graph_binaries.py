@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    package_folder = package_layout.package(pref)
+                    package_folder = package_layout.package()
                     if self._check_update(upstream_manifest, package_folder, output):
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision  # With revision
