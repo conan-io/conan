@@ -64,13 +64,12 @@ def search(conan_api, parser, *args, **kwargs):
     """
     Searches for package recipes whose name contain <query> in a remote or in the local cache
     """
-
     parser.add_argument("query",
                         help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")
     parser.add_argument("-r", "--remote", default=None, action=Extender,
                         help="Remote to search. Accepts wildcards. To search in all remotes use *")
     args = parser.parse_args(*args)
 
-    remotes = conan_api.get_remotes(args.remote)
+    remotes = conan_api.get_active_remotes(args.remote)
     results = conan_api.search_recipes(remotes, args.query)
     return results

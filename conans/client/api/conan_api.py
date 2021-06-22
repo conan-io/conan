@@ -191,13 +191,27 @@ class ConanAPIV2(object):
 
 
     @api_method
-    def get_remotes(self, remote_names):
-        all_remotes = self.app.cache.registry.load_remotes().all_values()
+    def get_active_remotes(self, remote_names):
+        remotes = self.app.cache.registry.load_remotes()
+        all_remotes = remotes.all_values()
 
+        if not all_remotes:
+            raise ConanException("The remotes registry is empty. "
+                                 "Please add at least one valid remote.")
+
+        # If no remote is specified, search in all of them
         if not remote_names:
+            # Exclude disabled remotes
+            all_remotes = [remote for remote in all_remotes if not remote.disabled]
             return all_remotes
 
-        return [remote for remote in all_remotes if remote.name in remote_names]
+        active_remotes = []
+        for remote_name in remote_names:
+            remote = remotes[remote_name]
+            active_remotes.append(remote)
+
+        return active_remotes
+
 
 
 Conan = ConanAPIV2

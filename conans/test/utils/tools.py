@@ -519,24 +519,27 @@ class TestClient(object):
         else:
             return self.get_conan_api_v1()
 
+    def get_conan_command(self, args=None):
+        if self.is_conan_cli_v2_command(args):
+            return Cli(self.api)
+        else:
+            return Command(self.api)
+
     @staticmethod
     def is_conan_cli_v2_command(args):
         conan_command = args[0] if args else None
         return conan_command in CLI_V2_COMMANDS
 
     def run_cli(self, command_line, assert_error=False):
-        args = shlex.split(command_line)
-
-        self.api = self.get_conan_api(args)
-        if self.is_conan_cli_v2_command(args):
-            command = Cli(self.api)
-        else:
-            command = Command(self.api)
-
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
         old_path = sys.path[:]
         old_modules = list(sys.modules.keys())
+
+        args = shlex.split(command_line)
+
+        self.api = self.get_conan_api(args)
+        command = self.get_conan_command(args)
 
         try:
             error = command.run(args)

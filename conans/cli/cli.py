@@ -141,10 +141,29 @@ class Cli(object):
         ) and is_config_install_scheduled(self._conan_api):
             self._conan_api.config_install(None, None)
 
-        command.run(self.conan_api, self.commands[command_argument].parser,
-                    args[0][1:], commands=self.commands, groups=self.groups)
+        try:
+            command.run(self.conan_api, self.commands[command_argument].parser,
+                        args[0][1:], commands=self.commands, groups=self.groups)
+            exit_error = SUCCESS
+        except SystemExit as exc:
+            if exc.code != 0:
+                logger.error(exc)
+                self._conan_api.out.error("Exiting with code: %d" % exc.code)
+            exit_error = exc.code
+        except ConanInvalidConfiguration as exc:
+            exit_error = ERROR_INVALID_CONFIGURATION
+            self._conan_api.out.error(exc)
+        except ConanException as exc:
+            exit_error = ERROR_GENERAL
+            self._conan_api.out.error(exc)
+        except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
+            exit_error = ERROR_GENERAL
+            msg = exception_message_safe(exc)
+            self._conan_api.out.error(msg)
 
-        return SUCCESS
+        return exit_error
 
 
 def cli_out_write(data, fg=None, bg=None):
@@ -199,25 +218,6 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    try:
-        cli = Cli(conan_api)
-        exit_error = cli.run(args)
-    except SystemExit as exc:
-        if exc.code != 0:
-            logger.error(exc)
-            conan_api.out.error("Exiting with code: %d" % exc.code)
-        exit_error = exc.code
-    except ConanInvalidConfiguration as exc:
-        exit_error = ERROR_INVALID_CONFIGURATION
-        conan_api.out.error(exc)
-    except ConanException as exc:
-        exit_error = ERROR_GENERAL
-        conan_api.out.error(exc)
-    except Exception as exc:
-        import traceback
-        print(traceback.format_exc())
-        exit_error = ERROR_GENERAL
-        msg = exception_message_safe(exc)
-        conan_api.out.error(msg)
-
+    cli = Cli(conan_api)
+    exit_error = cli.run(args)
     sys.exit(exit_error)
