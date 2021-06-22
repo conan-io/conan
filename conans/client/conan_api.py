@@ -7,6 +7,7 @@ from collections import namedtuple
 from io import StringIO
 
 import conans
+from conan.cache.conan_reference import ConanReference
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
@@ -1115,17 +1116,18 @@ class ConanAPIV1(object):
         if ref.name != target_ref.name:
             raise ConanException("An alias can only be defined to a package with the same name")
 
-        # Do not allow to override an existing package
-        alias_conanfile_path = self.app.cache.package_layout(ref).conanfile()
-        if os.path.exists(alias_conanfile_path):
-            conanfile = self.app.loader.load_basic(alias_conanfile_path)
-            if not getattr(conanfile, 'alias', None):
-                raise ConanException("Reference '{}' is already a package, remove it before "
-                                     "creating and alias with the same name".format(ref))
+        # Do not allow to create an alias of a recipe that already has revisions
+        # with that name
+        latest_rrev = self.app.cache.get_latest_rrev(ref)
+        if latest_rrev:
+            alias_conanfile_path = self.app.cache.get_ref_layout(latest_rrev).conanfile()
+            if os.path.exists(alias_conanfile_path):
+                conanfile = self.app.loader.load_basic(alias_conanfile_path)
+                if not getattr(conanfile, 'alias', None):
+                    raise ConanException("Reference '{}' is already a package, remove it before "
+                                         "creating and alias with the same name".format(ref))
 
-        package_layout = self.app.cache.package_layout(ref)
-        return export_alias(package_layout, target_ref,
-                            output=self.app.out)
+        return export_alias(ref, target_ref, self.app.cache, output=self.app.out)
 
     @api_method
     def get_default_remote(self):

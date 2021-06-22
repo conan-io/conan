@@ -19,7 +19,7 @@ from conans.util.files import is_dirty, load, rmdir, save, set_dirty, mkdir, \
 from conans.util.log import logger
 
 
-def export_alias(package_layout, target_ref, output):
+def export_alias(alias_ref, target_ref, cache, output):
     revision_mode = "hash"
     conanfile = """
 from conans import ConanFile
@@ -29,12 +29,17 @@ class AliasConanfile(ConanFile):
     revision_mode = "%s"
 """ % (target_ref.full_str(), revision_mode)
 
-    save(package_layout.conanfile(), conanfile)
-    manifest = FileTreeManifest.create(package_layout.export())
-    manifest.save(folder=package_layout.export())
+    alias_layout = cache.ref_layout(alias_ref)
+
+    save(alias_layout.conanfile(), conanfile)
+    manifest = FileTreeManifest.create(alias_layout.export())
+    manifest.save(folder=alias_layout.export())
 
     # Create the metadata for the alias
-    calc_revision(output=output, path=None, manifest=manifest, revision_mode=revision_mode)
+    rrev = calc_revision(output=output, path=None, manifest=manifest, revision_mode=revision_mode)
+
+    ref_with_rrev = alias_ref.copy_with_rev(rrev)
+    cache.assign_rrev(alias_layout, ConanReference(ref_with_rrev))
 
 
 def check_casing_conflict(cache, ref):

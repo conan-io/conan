@@ -10,7 +10,6 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
-@pytest.mark.xfail(reason="cache2.0 alias not yet implemented")
 class ConanAliasTest(unittest.TestCase):
 
     def test_alias_overriden(self):
@@ -441,8 +440,6 @@ class Pkg(ConanFile):
 
         ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
         pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
