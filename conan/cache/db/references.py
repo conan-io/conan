@@ -17,10 +17,10 @@ class ReferencesDbTable(BaseDbTable):
                            ('build_id', str, True)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
 
-    class DoesNotExist(ConanException):
+    class ReferenceDoesNotExist(ConanException):
         pass
 
-    class AlreadyExist(ConanException):
+    class ReferenceAlreadyExist(ConanException):
         pass
 
     def _as_dict(self, row):
@@ -68,7 +68,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(
+            raise ReferencesDbTable.ReferenceDoesNotExist(
                 f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
@@ -80,7 +80,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(
+            raise ReferencesDbTable.ReferenceDoesNotExist(
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
@@ -92,7 +92,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.DoesNotExist(
+            raise ReferencesDbTable.ReferenceDoesNotExist(
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 

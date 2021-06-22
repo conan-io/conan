@@ -107,7 +107,7 @@ class DataCache:
 
         try:
             self.db.update_reference(old_ref, new_ref, new_path=new_path)
-        except ReferencesDbTable.AlreadyExist:
+        except ReferencesDbTable.ReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
@@ -132,7 +132,7 @@ class DataCache:
         new_path = self._get_or_create_reference_path(new_pref)
         try:
             self.db.update_reference(old_pref, new_pref, new_path=new_path)
-        except ReferencesDbTable.AlreadyExist:
+        except ReferencesDbTable.ReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self.db.delete_ref_by_path(old_path)
