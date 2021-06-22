@@ -16,7 +16,7 @@ from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
-from conans.model.new_build_info import NewCppInfo, from_old_cppinfo
+from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
@@ -159,6 +159,7 @@ class ConanFile(object):
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
         self._conan_node = None  # access to container Node object, to access info, context, deps...
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_dependencies = None
 
         # layout() method related variables:
         self.folders = Folders()
@@ -186,7 +187,10 @@ class ConanFile(object):
 
     @property
     def dependencies(self):
-        return ConanFileDependencies.from_node(self._conan_node)
+        # Caching it, this object is requested many times
+        if self._conan_dependencies is None:
+            self._conan_dependencies = ConanFileDependencies.from_node(self._conan_node)
+        return self._conan_dependencies
 
     @property
     def ref(self):
@@ -383,7 +387,7 @@ class ConanFile(object):
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
 
-        command = environment_wrap_command(env, command)
+        command = environment_wrap_command(env, command, cwd=self.generators_folder)
 
         def _run():
             if not win_bash:

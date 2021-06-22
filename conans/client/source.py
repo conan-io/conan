@@ -125,7 +125,7 @@ def _run_source(conanfile, conanfile_path, hook_manager, reference, cache,
     """
 
 
-    src_folder = conanfile.source_folder
+    src_folder = conanfile.folders.base_source
     mkdir(src_folder)
 
     with tools.chdir(src_folder):

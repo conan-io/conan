@@ -11,7 +11,9 @@ from conans.client.command import _add_profile_arguments
 @parameterized_class([{"argument": ["env", "-e", "--env"]},
                       {"argument": ["options", "-o", "--options"]},
                       {"argument": ["profile", "-pr", "--profile"]},
-                      {"argument": ["settings", "-s", "--settings"]}])
+                      {"argument": ["settings", "-s", "--settings"]},
+                      {"argument": ["conf", "-c", "--conf"]}]
+                     )
 class ArgsParseProfileTest(unittest.TestCase):
     """ Check argparse for profile arguments """
 

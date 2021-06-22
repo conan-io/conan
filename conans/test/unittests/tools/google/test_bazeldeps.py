@@ -26,7 +26,7 @@ def test_bazeldeps_dependency_buildfiles():
 
         bazeldeps = BazelDeps(conanfile)
 
-        for dependency in bazeldeps._conanfile.dependencies.host_requires.values():
+        for dependency in bazeldeps._conanfile.dependencies.host.values():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
 
@@ -57,7 +57,7 @@ def test_bazeldeps_main_buildfile():
         bazeldeps = BazelDeps(conanfile)
 
         local_repositories = []
-        for dependency in bazeldeps._conanfile.dependencies.host_requires.values():
+        for dependency in bazeldeps._conanfile.dependencies.host.values():
             content = bazeldeps._create_new_local_repository(dependency,
                                                              "conandeps/OriginalDepName/BUILD")
             local_repositories.append(content)

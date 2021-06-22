@@ -67,7 +67,7 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen",
+                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain",
                                 "BazelDeps", "BazelToolchain"]
 
     def add(self, name, generator_class, custom=False):
@@ -100,9 +100,6 @@ class GeneratorManager(object):
         elif generator_name == "AutotoolsToolchain":
             from conan.tools.gnu import AutotoolsToolchain
             return AutotoolsToolchain
-        elif generator_name == "AutotoolsGen":
-            from conan.tools.gnu import AutotoolsGen
-            return AutotoolsGen
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain
@@ -204,7 +201,7 @@ def _receive_conf(conanfile):
     # TODO: Only direct build_requires?
     # TODO: Is really the best mechanism to define this info? Better than env-vars?
     # Conf only for first level build_requires
-    for build_require in conanfile.dependencies.direct_build_requires.values():
+    for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
             conanfile.conf.compose(build_require.conf_info)
 
