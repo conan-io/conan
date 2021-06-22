@@ -1,7 +1,7 @@
 import json
 import os
 import pytest
-
+import platform
 
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
@@ -191,12 +191,13 @@ def test_config_home_short_home_dir_contains_cache_dir():
 def test_config_user_home_short_path():
     """ When general.user_home_short is configured, short_paths MUST obey its path
     """
-    short_folder = os.path.join(temp_folder(), "short")
+    short_folder = os.path.join(temp_folder(), "short").replace("\\", "/")
     client = TestClient()
-    client.run('config set general.user_home_short="{}"'.format(short_folder))
+    client.run("config set general.user_home_short='{}'".format(short_folder))
     client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
     client.run("create . foobar/0.1.0@user/testing")
-    assert "Configuring sources in {}".format(short_folder.replace("\\", "/")) in client.out
+    target_folder = short_folder if platform.system() == "Windows" else client.cache_folder
+    assert "Configuring sources in {}".format(target_folder) in client.out
     assert client.cache.config.short_paths_home == short_folder
 
 

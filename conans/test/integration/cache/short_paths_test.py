@@ -146,3 +146,10 @@ class TestConan(ConanFile):
         client.run("export . test/1.0@")
         client.run("info test/1.0@ --paths")
         client.run("info test/1.0@ --paths")
+
+    def test_config_file_user_short_path_none(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("export . test/1.0@")
+        client.run("info test/1.0@ --paths")
+        client.run("info test/1.0@ --paths")
