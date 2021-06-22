@@ -48,20 +48,22 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def _get_or_create_reference_path(ref: ConanReference):
+    def _get_tmp_path():
+        return os.path.join("tmp", str(uuid.uuid4()))
+
+    def _get_or_create_reference_path(self, ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if ref.rrev:
             return md5(ref.full_reference)
         else:
-            return str(uuid.uuid4())
+            return self._get_tmp_path()
 
-    @staticmethod
-    def _get_or_create_package_path(ref: ConanReference):
+    def _get_or_create_package_path(self, ref: ConanReference):
         """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
         if ref.prev:
             return md5(ref.full_reference)
         else:
-            return str(uuid.uuid4())
+            return self._get_tmp_path()
 
     def get_or_create_reference_layout(self, ref: ConanReference):
         path = self._get_or_create_reference_path(ref)
