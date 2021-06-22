@@ -959,24 +959,29 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list_ref(self, no_remote=False):
+        result = {}
+        for ref in self.app.cache.all_refs():
+            result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
-            result = {}
-            for ref in self.app.cache.all_refs():
-                remote = self.app.cache.get_remote(ref)
-                if not remote:
-                    result[str(ref)] = None
-            return result
+            return {str(r): remote_name for r, remote_name in result.items() if not remote_name}
         else:
-            return {str(r): remote_name for r, remote_name in
-                    self.app.cache.registry.refs_list.items()
-                    if remote_name}
+            return {str(r): remote_name for r, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        all_rrevs = self.app.cache.get_recipe_revisions(ref)
+        if len(all_rrevs) > 0:
+            for rrev in all_rrevs:
+                self.app.cache.set_remote(rrev, remote.name)
+                # also set for all the packages
+                prevs = self.app.cache.get_package_revisions(rrev)
+                for prev in prevs:
+                    self.app.cache.set_remote(prev, remote.name)
+        else:
+            raise ConanException(f"Can't set the remote for {str(ref)}. "
+                                 f"It doesn't exist in the local cache")
 
     @api_method
     def remote_remove_ref(self, reference):
@@ -994,21 +999,14 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_pref(self, reference, no_remote=False):
         ref = ConanFileReference.loads(reference, validate=True)
+        result = {}
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            for prev in self.app.cache.get_package_revisions(rrev):
+                result[prev] = self.app.cache.get_remote(prev)
         if no_remote:
-            result = {}
-            metadata = self.app.cache.package_layout(ref).load_metadata()
-            for pid, pkg_metadata in metadata.packages.items():
-                if not pkg_metadata.remote:
-                    pref = PackageReference(ref, pid)
-                    result[repr(pref)] = None
-            return result
+            return {repr(prev): remote_name for prev, remote_name in result.items() if not remote_name}
         else:
-            ret = {}
-            tmp = self.app.cache.registry.prefs_list
-            for pref, remote in tmp.items():
-                if pref.ref == ref and remote:
-                    ret[repr(pref)] = remote
-            return ret
+            return {repr(prev): remote_name for prev, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
