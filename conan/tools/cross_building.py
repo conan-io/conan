@@ -1,9 +1,13 @@
 
+def cross_building(conanfile=None, skip_x64_x86=False):
 
-def cross_building(conanfile):
-    ret = get_cross_building_settings(conanfile)
+    build_os, build_arch, host_os, host_arch = get_cross_building_settings(conanfile)
 
-    build_os, build_arch, host_os, host_arch = ret
+    if skip_x64_x86 and host_os is not None and (build_os == host_os) and \
+            host_arch is not None and ((build_arch == "x86_64") and (host_arch == "x86") or
+                                       (build_arch == "sparcv9") and (host_arch == "sparc") or
+                                       (build_arch == "ppc64") and (host_arch == "ppc32")):
+        return False
 
     if host_os is not None and (build_os != host_os):
         return True
@@ -18,12 +22,7 @@ def get_cross_building_settings(conanfile):
     arch_host = conanfile.settings.get_safe("arch")
 
     if hasattr(conanfile, 'settings_build'):
-        return (conanfile.settings_build.get_safe('os'),
-                conanfile.settings_build.get_safe('arch'),
-                os_host,
-                arch_host)
+        return (conanfile.settings_build.get_safe('os'), conanfile.settings_build.get_safe('arch'),
+                os_host, arch_host)
     else:
-        return (os_host,
-                arch_host,
-                os_host,
-                arch_host)
+        return os_host, arch_host, os_host, arch_host
