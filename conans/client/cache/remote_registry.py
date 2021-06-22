@@ -413,22 +413,3 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.set_disabled_state(remote_name, state)
         remotes.save(self._filename)
-
-    @property
-    def refs_list(self):
-        result = {}
-        for ref in self._cache.all_refs():
-            remote = self._cache.get_remote(ref)
-            if remote:
-                result[ref] = remote
-        return result
-
-    @property
-    def prefs_list(self):
-        result = {}
-        for ref in self._cache.all_refs():
-            metadata = self._cache.package_layout(ref).load_metadata()
-            for pid, pkg_metadata in metadata.packages.items():
-                pref = PackageReference(ref, pid)
-                result[pref] = pkg_metadata.remote
-        return result
