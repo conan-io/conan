@@ -135,7 +135,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("Conflict in {}\n ".format(lib3), self.c_v2.out)
         self.assertIn("Different revisions of {} has been requested".format(lib1), self.c_v2.out)
 
-    @pytest.mark.xfail(reason="cache2.0 alias not yet implemented")
     def test_alias_to_a_rrev(self):
         """ If an alias points to a RREV, it resolved that RREV and no other"""
 
