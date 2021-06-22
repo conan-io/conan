@@ -64,3 +64,12 @@ class RenameTest(unittest.TestCase):
             rename(os.path.join("subdir", "1.txt"), "t.txt")
             self.assertTrue(os.path.isfile(os.path.join(tmpdir, "t.txt")))
             self.assertFalse(os.path.isfile(os.path.join(tmpdir, "subdir", "1.txt")))
+
+    def test_rename_empty_folder(self):
+        client = TestClient()
+        old_folder = os.path.join(client.current_folder, "old_folder")
+        os.mkdir(old_folder)
+        new_folder = os.path.join(client.current_folder, "new_folder")
+        rename(old_folder, new_folder)
+        self.assertFalse(os.path.exists(old_folder))
+        self.assertTrue(os.path.exists(new_folder))

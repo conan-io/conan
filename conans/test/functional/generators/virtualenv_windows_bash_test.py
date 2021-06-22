@@ -116,4 +116,4 @@ class VirtualenvWindowsBashTestCase(unittest.TestCase):
         self.assertEqual(environment["WHATEVER2"], "list:existing_value")
 
         # Variable: list with spaces
-        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2  existing_value")  # FIXME: extra blank
+        self.assertEqual(environment["CFLAGS"], "cflags1 cflags2 existing_value")

@@ -2,14 +2,12 @@ import os
 import platform
 import pytest
 import textwrap
-import unittest
 
 from conan.tools.microsoft.visual import vcvars_command
 from ._base import BaseIntelTestCase
-from ..test_msbuild import myapp_vcxproj, sln_file
 
 from conans.test.assets.sources import gen_function_cpp
-
+from ..microsoft.test_msbuild import sln_file, myapp_vcxproj
 
 conanfile_py = textwrap.dedent("""
     from conans import ConanFile, MSBuild, MSBuildToolchain
@@ -34,6 +32,7 @@ conanfile_py = textwrap.dedent("""
 @pytest.mark.tool_cmake
 @pytest.mark.tool_msbuild
 @pytest.mark.tool_icc
+@pytest.mark.xfail(reason="Intel compiler not installed yet on CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="msbuild requires Windows")
 class MSBuildIntelTestCase(BaseIntelTestCase):
     def test_use_msbuild_toolchain(self):

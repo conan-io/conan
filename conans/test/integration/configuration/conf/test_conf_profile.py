@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -14,8 +15,9 @@ def client():
 
         class Pkg(ConanFile):
             settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeToolchain"
 
-            def run(self, cmd):  # INTERCEPTOR of running
+            def run(self, cmd, env):  # INTERCEPTOR of running
                 self.output.info("RECIPE-RUN: {}".format(cmd))
 
             def build(self):
@@ -51,7 +53,7 @@ def test_cmake_config(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        tools.microsoft:msbuild_verbosity=Minimal
+        tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
@@ -68,7 +70,7 @@ def test_cmake_config_error(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        tools.microsoft:msbuild_verbosity=non-existing
+        tools.microsoft.msbuild:verbosity=non-existing
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile", assert_error=True)
@@ -85,7 +87,7 @@ def test_cmake_config_package(client):
         compiler.runtime=MD
         build_type=Release
         [conf]
-        dep*:tools.microsoft:msbuild_verbosity=Minimal
+        dep*:tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
@@ -102,10 +104,9 @@ def test_config_profile_forbidden(client):
     client.save({"myprofile": profile})
     client.run("install . pkg/0.1@ -pr=myprofile", assert_error=True)
     assert ("ERROR: Error reading 'myprofile' profile: [conf] "
-            "'cache:verbosity=Minimal' not allowed in profiles" in client.out)
+            "'cache:verbosity' not allowed in profiles" in client.out)
 
 
-@pytest.mark.tool_visual_studio
 def test_msbuild_config():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -128,13 +129,15 @@ def test_msbuild_config():
         compiler.runtime=MD
         build_type=Release
         [conf]
-        tools.microsoft:msbuild_verbosity=Minimal
+        tools.microsoft.msbuild:verbosity=Minimal
         """)
     client.save({"myprofile": profile})
     client.run("create . pkg/0.1@ -pr=myprofile")
     assert "/verbosity:Minimal" in client.out
 
 
+@pytest.mark.tool_visual_studio
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 def test_msbuild_compile_options():
     client = TestClient()
     conanfile = textwrap.dedent("""

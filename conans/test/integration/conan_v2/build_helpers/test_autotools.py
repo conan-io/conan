@@ -17,14 +17,24 @@ class AutotoolsBuildHelperTestCase(ConanV2ModeTestCase):
                 autotools.make()
     """)
 
+    profile = textwrap.dedent("""
+        [settings]
+        os = Linux
+        arch = x86_64
+        build_type = Release
+        compiler=gcc
+        compiler.version=4.9
+        compiler.libcxx=libstdc++
+        """)
+
     def test_no_build_type(self):
         t = self.get_client()
-        t.save({"conanfile.py": self.conanfile.format("compiler")})
-        t.run("create . pkg/0.1@user/testing", assert_error=True)
+        t.save({"conanfile.py": self.conanfile.format("compiler"), "myprofile": self.profile})
+        t.run("create . pkg/0.1@user/testing -pr myprofile", assert_error=True)
         self.assertIn("Conan v2 incompatible: build_type setting should be defined.", t.out)
 
     def test_no_compiler(self):
         t = self.get_client()
-        t.save({"conanfile.py": self.conanfile.format("build_type")})
-        t.run("create . pkg/0.1@user/testing", assert_error=True)
+        t.save({"conanfile.py": self.conanfile.format("build_type"), "myprofile": self.profile})
+        t.run("create . pkg/0.1@user/testing  -pr myprofile", assert_error=True)
         self.assertIn("Conan v2 incompatible: compiler setting should be defined.", t.out)

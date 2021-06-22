@@ -1,5 +1,4 @@
 import platform
-import unittest
 
 import pytest
 
@@ -7,17 +6,6 @@ from conans.test.utils.conan_v2_tests import ConanV2ModeTestCase
 
 
 class DefaultConfigTestCase(ConanV2ModeTestCase):
-    def test_revisions_enabled(self):
-        t = self.get_client()
-        self.assertEqual(t.cache.config.revisions_enabled, True)
-        t.run('config get general.revisions_enabled')
-        self.assertEqual(str(t.out).strip(), "1")
-
-    def test_scm_to_conandata(self):
-        t = self.get_client()
-        self.assertEqual(t.cache.config.scm_to_conandata, True)
-        # t.run('config get general.scm_to_conandata')  # FIXME: This should return a value
-        # self.assertEqual(str(t.out).strip(), "1")
 
     @pytest.mark.xfail
     def test_package_id_mode(self):

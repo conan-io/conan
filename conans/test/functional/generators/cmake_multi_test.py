@@ -136,11 +136,8 @@ int main(){{
 @pytest.mark.tool_cmake
 class CMakeMultiTest(unittest.TestCase):
 
-    @pytest.mark.tool_mingw
-    @pytest.mark.tool_gcc
+    @pytest.mark.tool_mingw64
     def test_cmake_multi_find(self):
-        if platform.system() not in ["Windows", "Linux"]:
-            return
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 class HelloConan(ConanFile):
@@ -199,6 +196,7 @@ class HelloConan(ConanFile):
             self.assertIn("FIND HELLO MINSIZEREL!", client.out)
 
     @pytest.mark.skipif(platform.system() not in ["Windows", "Darwin"], reason="Exclude Linux")
+    @pytest.mark.tool_cmake(version="3.19")
     def test_cmake_multi(self):
         client = TestClient()
 

@@ -4,7 +4,6 @@ import os
 import platform
 import subprocess
 import unittest
-import warnings
 
 import pytest
 import six
@@ -26,7 +25,8 @@ class FunctionalToolsTest(unittest.TestCase):
     output = TestBufferConanOutput()
 
     @pytest.mark.tool_file  # Needs the "file" command, not by default in linux
-    @pytest.mark.skipif(which("file") is None, reason="Needs the 'file' command, not by default in linux")
+    @pytest.mark.skipif(which("file") is None,
+                        reason="Needs the 'file' command, not by default in linux")
     def test_unix_to_dos_unit(self):
         def save_file(contents):
             tmp = temp_folder()
@@ -86,38 +86,23 @@ class VisualStudioToolsTest(unittest.TestCase):
         settings.compiler.version = "14"
 
         # test build_type and arch override, for multi-config packages
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
-                                           arch="x86", output=self.output)
-            self.assertEqual(len(w), 3)
-            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug",
+                                       arch="x86", output=self.output)
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 2)
-                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            tools.msvc_build_command(settings, "project.sln", output=self.output)
+
         settings.arch = "x86"
         with six.assertRaisesRegex(self, ConanException, "Cannot build_sln_command"):
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                tools.msvc_build_command(settings, "project.sln", output=self.output)
-                self.assertEqual(len(w), 2)
-                self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+            tools.msvc_build_command(settings, "project.sln", output=self.output)
 
         # successful definition via settings
         settings.build_type = "Debug"
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
-            self.assertEqual(len(w), 3)
-            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
+        cmd = tools.msvc_build_command(settings, "project.sln", output=self.output)
         self.assertIn('msbuild "project.sln" /p:Configuration="Debug" '
                       '/p:UseEnv=false /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)

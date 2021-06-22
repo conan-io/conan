@@ -21,10 +21,10 @@ def test_conf_definition(conf_definition):
     # Round trip
     assert c.dumps() == text
     # access
-    assert c["tools.microsoft.msbuild"].verbosity == "minimal"
-    assert c["user.company.toolchain"].flags == "someflags"
-    assert c["tools.microsoft.msbuild"].nonexist is None
-    assert c["nonexist"].nonexist is None
+    assert c["tools.microsoft.msbuild:verbosity"] == "minimal"
+    assert c["user.company.toolchain:flags"] == "someflags"
+    assert c["tools.microsoft.msbuild:nonexist"] is None
+    assert c["nonexist:nonexist"] is None
     # bool
     assert bool(c)
     assert not bool(ConfDefinition())
@@ -64,18 +64,19 @@ def test_conf_error_per_package():
     text = "*:core:verbosity=minimal"
     c = ConfDefinition()
     with pytest.raises(ConanException,
-                       match=r"Conf '\*:core:verbosity=minimal' cannot have a package pattern"):
+                       match=r"Conf '\*:core:verbosity' cannot have a package pattern"):
         c.loads(text)
 
 
 def test_conf_error_uppercase():
     text = "tools.something:Verbosity=minimal"
     c = ConfDefinition()
-    with pytest.raises(ConanException, match=r"Conf key 'Verbosity' must be lowercase"):
+    with pytest.raises(ConanException, match=r"Conf 'tools.something:Verbosity' must be lowercase"):
         c.loads(text)
     text = "tools.Something:verbosity=minimal"
     c = ConfDefinition()
-    with pytest.raises(ConanException, match=r"Conf module 'tools.Something' must be lowercase"):
+    with pytest.raises(ConanException,
+                       match=r"Conf 'tools.Something:verbosity' must be lowercase"):
         c.loads(text)
 
 
@@ -83,4 +84,4 @@ def test_parse_spaces():
     text = "core:verbosity = minimal"
     c = ConfDefinition()
     c.loads(text)
-    assert c["core"].verbosity == "minimal"
+    assert c["core:verbosity"] == "minimal"

@@ -4,21 +4,24 @@ from contextlib import contextmanager
 import six
 from six import string_types
 
+from conan.tools.env import Environment
+from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
 from conans.client.tools.env import environment_append, no_op, pythonpath
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
+from conans.model.conf import Conf
+from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
-from conans.model.layout import Layout
+from conans.model.layout import Folders, Patterns, Infos
+from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import CONAN_V2_MODE_ENVVAR
-from conans.util.conan_v2_mode import conan_v2_behavior
-from conans.util.env_reader import get_env
+from conans.util.conan_v2_mode import conan_v2_error
 
 
 def create_options(conanfile):
@@ -31,10 +34,10 @@ def create_options(conanfile):
             if isinstance(default_options, dict):
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, (list, tuple)):
-                conan_v2_behavior("Declare 'default_options' as a dictionary")
+                conan_v2_error("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues(default_options)
             elif isinstance(default_options, six.string_types):
-                conan_v2_behavior("Declare 'default_options' as a dictionary")
+                conan_v2_error("Declare 'default_options' as a dictionary")
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list, "
@@ -70,17 +73,16 @@ def create_settings(conanfile, settings):
         settings.constraint(current)
         return settings
     except Exception as e:
-        raise ConanInvalidConfiguration("The recipe is constraining settings. %s" % str(e))
+        raise ConanInvalidConfiguration("The recipe %s is constraining settings. %s" % (
+                                        conanfile.display_name, str(e)))
 
 
 @contextmanager
 def _env_and_python(conanfile):
     with environment_append(conanfile.env):
-        if get_env(CONAN_V2_MODE_ENVVAR, False):
+        # FIXME Conan 2.0, Remove old ways of reusing python code
+        with pythonpath(conanfile):
             yield
-        else:
-            with pythonpath(conanfile):
-                yield
 
 
 def get_env_context_manager(conanfile, without_python=False):
@@ -133,8 +135,9 @@ class ConanFile(object):
     provides = None
     deprecated = None
 
-    # layout
-    layout = None
+    # Folders
+    folders = None
+    patterns = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -147,10 +150,67 @@ class ConanFile(object):
 
         self.compatible_packages = []
         self._conan_using_build_profile = False
+        self._conan_requester = None
 
-        self.layout = Layout()
+        self.buildenv_info = Environment()
+        self.runenv_info = Environment()
+        # At the moment only for build_requires, others will be ignored
+        self.conf_info = Conf()
+        self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
+        self._conan_node = None  # access to container Node object, to access info, context, deps...
+        self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
+        self._conan_dependencies = None
 
-    def initialize(self, settings, env):
+        # layout() method related variables:
+        self.folders = Folders()
+        self.patterns = Patterns()
+        self.cpp = Infos()
+
+        self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.source.lib = []
+        self.patterns.source.bin = []
+
+        self.patterns.build.include = ["*.h", "*.hpp", "*.hxx"]
+        self.patterns.build.lib = ["*.so", "*.so.*", "*.a", "*.lib", "*.dylib"]
+        self.patterns.build.bin = ["*.exe", "*.dll"]
+
+        self.cpp.package.includedirs = ["include"]
+        self.cpp.package.libdirs = ["lib"]
+        self.cpp.package.bindirs = ["bin"]
+        self.cpp.package.resdirs = ["res"]
+        self.cpp.package.builddirs = [""]
+        self.cpp.package.frameworkdirs = ["Frameworks"]
+
+    @property
+    def context(self):
+        return self._conan_node.context
+
+    @property
+    def dependencies(self):
+        # Caching it, this object is requested many times
+        if self._conan_dependencies is None:
+            self._conan_dependencies = ConanFileDependencies.from_node(self._conan_node)
+        return self._conan_dependencies
+
+    @property
+    def ref(self):
+        return self._conan_node.ref
+
+    @property
+    def pref(self):
+        return self._conan_node.pref
+
+    @property
+    def buildenv(self):
+        # Lazy computation of the package buildenv based on the profileone
+        if not isinstance(self._conan_buildenv, Environment):
+            # TODO: missing user/channel
+            ref_str = "{}/{}".format(self.name, self.version)
+            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+        return self._conan_buildenv
+
+    def initialize(self, settings, env, buildenv=None):
+        self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
@@ -158,9 +218,8 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
-        if 'cppstd' in self.settings.fields:
-            conan_v2_behavior("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                              " please update your recipe.", v1_behavior=self.output.warn)
+        conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
+                       " please update your recipe.", 'cppstd' in self.settings.fields)
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -182,37 +241,61 @@ class ConanFile(object):
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
 
+        if not hasattr(self, "virtualenv"):  # Allow the user to override it with True or False
+            self.virtualenv = True
+
+    @property
+    def new_cpp_info(self):
+        if not self._conan_new_cpp_info:
+            self._conan_new_cpp_info = from_old_cppinfo(self.cpp_info)
+        return self._conan_new_cpp_info
+
     @property
     def source_folder(self):
-        return self.layout.source_folder
+        return self.folders.source_folder
 
     @source_folder.setter
     def source_folder(self, folder):
-        self.layout.set_base_source_folder(folder)
+        self.folders.set_base_source(folder)
 
     @property
     def build_folder(self):
-        return self.layout.build_folder
+        return self.folders.build_folder
 
     @build_folder.setter
     def build_folder(self, folder):
-        self.layout.set_base_build_folder(folder)
-
-    @property
-    def install_folder(self):
-        return self.layout.install_folder
-
-    @install_folder.setter
-    def install_folder(self, folder):
-        self.layout.set_base_install_folder(folder)
+        self.folders.set_base_build(folder)
 
     @property
     def package_folder(self):
-        return self.layout.package_folder
+        return self.folders.package_folder
 
     @package_folder.setter
     def package_folder(self, folder):
-        self.layout.set_base_package_folder(folder)
+        self.folders.set_base_package(folder)
+
+    @property
+    def install_folder(self):
+        # FIXME: Remove in 2.0, no self.install_folder
+        return self.folders.base_install
+
+    @install_folder.setter
+    def install_folder(self, folder):
+        # FIXME: Remove in 2.0, no self.install_folder
+        self.folders.set_base_install(folder)
+
+    @property
+    def generators_folder(self):
+        # FIXME: Remove in 2.0, no self.install_folder
+        return self.folders.generators_folder if self.folders.generators else self.install_folder
+
+    @property
+    def imports_folder(self):
+        return self.folders.imports_folder
+
+    @imports_folder.setter
+    def imports_folder(self, folder):
+        self.folders.set_base_imports(folder)
 
     @property
     def env(self):
@@ -222,8 +305,8 @@ class ConanFile(object):
         # the deps_env_info objects available
         tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
-
-        ret, multiple = tmp_env_values.env_dicts(self.name)
+        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
+                                                 self._conan_channel)
         ret.update(multiple)
         return ret
 
@@ -231,8 +314,7 @@ class ConanFile(object):
     def channel(self):
         if not self._conan_channel:
             _env_channel = os.getenv("CONAN_CHANNEL")
-            if _env_channel:
-                conan_v2_behavior("Environment variable 'CONAN_CHANNEL' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
             self._conan_channel = _env_channel or self.default_channel
             if not self._conan_channel:
                 raise ConanException("channel not defined, but self.channel is used in conanfile")
@@ -242,16 +324,14 @@ class ConanFile(object):
     def user(self):
         if not self._conan_user:
             _env_username = os.getenv("CONAN_USERNAME")
-            if _env_username:
-                conan_v2_behavior("Environment variable 'CONAN_USERNAME' is deprecated")
+            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
             self._conan_user = _env_username or self.default_user
             if not self._conan_user:
                 raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
     def collect_libs(self, folder=None):
-        conan_v2_behavior("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead",
-                          v1_behavior=self.output.warn)
+        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
         return tools.collect_libs(self, folder=folder)
 
     @property
@@ -305,7 +385,10 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+
+        command = environment_wrap_command(env, command)
+
         def _run():
             if not win_bash:
                 return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
@@ -313,8 +396,8 @@ class ConanFile(object):
             return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
                                              msys_mingw=msys_mingw, with_login=with_login)
         if run_environment:
-            # When using_build_profile the required environment is already applied through 'conanfile.env'
-            # in the contextmanager 'get_env_context_manager'
+            # When using_build_profile the required environment is already applied through
+            # 'conanfile.env' in the contextmanager 'get_env_context_manager'
             with tools.run_environment(self) if not self._conan_using_build_profile else no_op():
                 if OSInfo().is_macos and isinstance(command, string_types):
                     # Security policy on macOS clears this variable when executing /bin/sh. To

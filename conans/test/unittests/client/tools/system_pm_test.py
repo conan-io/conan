@@ -100,10 +100,10 @@ class SystemPackageToolTest(unittest.TestCase):
                 sudo_cmd = "sudo " if isatty else "sudo -A "
 
             runner = RunnerOrderedMock()
-            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if gpg_key:
                 runner.commands.append(
                     ("wget -qO - {} | {}apt-key add -".format(gpg_key, sudo_cmd), 0))
+            runner.commands.append(("{}apt-add-repository {}".format(sudo_cmd, repository), 0))
             if update:
                 runner.commands.append(("{}apt-get update".format(sudo_cmd), 0))
 
@@ -360,6 +360,21 @@ class SystemPackageToolTest(unittest.TestCase):
                 self.assertEqual(runner.command_called,
                                  'choco search --local-only --exact a_package | '
                                  'findstr /c:"1 packages installed."')
+
+    def test_opensuse_zypper_aptitude(self):
+        # https://github.com/conan-io/conan/issues/8737
+        os_info = OSInfo()
+        os_info.is_linux = True
+        os_info.is_solaris = False
+        os_info.is_macos = False
+        os_info.is_windows = False
+        os_info.linux_distro = "opensuse"
+        runner = RunnerMock()
+
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
+            spt = SystemPackageTool(runner=runner, os_info=os_info, output=self.out)
+            spt.update()
+            self.assertEqual(runner.command_called, "zypper --non-interactive ref")
 
     def test_system_package_tool_try_multiple(self):
         packages = ["a_package", "another_package", "yet_another_package"]

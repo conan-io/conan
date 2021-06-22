@@ -78,11 +78,15 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, TestBufferConanOutput(), ConanPythonRequire(None, None))
+        loader = ConanFileLoader(None, Mock(), ConanPythonRequire(None, None))
         conanfile = loader.load_consumer(conanfile_path, create_profile())
 
-        run_package_method(conanfile, None, build_folder, build_folder, package_folder,
-                           install_folder, Mock(), conanfile_path, ref, copy_info=True)
+        conanfile.folders.set_base_build(build_folder)
+        conanfile.folders.set_base_source(build_folder)
+        conanfile.folders.set_base_package(package_folder)
+        conanfile.folders.set_base_install(install_folder)
+
+        run_package_method(conanfile, None, Mock(), conanfile_path, ref, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

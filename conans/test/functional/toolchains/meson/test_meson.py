@@ -32,7 +32,8 @@ class MesonToolchainTest(TestMesonBase):
         def build(self):
             meson = Meson(self)
             meson.configure()
-            meson.build()
+            meson.build(target='hello')
+            meson.build(target='demo')
     """)
 
     _meson_options_txt = textwrap.dedent("""

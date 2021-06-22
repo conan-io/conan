@@ -1,23 +1,20 @@
 import os
+import sys
 import unittest
 
 import six
-from mock import Mock
+from mock import patch
 import pytest
 
 from conans import DEFAULT_REVISION_V1
-from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
+from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.mocks import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, \
-    TestServer, GenConanfile
+from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -139,8 +136,8 @@ conaninfo = '''
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
-        hello_files = cpp_hello_conan_files("Hello")
-        test_conanfile_contents = hello_files[CONANFILE]
+        test_conanfile_contents = str(GenConanfile("Hello", "0.1"))
+        hello_files = {"conanfile.py": test_conanfile_contents}
 
         self.server_folder = temp_folder()
         test_server = TestServer(users={"myuser": "mypass"},
@@ -277,9 +274,8 @@ class RemoveTest(unittest.TestCase):
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def test_basic_mocked(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/*", user_io=mocked_user_io)
+        with patch.object(sys.stdin, "readline", return_value="y"):
+            self.client.run("remove hello/*")
         self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
@@ -341,9 +337,8 @@ class RemoveTest(unittest.TestCase):
         self._validate_remove_hello_1_4_10()
 
     def test_builds(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/* -b", user_io=mocked_user_io)
+        with patch.object(sys.stdin, "readline", return_value="y"):
+            self.client.run("remove hello/* -b")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
@@ -360,9 +355,8 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def test_src(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=True)
-        self.client.run("remove hello/* -s", user_io=mocked_user_io)
+        with patch.object(sys.stdin, "readline", return_value="y"):
+            self.client.run("remove hello/* -s")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -379,9 +373,8 @@ class RemoveTest(unittest.TestCase):
                                                      "Hello/2.4.11/myuser/testing")))
 
     def test_reject_removal(self):
-        mocked_user_io = UserIO(out=TestBufferConanOutput())
-        mocked_user_io.request_boolean = Mock(return_value=False)
-        self.client.run("remove hello/* -s -b -p", user_io=mocked_user_io)
+        with patch.object(sys.stdin, "readline", return_value="n"):
+            self.client.run("remove hello/* -s -b -p")
         self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},

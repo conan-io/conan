@@ -13,7 +13,6 @@ from patch_ng import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.unicode import get_cwd
 from conans.util.fallbacks import default_output
 from conans.util.files import (_generic_algorithm_sum, load, save)
 
@@ -24,7 +23,7 @@ VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 @contextmanager
 def chdir(newdir):
-    old_path = get_cwd()
+    old_path = os.getcwd()
     os.chdir(newdir)
     try:
         yield
@@ -89,7 +88,7 @@ def unzip(filename, destination=".", keep_permissions=False, pattern=None, outpu
         return untargz(filename, destination, pattern, strip_root)
 
     import zipfile
-    full_path = os.path.normpath(os.path.join(get_cwd(), destination))
+    full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
@@ -421,6 +420,7 @@ def dos2unix(filepath):
 
 
 def rename(src, dst):
+    # FIXME: Deprecated, use new interface from conan.tools
     """
     rename a file or folder to avoid "Access is denied" error on Windows
     :param src: Source file or folder
@@ -437,7 +437,7 @@ def rename(src, dst):
         process = subprocess.Popen(["robocopy", "/move", "/e", "/ndl", "/nfl", src, dst],
                                    stdout=subprocess.PIPE)
         process.communicate()
-        if process.returncode != 1:
+        if process.returncode > 7:  # https://ss64.com/nt/robocopy-exit.html
             raise ConanException("rename {} to {} failed.".format(src, dst))
     else:
         try:

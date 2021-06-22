@@ -10,7 +10,7 @@ from parameterized import parameterized
 
 from conans.client import tools
 from conans.paths import CONANFILE
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
@@ -58,7 +58,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install . -pr envs -g virtualenv")
         content = self.client.load("environment.sh.env")
         self.assertIn(":".join(["PREPEND_VAR=\"new_path\"", "\"other_path\""]) +
-                      "${PREPEND_VAR+:$PREPEND_VAR}", content)
+                      "${PREPEND_VAR:+:$PREPEND_VAR}", content)
         if platform.system() == "Windows":
             content = self.client.load("environment.bat.env")
             self.assertIn(";".join(["PREPEND_VAR=new_path", "other_path", "%PREPEND_VAR%"]),
@@ -168,15 +168,12 @@ class ProfileTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler
     def test_install_profile_env(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = conanfile_scope_env
-
         create_profile(self.client.cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE"),
                             ("PREPEND_VAR", ["new_path", "other_path"])],
                        package_env={"Hello0": [("OTHER_VAR", "2")]})
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("PREPEND_VAR",
@@ -204,8 +201,6 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
     def test_install_profile_settings(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-
         # Create a profile and use it
         profile_settings = OrderedDict([("compiler", "Visual Studio"),
                                         ("compiler.version", "12"),
@@ -220,7 +215,7 @@ class ProfileTest(unittest.TestCase):
                               "compiler.libcxx", "#compiler.libcxx", strict=False,
                               output=TestBufferConanOutput())
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
         self.client.run("export . lasote/stable")
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.load("conaninfo.txt")
@@ -276,8 +271,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler.libcxx=libstdc++", info)
 
     def test_install_profile_package_settings(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
+        self.client.save({"conanfile.py": conanfile_scope_env})
 
         # Create a profile and use it
         profile_settings = OrderedDict([("os", "Windows"),
@@ -341,13 +335,12 @@ class ProfileTest(unittest.TestCase):
 
     @pytest.mark.tool_compiler
     def test_install_profile_options(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-
         create_profile(self.client.cache.profiles_path, "vs_12_86",
                        options=[("Hello0:language", 1),
                                 ("Hello0:static", False)])
 
-        self.client.save(files)
+        self.client.save({"conanfile.py": GenConanfile("Hello0", "1").with_option("language", [1, 2])
+                          .with_option("static", [True, False])})
         self.client.run("install . --build missing -pr vs_12_86")
         info = self.client.load("conaninfo.txt")
         self.assertIn("language=1", info)
@@ -635,3 +628,56 @@ class ProfileAggregationTest(unittest.TestCase):
                              compiler.runtime=MD
                              compiler.version=15
                              os=Windows"""), self.client.out)
+
+
+def test_profile_from_cache_path():
+    """ When passing relative folder/profile as profile file, it MUST be used
+        conan install . -pr=profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+        https://github.com/conan-io/conan/pull/8685
+    """
+    client = TestClient()
+    path = os.path.join(client.cache.profiles_path, "android", "profile1")
+    save(path, "[settings]\nos=Android")
+    client.save({"conanfile.txt": ""})
+    client.run("install . -pr=android/profile1")
+    assert "os=Android" in client.out
+
+
+def test_profile_from_relative_pardir():
+    """ When passing relative ../path as profile file, it MUST be used
+        conan install . -pr=../profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    client = TestClient()
+    client.save({"profiles/default": "[settings]\nos=AIX",
+                 "current/conanfile.txt": ""})
+    with client.chdir("current"):
+        client.run("install . -pr=../profiles/default")
+    assert "os=AIX" in client.out
+
+
+def test_profile_from_relative_dotdir():
+    """ When passing relative ./path as profile file, it MUST be used
+        conan install . -pr=./profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    client = TestClient()
+    client.save({os.path.join("profiles", "default"): "[settings]\nos=AIX",
+                 os.path.join("current", "conanfile.txt"): ""})
+    client.run("install ./current -pr=./profiles/default")
+    assert "os=AIX" in client.out
+
+
+def test_profile_from_temp_absolute_path():
+    """ When passing absolute path as profile file, it MUST be used
+        conan install . -pr=/tmp/profiles/default
+        /tmp/profiles/default MUST be consumed as target profile
+    """
+    client = TestClient()
+    client.save({"profiles/default": "[settings]\nos=AIX",
+                 "current/conanfile.txt": ""})
+    profile_path = os.path.join(client.current_folder, "profiles", "default")
+    recipe_path = os.path.join(client.current_folder, "current", "conanfile.txt")
+    client.run('install "{}" -pr="{}"'.format(recipe_path, profile_path))
+    assert "os=AIX" in client.out
