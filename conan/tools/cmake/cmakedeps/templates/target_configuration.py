@@ -110,7 +110,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      PROPERTY INTERFACE_LINK_LIBRARIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_LIBRARIES_TARGETS{{config_suffix}}}
                                                    ${{'{'}}{{pkg_name}}_LINKER_FLAGS{{config_suffix}}}> APPEND)
-        message(STATUS "ADDING INCLUDE_DIRS****{{config_suffix}}********!!!!!!! ${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}")
         set_property(TARGET {{target_namespace}}::{{target_namespace}}
                      PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                      $<$<CONFIG:{{configuration}}>:${{'{'}}{{pkg_name}}_INCLUDE_DIRS{{config_suffix}}}> APPEND)

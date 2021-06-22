@@ -212,6 +212,7 @@ def test_changing_build_type():
         cmake_minimum_required(VERSION 3.15)
         project(App CXX)
 
+        # NOTE: NO MAP necessary!!!
         find_package(dep REQUIRED)
         add_executable(app app.cpp)
         target_link_libraries(app PRIVATE dep::dep)
@@ -225,31 +226,12 @@ def test_changing_build_type():
                  "app.cpp": app}, clean_first=True)
 
     # in MSVC multi-config -s pkg:build_type=Debug is not really necesary, toolchain do nothing
+    # TODO: Challenge how to define consumer build_type for conanfile.txt
     client.run("install . -s pkg:build_type=Debug -s build_type=Release")
-    print(client.load("conan_toolchain.cmake"))
-    print(client.current_folder)
     client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
-    print(client.out)
-    client.run_command("cmake --build . --config Debug")
-    print(client.out)
-    cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
-    client.run_command(cmd)
-    assert "main: Debug!" in client.out
-    assert "BUILD_TYPE=Release!!" in client.out
-    return
-
-    client.run("install . -s build_type=Release")
-    client.run_command("cmake --build . --config Release")
-    print(client.out)
-    cmd = os.path.join(".", "Release", "app") if platform.system() == "Windows" else "./app"
-    client.run_command(cmd)
-    assert "main: Release!" in client.out
-    assert "BUILD_TYPE=Release!!" in client.out
-
-    client.run("install . -s build_type=Debug")
-    print(client.out)
     client.run_command("cmake --build . --config Debug")
     cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
     client.run_command(cmd)
     assert "main: Debug!" in client.out
-    assert "BUILD_TYPE=Debug!!" in client.out
+    assert "BUILD_TYPE=Release!!" in client.out
+

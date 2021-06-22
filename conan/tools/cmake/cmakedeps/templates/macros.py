@@ -51,11 +51,9 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            unset(_CONAN_ACTUAL_TARGETS CACHE)
 
            foreach(_LIBRARY_NAME ${libraries})
-               message(STATUS "Finding library ${_LIBRARY_NAME}")
                find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
                             NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
                if(CONAN_FOUND_LIBRARY)
-                   message(STATUS "Found library ${_LIBRARY_NAME} in ${CONAN_FOUND_LIBRARY}")
                    conan_message(DEBUG "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
                    list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
