@@ -101,7 +101,6 @@ def api_method(f):
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
-            api.app.cache.closedb()
     return wrapper
 
 

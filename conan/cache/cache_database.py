@@ -21,6 +21,7 @@ class CacheDatabase:
     @contextmanager
     def connection(self):
         yield self._conn.cursor()
+        self._conn.commit()
 
     def close(self):
         self._conn.close()
