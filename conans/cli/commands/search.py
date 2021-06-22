@@ -5,7 +5,7 @@ from conans.client.output import Color
 from conans.cli.command import conan_command, Extender
 
 
-def print_output(info, show_colors):
+def _print_output(info, show_colors):
     if info["error"]:
         # TODO: Handle errors
         return
@@ -39,23 +39,23 @@ def print_output(info, show_colors):
             cli_out_write("{}{}".format(" " * (indentation + 2), reference), reference_color)
 
 
-def output_search_cli(info):
-    print_output(info, show_colors=True)
+def _output_search_cli(info):
+    _print_output(info, show_colors=True)
 
 
-def output_search_raw(info):
-    print_output(info, show_colors=False)
+def _output_search_raw(info):
+    _print_output(info, show_colors=False)
 
 
-def output_search_json(info):
+def _output_search_json(info):
     myjson = json.dumps(info, indent=4)
     cli_out_write(myjson)
 
 
 search_formatters = {
-    "cli": output_search_cli,
-    "raw": output_search_raw,
-    "json": output_search_json
+    "cli": _output_search_cli,
+    "raw": _output_search_raw,
+    "json": _output_search_json
 }
 
 
