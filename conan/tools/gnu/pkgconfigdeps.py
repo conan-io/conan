@@ -30,6 +30,11 @@ def _concat_if_not_empty(groups):
     return " ".join([param for group in groups for param in group if param and param.strip()])
 
 
+def get_target_namespace(req):
+    ret = req.new_cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
+    return ret or req.ref.name
+
+
 def get_component_alias(req, comp_name):
     if comp_name not in req.new_cpp_info.components:
         # foo::foo might be referencing the root cppinfo
@@ -37,16 +42,8 @@ def get_component_alias(req, comp_name):
             return get_target_namespace(req)
         raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                              "package requirement".format(name=req.ref.name, cname=comp_name))
-    ret = req.new_cpp_info.components[comp_name].get_property("cmake_target_name", "CMakeDeps")
-    if not ret:
-        ret = req.cpp_info.components[comp_name].get_name("cmake_find_package_multi",
-                                                          default_name=False)
+    ret = req.new_cpp_info.components[comp_name].get_property("pkg_config_name", "PkgConfigDeps")
     return ret or comp_name
-
-
-def get_target_namespace(req):
-    ret = req.new_cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
-    return ret or req.ref.name
 
 
 class PkgConfigDeps(object):
@@ -58,22 +55,20 @@ class PkgConfigDeps(object):
     def compiler(self):
         return self._conanfile.settings.get_safe("compiler")
 
-    def __get_components(self, pkg_name, cpp_info):
+    def _get_require_comp_name(self, pkg_name, req):
+        pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
+        req = self._conanfile.dependencies.direct_host[pkg]
+        cmp_name = get_component_alias(req, comp_name)
+        return cmp_name
+
+    def get_components(self, pkg_name, dep):
         ret = []
-        for comp_name, comp in self.sorted_components(cpp_info).items():
-            comp_genname = self._get_name(cpp_info.components[comp_name])
+        for comp_name, comp in dep.new_cpp_info.get_sorted_components().items():
+            comp_genname = get_component_alias(dep, comp_name)
             comp_requires_gennames = []
             for require in comp.requires:
-                comp_requires_gennames.append(self._get_require_name(pkg_name, require))
+                comp_requires_gennames.append(self._get_require_comp_name(pkg_name, require))
             ret.append((comp_genname, comp, comp_requires_gennames))
-        ret.reverse()
-        return ret
-
-    def _get_components(self, pkg_name, cpp_info):
-        generator_components = self.__get_components(pkg_name, cpp_info)
-        ret = []
-        for comp_genname, comp, comp_requires_gennames in generator_components:
-            ret.append((comp_genname, comp, [it[1] for it in comp_requires_gennames]))
         return ret
 
     def _get_public_require_deps(self, comp):
@@ -81,7 +76,7 @@ class PkgConfigDeps(object):
         for require in comp.requires:
             if "::" in require:  # Points to a component of a different package
                 pkg, cmp_name = require.split("::")
-                req = self._conanfile.dependencies.host[pkg]
+                req = self._conanfile.dependencies.direct_host[pkg]
                 public_comp_deps.append(
                     (get_target_namespace(req), get_component_alias(req, cmp_name)))
             else:  # Points to a component of same package
@@ -98,7 +93,7 @@ class PkgConfigDeps(object):
             pkg_genname = dep.new_cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
 
             if dep.new_cpp_info.components:
-                components = self._get_components(dep.ref.name, dep.new_cpp_info)
+                components = self.get_components(dep.ref.name, dep)
                 for comp_genname, comp, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
@@ -106,7 +101,8 @@ class PkgConfigDeps(object):
                         comp_requires_gennames)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
-                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname, dep.new_cpp_info,
+                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname,
+                                                                              dep.new_cpp_info,
                                                                               comp_gennames)
             else:
                 require_public_deps = [_d for _, _d in self._get_public_require_deps(dep.new_cpp_info)]
