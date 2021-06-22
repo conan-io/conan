@@ -23,7 +23,8 @@ class ReferencesDbTable(BaseDbTable):
     class ReferenceAlreadyExist(ConanException):
         pass
 
-    def _as_dict(self, row):
+    @staticmethod
+    def _as_dict(row):
         return {
             "reference": row.reference,
             "rrev": row.rrev,
@@ -46,7 +47,8 @@ class ReferencesDbTable(BaseDbTable):
             [f'{k}="{v}" ' if v is not None else f'{k} IS NULL' for k, v in where_dict.items()])
         return where_expr
 
-    def _set_clause(self, ref: ConanReference, path=None, timestamp=None, remote=None, build_id=None):
+    def _set_clause(self, ref: ConanReference, path=None, timestamp=None, remote=None,
+                    build_id=None):
         set_dict = {
             self.columns.reference: ref.reference,
             self.columns.rrev: ref.rrev,
@@ -104,7 +106,8 @@ class ReferencesDbTable(BaseDbTable):
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
-                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, remote, timestamp, None])
+                         [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, remote, timestamp,
+                          None])
         return r.lastrowid
 
     def set_remote(self, conn, ref: ConanReference, remote):
@@ -199,7 +202,8 @@ class ReferencesDbTable(BaseDbTable):
 
     def get_pkgids(self, conn, ref: ConanReference, only_latest_prev=False, with_build_id=None):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
-        check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' if ref.prev else f'AND {self.columns.prev} IS NOT NULL '
+        check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' \
+            if ref.prev else f'AND {self.columns.prev} IS NOT NULL '
         check_build_id = f'AND {self.columns.build_id} = "{with_build_id}" ' if with_build_id else ''
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \

@@ -4,11 +4,19 @@ from contextlib import contextmanager
 from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, SYSTEM_REQS, DATA_YML, \
-    rm_conandir, EXPORT_SRC_FOLDER, SRC_FOLDER
-from conans.paths import CONANFILE, SCM_SRC_FOLDER
+from conans.paths import CONANFILE, DATA_YML, rm_conandir
 from conans.util.files import rmdir
 from conans.util.files import set_dirty, clean_dirty, is_dirty
+
+
+# To be able to change them later to something shorter
+SRC_FOLDER = "source"
+BUILD_FOLDER = "build"
+PACKAGES_FOLDER = "package"
+EXPORT_SRC_FOLDER = "export_source"
+SYSTEM_REQS_FOLDER = "system_reqs"
+SCM_SRC_FOLDER = "scm_source"
+SYSTEM_REQS = "system_reqs.txt"
 
 
 class LayoutBase:
@@ -45,7 +53,7 @@ class RecipeLayout(LayoutBase):
         return os.path.join(self.base_folder, 'export_sources')
 
     def download_export(self):
-        return os.path.join(self.base_folder, "dl", "export")
+        return os.path.join(self.base_folder, "dl")
 
     def source(self):
         return os.path.join(self.base_folder, SRC_FOLDER)
@@ -106,7 +114,7 @@ class PackageLayout(LayoutBase):
         return os.path.join(self.base_folder, PACKAGES_FOLDER)
 
     def download_package(self):
-        return os.path.join(self.base_folder, "dl", "pkg")
+        return os.path.join(self.base_folder, "dl")
 
     # TODO: cache2.0 fix this
     def system_reqs(self):
@@ -152,11 +160,3 @@ class PackageLayout(LayoutBase):
                                  "Close any app using it, and retry" % (self.package(), str(e)))
         if is_dirty(self.package()):
             clean_dirty(self.package())
-
-
-class ReferenceLayout:
-    def __new__(cls, ref, base_folder):
-        if ref.pkgid:
-            return PackageLayout(ref, base_folder)
-        else:
-            return RecipeLayout(ref, base_folder)
