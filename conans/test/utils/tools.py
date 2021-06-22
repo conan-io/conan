@@ -535,8 +535,10 @@ class TestClient(object):
         try:
             error = command.run(args)
         finally:
-            if self.api.app:
+            try:
                 self.api.app.cache.closedb()
+            except AttributeError:
+                pass
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
