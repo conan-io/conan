@@ -54,7 +54,6 @@ class MultiRemotesTest(unittest.TestCase):
         self.servers["default"] = TestServer()
         self.servers["local"] = TestServer()
 
-    @pytest.mark.xfail(reason="cache2.0 list_ref not implemented yet")
     def test_list_ref_no_remote(self):
         client = TestClient(servers=self.servers)
         client.save({"conanfile.py": GenConanfile()})
@@ -66,7 +65,7 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remote list_ref --no-remote")
         self.assertIn("pkg/1.0: None", client.out)
         client.run("remote list_pref pkg/1.0 --no-remote")
-        self.assertIn("pkg/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9: None", client.out)
+        self.assertIn("pkg/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#cf924fbb5ed463b8bb960cf3a4ad4f3a: None", client.out)
 
     @staticmethod
     def _create(client, number, version, modifier=""):
@@ -193,7 +192,6 @@ class MultiRemoteTest(unittest.TestCase):
 
         self.client = TestClient(servers=self.servers, users=self.users)
 
-    @pytest.mark.xfail(reason="cache2.0 list_ref not implemented yet")
     def test_predefine_remote(self):
         self.client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         self.client.run("export . lasote/stable")
@@ -201,12 +199,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote1")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote2")
         self.client.run('remove "*" -f')
-        self.client.run("remote add_ref Hello0/0.1@lasote/stable remote1")
-        self.client.run("install Hello0/0.1@lasote/stable --build=missing")
-        self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
-                      self.client.out)
-        self.client.run("remote list_ref")
-        self.assertIn(": remote1", self.client.out)
+        self.client.run("remote add_ref Hello0/0.1@lasote/stable remote1", assert_error=True)
+        self.assertIn("Can't set the remote for Hello0/0.1@lasote/stable. "
+                      "It doesn't exist in the local cache", self.client.out)
 
     def test_upload(self):
         ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
