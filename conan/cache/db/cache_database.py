@@ -2,21 +2,19 @@ import sqlite3
 from contextlib import contextmanager
 from io import StringIO
 
-from .conan_reference import ConanReference
-from .db.references import ReferencesDbTable
+from conan.cache.conan_reference import ConanReference
+from conan.cache.db.references import ReferencesDbTable
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
 
 
 class CacheDatabase:
 
-    timeout = CONNECTION_TIMEOUT_SECONDS
-
     def __init__(self, filename):
-        self._filename = filename
         self._references = ReferencesDbTable()
-        self._conn = sqlite3.connect(self._filename, isolation_level=None, timeout=self.timeout,
-                                     check_same_thread=False)
+        self._conn = sqlite3.connect(filename, isolation_level=None,
+                                     timeout=CONNECTION_TIMEOUT_SECONDS, check_same_thread=False)
+        self._initialize(if_not_exists=True)
 
     @contextmanager
     def connection(self):
@@ -26,7 +24,7 @@ class CacheDatabase:
     def close(self):
         self._conn.close()
 
-    def initialize(self, if_not_exists=True):
+    def _initialize(self, if_not_exists=True):
         with self.connection() as conn:
             self._references.create_table(conn, if_not_exists)
 

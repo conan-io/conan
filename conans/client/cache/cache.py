@@ -8,7 +8,7 @@ from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoade
 
 from conan.cache.cache import DataCache
 from conan.cache.conan_reference import ConanReference
-from conan.cache.conan_reference_layout import ReferenceLayout
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -106,10 +106,10 @@ class ClientCache(object):
         self._data_cache.dump(out)
         return out.getvalue()
 
-    def assign_rrev(self, layout: ReferenceLayout, ref: ConanReference):
+    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
         return self._data_cache.assign_rrev(layout, ref)
 
-    def assign_prev(self, layout: ReferenceLayout, ref: ConanReference):
+    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
