@@ -1,11 +1,10 @@
 import os
 import platform
-import pytest
 import textwrap
 import unittest
 
-from parameterized import parameterized
 import pytest
+from parameterized import parameterized
 
 from conans.client.tools.apple import XCRun, apple_deployment_target_flag, to_apple_arch
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
@@ -83,11 +82,11 @@ class IOSMesonTestCase(unittest.TestCase):
             include(default)
             [settings]
             {settings}
-            [env]
+            [buildenv]
             {env}
             """)
         settings = '\n'.join(["%s = %s" % (s[0], s[1]) for s in self.settings()])
-        env = '\n'.join(["%s = %s" % (k, v) for k, v in self.env().items()])
+        env = '\n'.join(["%s=%s" % (k, v) for k, v in self.env().items()])
         return template.format(settings=settings, env=env)
 
     @parameterized.expand([('armv8', 'iOS', '10.0', 'iphoneos'),

@@ -236,6 +236,12 @@ class Environment:
     def __getitem__(self, name):
         return self._get_final_value(name)
 
+    def get(self, name, default=None):
+        try:
+            return self._get_final_value(name)
+        except KeyError:
+            return default
+
     def keys(self):
         return self._values.keys()
 

@@ -1,5 +1,6 @@
 import os
 
+from conan.tools.env import VirtualEnv
 from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
@@ -73,10 +74,44 @@ class MesonToolchain(object):
         self._cppstd = cppstd_from_settings(self._conanfile.settings)
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
+        self._build_env = VirtualEnv(self._conanfile).build_environment()
+
         self.definitions = dict()
         self.preprocessor_definitions = dict()
-        self._env = env.copy()
-        self._env.update(self._conanfile.env)
+
+        def from_build_env(name):
+            return self._to_meson_value(self._build_env.get(name, None))
+
+        self.c = from_build_env("CC")
+        self.cpp = from_build_env("CXX")
+        self.c_ld = from_build_env("CC_LD") or from_build_env("LD")
+        self.cpp_ld = from_build_env("CXX_LD") or from_build_env("LD")
+        self.ar = from_build_env("AR")
+        self.strip = from_build_env("STRIP")
+        self.as_ = from_build_env("AS")
+        self.windres = from_build_env("WINDRES")
+        self.pkgconfig = from_build_env("PKG_CONFIG")
+
+        # https://mesonbuild.com/Builtin-options.html#core-options
+        # Do not adjust "debug" if already adjusted "buildtype"
+        self.buildtype = self._to_meson_build_type(self._build_type) if self._build_type else None
+        self.default_library = self._to_meson_shared(self._shared) \
+            if self._shared is not None else None
+
+        # https://mesonbuild.com/Builtin-options.html#base-options
+        self.b_vscrt = self._to_meson_vscrt(self._vscrt)
+        self.b_staticpic = self._to_meson_value(self._fpic) \
+            if (self._shared is False and self._fpic is not None) else None
+        self.b_ndebug = self._to_meson_value(self._ndebug) if self._build_type else None
+
+        # https://mesonbuild.com/Builtin-options.html#compiler-options
+        self.cpp_std = self._to_meson_cppstd(self._cppstd) if self._cppstd else None
+        self.c_args = self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS'))
+        self.c_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
+        self.cpp_args = self._to_meson_value(self._env_array('CPPFLAGS') +
+                                             self._env_array('CXXFLAGS'))
+        self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
+        self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
 
     @staticmethod
     def _to_meson_value(value):
@@ -144,7 +179,7 @@ class MesonToolchain(object):
 
     def _env_array(self, name):
         import shlex
-        return shlex.split(self._env.get(name, ''))
+        return shlex.split(self._build_env.get(name, ''))
 
     @property
     def _context(self):
@@ -159,32 +194,30 @@ class MesonToolchain(object):
             # https://mesonbuild.com/Builtin-options.html#directories
             # TODO : we don't manage paths like libdir here (yet?)
             # https://mesonbuild.com/Machine-files.html#binaries
-            "c": self._to_meson_value(self._env.get("CC", None)),
-            "cpp": self._to_meson_value(self._env.get("CXX", None)),
-            "c_ld": self._to_meson_value(self._env.get("LD", None)),
-            "cpp_ld": self._to_meson_value(self._env.get("LD", None)),
-            "ar": self._to_meson_value(self._env.get("AR", None)),
-            "strip": self._to_meson_value(self._env.get("STRIP", None)),
-            "as": self._to_meson_value(self._env.get("AS", None)),
-            "windres": self._to_meson_value(self._env.get("WINDRES", None)),
-            "pkgconfig": self._to_meson_value(self._env.get("PKG_CONFIG", None)),
+            # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
+            "c": self.c,
+            "cpp": self.cpp,
+            "c_ld": self.c_ld,
+            "cpp_ld": self.cpp_ld,
+            "ar": self.ar,
+            "strip": self.strip,
+            "as": self.as_,
+            "windres": self.windres,
+            "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": self._to_meson_build_type(self._build_type) if self._build_type else None,
-            "debug": self._to_meson_value(self._debug) if self._build_type else None,
-            "default_library": self._to_meson_shared(
-                self._shared) if self._shared is not None else None,
+            "buildtype": self.buildtype,
+            "default_library": self.default_library,
             # https://mesonbuild.com/Builtin-options.html#base-options
-            "b_vscrt": self._to_meson_vscrt(self._vscrt),
-            "b_staticpic": self._to_meson_value(self._fpic) if (self._shared is False and self._fpic
-                                                                is not None) else None,
-            "b_ndebug": self._to_meson_value(self._ndebug) if self._build_type else None,
+            "b_vscrt": self.b_vscrt,
+            "b_staticpic": self.b_staticpic,
+            "b_ndebug": self.b_ndebug,
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": self._to_meson_cppstd(self._cppstd) if self._cppstd else None,
-            "c_args": self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CFLAGS')),
-            "c_link_args": self._to_meson_value(self._env_array('LDFLAGS')),
-            "cpp_args": self._to_meson_value(self._env_array('CPPFLAGS') + self._env_array('CXXFLAGS')),
-            "cpp_link_args": self._to_meson_value(self._env_array('LDFLAGS')),
-            "pkg_config_path": "'%s'" % os.getcwd(),
+            "cpp_std": self.cpp_std,
+            "c_args": self.c_args,
+            "c_link_args": self.c_link_args,
+            "cpp_args": self.cpp_args,
+            "cpp_link_args": self.cpp_link_args,
+            "pkg_config_path": self.pkg_config_path,
             "preprocessor_definitions": self.preprocessor_definitions
         }
         return context
