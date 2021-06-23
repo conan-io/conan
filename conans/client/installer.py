@@ -400,10 +400,10 @@ class BinaryInstaller(object):
         def _download(n):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
-
             # TODO: cache2.0 check locks
-            # with layout.package_lock(pref):
-            self._download_pkg(n)
+            layout = self._cache.get_pkg_layout(n.pref)
+            with layout.package_lock():
+                self._download_pkg(n)
 
         parallel = self._cache.config.parallel_download
         if parallel is not None:
@@ -529,7 +529,7 @@ class BinaryInstaller(object):
             if node.binary == BINARY_BUILD:
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
                 # TODO: cache2.0 check remove
-                # layout.package_remove(pref)
+                #layout.package_remove()
                 with pkg_layout.set_dirty_context_manager():
                     pref = self._build_package(node, output, remotes, pkg_layout)
                 assert node.prev, "Node PREV shouldn't be empty"

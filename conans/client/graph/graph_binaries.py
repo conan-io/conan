@@ -53,20 +53,12 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
         # Check if dirty, to remove it
-        with package_layout.package_lock(pref):
+        with package_layout.package_lock():
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
-            if package_layout.package_is_dirty(pref):
+            if package_layout.package_is_dirty():
                 node.conanfile.output.warn("Package binary is corrupted, removing: %s" % pref.id)
-                package_layout.package_remove(pref)
+                package_layout.package_remove()
                 return
-
-            metadata = package_layout.load_metadata()
-            rec_rev = metadata.packages[pref.id].recipe_revision
-            if rec_rev and rec_rev != node.ref.revision:
-                node.conanfile.output.warn("The package {} doesn't belong to the installed "
-                                           "recipe revision, removing folder".format(pref))
-                package_layout.package_remove(pref)
-            return metadata
 
     def _evaluate_cache_pkg(self, node, package_layout, pref, remote, remotes, update):
         if update:
@@ -222,7 +214,6 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_is_cached(node, pref):
             return
 
-        conanfile = node.conanfile
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
@@ -236,29 +227,24 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        #package_layout = self._cache.pkg_layout(pref)
+        latest_prev_for_pkg_id = self._cache.get_latest_prev(pref)
 
-        latest_prev_for_pkg_id = self._cache.get_package_revisions(pref, only_latest_prev=True)
-
-        # TODO: cache2.0: remove metadata, move to db
-        #metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
+        if latest_prev_for_pkg_id:
+            package_layout = self._cache.get_pkg_layout(latest_prev_for_pkg_id)
+            self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
-        # metadata = metadata or package_layout.load_metadata()
-        # if not remote:
-        #     # If the remote_name is not given, follow the binary remote, or the recipe remote
-        #     # If it is defined it won't iterate (might change in conan2.0)
-        #     if pref.id in metadata.packages:
-        #         remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
-        #     else:
-        #         remote_name = metadata.recipe.remote
-        #     remote = remotes.get(remote_name)
+
+        if not remote:
+            # If the remote_name is not given, follow the binary remote, or the recipe remote
+            # If it is defined it won't iterate (might change in conan2.0)
+            remote_name = self._cache.get_remote(latest_prev_for_pkg_id.ref) if latest_prev_for_pkg_id else None
+            remote = remotes.get(remote_name)
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
-            latest_package = latest_prev_for_pkg_id[0]
-            node.prev = latest_package.revision
-            package_layout = self._cache.pkg_layout(latest_package)
-            self._evaluate_cache_pkg(node, package_layout, latest_package, remote, remotes, update)
+            node.prev = latest_prev_for_pkg_id.revision
+            package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id)
+            self._evaluate_cache_pkg(node, package_layout, latest_prev_for_pkg_id, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
             remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
