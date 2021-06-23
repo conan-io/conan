@@ -66,9 +66,16 @@ class _PackageBuilder(object):
         if pref.id != recipe_build_id and hasattr(conanfile, "build_id"):
             # check if we already have a package with the calculated build_id
             recipe_ref = ConanFileReference.loads(ConanReference(pref).recipe_reference)
-            prev_with_build_folder = self._cache.get_package_ids(recipe_ref, only_latest_prev=True,
-                                                                 with_build_id=recipe_build_id)
-            build_prev = prev_with_build_folder[0] if prev_with_build_folder else pref
+            package_ids = self._cache.get_package_ids(recipe_ref)
+            build_prev = None
+            for pkg_id in package_ids:
+                prev = self._cache.get_latest_prev(pkg_id)
+                prev_build_id = self._cache.get_build_id(prev)
+                if prev_build_id == recipe_build_id:
+                    build_prev = prev
+                    break
+
+            build_prev = build_prev or pref
 
             # We are trying to build a package id different from the one that has the
             # build_folder but belongs to the same recipe revision, so reuse the build_folder
