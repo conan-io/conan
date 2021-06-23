@@ -976,8 +976,7 @@ class ConanAPIV1(object):
         if len(all_rrevs) > 0:
             for rrev in all_rrevs:
                 self.app.cache.set_remote(rrev, remote.name)
-                pkg_ids = self.app.cache.get_package_ids(rrev)
-                for pkg in pkg_ids:
+                for pkg in self.app.cache.get_package_ids(rrev):
                     for prev in self.app.cache.get_package_revisions(pkg):
                         self.app.cache.set_remote(prev, remote.name)
         else:
@@ -987,23 +986,22 @@ class ConanAPIV1(object):
     @api_method
     def remote_remove_ref(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = None
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            self.app.cache.set_remote(rrev, None)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            self.app.cache.set_remote(rrev, remote.name)
 
     @api_method
     def remote_list_pref(self, reference, no_remote=False):
         ref = ConanFileReference.loads(reference, validate=True)
         result = {}
         for rrev in self.app.cache.get_recipe_revisions(ref):
-            pkg_ids = self.app.cache.get_package_ids(rrev)
-            for pkg in pkg_ids:
+            for pkg in self.app.cache.get_package_ids(rrev):
                 for prev in self.app.cache.get_package_revisions(pkg):
                     result[prev] = self.app.cache.get_remote(prev)
         if no_remote:
@@ -1015,28 +1013,35 @@ class ConanAPIV1(object):
     def remote_add_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m and m.remote:
-                raise ConanException("%s already exists. Use update" % str(pref))
-            metadata.packages[pref.id].remote = remote.name
+        # TODO: cache2.0 fix this, probably we have to ask to enter the ref with rrev?
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id  in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            raise ConanException("%s already exists. Use update" % str(pref))
+                        self.app.cache.set_remote(prev, remote.name)
 
     @api_method
     def remote_remove_pref(self, package_reference):
         pref = PackageReference.loads(package_reference, validate=True)
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m:
-                m.remote = None
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            self.app.cache.set_remote(prev, None)
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
         _ = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m:
-                m.remote = remote_name
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            self.app.cache.set_remote(prev, remote_name)
 
     @api_method
     def remote_clean(self):

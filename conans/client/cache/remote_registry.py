@@ -337,13 +337,13 @@ class RemoteRegistry(object):
         remotes.save(self._filename)
         if renamed:
             with self._cache.editable_packages.disable_editables():
-                for ref in self._cache.all_refs():
-                    with self._cache.package_layout(ref).update_metadata() as metadata:
-                        if metadata.recipe.remote == renamed:
-                            metadata.recipe.remote = remote_name
-                        for pkg_metadata in metadata.packages.values():
-                            if pkg_metadata.remote == renamed:
-                                pkg_metadata.remote = remote_name
+                for rrev in self._cache.all_refs():
+                    if self._cache.get_remote(rrev) == renamed:
+                        self._cache.set_remote(rrev, remote_name)
+                    for pkg_id in self._cache.get_package_ids(rrev):
+                        for prev in self._cache.get_package_revisions(pkg_id):
+                            if self._cache.get_remote(prev) == renamed:
+                                self._cache.set_remote(prev, remote_name)
 
     def update(self, remote_name, url, verify_ssl=True, insert=None):
         self._validate_url(url)
@@ -355,29 +355,28 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.clear()
         with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    metadata.recipe.remote = None
-                    for pkg_metadata in metadata.packages.values():
-                        pkg_metadata.remote = None
+            for rrev in self._cache.all_refs():
+                self._cache.set_remote(rrev, None)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        self._cache.set_remote(prev, None)
+
             remotes.save(self._filename)
 
     def remove(self, remote_name):
         remotes = self.load_remotes()
         del remotes[remote_name]
 
-        # TODO: cache2.0, editables
-        # with self._cache.editable_packages.disable_editables():
-        for rrev in self._cache.all_refs():
-            # TODO: cache2.0 revisit this part, maybe implement some methods for remotes
-            if self._cache.get_remote(rrev) == remote_name:
-                self._cache.set_remote(rrev, None)
-            for pkg_id in self._cache.get_package_ids(rrev):
-                for prev in self._cache.get_package_revisions(pkg_id):
-                    if self._cache.get_remote(prev) == remote_name:
-                        self._cache.set_remote(prev, None)
+        with self._cache.editable_packages.disable_editables():
+            for rrev in self._cache.all_refs():
+                if self._cache.get_remote(rrev) == remote_name:
+                    self._cache.set_remote(rrev, None)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        if self._cache.get_remote(prev) == remote_name:
+                            self._cache.set_remote(prev, None)
 
-        remotes.save(self._filename)
+            remotes.save(self._filename)
 
     def define(self, remotes):
         # For definition from conan config install
@@ -385,10 +384,10 @@ class RemoteRegistry(object):
             for ref in self._cache.all_refs():
                 if self._cache.get_remote(ref) not in remotes:
                     self._cache.set_remote(ref, None)
-                packages = self._cache.get_package_revisions(ref)
-                for pref in packages:
-                    if self._cache.get_remote(pref) not in remotes:
-                        self._cache.set_remote(pref, None)
+                for package_id in self._cache.get_package_ids(ref):
+                    for prev in self._cache.get_package_revisions(package_id):
+                        if self._cache.get_remote(prev) not in remotes:
+                            self._cache.set_remote(prev, None)
 
             remotes.save(self._filename)
 
@@ -396,13 +395,13 @@ class RemoteRegistry(object):
         remotes = self.load_remotes()
         remotes.rename(remote_name, new_remote_name)
         with self._cache.editable_packages.disable_editables():
-            for ref in self._cache.all_refs():
-                with self._cache.package_layout(ref).update_metadata() as metadata:
-                    if metadata.recipe.remote == remote_name:
-                        metadata.recipe.remote = new_remote_name
-                    for pkg_metadata in metadata.packages.values():
-                        if pkg_metadata.remote == remote_name:
-                            pkg_metadata.remote = new_remote_name
+            for rrev in self._cache.all_refs():
+                if self._cache.get_remote(rrev) == remote_name:
+                    self._cache.set_remote(rrev, new_remote_name)
+                for pkg_id in self._cache.get_package_ids(rrev):
+                    for prev in self._cache.get_package_revisions(pkg_id):
+                        if self._cache.get_remote(prev) == remote_name:
+                            self._cache.set_remote(prev, new_remote_name)
 
             remotes.save(self._filename)
 
