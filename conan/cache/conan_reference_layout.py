@@ -1,3 +1,4 @@
+import contextlib
 import os
 from contextlib import contextmanager
 
@@ -106,6 +107,10 @@ class PackageLayout(LayoutBase):
     @reference.setter
     def reference(self, ref: ConanReference):
         self._ref = ref
+
+    # TODO: cache2.0 locks implementation
+    def package_lock(self):
+        return contextlib.nullcontext()
 
     def build(self):
         return os.path.join(self.base_folder, BUILD_FOLDER)
