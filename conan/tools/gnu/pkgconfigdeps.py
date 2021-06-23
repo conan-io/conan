@@ -90,9 +90,9 @@ class PkgConfigDeps(object):
         host_req = self._conanfile.dependencies.host
 
         for require, dep in host_req.items():
-            pkg_genname = dep.new_cpp_info.get_property("pkg_config_name", "PkgConfigDeps")
+            pkg_genname = get_target_namespace(dep)
 
-            if dep.new_cpp_info.components:
+            if dep.new_cpp_info.has_components:
                 components = self.get_components(dep.ref.name, dep)
                 for comp_genname, comp, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self._pc_file_content(
@@ -102,27 +102,27 @@ class PkgConfigDeps(object):
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname,
-                                                                              dep.new_cpp_info,
+                                                                              dep,
                                                                               comp_gennames)
             else:
                 require_public_deps = [_d for _, _d in self._get_public_require_deps(dep.new_cpp_info)]
-                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info,
+                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep,
                                                                    require_public_deps)
         return ret
 
-    def _pc_file_content(self, name, cpp_info, requires_gennames):
-        prefix_path = cpp_info.rootpath.replace("\\", "/")
+    def _pc_file_content(self, name, dep, requires_gennames):
+        prefix_path = dep.package_folder.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
-
+        cpp_info = dep.new_cpp_info
         libdir_vars = []
-        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.lib_paths)
+        dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
         if dir_lines:
             libdir_vars = varnames
             lines.extend(dir_lines)
 
         includedir_vars = []
         dir_lines, varnames = self._generate_dir_lines(prefix_path, "includedir",
-                                                       cpp_info.include_paths)
+                                                       cpp_info.includedirs)
         if dir_lines:
             includedir_vars = varnames
             lines.extend(dir_lines)
@@ -134,9 +134,9 @@ class PkgConfigDeps(object):
 
         lines.append("")
         lines.append("Name: %s" % name)
-        description = cpp_info.description or "Conan package: %s" % name
+        description = self._conanfile.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % cpp_info.version)
+        lines.append("Version: %s" % dep.ref.version)
         libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
@@ -148,7 +148,7 @@ class PkgConfigDeps(object):
         rpaths = rpath_flags(self._conanfile.settings, os_build,
                              ["${%s}" % libdir for libdir in libdir_vars])
         frameworks = format_frameworks(cpp_info.frameworks, self._conanfile.settings)
-        framework_paths = format_framework_paths(cpp_info.framework_paths, self._conanfile.settings)
+        framework_paths = format_framework_paths(cpp_info.frameworkdirs, self._conanfile.settings)
 
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
@@ -169,12 +169,11 @@ class PkgConfigDeps(object):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
-    @staticmethod
-    def global_pc_file_contents(name, cpp_info, comp_gennames):
+    def global_pc_file_contents(self, name, dep, comp_gennames):
         lines = ["Name: %s" % name]
-        description = cpp_info.description or "Conan package: %s" % name
+        description = self._conanfile.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % cpp_info.version)
+        lines.append("Version: %s" % dep.ref.version)
 
         if comp_gennames:
             public_deps = " ".join(comp_gennames)

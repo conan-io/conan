@@ -23,7 +23,6 @@ from conans import ConanFile
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
-    generators = "PkgConfigDeps"
 
     def package_info(self):
         self.cpp_info.frameworkdirs = []
@@ -38,8 +37,8 @@ class PkgConfigConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . danimtb/testing")
-        client.run("install MyLib/0.1@danimtb/testing")
+        client.run("create .")
+        client.run("install MyLib/0.1@ -g PkgConfigDeps")
 
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
@@ -80,7 +79,6 @@ from conans import ConanFile
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
-    generators = "PkgConfigDeps"
 
     def package_info(self):
         self.cpp_info.includedirs = []
@@ -90,8 +88,8 @@ class PkgConfigConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create . danimtb/testing")
-        client.run("install MyLib/0.1@danimtb/testing")
+        client.run("create .")
+        client.run("install MyLib/0.1@ -g PkgConfigDeps")
 
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
@@ -121,7 +119,6 @@ class PkgConfigConan(ConanFile):
     version = "0.1"
     settings = "os", "compiler"
     exports = "mylib.so"
-    generators = "PkgConfigDeps"
 
     def package(self):
         self.copy("mylib.so", dst="lib")
@@ -133,8 +130,8 @@ class PkgConfigConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "linux_gcc": profile,
                      "mylib.so": "fake lib content"})
-        client.run("create . danimtb/testing -pr=linux_gcc")
-        client.run("install MyLib/0.1@danimtb/testing -pr=linux_gcc")
+        client.run("create . -pr=linux_gcc")
+        client.run("install MyLib/0.1@ -g PkgConfigDeps -pr=linux_gcc")
 
         pc_path = os.path.join(client.current_folder, "MyLib.pc")
         self.assertTrue(os.path.exists(pc_path))
@@ -150,7 +147,6 @@ import os
 class PkgConfigConan(ConanFile):
     name = "MyLib"
     version = "0.1"
-    generators = "PkgConfigDeps"
 
     def package(self):
         save(os.path.join(self.package_folder, "lib", "file"), "")
@@ -162,7 +158,7 @@ class PkgConfigConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create .")
-        client.run("install MyLib/0.1@")
+        client.run("install MyLib/0.1@ -g PkgConfigDeps")
 
         pc_content = client.load("MyLib.pc")
         self.assertIn('Libs: -L"${libdir}" -lmylib1  -lmylib2  -lsystem_lib1  -lsystem_lib2 ',
@@ -176,8 +172,6 @@ class PkgConfigConan(ConanFile):
             import os
 
             class PkgConfigConan(ConanFile):
-                generators = "PkgConfigDeps"
-
                 def package(self):
                     for p in ["inc1", "inc2", "inc3/foo", "lib1", "lib2"]:
                         save(os.path.join(self.package_folder, p, "file"), "")
@@ -189,7 +183,7 @@ class PkgConfigConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@")
-        client.run("install pkg/0.1@")
+        client.run("install pkg/0.1@ -g PkgConfigDeps")
 
         pc_content = client.load("pkg.pc")
         self.assertIn("includedir=${prefix}/inc1", pc_content)
@@ -202,9 +196,9 @@ class PkgConfigConan(ConanFile):
 
     def test_empty_include(self):
         client = TestClient()
-        client.save({"conanfile.py": GenConanfile().with_generator("PkgConfigDeps")})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . pkg/0.1@")
-        client.run("install pkg/0.1@")
+        client.run("install pkg/0.1@ -g PkgConfigDeps")
         pc = client.load("pkg.pc")
         self.assertNotIn("libdir=${prefix}/lib", pc)
         self.assertNotIn("includedir=${prefix}/include", pc)
@@ -218,7 +212,6 @@ class PkgConfigConan(ConanFile):
             import textwrap
 
             class PkgConfigConan(ConanFile):
-                generators = "PkgConfigDeps"
 
                 def package(self):
                     save(os.path.join(self.package_folder, "include" ,"file"), "")
@@ -237,7 +230,7 @@ class PkgConfigConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@")
-        client.run("install pkg/0.1@")
+        client.run("install pkg/0.1@ -g PkgConfigDeps")
 
         pc_content = client.load("pkg.pc")
         self.assertIn("libdir=${prefix}/lib", pc_content)
@@ -254,7 +247,6 @@ class PkgConfigConan(ConanFile):
             import textwrap
 
             class PkgConfigConan(ConanFile):
-                generators = "PkgConfigDeps"
 
                 def package_info(self):
                     self.cpp_info.components["mycomponent"].set_property("pkg_config_custom_content",
@@ -263,7 +255,7 @@ class PkgConfigConan(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . pkg/0.1@")
-        client.run("install pkg/0.1@")
+        client.run("install pkg/0.1@ -g PkgConfigDeps")
 
         pc_content = client.load("mycomponent.pc")
         self.assertIn("componentdir=${prefix}/mydir", pc_content)
