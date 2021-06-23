@@ -1,4 +1,3 @@
-import contextlib
 import os
 from contextlib import contextmanager
 
@@ -109,8 +108,9 @@ class PackageLayout(LayoutBase):
         self._ref = ref
 
     # TODO: cache2.0 locks implementation
+    @contextmanager
     def package_lock(self):
-        return contextlib.nullcontext()
+        yield
 
     def build(self):
         return os.path.join(self.base_folder, BUILD_FOLDER)
