@@ -74,6 +74,15 @@ class PackageCacheLayout(object):
     def system_reqs_package(self, pref):
         return self.pkg_layout(pref).system_reqs_package()
 
+    def builds(self):
+        latest_rrev = self._cache.get_latest_rrev(self._ref)
+        package_ids = self._cache.get_package_ids(latest_rrev)
+        build_folders = []
+        for package_id in package_ids:
+            prev = self._cache.get_latest_prev(package_id)
+            build_folders.append(self._cache.get_pkg_layout(prev).build())
+        return build_folders
+
     def packages(self):
         latest_rrev = self._cache.get_latest_rrev(self._ref)
         package_ids = self._cache.get_package_ids(latest_rrev)
