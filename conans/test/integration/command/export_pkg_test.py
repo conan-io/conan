@@ -101,10 +101,10 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.cache.package_layout(ref).packages()
-        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
+        pkgs_folders = client.cache.package_layout(ref).packages()
+        conaninfo = load(os.path.join(pkgs_folders[0], "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
-        manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+        manifest = load(os.path.join(pkgs_folders[0], "conanmanifest.txt"))
         self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 

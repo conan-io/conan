@@ -412,7 +412,8 @@ class MyPkg(ConanFile):
 
         refs = client.cache.get_latest_rrev(ref)
         pkgs = client.cache.get_package_ids(refs)
-        package_folder = client.cache.pkg_layout(pkgs[0]).package()
+        prev = client.cache.get_latest_prev(pkgs[0])
+        package_folder = client.cache.pkg_layout(prev).package()
 
         conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
         # The user and channel nor None nor "_/" appears in the conaninfo
