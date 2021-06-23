@@ -17,8 +17,9 @@ class SettingsTest(unittest.TestCase):
 
     def _get_conaninfo(self, reference, client):
         ref = client.cache.get_latest_rrev(ConanFileReference.loads(reference))
-        pref = client.cache.get_package_revisions(ref)
-        pkg_folder = client.cache.pkg_layout(pref[0]).package()
+        pkg_ids = client.cache.get_package_ids(ref)
+        pref = client.cache.get_latest_prev(pkg_ids[0])
+        pkg_folder = client.cache.pkg_layout(pref).package()
         return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):
