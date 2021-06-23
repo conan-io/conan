@@ -1,7 +1,6 @@
 import json
 import os
 import pytest
-import platform
 
 from conans.errors import ConanException
 from conans.test.assets.genconanfile import GenConanfile
