@@ -163,7 +163,6 @@ def test_reuse():
     assert header == "//EMPTY!"
 
 
-@pytest.mark.xfail(reason="cache2.0")
 def test_upload_doesnt_follow_pref():
     servers = OrderedDict()
     servers['r1'] = TestServer()
@@ -171,13 +170,13 @@ def test_upload_doesnt_follow_pref():
     client = TestClient(servers=servers, users={"r1": [("lasote", "mypass")],
                                                 "r2": [("lasote", "mypass")]})
     ref = "Pkg/0.1@lasote/testing"
-    pref = f"%s:{NO_SETTINGS_PACKAGE_ID}" % ref
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload Pkg/0.1@lasote/testing --all -r r2")
     client.run("remote list_pref Pkg/0.1@lasote/testing")
-
-    assert "%s: r2" % pref in client.out
+    rrev = client.cache.get_latest_rrev(ConanFileReference.loads(ref))
+    prev = client.cache.get_latest_prev(PackageReference(rrev, NO_SETTINGS_PACKAGE_ID))
+    assert "%s: r2" % prev.full_str() in client.out
     client.run("remote remove_ref Pkg/0.1@lasote/testing")
 
     # It should upload both to r1 (default), not taking into account the pref to r2
@@ -185,7 +184,7 @@ def test_upload_doesnt_follow_pref():
     assert "Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0")
+@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
 def test_install_update_following_pref():
     conanfile = textwrap.dedent("""
         import os, random
@@ -230,7 +229,7 @@ def test_update_binaries_failed():
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0")
+@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
 def test_update_binaries_no_package_error():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
@@ -241,7 +240,7 @@ def test_update_binaries_no_package_error():
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0")
+@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
 def test_remove_old_sources():
     # https://github.com/conan-io/conan/issues/1841
     test_server = TestServer()
