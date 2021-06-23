@@ -192,21 +192,23 @@ def test_config_user_home_short_path():
     """ When general.user_home_short is configured, short_paths MUST obey its path
     """
     short_folder = os.path.join(temp_folder(), "short").replace("\\", "/")
-    client = TestClient()
-    client.run("config set general.user_home_short='{}'".format(short_folder))
-    client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
-    client.run("create . foobar/0.1.0@user/testing")
-    assert client.cache.config.short_paths_home == short_folder
+    with environment_append({"CONAN_USER_HOME_SHORT": ""}):
+        client = TestClient()
+        client.run("config set general.user_home_short='{}'".format(short_folder))
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("create . foobar/0.1.0@user/testing")
+        assert client.cache.config.short_paths_home == short_folder
 
 
 def test_config_user_home_short_none():
     """ When general.user_home_short is None, short_paths MUST use cache folder
     """
-    client = TestClient()
-    client.run('config set general.user_home_short=None')
-    client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
-    client.run("create . foobar/0.1.0@user/testing")
-    assert client.cache.config.short_paths_home == "None"
+    with environment_append({"CONAN_USER_HOME_SHORT": ""}):
+        client = TestClient()
+        client.run('config set general.user_home_short=None')
+        client.save({"conanfile.py": GenConanfile().with_short_paths(True)})
+        client.run("create . foobar/0.1.0@user/testing")
+        assert client.cache.config.short_paths_home == "None"
 
 
 def test_init():
