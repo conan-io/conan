@@ -370,16 +370,12 @@ class RemoteRegistry(object):
         # with self._cache.editable_packages.disable_editables():
         for rrev in self._cache.all_refs():
             # TODO: cache2.0 revisit this part, maybe implement some methods for remotes
-            self._cache.set_remote(rrev, None)
+            if self._cache.get_remote(rrev) == remote_name:
+                self._cache.set_remote(rrev, None)
             for pkg_id in self._cache.get_package_ids(rrev):
                 for prev in self._cache.get_package_revisions(pkg_id):
-                    self._cache.set_remote(prev, None)
-            # with self._cache.package_layout(ref).update_metadata() as metadata:
-            #     if metadata.recipe.remote == remote_name:
-            #         metadata.recipe.remote = None
-            #     for pkg_metadata in metadata.packages.values():
-            #         if pkg_metadata.remote == remote_name:
-            #             pkg_metadata.remote = None
+                    if self._cache.get_remote(prev) == remote_name:
+                        self._cache.set_remote(prev, None)
 
         remotes.save(self._filename)
 
