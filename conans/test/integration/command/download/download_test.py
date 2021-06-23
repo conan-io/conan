@@ -135,7 +135,8 @@ class Pkg(ConanFile):
         client.run("download pkg/0.1@lasote/stable:{}".format(NO_SETTINGS_PACKAGE_ID))
 
         rrev = client.cache.get_latest_rrev(ref)
-        prev = client.cache.get_latest_prev(rrev)
+        pkgids = client.cache.get_package_ids(rrev)
+        prev = client.cache.get_latest_prev(pkgids[0])
         package_folder = client.cache.pkg_layout(prev).package()
 
         # Check not 'No remote binary packages found' warning

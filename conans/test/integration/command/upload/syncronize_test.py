@@ -76,8 +76,9 @@ class SynchronizeTest(unittest.TestCase):
         client.run("install %s --build missing" % str(ref))
         # Upload package
         ref_with_rev = client.cache.get_latest_rrev(ref)
-        pref = client.cache.get_latest_prev(ref_with_rev)
-        client.run(f"upload {str(pref)}")
+        pkg_ids = client.cache.get_package_ids(ref_with_rev)
+        pref = client.cache.get_latest_prev(pkg_ids[0])
+        client.run("upload %s -p %s" % (str(ref), str(pkg_ids[0].id)))
 
         # Check that package exists on server
         package_server_path = remote_paths.package(pref)

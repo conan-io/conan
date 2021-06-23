@@ -128,7 +128,12 @@ class _UploadCollecter(object):
                     package_id = package_id.split("#")[0]
                     pref = PackageReference(ref, package_id, prev)
                     packages = self._cache.get_package_ids(pref)
-                    packages_ids = [pkg for pkg in packages if pkg.id == package_id]
+                    # TODO: FIX the name is package_ids but we pass the latest prev for each package id
+                    packages_ids = []
+                    for pkg in packages:
+                        if pkg.id == package_id:
+                            packages_ids.append(self._cache.get_latest_prev(pkg))
+
                     if not packages_ids:
                         prev = f"#{prev}" if prev else ""
                         raise ConanException(f"Binary package {str(ref)}:{package_id}{prev} not found")

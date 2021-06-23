@@ -38,7 +38,8 @@ class ConanFileToolsTest(ConanFile):
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
 
         latest_rrev = client.cache.get_latest_rrev(ref)
-        latest_prev = client.cache.get_latest_prev(latest_rrev)
+        pkg_ids = client.cache.get_package_ids(latest_rrev)
+        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
         layout = client.cache.get_pkg_layout(latest_prev)
         build_folder = layout.build()
         package_folder = layout.package()

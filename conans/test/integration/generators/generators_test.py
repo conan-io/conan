@@ -65,7 +65,8 @@ class TestConan(ConanFile):
         src_dirs = re.search('set\(CONAN_SRC_DIRS_MYSRC "(.*)"\)', cmake).group(1)
 
         latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("mysrc/0.1@user/testing"))
-        prev = client.cache.get_latest_prev(latest_rrev)
+        pkgids = client.cache.get_package_ids(latest_rrev)
+        prev = client.cache.get_latest_prev(pkgids[0])
         pkg_layout = client.cache.pkg_layout(prev)
 
         src_folder = os.path.join(pkg_layout.package(), "src")
