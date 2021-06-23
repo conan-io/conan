@@ -52,7 +52,10 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
 
-        package_path = client.cache.package_layout(ref).pkg_layout.package()
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        pkg_ids = client.cache.get_package_ids(latest_rrev)
+        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        package_path = client.cache.get_pkg_layout(latest_prev).package()
         self.assertIn(f"{package_path}", cmake)
 
         # CHECK XCODE GENERATOR

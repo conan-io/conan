@@ -218,15 +218,17 @@ class BuildIdTest(unittest.TestCase):
 
         def _check_builds():
             latest_rrev = client.cache.get_latest_rrev(ref)
-            prevs = client.cache.get_package_revisions(latest_rrev)
+            pkg_ids = client.cache.get_package_ids(latest_rrev)
+            prevs = []
+            for pkg_id in pkg_ids:
+                prevs.extend(client.cache.get_package_revisions(pkg_id))
             build_folders = []
             for prev in prevs:
                 if os.path.exists(client.cache.get_pkg_layout(prev).build()):
                     build_folders.append(client.cache.get_pkg_layout(prev).build())
             self.assertEqual(1, len(build_folders))
-            pkgs = client.cache.get_package_ids(latest_rrev)
-            self.assertEqual(2, len(pkgs))
-            return build_folders[0], pkgs
+            self.assertEqual(2, len(pkg_ids))
+            return build_folders[0], pkg_ids
 
         build, packages = _check_builds()
         # TODO: cache2.0 remove -p and -b is not yet fully implemented
