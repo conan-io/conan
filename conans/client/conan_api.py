@@ -976,10 +976,10 @@ class ConanAPIV1(object):
         if len(all_rrevs) > 0:
             for rrev in all_rrevs:
                 self.app.cache.set_remote(rrev, remote.name)
-                # also set for all the packages
-                prevs = self.app.cache.get_package_revisions(rrev)
-                for prev in prevs:
-                    self.app.cache.set_remote(prev, remote.name)
+                pkg_ids = self.app.cache.get_package_ids(rrev)
+                for pkg in pkg_ids:
+                    for prev in self.app.cache.get_package_revisions(pkg):
+                        self.app.cache.set_remote(prev, remote.name)
         else:
             raise ConanException(f"Can't set the remote for {str(ref)}. "
                                  f"It doesn't exist in the local cache")
@@ -1002,8 +1002,10 @@ class ConanAPIV1(object):
         ref = ConanFileReference.loads(reference, validate=True)
         result = {}
         for rrev in self.app.cache.get_recipe_revisions(ref):
-            for prev in self.app.cache.get_package_revisions(rrev):
-                result[prev] = self.app.cache.get_remote(prev)
+            pkg_ids = self.app.cache.get_package_ids(rrev)
+            for pkg in pkg_ids:
+                for prev in self.app.cache.get_package_revisions(pkg):
+                    result[prev] = self.app.cache.get_remote(prev)
         if no_remote:
             return {repr(prev): remote_name for prev, remote_name in result.items() if not remote_name}
         else:

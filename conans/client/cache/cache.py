@@ -152,6 +152,9 @@ class ClientCache(object):
                                    validate=False) for pref in
             self._data_cache.get_package_ids(ConanReference(ref))]
 
+    def get_build_id(self, ref):
+        return self._data_cache.get_build_id(ConanReference(ref))
+
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
         return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
                 self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]

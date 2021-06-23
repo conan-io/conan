@@ -167,6 +167,9 @@ class DataCache:
         for it in self._db.get_package_ids(ref):
             yield it
 
+    def get_build_id(self, ref):
+        yield self._db.get_build_id(ref)
+
     def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         for it in self._db.get_package_revisions(ref, only_latest_prev):
             yield it

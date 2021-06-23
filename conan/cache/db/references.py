@@ -86,6 +86,21 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
+    def get_build_id(self, conn, ref: ConanReference):
+        """ Returns the row matching the reference or fails """
+        assert ref.rrev, "To get the build_id you must provide a recipe revision."
+        assert ref.pkgid, "To get the build_id you must provide a package id."
+        assert ref.prev, "To get the build_id you must provide a package revision."
+        where_clause = self._where_clause(ref)
+        query = f'SELECT {self.columns.build_id} FROM {self.table_name} ' \
+                f'WHERE {where_clause};'
+        r = conn.execute(query)
+        row = r.fetchone()
+        if not row:
+            raise ReferencesDbTable.ReferenceDoesNotExist(
+                f"No entry for reference '{ref.full_reference}'")
+        return row[0]
+
     def get_timestamp(self, conn, ref: ConanReference):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)

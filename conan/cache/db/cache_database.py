@@ -83,6 +83,10 @@ class CacheDatabase:
             for it in self._references.get_package_ids(conn, ref):
                 yield it
 
+    def get_build_id(self, ref: ConanReference):
+        with self.connection() as conn:
+            yield self._references.get_build_id(conn, ref)
+
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         with self.connection() as conn:
             for it in self._references.get_recipe_revisions(conn, ref, only_latest_rrev):

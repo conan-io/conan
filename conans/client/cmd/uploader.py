@@ -127,12 +127,13 @@ class _UploadCollecter(object):
                     prev = package_id.split("#")[1] if "#" in package_id else ""
                     package_id = package_id.split("#")[0]
                     pref = PackageReference(ref, package_id, prev)
-                    packages = self._cache.get_package_ids(pref)
-                    # TODO: FIX the name is package_ids but we pass the latest prev for each package id
+                    # FIXME: The name is package_ids but we pass the latest prev for each package id
                     packages_ids = []
+                    packages = [pref] if pref.revision else self._cache.get_package_ids(pref)
                     for pkg in packages:
-                        if pkg.id == package_id:
-                            packages_ids.append(self._cache.get_latest_prev(pkg))
+                        latest_prev = self._cache.get_latest_prev(pkg) if pkg.id == package_id else None
+                        if latest_prev:
+                            packages_ids.append(latest_prev)
 
                     if not packages_ids:
                         prev = f"#{prev}" if prev else ""
