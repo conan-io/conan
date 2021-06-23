@@ -33,7 +33,13 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
     output.info("Packaging to %s" % package_id)
     pref = PackageReference(ref, package_id)
     pkg_ids = cache.get_package_ids(ref)
-    existing_id = [pkg_id for pkg_id in pkg_ids if package_id in pkg_id]
+
+    existing_id = False
+    for pkg_id in pkg_ids:
+        if pkg_id.id == package_id:
+            existing_id = True
+            break
+
     if existing_id and not force:
         raise ConanException("Package already exists. Please use --force, -f to overwrite it")
 
