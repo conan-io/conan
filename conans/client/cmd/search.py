@@ -61,9 +61,12 @@ class Search(object):
             raise RecipeNotFoundException(ref)
 
         conanfileref = latest_rrev
+        package_layouts = []
+        pkg_ids = self._cache.get_package_ids(conanfileref)
+        for pkg in pkg_ids:
+            latest_prev = self._cache.get_latest_prev(pkg)
+            package_layouts.append(self._cache.pkg_layout(latest_prev))
 
-        pkg_ids = self._cache.get_package_ids(conanfileref, only_latest_prev=True)
-        package_layouts = [self._cache.pkg_layout(pkg_ref) for pkg_ref in pkg_ids]
         packages_props = search_packages(package_layouts, query)
         ordered_packages = OrderedDict(sorted(packages_props.items()))
 

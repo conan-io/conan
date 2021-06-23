@@ -116,7 +116,10 @@ class _UploadCollecter(object):
                     # TODO: cache2.0 do we want to upload all package_revisions ? Just the latest
                     #  upload just the latest for the moment
                     # TODO: cache2.0 Ignoring the query for the moment
-                    packages_ids = self._cache.get_package_ids(ref, only_latest_prev=True)
+                    packages_ids = []
+                    for pkg_id in self._cache.get_package_ids(ref):
+                        packages_ids.append(self._cache.get_latest_prev(pkg_id))
+
                 elif package_id:
                     # TODO: cache2.0 if we specify a package id we could have multiple package revisions
                     #  something like: upload pkg/1.0:pkg_id will upload the package id for the latest prev

@@ -25,7 +25,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -141,17 +140,17 @@ class ClientCache(object):
         return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
                 self._data_cache.list_references()]
 
-    def get_package_revisions(self, ref, only_latest_prev=False, with_build_id=None):
+    def get_package_revisions(self, ref, only_latest_prev=False):
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
                                    validate=False) for pref in
-            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev, with_build_id)]
+            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref, only_latest_prev=False, with_build_id=None):
+    def get_package_ids(self, ref):
         return [
-            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
+            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
                                    validate=False) for pref in
-            self._data_cache.get_package_ids(ConanReference(ref), only_latest_prev, with_build_id)]
+            self._data_cache.get_package_ids(ConanReference(ref))]
 
     def get_recipe_revisions(self, ref, only_latest_rrev=False):
         return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in

@@ -124,7 +124,11 @@ class ConanRemover(object):
             return
 
         remove_recipe = False if package_ids is not None or build_ids is not None else True
-        all_package_revisions = self._cache.get_package_revisions(ref)
+        pkg_ids = self._cache.get_package_ids(ref)
+        all_package_revisions = []
+        for pkg_id in pkg_ids:
+            all_package_revisions.extend(self._cache.get_package_revisions(pkg_id))
+
         prev_remove = []
         prev_remove_build = []
 
@@ -218,7 +222,10 @@ class ConanRemover(object):
                 if remote_name:
                     packages = self._remote_manager.search_packages(remote, ref, packages_query)
                 else:
-                    all_package_revs = self._cache.get_package_revisions(ref)
+                    pkg_ids = self._cache.get_package_ids(ref)
+                    all_package_revs = []
+                    for pkg in pkg_ids:
+                        all_package_revs.extend(self._cache.get_package_revisions(pkg))
                     packages_layouts = [self._cache.pkg_layout(pref) for pref in all_package_revs]
                     packages = search_packages(packages_layouts, packages_query)
                 if package_ids_filter:

@@ -38,77 +38,59 @@ class PackageCacheLayout(object):
     def ref(self):
         return self._ref
 
-    @property
     def ref_layout(self):
         latest_rrev = self._cache.get_latest_rrev(self._ref)
         return self._cache.get_ref_layout(latest_rrev)
 
-    @property
-    def pkg_layout(self):
-        latest_rrev = self._cache.get_latest_rrev(self._ref)
-        latest_prev = self._cache.get_latest_prev(latest_rrev)
+    def pkg_layout(self, pref):
+        latest_rrev = self._cache.get_latest_rrev(pref.ref)
+        latest_prev = self._cache.get_latest_prev(PackageReference(latest_rrev, pref.id))
         return self._cache.get_pkg_layout(latest_prev)
 
     def base_folder(self):
-        return self.ref_layout.base_folder
+        return self.ref_layout().base_folder
 
     def export(self):
-        return self.ref_layout.export()
+        return self.ref_layout().export()
 
     def conanfile(self):
-        return self.ref_layout.conanfile()
+        return self.ref_layout().conanfile()
 
     def conandata(self):
-        return self.ref_layout.conandata()
+        return self.ref_layout().conandata()
 
     def export_sources(self):
-        return self.ref_layout.export_sources()
+        return self.ref_layout().export_sources()
 
     def source(self):
-        return self.ref_layout.source()
+        return self.ref_layout().source()
 
     def scm_sources(self):
-        return self.ref_layout.scm_sources()
-
-    def builds(self):
-        return self.pkg_layout.build()
+        return self.ref_layout().scm_sources()
 
     def build(self, pref):
-        return self.pkg_layout.build()
-
-    def system_reqs(self):
-        return self.pkg_layout.system_reqs()
+        return self.pkg_layout(pref).build()
 
     def system_reqs_package(self, pref):
-        return self.pkg_layout.system_reqs_package()
-
-    def remove_system_reqs(self):
-        system_reqs_folder = os.path.join(self._base_folder, SYSTEM_REQS_FOLDER)
-        if not os.path.exists(self._base_folder):
-            raise ValueError("%s does not exist" % repr(self._ref))
-        if not os.path.exists(system_reqs_folder):
-            return
-        try:
-            rmdir(system_reqs_folder)
-        except Exception as e:
-            raise ConanException("Unable to remove system requirements at %s: %s"
-                                 % (system_reqs_folder, str(e)))
+        return self.pkg_layout(pref).system_reqs_package()
 
     def packages(self):
-        return self.pkg_layout.package()
+        latest_rrev = self._cache.get_latest_rrev(self._ref)
+        package_ids = self._cache.get_package_ids(latest_rrev)
+        packages_folders = []
+        for package_id in package_ids:
+            prev = self._cache.get_latest_prev(package_id)
+            packages_folders.append(self._cache.get_pkg_layout(prev).package())
+        return packages_folders
 
     def package(self, pref):
-        return self.pkg_layout.package()
-
-    @contextmanager
-    def set_dirty_context_manager(self, pref):
-        raise("set_dirty_context_manager moved to cache2.0")
+        return self.pkg_layout(pref).package()
 
     def download_package(self, pref):
-        return self.pkg_layout.download_package()
+        return self.pkg_layout(pref).download_package()
 
     def download_export(self):
-        return self.ref_layout.download_export()
+        return self.ref_layout().download_export()
 
     def package_is_dirty(self, pref):
         raise ConanException("package_is_dirty moved to cache2.0")
@@ -146,10 +128,10 @@ class PackageCacheLayout(object):
                 (not pref.revision or self.package_revision(pref) == pref.revision))
 
     def recipe_revision(self):
-        return self.ref_layout.reference.revision
+        return self.ref_layout().reference.revision
 
     def package_revision(self, pref):
-        return self.pkg_layout.reference.revision
+        return self.pkg_layout(pref).reference.revision
 
     def conan_builds(self):
         builds_dir = self.builds()

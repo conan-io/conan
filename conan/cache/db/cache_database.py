@@ -73,19 +73,19 @@ class CacheDatabase:
             for it in self._references.all(conn, only_latest_rrev):
                 yield it
 
-    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False, with_build_id=None):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         with self.connection() as conn:
-            for it in self._references.get_prevs(conn, ref, only_latest_prev, with_build_id):
+            for it in self._references.get_package_revisions(conn, ref, only_latest_prev):
                 yield it
 
-    def get_package_ids(self, ref: ConanReference, only_latest_prev=False, with_build_id=None):
+    def get_package_ids(self, ref: ConanReference):
         with self.connection() as conn:
-            for it in self._references.get_pkgids(conn, ref, only_latest_prev, with_build_id):
+            for it in self._references.get_package_ids(conn, ref):
                 yield it
 
     def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         with self.connection() as conn:
-            for it in self._references.get_rrevs(conn, ref, only_latest_rrev):
+            for it in self._references.get_recipe_revisions(conn, ref, only_latest_rrev):
                 yield it
 
     def get_remote(self, ref: ConanReference):

@@ -146,7 +146,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         return r.lastrowid
 
-    def all(self, conn, only_latest_rrev: bool):
+    def all(self, conn, only_latest_rrev=False):
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -166,11 +166,10 @@ class ReferencesDbTable(BaseDbTable):
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_prevs(self, conn, ref: ConanReference, only_latest_prev=False, with_build_id=None):
+    def get_package_revisions(self, conn, ref: ConanReference, only_latest_prev=False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
-        check_pkgid = f'AND {self.columns.pkgid} = "{ref.pkgid}" ' if ref.pkgid else ''
+        assert ref.pkgid, "To search for package revisions you must provide a package id."
         check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' if ref.prev else ''
-        check_build_id = f'AND {self.columns.build_id} = "{with_build_id}" ' if with_build_id else ''
         if only_latest_prev:
             query = f'SELECT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -183,56 +182,42 @@ class ReferencesDbTable(BaseDbTable):
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'{check_pkgid} ' \
+                    f'AND {self.columns.pkgid} = "{ref.pkgid}" ' \
                     f'{check_prev} ' \
-                    f'{check_build_id} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'GROUP BY {self.columns.pkgid} '
         else:
             query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'{check_pkgid} ' \
+                    f'AND {self.columns.pkgid} = "{ref.pkgid}" ' \
                     f'{check_prev} ' \
-                    f'{check_build_id} ' \
                     f'AND {self.columns.prev} IS NOT NULL '
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_pkgids(self, conn, ref: ConanReference, only_latest_prev=False, with_build_id=None):
+    def get_package_ids(self, conn, ref: ConanReference):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
-        check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' \
-            if ref.prev else f'AND {self.columns.prev} IS NOT NULL '
-        check_build_id = f'AND {self.columns.build_id} = "{with_build_id}" ' if with_build_id else ''
-        if only_latest_prev:
-            query = f'SELECT {self.columns.reference}, ' \
-                    f'{self.columns.rrev}, ' \
-                    f'{self.columns.pkgid}, ' \
-                    f'{self.columns.prev}, ' \
-                    f'{self.columns.path}, ' \
-                    f'{self.columns.remote}, ' \
-                    f'MAX({self.columns.timestamp}), ' \
-                    f'{self.columns.build_id} ' \
-                    f'FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
-                    f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'AND {self.columns.pkgid} IS NOT NULL ' \
-                    f'{check_prev} ' \
-                    f'{check_build_id} ' \
-                    f'GROUP BY {self.columns.pkgid} '
-        else:
-            query = f'SELECT * FROM {self.table_name} ' \
-                    f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
-                    f'AND {self.columns.reference} = "{ref.reference}" ' \
-                    f'{check_prev} ' \
-                    f'{check_build_id} ' \
-                    f'AND {self.columns.prev} IS NOT NULL'
+        # we select the latest prev for each package_id
+        query = f'SELECT {self.columns.reference}, ' \
+                f'{self.columns.rrev}, ' \
+                f'{self.columns.pkgid}, ' \
+                f'{self.columns.prev}, ' \
+                f'{self.columns.path}, ' \
+                f'{self.columns.remote}, ' \
+                f'MAX({self.columns.timestamp}), ' \
+                f'{self.columns.build_id} ' \
+                f'FROM {self.table_name} ' \
+                f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
+                f'AND {self.columns.reference} = "{ref.reference}" ' \
+                f'AND {self.columns.pkgid} IS NOT NULL ' \
+                f'GROUP BY {self.columns.pkgid} '
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_rrevs(self, conn, ref: ConanReference, only_latest_rrev=False):
+    def get_recipe_revisions(self, conn, ref: ConanReference, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \
