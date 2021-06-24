@@ -62,7 +62,7 @@ def test_makefile_arch(config):
             "profile": profile})
 
     t.run("install . --profile:host=profile --profile:build=default")
-    t.run("build .")
+    t.run("build . --profile:host=profile --profile:build=default")
 
     libhello = os.path.join(t.current_folder, "libhello.a")
     app = os.path.join(t.current_folder, "app")
@@ -117,7 +117,7 @@ def test_catalyst(arch):
             "profile": profile})
 
     t.run("install . --profile:host=profile --profile:build=default")
-    t.run("build .")
+    t.run("build . --profile:host=profile --profile:build=default")
 
     libhello = os.path.join(t.current_folder, "libhello.a")
     app = os.path.join(t.current_folder, "app")
