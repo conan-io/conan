@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 import textwrap
+import os
 
 import six
 
@@ -246,6 +247,7 @@ class QbsGenericTest(unittest.TestCase):
             qbs._settings_dir(conanfile),
             '%s/conan_qbs_toolchain_settings_dir' % conanfile.install_folder)
 
+    @unittest.skipIf(os.name == 'nt', "Test can only be performed with known MSVC version")
     def test_setup_toolchain_without_any_env_values(self):
         for settings in self._settings_to_test_against():
             conanfile = MockConanfileWithFolders(MockSettings(settings), runner=RunnerMock())
