@@ -31,22 +31,26 @@ class GraphLockErrorsTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile("PkgA", "0.1")})
         client.run("lock create conanfile.py --lockfile-out=conan.lock")
         client.run("install . --lockfile=conan.lock -s os=Windows", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -pr=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -o myoption=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'host' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'host' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -s:b os=Windows", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock --profile:build=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
         client.run("install . --lockfile=conan.lock -o:b myoption=default", assert_error=True)
-        self.assertIn("ERROR: Cannot use profile, settings, options or env 'build' "
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
+                      "when using lockfile", client.out)
+        client.run("install . --lockfile=conan.lock -c:b core:required_conan_version=>=1.36",
+                   assert_error=True)
+        self.assertIn("ERROR: Cannot use profile, settings, options, env or conf 'build' "
                       "when using lockfile", client.out)
 
     def test_error_old_format(self):

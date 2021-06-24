@@ -46,6 +46,9 @@ class Conf(object):
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._values[name] = value
 
+    def __delitem__(self, name):
+        del self._values[name]
+
     def __repr__(self):
         return "Conf: " + repr(self._values)
 
@@ -100,6 +103,11 @@ class ConfDefinition(object):
         """
         return self._pattern_confs.get(None, Conf())[module_name]
 
+    def __delitem__(self, module_name):
+        """ if a module name is requested for this, always goes to the None-Global config
+        """
+        del self._pattern_confs.get(None, Conf())[module_name]
+
     def get_conanfile_conf(self, ref_str):
         result = Conf()
         for pattern, conf in self._pattern_confs.items():
@@ -131,16 +139,22 @@ class ConfDefinition(object):
                 new_v.update(existing)
             self._pattern_confs[k] = new_v
 
-    def dumps(self):
+    def as_list(self):
         result = []
         # It is necessary to convert the None for sorting
         for pattern, conf in sorted(self._pattern_confs.items(),
                                     key=lambda x: ("", x[1]) if x[0] is None else x):
             for name, value in sorted(conf.items()):
                 if pattern:
-                    result.append("{}:{}={}".format(pattern, name, value))
+                    result.append(("{}:{}".format(pattern, name), value))
                 else:
-                    result.append("{}={}".format(name, value))
+                    result.append((name, value))
+        return result
+
+    def dumps(self):
+        result = []
+        for name, value in self.as_list():
+            result.append("{}={}".format(name, value))
         return "\n".join(result)
 
     def loads(self, text, profile=False):
@@ -151,19 +165,27 @@ class ConfDefinition(object):
                 continue
             try:
                 left, value = line.split("=", 1)
-                value = value.strip()
-                left = left.strip()
-                if left.count(":") >= 2:
-                    pattern, name = left.split(":", 1)
-                else:
-                    pattern, name = None, left
-            except Exception:
+            except ValueError:
                 raise ConanException("Error while parsing conf value '{}'".format(line))
+            else:
+                self.update(left.strip(), value.strip(), profile=profile)
 
-            if not _is_profile_module(name):
-                if profile:
-                    raise ConanException("[conf] '{}' not allowed in profiles".format(line))
-                if pattern is not None:
-                    raise ConanException("Conf '{}' cannot have a package pattern".format(line))
-            conf = self._pattern_confs.setdefault(pattern, Conf())
-            conf[name] = value
+    def update(self, key, value, profile=False):
+        """
+        Add/update a new/existing Conf line
+
+        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        """
+        if key.count(":") >= 2:
+            pattern, name = key.split(":", 1)
+        else:
+            pattern, name = None, key
+
+        if not _is_profile_module(name):
+            if profile:
+                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
+            if pattern is not None:
+                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
+
+        conf = self._pattern_confs.setdefault(pattern, Conf())
+        conf[name] = value
