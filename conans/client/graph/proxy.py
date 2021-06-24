@@ -58,7 +58,7 @@ class ConanProxy(object):
 
         # TODO: cache2.0: store the remote in the db? In 1.X we took the remote from the metadata
         # TODO: cache2.0: check with new --update flows
-        recipe_layout = self._cache.ref_layout(ref)
+        recipe_layout = self._cache.get_ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
         # TODO: cache2.0: check if we want to get the remote through the layout
         cur_remote = self._cache.get_remote(recipe_layout.reference)
