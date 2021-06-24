@@ -46,6 +46,10 @@ class RecipeLayout(LayoutBase):
     def reference(self, ref: ConanReference):
         self._ref = ref
 
+    @contextmanager
+    def conanfile_write_lock(self, output):
+        yield
+
     def export(self):
         return os.path.join(self.base_folder, 'export')
 
