@@ -56,7 +56,7 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
         pkg_ids = client.cache.get_package_ids(latest_rrev)
         latest_prev = client.cache.get_latest_prev(pkg_ids[0])
         package_path = client.cache.get_pkg_layout(latest_prev).package()
-        self.assertIn(f"{package_path}", cmake)
+        self.assertIn(f"{package_path}", str(cmake))
 
         # CHECK XCODE GENERATOR
         xcode = client.load(BUILD_INFO_XCODE)
