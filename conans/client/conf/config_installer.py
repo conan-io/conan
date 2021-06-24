@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
-from conans.client.cache.remote_registry import load_registry_txt, migrate_registry_file
+from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
@@ -96,14 +96,6 @@ def _process_file(directory, filename, config, cache, output, folder):
     elif filename == "remotes.txt":
         output.info("Defining remotes from remotes.txt")
         _handle_remotes(cache, os.path.join(directory, filename))
-    elif filename in ("registry.txt", "registry.json"):
-        try:
-            os.remove(cache.remotes_path)
-        except OSError:
-            pass
-        finally:
-            _filecopy(directory, filename, cache.cache_folder)
-            migrate_registry_file(cache, output)
     elif filename == "remotes.json":
         # Fix for Conan 2.0
         raise ConanException("remotes.json install is not supported yet. Use 'remotes.txt'")

@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.config_parser import get_bool_from_text_value
 from conans.util.files import load, save
-from conans.model.ref import PackageReference, ConanFileReference
 
 
 CONAN_CENTER_REMOTE_NAME = "conancenter"
@@ -47,59 +46,6 @@ def load_registry_txt(contents):
             refs[ref] = remote_name
 
     return remotes, refs
-
-
-def load_old_registry_json(contents):
-    """From json"""
-    data = json.loads(contents)
-    remotes = Remotes()
-    refs = data.get("references", {})
-    prefs = data.get("package_references", {})
-    for r in data["remotes"]:
-        remotes.add(r["name"], r["url"], r["verify_ssl"])
-    return remotes, refs, prefs
-
-
-def migrate_registry_file(cache, out):
-    folder = cache.cache_folder
-    reg_json_path = os.path.join(folder, "registry.json")
-    reg_txt_path = os.path.join(folder, "registry.txt")
-    remotes_path = cache.remotes_path
-
-    def add_ref_remote(reference, remotes_, remote_name_):
-        ref_ = ConanFileReference.loads(reference, validate=True)
-        remote = remotes_.get(remote_name_)
-        if remote:
-            with cache.package_layout(ref_).update_metadata() as metadata:
-                metadata.recipe.remote = remote.name
-
-    def add_pref_remote(pkg_ref, remotes_, remote_name_):
-        pref_ = PackageReference.loads(pkg_ref, validate=True)
-        remote = remotes_.get(remote_name_)
-        if remote:
-            with cache.package_layout(pref_.ref).update_metadata() as metadata:
-                metadata.packages[pref_.id].remote = remote.name
-
-    try:
-        if os.path.exists(reg_json_path):
-            out.warn("registry.json has been deprecated. Migrating to remotes.json")
-            remotes, refs, prefs = load_old_registry_json(load(reg_json_path))
-            remotes.save(remotes_path)
-            for ref, remote_name in refs.items():
-                add_ref_remote(ref, remotes, remote_name)
-            for pref, remote_name in prefs.items():
-                add_pref_remote(pref, remotes, remote_name)
-            os.remove(reg_json_path)
-        elif os.path.exists(reg_txt_path):
-            out.warn("registry.txt has been deprecated. Migrating to remotes.json")
-            remotes, refs = load_registry_txt(load(reg_txt_path))
-            remotes.save(remotes_path)
-            for ref, remote_name in refs.items():
-                add_ref_remote(ref, remotes, remote_name)
-            os.remove(reg_txt_path)
-
-    except Exception as e:
-        raise ConanException("Cannot migrate old registry: %s" % str(e))
 
 
 class Remotes(object):

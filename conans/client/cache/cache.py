@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 from collections import OrderedDict
 from io import StringIO
@@ -36,36 +35,6 @@ PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
-
-
-def _is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
-
-if _is_case_insensitive_os():
-    def _check_ref_case(ref, store_folder):
-        if not os.path.exists(store_folder):
-            return
-
-        tmp = store_folder
-        for part in ref.dir_repr().split("/"):
-            items = os.listdir(tmp)
-            try:
-                idx = [item.lower() for item in items].index(part.lower())
-                if part != items[idx]:
-                    raise ConanException("Requested '{requested}', but found case incompatible"
-                                         " recipe with name '{existing}' in the cache. Case"
-                                         " insensitive filesystem can't manage this.\n Remove"
-                                         " existing recipe '{existing}' and try again.".format(
-                        requested=str(ref), existing=items[idx]
-                    ))
-                tmp = os.path.normpath(tmp + os.sep + part)
-            except ValueError:
-                return
-else:
-    def _check_ref_case(ref, store_folder):  # @UnusedVariable
-        pass
 
 
 class ClientCache(object):
@@ -187,7 +156,6 @@ class ClientCache(object):
     #  that call this directly
     def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        _check_ref_case(ref, self.store)
         return PackageCacheLayout(ref, self)
 
     @property
