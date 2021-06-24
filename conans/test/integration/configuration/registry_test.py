@@ -1,34 +1,15 @@
 import os
-import textwrap
 import unittest
 
 from conans.client.cache.cache import ClientCache
-from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes,\
-    migrate_registry_file
+from conans.client.cache.remote_registry import RemoteRegistry, Remote, Remotes
 from conans.errors import ConanException
-from conans.migrations import CONAN_VERSION
-from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient
 from conans.test.utils.mocks import TestBufferConanOutput
 from conans.util.files import save
 
 
 class RegistryTest(unittest.TestCase):
-
-    def test_retro_compatibility(self):
-        folder = temp_folder()
-        f = os.path.join(folder, "registry.txt")
-        save(f, textwrap.dedent("""conan.io https://server.conan.io
-
-            pkg/0.1@user/testing some_remote
-            """))
-        output = TestBufferConanOutput()
-        cache = ClientCache(folder, output)
-        migrate_registry_file(cache, output)
-        registry = RemoteRegistry(cache, output)
-        self.assertEqual(list(registry.load_remotes().values()),
-                         [("conan.io", "https://server.conan.io", True, False)])
 
     def test_add_remove_update(self):
         f = os.path.join(temp_folder(), "aux_file")
