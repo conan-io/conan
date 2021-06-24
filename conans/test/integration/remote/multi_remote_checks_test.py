@@ -28,6 +28,7 @@ class RemoteChecksTest(unittest.TestCase):
         self.assertIn("Uploading Pkg/0.1@lasote/testing to remote 'server1'", client.out)
         self.assertIn("Uploading Pkg2/0.1@lasote/testing to remote 'server2'", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 conan info and update revisit")
     def test_binary_packages_mixed(self):
         servers = OrderedDict([("server1", TestServer()),
                                ("server2", TestServer()),
@@ -58,7 +59,7 @@ class Pkg(ConanFile):
 
         # Check registry, recipe should have been found from server1 and binary from server2
         ref = "Pkg/0.1@lasote/testing"
-        pref = f"%s:{package_id_debug}" % ref
+        pref = f"%s#1b25ee13ed28ed6349426f272e44a1da:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         client.run("remote list_ref")
         self.assertIn("%s: server1" % ref, client.out)
 
@@ -84,7 +85,7 @@ class Pkg(ConanFile):
         self.assertIn(f"Uploading package 1/1: {package_id_debug} to 'server1'", client2.out)
 
         ref2 = "Pkg/0.1@lasote/testing"
-        pref2 = f"%s:{package_id_debug}" % ref
+        pref2 = f"%s#2f81612204de158d4448529e554ffdd6:{package_id_debug}#2c2736de567a6e278851c9eebfd26fdb" % ref
         # Now the reference is associated with server1
         client2.run("remote list_ref")
         self.assertIn("%s: server1" % ref2, client2.out)

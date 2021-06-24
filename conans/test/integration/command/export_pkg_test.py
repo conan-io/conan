@@ -213,7 +213,8 @@ class TestConan(ConanFile):
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:3475bd55b91ae904ac96fde0f106a136ab951a5e#ca390c141f4dfd77f5ffd03eca67b2e0")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -235,7 +236,8 @@ class TestConan(ConanFile):
                      "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#b1205438a95acf45b1814573e48f6c50")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#b1205438a95acf45b1814573e48f6c50")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
@@ -261,7 +263,8 @@ class TestConan(ConanFile):
                      "build/lib/bye.txt": ""})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
                    "--source-folder=src")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:3475bd55b91ae904ac96fde0f106a136ab951a5e#ca390c141f4dfd77f5ffd03eca67b2e0")
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
         package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
@@ -459,7 +462,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        pref = PackageReference.loads("Hello/0.1#7824a75809349a3700283a00e63086ee:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#44e87ea1a65a899b6291991959a22b62")
+        pref = PackageReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#44e87ea1a65a899b6291991959a22b62")
         package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
