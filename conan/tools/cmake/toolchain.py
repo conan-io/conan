@@ -51,9 +51,20 @@ class Block(object):
     def __init__(self, conanfile, toolchain):
         self._conanfile = conanfile
         self._toolchain = toolchain
+        self._context_values = None
 
-    def get_block(self):
-        context = self.context()
+    @property
+    def values(self):
+        if self._context_values is None:
+            self._context_values = self.context()
+        return self._context_values
+
+    @values.setter
+    def values(self, context_values):
+        self._context_values = context_values
+
+    def get_rendered_content(self):
+        context = self.values
         if context is None:
             return
         return Template(self.template, trim_blocks=True, lstrip_blocks=True).render(**context)
@@ -324,22 +335,23 @@ class AppleSystemBlock(Block):
         we're building for (considering simulators)"""
         arch = self._conanfile.settings.get_safe('arch')
         os_ = self._conanfile.settings.get_safe('os')
-        if str(arch).startswith('x86'):
+        if arch.startswith('x86'):
             return {'Macos': 'macosx',
                     'iOS': 'iphonesimulator',
                     'watchOS': 'watchsimulator',
-                    'tvOS': 'appletvsimulator'}.get(str(os_))
+                    'tvOS': 'appletvsimulator'}.get(os_)
         else:
             return {'Macos': 'macosx',
                     'iOS': 'iphoneos',
                     'watchOS': 'watchos',
-                    'tvOS': 'appletvos'}.get(str(os_), None)
+                    'tvOS': 'appletvos'}.get(os_)
 
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
-        host_architecture = self._get_architecture()
+        if os_ not in ['Macos', 'iOS', 'watchOS', 'tvOS']:
+            return None
 
-        host_os = self._conanfile.settings.get_safe("os")
+        host_architecture = self._get_architecture()
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
@@ -353,7 +365,7 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["CMAKE_OSX_ARCHITECTURES"] = host_architecture
 
         if os_ in ('iOS', "watchOS", "tvOS"):
-            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = host_os
+            ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
 
         return ctxt_toolchain
@@ -543,9 +555,9 @@ class ToolchainBlocks:
     def process_blocks(self):
         result = []
         for b in self._blocks.values():
-            block = b.get_block()
-            if block:
-                result.append(block)
+            content = b.get_rendered_content()
+            if content:
+                result.append(content)
         return result
 
 
