@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 
 from conans import load
 from conans.client import tools
+from conans.client.cache.remote_registry import load_registry_txt
 from conans.client.tools import Git
 from conans.client.tools.files import unzip
 from conans.errors import ConanException
