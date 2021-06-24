@@ -553,8 +553,6 @@ class BinaryInstaller(object):
             pkg_layout = self._cache.get_pkg_layout(pref)
 
         # at this point the package reference should be complete
-        # TODO: cache2.0: update the metadata db here?
-        #  update_package_metadata(prev, package_layout, package_id, pref.ref.revision)
         if pkg_layout.reference != pref:
             self._cache.assign_prev(pkg_layout, ConanReference(pref))
 

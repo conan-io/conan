@@ -180,14 +180,6 @@ class RemoteManager(object):
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
 
-            # Compute and update the package metadata
-            #package_checksums = calc_files_checksum(zipped_files)
-            # TODO: cache2.0: remove metadata, move to db
-            # with layout.update_metadata() as metadata:
-            #     metadata.packages[pref.id].revision = pref.revision
-            #     metadata.packages[pref.id].recipe_revision = pref.ref.revision
-            #     metadata.packages[pref.id].checksums = package_checksums
-            #     metadata.packages[pref.id].remote = remote.name
             self._cache.set_remote(layout.reference, remote.name)
 
             duration = time.time() - t1

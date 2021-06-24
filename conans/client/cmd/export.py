@@ -35,7 +35,6 @@ class AliasConanfile(ConanFile):
     manifest = FileTreeManifest.create(alias_layout.export())
     manifest.save(folder=alias_layout.export())
 
-    # Create the metadata for the alias
     rrev = calc_revision(output=output, path=None, manifest=manifest, revision_mode=revision_mode)
 
     ref_with_rrev = alias_ref.copy_with_rev(rrev)
