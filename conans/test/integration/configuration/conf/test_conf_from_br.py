@@ -50,3 +50,34 @@ def test_basic():
 
     client.run("install . -pr:b=default -pr:h=android")
     assert "conanfile.py: NDK: MY-SYSTEM-NDK!!!" in client.out
+
+
+def test_basic_conf_through_cli():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Pkg(ConanFile):
+
+            def package_info(self):
+                self.output.info("NDK build: %s" % self.conf["tools.android:ndk_path"])
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . android_ndk/1.0@")
+
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain"
+            build_requires = "android_ndk/1.0"
+
+            def generate(self):
+                self.output.info("NDK host: %s" % self.conf["tools.android:ndk_path"])
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run('install . -c:b=tools.android:ndk_path="MY-NDK!!!" '
+               '-c:h=tools.android:ndk_path="MY-SYSTEM-NDK!!!"')
+    assert "android_ndk/1.0: NDK build: MY-NDK!!!" in client.out
+    assert "conanfile.py: NDK host: MY-SYSTEM-NDK!!!" in client.out

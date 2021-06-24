@@ -24,7 +24,8 @@ def conanfile():
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
-        tools.save("source.h", "foo")
+        # The layout describes where the sources are, not force them to be there
+        tools.save("my_sources/source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))

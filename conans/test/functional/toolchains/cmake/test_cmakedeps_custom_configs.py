@@ -5,6 +5,7 @@ import unittest
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient
 
@@ -185,3 +186,54 @@ class CustomSettingsTest(unittest.TestCase):
             self.client.run_command(r"MyRelease\\app.exe")
             self.assertIn("hello/0.1: Hello World Release!", self.client.out)
             self.assertIn("main: Release!", self.client.out)
+
+
+@pytest.mark.tool_cmake
+def test_changing_build_type():
+    client = TestClient(path_with_spaces=False)
+    dep_conanfile = textwrap.dedent(r"""
+       from conans import ConanFile
+       from conans.tools import save
+
+       class Dep(ConanFile):
+           settings = "build_type"
+           def build(self):
+               save("hello.h",
+               '# include <iostream>\n'
+               'void hello(){{std::cout<<"BUILD_TYPE={}!!";}}'.format(self.settings.build_type))
+           def package(self):
+               self.copy("*.h", dst="include")
+           """)
+    client.save({"conanfile.py": dep_conanfile})
+    client.run("create . dep/0.1@ -s build_type=Release")
+    client.run("create . dep/0.1@ -s build_type=Debug")
+
+    cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(App CXX)
+
+        # NOTE: NO MAP necessary!!!
+        find_package(dep REQUIRED)
+        add_executable(app app.cpp)
+        target_link_libraries(app PRIVATE dep::dep)
+        """)
+    app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
+    pkg_conanfile = GenConanfile("pkg", "0.1").with_requires("dep/0.1").\
+        with_generator("CMakeDeps").with_generator("CMakeToolchain").\
+        with_settings("os", "compiler", "arch", "build_type")
+    client.save({"conanfile.py": pkg_conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "app.cpp": app}, clean_first=True)
+
+    # in MSVC multi-config -s pkg:build_type=Debug is not really necesary, toolchain do nothing
+    # TODO: Challenge how to define consumer build_type for conanfile.txt
+    client.run("install . -s pkg:build_type=Debug -s build_type=Release")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake")
+    client.run_command("cmake --build . --config Debug")
+    cmd = os.path.join(".", "Debug", "app") if platform.system() == "Windows" else "./app"
+    client.run_command(cmd)
+    assert "main: Debug!" in client.out
+    assert "BUILD_TYPE=Release!!" in client.out
+

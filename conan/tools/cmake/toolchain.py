@@ -177,6 +177,7 @@ class GLibCXXBlock(Block):
             if lib:
                 lib = "-library={}".format(lib)
         elif compiler == "gcc":
+            # we might want to remove this "1", it is the default in most distros
             if libcxx == "libstdc++11":
                 glib = "1"
             elif libcxx == "libstdc++":
@@ -220,6 +221,7 @@ class CppStdBlock(Block):
         message(STATUS "Conan C++ Standard {{ cppstd }} with extensions {{ cppstd_extensions }}}")
         set(CMAKE_CXX_STANDARD {{ cppstd }})
         set(CMAKE_CXX_EXTENSIONS {{ cppstd_extensions }})
+        set(CMAKE_CXX_STANDARD_REQUIRED ON)
         """)
 
     def context(self):
@@ -453,6 +455,18 @@ class TryCompileBlock(Block):
 
 class GenericSystemBlock(Block):
     template = textwrap.dedent("""
+        {% if cmake_system_name %}
+        # Cross building
+        set(CMAKE_SYSTEM_NAME {{ cmake_system_name }})
+        {% endif %}
+        {% if cmake_system_version %}
+        # Cross building
+        set(CMAKE_SYSTEM_VERSION {{ cmake_system_version }})
+        {% endif %}
+        {% if cmake_system_processor %}
+        set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
+        {% endif %}
+
         {% if generator_platform %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
         {% endif %}
@@ -513,14 +527,55 @@ class GenericSystemBlock(Block):
                     "armv8": "ARM64"}.get(arch)
         return None
 
+    def _get_cross_build(self):
+        user_toolchain = self._conanfile.conf["tools.cmake.cmaketoolchain:user_toolchain"]
+        if user_toolchain is not None:
+            return None, None, None  # Will be provided by user_toolchain
+
+        system_name = self._conanfile.conf["tools.cmake.cmaketoolchain:system_name"]
+        system_version = self._conanfile.conf["tools.cmake.cmaketoolchain:system_version"]
+        system_processor = self._conanfile.conf["tools.cmake.cmaketoolchain:system_processor"]
+
+        settings = self._conanfile.settings
+        if hasattr(self._conanfile, "settings_build"):
+            os_ = settings.get_safe("os")
+            arch = settings.get_safe("arch")
+            settings_build = self._conanfile.settings_build
+            os_build = settings_build.get_safe("os")
+            arch_build = settings_build.get_safe("arch")
+
+            if system_name is None:  # Try to deduce
+                if os_ not in ('Macos', 'iOS', 'watchOS', 'tvOS'):  # Handled by AppleBlock
+                    cmake_system_name_map = {"Neutrino": "QNX",
+                                             "": "Generic",
+                                             None: "Generic"}
+                    if os_ != os_build:
+                        system_name = cmake_system_name_map.get(os_, os_)
+                    elif arch is not None and arch != arch_build:
+                        if not ((arch_build == "x86_64") and (arch == "x86") or
+                                (arch_build == "sparcv9") and (arch == "sparc") or
+                                (arch_build == "ppc64") and (arch == "ppc32")):
+                            system_name = cmake_system_name_map.get(os_, os_)
+
+            if system_name is not None and system_version is None:
+                os_ver_str = "os.api_level" if os_ == "Android" else "os.version"
+                system_version = settings.get_safe(os_ver_str)
+
+            if system_name is not None and system_processor is None:
+                if arch != arch_build:
+                    system_processor = arch
+
+        return system_name, system_version, system_processor
+
     def context(self):
         # build_type (Release, Debug, etc) is only defined for single-config generators
         generator = self._toolchain.generator
         generator_platform = self._get_generator_platform(generator)
         toolset = self._get_toolset(generator)
+        compiler = self._conanfile.settings.get_safe("compiler")
         # TODO: Check if really necessary now that conanvcvars is used
         if (generator is not None and "Ninja" in generator
-                and "Visual" in self._conanfile.settings.compiler):
+                and ("Visual" in compiler or compiler == "msvc")):
             compiler = "cl"
         else:
             compiler = None  # compiler defined by default
@@ -528,10 +583,15 @@ class GenericSystemBlock(Block):
         build_type = self._conanfile.settings.get_safe("build_type")
         build_type = build_type if not is_multi_configuration(generator) else None
 
+        system_name, system_version, system_processor = self._get_cross_build()
+
         return {"compiler": compiler,
                 "toolset": toolset,
                 "generator_platform": generator_platform,
-                "build_type": build_type}
+                "build_type": build_type,
+                "cmake_system_name": system_name,
+                "cmake_system_version": system_version,
+                "cmake_system_processor": system_processor}
 
 
 class ToolchainBlocks:

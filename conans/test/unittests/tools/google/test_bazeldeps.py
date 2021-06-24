@@ -13,6 +13,7 @@ def test_bazeldeps_dependency_buildfiles():
     conanfile = ConanFile(Mock(), None)
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
+    cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
@@ -29,6 +30,7 @@ def test_bazeldeps_dependency_buildfiles():
         for dependency in bazeldeps._conanfile.dependencies.host.values():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
+            assert 'defines = ["DUMMY_DEFINE=\'string/value\'"],' in dependency_content
 
 
 def test_bazeldeps_main_buildfile():
