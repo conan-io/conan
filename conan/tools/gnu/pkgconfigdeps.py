@@ -88,7 +88,6 @@ class PkgConfigDeps(object):
     def content(self):
         ret = {}
         host_req = self._conanfile.dependencies.host
-
         for require, dep in host_req.items():
             pkg_genname = get_target_namespace(dep)
 
@@ -97,8 +96,8 @@ class PkgConfigDeps(object):
                 for comp_genname, comp, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
-                        comp,
-                        comp_requires_gennames)
+                        dep,
+                        comp_requires_gennames, cpp_info=comp)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname,
@@ -110,10 +109,10 @@ class PkgConfigDeps(object):
                                                                    require_public_deps)
         return ret
 
-    def _pc_file_content(self, name, dep, requires_gennames):
+    def _pc_file_content(self, name, dep, requires_gennames, cpp_info=None):
         prefix_path = dep.package_folder.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
-        cpp_info = dep.new_cpp_info
+        cpp_info = cpp_info or dep.new_cpp_info
         libdir_vars = []
         dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
         if dir_lines:
@@ -196,23 +195,6 @@ class PkgConfigDeps(object):
             lines.append("%s=%s%s" % (name, prefix, directory))
             varnames.append(name)
         return lines, varnames
-
-    @property
-    def template(self):
-        return textwrap.dedent("""\
-        prefix=/usr
-        exec_prefix=${prefix}
-        libdir=${exec_prefix}/lib
-        includedir=${prefix}/include
-
-        Name: my-project
-        Description: Some brief but informative description
-        Version: 1.2.3
-        Libs: -L${libdir} -lmy-project-1 -linkerflag -Wl,-rpath=${libdir}
-        Cflags: -I${includedir}/my-project-1
-        Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
-        Requires.private: gthread-2.0 >= 2.40
-        """)
 
     def generate(self):
         # Current directory is the generators_folder

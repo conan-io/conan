@@ -5,7 +5,6 @@ import unittest
 
 import pytest
 
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -71,7 +70,8 @@ Cflags: -I"${includedir}"\
             elif line.startswith("libdir3="):
                 self.assertIn("${prefix}/lib2", line)
 
-    def test_pkg_config_without_libdir(self):
+    def test_empty_dirs(self):
+        # Adding in package_info all the empty directories
         conanfile = """
 import os
 from conans import ConanFile
@@ -85,6 +85,7 @@ class PkgConfigConan(ConanFile):
         self.cpp_info.libdirs = []
         self.cpp_info.bindirs = []
         self.cpp_info.libs = []
+        self.cpp_info.frameworkdirs = []
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
@@ -193,15 +194,6 @@ class PkgConfigConan(ConanFile):
         self.assertIn("libdir2=${prefix}/lib2", pc_content)
         self.assertIn('Libs: -L"${libdir}" -L"${libdir2}"', pc_content)
         self.assertIn('Cflags: -I"${includedir}" -I"${includedir2}" -I"${includedir3}"', pc_content)
-
-    def test_empty_include(self):
-        client = TestClient()
-        client.save({"conanfile.py": GenConanfile()})
-        client.run("create . pkg/0.1@")
-        client.run("install pkg/0.1@ -g PkgConfigDeps")
-        pc = client.load("pkg.pc")
-        self.assertNotIn("libdir=${prefix}/lib", pc)
-        self.assertNotIn("includedir=${prefix}/include", pc)
 
     def test_custom_content(self):
         # https://github.com/conan-io/conan/issues/7661
