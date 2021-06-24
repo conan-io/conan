@@ -94,6 +94,6 @@ def test_basic_conf_through_cli():
                  "linux": linux_profile,
                  "android": android_profile}, clean_first=True)
     client.run('install . -c:b=tools.android:ndk_path="MY-NDK!!!" '
-               '-c:h=tools.android:ndk_path="MY-SYSTEM-NDK!!! -pr:b=default -pr:h=android"')
+               '-c:h=tools.android:ndk_path="MY-SYSTEM-NDK!!!" -pr:b=default -pr:h=android')
     assert "android_ndk/1.0: NDK build: MY-NDK!!!" in client.out
     assert "conanfile.py: NDK host: MY-SYSTEM-NDK!!!" in client.out
