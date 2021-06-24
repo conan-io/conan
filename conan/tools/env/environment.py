@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import textwrap
+import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -27,9 +28,9 @@ def environment_wrap_command(filename, cmd, cwd=None):
     for f in filenames:
         full_path = os.path.join(cwd, f) if cwd else f
         if os.path.isfile("{}.bat".format(full_path)):
-            bats.append("{}.bat".format(f))
+            bats.append("{}.bat".format(full_path))
         elif os.path.isfile("{}.sh".format(full_path)):
-            shs.append("{}.sh".format(f))
+            shs.append("{}.sh".format(full_path))
     if bats and shs:
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
 
@@ -37,7 +38,8 @@ def environment_wrap_command(filename, cmd, cwd=None):
         command = " && ".join('"{}"'.format(b) for b in bats)
         return "{} && {}".format(command, cmd)
     elif shs:
-        command = " && ".join(". ./{}".format(f) for f in shs)
+        curdir = "./" if cwd is None else ""
+        command = " && ".join('. "{}{}"'.format(curdir, f) for f in shs)
         return "{} && {}".format(command, cmd)
     else:
         return cmd
@@ -197,6 +199,13 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
+    def save_script(self, name):
+        # FIXME: using platform is not ideal but settings might be incomplete
+        if platform.system() == "Windows":
+            self.save_bat("{}.bat".format(name))
+        else:
+            self.save_sh("{}.sh".format(name))
+
     def compose(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
@@ -235,6 +244,12 @@ class Environment:
 
     def __getitem__(self, name):
         return self._get_final_value(name)
+
+    def get(self, name, default=None):
+        try:
+            return self._get_final_value(name)
+        except KeyError:
+            return default
 
     def keys(self):
         return self._values.keys()

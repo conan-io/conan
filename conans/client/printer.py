@@ -74,6 +74,7 @@ class Printer(object):
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
             _print("id", name="ID")
             _print("build_id", name="BuildID")
+            _print("context", name="Context")
             if show_paths:
                 _print("export_folder")
                 _print("source_folder")
@@ -215,6 +216,7 @@ class Printer(object):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items(), separator="=")
         self._print_profile_section("options", profile.options.as_list(), separator="=")
+        self._print_profile_section("conf", profile.conf.as_list(), separator="=")
         self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
                                                        for key, values in
                                                        profile.build_requires.items()])

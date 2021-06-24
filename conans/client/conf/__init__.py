@@ -498,6 +498,11 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def short_paths_home(self):
         short_paths_home = get_env("CONAN_USER_HOME_SHORT")
+        if not short_paths_home:
+            try:
+                short_paths_home = self.get_item("general.user_home_short")
+            except ConanException:
+                return None
         if short_paths_home:
             current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
             short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))

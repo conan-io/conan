@@ -1,7 +1,7 @@
 import os
 
+from conan.tools.cross_building import cross_building
 from conan.tools.meson import MesonToolchain
-from conans.client.tools.oss import cross_building
 
 
 def ninja_jobs_cmd_line_arg(conanfile):

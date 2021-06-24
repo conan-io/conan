@@ -49,7 +49,7 @@ def test_ios():
             requires = "hello/0.1"
             settings = "os", "compiler", "arch", "build_type"
             exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-            generators = "AutotoolsGen"
+            generators = "AutotoolsToolchain", "AutotoolsDeps"
 
             def build(self):
                 self.run("aclocal")
@@ -73,5 +73,5 @@ def test_ios():
     assert "Non-fat file: main is architecture: arm64" in client.out
 
     js = client.load("conanbuild.json")
-    assert '"build": "x86_64-apple-darwin"' in js
-    assert '"host": "aarch64-apple-ios"' in js
+    assert '--host=aarch64-apple-ios' in js
+    assert '--build=x86_64-apple-darwin' in js
