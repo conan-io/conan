@@ -1,4 +1,5 @@
 import os
+import platform
 from contextlib import contextmanager
 
 import six
@@ -385,16 +386,27 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv",
+            win_shell=False):
+        # NOTE: "win_shell" is the new "win_bash" for Conan 2.0
 
-        command = environment_wrap_command(env, command, cwd=self.generators_folder)
+        subsystem = (subsystem or self.conf["tools.win.bash:subsystem"]) \
+            if (win_shell or win_bash) else None
+        command = environment_wrap_command(env, command, cwd=self.generators_folder,
+                                           subsystem=subsystem)
 
-        def _run():
-            if not win_bash:
-                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+        def _run(cmd):
             # FIXME: run in windows bash is not using output
-            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, with_login=with_login)
+            if platform.system() == "Windows":
+                if win_bash:
+                    return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd,
+                                                     subsystem=subsystem)
+                elif win_shell:  # New, Conan 2.0
+                    from conan.tools.microsoft.win import run_in_windows_shell
+                    return run_in_windows_shell(self, command=cmd, cwd=cwd, subsystem=subsystem)
+
+            return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+
         if run_environment:
             # When using_build_profile the required environment is already applied through
             # 'conanfile.env' in the contextmanager 'get_env_context_manager'

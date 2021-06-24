@@ -73,18 +73,26 @@ class VirtualEnv:
 
         return runenv
 
-    def generate(self):
+    def generate(self, win_shell=False):
         build_env = self.build_environment()
         run_env = self.run_environment()
         # FIXME: Use settings, not platform Not always defined :(
         # os_ = self._conanfile.settings_build.get_safe("os")
         if build_env:  # Only if there is something defined
             if platform.system() == "Windows":
-                build_env.save_bat("conanbuildenv.bat")
+                if not win_shell:
+                    build_env.save_bat("conanbuildenv.bat")
+                else:
+                    subsystem = self._conanfile.conf["tools.win.bash:subsystem"]
+                    build_env.save_sh("conanrunenv.sh", subsystem=subsystem)
             else:
                 build_env.save_sh("conanbuildenv.sh")
         if run_env:
             if platform.system() == "Windows":
-                run_env.save_bat("conanrunenv.bat")
+                if not win_shell:
+                    run_env.save_bat("conanrunenv.bat")
+                else:
+                    subsystem = self._conanfile.conf["tools.win.bash:subsystem"]
+                    run_env.save_sh("conanrunenv.sh")
             else:
                 run_env.save_sh("conanrunenv.sh")

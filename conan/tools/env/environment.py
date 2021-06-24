@@ -5,6 +5,7 @@ import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conan.tools.microsoft.win import unix_path
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -21,12 +22,14 @@ class _PathSep:
     pass
 
 
-def environment_wrap_command(filename, cmd, cwd=None):
+def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
     assert filename
     filenames = [filename] if not isinstance(filename, list) else filename
     bats, shs = [], []
     for f in filenames:
         full_path = os.path.join(cwd, f) if cwd else f
+        if subsystem:
+            full_path = unix_path(full_path, subsystem)
         if os.path.isfile("{}.bat".format(full_path)):
             bats.append("{}.bat".format(full_path))
         elif os.path.isfile("{}.sh".format(full_path)):
@@ -66,7 +69,7 @@ class Environment:
         return self._format_value(name, self._values[name], placeholder, pathsep)
 
     @staticmethod
-    def _format_value(name, varvalues, placeholder, pathsep):
+    def _format_value(name, varvalues, placeholder, pathsep, subsystem=None):
         values = []
         for v in varvalues:
 
@@ -75,6 +78,9 @@ class Environment:
             elif v is _PathSep:
                 values.append(pathsep)
             else:
+                # FIXME: This is wrong, format only the values that are "paths"
+                if subsystem:  # we got a windows path that have to be converted to right subsystem
+                    v = unix_path(v, subsystem)
                 values.append(v)
         return "".join(values)
 
@@ -168,7 +174,7 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
-    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep, subsystem=None):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -190,7 +196,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = self._format_value(varname, varvalues, "${name}", pathsep)
+            value = self._format_value(varname, varvalues, "${name}", pathsep, subsystem=subsystem)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
