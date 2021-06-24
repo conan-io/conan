@@ -1,15 +1,16 @@
 import unittest
 
-from conans.client.tools import environment_append
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
 class CliUserTest(unittest.TestCase):
 
     def run(self, *args, **kwargs):
-        with environment_append({"CONAN_V2_CLI": "1"}):
-            super(CliUserTest, self).run(*args, **kwargs)
+        super(CliUserTest, self).run(*args, **kwargs)
 
+    @pytest.mark.skip(reason="Command 'user' is not implemented yet")
     def test_user_command(self):
         client = TestClient()
 

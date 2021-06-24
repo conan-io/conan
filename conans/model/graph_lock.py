@@ -294,6 +294,8 @@ class GraphLock(object):
         if self._relaxed:
             return
         locked_node = node.graph_lock_node
+        if locked_node is None:
+            return
         locked_requires = locked_node.build_requires
         if not locked_requires:
             return

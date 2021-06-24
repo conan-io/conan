@@ -92,7 +92,8 @@ class RangeResolver(object):
     def __init__(self, cache, remote_manager):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._cached_remote_found = {}  # TODO: This needs to cache per-remote
+        self._cached_remote_found = {}  # Per-remote caching of search result
+        self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._result = []
 
     @property
@@ -125,13 +126,17 @@ class RangeResolver(object):
 
         if resolved_ref is None:
             raise ConanException("Cannot resolve version range {}".format(require.ref))
+        require.ref = resolved_ref
         return resolved_ref
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = search_recipes(self._cache, search_ref)
-        local_found = [ref for ref in local_found
-                       if ref.user == search_ref.user and
-                       ref.channel == search_ref.channel]
+        local_found = self._cached_cache.get(search_ref)
+        if local_found is None:
+            local_found = search_recipes(self._cache, search_ref)
+            local_found = [ref for ref in local_found
+                           if ref.user == search_ref.user and
+                           ref.channel == search_ref.channel]
+            self._cached_cache[search_ref] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found)
 
@@ -139,28 +144,26 @@ class RangeResolver(object):
         pattern = str(search_ref)
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
-                result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-                result = [ref for ref in result
-                          if ref.user == search_ref.user and ref.channel == search_ref.channel]
+                cached_remote = self._cached_remote_found.setdefault(remote.name, {})
+                result = cached_remote.get(pattern)
+                if result is None:
+                    result = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+                    result = [ref for ref in result
+                              if ref.user == search_ref.user and ref.channel == search_ref.channel]
+                    cached_remote[pattern] = result
                 if result:
                     return result, remote.name
         return None, None
 
     def _resolve_remote(self, search_ref, version_range, remotes):
-        # We should use ignorecase=False, we want the exact case!
-        found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
-        if found_refs is None:
-            # Searching for just the name is much faster in remotes like Artifactory
-            found_refs, remote_name = self._search_remotes(search_ref, remotes)
-            if found_refs:
-                self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
-            else:
-                self._result.append("%s versions not found in remotes")
-            # We don't want here to resolve the revision that should be done in the proxy
-            # as any other regular flow
-            found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
-            # Empty list, just in case it returns None
-            self._cached_remote_found[search_ref] = found_refs, remote_name
+        found_refs, remote_name = self._search_remotes(search_ref, remotes)
+        if found_refs:
+            self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
+        else:
+            self._result.append("%s versions not found in remotes")
+        # We don't want here to resolve the revision that should be done in the proxy
+        # as any other regular flow
+        found_refs = [ref.copy_clear_rev() for ref in found_refs or []]
         if found_refs:
             return self._resolve_version(version_range, found_refs), remote_name
         return None, None

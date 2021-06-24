@@ -1,6 +1,8 @@
 import unittest
 import textwrap
 
+import pytest
+
 from conans import __version__
 from conans.test.utils.tools import TestClient
 
@@ -64,6 +66,7 @@ class BasicClientTest(unittest.TestCase):
         self.assertIn(
             expected_output, client.out)
 
+    @pytest.mark.xfail(reason="the new help command cannot show the help of commands from the legacy system")
     def test_help_cmd(self):
         client = TestClient()
         client.run("help new")
@@ -75,6 +78,7 @@ class BasicClientTest(unittest.TestCase):
         client.run("help")
         self.assertIn("Creator commands", client.out)
 
+    @pytest.mark.xfail(reason="the new help command cannot show the help of commands from the legacy system")
     def test_help_cmd_error(self):
         client = TestClient()
         client.run("help not-exists", assert_error=True)
