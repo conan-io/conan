@@ -139,8 +139,8 @@ class ConanRemover(object):
             prev_remove_build = self._get_revisions_to_remove(ref, build_ids, all_package_revisions)
 
         if src:
-            ref_layout = self._cache.get_ref_layout(ref)
-            ref_layout.sources_remove()
+            recipe_layout = self._cache.get_ref_layout(ref)
+            recipe_layout.sources_remove()
 
         if package_ids is None and build_ids is None:
             for package in all_package_revisions:

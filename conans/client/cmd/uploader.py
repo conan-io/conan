@@ -170,18 +170,19 @@ class _PackagePreparator(object):
         - check if the remote recipe is newer, raise
         - compare and decide which files need to be uploaded (and deleted from server)
         """
-        layout = self._cache.get_ref_layout(ref)
+        recipe_layout = self._cache.get_ref_layout(ref)
         current_remote_name = self._cache.get_remote(ref)
 
         if remote.name != current_remote_name:
-            retrieve_exports_sources(self._remote_manager, self._cache, layout, conanfile, ref, remotes)
+            retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
+                                     ref, remotes)
 
-        conanfile_path = layout.conanfile()
+        conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        cache_files = self._compress_recipe_files(layout, ref)
+        cache_files = self._compress_recipe_files(recipe_layout, ref)
 
         local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
 
@@ -205,7 +206,8 @@ class _PackagePreparator(object):
 
         files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
                                                                 remote_manifest, local_manifest)
-        return files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name, layout
+        return (files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name,
+                recipe_layout)
 
     def _check_recipe_date(self, ref, remote, local_manifest):
         try:
@@ -364,8 +366,8 @@ class _PackagePreparator(object):
         self._output.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        layout = self._cache.get_pkg_layout(pref)
-        read_manifest, expected_manifest = layout.package_manifests()
+        pkg_layout = self._cache.get_pkg_layout(pref)
+        read_manifest, expected_manifest = pkg_layout.package_manifests()
 
         if read_manifest != expected_manifest:
             self._output.writeln("")

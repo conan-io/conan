@@ -13,12 +13,12 @@ from conans.util.files import (is_dirty, mkdir, rmdir, set_dirty_context_manager
                                merge_directories, clean_dirty)
 
 
-def retrieve_exports_sources(remote_manager, cache, reference_layout, conanfile, ref, remotes):
+def retrieve_exports_sources(remote_manager, cache, recipe_layout, conanfile, ref, remotes):
     """ the "exports_sources" sources are not retrieved unless necessary to build. In some
     occassions, conan needs to get them too, like if uploading to a server, to keep the recipes
     complete
     """
-    export_sources_folder = reference_layout.export_sources()
+    export_sources_folder = recipe_layout.export_sources()
     if os.path.exists(export_sources_folder):
         return None
 
@@ -29,7 +29,7 @@ def retrieve_exports_sources(remote_manager, cache, reference_layout, conanfile,
     # TODO: cache2.0 check what behaviour for this in 2.0
     # If not path to sources exists, we have a problem, at least an empty folder
     # should be there
-    current_remote = cache.get_remote(reference_layout.reference)
+    current_remote = cache.get_remote(recipe_layout.reference)
     if current_remote:
         current_remote = remotes[current_remote]
     if not current_remote:
@@ -39,7 +39,7 @@ def retrieve_exports_sources(remote_manager, cache, reference_layout, conanfile,
         raise ConanException(msg)
 
     try:
-        remote_manager.get_recipe_sources(ref, reference_layout, current_remote)
+        remote_manager.get_recipe_sources(ref, recipe_layout, current_remote)
     except Exception as e:
         msg = ("The '%s' package has 'exports_sources' but sources not found in local cache.\n"
                "Probably it was installed from a remote that is no longer available.\n"

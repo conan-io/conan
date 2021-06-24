@@ -97,14 +97,14 @@ class _PackageBuilder(object):
 
         return build_folder, skip_build
 
-    def _prepare_sources(self, conanfile, pref, reference_layout, remotes):
-        export_folder = reference_layout.export()
-        export_source_folder = reference_layout.export_sources()
-        scm_sources_folder = reference_layout.scm_sources()
-        conanfile_path = reference_layout.conanfile()
-        source_folder = reference_layout.source()
+    def _prepare_sources(self, conanfile, pref, recipe_layout, remotes):
+        export_folder = recipe_layout.export()
+        export_source_folder = recipe_layout.export_sources()
+        scm_sources_folder = recipe_layout.scm_sources()
+        conanfile_path = recipe_layout.conanfile()
+        source_folder = recipe_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, self._cache, reference_layout, conanfile,
+        retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
                                  pref.ref, remotes)
 
         conanfile.folders.set_base_source(source_folder)
@@ -189,10 +189,10 @@ class _PackageBuilder(object):
         pref = node.pref
 
         # TODO: cache2.0 fix this
-        reference_layout = self._cache.ref_layout(pref.ref)
+        recipe_layout = self._cache.ref_layout(pref.ref)
 
-        base_source = reference_layout.source()
-        conanfile_path = reference_layout.conanfile()
+        base_source = recipe_layout.source()
+        conanfile_path = recipe_layout.conanfile()
         base_package = package_layout.package()
 
         base_build, skip_build = self._get_build_folder(conanfile, package_layout)
@@ -202,7 +202,7 @@ class _PackageBuilder(object):
             # TODO: cache2.0 check locks
             # with package_layout.conanfile_write_lock(self._output):
             set_dirty(base_build)
-            self._prepare_sources(conanfile, pref, reference_layout, remotes)
+            self._prepare_sources(conanfile, pref, recipe_layout, remotes)
             self._copy_sources(conanfile, base_source, base_build)
             mkdir(base_build)
 
@@ -401,8 +401,8 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             # TODO: cache2.0 check locks
-            layout = self._cache.get_pkg_layout(n.pref)
-            with layout.package_lock():
+            pkg_layout = self._cache.get_pkg_layout(n.pref)
+            with pkg_layout.package_lock():
                 self._download_pkg(n)
 
         parallel = self._cache.config.parallel_download

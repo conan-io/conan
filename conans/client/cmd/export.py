@@ -93,7 +93,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                                        ref.user, ref.channel, python_requires)
 
     check_casing_conflict(cache=cache, ref=ref)
-    reference_layout = cache.ref_layout(ref)
+    recipe_layout = cache.ref_layout(ref)
 
     _check_settings_for_warnings(conanfile, output)
 
@@ -104,23 +104,23 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
     output.highlight("Exporting package recipe")
     output = conanfile.output
 
-    export_folder = reference_layout.export()
-    export_src_folder = reference_layout.export_sources()
+    export_folder = recipe_layout.export()
+    export_src_folder = recipe_layout.export_sources()
     # TODO: cache2.0 move this creation to other place
     mkdir(export_folder)
     mkdir(export_src_folder)
     origin_folder = os.path.dirname(conanfile_path)
     export_recipe(conanfile, origin_folder, export_folder)
     export_source(conanfile, origin_folder, export_src_folder)
-    shutil.copy2(conanfile_path, reference_layout.conanfile())
+    shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Calculate the "auto" values and replace in conanfile.py
     scm_data, local_src_folder = _capture_scm_auto_fields(conanfile,
                                                           os.path.dirname(conanfile_path),
-                                                          reference_layout, output,
+                                                          recipe_layout, output,
                                                           ignore_dirty)
 
-    scm_sources_folder = reference_layout.scm_sources()
+    scm_sources_folder = recipe_layout.scm_sources()
     if local_src_folder:
         # Copy the local scm folder to scm_sources in the cache
         mkdir(scm_sources_folder)
@@ -128,7 +128,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
 
     # Execute post-export hook before computing the digest
     hook_manager.execute("post_export", conanfile=conanfile, reference=ref,
-                         conanfile_path=reference_layout.conanfile())
+                         conanfile_path=recipe_layout.conanfile())
 
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)
@@ -141,14 +141,14 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
                              revision_mode=conanfile.revision_mode)
 
     ref = ref.copy_with_rev(revision=revision)
-    cache.assign_rrev(reference_layout, ConanReference(ref))
+    cache.assign_rrev(recipe_layout, ConanReference(ref))
     # TODO: cache2.0 check if this is the message we want to output
     output.success('A new %s version was exported' % CONANFILE)
-    output.info('Folder: %s' % reference_layout.export())
+    output.info('Folder: %s' % recipe_layout.export())
 
     # FIXME: Conan 2.0 Clear the registry entry if the recipe has changed
     # TODO: cache2.0: check this part
-    source_folder = reference_layout.source()
+    source_folder = recipe_layout.source()
     if os.path.exists(source_folder):
         try:
             if is_dirty(source_folder):
@@ -187,7 +187,7 @@ def _check_settings_for_warnings(conanfile, output):
         pass
 
 
-def _capture_scm_auto_fields(conanfile, conanfile_dir, reference_layout, output, ignore_dirty):
+def _capture_scm_auto_fields(conanfile, conanfile_dir, recipe_layout, output, ignore_dirty):
     """Deduce the values for the scm auto fields or functions assigned to 'url' or 'revision'
        and replace the conanfile.py contents.
        Returns a tuple with (scm_data, path_to_scm_local_directory)"""
@@ -201,7 +201,7 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, reference_layout, output,
 
     if not captured:
         # We replace not only "auto" values, also evaluated functions (e.g from a python_require)
-        _replace_scm_data_in_recipe(reference_layout, scm_data)
+        _replace_scm_data_in_recipe(recipe_layout, scm_data)
         return scm_data, None
 
     if not scm.is_pristine() and not ignore_dirty:
@@ -233,13 +233,13 @@ def _capture_scm_auto_fields(conanfile, conanfile_dir, reference_layout, output,
         output.success("Revision deduced by 'auto': %s" % scm_data.revision)
 
     local_src_path = scm.get_local_path_to_url(scm_data.url)
-    _replace_scm_data_in_recipe(reference_layout, scm_data)
+    _replace_scm_data_in_recipe(recipe_layout, scm_data)
 
     return scm_data, local_src_path
 
 
-def _replace_scm_data_in_recipe(reference_layout, scm_data):
-    conandata_path = os.path.join(reference_layout.export(), DATA_YML)
+def _replace_scm_data_in_recipe(recipe_layout, scm_data):
+    conandata_path = os.path.join(recipe_layout.export(), DATA_YML)
     conandata_yml = {}
     if os.path.exists(conandata_path):
         conandata_yml = yaml.safe_load(load(conandata_path))

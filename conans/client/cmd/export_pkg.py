@@ -34,26 +34,21 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
     pref = PackageReference(ref, package_id)
     pkg_ids = cache.get_package_ids(ref)
 
-    existing_id = False
-    for pkg_id in pkg_ids:
-        if pkg_id.id == package_id:
-            existing_id = True
-            break
-
+    existing_id = any(pkg_id.id == package_id for pkg_id in pkg_ids)
     if existing_id and not force:
         raise ConanException("Package already exists. Please use --force, -f to overwrite it")
 
-    layout = cache.pkg_layout(pref)
-    layout.package_remove()
+    pkg_layout = cache.pkg_layout(pref)
+    pkg_layout.package_remove()
 
-    dest_package_folder = layout.package()
+    dest_package_folder = pkg_layout.package()
     conanfile.develop = True
 
     conanfile.folders.set_base_build(build_folder)
     conanfile.folders.set_base_source(source_folder)
     conanfile.folders.set_base_package(dest_package_folder)
 
-    with layout.set_dirty_context_manager():
+    with pkg_layout.set_dirty_context_manager():
         if package_folder:
             prev = packager.export_pkg(conanfile, package_id, package_folder, hook_manager,
                                        conan_file_path, ref)
@@ -61,7 +56,7 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
             prev = run_package_method(conanfile, package_id, hook_manager, conan_file_path, ref)
 
     pref = PackageReference(pref.ref, pref.id, prev)
-    cache.assign_prev(layout, ConanReference(pref))
+    cache.assign_prev(pkg_layout, ConanReference(pref))
     if pkg_node.graph_lock_node:
         # after the package has been created we need to update the node PREV
         pkg_node.prev = pref.revision
