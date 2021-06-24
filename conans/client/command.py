@@ -357,7 +357,8 @@ class Command(object):
         info = None
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
             # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
             #       to the API
 
@@ -841,7 +842,8 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 
@@ -918,7 +920,8 @@ class Command(object):
         self._warn_python_version()
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 

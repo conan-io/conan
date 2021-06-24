@@ -53,7 +53,7 @@ class SettingsCppStdTests(unittest.TestCase):
         save(self.cache.settings_path, get_default_settings_yml().replace("cppstd", "foobar"))
         save(fullpath, t)
         r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with self.assertRaisesRegex(self, ConanException,
+        with self.assertRaisesRegex(ConanException,
                                    "'settings.compiler.cppstd' doesn't exist for 'apple-clang'"):
             r.process_settings(self.cache)
 
@@ -85,8 +85,8 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="13")
 
         r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with self.assertRaisesRegex(self, ConanException, "Invalid setting '13' is not a valid "
-                                                         "'settings.compiler.cppstd' value"):
+        with self.assertRaisesRegex(ConanException, "Invalid setting '13' is not a valid "
+                                                    "'settings.compiler.cppstd' value"):
             r.process_settings(self.cache)
         self.assertNotIn("cppstd", r.settings)
 
@@ -102,9 +102,9 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(compiler_cppstd="11", cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with self.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
-                                                         " together with 'cppstd'. Use only the"
-                                                         " former one."):
+        with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
+                                                     " together with 'cppstd'. Use only the"
+                                                     " former one."):
             r.process_settings(self.cache)
         self.assertEqual(r.settings["compiler.cppstd"], "11")
         self.assertEqual(r.settings["cppstd"], "11")
@@ -113,9 +113,9 @@ class SettingsCppStdTests(unittest.TestCase):
         self._save_profile(cppstd="14", compiler_cppstd="11")
 
         r = profile_from_args(["default", ], [], [], [], [], cwd=self.tmp_folder, cache=self.cache)
-        with self.assertRaisesRegex(self, ConanException, "Do not use settings 'compiler.cppstd'"
-                                                         " together with 'cppstd'. Use only the"
-                                                         " former one"):
+        with self.assertRaisesRegex(ConanException, "Do not use settings 'compiler.cppstd'"
+                                                    " together with 'cppstd'. Use only the"
+                                                    " former one"):
             r.process_settings(self.cache)
 
     def test_value_from_cppstd(self):

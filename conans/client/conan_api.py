@@ -642,7 +642,8 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_names=None, remote_name=None, check_updates=None,
-                            profile_build=None, conf=None):
+                            profile_build=None, name=None, version=None, user=None, channel=None,
+                            conf=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         reference, profile_host, profile_build, graph_lock, root_ref = \
@@ -684,9 +685,10 @@ class ConanAPIV1(object):
               should_test=True, cwd=None, settings=None, options=None, env=None,
               remote_name=None, build=None, profile_names=None,
               update=False, generators=None, no_imports=False,
-              lockfile=None, lockfile_out=None, profile_build=None):
+              lockfile=None, lockfile_out=None, profile_build=None, conf=None):
 
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env, conf=conf)
         recorder = ActionRecorder()
         cwd = cwd or os.getcwd()
 
@@ -760,7 +762,8 @@ class ConanAPIV1(object):
 
     @api_method
     def imports(self, conanfile_path, dest=None, cwd=None, settings=None,
-                options=None, env=None, profile_names=None, profile_build=None, lockfile=None):
+                options=None, env=None, profile_names=None, profile_build=None, lockfile=None,
+                conf=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
@@ -771,7 +774,8 @@ class ConanAPIV1(object):
         dest = _make_abs_path(dest, cwd)
 
         mkdir(dest)
-        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options, env=env)
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env, conf=conf)
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=None)
         recorder = ActionRecorder()
         try:
@@ -1445,12 +1449,14 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
         output.info("Using lockfile: '{}'".format(lockfile))
         return profile_host, profile_build, graph_lock, root_ref
 
-    phost = profile_from_args(profile_host.profiles, profile_host.settings, profile_host.options,
-                              profile_host.env, cwd, cache)
+    phost = profile_from_args(profile_host.profiles, profile_host.settings,
+                              profile_host.options, profile_host.env, profile_host.conf,
+                              cwd, cache)
     phost.process_settings(cache)
     # Only work on the profile_build if something is provided
     pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                               profile_build.options, profile_build.env, cwd, cache)
+                               profile_build.options, profile_build.env, profile_build.conf,
+                               cwd, cache)
     pbuild.process_settings(cache)
 
     # Preprocess settings and convert to real settings
