@@ -160,8 +160,6 @@ _t_default_client_conf = Template(textwrap.dedent("""
     # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
     # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
     # cache_no_locks = True               # environment CONAN_CACHE_NO_LOCKS
-    # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
-    # use_always_short_paths = False      # environment CONAN_USE_ALWAYS_SHORT_PATHS
     # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
     # non_interactive = False             # environment CONAN_NON_INTERACTIVE
     # skip_broken_symlinks_check = False  # environment CONAN_SKIP_BROKEN_SYMLINKS_CHECK
@@ -248,8 +246,6 @@ class ConanClientConfigParser(ConfigParser, object):
             ("CONAN_VS_INSTALLATION_PREFERENCE", "vs_installation_preference", None),
             ("CONAN_CPU_COUNT", "cpu_count", None),
             ("CONAN_READ_ONLY_CACHE", "read_only_cache", None),
-            ("CONAN_USER_HOME_SHORT", "user_home_short", None),
-            ("CONAN_USE_ALWAYS_SHORT_PATHS", "use_always_short_paths", None),
             ("CONAN_VERBOSE_TRACEBACK", "verbose_traceback", None),
             ("CONAN_ERROR_ON_OVERRIDE", "error_on_override", False),
             # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -469,25 +465,6 @@ class ConanClientConfigParser(ConfigParser, object):
             return fix_id.lower() in ("1", "true")
         except ConanException:
             return None
-
-    @property
-    def short_paths_home(self):
-        short_paths_home = get_env("CONAN_USER_HOME_SHORT")
-        if not short_paths_home:
-            try:
-                short_paths_home = self.get_item("general.user_home_short")
-            except ConanException:
-                return None
-        if short_paths_home:
-            current_dir = os.path.dirname(os.path.normpath(os.path.normcase(self.filename)))
-            short_paths_dir = os.path.normpath(os.path.normcase(short_paths_home))
-            if current_dir == short_paths_dir  or \
-                    short_paths_dir.startswith(current_dir + os.path.sep):
-                raise ConanException("Short path home '{}' (defined by conan.conf variable "
-                                     "'user_home_short', or environment variable "
-                                     "'CONAN_USER_HOME_SHORT') cannot be a subdirectory of "
-                                     "the conan cache '{}'.".format(short_paths_home, current_dir))
-        return short_paths_home
 
     @property
     def storage_path(self):
