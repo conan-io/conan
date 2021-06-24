@@ -5,6 +5,8 @@ import unittest
 
 from io import StringIO
 
+import pytest
+
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput
 from conans.client.tools import environment_append
@@ -24,6 +26,7 @@ class CacheTest(unittest.TestCase):
         self.cache = ClientCache(tmp_dir, output)
         self.ref = ConanFileReference.loads("lib/1.0@conan/stable")
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_recipe_exists(self):
         layout = self.cache.package_layout(self.ref)
         self.assertFalse(layout.recipe_exists())
@@ -45,6 +48,7 @@ class CacheTest(unittest.TestCase):
 
         self.assertTrue(layout2.recipe_exists())
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_package_exists(self):
         pref = PackageReference(self.ref, "999")
         layout = self.cache.package_layout(self.ref)

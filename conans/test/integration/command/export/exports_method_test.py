@@ -26,7 +26,9 @@ class ExportsMethodTest(unittest.TestCase):
         self.assertIn("pkg/0.1 exports: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1 export() method: Copied 1 '.md' file: LICENSE.md", client.out)
 
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
+
         exported_files = os.listdir(layout.export())
         self.assertIn("file.txt", exported_files)
         self.assertIn("LICENSE.md", exported_files)
@@ -48,7 +50,9 @@ class ExportsMethodTest(unittest.TestCase):
         self.assertIn("pkg/0.1 export() method: Copied 2 '.txt' files: file1.txt, file2.txt",
                       client.out)
 
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
+
         self.assertTrue(os.path.isfile(os.path.join(layout.export(), "file1.txt")))
         self.assertTrue(os.path.isfile(os.path.join(layout.export(), "subdir2", "file2.txt")))
 
@@ -111,11 +115,13 @@ class ExportsMethodTest(unittest.TestCase):
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
         client.run("export recipe pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export(), "myfile.txt")))
 
     def test_export_attribute_error(self):
@@ -160,7 +166,9 @@ class ExportsSourcesMethodTest(unittest.TestCase):
         self.assertIn("pkg/0.1 exports_sources: Copied 1 '.txt' file: file.txt", client.out)
         self.assertIn("pkg/0.1 export_sources() method: Copied 1 '.md' file: LICENSE.md", client.out)
 
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
+
         exported_files = os.listdir(layout.export_sources())
         self.assertIn("file.txt", exported_files)
         self.assertIn("LICENSE.md", exported_files)
@@ -179,11 +187,13 @@ class ExportsSourcesMethodTest(unittest.TestCase):
            """)
         client.save({"recipe/conanfile.py": conanfile, "recipe/data.txt": "mycontent"})
         client.run("export recipe pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
         client.current_folder = os.path.join(client.current_folder, "recipe")
         client.run("export . pkg/0.1@")
-        layout = client.cache.package_layout(ConanFileReference.loads("pkg/0.1"))
+        latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("pkg/0.1"))
+        layout = client.cache.ref_layout(latest_rrev)
         self.assertEqual("mycontent", load(os.path.join(layout.export_sources(), "myfile.txt")))
 
     def test_export_sources_attribute_error(self):

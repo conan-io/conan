@@ -20,8 +20,9 @@ class BrokenDownloadTest(unittest.TestCase):
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.cache.package_layout(ref).export()))
         client.run("upload Hello/0.1@lasote/stable")
+        export_folder = client.cache.package_layout(ref).export()
         client.run("remove Hello/0.1@lasote/stable -f")
-        self.assertFalse(os.path.exists(client.cache.package_layout(ref).export()))
+        self.assertFalse(os.path.exists(export_folder))
 
         rev = server.server_store.get_last_revision(ref).revision
         ref = ref.copy_with_rev(rev)

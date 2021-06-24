@@ -79,22 +79,21 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
-        layout = self.cache.package_layout(ref)
-        save(layout.conanfile(), str(conanfile))
+        ref = ConanFileReference.loads(repr(ref)+"#123")  # FIXME: Make access
+        recipe_layout = self.cache.ref_layout(ref)
+        save(recipe_layout.conanfile(), str(conanfile))
         # Need to complete de metadata = revision + manifest
-        with layout.update_metadata() as metadata:
-            metadata.recipe.revision = "123"
-        manifest = FileTreeManifest.create(layout.export())
-        manifest.save(layout.export())
+        manifest = FileTreeManifest.create(recipe_layout.export())
+        manifest.save(recipe_layout.export())
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         # FIXME: This seems duplicated
         if not isinstance(ref, ConanFileReference):
             ref = ConanFileReference.loads(ref)
-        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
-        with self.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
+        ref = ConanFileReference.loads(repr(ref) + "#{}".format(revision or 123))  # FIXME: Make access
+        recipe_layout = self.cache.ref_layout(ref)
+        save(recipe_layout.conanfile(), str(test_conanfile))
+        manifest = FileTreeManifest.create(recipe_layout.export())
         manifest.save(self.cache.package_layout(ref).export())
 
     def alias_cache(self, alias, target):

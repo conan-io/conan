@@ -86,6 +86,7 @@ class HeaderOnlyLibTestClient(TestClient):
 
 @pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class EditableReferenceTest(unittest.TestCase):
 
     @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])

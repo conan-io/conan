@@ -3,6 +3,8 @@ import re
 import stat
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.util.files import load
@@ -23,6 +25,8 @@ class TestSystemReqs(ConanFile):
 '''
 
 
+@pytest.mark.xfail(reason="cache2.0: check this for 2.0, nre chache will recreate sys_reqs"
+                   "every time")
 class SystemReqsTest(unittest.TestCase):
     def test_force_system_reqs_rerun(self):
         client = TestClient()

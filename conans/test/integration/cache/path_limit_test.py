@@ -42,6 +42,7 @@ class ConanLib(ConanFile):
 '''
 
 
+@pytest.mark.xfail(reason="cache2.0: create new tests for 2.0")
 class PathLengthLimitTest(unittest.TestCase):
     @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
     def test_failure_copy(self):

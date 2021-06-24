@@ -363,7 +363,7 @@ class ConanFile(object):
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
 
-        command = environment_wrap_command(env, command)
+        command = environment_wrap_command(env, command, cwd=self.generators_folder)
 
         def _run():
             if not win_bash:

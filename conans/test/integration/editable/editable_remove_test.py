@@ -3,6 +3,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
@@ -24,11 +26,15 @@ class RemoveEditablePackageTest(unittest.TestCase):
         self.t.run('editable add . {} -l=mylayout'.format(self.ref))
         self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
     def test_unlink(self):
         self.t.run('editable remove {}'.format(self.ref))
         self.assertIn("Removed editable mode for reference '{}'".format(self.ref), self.t.out)
         self.assertFalse(self.t.cache.installed_as_editable(self.ref))
 
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
     def test_unlink_not_linked(self):
         reference = 'otherlib/version@user/name'
         self.t.run('search {}'.format(reference), assert_error=True)

@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import unittest
 
+import pytest
 from mock import mock
 from parameterized import parameterized
 
@@ -29,6 +30,7 @@ class PathsTest(unittest.TestCase):
                 os.environ.update(old_env)
             self.assertTrue(os.path.exists(user_home))
 
+    @pytest.mark.xfail(reason="cache2.0: create new tests for 2.0")
     def test_basic(self):
         folder = temp_folder()
         paths = ClientCache(folder, TestBufferConanOutput())

@@ -46,8 +46,6 @@ class BoostConan(ConanFile):
         client.save(files, clean_first=True)
         client.run("create . lasote/testing -o BoostDbg:shared=True --build=missing")
         ref = ConanFileReference.loads("BoostDbg/1.0@lasote/testing")
-        pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
+        pkg_folder = client.cache.package_layout(ref).packages()[0]
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
         self.assertIn("zlib:shared=True", conaninfo)

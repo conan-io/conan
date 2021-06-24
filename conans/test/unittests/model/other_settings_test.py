@@ -16,10 +16,10 @@ from conans.util.files import load, save
 class SettingsTest(unittest.TestCase):
 
     def _get_conaninfo(self, reference, client):
-        ref = ConanFileReference.loads(reference)
-        pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
+        ref = client.cache.get_latest_rrev(ConanFileReference.loads(reference))
+        pkg_ids = client.cache.get_package_ids(ref)
+        pref = client.cache.get_latest_prev(pkg_ids[0])
+        pkg_folder = client.cache.pkg_layout(pref).package()
         return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):

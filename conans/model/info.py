@@ -14,6 +14,7 @@ from conans.util.files import load
 from conans.util.sha import sha1
 
 PREV_UNKNOWN = "PREV unknown"
+RREV_UNKNOWN = "RREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
 PACKAGE_ID_INVALID = "INVALID"
 

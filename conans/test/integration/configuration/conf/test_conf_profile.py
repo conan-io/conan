@@ -104,7 +104,7 @@ def test_config_profile_forbidden(client):
     client.save({"myprofile": profile})
     client.run("install . pkg/0.1@ -pr=myprofile", assert_error=True)
     assert ("ERROR: Error reading 'myprofile' profile: [conf] "
-            "'cache:verbosity=Minimal' not allowed in profiles" in client.out)
+            "'cache:verbosity' not allowed in profiles" in client.out)
 
 
 def test_msbuild_config():

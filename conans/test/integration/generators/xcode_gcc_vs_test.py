@@ -54,11 +54,12 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
 
         self.assertIn("CONAN_INCLUDE_DIRS", cmake)
         self.assertIn("CONAN_LIB_DIRS", cmake)
-        self.assertIn("/data/Hello/0.1/lasote/stable/package", cmake)
 
-        package_id = os.listdir(client.cache.package_layout(ref).packages())[0]
-        pref = PackageReference(ref, package_id)
-        package_path = client.cache.package_layout(pref.ref).package(pref)
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        pkg_ids = client.cache.get_package_ids(latest_rrev)
+        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        package_path = client.cache.get_pkg_layout(latest_prev).package().replace("\\", "/")
+        self.assertIn(f"{package_path}", cmake)
 
         # CHECK XCODE GENERATOR
         xcode = client.load(BUILD_INFO_XCODE)

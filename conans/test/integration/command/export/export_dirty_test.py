@@ -11,6 +11,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
 
+@pytest.mark.xfail(reason="cache2.0")
 class SourceDirtyTest(unittest.TestCase):
     def test_keep_failing_source_folder(self):
         # https://github.com/conan-io/conan/issues/4025
@@ -43,6 +44,7 @@ class SourceDirtyTest(unittest.TestCase):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for rmdir block")
+@pytest.mark.xfail(reason="cache2.0: revisit tests")
 class ExportDirtyTest(unittest.TestCase):
     """ Make sure than when the source folder becomes dirty, due to a export of
     a new recipe with a rmdir failure, or to an uncomplete execution of source(),

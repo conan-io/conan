@@ -80,6 +80,7 @@ src/include/{{settings.build_type}}/{{options.shared}}
 
 @pytest.mark.xfail(reason="Editable packages to be superseded by new layout")
 @pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class SettingsAndOptionsTest(unittest.TestCase):
 
     @parameterized.expand(itertools.product(["Debug", "Release", ],  # build_type
