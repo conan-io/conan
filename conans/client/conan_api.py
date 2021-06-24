@@ -7,6 +7,7 @@ from collections import namedtuple
 from io import StringIO
 
 import conans
+from conan.cache.conan_reference import ConanReference
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
@@ -62,6 +63,7 @@ from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.util.conan_v2_mode import conan_v2_error
+from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
@@ -362,18 +364,15 @@ class ConanAPIV1(object):
 
             self.app.range_resolver.clear_output()  # invalidate version range output
 
-            # The new_ref contains the revision
-            # To not break existing things, that they used this ref without revision
-            ref = new_ref.copy_clear_rev()
             recorder.recipe_exported(new_ref)
 
             if build_modes is None:  # Not specified, force build the tested library
-                build_modes = [ref.name]
+                build_modes = [new_ref.name]
 
             # FIXME: Dirty hack: remove the root for the test_package/conanfile.py consumer
             root_ref = ConanFileReference(None, None, None, None, validate=False)
-            recorder.add_recipe_being_developed(ref)
-            create(self.app, ref, profile_host, profile_build,
+            recorder.add_recipe_being_developed(new_ref)
+            create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder,
                    is_build_require=is_build_require)
@@ -878,8 +877,7 @@ class ConanAPIV1(object):
             raise
 
     @api_method
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False,
-                       fill_revisions=False):
+    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
         search_recorder = SearchRecorder()
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
@@ -893,11 +891,6 @@ class ConanAPIV1(object):
 
         for remote_name, refs in references.items():
             for ref in refs:
-                if fill_revisions:
-                    layout = self.app.cache.package_layout(ref)
-                    if isinstance(layout, PackageCacheLayout):
-                        ref = ref.copy_with_rev(layout.recipe_revision())
-
                 search_recorder.add_recipe(remote_name, ref, with_packages=False)
         return search_recorder.get_info()
 
@@ -973,83 +966,88 @@ class ConanAPIV1(object):
 
     @api_method
     def remote_list_ref(self, no_remote=False):
+        result = {}
+        for ref in self.app.cache.all_refs():
+            result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
-            result = {}
-            for ref in self.app.cache.all_refs():
-                metadata = self.app.cache.package_layout(ref).load_metadata()
-                if not metadata.recipe.remote:
-                    result[str(ref)] = None
-            return result
+            return {str(r): remote_name for r, remote_name in result.items() if not remote_name}
         else:
-            return {str(r): remote_name for r, remote_name in
-                    self.app.cache.registry.refs_list.items()
-                    if remote_name}
+            return {str(r): remote_name for r, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        all_rrevs = self.app.cache.get_recipe_revisions(ref)
+        if len(all_rrevs) > 0:
+            for rrev in all_rrevs:
+                self.app.cache.set_remote(rrev, remote.name)
+                for pkg in self.app.cache.get_package_ids(rrev):
+                    for prev in self.app.cache.get_package_revisions(pkg):
+                        self.app.cache.set_remote(prev, remote.name)
+        else:
+            raise ConanException(f"Can't set the remote for {str(ref)}. "
+                                 f"It doesn't exist in the local cache")
 
     @api_method
     def remote_remove_ref(self, reference):
         ref = ConanFileReference.loads(reference, validate=True)
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = None
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            self.app.cache.set_remote(rrev, None)
 
     @api_method
     def remote_update_ref(self, reference, remote_name):
         ref = ConanFileReference.loads(reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(ref).update_metadata() as metadata:
-            metadata.recipe.remote = remote.name
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            self.app.cache.set_remote(rrev, remote.name)
 
     @api_method
     def remote_list_pref(self, reference, no_remote=False):
         ref = ConanFileReference.loads(reference, validate=True)
+        result = {}
+        for rrev in self.app.cache.get_recipe_revisions(ref):
+            for pkg in self.app.cache.get_package_ids(rrev):
+                for prev in self.app.cache.get_package_revisions(pkg):
+                    result[prev] = self.app.cache.get_remote(prev)
         if no_remote:
-            result = {}
-            metadata = self.app.cache.package_layout(ref).load_metadata()
-            for pid, pkg_metadata in metadata.packages.items():
-                if not pkg_metadata.remote:
-                    pref = PackageReference(ref, pid)
-                    result[repr(pref)] = None
-            return result
+            return {repr(prev): remote_name for prev, remote_name in result.items() if not remote_name}
         else:
-            ret = {}
-            tmp = self.app.cache.registry.prefs_list
-            for pref, remote in tmp.items():
-                if pref.ref == ref and remote:
-                    ret[repr(pref)] = remote
-            return ret
+            return {repr(prev): remote_name for prev, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
         remote = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m and m.remote:
-                raise ConanException("%s already exists. Use update" % str(pref))
-            metadata.packages[pref.id].remote = remote.name
+        # TODO: cache2.0 fix this, probably we have to ask to enter the ref with rrev?
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id  in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            raise ConanException("%s already exists. Use update" % str(pref))
+                        self.app.cache.set_remote(prev, remote.name)
 
     @api_method
     def remote_remove_pref(self, package_reference):
         pref = PackageReference.loads(package_reference, validate=True)
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m:
-                m.remote = None
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            self.app.cache.set_remote(prev, None)
 
     @api_method
     def remote_update_pref(self, package_reference, remote_name):
         pref = PackageReference.loads(package_reference, validate=True)
         _ = self.app.cache.registry.load_remotes()[remote_name]
-        with self.app.cache.package_layout(pref.ref).update_metadata() as metadata:
-            m = metadata.packages.get(pref.id)
-            if m:
-                m.remote = remote_name
+        for rrev in self.app.cache.get_recipe_revisions(pref.ref):
+            for pkg_id in self.app.cache.get_package_ids(rrev):
+                if pkg_id.id == pref.id:
+                    for prev in self.app.cache.get_package_revisions(pkg_id):
+                        if self.app.cache.get_remote(prev):
+                            self.app.cache.set_remote(prev, remote_name)
 
     @api_method
     def remote_clean(self):
@@ -1131,17 +1129,18 @@ class ConanAPIV1(object):
         if ref.name != target_ref.name:
             raise ConanException("An alias can only be defined to a package with the same name")
 
-        # Do not allow to override an existing package
-        alias_conanfile_path = self.app.cache.package_layout(ref).conanfile()
-        if os.path.exists(alias_conanfile_path):
-            conanfile = self.app.loader.load_basic(alias_conanfile_path)
-            if not getattr(conanfile, 'alias', None):
-                raise ConanException("Reference '{}' is already a package, remove it before "
-                                     "creating and alias with the same name".format(ref))
+        # Do not allow to create an alias of a recipe that already has revisions
+        # with that name
+        latest_rrev = self.app.cache.get_latest_rrev(ref)
+        if latest_rrev:
+            alias_conanfile_path = self.app.cache.get_ref_layout(latest_rrev).conanfile()
+            if os.path.exists(alias_conanfile_path):
+                conanfile = self.app.loader.load_basic(alias_conanfile_path)
+                if not getattr(conanfile, 'alias', None):
+                    raise ConanException("Reference '{}' is already a package, remove it before "
+                                         "creating and alias with the same name".format(ref))
 
-        package_layout = self.app.cache.package_layout(ref)
-        return export_alias(package_layout, target_ref,
-                            output=self.app.out)
+        return export_alias(ref, target_ref, self.app.cache, output=self.app.out)
 
     @api_method
     def get_default_remote(self):
@@ -1157,29 +1156,22 @@ class ConanAPIV1(object):
         if ref.revision:
             raise ConanException("Cannot list the revisions of a specific recipe revision")
 
+        # TODO: cache2.0 in 1.X we checked for the remote associated with the reference
+        #  then if we had a remote there we listed all the revisions associated with that remote
+        #  check which behaviour we want here, for the moment just listing the revisions in the
+        #  local cache an forgetting about remotes if no remote is specified
         if not remote_name:
-            layout = self.app.cache.package_layout(ref)
-            try:
-                rev = layout.recipe_revision()
-            except RecipeNotFoundException as e:
-                raise e
-
-            # Check the time in the associated remote if any
-            remote_name = layout.load_metadata().recipe.remote
-            remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
-            rev_time = None
-            if remote:
-                try:
-                    revisions = self.app.remote_manager.get_recipe_revisions(ref, remote)
-                except RecipeNotFoundException:
-                    pass
-                except NotFoundException:
-                    rev_time = None
-                else:
-                    tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(rev)
-
-            return [{"revision": rev, "time": rev_time}]
+            rrevs = self.app.cache.get_recipe_revisions(ref)
+            # TODO: cache2.0 fix this, just adapting the return value for the moment
+            ret = []
+            for rev in rrevs:
+                timestamp = self.app.cache.get_timestamp(rev)
+                rev_dict = {
+                    "revision": rev.revision,
+                    "time": from_timestamp_to_iso8601(timestamp)
+                }
+                ret.append(rev_dict)
+            return ret
         else:
             remote = self.get_remote_by_name(remote_name)
             return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
@@ -1192,15 +1184,13 @@ class ConanAPIV1(object):
         if pref.revision:
             raise ConanException("Cannot list the revisions of a specific package revision")
 
+        # TODO: cache2.0 we get the latest package revision for the recipe revision and package id
+        pkg_revs = self.app.cache.get_package_revisions(pref, only_latest_prev=True)
+        pkg_rev = pkg_revs[0] if pkg_revs else None
         if not remote_name:
-            layout = self.app.cache.package_layout(pref.ref)
-            try:
-                rev = layout.package_revision(pref)
-            except (RecipeNotFoundException, PackageNotFoundException) as e:
-                raise e
-
             # Check the time in the associated remote if any
-            remote_name = layout.load_metadata().recipe.remote
+            pkg_layout = self.app.cache.pkg_layout(pkg_rev)
+            remote_name = self.app.cache.get_remote(pkg_rev)
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
             if remote:
@@ -1212,9 +1202,9 @@ class ConanAPIV1(object):
                     rev_time = None
                 else:
                     tmp = {r["revision"]: r["time"] for r in revisions}
-                    rev_time = tmp.get(rev)
+                    rev_time = tmp.get(pkg_rev.revision)
 
-            return [{"revision": rev, "time": rev_time}]
+            return [{"revision": pkg_rev.revision, "time": rev_time}]
         else:
             remote = self.get_remote_by_name(remote_name)
             return self.app.remote_manager.get_package_revisions(pref, remote=remote)

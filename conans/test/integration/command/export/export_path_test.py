@@ -23,7 +23,9 @@ def test_basic(relative_path):
 
     # The result should be the same in both cases
     ref = ConanFileReference("hello", "0.1", "lasote", "stable")
-    reg_path = client.cache.package_layout(ref).export()
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    ref_layoyt = client.cache.ref_layout(latest_rrev)
+    reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
 
     assert '%s: A new conanfile.py version was exported' % str(ref) in client.out
@@ -52,7 +54,9 @@ def test_path(relative_path):
             client.run("export . hello/0.1@lasote/stable")
 
     ref = ConanFileReference("hello", "0.1", "lasote", "stable")
-    reg_path = client.cache.package_layout(ref).export()
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    ref_layoyt = client.cache.ref_layout(latest_rrev)
+    reg_path = ref_layoyt.export()
     manif = FileTreeManifest.load(reg_path)
 
     for name in ['conanfile.py', 'conanmanifest.txt', 'source/main.cpp']:

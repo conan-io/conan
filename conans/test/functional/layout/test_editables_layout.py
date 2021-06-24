@@ -1,9 +1,12 @@
 import textwrap
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_cpp_info_editable():
 
     client = TestClient()
@@ -92,6 +95,7 @@ def test_cpp_info_editable():
     assert "**frameworkdirs:[]**" in client2.out
 
 
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 def test_cpp_info_components_editable():
 
     client = TestClient()

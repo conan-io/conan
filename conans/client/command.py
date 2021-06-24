@@ -1270,8 +1270,7 @@ class Command(object):
                     raise ConanException(exc_msg)
 
                 info = self._conan.search_recipes(args.pattern_or_reference, remote_name=None,
-                                                  case_sensitive=args.case_sensitive,
-                                                  fill_revisions=True)
+                                                  case_sensitive=args.case_sensitive)
                 self._outputer.print_search_references(info["results"],
                                                        args.pattern_or_reference,
                                                        args.raw, all_remotes_search=None)

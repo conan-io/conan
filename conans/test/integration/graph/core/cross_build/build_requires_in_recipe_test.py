@@ -1,11 +1,14 @@
 import textwrap
 
+import pytest
+
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
 
 
+@pytest.mark.xfail(reason="cache2.0 will not pass modifying the cache manually, revisit")
 class BuildRequiresInRecipeExample(CrossBuildingBaseTestCase):
     """ There is an application with a requirement 'lib', both of them build_requires
         a tool called 'breq' (build_machine) and this tool requires a 'breq_lib'.

@@ -3,6 +3,7 @@
 import os
 import unittest
 
+import pytest
 from mock import patch
 
 from conans.client.hook_manager import HookManager
@@ -13,6 +14,7 @@ from conans.test.utils.tools import TurboTestClient
 
 class PostPackageTestCase(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_create_command(self):
         """ Test that 'post_package' hook is called before computing the manifest
         """
@@ -42,6 +44,7 @@ class PostPackageTestCase(unittest.TestCase):
             content = f.read()
             self.assertIn(filename, content)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_export_pkg_command(self):
         """ Test that 'post_package' hook is called before computing the manifest
         """

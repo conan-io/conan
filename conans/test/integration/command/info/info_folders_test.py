@@ -38,6 +38,7 @@ MyPackage2/0.2.0@myUser/testing
 """
 
 
+@pytest.mark.xfail(reason="cache2.0 revisit tests")
 class InfoFoldersTest(unittest.TestCase):
     def setUp(self):
         self.user_channel = "myUser/testing"

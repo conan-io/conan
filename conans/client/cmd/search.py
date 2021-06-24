@@ -1,7 +1,8 @@
 from collections import OrderedDict, namedtuple
 
-from conans.errors import NotFoundException
-from conans.search.search import (search_packages, search_recipes, filter_by_revision)
+from conans.errors import NotFoundException, RecipeNotFoundException
+from conans.model.ref import ConanFileReference
+from conans.search.search import (search_packages, search_recipes)
 
 
 class Search(object):
@@ -54,12 +55,20 @@ class Search(object):
         return self._search_packages_in(remote_name, ref, query)
 
     def _search_packages_in_local(self, ref=None, query=None):
-        package_layout = self._cache.package_layout(ref, short_paths=None)
-        packages_props = search_packages(package_layout, query)
-        ordered_packages = OrderedDict(sorted(packages_props.items()))
+        latest_rrev = self._cache.get_latest_rrev(ref)
 
-        metadata = package_layout.load_metadata()
-        ordered_packages = filter_by_revision(metadata, ordered_packages)
+        if not latest_rrev:
+            raise RecipeNotFoundException(ref)
+
+        conanfileref = latest_rrev
+        package_layouts = []
+        pkg_ids = self._cache.get_package_ids(conanfileref)
+        for pkg in pkg_ids:
+            latest_prev = self._cache.get_latest_prev(pkg)
+            package_layouts.append(self._cache.pkg_layout(latest_prev))
+
+        packages_props = search_packages(package_layouts, query)
+        ordered_packages = OrderedDict(sorted(packages_props.items()))
 
         references = OrderedDict()
         references[None] = self.remote_ref(ordered_packages)
