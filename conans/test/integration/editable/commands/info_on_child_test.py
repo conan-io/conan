@@ -49,6 +49,7 @@ class InfoCommandTest(unittest.TestCase):
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
+                      "    Context: host\n"
                       "    Remote: None\n"
                       "    Provides: lib\n"
                       "    Recipe: Editable\n{}"

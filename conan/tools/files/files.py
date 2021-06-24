@@ -1,8 +1,10 @@
 import errno
+import json
 import os
 import platform
 import subprocess
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conans.client.downloaders.download import run_downloader
 from conans.client.tools.files import unzip, which
 from conans.errors import ConanException
@@ -181,3 +183,15 @@ def rename(conanfile, src, dst):
             os.rename(src, dst)
         except Exception as err:
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
+
+
+def load_build_json(conanfile):
+    path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
+    contents = load(conanfile, path)
+    data = json.loads(contents)
+    return data
+
+
+def save_build_json(conanfile, contents):
+    path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
+    save(conanfile, path, json.dumps(contents))
