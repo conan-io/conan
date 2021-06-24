@@ -520,31 +520,11 @@ class BinaryInstaller(object):
         assert pref.id != PACKAGE_ID_UNKNOWN, "Package-ID error: %s" % str(pref)
         conanfile = node.conanfile
         output = conanfile.output
-        # TODO: cache2.0 Check with new locks
-        # with layout.package_lock(pref):
+
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
         if processed_prev is None:  # This package-id has not been processed before
             pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
-            if node.binary == BINARY_BUILD:
-                assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                pkg_layout.package_remove()
-                with pkg_layout.set_dirty_context_manager():
-                    pref = self._build_package(node, output, remotes, pkg_layout)
-                assert node.prev, "Node PREV shouldn't be empty"
-                assert node.pref.revision, "Node PREF revision shouldn't be empty"
-                assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
-            elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
-                # this can happen after a re-evaluation of packageID with Package_ID_unknown
-                # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
-                #  move the layout inside the get... method
-                self._download_pkg(node)
-            elif node.binary == BINARY_CACHE:
-                assert node.prev, "PREV for %s is None" % str(pref)
-                output.success('Already installed!')
-                log_package_got_from_local_cache(pref)
-                self._recorder.package_fetched_from_cache(pref)
-            processed_package_references[bare_pref] = node.prev
         else:
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
@@ -552,16 +532,38 @@ class BinaryInstaller(object):
             pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
             pkg_layout = self._cache.get_pkg_layout(pref)
 
-        # at this point the package reference should be complete
-        if pkg_layout.reference != pref:
-            self._cache.assign_prev(pkg_layout, ConanReference(pref))
+        with pkg_layout.package_lock():
+            if processed_prev is None:  # This package-id has not been processed before
+                if node.binary == BINARY_BUILD:
+                    assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
+                    pkg_layout.package_remove()
+                    with pkg_layout.set_dirty_context_manager():
+                        pref = self._build_package(node, output, remotes, pkg_layout)
+                    assert node.prev, "Node PREV shouldn't be empty"
+                    assert node.pref.revision, "Node PREF revision shouldn't be empty"
+                    assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
+                elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    # this can happen after a re-evaluation of packageID with Package_ID_unknown
+                    # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
+                    #  move the layout inside the get... method
+                    self._download_pkg(node)
+                elif node.binary == BINARY_CACHE:
+                    assert node.prev, "PREV for %s is None" % str(pref)
+                    output.success('Already installed!')
+                    log_package_got_from_local_cache(pref)
+                    self._recorder.package_fetched_from_cache(pref)
+                processed_package_references[bare_pref] = node.prev
 
-        package_folder = pkg_layout.package()
-        assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
-                                               % (str(pref), package_folder))
-        # Call the info method
-        self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
-        self._recorder.package_cpp_info(pref, conanfile.cpp_info)
+            # at this point the package reference should be complete
+            if pkg_layout.reference != pref:
+                self._cache.assign_prev(pkg_layout, ConanReference(pref))
+
+            package_folder = pkg_layout.package()
+            assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
+                                                   % (str(pref), package_folder))
+            # Call the info method
+            self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
+            self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
     def _build_package(self, node, output, remotes, pkg_layout):
         conanfile = node.conanfile
