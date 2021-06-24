@@ -54,7 +54,7 @@ class PkgConfigDeps(object):
         cmp_name = get_component_alias(req, comp_name)
         return cmp_name
 
-    def get_components(self, pkg_name, dep):
+    def _get_components(self, pkg_name, dep):
         ret = []
         for comp_name, comp in dep.new_cpp_info.get_sorted_components().items():
             comp_genname = get_component_alias(dep, comp_name)
@@ -85,7 +85,7 @@ class PkgConfigDeps(object):
             pkg_genname = get_target_namespace(dep)
 
             if dep.new_cpp_info.has_components:
-                components = self.get_components(dep.ref.name, dep)
+                components = self._get_components(dep.ref.name, dep)
                 for comp_genname, comp, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
@@ -93,9 +93,9 @@ class PkgConfigDeps(object):
                         comp_requires_gennames, cpp_info=comp)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
-                    ret["%s.pc" % pkg_genname] = self.global_pc_file_contents(pkg_genname,
-                                                                              dep,
-                                                                              comp_gennames)
+                    ret["%s.pc" % pkg_genname] = self._global_pc_file_contents(pkg_genname,
+                                                                               dep,
+                                                                               comp_gennames)
             else:
                 require_public_deps = [_d for _, _d in self._get_public_require_deps(dep.new_cpp_info)]
                 ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep,
@@ -156,7 +156,7 @@ class PkgConfigDeps(object):
             lines.append("Requires: %s" % public_deps)
         return "\n".join(lines) + "\n"
 
-    def global_pc_file_contents(self, name, dep, comp_gennames):
+    def _global_pc_file_contents(self, name, dep, comp_gennames):
         lines = ["Name: %s" % name]
         description = self._conanfile.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
