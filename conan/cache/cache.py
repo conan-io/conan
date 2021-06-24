@@ -10,6 +10,7 @@ from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conan.cache.db.references import ReferencesDbTable
+from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util import files
 from conans.util.files import rmdir, md5
 
@@ -68,7 +69,7 @@ class DataCache:
         path = self._get_or_create_reference_path(ref)
 
         if not ref.rrev:
-            ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, path,
+            ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, RREV_UNKNOWN,
                                  ref.pkgid, ref.prev)
 
         reference_path, created = self._db.get_or_create_reference(path, ref)
@@ -77,16 +78,12 @@ class DataCache:
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def get_or_create_package_layout(self, pref: ConanReference):
+        assert pref.rrev, "Recipe revision must be known to get or create the package layout"
+        assert pref.pkgid, "Package id must be known to get or create the package layout"
         package_path = self._get_or_create_package_path(pref)
-
-        # Assign a random (uuid4) revision if not set
-        # if the package revision is not calculated yet, assign the uuid of the path as prev
-        # If we don't pass a revision we also generate a random uuid to fill the fields
-        rrev = pref.rrev or str(uuid.uuid4())
-        prev = pref.prev or str(uuid.uuid4())
         if not pref.prev:
-            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, rrev,
-                                  pref.pkgid, prev)
+            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
+                                  pref.pkgid, PREV_UNKNOWN)
 
         package_path, created = self._db.get_or_create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=created)
@@ -99,9 +96,9 @@ class DataCache:
         return RecipeLayout(ref, os.path.join(self.base_folder, path))
 
     def get_package_layout(self, pref: ConanReference):
-        assert pref.rrev, "Recipe revision must be known to get the reference layout"
-        assert pref.prev, "Package revision must be known to get the reference layout"
-        assert pref.pkgid, "Package id must be known to get the reference layout"
+        assert pref.rrev, "Recipe revision must be known to get the package layout"
+        assert pref.prev, "Package revision must be known to get the package layout"
+        assert pref.pkgid, "Package id must be known to get the package layout"
         package_path = self._get_or_create_package_path(pref)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
