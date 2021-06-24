@@ -1,29 +1,26 @@
+"""
+    PkgConfigDeps Conan generator
+
+    - PC FILE EXAMPLE:
+
+        prefix=/usr
+        exec_prefix=${prefix}
+        libdir=${exec_prefix}/lib
+        includedir=${prefix}/include
+
+        Name: my-project
+        Description: Some brief but informative description
+        Version: 1.2.3
+        Libs: -L${libdir} -lmy-project-1 -linkerflag -Wl,-rpath=${libdir}
+        Cflags: -I${includedir}/my-project-1
+        Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
+        Requires.private: gthread-2.0 >= 2.40
+"""
 import os
 
-# FIXME: imports from conan namespace
-import textwrap
-
-from conans.client.build.compiler_flags import rpath_flags, format_frameworks, format_framework_paths
-from conans.client.tools.oss import get_build_os_arch
+from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.errors import ConanException
 from conans.util.files import save
-
-"""
-PC FILE EXAMPLE:
-
-prefix=/usr
-exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
-
-Name: my-project
-Description: Some brief but informative description
-Version: 1.2.3
-Libs: -L${libdir} -lmy-project-1 -linkerflag -Wl,-rpath=${libdir}
-Cflags: -I${includedir}/my-project-1
-Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
-Requires.private: gthread-2.0 >= 2.40
-"""
 
 
 def _concat_if_not_empty(groups):
@@ -108,7 +105,10 @@ class PkgConfigDeps(object):
     def _pc_file_content(self, name, dep, requires_gennames, cpp_info=None):
         prefix_path = dep.package_folder.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
+
         cpp_info = cpp_info or dep.new_cpp_info
+        gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
+
         libdir_vars = []
         dir_lines, varnames = self._generate_dir_lines(prefix_path, "libdir", cpp_info.libdirs)
         if dir_lines:
@@ -133,24 +133,16 @@ class PkgConfigDeps(object):
         lines.append("Description: %s" % description)
         lines.append("Version: %s" % dep.ref.version)
         libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
+        lib_paths = ["${%s}" % libdir for libdir in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-
-        os_build, _ = get_build_os_arch(self._conanfile)
-        if not hasattr(self._conanfile, 'settings_build'):
-            os_build = os_build or self._conanfile.settings.get_safe("os")
-
-        rpaths = rpath_flags(self._conanfile.settings, os_build,
-                             ["${%s}" % libdir for libdir in libdir_vars])
-        frameworks = format_frameworks(cpp_info.frameworks, self._conanfile.settings)
-        framework_paths = format_framework_paths(cpp_info.frameworkdirs, self._conanfile.settings)
 
         lines.append("Libs: %s" % _concat_if_not_empty([libdirs_flags,
                                                         libnames_flags,
                                                         shared_flags,
-                                                        rpaths,
-                                                        frameworks,
-                                                        framework_paths]))
+                                                        gnudeps_flags._rpath_flags(lib_paths),
+                                                        gnudeps_flags.frameworks,
+                                                        gnudeps_flags.framework_paths]))
         include_dirs_flags = ['-I"${%s}"' % name for name in includedir_vars]
 
         lines.append("Cflags: %s" % _concat_if_not_empty(
