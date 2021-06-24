@@ -69,5 +69,5 @@ class TestConan(ConanFile):
         prev = client.cache.get_latest_prev(pkgids[0])
         pkg_layout = client.cache.pkg_layout(prev)
 
-        src_folder = str(os.path.join(pkg_layout.package(), "src"))
+        src_folder = os.path.join(pkg_layout.package(), "src").replace("\\", "/")
         self.assertIn(f"{src_folder}", src_dirs)
