@@ -15,25 +15,25 @@ class PkgGeneratorTest(unittest.TestCase):
     @pytest.mark.tool_compiler
     def test_pkg_config_dirs(self):
         # https://github.com/conan-io/conan/issues/2756
-        conanfile = """
-import os
-from conans import ConanFile
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
 
-class PkgConfigConan(ConanFile):
-    name = "MyLib"
-    version = "0.1"
+            class PkgConfigConan(ConanFile):
+                name = "MyLib"
+                version = "0.1"
 
-    def package_info(self):
-        self.cpp_info.frameworkdirs = []
-        self.cpp_info.filter_empty = False
-        libname = "mylib"
-        fake_dir = os.path.join("/", "my_absoulte_path", "fake")
-        include_dir = os.path.join(fake_dir, libname, "include")
-        lib_dir = os.path.join(fake_dir, libname, "lib")
-        lib_dir2 = os.path.join(self.package_folder, "lib2")
-        self.cpp_info.includedirs = [include_dir]
-        self.cpp_info.libdirs = [lib_dir, lib_dir2]
-"""
+                def package_info(self):
+                    self.cpp_info.frameworkdirs = []
+                    self.cpp_info.filter_empty = False
+                    libname = "mylib"
+                    fake_dir = os.path.join("/", "my_absoulte_path", "fake")
+                    include_dir = os.path.join(fake_dir, libname, "include")
+                    lib_dir = os.path.join(fake_dir, libname, "lib")
+                    lib_dir2 = os.path.join(self.package_folder, "lib2")
+                    self.cpp_info.includedirs = [include_dir]
+                    self.cpp_info.libdirs = [lib_dir, lib_dir2]
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create .")
@@ -45,16 +45,16 @@ class PkgConfigConan(ConanFile):
         expected_rpaths = ""
         if platform.system() in ("Linux", "Darwin"):
             expected_rpaths = ' -Wl,-rpath,"${libdir}" -Wl,-rpath,"${libdir2}"'
-        expected_content = """libdir=/my_absoulte_path/fake/mylib/lib
-libdir2=${prefix}/lib2
-includedir=/my_absoulte_path/fake/mylib/include
+        expected_content = textwrap.dedent("""\
+            libdir=/my_absoulte_path/fake/mylib/lib
+            libdir2=${prefix}/lib2
+            includedir=/my_absoulte_path/fake/mylib/include
 
-Name: MyLib
-Description: Conan package: MyLib
-Version: 0.1
-Libs: -L"${libdir}" -L"${libdir2}"%s
-Cflags: -I"${includedir}"\
-""" % expected_rpaths
+            Name: MyLib
+            Description: Conan package: MyLib
+            Version: 0.1
+            Libs: -L"${libdir}" -L"${libdir2}"%s
+            Cflags: -I"${includedir}\"""" % expected_rpaths)
         self.assertEqual("\n".join(pc_content.splitlines()[1:]), expected_content)
 
         def assert_is_abs(path):
@@ -72,21 +72,21 @@ Cflags: -I"${includedir}"\
 
     def test_empty_dirs(self):
         # Adding in package_info all the empty directories
-        conanfile = """
-import os
-from conans import ConanFile
+        conanfile = textwrap.dedent("""
+            import os
+            from conans import ConanFile
 
-class PkgConfigConan(ConanFile):
-    name = "MyLib"
-    version = "0.1"
+            class PkgConfigConan(ConanFile):
+                name = "MyLib"
+                version = "0.1"
 
-    def package_info(self):
-        self.cpp_info.includedirs = []
-        self.cpp_info.libdirs = []
-        self.cpp_info.bindirs = []
-        self.cpp_info.libs = []
-        self.cpp_info.frameworkdirs = []
-"""
+                def package_info(self):
+                    self.cpp_info.includedirs = []
+                    self.cpp_info.libdirs = []
+                    self.cpp_info.bindirs = []
+                    self.cpp_info.libs = []
+                    self.cpp_info.frameworkdirs = []
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create .")
@@ -105,28 +105,28 @@ class PkgConfigConan(ConanFile):
 
     def test_pkg_config_rpaths(self):
         # rpath flags are only generated for gcc and clang
-        profile = """
-[settings]
-os=Linux
-compiler=gcc
-compiler.version=7
-compiler.libcxx=libstdc++
-"""
-        conanfile = """
-from conans import ConanFile
+        profile = textwrap.dedent("""\
+            [settings]
+            os=Linux
+            compiler=gcc
+            compiler.version=7
+            compiler.libcxx=libstdc++
+            """)
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
 
-class PkgConfigConan(ConanFile):
-    name = "MyLib"
-    version = "0.1"
-    settings = "os", "compiler"
-    exports = "mylib.so"
+            class PkgConfigConan(ConanFile):
+                name = "MyLib"
+                version = "0.1"
+                settings = "os", "compiler"
+                exports = "mylib.so"
 
-    def package(self):
-        self.copy("mylib.so", dst="lib")
+                def package(self):
+                    self.copy("mylib.so", dst="lib")
 
-    def package_info(self):
-        self.cpp_info.libs = ["mylib"]
-"""
+                def package_info(self):
+                    self.cpp_info.libs = ["mylib"]
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "linux_gcc": profile,
@@ -140,22 +140,22 @@ class PkgConfigConan(ConanFile):
         self.assertIn("-Wl,-rpath,\"${libdir}\"", pc_content)
 
     def test_system_libs(self):
-        conanfile = """
-from conans import ConanFile
-from conans.tools import save
-import os
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conans.tools import save
+            import os
 
-class PkgConfigConan(ConanFile):
-    name = "MyLib"
-    version = "0.1"
+            class PkgConfigConan(ConanFile):
+                name = "MyLib"
+                version = "0.1"
 
-    def package(self):
-        save(os.path.join(self.package_folder, "lib", "file"), "")
+                def package(self):
+                    save(os.path.join(self.package_folder, "lib", "file"), "")
 
-    def package_info(self):
-        self.cpp_info.libs = ["mylib1", "mylib2"]
-        self.cpp_info.system_libs = ["system_lib1", "system_lib2"]
-"""
+                def package_info(self):
+                    self.cpp_info.libs = ["mylib1", "mylib2"]
+                    self.cpp_info.system_libs = ["system_lib1", "system_lib2"]
+            """)
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create .")

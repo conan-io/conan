@@ -51,10 +51,6 @@ class PkgConfigDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    @property
-    def compiler(self):
-        return self._conanfile.settings.get_safe("compiler")
-
     def _get_require_comp_name(self, pkg_name, req):
         pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
         req = self._conanfile.dependencies.direct_host[pkg]
