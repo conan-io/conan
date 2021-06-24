@@ -528,8 +528,7 @@ class BinaryInstaller(object):
             pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
             if node.binary == BINARY_BUILD:
                 assert node.prev is None, "PREV for %s to be built should be None" % str(pref)
-                # TODO: cache2.0 check remove
-                #layout.package_remove()
+                pkg_layout.package_remove()
                 with pkg_layout.set_dirty_context_manager():
                     pref = self._build_package(node, output, remotes, pkg_layout)
                 assert node.prev, "Node PREV shouldn't be empty"
