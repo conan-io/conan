@@ -11,7 +11,6 @@ import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
@@ -165,26 +164,6 @@ class SearchTest(unittest.TestCase):
                                                        PACKAGES_FOLDER,
                                                        "hello.txt"): "Hello"},
                          self.client.cache.store)
-        # Fake metadata
-
-        def create_metadata(folder, pids):
-            metadata = PackageMetadata()
-            metadata.recipe.revision = "myreciperev"
-            for pid in pids:
-                metadata.packages[pid].revision = "mypackagerev"
-                metadata.packages[pid].recipe_revision = "myreciperev"
-            save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
-
-        create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
-                                       "LinuxPackageSHA"])
-        create_metadata(root_folder11, ["WindowsPackageSHA"])
-        create_metadata(root_folder12, ["WindowsPackageSHA"])
-        create_metadata(root_folder2, ["a44f541cd44w57"])
-        create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder6, ["LinuxPackageCustom"])
-        create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})

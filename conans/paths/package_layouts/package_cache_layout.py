@@ -12,7 +12,6 @@ from conans.errors import NotFoundException, ConanException
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \

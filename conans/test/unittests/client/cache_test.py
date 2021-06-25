@@ -10,7 +10,6 @@ import pytest
 from conans.client.cache.cache import ClientCache
 from conans.client.output import ConanOutput
 from conans.client.tools import environment_append
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import mkdir
@@ -56,8 +55,6 @@ class CacheTest(unittest.TestCase):
 
         mkdir(layout.export())
         mkdir(layout.package(pref))
-        save(os.path.join(self.cache.package_layout(self.ref).package_metadata()),
-             PackageMetadata().dumps())
 
         self.assertTrue(layout.package_exists(pref))
 
