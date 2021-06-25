@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient
 
 def test_build_requires_ranges():
     # app -> pkga ----------> pkgb ------------> pkgc
-    #          \-cmake/[*]     \-cmake/1.0         \-cmake/[*]
+    #          \-cmake/[*]     \ -cmake/1.0        \-cmake/[*]
     # The resolution of cmake/[*] is invariant, it will always resolved to cmake/0.5, not
     # one to cmake/0.5 and the next one to cmake/1.0 because in between there was an explicit
     # dependency to cmake/1.0
