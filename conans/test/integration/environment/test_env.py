@@ -93,7 +93,7 @@ def test_complete(client):
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
-                self.run(mybuild_cmd)
+                self.run(mybuild_cmd, env="conanbuildenv")
                 mytest_cmd = "mygtest.bat" if platform.system() == "Windows" else "mygtest.sh"
                 self.run(mytest_cmd, env="conanrunenv")
        """)
