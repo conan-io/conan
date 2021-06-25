@@ -6,7 +6,6 @@ import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
@@ -126,8 +125,6 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
-            fake_metadata = PackageMetadata()
-            fake_metadata.recipe.revision = "myreciperev"
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = \
                 "123\nconanfile.py: 234234234"
@@ -135,8 +132,6 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                fake_metadata.packages[pack_id].revision = "mypackagerev"
-                fake_metadata.packages[pack_id].recipe_revision = "myreciperev"
                 prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
@@ -144,7 +139,6 @@ class RemoveTest(unittest.TestCase):
                     "%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(
                     i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
-            files["%s/metadata.json" % folder] = fake_metadata.dumps()
             exports_sources_dir = client.cache.package_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 

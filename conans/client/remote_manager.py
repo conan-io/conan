@@ -8,11 +8,12 @@ from requests.exceptions import ConnectionError
 from conan.cache.conan_reference import ConanReference
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum
+from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
+    rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -118,7 +119,7 @@ class RemoteManager(object):
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
         # Make sure that the source dir is deleted
-        rm_conandir(layout.source())
+        rmdir(layout.source())
         touch_folder(export_folder)
         conanfile_path = layout.conanfile()
 

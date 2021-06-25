@@ -4,9 +4,8 @@ from contextlib import contextmanager
 from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONANFILE, DATA_YML, rm_conandir
-from conans.util.files import rmdir
-from conans.util.files import set_dirty, clean_dirty, is_dirty
+from conans.paths import CONANFILE, DATA_YML
+from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 
 
 # To be able to change them later to something shorter
@@ -77,14 +76,14 @@ class RecipeLayout(LayoutBase):
     def sources_remove(self):
         src_folder = self.source()
         try:
-            rm_conandir(src_folder)  # This will remove the shortened path too if exists
+            rmdir(src_folder)  # This will remove the shortened path too if exists
         except OSError as e:
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
                                  "Close any app using it, and retry" % (src_folder, str(e)))
         scm_folder = self.scm_sources()
         try:
-            rm_conandir(scm_folder)  # This will remove the shortened path too if exists
+            rmdir(scm_folder)  # This will remove the shortened path too if exists
         except OSError as e:
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
@@ -94,11 +93,11 @@ class RecipeLayout(LayoutBase):
         export_folder = self.export()
         rmdir(export_folder)
         export_src_folder = os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
-        rm_conandir(export_src_folder)
+        rmdir(export_src_folder)
         download_export = self.download_export()
         rmdir(download_export)
         scm_folder = os.path.join(self.base_folder, SCM_SRC_FOLDER)
-        rm_conandir(scm_folder)
+        rmdir(scm_folder)
 
 
 class PackageLayout(LayoutBase):

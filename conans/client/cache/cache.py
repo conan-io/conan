@@ -53,8 +53,6 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
-        # Just call it to make it raise in case of short_paths misconfiguration
-        _ = self.config.short_paths_home
 
         mkdir(self._store_folder)
         db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
@@ -257,10 +255,6 @@ class ClientCache(object):
     def default_profile(self):
         self.initialize_default_profile()
         default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
-
-        # Mix profile settings with environment
-        mixed_settings = _mix_settings_with_env(default_profile.settings)
-        default_profile.settings = mixed_settings
         return default_profile
 
     @property
@@ -290,20 +284,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def delete_empty_dirs(self, deleted_refs):
-        """ Method called by ConanRemover.remove() to clean up from the cache empty folders
-        :param deleted_refs: The recipe references that the remove() has been removed
-        """
-        for ref in deleted_refs:
-            ref_path = self.package_layout(ref).base_folder()
-            for _ in range(4):
-                if os.path.exists(ref_path):
-                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
-                        os.rmdir(ref_path)
-                    except OSError:
-                        break  # not empty
-                ref_path = os.path.dirname(ref_path)
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
@@ -364,36 +344,3 @@ class ClientCache(object):
         if os.path.exists(self.settings_path):
             remove(self.settings_path)
         self.initialize_settings()
-
-
-def _mix_settings_with_env(settings):
-    """Reads CONAN_ENV_XXXX variables from environment
-    and if it's defined uses these value instead of the default
-    from conf file. If you specify a compiler with ENV variable you
-    need to specify all the subsettings, the file defaulted will be
-    ignored"""
-
-    # FIXME: Conan 2.0. This should be removed, it only applies to default profile, not others
-
-    def get_env_value(name_):
-        env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
-        return os.getenv(env_name, None)
-
-    def get_setting_name(env_name):
-        return env_name[10:].lower().replace("_", ".")
-
-    ret = OrderedDict()
-    for name, value in settings.items():
-        if get_env_value(name):
-            ret[name] = get_env_value(name)
-        else:
-            # being a subsetting, if parent exist in env discard this, because
-            # env doesn't define this setting. EX: env=>Visual Studio but
-            # env doesn't define compiler.libcxx
-            if "." not in name or not get_env_value(name.split(".")[0]):
-                ret[name] = value
-    # Now read if there are more env variables
-    for env, value in sorted(os.environ.items()):
-        if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
-            ret[get_setting_name(env)] = value
-    return ret

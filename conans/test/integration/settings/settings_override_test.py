@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from conans.client import tools
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANINFO
 from conans.test.assets.genconanfile import GenConanfile
@@ -68,12 +67,3 @@ def test_override_in_non_existing_recipe(client):
 
     assert "COMPILER=> MinGWBuild Visual Studio" in client.out
     assert "COMPILER=> VisualBuild Visual Studio" in client.out
-
-
-def test_override_setting_with_env_variables(client):
-    with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio",
-                                   "CONAN_ENV_COMPILER_VERSION": "14",
-                                   "CONAN_ENV_COMPILER_RUNTIME": "MD"}):
-        client.run("install VisualBuild/0.1@lasote/testing --build missing")
-
-    assert "COMPILER=> MinGWBuild Visual Studio" in client.out

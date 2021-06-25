@@ -10,9 +10,9 @@ from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conan.cache.db.references import ReferencesDbTable
+from conans.errors import ConanException
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
-from conans.util import files
-from conans.util.files import rmdir, md5
+from conans.util.files import md5, rmdir
 
 
 class DataCache:
@@ -37,7 +37,7 @@ class DataCache:
         os.makedirs(path, exist_ok=True)
 
     def _remove_path(self, relative_path):
-        files.rmdir(self._full_path(relative_path))
+        rmdir(self._full_path(relative_path))
 
     def _full_path(self, relative_path):
         path = os.path.realpath(os.path.join(self._base_folder, relative_path))
@@ -136,11 +136,20 @@ class DataCache:
         except ReferencesDbTable.ReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
+            # TODO: cache2.0 locks
             self._db.delete_ref_by_path(old_path)
+            if os.path.exists(self._full_path(new_path)):
+                try:
+                    rmdir(self._full_path(new_path))
+                except OSError as e:
+                    raise ConanException(f"{self._full_path(new_path)}\n\nFolder: {str(e)}\n"
+                                         "Couldn't remove folder, might be busy or open\n"
+                                         "Close any app using it, and retry")
+            else:
+                raise ConanException(f"Cache folder: {self._full_path(new_path)} associated to "
+                                     f"reference: {new_pref.full_reference} should exist.")
             self._db.update_reference(new_pref)
 
-        if os.path.exists(self._full_path(new_path)):
-            rmdir(self._full_path(new_path))
         shutil.move(self._full_path(old_path), self._full_path(new_path))
 
         return new_path
