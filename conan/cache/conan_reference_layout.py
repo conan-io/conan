@@ -5,7 +5,6 @@ from conan.cache.conan_reference import ConanReference
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.paths import CONANFILE, DATA_YML, rm_conandir
-from conans.util.files import rmdir
 from conans.util.files import set_dirty, clean_dirty, is_dirty
 
 
@@ -30,7 +29,7 @@ class LayoutBase:
 
     def remove(self):
         try:
-            rmdir(self.base_folder)
+            rm_conandir(self.base_folder)
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self.base_folder}: {str(e)}")
 
@@ -92,11 +91,11 @@ class RecipeLayout(LayoutBase):
 
     def export_remove(self):
         export_folder = self.export()
-        rmdir(export_folder)
+        rm_conandir(export_folder)
         export_src_folder = os.path.join(self.base_folder, EXPORT_SRC_FOLDER)
         rm_conandir(export_src_folder)
         download_export = self.download_export()
-        rmdir(download_export)
+        rm_conandir(download_export)
         scm_folder = os.path.join(self.base_folder, SCM_SRC_FOLDER)
         rm_conandir(scm_folder)
 
@@ -152,7 +151,7 @@ class PackageLayout(LayoutBase):
 
     def build_remove(self):
         try:
-            rmdir(self.build())
+            rm_conandir(self.build())
         except OSError as e:
             raise ConanException(f"Couldn't remove folder {self.build()}: {str(e)}")
 
@@ -160,9 +159,9 @@ class PackageLayout(LayoutBase):
     def package_remove(self):
         # Here we could validate and check we own a write lock over this package
         tgz_folder = self.download_package()
-        rmdir(tgz_folder)
+        rm_conandir(tgz_folder)
         try:
-            rmdir(self.package())
+            rm_conandir(self.package())
         except OSError as e:
             raise ConanException("%s\n\nFolder: %s\n"
                                  "Couldn't remove folder, might be busy or open\n"
