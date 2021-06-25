@@ -12,7 +12,6 @@ from requests import ConnectionError
 
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
@@ -127,13 +126,6 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR: Recipe not found: '%s'" % str(self.ref), self.client.out)
 
         files = {}
-
-        fake_metadata = PackageMetadata()
-        fake_metadata.recipe.revision = "myreciperev"
-        fake_metadata.packages[self.pref.id].revision = "mypackagerev"
-        fake_metadata.packages[self.pref.id].recipe_revision = "myreciperev"
-        self.client.save({"metadata.json": fake_metadata.dumps()},
-                         path=self.client.cache.package_layout(self.ref).base_folder())
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: GenConanfile().with_name("Hello").with_version("1.2.1"),
                           "include/math/lib1.h": "//copy",
