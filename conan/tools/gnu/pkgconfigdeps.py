@@ -86,27 +86,28 @@ class PkgConfigDeps(object):
 
             if dep.new_cpp_info.has_components:
                 components = self._get_components(dep.ref.name, dep)
-                for comp_genname, comp, comp_requires_gennames in components:
+                for comp_genname, comp_cpp_info, comp_requires_gennames in components:
                     ret["%s.pc" % comp_genname] = self._pc_file_content(
                         "%s-%s" % (pkg_genname, comp_genname),
-                        dep,
-                        comp_requires_gennames, cpp_info=comp)
+                        comp_cpp_info, comp_requires_gennames, dep.package_folder, dep.ref.version)
                 comp_gennames = [comp_genname for comp_genname, _, _ in components]
                 if pkg_genname not in comp_gennames:
                     ret["%s.pc" % pkg_genname] = self._global_pc_file_contents(pkg_genname,
                                                                                dep,
                                                                                comp_gennames)
             else:
-                require_public_deps = [_d for _, _d in self._get_public_require_deps(dep.new_cpp_info)]
-                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep,
-                                                                   require_public_deps)
+                require_public_deps = [_d for _, _d in
+                                       self._get_public_require_deps(dep.new_cpp_info)]
+                ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info,
+                                                                   require_public_deps,
+                                                                   dep.package_folder,
+                                                                   dep.ref.version)
         return ret
 
-    def _pc_file_content(self, name, dep, requires_gennames, cpp_info=None):
-        prefix_path = dep.package_folder.replace("\\", "/")
+    def _pc_file_content(self, name, cpp_info, requires_gennames, package_folder, version):
+        prefix_path = package_folder.replace("\\", "/")
         lines = ['prefix=%s' % prefix_path]
 
-        cpp_info = cpp_info or dep.new_cpp_info
         gnudeps_flags = GnuDepsFlags(self._conanfile, cpp_info)
 
         libdir_vars = []
@@ -131,7 +132,7 @@ class PkgConfigDeps(object):
         lines.append("Name: %s" % name)
         description = self._conanfile.description or "Conan package: %s" % name
         lines.append("Description: %s" % description)
-        lines.append("Version: %s" % dep.ref.version)
+        lines.append("Version: %s" % version)
         libdirs_flags = ['-L"${%s}"' % name for name in libdir_vars]
         lib_paths = ["${%s}" % libdir for libdir in libdir_vars]
         libnames_flags = ["-l%s " % name for name in (cpp_info.libs + cpp_info.system_libs)]
