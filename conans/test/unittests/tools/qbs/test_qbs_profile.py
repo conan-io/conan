@@ -224,9 +224,9 @@ class QbsGenericTest(unittest.TestCase):
             {'os': 'Windows', 'compiler': 'gcc', 'compiler.version': '6', 'qbs_compiler': 'mingw'},
             {'os': 'Windows', 'compiler': 'clang', 'compiler.version': '3.9',
              'qbs_compiler': 'clang-cl'},
-            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '16',
+            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '15',
              'qbs_compiler': 'cl'},
-            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '16',
+            {'os': 'Windows', 'compiler': 'Visual Studio', 'compiler.version': '15',
              'compiler.toolset': 'ClangCL', 'qbs_compiler': 'clang-cl'},
             {'os': 'Windows', 'compiler': 'msvc', 'compiler.version': '19.0',
              'qbs_compiler': 'cl'},
@@ -505,7 +505,7 @@ class QbsGenericTest(unittest.TestCase):
         conanfile = MockConanfileWithFolders(
             MockSettings({
                 'compiler': 'Visual Studio',
-                'compiler.version': 16,
+                'compiler.version': 15,
                 'compiler.runtime': 'MD',
                 'os': 'Windows',
                 'build_type': 'MinSizeRel',
