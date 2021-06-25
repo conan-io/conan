@@ -140,7 +140,7 @@ class Environment:
             )
             endlocal
 
-            """).format(filename=filename, vars=" ".join(self._values.keys()))
+            """).format(filename=os.path.basename(filename), vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
             {deactivate}
@@ -183,7 +183,7 @@ class Environment:
                 fi
             done
             echo Configuring environment variables
-            """.format(filename=filename, vars=" ".join(self._values.keys())))
+            """.format(filename=os.path.basename(filename), vars=" ".join(self._values.keys())))
         capture = textwrap.dedent("""\
            {deactivate}
            echo Configuring environment variables
@@ -198,13 +198,6 @@ class Environment:
 
         content = "\n".join(result)
         save(filename, content)
-
-    def save_script(self, name):
-        # FIXME: using platform is not ideal but settings might be incomplete
-        if platform.system() == "Windows":
-            self.save_bat("{}.bat".format(name))
-        else:
-            self.save_sh("{}.sh".format(name))
 
     def compose(self, other):
         """
@@ -342,3 +335,15 @@ class ProfileEnvironment:
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
         return result
+
+
+def save_script(conanfile, env, name):
+    # FIXME: using platform is not ideal but settings might be incomplete
+    if platform.system() == "Windows":
+        path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
+        env.save_bat(path)
+    else:
+        path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
+        env.save_sh(path)
+
+    conanfile.environment_scripts.append(name)

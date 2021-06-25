@@ -179,6 +179,7 @@ class ConanFileMock(ConanFile):
         self.folders.set_base_generators(".")
         self._conan_user = None
         self._conan_channel = None
+        self.environment_scripts = []
 
     def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False

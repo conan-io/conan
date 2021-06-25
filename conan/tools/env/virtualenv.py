@@ -1,6 +1,8 @@
+import os
 import platform
 
 from conan.tools.env import Environment
+from conan.tools.env.environment import save_script
 
 
 class VirtualEnv:
@@ -76,15 +78,8 @@ class VirtualEnv:
     def generate(self):
         build_env = self.build_environment()
         run_env = self.run_environment()
-        # FIXME: Use settings, not platform Not always defined :(
-        # os_ = self._conanfile.settings_build.get_safe("os")
         if build_env:  # Only if there is something defined
-            if platform.system() == "Windows":
-                build_env.save_bat("conanbuildenv.bat")
-            else:
-                build_env.save_sh("conanbuildenv.sh")
+            save_script(self._conanfile, build_env, "conanbuildenv")
         if run_env:
-            if platform.system() == "Windows":
-                run_env.save_bat("conanrunenv.bat")
-            else:
-                run_env.save_sh("conanrunenv.sh")
+            save_script(self._conanfile, run_env, "conanrunenv")
+

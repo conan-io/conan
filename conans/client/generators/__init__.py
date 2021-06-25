@@ -1,3 +1,5 @@
+import os
+import textwrap
 import traceback
 from os.path import join
 
@@ -191,6 +193,32 @@ class GeneratorManager(object):
                 output.error("Generator %s(file:%s) failed\n%s"
                              % (generator_name, generator.filename, str(e)))
                 raise ConanException(e)
+
+        if conanfile.environment_scripts:
+            output.highlight("Aggregating env generators")
+            _generate_aggregated_env(conanfile)
+
+
+def _generate_aggregated_env(conanfile):
+    bats = []
+    shs = []
+    for s in conanfile.environment_scripts:
+        bat_path = os.path.join(conanfile.generators_folder, "{}.bat".format(s))
+        sh_path = os.path.join(conanfile.generators_folder, "{}.sh".format(s))
+        if os.path.exists(bat_path):
+            bats.append(bat_path)
+        if os.path.exists(sh_path):
+            shs.append(sh_path)
+    if shs:
+        sh_content = ". " + " && . ".join(shs)
+        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
+    if bats:
+        lines = "\r\n".join("call {}".format(b) for b in bats)
+        bat_content = textwrap.dedent("""\
+                        @echo off
+                        {}
+                        """.format(lines))
+        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
 
 
 def _receive_conf(conanfile):

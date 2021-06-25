@@ -64,7 +64,7 @@ class MesonToolchain(object):
     endian = {{endian}}
     """)
 
-    def __init__(self, conanfile, env=os.environ):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
         self._build_type = self._conanfile.settings.get_safe("build_type")
         self._base_compiler = self._conanfile.settings.get_safe("compiler.base") or \
