@@ -5,8 +5,9 @@ from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
-from conans.paths import SYSTEM_REQS, rm_conandir
+from conans.paths import SYSTEM_REQS
 from conans.search.search import search_packages, search_recipes, filter_packages
+from conans.util.files import rmdir
 from conans.util.log import logger
 
 
@@ -15,7 +16,7 @@ class DiskRemover(object):
     def _remove(self, path, ref, msg=""):
         try:
             logger.debug("REMOVE: folder %s" % path)
-            rm_conandir(path)
+            rmdir(path)
         except OSError:
             error_msg = "Folder busy (open or some file open): %s" % path
             raise ConanException("%s: Unable to remove %s\n\t%s" % (repr(ref), msg, error_msg))

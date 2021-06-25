@@ -1,17 +1,4 @@
 import os
-import subprocess
-import tempfile
-
-from conans.client.tools.oss import OSInfo
-from conans.errors import ConanException
-from conans.util.env_reader import get_env
-from conans.util.files import decode_text
-from conans.util.files import load, mkdir, rmdir, save
-from conans.util.log import logger
-from conans.util.sha import sha256
-
-CONAN_LINK = ".conan_link"
-CONAN_REAL_PATH = "real_path.txt"
 
 
 def conan_expand_user(path):
@@ -37,26 +24,3 @@ def conan_expand_user(path):
         os.environ.clear()
         os.environ.update(old_env)
     return result
-
-
-def rm_conandir(path):
-    """removal of a directory that might contain a link to a short path"""
-    link = os.path.join(path, CONAN_LINK)
-    if os.path.exists(link):
-        short_path = load(link)
-        rmdir(os.path.dirname(short_path))
-    rmdir(path)
-
-
-def hashed_redirect(base, path, min_length=6, attempts=10):
-    max_length = min_length + attempts
-
-    full_hash = sha256(path.encode())
-    assert len(full_hash) > max_length
-
-    for length in range(min_length, max_length):
-        redirect = os.path.join(base, full_hash[:length])
-        if not os.path.exists(redirect):
-            return redirect
-    else:
-        return None
