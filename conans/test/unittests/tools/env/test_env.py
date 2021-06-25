@@ -35,6 +35,20 @@ def test_compose():
     assert env.value("MyVar5") == ''
 
 
+def test_define_append():
+    env = Environment()
+    env.define("MyVar", "MyValue")
+    env.append("MyVar", "MyValue1")
+    env.append("MyVar", ["MyValue2", "MyValue3"])
+    assert env.value("MyVar") == "MyValue MyValue1 MyValue2 MyValue3"
+
+    env = Environment()
+    env.append("MyVar", "MyValue")
+    env.append("MyVar", "MyValue1")
+    env.define("MyVar", "MyValue2")
+    assert env.value("MyVar") == "MyValue2"
+
+
 @pytest.mark.parametrize("op1, v1, s1, op2, v2, s2, result",
                          [("define", "Val1", " ", "define", "Val2", " ", "Val1"),
                           ("define", "Val1", " ", "append", "Val2", " ", "Val1"),
@@ -53,8 +67,8 @@ def test_compose():
                           ("unset", "", " ", "prepend", "Val2", " ", ""),
                           ("unset", "", " ", "unset", "", " ", ""),
                           # different separators
-                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar-Val2+Val1"),
-                          ("append", "Val1", "+", "prepend", "Val2", "-", "Val2-MyVar+Val1"),
+                          ("append", "Val1", "+", "append", "Val2", "-", "MyVar+Val2+Val1"),
+                          ("append", "Val1", "+", "prepend", "Val2", "-", "Val2+MyVar+Val1"),
                           ("unset", "", " ", "append", "Val2", "+", ""),
                           ("unset", "", " ", "prepend", "Val2", "+", ""),
                           ])

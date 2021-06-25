@@ -45,6 +45,58 @@ def environment_wrap_command(filename, cmd, cwd=None):
         return cmd
 
 
+class _EnvValue:
+    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
+        self._name = name
+        self._values = [] if value is None else value if isinstance(value, list) else [value]
+        self._path = path
+        self._sep = separator
+
+    @property
+    def is_path(self):
+        return self._path
+
+    def append(self, value, separator=None):
+        if separator is not None:
+            self._sep = separator
+        if isinstance(value, list):
+            self._values.extend(value)
+        else:
+            self._values.append(value)
+
+    def prepend(self, value, separator=None):
+        if separator is not None:
+            self._sep = separator
+        if isinstance(value, list):
+            self._values = value + self._values
+        else:
+            self._values.insert(0, value)
+
+    def compose(self, other):
+        """
+        :type other: _EnvValue
+        """
+        try:
+            index = self._values.index(_EnvVarPlaceHolder)
+        except ValueError:  # It doesn't have placeholder
+            pass
+        else:
+            new_value = self._values[:]  # do a copy
+            new_value[index:index + 1] = other._values  # replace the placeholder
+            self._values = new_value
+
+    def format_value(self, placeholder, pathsep):
+        values = []
+        for v in self._values:
+            if v is _EnvVarPlaceHolder:
+                values.append(placeholder.format(name=self._name))
+            else:
+                values.append(v)
+        if self._path:
+            return pathsep.join(values)
+        return self._sep.join(values)
+
+
 class Environment:
     def __init__(self):
         # TODO: Maybe we need to pass conanfile to get the [conf]
@@ -63,62 +115,31 @@ class Environment:
         return list(self._values.keys())
 
     def value(self, name, placeholder="{name}", pathsep=os.pathsep):
-        return self._format_value(name, self._values[name], placeholder, pathsep)
-
-    @staticmethod
-    def _format_value(name, varvalues, placeholder, pathsep):
-        values = []
-        for v in varvalues:
-
-            if v is _EnvVarPlaceHolder:
-                values.append(placeholder.format(name=name))
-            elif v is _PathSep:
-                values.append(pathsep)
-            else:
-                values.append(v)
-        return "".join(values)
-
-    @staticmethod
-    def _list_value(value, separator):
-        if isinstance(value, list):
-            result = []
-            for v in value[:-1]:
-                result.append(v)
-                result.append(separator)
-            result.extend(value[-1:])
-            return result
-        else:
-            return [value]
+        return self._values[name].format_value(placeholder, pathsep)
 
     def define(self, name, value, separator=" "):
-        value = self._list_value(value, _Sep(separator))
-        self._values[name] = value
+        self._values[name] = _EnvValue(name, value, separator, path=False)
 
     def define_path(self, name, value):
-        value = self._list_value(value, _PathSep)
-        self._values[name] = value
+        self._values[name] = _EnvValue(name, value, path=True)
 
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
         """
-        self._values[name] = []
+        self._values[name] = _EnvValue(name, None)
 
-    def append(self, name, value, separator=" "):
-        value = self._list_value(value, _Sep(separator))
-        self._values[name] = [_EnvVarPlaceHolder] + [_Sep(separator)] + value
+    def append(self, name, value, separator=None):
+        self._values.setdefault(name, _EnvValue(name)).append(value, separator)
 
     def append_path(self, name, value):
-        value = self._list_value(value, _PathSep)
-        self._values[name] = [_EnvVarPlaceHolder] + [_PathSep] + value
+        self._values.setdefault(name, _EnvValue(name, path=True)).append(value)
 
-    def prepend(self, name, value, separator=" "):
-        value = self._list_value(value, _Sep(separator))
-        self._values[name] = value + [_Sep(separator)] + [_EnvVarPlaceHolder]
+    def prepend(self, name, value, separator=None):
+        self._values.setdefault(name, _EnvValue(name)).prepend(value, separator)
 
     def prepend_path(self, name, value):
-        value = self._list_value(value, _PathSep)
-        self._values[name] = value + [_PathSep] + [_EnvVarPlaceHolder]
+        self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
 
     def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
@@ -148,7 +169,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = self._format_value(varname, varvalues, "%{name}%", pathsep)
+            value = varvalues.format_value("%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -162,7 +183,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = self._format_value(varname, varvalues, "$env:{name}", pathsep)
+            value = varvalues.format_value("$env:{name}", pathsep)
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -190,7 +211,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = self._format_value(varname, varvalues, "${name}", pathsep)
+            value = varvalues.format_value("${name}", pathsep)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -217,21 +238,7 @@ class Environment:
             if existing is None:
                 self._values[k] = v
             else:
-                try:
-                    index = existing.index(_EnvVarPlaceHolder)
-                except ValueError:  # It doesn't have placeholder
-                    pass
-                else:
-                    new_value = existing[:]  # do a copy
-                    new_value[index:index + 1] = v  # replace the placeholder
-                    # Trim front and back separators
-                    val = new_value[0]
-                    if isinstance(val, _Sep) or val is _PathSep:
-                        new_value = new_value[1:]
-                    val = new_value[-1]
-                    if isinstance(val, _Sep) or val is _PathSep:
-                        new_value = new_value[:-1]
-                    self._values[k] = new_value
+                existing.compose(v)
         return self
 
     # Methods to user access to the environment object as a dict, replacing the placeholder with
@@ -240,7 +247,7 @@ class Environment:
         if name not in self._values:
             raise KeyError("No environment variable: " + name)
         previous_value = os.getenv(name) or ""
-        return self._format_value(name, self._values[name], previous_value, os.pathsep)
+        return self._values[name].format_value(previous_value, os.pathsep)
 
     def __getitem__(self, name):
         return self._get_final_value(name)
@@ -259,6 +266,9 @@ class Environment:
             yield k, self._get_final_value(k)
 
     def __eq__(self, other):
+        """
+        :type other: Environment
+        """
         return other._values == self._values
 
     def __ne__(self, other):
