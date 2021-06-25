@@ -14,9 +14,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.model.manifest import discarded_file
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
-from conans.paths import CONANFILE, SYSTEM_REQS, EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER, \
-    BUILD_FOLDER, PACKAGES_FOLDER, SYSTEM_REQS_FOLDER, PACKAGE_METADATA, SCM_SRC_FOLDER, DATA_YML, \
-    rm_conandir
 from conans.util.env_reader import get_env
 from conans.util.files import load, save, rmdir, set_dirty, clean_dirty, is_dirty
 from conans.util.locks import Lock, NoLock, ReadLock, SimpleLock, WriteLock
