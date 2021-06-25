@@ -12,8 +12,7 @@ from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conan.cache.db.references import ReferencesDbTable
 from conans.errors import ConanException
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
-from conans.paths import rm_conandir
-from conans.util.files import md5
+from conans.util.files import md5, rmdir
 
 
 class DataCache:
@@ -38,7 +37,7 @@ class DataCache:
         os.makedirs(path, exist_ok=True)
 
     def _remove_path(self, relative_path):
-        rm_conandir(self._full_path(relative_path))
+        rmdir(self._full_path(relative_path))
 
     def _full_path(self, relative_path):
         path = os.path.realpath(os.path.join(self._base_folder, relative_path))
@@ -125,7 +124,7 @@ class DataCache:
         #  avoid getting here if old and new paths are the same
         if new_path != old_path:
             if os.path.exists(self._full_path(new_path)):
-                rm_conandir(self._full_path(new_path))
+                rmdir(self._full_path(new_path))
             shutil.move(self._full_path(old_path), self._full_path(new_path))
         return new_path
 
@@ -141,7 +140,7 @@ class DataCache:
             self._db.delete_ref_by_path(old_path)
             if os.path.exists(self._full_path(new_path)):
                 try:
-                    rm_conandir(self._full_path(new_path))
+                    rmdir(self._full_path(new_path))
                 except OSError as e:
                     raise ConanException(f"{self._full_path(new_path)}\n\nFolder: {str(e)}\n"
                                          "Couldn't remove folder, might be busy or open\n"
