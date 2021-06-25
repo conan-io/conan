@@ -52,6 +52,9 @@ class _EnvValue:
         self._path = path
         self._sep = separator
 
+    def copy(self):
+        return _EnvValue(self._name, self._values, self._sep, self._path)
+
     @property
     def is_path(self):
         return self._path
@@ -236,7 +239,7 @@ class Environment:
         for k, v in other._values.items():
             existing = self._values.get(k)
             if existing is None:
-                self._values[k] = v
+                self._values[k] = v.copy()
             else:
                 existing.compose(v)
         return self
