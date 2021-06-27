@@ -131,9 +131,9 @@ def test_profile_included_multiple():
         class Pkg(ConanFile):
             def generate(self):
                 buildenv = self.buildenv
-                self.output.info("MYVAR1: {}!!!".format(buildenv.value("MYVAR1")))
-                self.output.info("MYVAR2: {}!!!".format(buildenv.value("MYVAR2")))
-                self.output.info("MYVAR3: {}!!!".format(buildenv.value("MYVAR3")))
+                self.output.info("MYVAR1: {}!!!".format(buildenv.get("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(buildenv.get("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(buildenv.get("MYVAR3")))
         """)
 
     myprofile = textwrap.dedent("""
@@ -261,21 +261,21 @@ def test_transitive_order():
             def generate(self):
                 env = VirtualEnv(self)
                 buildenv = env.build_environment()
-                self.output.info("BUILDENV: {}!!!".format(buildenv.value("MYVAR")))
+                self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
                 runenv = env.run_environment()
-                self.output.info("RUNENV: {}!!!".format(runenv.value("MYVAR")))
+                self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build")
-    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyGCCValue "\
+    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
     # Even if the generator is duplicated in command line (it used to fail due to bugs)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV: MYVAR MyOpenSSLWindowsValue MyGCCValue "\
+    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
 
 def test_buildenv_from_requires():
@@ -310,13 +310,13 @@ def test_buildenv_from_requires():
             def generate(self):
                 env = VirtualEnv(self)
                 buildenv = env.build_environment()
-                self.output.info("BUILDENV POCO: {}!!!".format(buildenv.value("Poco_ROOT")))
-                self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.value("OpenSSL_ROOT")))
+                self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
+                self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV POCO: Poco_ROOT MyPocoLinuxValue!!!" in client.out
-    assert "BUILDENV OpenSSL: OpenSSL_ROOT MyOpenSSLLinuxValue!!!" in client.out
+    assert "BUILDENV POCO: MyPocoLinuxValue!!!" in client.out
+    assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
 
 def test_diamond_repeated():
@@ -367,10 +367,10 @@ def test_diamond_repeated():
            def generate(self):
                 env = VirtualEnv(self)
                 runenv = env.run_environment()
-                self.output.info("MYVAR1: {}!!!".format(runenv.value("MYVAR1")))
-                self.output.info("MYVAR2: {}!!!".format(runenv.value("MYVAR2")))
-                self.output.info("MYVAR3: {}!!!".format(runenv.value("MYVAR3")))
-                self.output.info("MYVAR4: {}!!!".format(runenv.value("MYVAR4")))
+                self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
+                self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
+                self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))
+                self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
        """)
     client = TestClient()
     client.save({"pkga/conanfile.py": pkga,
@@ -386,6 +386,6 @@ def test_diamond_repeated():
 
     client.run("install pkge --build")
     assert "MYVAR1: PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1!!!" in client.out
-    assert "MYVAR2: MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
-    assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 MYVAR3!!!" in client.out
+    assert "MYVAR2: PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2!!!" in client.out
+    assert "MYVAR3: PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3!!!" in client.out
     assert "MYVAR4: PkgDValue4!!!" in client.out
