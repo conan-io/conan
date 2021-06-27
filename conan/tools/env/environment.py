@@ -13,14 +13,6 @@ class _EnvVarPlaceHolder:
     pass
 
 
-class _Sep(str):
-    pass
-
-
-class _PathSep:
-    pass
-
-
 def environment_wrap_command(filename, cmd, cwd=None):
     assert filename
     filenames = [filename] if not isinstance(filename, list) else filename
@@ -88,16 +80,27 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def format_value(self, placeholder, pathsep):
+    def get_str(self, placeholder, pathsep=os.pathsep):
+        """
+        :param placeholder: a OS dependant string pattern of the previous env-var value like
+        $PATH, %PATH%, et
+        :param pathsep: The path separator, typically ; or :
+        :return: a string representation of the env-var value, including the $NAME-like placeholder
+        """
         values = []
         for v in self._values:
             if v is _EnvVarPlaceHolder:
-                values.append(placeholder.format(name=self._name))
+                if placeholder:
+                    values.append(placeholder.format(name=self._name))
             else:
                 values.append(v)
         if self._path:
             return pathsep.join(values)
         return self._sep.join(values)
+
+    def get_value(self, pathsep=os.pathsep):
+        previous_value = os.getenv(self._name)
+        return self.get_str(previous_value, pathsep)
 
 
 class Environment:
@@ -113,12 +116,6 @@ class Environment:
 
     def __repr__(self):
         return repr(self._values)
-
-    def vars(self):
-        return list(self._values.keys())
-
-    def value(self, name, placeholder="{name}", pathsep=os.pathsep):
-        return self._values[name].format_value(placeholder, pathsep)
 
     def define(self, name, value, separator=" "):
         self._values[name] = _EnvValue(name, value, separator, path=False)
@@ -172,7 +169,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.format_value("%{name}%", pathsep)
+            value = varvalues.get_str("%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -186,7 +183,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.format_value("$env:{name}", pathsep)
+            value = varvalues.get_str("$env:{name}", pathsep)
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -214,7 +211,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.format_value("${name}", pathsep)
+            value = varvalues.get_str("${name}", pathsep)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -244,29 +241,28 @@ class Environment:
                 existing.compose(v)
         return self
 
-    # Methods to user access to the environment object as a dict, replacing the placeholder with
-    # the current environment value
-    def _get_final_value(self, name):
-        if name not in self._values:
-            raise KeyError("No environment variable: " + name)
-        previous_value = os.getenv(name) or ""
-        return self._values[name].format_value(previous_value, os.pathsep)
-
-    def __getitem__(self, name):
-        return self._get_final_value(name)
-
-    def get(self, name, default=None):
-        try:
-            return self._get_final_value(name)
-        except KeyError:
-            return default
-
+    # Methods to user access to the environment object as a dict
     def keys(self):
         return self._values.keys()
 
+    def __getitem__(self, name):
+        return self._values[name].get_value()
+
+    def get(self, name, default=None):
+        v = self._values.get(name)
+        if v is None:
+            return default
+        return v.get_value()
+
     def items(self):
-        for k in self._values.keys():
-            yield k, self._get_final_value(k)
+        return {k: v.get_value() for k, v in self._values.items()}.items()
+
+    def var(self, name):
+        return self._values[name]
+
+    def var_items(self):
+        # Access to the dict items, so users can do what they want with the underlying env-var
+        return self._values.items()
 
     def __eq__(self, other):
         """

@@ -7,7 +7,7 @@ import pytest
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.tools import chdir
+from conans.client.tools import chdir, environment_append
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -28,11 +28,11 @@ def test_compose():
     env2.define("MyVar5", "MyNewValue5")
 
     env.compose(env2)
-    assert env.value("MyVar") == "MyValue"
-    assert env.value("MyVar2") == 'MyValue2'
-    assert env.value("MyVar3") == 'MyValue3'
-    assert env.value("MyVar4") == "MyValue4"
-    assert env.value("MyVar5") == ''
+    assert env.get("MyVar") == "MyValue"
+    assert env.get("MyVar2") == 'MyValue2'
+    assert env.get("MyVar3") == 'MyValue3'
+    assert env.get("MyVar4") == "MyValue4"
+    assert env.get("MyVar5") == ''
 
 
 def test_define_append():
@@ -40,13 +40,13 @@ def test_define_append():
     env.define("MyVar", "MyValue")
     env.append("MyVar", "MyValue1")
     env.append("MyVar", ["MyValue2", "MyValue3"])
-    assert env.value("MyVar") == "MyValue MyValue1 MyValue2 MyValue3"
+    assert env.get("MyVar") == "MyValue MyValue1 MyValue2 MyValue3"
 
     env = Environment()
     env.append("MyVar", "MyValue")
     env.append("MyVar", "MyValue1")
     env.define("MyVar", "MyValue2")
-    assert env.value("MyVar") == "MyValue2"
+    assert env.get("MyVar") == "MyValue2"
 
 
 @pytest.mark.parametrize("op1, v1, s1, op2, v2, s2, result",
@@ -84,7 +84,9 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
     else:
         env2.unset("MyVar")
     env.compose(env2)
-    assert env.value("MyVar") == result
+    with environment_append({"MyVar": "MyVar"}):
+        assert env.get("MyVar") == result
+    assert env.var("MyVar").get_str("{name}") == result
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
@@ -117,7 +119,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
     else:
         env2.unset("MyVar")
     env.compose(env2)
-    assert env.value("MyVar", pathsep=":") == result
+    assert env.var("MyVar").get_str("{name}", pathsep=":") == result
 
 
 def test_profile():
@@ -153,15 +155,19 @@ def test_profile():
 
     profile_env = ProfileEnvironment.loads(myprofile)
     env = profile_env.get_env("")
-    assert env.value("MyVar1") == "MyValue1"
-    assert env.value("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
-    assert env.value("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
-    assert env.value("MyVar4") == ""
-    assert env.value("MyVar5") == ''
+    with environment_append({"MyVar1": "$MyVar1",
+                             "MyVar2": "$MyVar2",
+                             "MyVar3": "$MyVar3",
+                             "MyVar4": "$MyVar4"}):
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
+        assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
+        assert env.get("MyVar4") == ""
+        assert env.get("MyVar5") == ''
 
-    env = profile_env.get_env("mypkg1/1.0")
-    assert env.value("MyVar1") == "MyValue1"
-    assert env.value("MyVar2", "$MyVar2") == 'MyValue2'
+        env = profile_env.get_env("mypkg1/1.0")
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 
 
 def test_env_files():
@@ -302,13 +308,13 @@ def test_dict_access():
     env = Environment()
     env.append("MyVar", "MyValue", separator="@")
     ret = env.items()
-    assert dict(ret) == {"MyVar": "@MyValue"}
+    assert dict(ret) == {"MyVar": "MyValue"}
 
     env = Environment()
     env.prepend("MyVar", "MyValue", separator="@")
     ret = env.items()
-    assert dict(ret) == {"MyVar": "MyValue@"}
-    assert env["MyVar"] == "MyValue@"
+    assert dict(ret) == {"MyVar": "MyValue"}
+    assert env["MyVar"] == "MyValue"
 
     env2 = Environment()
     env2.define("MyVar", "MyValue2")
@@ -343,6 +349,4 @@ def test_dict_access():
         os.environ.update(old_env)
 
     assert list(env.keys()) == ["MyVar"]
-    assert dict(env.items()) == {"MyVar": "{}MyValue".format(os.pathsep)}
-
-
+    assert dict(env.items()) == {"MyVar": "MyValue"}
