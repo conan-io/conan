@@ -68,7 +68,8 @@ class BazelDeps(object):
         headers = ', '.join(headers)
         includes = ', '.join(includes)
 
-        defines = ('"{}"'.format(define) for define in dependency.new_cpp_info.defines)
+        defines = ('"{}"'.format(define.replace('"', "'"))
+                   for define in dependency.new_cpp_info.defines)
         defines = ', '.join(defines)
 
         context = {

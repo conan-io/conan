@@ -74,6 +74,7 @@ class Printer(object):
             self._out.writeln(it["display_name"], Color.BRIGHT_CYAN)
             _print("id", name="ID")
             _print("build_id", name="BuildID")
+            _print("context", name="Context")
             if show_paths:
                 _print("export_folder")
                 _print("source_folder")

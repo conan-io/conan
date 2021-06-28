@@ -13,8 +13,7 @@ class Autotools(object):
     def __init__(self, conanfile, win_shell=False):
         self._conanfile = conanfile
         self._win_shell = win_shell
-        self.environment_files = ["conanbuildenv", "conanautotoolstoolchain", "conanautotoolsdeps",
-                                  "conanvcvars"]
+
 
         args_path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
         if os.path.isfile(args_path):
@@ -33,7 +32,7 @@ class Autotools(object):
 
         cmd = "{}/configure {}".format(self._conanfile.source_folder, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
-        self._conanfile.run(cmd, env=self.environment_files, new_win_bash=self._win_shell)
+        self._conanfile.run(cmd,  new_win_bash=self._win_shell)
 
     def make(self, target=None):
         make_program = self._conanfile.conf["tools.gnu:make_program"]
@@ -45,7 +44,7 @@ class Autotools(object):
         if "-j" not in str_args and "nmake" not in make_program.lower():
             jobs = make_jobs_cmd_line_arg(self._conanfile) or ""
         command = join_arguments([make_program, target, str_args, jobs])
-        self._conanfile.run(command, env=self.environment_files, win_shell=self._win_shell)
+        self._conanfile.run(command, win_shell=self._win_shell)
 
     def install(self):
         if not self._conanfile.should_install:

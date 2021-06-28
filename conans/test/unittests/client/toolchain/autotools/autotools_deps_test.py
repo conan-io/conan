@@ -73,7 +73,7 @@ def test_foo():
         deps = AutotoolsDeps(consumer)
         # deps.generate()
         env = deps.environment()
-        assert env["LDFLAGS"] == ' dep1_shared_link_flag dep2_shared_link_flag ' \
+        assert env["LDFLAGS"] == 'dep1_shared_link_flag dep2_shared_link_flag ' \
                                  'dep1_exe_link_flag dep2_exe_link_flag ' \
                                  '-framework dep1_oneframework -framework dep1_twoframework ' \
                                  '-framework dep2_oneframework -framework dep2_twoframework ' \
@@ -85,5 +85,5 @@ def test_foo():
                                  '-Wl,-rpath,"/path/to/folder_dep2/one/lib/path/dep2" ' \
                                  '--sysroot=/path/to/folder/dep1'
 
-        assert env["CXXFLAGS"] == ' dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
-        assert env["CFLAGS"] == ' dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
+        assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
+        assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'

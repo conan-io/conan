@@ -6,6 +6,7 @@ from conan.tools.apple.apple import apple_min_version_flag, to_apple_arch, \
     apple_sdk_path
 from conan.tools.cross_building import cross_building, get_cross_building_settings
 from conan.tools.env import Environment
+from conan.tools.env.environment import save_script
 from conan.tools.files import save
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conans.tools import args_to_string
@@ -138,9 +139,9 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None):
+    def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        env.save_script("conanautotoolstoolchain")
+        save_script(self._conanfile, env, "conanautotoolstoolchain", auto_activate=auto_activate)
         self.generate_args()
 
     def generate_args(self):

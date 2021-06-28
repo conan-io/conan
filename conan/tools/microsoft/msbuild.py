@@ -1,5 +1,3 @@
-import os
-
 from conans.errors import ConanException
 
 
@@ -53,8 +51,7 @@ class MSBuild(object):
 
     def build(self, sln):
         cmd = self.command(sln)
-        vcvars = os.path.join(self._conanfile.generators_folder, "conanvcvars")
-        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
+        self._conanfile.run(cmd)
 
     @staticmethod
     def get_version(_):

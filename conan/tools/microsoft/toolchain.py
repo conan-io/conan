@@ -2,9 +2,63 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conan.tools.microsoft.visual import VCvars
+
+from conan.tools.env.environment import register_environment_script
+from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
+from conans.client.tools import intel_compilervars_command
 from conans.errors import ConanException
 from conans.util.files import save, load
+
+
+CONAN_VCVARS_FILE = "conanvcvars.bat"
+
+
+def write_conanvcvars(conanfile, auto_activate=True):
+    # FIXME: Write a VCVars generator for the final user
+    """
+    write a conanvcvars.bat file with the good args from settings
+    """
+    os_ = conanfile.settings.get_safe("os")
+    if os_ != "Windows":
+        return
+
+    compiler = conanfile.settings.get_safe("compiler")
+    cvars = None
+    if compiler == "intel":
+        cvars = intel_compilervars_command(conanfile)
+    elif compiler == "Visual Studio" or compiler == "msvc":
+        vs_version = vs_ide_version(conanfile)
+        vcvarsarch = vcvars_arch(conanfile)
+        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                               winsdk_version=None, vcvars_ver=None)
+    if cvars:
+        content = textwrap.dedent("""\
+            @echo off
+            {}
+            """.format(cvars))
+        path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
+        save(path, content)
+        if auto_activate:
+            register_environment_script(conanfile, path)
+
+
+def vs_ide_version(conanfile):
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
+    if compiler == "msvc":
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        if toolset_override:
+            visual_version = toolset_override
+        else:
+            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
+                        '19.1': '15',
+                        '19.2': '16'}
+            visual_version = _visuals[version]
+    else:
+        visual_version = compiler_version
+    return visual_version
 
 
 class MSBuildToolchain(object):

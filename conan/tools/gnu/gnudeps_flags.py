@@ -1,7 +1,10 @@
-from conans.model.new_build_info import NewCppInfo
+"""
+    This is a helper class which offers a lot of useful methods and attributes
+"""
+# FIXME: only for tools.gnu? perhaps it should be a global module
 
 
-class AutoToolsDepsFlags(object):
+class GnuDepsFlags(object):
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
