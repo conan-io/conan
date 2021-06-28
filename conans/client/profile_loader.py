@@ -1,5 +1,8 @@
 import os
+import platform
 from collections import OrderedDict, defaultdict
+
+from jinja2 import Environment, FileSystemLoader
 
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
@@ -116,6 +119,14 @@ def read_profile(profile_name, cwd, default_folder):
     profile_path = get_profile_path(profile_name, default_folder, cwd)
     logger.debug("PROFILE LOAD: %s" % profile_path)
     text = load(profile_path)
+
+    if profile_name.endswith(".jinja"):
+        base_path = os.path.dirname(profile_path)
+        context = {"platform": platform,
+                   "os": os,
+                   "profile_dir": base_path}
+        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        text = rtemplate.render(context)
 
     try:
         return _load_profile(text, profile_path, default_folder)
