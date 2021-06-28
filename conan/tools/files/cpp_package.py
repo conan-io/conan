@@ -1,6 +1,7 @@
 import json
 from conans.util.files import load, save
 
+
 class CppPackage(object):
     """
     models conan_package.json, serializable object
@@ -33,7 +34,9 @@ class CppPackage(object):
         :param filename: path to the cpp_package.json
         :return: None
         """
-        save(filename, json.dumps(self, default=lambda o: o.__dict__))
+        text = json.dumps(self, default=lambda o: o.__dict__, indent=4)
+        print(text)
+        save(filename, text)
 
     def package_info(self, conanfile):
         """

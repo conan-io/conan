@@ -26,7 +26,7 @@ def test_file_api():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.cmake import CMake, CMakeFileAPI
-        from conans.model.cpp_package import CppPackage
+        from conan.tools.files import CppPackage
 
         class Triunfo(ConanFile):
             name = "triunfo"
@@ -89,10 +89,12 @@ def test_file_api():
                  "CMakeLists.txt": common_cmake,
                  })
     client.run("create .")
+    print(client.out)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
-        from conan.tools.cmake import CMake
+        from conan.tools.cmake import CMake, CMakeFileAPI
+        from conan.tools.files import CppPackage
 
         class Elogio(ConanFile):
             name = "elogio"
@@ -103,8 +105,13 @@ def test_file_api():
             generators = "CMakeDeps", "CMakeToolchain"
 
             def build(self):
+                file_api = CMakeFileAPI(self)
+                file_api.query(CMakeFileAPI.CODEMODELV2)
                 cmake = CMake(self)
                 cmake.configure()
+                reply = file_api.reply(CMakeFileAPI.CODEMODELV2)
+                package = reply.to_conan_package()
+                package.save()
                 cmake.build()
     """)
 
@@ -136,4 +143,6 @@ def test_file_api():
                  }, clean_first=True)
 
     client.run("install .")
+    print(client.out)
     client.run("build .")
+    print(client.out)

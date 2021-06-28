@@ -2,8 +2,9 @@ import json
 import fnmatch
 import os
 
-from conans.model.cpp_package import CppPackage
+from conan.tools.files import CppPackage
 from conans.util.files import save, load
+
 
 class CMakeFileAPI(object):
     """
@@ -16,18 +17,11 @@ class CMakeFileAPI(object):
         self._conanfile = conanfile
 
     @property
-    def build_dir(self):
-        """
-        :return: CMake build directory (the one containing CMakeCache.txt)
-        """
-        return self._conanfile.build_folder
-
-    @property
     def api_dir(self):
         """
         :return: api directory <build>/.cmake/api/v1/
         """
-        return os.path.join(self.build_dir, ".cmake", "api", "v1")
+        return os.path.join(self._conanfile.build_folder, ".cmake", "api", "v1")
 
     @property
     def query_dir(self):
@@ -50,7 +44,11 @@ class CMakeFileAPI(object):
         :return: new query object
         """
         if query == self.CODEMODELV2:
-            return self.CodeModelQueryV2(self)
+            # implements codemodel-v2 query
+            # https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html#codemodel-version-2
+            os.makedirs(self.query_dir)
+            save(os.path.join(self.query_dir, "codemodel-v2"), "")
+            return
         raise NotImplementedError()
 
     def reply(self, reply):
@@ -69,18 +67,6 @@ class CMakeFileAPI(object):
         :return: active build type (configuration)
         """
         return self._conanfile.settings.get_safe("build_type")
-
-    class CodeModelQueryV2(object):
-        """
-        implements codemodel-v2 query
-        https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html#codemodel-version-2
-        """
-        def __init__(self, api):
-            """
-            :param api:
-            """
-            os.makedirs(api.query_dir)
-            save(os.path.join(api.query_dir, "codemodel-v2"), "")
 
     class CodeModelReplyV2(object):
         """
@@ -110,20 +96,21 @@ class CMakeFileAPI(object):
                         loadjs(os.path.join(api.reply_dir, target['jsonFile']))
 
         @classmethod
-        def _name_on_disk2lib(cls, nameOnDisk):
+        def _name_on_disk2lib(cls, name_on_disk):
             """
             convert raw library file name into conan-friendly one
-            :param nameOnDisk: raw library file name read from target.json
+            :param name_on_disk: raw library file name read from target.json
             :return: conan-friendly library name, without suffix and prefix
             """
-            if nameOnDisk.endswith('.lib'):
-                return nameOnDisk[:-4]
-            elif nameOnDisk.endswith('.dll'):
-                return nameOnDisk[:-4]
-            elif nameOnDisk.startswith('lib') and nameOnDisk.endswith('.a'):
-                return nameOnDisk[3:-2]
+            if name_on_disk.endswith('.lib'):
+                return name_on_disk[:-4]
+            elif name_on_disk.endswith('.dll'):
+                return name_on_disk[:-4]
+            elif name_on_disk.startswith('lib') and name_on_disk.endswith('.a'):
+                return name_on_disk[3:-2]
             else:
-                raise Exception("don't know how to convert %s" % nameOnDisk)
+                # FIXME: This fails to parse executables
+                raise Exception("don't know how to convert %s" % name_on_disk)
 
         @classmethod
         def _parse_dep_name(cls, name):
@@ -143,6 +130,7 @@ class CMakeFileAPI(object):
 
             for name, target in self._components.items():
                 component = conan_package.add_component(name)
+                # TODO: CMakeDeps has nothing to do here
                 component.names["CMakeDeps"] = name
                 component.libs = [self._name_on_disk2lib(target['nameOnDisk'])]
                 deps = target["dependencies"] if 'dependencies' in target else []
