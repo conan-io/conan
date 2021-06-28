@@ -41,5 +41,3 @@ def test_dependencies_visit():
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
-
-

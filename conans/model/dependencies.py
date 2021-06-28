@@ -29,13 +29,18 @@ class Requirement(object):
 class UserRequirementsDict(object):
     """ user facing dict to allow access of dependencies by name
     """
-    def __init__(self, data, default_require_kwargs=None):
+    def __init__(self, data, require_filter=None):
         self._data = data  # dict-like
-        self._default_require_kwargs = default_require_kwargs or {}
+        self._require_filter = require_filter  # dict {trait: value} for requirements
 
-    def filter(self, filter_fn, default_require_kwargs=None):
-        data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k, v))
-        return UserRequirementsDict(data, default_require_kwargs)
+    def filter(self, require_filter):
+        def filter_fn(require):
+            for k, v in require_filter.items():
+                if getattr(require, k) != v:
+                    return False
+            return True
+        data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
+        return UserRequirementsDict(data, require_filter)
 
     def __bool__(self):
         return bool(self._data)
@@ -49,9 +54,8 @@ class UserRequirementsDict(object):
         else:
             ref = ConanFileReference(ref, "unknown", "unknown", "unknown", validate=False)
 
-        for k, v in self._default_require_kwargs.items():
-            if k not in kwargs:
-                kwargs[k] = v
+        if self._require_filter:
+            kwargs.update(self._require_filter)
         r = Requirement(ref, **kwargs)
         return r
 
@@ -112,21 +116,21 @@ class ConanFileDependencies(UserRequirementsDict):
 
         return ConanFileDependencies(d)
 
-    def filter(self, filter_fn, default_require_kwargs=None):
-        return super(ConanFileDependencies, self).filter(filter_fn, default_require_kwargs)
+    def filter(self, require_filter):
+        return super(ConanFileDependencies, self).filter(require_filter)
 
     @property
     def direct_host(self):
-        return self.filter(lambda r, c: r.direct and not r.build)
+        return self.filter({"build": False, "direct": True})
 
     @property
     def direct_build(self):
-        return self.filter(lambda r, c: r.direct and r.build, {"build": True})
+        return self.filter({"build": True, "direct": True})
 
     @property
     def host(self):
-        return self.filter(lambda r, c: not r.build)
+        return self.filter({"build": False})
 
     @property
     def build(self):
-        return self.filter(lambda r, c: r.build, {"build": True})
+        return self.filter({"build": True})
