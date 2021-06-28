@@ -68,7 +68,7 @@ class GeneratorManager(object):
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
                                 "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain",
-                                "BazelDeps", "BazelToolchain"]
+                                "BazelDeps", "BazelToolchain", "PkgConfigDeps"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -100,6 +100,9 @@ class GeneratorManager(object):
         elif generator_name == "AutotoolsToolchain":
             from conan.tools.gnu import AutotoolsToolchain
             return AutotoolsToolchain
+        elif generator_name == "PkgConfigDeps":
+            from conan.tools.gnu import PkgConfigDeps
+            return PkgConfigDeps
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain
@@ -109,9 +112,6 @@ class GeneratorManager(object):
         elif generator_name in ("MSBuildDeps", "msbuild"):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
-        elif generator_name == "CMakeDeps":
-            from conan.tools.cmake import CMakeDeps
-            return CMakeDeps
         elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
