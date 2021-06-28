@@ -239,7 +239,7 @@ def write_toolchain(conanfile, path, output):
             env.generate()
 
             env = VirtualRunEnv(conanfile)
-            env.generate(auto_activate=False)
+            env.generate()
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
