@@ -3,6 +3,7 @@ import textwrap
 import traceback
 from os.path import join
 
+from conan.tools.env import VirtualRunEnv
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -231,11 +232,14 @@ def write_toolchain(conanfile, path, output):
                 conanfile.generate()
 
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualbuildenv:
+    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
             from conan.tools.env.virtualbuildenv import VirtualBuildEnv
             env = VirtualBuildEnv(conanfile)
             env.generate()
+
+            env = VirtualRunEnv(conanfile)
+            env.generate(auto_activate=False)
 
     output.highlight("Aggregating env generators")
     _generate_aggregated_env(conanfile)
@@ -247,9 +251,9 @@ def _generate_aggregated_env(conanfile):
 
     for s in conanfile.environment_scripts:
         path = os.path.join(conanfile.generators_folder, s)
-        if path.endswith(".bat"):
+        if path.lower().endswith(".bat"):
             bats.append(path)
-        elif path.endswith(".sh"):
+        elif path.lower().endswith(".sh"):
             shs.append(path)
     if shs:
         sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)

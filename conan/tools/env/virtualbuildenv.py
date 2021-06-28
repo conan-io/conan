@@ -40,7 +40,7 @@ class VirtualBuildEnv:
 
         return build_env
 
-    def generate(self):
+    def generate(self, auto_activate=True):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            save_script(self._conanfile, build_env, "conanbuildenv")
+            save_script(self._conanfile, build_env, "conanbuildenv", auto_activate=auto_activate)

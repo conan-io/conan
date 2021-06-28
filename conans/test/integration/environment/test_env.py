@@ -83,7 +83,6 @@ def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
         from conans import ConanFile
-        from conan.tools.env import VirtualRunEnv
 
         class Pkg(ConanFile):
             requires = "openssl/1.0"
@@ -92,10 +91,6 @@ def test_complete(client):
 
             def build_requirements(self):
                 self.build_requires("mygtest/1.0", force_host_context=True)
-
-            def generate(self):
-                # Build is "automatic", "run" is explicit
-                VirtualRunEnv(self).generate()
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
