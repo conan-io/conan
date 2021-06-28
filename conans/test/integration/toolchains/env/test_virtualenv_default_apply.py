@@ -25,8 +25,8 @@ def client():
 
 @pytest.mark.parametrize("default_virtualenv", [True, False, None])
 def test_virtualenv_deactivated(client, default_virtualenv):
-    format_str = {True: "virtualbuildenv = True",
-                  False: "virtualbuildenv = False",
+    format_str = {True: "virtualenv = True",
+                  False: "virtualenv = False",
                   None: ""}[default_virtualenv]
     conanfile = textwrap.dedent("""
     from conans import ConanFile
