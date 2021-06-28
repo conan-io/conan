@@ -1,13 +1,15 @@
 import textwrap
-import unittest
 from collections import OrderedDict
+
+import pytest
 
 from conans.test.utils.tools import TestClient, TestServer
 
 
-class SearchTest(unittest.TestCase):
+class TestSearch:
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.servers = OrderedDict()
         self.servers["remote1"] = TestServer(server_capabilities=[])
         self.servers["remote2"] = TestServer(server_capabilities=[])
@@ -19,7 +21,7 @@ class SearchTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search", assert_error=True)
-        self.assertIn("error: the following arguments are required: query", self.client.out)
+        assert "error: the following arguments are required: query" in self.client.out
 
     def test_search_no_matching_recipes(self):
         expected_output = ("remote1:\n"
@@ -35,16 +37,18 @@ class SearchTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search whatever", assert_error=True)
-        self.assertIn("ERROR: The remotes registry is empty", self.client.out)
+        assert "ERROR: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1", assert_error=True)
-        self.assertIn("ERROR: Remote 'remote1' is disabled", self.client.out)
+        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
 
 
-class SearchRemotesTest(unittest.TestCase):
-    def setUp(self):
+class TestRemotes:
+
+    @pytest.fixture(autouse=True)
+    def _setup(self):
         self.servers = OrderedDict()
         self.users = {}
         self.client = TestClient()
@@ -68,7 +72,7 @@ class SearchRemotesTest(unittest.TestCase):
     def test_no_remotes(self):
         self.client.run("search something", assert_error=True)
         expected_output = "The remotes registry is empty. Please add at least one valid remote"
-        self.assertIn(expected_output, self.client.out)
+        assert expected_output in self.client.out
 
     def test_search_by_name(self):
         remote_name = "remote1"
@@ -77,7 +81,9 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote_name, recipe_name)
 
         self.client.run("remote list")
-        self.assertIn("remote1: http://fake", self.client.out)
+
+        assert "remote1: http://fake" in self.client.out
+
         self.client.run("search -r {} {}".format(remote_name, "test_recipe"))
 
         expected_output = (
@@ -85,7 +91,7 @@ class SearchRemotesTest(unittest.TestCase):
             "  {}\n".format(recipe_name)
         )
 
-        self.assertEqual(expected_output, self.client.out)
+        assert expected_output == self.client.out
 
     def test_search_in_all_remotes(self):
         remote1 = "remote1"
@@ -116,7 +122,7 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote2, remote2_recipe2)
 
         self.client.run("search test_recipe")
-        self.assertEqual(expected_output, self.client.out)
+        assert expected_output == self.client.out
 
     def test_search_in_one_remote(self):
         remote1 = "remote1"
@@ -142,7 +148,7 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote2, remote2_recipe2)
 
         self.client.run("search -r remote1 test_recipe")
-        self.assertEqual(expected_output, self.client.out)
+        assert expected_output in self.client.out
 
     def test_search_package_found_in_one_remote(self):
 
@@ -172,7 +178,7 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote2, remote2_recipe2)
 
         self.client.run("search test_recipe")
-        self.assertEqual(expected_output, self.client.out)
+        assert expected_output == self.client.out
 
     def test_search_in_missing_remote(self):
         remote1 = "remote1"
@@ -187,7 +193,7 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote1, remote1_recipe2)
 
         self.client.run("search -r wrong_remote test_recipe", assert_error=True)
-        self.assertIn(expected_output, self.client.out)
+        assert expected_output in self.client.out
 
     def test_search_wildcard(self):
         remote1 = "remote1"
@@ -213,4 +219,4 @@ class SearchRemotesTest(unittest.TestCase):
         self._add_recipe(remote1, remote1_recipe4)
 
         self.client.run("search test_*")
-        self.assertIn(expected_output, self.client.out)
+        assert expected_output in self.client.out
