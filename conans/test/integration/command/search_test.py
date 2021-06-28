@@ -8,6 +8,7 @@ import unittest
 from collections import OrderedDict
 
 from mock import patch
+import pytest
 
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
@@ -106,6 +107,7 @@ conan_vars4 = """[settings]
 """
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -1122,6 +1124,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchReferencesWithoutUserChannel(unittest.TestCase):
     conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -1163,6 +1166,7 @@ class Test(ConanFile):
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchOrder(unittest.TestCase):
     def test_search(self):
         client = TestClient(default_server_user=True)
@@ -1191,6 +1195,7 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRevisionsTest(unittest.TestCase):
 
     def test_search_recipe_revisions(self):
@@ -1432,6 +1437,7 @@ class Test(ConanFile):
         self.assertIn("There are no packages", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRemoteAllTestCase(unittest.TestCase):
     def setUp(self):
         """ Create a remote called 'all' with some recipe in it """
