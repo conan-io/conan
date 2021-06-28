@@ -83,6 +83,8 @@ def test_complete(client):
     conanfile = textwrap.dedent("""
         import platform
         from conans import ConanFile
+        from conan.tools.env import VirtualRunEnv
+
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             build_requires = "mycmake/1.0"
@@ -90,6 +92,10 @@ def test_complete(client):
 
             def build_requirements(self):
                 self.build_requires("mygtest/1.0", force_host_context=True)
+
+            def generate(self):
+                # Build is "automatic", "run" is explicit
+                VirtualRunEnv(self).generate()
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
@@ -254,15 +260,14 @@ def test_transitive_order():
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
-        from conan.tools.env import VirtualEnv
+        from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
         class Pkg(ConanFile):
             requires = "openssl/1.0"
             build_requires = "cmake/1.0", "gcc/1.0"
             def generate(self):
-                env = VirtualEnv(self)
-                buildenv = env.build_environment()
+                buildenv = VirtualBuildEnv(self).environment()
                 self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
-                runenv = env.run_environment()
+                runenv = VirtualRunEnv(self).environment()
                 self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
@@ -272,7 +277,7 @@ def test_transitive_order():
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
     # Even if the generator is duplicated in command line (it used to fail due to bugs)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualRunEnv -g VirtualBuildEnv")
     assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
@@ -304,17 +309,17 @@ def test_buildenv_from_requires():
 
     consumer = textwrap.dedent(r"""
         from conans import ConanFile
-        from conan.tools.env import VirtualEnv
+        from conan.tools.env import VirtualBuildEnv
         class Pkg(ConanFile):
             requires = "poco/1.0"
             def generate(self):
-                env = VirtualEnv(self)
-                buildenv = env.build_environment()
+                env = VirtualBuildEnv(self)
+                buildenv = env.environment()
                 self.output.info("BUILDENV POCO: {}!!!".format(buildenv.get("Poco_ROOT")))
                 self.output.info("BUILDENV OpenSSL: {}!!!".format(buildenv.get("OpenSSL_ROOT")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
+    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualBuildEnv")
     assert "BUILDENV POCO: MyPocoLinuxValue!!!" in client.out
     assert "BUILDENV OpenSSL: MyOpenSSLLinuxValue!!!" in client.out
 
@@ -361,12 +366,12 @@ def test_diamond_repeated():
        """)
     pkge = textwrap.dedent(r"""
        from conans import ConanFile
-       from conan.tools.env import VirtualEnv
+       from conan.tools.env import VirtualRunEnv
        class Pkg(ConanFile):
            requires = "pkgd/1.0"
            def generate(self):
-                env = VirtualEnv(self)
-                runenv = env.run_environment()
+                env = VirtualRunEnv(self)
+                runenv = env.environment()
                 self.output.info("MYVAR1: {}!!!".format(runenv.get("MYVAR1")))
                 self.output.info("MYVAR2: {}!!!".format(runenv.get("MYVAR2")))
                 self.output.info("MYVAR3: {}!!!".format(runenv.get("MYVAR3")))

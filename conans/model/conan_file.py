@@ -243,8 +243,8 @@ class ConanFile(object):
         if self.description is not None and not isinstance(self.description, six.string_types):
             raise ConanException("Recipe 'description' must be a string.")
 
-        if not hasattr(self, "virtualenv"):  # Allow the user to override it with True or False
-            self.virtualenv = True
+        if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False
+            self.virtualbuildenv = True
 
     @property
     def new_cpp_info(self):

@@ -349,10 +349,12 @@ class ProfileEnvironment:
 def save_script(conanfile, env, name):
     # FIXME: using platform is not ideal but settings might be incomplete
     if platform.system() == "Windows":
-        path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
+        complete_name = "{}.bat".format(name)
+        path = os.path.join(conanfile.generators_folder, complete_name)
         env.save_bat(path)
     else:
-        path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
+        complete_name = "{}.sh".format(name)
+        path = os.path.join(conanfile.generators_folder, complete_name)
         env.save_sh(path)
 
-    conanfile.environment_scripts.append(name)
+    conanfile.environment_scripts.append(complete_name)
