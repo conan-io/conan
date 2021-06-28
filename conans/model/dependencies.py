@@ -87,7 +87,7 @@ class ConanFileDependencies(UserRequirementsDict):
         build, test, host = [], [], []
         for edge in node.dependencies:
             if edge.build_require:
-                if edge.require.build_require_context == CONTEXT_BUILD:
+                if not edge.require.force_host_context:
                     build.append(edge.dst)
                 else:
                     test.append(edge.dst)

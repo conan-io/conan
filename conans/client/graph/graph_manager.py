@@ -35,6 +35,7 @@ class _RecipeBuildRequires(OrderedDict):
 
     def __call__(self, build_require, force_host_context=False):
         context = CONTEXT_HOST if force_host_context else self._default_context
+        build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
         self.add(build_require, context)
 
     def __str__(self):
