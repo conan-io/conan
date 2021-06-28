@@ -153,6 +153,7 @@ class ClientCache(object):
     # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
     #  that call this directly
     def package_layout(self, ref, short_paths=None):
+        raise Exception("buuuuuuuhhhhh")
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
         return PackageCacheLayout(ref, self)
 
