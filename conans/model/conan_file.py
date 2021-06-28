@@ -390,21 +390,21 @@ class ConanFile(object):
             win_shell=False):
         # NOTE: "win_shell" is the new "win_bash" for Conan 2.0
 
-        subsystem = (subsystem or self.conf["tools.win.bash:subsystem"]) \
+        subsystem = (subsystem or self.conf["tools.win.shell:subsystem"]) \
             if (win_shell or win_bash) else None
-        command = environment_wrap_command(env, command, cwd=self.generators_folder,
-                                           subsystem=subsystem)
 
         def _run(cmd):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
                 if win_bash:
-                    return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd,
-                                                     subsystem=subsystem)
+                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem)
                 elif win_shell:  # New, Conan 2.0
                     from conan.tools.microsoft.win import run_in_windows_shell
-                    return run_in_windows_shell(self, command=cmd, cwd=cwd, subsystem=subsystem)
+                    return run_in_windows_shell(self, command=cmd, cwd=cwd, subsystem=subsystem,
+                                                env=env)
 
+            command = environment_wrap_command(env, cmd, cwd=self.generators_folder,
+                                               subsystem=subsystem)
             return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
@@ -418,9 +418,9 @@ class ConanFile(object):
                               (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                os.environ.get("DYLD_FRAMEWORK_PATH", ''),
                                command)
-                retcode = _run()
+                retcode = _run(command)
         else:
-            retcode = _run()
+            retcode = _run(command)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

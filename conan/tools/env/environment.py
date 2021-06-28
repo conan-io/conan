@@ -5,7 +5,6 @@ import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.tools.microsoft.win import unix_path
 from conans.errors import ConanException
 from conans.util.files import save
 
@@ -28,11 +27,13 @@ def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
     bats, shs = [], []
     for f in filenames:
         full_path = os.path.join(cwd, f) if cwd else f
-        if subsystem:
-            full_path = unix_path(full_path, subsystem)
         if os.path.isfile("{}.bat".format(full_path)):
             bats.append("{}.bat".format(full_path))
         elif os.path.isfile("{}.sh".format(full_path)):
+            if subsystem:
+                # FIXME: recursive inclusion
+                from conan.tools.microsoft.win import unix_path
+                full_path = unix_path(full_path, subsystem)
             shs.append("{}.sh".format(full_path))
     if bats and shs:
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
@@ -41,7 +42,8 @@ def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
         command = " && ".join('"{}"'.format(b) for b in bats)
         return "{} && {}".format(command, cmd)
     elif shs:
-        curdir = "./" if cwd is None else ""
+        # FIXME: This is tricky, use always absolute paths?
+        curdir = "./" if cwd is None and subsystem is None else ""
         command = " && ".join('. "{}{}"'.format(curdir, f) for f in shs)
         return "{} && {}".format(command, cmd)
     else:
@@ -71,17 +73,21 @@ class Environment:
     @staticmethod
     def _format_value(name, varvalues, placeholder, pathsep, subsystem=None):
         values = []
+        is_path = False
         for v in varvalues:
-
             if v is _EnvVarPlaceHolder:
                 values.append(placeholder.format(name=name))
             elif v is _PathSep:
+                is_path = True
                 values.append(pathsep)
             else:
-                # FIXME: This is wrong, format only the values that are "paths"
-                if subsystem:  # we got a windows path that have to be converted to right subsystem
-                    v = unix_path(v, subsystem)
                 values.append(v)
+        # FIXME: This is weird way to know if this is a path and only working when appending,
+        #        not when defining
+        if subsystem:
+            # we got a windows path that have to be converted to right subsystem. e.g AR=/path/to/ar
+            from conan.tools.microsoft.win import unix_path
+            values = [unix_path(v, subsystem) for v in values]
         return "".join(values)
 
     @staticmethod
@@ -146,7 +152,7 @@ class Environment:
             )
             endlocal
 
-            """).format(filename=filename, vars=" ".join(self._values.keys()))
+            """).format(filename=os.path.basename(filename), vars=" ".join(self._values.keys()))
         capture = textwrap.dedent("""\
             @echo off
             {deactivate}

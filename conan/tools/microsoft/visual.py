@@ -1,7 +1,29 @@
 import os
+import textwrap
 
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
+from conans.client.tools import intel_compilervars_command
+from conans.util.files import save
+
+
+def vs_ide_version(conanfile):
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
+    if compiler == "msvc":
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        if toolset_override:
+            visual_version = toolset_override
+        else:
+            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
+                        '19.1': '15',
+                        '19.2': '16'}
+            visual_version = _visuals[version]
+    else:
+        visual_version = compiler_version
+    return visual_version
 
 
 def msvc_runtime_flag(conanfile):
@@ -87,3 +109,36 @@ def vcvars_arch(conanfile):
         raise ConanException('vcvars unsupported architectures %s-%s' % (arch_build, arch_host))
 
     return arch
+
+
+class VCvars(object):
+
+    filename = "conanvcvars"
+
+    def __init__(self, conanfile):
+        self._conanfile = conanfile
+
+    def generate(self):
+        """
+        write a conanvcvars.bat file with the good args from settings
+        """
+        os_ = self._conanfile.settings.get_safe("os")
+        if os_ != "Windows":
+            return
+
+        compiler = self._conanfile.settings.get_safe("compiler")
+        cvars = None
+        if compiler == "intel":
+            cvars = intel_compilervars_command(self._conanfile)
+        elif compiler == "Visual Studio" or compiler == "msvc":
+            vs_version = vs_ide_version(self._conanfile)
+            vcvarsarch = vcvars_arch(self._conanfile)
+            cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                                   winsdk_version=None, vcvars_ver=None)
+        if cvars:
+            content = textwrap.dedent("""\
+                @echo off
+                {}
+                """.format(cvars))
+            save(os.path.join(self._conanfile.generators_folder,
+                              "{}.bat".format(self.filename)), content)

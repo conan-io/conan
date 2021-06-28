@@ -20,7 +20,7 @@ def unix_path(path, subsystem):
     if not path:
         return None
 
-    if not platform.system == "Windows":
+    if not platform.system() == "Windows":
         return path
 
     if os.path.exists(path):
@@ -76,35 +76,41 @@ def get_cased_path(name):
     return os.sep.join(reversed(result))
 
 
-def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None):
+def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
+    # FIXME: !!! DETECTAR SI EL ENV ES SH O NO PARA SABER DONDE CORRERLO
+    env = env or []
     subsystem = subsystem or conanfile.conf["tools.win.shell:subsystem"]
-    if not platform.system() != "Windows":
+    if not platform.system() == "Windows":
         raise ConanException("Command only for Windows operating system")
 
     if not subsystem:
         raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin "
                              "or specify a build_require to apply it.")
 
-    msys2_mode_env = Environment()
+    pre_shell_env = []
     if subsystem == MSYS2:
-        msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
-        msys2_mode_env.define("MSYSTEM", msystem)
-        # TODO: This is not working when opening the "bash" at "c:\msys64\usr\bin\bash.exe"
-        #       Also bash looks very incomplete, without many commom commands
-        #       This is working if we consider "c:\msys64\msys2_shell.cmd" the shell
+        msys2_mode_env = Environment()
+        _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
+        msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
-        msys2_mode_env.save_sh("msys2_mode", subsystem=subsystem)
-        command = environment_wrap_command("msys2_mode", command, subsystem=subsystem)
+        msys2_mode_env.save_bat(os.path.join(conanfile.generators_folder, "msys2_mode.bat"))
+        pre_shell_env.append("msys2_mode")
+
+    if "conanvcvars" in env:
+        pre_shell_env.append("conanvcvars")
+        env.remove("conanvcvars")
 
     # Needed to change to that dir inside the bash shell
     if cwd and not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
 
     curdir = unix_path(cwd or os.getcwd(), subsystem=subsystem)
-    to_run = 'cd "%s" && %s ' % (curdir, command)
+    _cmd_wrap = environment_wrap_command(env, command, subsystem=subsystem,
+                                         cwd=conanfile.generators_folder)
+    to_run = 'cd "%s" && %s ' % (curdir, _cmd_wrap)
     shell_path = conanfile.conf["tools.win.shell:path"]
     shell_path = '"%s"' % shell_path if " " in shell_path else shell_path
     login = "--login"
@@ -115,6 +121,10 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None):
         wincmd = '%s %s -c %s' % (shell_path, login, to_run)
     conanfile.output.info('run_in_windows_bash: %s' % wincmd)
     # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
+    if pre_shell_env:
+        wincmd = environment_wrap_command(pre_shell_env, wincmd, subsystem=subsystem,
+                                          cwd=conanfile.generators_folder)
+    print("===Final command: {}===".format(wincmd))
     return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
 
 

@@ -7,6 +7,8 @@ class VirtualEnv:
     """ captures the conanfile environment that is defined from its
     dependencies, and also from profiles
     """
+    filename_build = "conanbuildenv"
+    filename_run = "conanrunenv"
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -79,20 +81,16 @@ class VirtualEnv:
         # FIXME: Use settings, not platform Not always defined :(
         # os_ = self._conanfile.settings_build.get_safe("os")
         if build_env:  # Only if there is something defined
-            if platform.system() == "Windows":
-                if not win_shell:
-                    build_env.save_bat("conanbuildenv.bat")
-                else:
-                    subsystem = self._conanfile.conf["tools.win.bash:subsystem"]
-                    build_env.save_sh("conanrunenv.sh", subsystem=subsystem)
-            else:
-                build_env.save_sh("conanbuildenv.sh")
+            self._generate_env("conanbuildenv", build_env, win_shell)
         if run_env:
-            if platform.system() == "Windows":
-                if not win_shell:
-                    run_env.save_bat("conanrunenv.bat")
-                else:
-                    subsystem = self._conanfile.conf["tools.win.bash:subsystem"]
-                    run_env.save_sh("conanrunenv.sh")
+            self._generate_env("conanrunenv", run_env, win_shell)
+
+    def _generate_env(self, name, obj, win_shell):
+        if platform.system() == "Windows":
+            if not win_shell:
+                obj.save_bat("{}.bat".format(name))
             else:
-                run_env.save_sh("conanrunenv.sh")
+                subsystem = self._conanfile.conf["tools.win.shell:subsystem"]
+                obj.save_sh("{}.sh".format(name), subsystem=subsystem)
+        else:
+            obj.save_sh("{}.sh".format(name))
