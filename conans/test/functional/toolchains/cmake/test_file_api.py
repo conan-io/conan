@@ -143,6 +143,5 @@ def test_file_api():
                  }, clean_first=True)
 
     client.run("install .")
-    print(client.out)
     client.run("build .")
     print(client.out)
