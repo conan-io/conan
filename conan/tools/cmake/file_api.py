@@ -12,6 +12,8 @@ class CMakeFileAPI(object):
     """
     CODEMODELV2 = "codemodel-v2"
     SKIP_TARGETS = ["ZERO_CHECK", "ALL_BUILD"]
+    # https://cmake.org/cmake/help/v3.21/prop_tgt/TYPE.html
+    SUPPORTED_TARGET_TYPES = ['STATIC_LIBRARY', 'SHARED_LIBRARY', 'MODULE_LIBRARY']
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -129,6 +131,8 @@ class CMakeFileAPI(object):
             conan_package = CppPackage()
 
             for name, target in self._components.items():
+                if target['type'] not in CMakeFileAPI.SUPPORTED_TARGET_TYPES:
+                    continue
                 component = conan_package.add_component(name)
                 # TODO: CMakeDeps has nothing to do here
                 component.names["CMakeDeps"] = name
