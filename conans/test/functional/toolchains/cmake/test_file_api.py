@@ -89,7 +89,6 @@ def test_file_api():
                  "CMakeLists.txt": common_cmake,
                  })
     client.run("create .")
-    print(client.out)
 
     conanfile = textwrap.dedent("""
         from conans import ConanFile
