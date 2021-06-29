@@ -272,7 +272,7 @@ def test_apple_own_framework_cmake_deps():
             version = "1.0"
             requires = "mylibrary/1.0"
             exports_sources = "CMakeLists.txt", "timer.cpp"
-            settings = "build_type",
+            settings = "os", "arch", "compiler", "build_type"
             # FIXME
             test_type = "build_requires"
 

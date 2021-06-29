@@ -104,6 +104,9 @@ class NewCppInfo(object):
                 setattr(self, varname, [])
             merge_list(getattr(other, varname), getattr(self, varname))
 
+        if self.sysroot is None and other.sysroot:
+            self.sysroot = other.sysroot
+
         if other._generator_properties:
             if not self._generator_properties:
                 self._generator_properties = {}

@@ -544,6 +544,10 @@ class TestClient(object):
         try:
             error = command.run(args)
         finally:
+            try:
+                self.api.app.cache.closedb()
+            except AttributeError:
+                pass
             sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
@@ -684,14 +688,19 @@ class TurboTestClient(TestClient):
         self.run("create . {} {} --json {}".format(full_str,
                                                    args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+
+        ref = self.cache.get_latest_rrev(ref)
+
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
-        return package_ref.copy_with_revs(rrev, prev)
+
+        prevs = self.cache.get_package_revisions(package_ref, only_latest_prev=True)
+        prev = prevs[0]
+
+        return prev
 
     def upload_all(self, ref, remote=None, args=None, assert_error=False):
         remote = remote or list(self.servers.keys())[0]
@@ -718,16 +727,20 @@ class TurboTestClient(TestClient):
         return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
-        return self.cache.package_layout(ref).recipe_exists()
+        rrev = self.cache.get_recipe_revisions(ref)
+        return True if rrev else False
 
     def package_exists(self, pref):
-        return self.cache.package_layout(pref.ref).package_exists(pref)
+        prev = self.cache.get_package_revisions(pref)
+        return True if prev else False
 
     def recipe_revision(self, ref):
-        return self.cache.package_layout(ref).recipe_revision()
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        return latest_rrev.revision
 
     def package_revision(self, pref):
-        return self.cache.package_layout(pref.ref).package_revision(pref)
+        latest_prev = self.cache.get_latest_rrev(pref)
+        return latest_prev.revision
 
     def search(self, pattern, remote=None, assert_error=False, args=None):
         remote = " -r={}".format(remote) if remote else ""

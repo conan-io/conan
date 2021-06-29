@@ -1,6 +1,8 @@
 import os
 import shutil
 import unittest
+
+import pytest
 from mock import Mock
 
 from conans.client.conanfile.package import run_package_method
@@ -37,6 +39,7 @@ class HelloConan(ConanFile):
 
 class ExporterTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_complete(self):
         """ basic installation of a new conans
         """

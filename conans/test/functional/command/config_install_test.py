@@ -293,28 +293,6 @@ class Pkg(ConanFile):
         self.assertEqual(1, content.count("subf"))
         self.assertEqual(1, content.count("other"))
 
-    def test_install_registry_txt_error(self):
-        folder = temp_folder()
-        save_files(folder, {"registry.txt": "myrepo1 https://myrepourl.net False"})
-        self.client.run('config install "%s"' % folder)
-        self.assertIn("WARN: registry.txt has been deprecated. Migrating to remotes.json",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertEqual("myrepo1: https://myrepourl.net [Verify SSL: False]\n", self.client.out)
-
-    def test_install_registry_json_error(self):
-        folder = temp_folder()
-        registry_json = {"remotes": [{"url": "https://server.conan.io",
-                                      "verify_ssl": True,
-                                      "name": "conan.io"
-                                      }]}
-        save_files(folder, {"registry.json": json.dumps(registry_json)})
-        self.client.run('config install "%s"' % folder)
-        self.assertIn("WARN: registry.json has been deprecated. Migrating to remotes.json",
-                      self.client.out)
-        self.client.run("remote list")
-        self.assertEqual("conan.io: https://server.conan.io [Verify SSL: True]\n", self.client.out)
-
     def test_install_remotes_json_error(self):
         folder = temp_folder()
         save_files(folder, {"remotes.json": ""})

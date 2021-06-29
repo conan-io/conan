@@ -24,7 +24,8 @@ def conanfile():
 
     def source(self):
         self.output.warn("Source folder: {}".format(self.source_folder))
-        tools.save("source.h", "foo")
+        # The layout describes where the sources are, not force them to be there
+        tools.save("my_sources/source.h", "foo")
 
     def build(self):
         self.output.warn("Build folder: {}".format(self.build_folder))
@@ -106,6 +107,8 @@ def test_create_test_package_with_layout(conanfile):
     assert "hey! testing" in client.out
 
 
+@pytest.mark.xfail(reason="This test will not pass because during build we use a temporal folder"
+                          "with the new Cache2.0. TODO: cache2.0 must adapt")
 def test_cache_in_layout(conanfile):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed
@@ -141,6 +144,7 @@ def test_cache_in_layout(conanfile):
     # Search the package in the cache
     client.run("search lib/1.0@")
     assert "Package_ID: {}".format(package_id) in client.out
+
 
 def test_same_conanfile_local(conanfile):
     client = TestClient()

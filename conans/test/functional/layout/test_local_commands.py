@@ -141,7 +141,7 @@ def test_local_build_change_base():
 
 def test_local_source():
     """If we configure a source folder in the layout, the downloaded files in a "conan source ."
-    go to the specified folder: "my_source"
+    DON'T go to the specified folder: "my_source" but to the root source folder
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
@@ -149,7 +149,7 @@ def test_local_source():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("downloaded.h", "bar")
+        tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -160,8 +160,8 @@ def test_local_source():
 
 
 def test_local_source_change_base():
-    """If we configure a source folder in the layout, the souce files in a "conan source ."
-    go to the specified folder: "my_source under the modified base one "all_source"
+    """If we configure a source folder in the layout, the source files in a "conan source ."
+    DON'T go to the specified folder: "my_source under the modified base one "all_source"
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
@@ -169,7 +169,7 @@ def test_local_source_change_base():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("downloaded.h", "bar")
+        tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
@@ -178,6 +178,7 @@ def test_local_source_change_base():
     assert os.path.exists(header)
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     client = TestClient()
@@ -277,6 +278,7 @@ def test_export_pkg_local():
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_imports():
     """The 'conan imports' follows the layout"""
     client = TestClient()

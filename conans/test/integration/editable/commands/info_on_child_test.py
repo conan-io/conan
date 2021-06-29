@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -11,6 +12,8 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                          "TODO: cache2.0 fix with editables")
 class InfoCommandTest(unittest.TestCase):
 
     def setUp(self):
@@ -49,6 +52,7 @@ class InfoCommandTest(unittest.TestCase):
         self.assertIn("lib/version@user/name\n"
                       "    ID: e94ed0d45e4166d2f946107eaa208d550bf3691e\n"
                       "    BuildID: None\n"
+                      "    Context: host\n"
                       "    Remote: None\n"
                       "    Provides: lib\n"
                       "    Recipe: Editable\n{}"

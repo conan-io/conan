@@ -2,11 +2,14 @@ import platform
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class CollectLibsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0")
     def test_collect_libs(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
