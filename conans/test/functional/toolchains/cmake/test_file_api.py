@@ -144,4 +144,3 @@ def test_file_api():
 
     client.run("install .")
     client.run("build .")
-    print(client.out)
