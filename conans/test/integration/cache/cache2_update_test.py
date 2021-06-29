@@ -1,11 +1,16 @@
 import time
 from collections import OrderedDict
+from datetime import datetime
 
+from mock import patch
+
+from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
+from conans.util.dates import from_timestamp_to_iso8601, iso8601_to_str
 
 
-def test_no_update():
+def test_update_flows():
     server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     server3 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
@@ -31,21 +36,51 @@ def test_no_update():
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0")})
     client.run("remote list")
     client.run("create .")
-    client.run("upload liba/1.0.0 -r server1 --all -c")
-    time.sleep(0.1)
-    client.run("upload liba/1.0.0 -r server2 --all -c")
-    time.sleep(0.1)
-    client.run("upload liba/1.0.0 -r server3 --all -c")
+    # same revision with different datest
+    # TODO: different revision with different dates
+    the_time = time.time()
 
-    # we already have a revision for this recipe, don't install anything
+    for index in range(3):
+        the_time = the_time + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run(f"upload liba/1.0.0 -r server{index+1} --all -c")
+
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_provides("new_revision/1.0.0")})
+    client.run("create .")
+
+    for index in range(3):
+        the_time = the_time + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run(f"upload liba/1.0.0 -r server{index+1} --all -c")
+
+    # client2 already has a revision for this recipe, don't install anything
     client2.run("install liba/1.0.0@")
+    assert "liba/1.0.0: Already installed!" in client2.out
+
+    client.run("remove * -f")
 
     # will not find revisions for the recipe -> search all remotes and install the
     # latest revision between all of them, in 2.0 no remotes means search in all of them
     # remote3 has the latest revision so we should pick that one
+    # --> result: install rev from remote3
+    client.run("install liba/1.0.0@")
+
+    # will find the latest revision between servers: rev from server3
+    # --> result: we already have the revision installed so do nothing
+    client.run("install liba/1.0.0@ --update")
+
+    # now check for newer references with --update for client2 that has an older revision
+    # when we use --update: first check all remotes (no -r argument) get latest revision
+    # check if it is in cache, if it is --> stop, if it is not --> check date and install
+    # --> result: install rev from server3
+    client2.run("install liba/1.0.0@ --update")
+
     # note: we have to consider two cases: the same revision has different dates and also
     # we have different revisions with different dates, if we check server1 and has rev1
     # should we check if theres a newer?
-    client.run("remove * -f")
-    client.run("install liba/1.0.0@")
-    jander = client.out.getvalue()
+
+
+
+
+def test_update_flows_version_ranges():
+    pass

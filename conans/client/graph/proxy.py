@@ -12,6 +12,7 @@ from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.util.dates import from_iso8601_to_datetime
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -147,13 +148,25 @@ class ConanProxy(object):
         remotes = remotes.values()
         if not remotes:
             raise ConanException("No remote defined")
+
+        remotes_results = []
         for remote in remotes:
             try:
-                new_ref = _retrieve_from_remote(remote)
-                return remote, new_ref
-            # If not found continue with the next, else raise
+                remote_rrevs = self._remote_manager.get_recipe_revisions(ref, remote)
+                if len(remote_rrevs) > 0:
+                    remotes_results.append({'remote': remote,
+                                            'reference': ref.copy_with_rev(remote_rrevs[0].get("revision")),
+                                            'time': remote_rrevs[0].get("time")})
             except NotFoundException:
                 pass
-        else:
+
+        if len(remotes_results) == 0:
             msg = "Unable to find '%s' in remotes" % ref.full_str()
             raise NotFoundException(msg)
+
+        ordered_list = sorted(remotes_results, key=lambda k: from_iso8601_to_datetime(k['time']),
+                              reverse=True)
+        remote = ordered_list[0].get("remote")
+        ref = ordered_list[0].get("reference")
+        new_ref = _retrieve_from_remote(remote)
+        return remote, new_ref
