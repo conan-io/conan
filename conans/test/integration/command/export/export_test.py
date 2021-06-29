@@ -275,9 +275,8 @@ class ExportTest(unittest.TestCase):
     def test_case_sensitive(self):
         self.ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
         self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
-        self.client.run("export . lasote/stable", assert_error=True)
-        self.assertIn("ERROR: Cannot export package with same name but different case",
-                      self.client.out)
+        self.client.run("export . lasote/stable")
+        self.assertIn("hello0/0.1@lasote/stable: Exported revision", self.client.out)
 
     def test_export_filter(self):
         self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
@@ -467,8 +466,8 @@ class ExportMetadataTest(unittest.TestCase):
         self.assertIn("pkg/0.1@other/stable: A new conanfile.py version was exported", client.out)
         client.run('export . pkg/0.1@')
         self.assertIn("pkg/0.1: A new conanfile.py version was exported", client.out)
-        client.run('export . Pkg/0.1@', assert_error=True)
-        self.assertIn("ERROR: Cannot export package with same name but different case", client.out)
+        client.run('export . Pkg/0.1@')
+        self.assertIn("Pkg/0.1: Exported revision", client.out)
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")

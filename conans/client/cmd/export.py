@@ -41,19 +41,6 @@ class AliasConanfile(ConanFile):
     cache.assign_rrev(alias_layout, ConanReference(ref_with_rrev))
 
 
-def check_casing_conflict(cache, ref):
-    # Check for casing conflict
-    # Maybe a platform check could be added, but depends on disk partition
-    refs = search_recipes(cache, ref, ignorecase=True)
-    refs2 = [ConanFileReference(r.name, r.version, r.user if ref.user else None,
-                                r.channel if ref.channel else None, validate=False) for r in refs]
-
-    if refs and ref not in refs2:
-        raise ConanException("Cannot export package with same name but different case\n"
-                             "You exported '%s' but already existing '%s'"
-                             % (str(ref), " ".join(str(s) for s in refs)))
-
-
 def cmd_export(app, conanfile_path, name, version, user, channel,
                graph_lock=None, ignore_dirty=False):
     """ Export the recipe
@@ -92,7 +79,6 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        ref.user, ref.channel, python_requires)
 
-    check_casing_conflict(cache=cache, ref=ref)
     recipe_layout = cache.ref_layout(ref)
 
     _check_settings_for_warnings(conanfile, output)
