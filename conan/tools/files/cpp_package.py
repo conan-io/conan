@@ -35,7 +35,6 @@ class CppPackage(object):
         :return: None
         """
         text = json.dumps(self, default=lambda o: o.__dict__, indent=4)
-        print(text)
         save(filename, text)
 
     def package_info(self, conanfile):
