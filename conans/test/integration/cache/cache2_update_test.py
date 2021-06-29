@@ -1,13 +1,11 @@
 import time
 from collections import OrderedDict
-from datetime import datetime
 
 from mock import patch
 
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.dates import from_timestamp_to_iso8601, iso8601_to_str
 
 
 def test_update_flows():
@@ -43,7 +41,7 @@ def test_update_flows():
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            client.run(f"upload liba/1.0.0 -r server{index+1} --all -c")
+            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_provides("new_revision/1.0.0")})
     client.run("create .")
@@ -51,7 +49,7 @@ def test_update_flows():
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            client.run(f"upload liba/1.0.0 -r server{index+1} --all -c")
+            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
     # client2 already has a revision for this recipe, don't install anything
     client2.run("install liba/1.0.0@")
@@ -64,22 +62,29 @@ def test_update_flows():
     # remote3 has the latest revision so we should pick that one
     # --> result: install rev from remote3
     client.run("install liba/1.0.0@")
+    assert "liba/1.0.0 from 'server3' - Downloaded" in client.out
+    assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
+           " from remote 'server3'" in client.out
 
-    # will find the latest revision between servers: rev from server3
+    # It will first check all the remotes and
+    # will find the latest revision: rev from server3
     # --> result: we already have the revision installed so do nothing
     client.run("install liba/1.0.0@ --update")
+    assert "liba/1.0.0 from 'server3' - Cache" in client.out
+    assert "liba/1.0.0: Already installed!" in client.out
 
     # now check for newer references with --update for client2 that has an older revision
     # when we use --update: first check all remotes (no -r argument) get latest revision
     # check if it is in cache, if it is --> stop, if it is not --> check date and install
     # --> result: install rev from server3
     client2.run("install liba/1.0.0@ --update")
+    assert "liba/1.0.0: Downloaded recipe revision 70d7d7aab6c02d9c44d7418a7a33d120" in client2.out
+    assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
+           " from remote 'server3'" in client2.out
 
     # note: we have to consider two cases: the same revision has different dates and also
     # we have different revisions with different dates, if we check server1 and has rev1
     # should we check if theres a newer?
-
-
 
 
 def test_update_flows_version_ranges():

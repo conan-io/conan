@@ -1,17 +1,13 @@
-import os
+from datetime import datetime, timezone
 
 from requests.exceptions import RequestException
 
-from conan.cache.conan_reference import ConanReference
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
-from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
-from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
-from conans.model.ref import ConanFileReference
-from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
+from conans.errors import ConanException, NotFoundException
 from conans.util.dates import from_iso8601_to_datetime
 from conans.util.tracer import log_recipe_got_from_local_cache
 
@@ -67,21 +63,20 @@ class ConanProxy(object):
 
         check_updates = check_updates or update
 
-        # TODO: cache2.0 check this for new update flows
-        # requested_different_revision = (ref.revision is not None) and cur_revision != ref.revision
-        # if requested_different_revision:
-        #     if check_updates:
-        #         remote, new_ref = self._download_recipe(layout, ref, output, remotes,
-        #                                                 selected_remote)
-        #         status = RECIPE_DOWNLOADED
-        #         return conanfile_path, status, remote, new_ref
-        #     else:
-        #         raise NotFoundException("The '%s' revision recipe in the local cache doesn't "
-        #                                 "match the requested '%s'."
-        #                                 " Use '--update' to check in the remote."
-        #                                 % (cur_revision, repr(ref)))
-
-        if not check_updates:
+        if check_updates:
+            remote, latest_rrev, remote_time = self._get_latest_rrev_from_remotes(ref.copy_clear_rev(),
+                                                                                  remotes.values())
+            # check if we already have the latest in local cache
+            if latest_rrev:
+                if latest_rrev.revision != ref.revision:
+                    # TODO: check the timezone
+                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)
+                    if cache_time < remote_time:
+                        # the remote one is newer
+                        remote, new_ref = self._download_recipe(latest_rrev, output, remotes, remote)
+                        status = RECIPE_DOWNLOADED
+                        return conanfile_path, status, remote, new_ref
+        else:
             status = RECIPE_INCACHE
             return conanfile_path, status, cur_remote, ref
 
@@ -115,6 +110,29 @@ class ConanProxy(object):
 
         return conanfile_path, status, selected_remote, ref
 
+    def _get_latest_rrev_from_remotes(self, reference, remotes):
+        remotes_results = []
+        for remote in remotes:
+            try:
+                remote_rrevs = self._remote_manager.get_recipe_revisions(reference, remote)
+                if len(remote_rrevs) > 0:
+                    remotes_results.append({'remote': remote,
+                                            'reference': reference.copy_with_rev(
+                                                remote_rrevs[0].get("revision")),
+                                            'time': from_iso8601_to_datetime(remote_rrevs[0].get("time"))})
+            except NotFoundException:
+                pass
+
+        if len(remotes_results) == 0:
+            return None, None, None
+
+        remotes_results = sorted(remotes_results, key=lambda k: k['time'], reverse=True)
+        # get the latest revision from all remotes
+        latest_rrev = remotes_results[0]
+        return latest_rrev.get("remote"), latest_rrev.get("reference"), latest_rrev.get("time")
+
+    # searches in all the remotes and downloads the latest from all of them
+    # TODO: refactor this
     def _download_recipe(self, ref, output, remotes, remote):
 
         def _retrieve_from_remote(the_remote):
@@ -149,24 +167,12 @@ class ConanProxy(object):
         if not remotes:
             raise ConanException("No remote defined")
 
-        remotes_results = []
-        for remote in remotes:
-            try:
-                remote_rrevs = self._remote_manager.get_recipe_revisions(ref, remote)
-                if len(remote_rrevs) > 0:
-                    remotes_results.append({'remote': remote,
-                                            'reference': ref.copy_with_rev(remote_rrevs[0].get("revision")),
-                                            'time': remote_rrevs[0].get("time")})
-            except NotFoundException:
-                pass
+        remote, latest_rrev, _ = self._get_latest_rrev_from_remotes(ref, remotes)
 
-        if len(remotes_results) == 0:
+        if not latest_rrev:
             msg = "Unable to find '%s' in remotes" % ref.full_str()
             raise NotFoundException(msg)
 
-        ordered_list = sorted(remotes_results, key=lambda k: from_iso8601_to_datetime(k['time']),
-                              reverse=True)
-        remote = ordered_list[0].get("remote")
-        ref = ordered_list[0].get("reference")
+        ref = latest_rrev
         new_ref = _retrieve_from_remote(remote)
         return remote, new_ref
