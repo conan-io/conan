@@ -14,6 +14,74 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
+def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None):
+    """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
+    env = [env] if not isinstance(env, list) and env is not None else env
+
+    env_shell = [f for f in conanfile.environment_scripts if f.lower().endswith(".sh")]
+    env_win = env or [f for f in conanfile.environment_scripts if f.lower().endswith(".bat")]
+
+    subsystem = subsystem or conanfile.conf["tools.win.shell:subsystem"]
+    shell_path = conanfile.conf["tools.win.shell:path"]
+
+    if not platform.system() == "Windows":
+        raise ConanException("Command only for Windows operating system")
+
+    if not subsystem or not shell_path:
+        raise ConanException("The config 'tools.win.shell:subsystem' and 'tools.win.shell:path' are "
+                             "needed to run commands in a Windows subsystem")
+    if subsystem == MSYS2:
+        # Configure MSYS2 to inherith the PATH
+        msys2_mode_env = Environment()
+        _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
+        msys2_mode_env.define("MSYSTEM", _msystem)
+        msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
+        path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
+        msys2_mode_env.save_bat(path)
+        env_win.append(path)
+
+    # Needed to change to that dir inside the bash shell
+    wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
+    if env_win:
+        wrapped_shell = environment_wrap_command(env_win, shell_path, subsystem=subsystem,
+                                                 cwd=conanfile.generators_folder)
+    cwd = cwd or os.getcwd()
+    if not os.path.isabs(cwd):
+        cwd = os.path.join(os.getcwd(), cwd)
+    cwd_inside = unix_path(cwd, subsystem=subsystem)
+    wrapped_user_cmd = command
+    if env_shell:
+        # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
+        # first and there could be commands that we want to skip
+        wrapped_user_cmd = environment_wrap_command(env_shell, command, subsystem=subsystem,
+                                                   cwd=conanfile.generators_folder)
+    inside_command = 'cd "{cwd_inside}" && ' \
+                     '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,
+                                                 wrapped_user_cmd=wrapped_user_cmd)
+    if platform.system() == "Windows":
+        # cmd.exe shell
+        inside_command = escape_windows_cmd(inside_command)
+
+    final_command = 'cd "{cwd}" && {wrapped_shell} --login -c {inside_command}'.format(
+        cwd=cwd,
+        wrapped_shell=wrapped_shell,
+        inside_command=inside_command)
+
+    return conanfile._conan_runner(final_command, output=conanfile.output, subprocess=True)
+
+
+def escape_windows_cmd(command):
+    """ To use in a regular windows cmd.exe
+        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
+        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
+
+        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
+    """
+    quoted_arg = subprocess.list2cmdline([command])
+    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
+
+
+
 def unix_path(path, subsystem):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!"""
@@ -74,66 +142,3 @@ def get_cased_path(name):
     drive, _ = os.path.splitdrive(current)
     result.append(drive)
     return os.sep.join(reversed(result))
-
-
-def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None):
-    """ Will run a unix command inside a bash terminal
-        It requires to have MSYS2, CYGWIN, or WSL
-    """
-    # FIXME: !!! DETECTAR SI EL ENV ES SH O NO PARA SABER DONDE CORRERLO
-    env = env or []
-    subsystem = subsystem or conanfile.conf["tools.win.shell:subsystem"]
-    if not platform.system() == "Windows":
-        raise ConanException("Command only for Windows operating system")
-
-    if not subsystem:
-        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin "
-                             "or specify a build_require to apply it.")
-
-    pre_shell_env = []
-    if subsystem == MSYS2:
-        msys2_mode_env = Environment()
-        _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
-        msys2_mode_env.define("MSYSTEM", _msystem)
-        msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
-        msys2_mode_env.save_bat(os.path.join(conanfile.generators_folder, "msys2_mode.bat"))
-        pre_shell_env.append("msys2_mode")
-
-    if "conanvcvars" in env:
-        pre_shell_env.append("conanvcvars")
-        env.remove("conanvcvars")
-
-    # Needed to change to that dir inside the bash shell
-    if cwd and not os.path.isabs(cwd):
-        cwd = os.path.join(os.getcwd(), cwd)
-
-    curdir = unix_path(cwd or os.getcwd(), subsystem=subsystem)
-    _cmd_wrap = environment_wrap_command(env, command, subsystem=subsystem,
-                                         cwd=conanfile.generators_folder)
-    to_run = 'cd "%s" && %s ' % (curdir, _cmd_wrap)
-    shell_path = conanfile.conf["tools.win.shell:path"]
-    shell_path = '"%s"' % shell_path if " " in shell_path else shell_path
-    login = "--login"
-    if platform.system() == "Windows":
-        # cmd.exe shell
-        wincmd = '%s %s -c %s' % (shell_path, login, escape_windows_cmd(to_run))
-    else:
-        wincmd = '%s %s -c %s' % (shell_path, login, to_run)
-    conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-    # https://github.com/conan-io/conan/issues/2839 (subprocess=True)
-    if pre_shell_env:
-        wincmd = environment_wrap_command(pre_shell_env, wincmd, subsystem=subsystem,
-                                          cwd=conanfile.generators_folder)
-    print("===Final command: {}===".format(wincmd))
-    return conanfile._conan_runner(wincmd, output=conanfile.output, subprocess=True)
-
-
-def escape_windows_cmd(command):
-    """ To use in a regular windows cmd.exe
-        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
-        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
-
-        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
-    """
-    quoted_arg = subprocess.list2cmdline([command])
-    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])

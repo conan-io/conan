@@ -350,3 +350,17 @@ def test_dict_access():
 
     assert list(env.keys()) == ["MyVar"]
     assert dict(env.items()) == {"MyVar": "MyValue"}
+
+
+def test_env_win_shell():
+    folder = temp_folder()
+    env = Environment()
+    env.define("MyVar", "MyValue")
+    env.define_path("MyPath", "c:/path/to/something")
+    env.append("MyPath", "D:/Otherpath")
+    sh_path = os.path.join(folder, "foo.sh")
+    env.save_sh(sh_path, subsystem="msys2")
+    with open(sh_path) as f:
+        content = f.read()
+        assert 'MyVar="MyValue"' in content
+        assert 'MyPath="/c/path/to/something:/d/otherpath"' in content

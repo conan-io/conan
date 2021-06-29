@@ -139,9 +139,10 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None, auto_activate=True):
+    def generate(self, env=None, win_shell=False, auto_activate=True):
         env = env or self.environment()
-        save_script(self._conanfile, env, "conanautotoolstoolchain", auto_activate=auto_activate)
+        save_script(self._conanfile, env, "conanautotoolstoolchain", win_shell=win_shell,
+                    auto_activate=auto_activate)
         self.generate_args()
 
     def generate_args(self):

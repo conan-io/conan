@@ -43,8 +43,8 @@ class VirtualRunEnv:
 
         return runenv
 
-    def generate(self, auto_activate=False):
+    def generate(self, win_shell=False, auto_activate=False):
         run_env = self.environment()
         if run_env:
-            save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate)
-
+            save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate,
+                        win_shell=win_shell)

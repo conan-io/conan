@@ -14,19 +14,29 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
+    from conan.tools.microsoft.win import unix_path
     assert filename
     filenames = [filename] if not isinstance(filename, list) else filename
     bats, shs = [], []
+
     for f in filenames:
-        full_path = os.path.join(cwd, f) if cwd else f
-        if os.path.isfile("{}.bat".format(full_path)):
-            bats.append("{}.bat".format(full_path))
-        elif os.path.isfile("{}.sh".format(full_path)):
+        f = f if os.path.isabs(f) else os.path.join(cwd, f) if cwd else f
+        if f.lower().endswith(".sh"):
             if subsystem:
-                # FIXME: recursive inclusion
-                from conan.tools.microsoft.win import unix_path
-                full_path = unix_path(full_path, subsystem)
-            shs.append("{}.sh".format(full_path))
+                f = unix_path(f, subsystem)
+            shs.append(f)
+        elif f.lower().endswith(".bat"):
+            bats.append(f)
+        else:  # Simple name like "conanrunenv"
+            path_bat = "{}.bat".format(f)
+            path_sh = "{}.sh".format(f)
+            if os.path.isfile(path_bat):
+                bats.append(path_bat)
+            elif os.path.isfile(path_sh):
+                if subsystem:
+                    path_sh = unix_path(path_sh, subsystem)
+                shs.append(path_sh)
+
     if bats and shs:
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
 
@@ -85,7 +95,7 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self, placeholder, pathsep=os.pathsep):
+    def get_str(self, placeholder, pathsep=os.pathsep, subsystem=None):
         """
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
@@ -98,8 +108,13 @@ class _EnvValue:
                 if placeholder:
                     values.append(placeholder.format(name=self._name))
             else:
+                if subsystem and self._path:
+                    from conan.tools.microsoft.win import unix_path
+                    v = unix_path(v, subsystem=subsystem)
                 values.append(v)
         if self._path:
+            if subsystem:
+                pathsep = ":"
             return pathsep.join(values)
         return self._sep.join(values)
 
@@ -176,7 +191,6 @@ class Environment:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
-
         content = "\n".join(result)
         save(filename, content)
 
@@ -216,7 +230,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", pathsep)
+            value = varvalues.get_str("${name}", pathsep, subsystem=subsystem)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -351,14 +365,18 @@ class ProfileEnvironment:
         return result
 
 
-def save_script(conanfile, env, name, auto_activate):
+def save_script(conanfile, env, name, auto_activate, win_shell=False):
     # FIXME: using platform is not ideal but settings might be incomplete
-    if platform.system() == "Windows":
+    if platform.system() == "Windows" and not win_shell:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
         env.save_bat(path)
     else:
         path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
-        env.save_sh(path)
+        if win_shell:
+            subsystem = conanfile.conf["tools.win.shell:subsystem"]
+            env.save_sh(path, subsystem=subsystem)
+        else:
+            env.save_sh(path)
 
     if auto_activate:
         register_environment_script(conanfile, path)

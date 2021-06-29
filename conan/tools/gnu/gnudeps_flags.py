@@ -112,13 +112,10 @@ class GnuDepsFlags(object):
         return result
 
     def _adjust_path(self, path):
-        # FIXME: Missing support for subsystems
         if self._base_compiler == 'Visual Studio':
             path = path.replace('/', '\\')
         else:
             path = path.replace('\\', '/')
-        # if win_bash:
-        #    path = unix_path(path, subsystem)
         return '"%s"' % path if ' ' in path else path
 
     @property

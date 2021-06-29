@@ -388,14 +388,13 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanenv",
-            win_shell=False):
+            ignore_errors=False, run_environment=False, with_login=True, env=None, win_shell=False):
         # NOTE: "win_shell" is the new "win_bash" for Conan 2.0
 
         subsystem = (subsystem or self.conf["tools.win.shell:subsystem"]) \
             if (win_shell or win_bash) else None
 
-        def _run(cmd):
+        def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
                 if win_bash:
@@ -403,9 +402,9 @@ class ConanFile(object):
                 elif win_shell:  # New, Conan 2.0
                     from conan.tools.microsoft.win import run_in_windows_shell
                     return run_in_windows_shell(self, command=cmd, cwd=cwd, subsystem=subsystem,
-                                                env=env)
-
-            command = environment_wrap_command(env, cmd, cwd=self.generators_folder,
+                                                env=_env)
+            _env = _env or "conanenv"
+            command = environment_wrap_command(_env, cmd, cwd=self.generators_folder,
                                                subsystem=subsystem)
             return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
@@ -420,9 +419,9 @@ class ConanFile(object):
                               (os.environ.get('DYLD_LIBRARY_PATH', ''),
                                os.environ.get("DYLD_FRAMEWORK_PATH", ''),
                                command)
-                retcode = _run(command)
+                retcode = _run(command, env)
         else:
-            retcode = _run(command)
+            retcode = _run(command, env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
