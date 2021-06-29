@@ -115,17 +115,14 @@ def test_build_policies_in_conanfile():
 
 def test_reuse():
     client = TestClient(default_server_user=True)
-    ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
     client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
     client.run("export . lasote/stable")
+    ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
     client.run("install %s --build missing" % str(ref))
 
-    latest_prev = client.cache.get_latest_prev(ref)
-    export_path = client.cache.get_pkg_layout(latest_prev).build()
-    export_src_path = client.cache.get_pkg_layout(latest_prev).package()
-
-    assert os.path.exists(client.cache.package_layout(ref).builds()[0])
-    assert os.path.exists(client.cache.package_layout(ref).packages()[0])
+    pkg_layout = client.get_latest_pkg_layout(ref)
+    assert os.path.exists(pkg_layout.build())
+    assert os.path.exists(pkg_layout.package())
 
     # Upload
     client.run("upload %s --all" % str(ref))
@@ -133,20 +130,26 @@ def test_reuse():
     # Now from other "computer" install the uploaded conans with same options (nothing)
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build missing" % str(ref))
-    assert not os.path.exists(other_client.cache.package_layout(ref).builds()[0])
-    assert os.path.exists(other_client.cache.package_layout(ref).packages()[0])
+
+    pkg_layout = other_client.get_latest_pkg_layout(ref)
+    assert not os.path.exists(pkg_layout.build())
+    assert os.path.exists(pkg_layout.package())
 
     # Now from other "computer" install the uploaded conans with same options (nothing)
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build" % str(ref))
-    assert os.path.exists(other_client.cache.package_layout(ref).builds()[0])
-    assert os.path.exists(other_client.cache.package_layout(ref).packages()[0])
+
+    pkg_layout = other_client.get_latest_pkg_layout(ref)
+    assert os.path.exists(pkg_layout.build())
+    assert os.path.exists(pkg_layout.package())
 
     # Use an invalid pattern and check that its not builded from source
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build HelloInvalid" % str(ref))
+
+    pkg_layout = other_client.get_latest_pkg_layout(ref)
     assert "No package matching 'HelloInvalid' pattern" in other_client.out
-    assert not os.path.exists(other_client.cache.package_layout(ref).builds()[0])
+    assert not os.path.exists(pkg_layout.build())
 
     # Use another valid pattern and check that its not builded from source
     other_client = TestClient(servers=client.servers, users=client.users)

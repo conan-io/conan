@@ -2,7 +2,7 @@ import os
 import shutil
 from collections import OrderedDict
 from io import StringIO
-
+from typing import List
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
@@ -113,7 +113,7 @@ class ClientCache(object):
                                    validate=False) for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref):
+    def get_package_ids(self, ref: ConanFileReference) -> List[PackageReference]:
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
                                    validate=False) for pref in

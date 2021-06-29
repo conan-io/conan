@@ -19,6 +19,8 @@ from requests.exceptions import HTTPError
 from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.cli import Cli, CLI_V2_COMMANDS
 from conans.client.api.conan_api import ConanAPIV2
@@ -55,7 +57,7 @@ NO_SETTINGS_PACKAGE_ID = "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9"
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.package_layout(ref).export()
+    path = cache.get_latest_rrev(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -63,7 +65,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package_layout(pref.ref).package(pref)
+    path = cache.get_latest_prev(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -613,7 +615,7 @@ class TestClient(object):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref)
         return ref.copy_with_rev(rrev)
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
@@ -667,6 +669,22 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
+    def get_latest_pkg_layout(self, ref: ConanFileReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        # Given the latest recipe revision we can get the latest package ID and
+        # get the corresponding PackageLayout
+        all_package_ids = self.cache.get_package_ids(latest_rrev)
+        latest_prev = self.cache.get_latest_prev(all_package_ids[0])
+        pkg_layout = self.cache.get_pkg_layout(latest_prev)
+        return pkg_layout
+
+    def get_latest_ref_layout(self, ref: ConanFileReference) -> RecipeLayout:
+        """Get the latest PackageLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        pkg_layout = self.cache.get_ref_layout(latest_rrev)
+        return pkg_layout
+
 
 class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"
@@ -714,13 +732,13 @@ class TurboTestClient(TestClient):
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref)
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        prev = self.cache.get_latest_prev(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):
