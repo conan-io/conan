@@ -153,3 +153,8 @@ class ConanOutput(object):
                 # TODO: check if colorama checks for stripping colors are enough
                 colorama.init()
             return True
+
+
+def cli_out_write(data, fg=None, bg=None, endline="\n"):
+    data = "{}{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL, endline)
+    sys.stderr.write(data)
