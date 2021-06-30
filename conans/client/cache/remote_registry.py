@@ -2,7 +2,6 @@ import fnmatch
 import json
 import os
 import stat
-import traceback
 from collections import OrderedDict, namedtuple
 from six.moves.urllib.parse import urlparse
 
