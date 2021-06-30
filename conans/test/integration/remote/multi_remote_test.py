@@ -251,8 +251,8 @@ class MultiRemoteTest(unittest.TestCase):
         client2 = TestClient(servers=servers, users=self.users)
         err = client2.run("install MyLib/0.1@conan/testing --build=missing", assert_error=True)
         self.assertTrue(err)
-        self.assertIn("MyLib/0.1@conan/testing: Trying with 's0'...", client2.out)
-        self.assertIn("MyLib/0.1@conan/testing: Trying with 's1'...", client2.out)
+        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s0", client2.out)
+        self.assertIn("MyLib/0.1@conan/testing: Checking remote: s1", client2.out)
         self.assertIn("Unable to connect to s1=http://asdlhaljksdhlajkshdljakhsd.com", client2.out)
         # s2 is not even tried
         self.assertNotIn("MyLib/0.1@conan/testing: Trying with 's2'...", client2.out)
