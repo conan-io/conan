@@ -657,6 +657,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = items[0]["settings"]["os"]
         self.assertEqual(oss, "Linux")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_local_by_pattern(self):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
