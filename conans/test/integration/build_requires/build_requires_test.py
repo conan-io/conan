@@ -193,15 +193,14 @@ def test_transitive_order():
             def generate(self):
                 env = VirtualEnv(self)
                 buildenv = env.build_environment()
-                self.output.info("BUILDENV: {}!!!".format(buildenv.value("MYVAR")))
+                self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
                 runenv = env.run_environment()
-                self.output.info("RUNENV: {}!!!".format(runenv.value("MYVAR")))
+                self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    print(client.out)
-    assert "BUILDENV: MYVAR MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
+    assert "BUILDENV: MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
+    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
 
 tool_conanfile = """from conans import ConanFile
