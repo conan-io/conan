@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 def test_dependencies_visit():
     client = TestClient()
-    client.save({"conanfile.py": GenConanfile()})
+    client.save({"conanfile.py": GenConanfile().with_shared_option(True)})
     client.run("create . openssl/0.1@")
     client.run("create . openssl/0.2@")
     client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.2")})
@@ -30,15 +30,15 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    assert "DefRef: dep/0.1#f3367e0e7d170aa12abccb175fee5f97!!!" in client.out
-    assert "DefPRef: dep/0.1#f3367e0e7d170aa12abccb175fee5f97:"\
-           f"{NO_SETTINGS_PACKAGE_ID}#"\
-           "cf924fbb5ed463b8bb960cf3a4ad4f3a!!!" in client.out
+    assert "DefRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
+    assert "DefPRef: openssl/0.1#b3b97aecc1d4fae5f8f1c5b715079009:"\
+           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
+           "2b1f6d5048d8d32133ee0e0f01fdafaa!!!" in client.out
 
-    assert "DefRefBuild: openssl/0.2#f3367e0e7d170aa12abccb175fee5f97!!!" in client.out
-    assert "DefPRefBuild: openssl/0.2#f3367e0e7d170aa12abccb175fee5f97:" \
-           "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#" \
-           "cf924fbb5ed463b8bb960cf3a4ad4f3a!!!" in client.out
+    assert "DefRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009!!!" in client.out
+    assert "DefPRefBuild: openssl/0.2#b3b97aecc1d4fae5f8f1c5b715079009:" \
+           "012cdbad7278c98ff196ee2aa8f1158dde7d3c61#"\
+           "2b1f6d5048d8d32133ee0e0f01fdafaa!!!" in client.out
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out

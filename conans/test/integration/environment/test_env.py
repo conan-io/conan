@@ -269,20 +269,15 @@ def test_transitive_order():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . -s:b os=Windows -s:h os=Linux --build")
-    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
+    assert "BUILDENV: MyGCCValue MyOpenSSLWindowsValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
 
     # Even if the generator is duplicated in command line (it used to fail due to bugs)
     client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-<<<<<<< HEAD
-    assert "BUILDENV: MYVAR MyGCCValue MyOpenSSLWindowsValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MYVAR MyOpenSSLLinuxValue!!!" in client.out
-=======
-    assert "BUILDENV: MyOpenSSLWindowsValue MyGCCValue "\
+    assert "BUILDENV: MyGCCValue MyOpenSSLWindowsValue "\
            "MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
     assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
->>>>>>> develop2
 
 
 def test_buildenv_from_requires():

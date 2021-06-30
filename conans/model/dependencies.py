@@ -76,7 +76,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_build(self):
-        return self.filter({"build": True, "direct": True})
+        return self.filter({"build": True, "direct": True, "run": True})
 
     @property
     def host(self):
@@ -84,4 +84,4 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def build(self):
-        return self.filter({"build": True})
+        return self.filter({"build": True, "run": True})
