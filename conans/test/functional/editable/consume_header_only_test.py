@@ -83,6 +83,7 @@ class HeaderOnlyLibTestClient(TestClient):
                                                                      origin='local')})
 
 @pytest.mark.tool_cmake
+@pytest.mark.xfail(reason="cache2.0 editables not considered yet")
 class EditableReferenceTest(unittest.TestCase):
 
     @parameterized.expand([(False, True), (True, False), (True, True), (False, False)])

@@ -26,17 +26,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2 = TurboTestClient(servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    def test_install_missing_prev_deletes_outdated_prev(self):
-        """If we have in a local v2 client a RREV with a PREV that doesn't match the RREV, when
-        we try to install, it removes the previous outdated PREV even before resolve it"""
-        pref = self.c_v2.create(self.ref)
-        self.c_v2.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
-
-        self.c_v2.run("install {} --build missing".format(self.ref))
-        self.assertIn("WARN: The package {} doesn't belong to the installed recipe revision, "
-                      "removing folder".format(pref), self.c_v2.out)
-        self.assertIn("Package '{}' created".format(pref.id), self.c_v2.out)
-
     def test_install_binary_iterating_remotes_same_rrev(self):
         """We have two servers (remote1 and remote2), first with a recipe but the
         second one with a PREV of the binary.
@@ -79,6 +68,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref), assert_error=True)
         self.assertIn("{} - Missing".format(pref), self.c_v2.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_update_recipe_iterating_remotes(self):
         """We have two servers (remote1 and remote2), both with a recipe but the second one with a
         new RREV. If a client installs without specifying -r remote1, it WONT iterate
@@ -173,6 +163,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Read current revision
         self.assertEqual(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
+    @pytest.mark.xfail(reason="cache2.0 rewrite with db info instead of metadata")
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get
         the revision from upstream"""
@@ -190,6 +181,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertEqual(local_rev, pref.ref.revision)
         self.assertEqual(local_prev, pref.revision)
 
+    @pytest.mark.xfail(reason="cache2.0 rewrite with db info instead of metadata")
     def test_revision_metadata_update_on_update(self):
         """
         A client v2 upload a recipe revision
@@ -224,6 +216,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev = client.package_revision(pref2)
         self.assertIsNotNone(prev)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_update_on_package_update(self):
         """
         A client v2 upload RREV with PREV1
@@ -256,8 +249,10 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIsNotNone(prev)
 
     def test_revision_mismatch_packages_in_local(self):
-        """If we have a recipe that doesn't match the local package
-           it is not resolved."""
+        """Test adapted for the new cache: we create a revision but we export again a  recipe
+        to create a new revision, then we won't have a package for the latest recipe revision
+        of the cache.
+        TODO: cache2.0 check this case"""
         client = self.c_v2
         pref = client.create(self.ref)
         ref2 = client.export(self.ref, conanfile=GenConanfile().with_build_msg("REV2"))
@@ -268,10 +263,9 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Now we try to install the self.ref, the binary is missing when using revisions
         command = "install {}".format(self.ref)
         client.run(command, assert_error=True)
-        self.assertIn("The package {} doesn't belong to the installed "
-                      "recipe".format(pref), client.out)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_install_explicit_mismatch_rrev(self):
         # If we have a recipe in local, but we request to install a different one with RREV
         # It fail and won't look the remotes unless --update
@@ -316,83 +310,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         data = json.loads(client.load("file.json"))
         ref = ConanFileReference.loads(data["installed"][0]["recipe"]["id"])
         self.assertIsNotNone(ref.revision)
-
-
-class RevisionsInLocalCacheTest(unittest.TestCase):
-
-    def setUp(self):
-        self.server = TestServer()
-        self.c_v2 = TurboTestClient(servers={"default": self.server})
-        self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
-
-    def test_create_metadata(self):
-        """When a create is executed, the recipe & package revision are updated in the cache"""
-        client = self.c_v2
-        pref = client.create(self.ref)
-        # Check recipe revision
-        rev = client.recipe_revision(self.ref)
-        self.assertEqual(pref.ref.revision, rev)
-        self.assertIsNotNone(rev)
-
-        # Check package revision
-        prev = client.package_revision(pref)
-        self.assertEqual(pref.revision, prev)
-        self.assertIsNotNone(prev)
-
-        # Create new revision, check that it changes
-        client.create(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        rev2 = client.recipe_revision(self.ref)
-        prev2 = client.package_revision(pref)
-
-        self.assertNotEqual(rev2, rev)
-        # If the contents of the package is identical, the prev is identical, even if recipe changed
-        self.assertEqual(prev2, prev)
-
-        self.assertIsNotNone(rev2)
-        self.assertIsNotNone(prev2)
-
-    def test_new_exported_recipe_clears_outdated_packages(self):
-        client = self.c_v2
-        conanfile = GenConanfile().with_setting("os")
-        pref_outdated = client.create(self.ref, conanfile=conanfile, args="-s os=Windows")
-        pref_ok = client.create(self.ref, conanfile=conanfile.with_build_msg("rev2"),
-                                args="-s os=Linux")
-
-        msg = "Removing the local binary packages from different recipe revisions"
-        self.assertIn(msg, client.out)
-        self.assertFalse(client.package_exists(pref_outdated.copy_clear_revs()))
-        self.assertTrue(client.package_exists(pref_ok))
-
-    def test_export_metadata(self):
-        """When a export is executed, the recipe revision is updated in the cache"""
-        client = self.c_v2
-        ref = client.export(self.ref)
-        # Check recipe revision
-        rev = client.recipe_revision(self.ref)
-        self.assertEqual(ref.revision, rev)
-        self.assertIsNotNone(rev)
-
-        # Export new revision, check that it changes
-        client.export(self.ref, conanfile=GenConanfile().with_build_msg("Rev2"))
-        rev2 = client.recipe_revision(self.ref)
-
-        self.assertNotEqual(rev2, rev)
-        self.assertIsNotNone(rev2)
-
-    def test_remove_metadata(self):
-        """If I remote a package, the metadata is cleared"""
-        pref = self.c_v2.create(self.ref)
-        self.c_v2.upload_all(self.ref)
-        self.c_v2.remove_all()
-        self.c_v2.run("install {}".format(self.ref))
-
-        self.c_v2.run("remove {} -p {} -f".format(pref.ref, pref.id))
-        self.assertRaises(PackageNotFoundException, self.c_v2.package_revision, pref)
-        rev = self.c_v2.recipe_revision(pref.ref)
-        self.assertIsNotNone(rev)
-        self.c_v2.remove_all()
-        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, pref.ref)
-
 
 class RemoveWithRevisionsTest(unittest.TestCase):
 
@@ -518,8 +435,8 @@ class RemoveWithRevisionsTest(unittest.TestCase):
         self.c_v2.upload_all(pref2.ref)
 
         self.assertEqual(pref1.id, pref2.id)
-        # Locally only one revision exists at the same time
-        self.assertFalse(self.c_v2.package_exists(pref1))
+        # Both revisions exist in 2.0 cache
+        self.assertTrue(self.c_v2.package_exists(pref1))
         self.assertTrue(self.c_v2.package_exists(pref2))
 
         remover_client = self.c_v2
@@ -740,27 +657,6 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = items[0]["settings"]["os"]
         self.assertEqual(oss, "Linux")
 
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
-    def test_search_a_local_package_with_rrev(self):
-        """If we search for the packages of a ref specifying the RREV in the local cache:
-         1. With v2 client it shows the packages for that RREV and only if it is the one
-            in the cache, otherwise it is not returned."""
-
-        client = self.c_v2
-        pref1 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev1"),
-                              args="-s os=Windows")
-
-        pref2 = client.create(self.ref, GenConanfile().with_setting("os").with_build_msg("Rev2"),
-                              args="-s os=Linux")
-
-        client.run("search {}".format(pref1.ref.full_str()), assert_error=True)
-        self.assertIn("Recipe not found: '{}'".format(pref1.ref.full_str()), client.out)
-
-        client.run("search {}".format(pref2.ref.full_str()))
-        self.assertIn("Existing packages for recipe {}:".format(pref2.ref), client.out)
-        self.assertIn("os: Linux", client.out)
-
-    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_local_by_pattern(self):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
@@ -776,7 +672,11 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         items = data["results"][0]["items"]
         self.assertEqual(2, len(items))
         expected = [str(self.ref), str(ref2)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
+        result = [i["recipe"]["id"] for i in items]
+        # check if the reference is in the output
+        # TODO: fix search output in 2.0
+        assert [recipe for recipe in result if expected[0] in recipe]
+        assert [recipe for recipe in result if expected[1] in recipe]
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_local_by_revision_pattern(self):
@@ -793,8 +693,9 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         data = client.search("{}*".format(self.ref.full_str()))
         items = data["results"][0]["items"]
         self.assertEqual(1, len(items))
-        expected = [str(self.ref)]
-        self.assertEqual(expected, [i["recipe"]["id"] for i in items])
+        expected = str(self.ref)
+        result = items[0]["recipe"]["id"]
+        self.assertIn(expected, result)
 
     @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_remote_by_pattern(self):
@@ -1164,6 +1065,7 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(revs, [pref4.revision])
 
 
+@pytest.mark.xfail(reason="cache2.0: revisit when --update flows implemented")
 def test_necessary_update():
     # https://github.com/conan-io/conan/issues/7235
     c = TestClient(default_server_user=True)

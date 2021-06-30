@@ -1,6 +1,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client.remote_manager import CONAN_REQUEST_HEADER_SETTINGS, CONAN_REQUEST_HEADER_OPTIONS
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, TestRequester
@@ -84,6 +86,7 @@ class RequestHeadersTestCase(unittest.TestCase):
         self.assertFalse(any([CONAN_REQUEST_HEADER_OPTIONS in headers for _, headers in
                               t.api.http_requester.requests]))
 
+    @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_install_package_match(self):
         t = self._get_test_client()
         t.save({'profile': self.profile})
@@ -107,6 +110,7 @@ class RequestHeadersTestCase(unittest.TestCase):
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers, shared_value='True')
 
+    @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_info_package_match(self):
         t = self._get_test_client()
         t.save({'profile': self.profile})
@@ -129,6 +133,7 @@ class RequestHeadersTestCase(unittest.TestCase):
         options_headers = self._get_header(t.api.http_requester, CONAN_REQUEST_HEADER_OPTIONS)
         self._assert_options_headers(options_headers, shared_value='True')
 
+    @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_install_as_requirement(self):
         t = self._get_test_client()
         t.save({'conanfile.py': GenConanfile().with_requires('name/version@user/channel'),

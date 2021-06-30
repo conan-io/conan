@@ -1,10 +1,13 @@
 import textwrap
 
+import pytest
+
 from conans.client.graph.grapher import Grapher, Node
 from conans.model.profile import Profile
 from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
 
 
+@pytest.mark.xfail(reason="cache2.0 touches manually the cache, revisit")
 class GrapherTestCase(CrossBuildingBaseTestCase):
     """ Written on top of the cross-building tests, so I can get a more interesting graph that
         serves for the future when users start to need information related to cross-building

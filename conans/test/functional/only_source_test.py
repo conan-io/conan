@@ -123,8 +123,8 @@ class MyPackage(ConanFile):
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
 
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).packages()))
+        self.assertTrue(os.path.exists(client.cache.package_layout(ref).builds()[0]))
+        self.assertTrue(os.path.exists(client.cache.package_layout(ref).packages()[0]))
 
         # Upload
         client.run("upload %s --all" % str(ref))
@@ -132,20 +132,20 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build missing" % str(ref))
-        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
+        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()[0]))
+        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()[0]))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build" % str(ref))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
+        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).builds()[0]))
+        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()[0]))
 
         # Use an invalid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build HelloInvalid" % str(ref))
         self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
-        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
+        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()[0]))
         # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).packages()))
 
         # Use another valid pattern and check that its not builded from source

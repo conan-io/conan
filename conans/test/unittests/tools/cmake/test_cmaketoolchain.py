@@ -69,6 +69,21 @@ def test_context_change(conanfile):
     assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
 
 
+def test_context_update(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    build_type = toolchain.blocks["generic_system"].values["build_type"]
+    toolchain.blocks["generic_system"].values["build_type"] = "Super" + build_type
+    content = toolchain.content
+    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+
+
+def test_context_replace(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks["generic_system"].values = {"build_type": "SuperRelease"}
+    content = toolchain.content
+    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+
+
 def test_replace_block(conanfile):
     toolchain = CMakeToolchain(conanfile)
 

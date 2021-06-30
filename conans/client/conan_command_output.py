@@ -121,6 +121,7 @@ class CommandOutputer(object):
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
+            item_data["context"] = conanfile.context
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
@@ -135,8 +136,7 @@ class CommandOutputer(object):
                 item_data["package_folder"] = package_layout.package(pref)
 
             try:
-                package_metadata = self._cache.package_layout(ref).load_metadata()
-                reg_remote = package_metadata.recipe.remote
+                reg_remote = self._cache.get_remote(ref)
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}

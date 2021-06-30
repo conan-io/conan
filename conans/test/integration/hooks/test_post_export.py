@@ -4,6 +4,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from mock import patch
 
 from conans.client.hook_manager import HookManager
@@ -15,6 +16,7 @@ from conans.test.utils.tools import TestClient
 
 class PostExportTestCase(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 revisit test")
     def test_called_before_digest(self):
         """ Test that 'post_export' hook is called before computing the digest of the
             exported folders

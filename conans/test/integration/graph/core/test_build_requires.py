@@ -1,3 +1,4 @@
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -5,6 +6,7 @@ from conans.test.integration.graph.core.graph_manager_base import GraphManagerTe
 from conans.test.utils.tools import GenConanfile
 
 
+@pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
 class BuildRequiresGraphTest(GraphManagerTest):
 
     @parameterized.expand([("recipe", ), ("profile", )])

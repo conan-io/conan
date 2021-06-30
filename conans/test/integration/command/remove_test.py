@@ -6,7 +6,6 @@ import pytest
 from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
@@ -16,6 +15,7 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load
 
 
+@pytest.mark.xfail(reason="cache2.0: TODO: FIX for new locking system")
 class RemoveLocksTest(unittest.TestCase):
     def test_remove_locks(self):
         client = TestClient()
@@ -101,6 +101,7 @@ conaninfo = '''
 '''
 
 
+@pytest.mark.xfail(reason="cache2.0: TODO: Write new tests for 2.0")
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
@@ -125,8 +126,6 @@ class RemoveTest(unittest.TestCase):
         for key, folder in self.root_folder.items():
             ref = ConanFileReference.loads(folder)
             folder = folder.replace("@", "/")
-            fake_metadata = PackageMetadata()
-            fake_metadata.recipe.revision = "myreciperev"
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = \
                 "123\nconanfile.py: 234234234"
@@ -134,8 +133,6 @@ class RemoveTest(unittest.TestCase):
             for pack_id in (1, 2):
                 i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
-                fake_metadata.packages[pack_id].revision = "mypackagerev"
-                fake_metadata.packages[pack_id].recipe_revision = "myreciperev"
                 prefs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
@@ -143,7 +140,6 @@ class RemoveTest(unittest.TestCase):
                     "%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(
                     i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
-            files["%s/metadata.json" % folder] = fake_metadata.dumps()
             exports_sources_dir = client.cache.package_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 
@@ -431,9 +427,14 @@ class RemoveWithoutUserChannel(unittest.TestCase):
     def test_local(self):
         self.client.save({"conanfile.py": GenConanfile()})
         self.client.run("create . lib/1.0@")
+        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("lib/1.0"))
+        ref_layout = self.client.cache.ref_layout(latest_rrev)
+        pkg_ids = self.client.cache.get_package_ids(latest_rrev)
+        latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
+        pkg_layout = self.client.cache.pkg_layout(latest_prev)
         self.client.run("remove lib/1.0 -f")
-        folder = self.client.cache.package_layout(ConanFileReference.loads("lib/1.0@")).export()
-        self.assertFalse(os.path.exists(folder))
+        self.assertFalse(os.path.exists(ref_layout.base_folder))
+        self.assertFalse(os.path.exists(pkg_layout.base_folder))
 
     def test_remote(self):
         self.client.save({"conanfile.py": GenConanfile()})

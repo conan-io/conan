@@ -1,10 +1,13 @@
 import os
-import platform
 import shutil
 from collections import OrderedDict
+from io import StringIO
 
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
+from conan.cache.cache import DataCache
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
 from conans.assets.templates import dict_loader
 from conans.client.cache.editable import EditablePackages
 from conans.client.cache.remote_registry import RemoteRegistry
@@ -17,12 +20,11 @@ from conans.client.store.localdb import LocalDB
 from conans.errors import ConanException
 from conans.model.conf import ConfDefinition
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
 from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
-from conans.util.files import list_folder_subdirs, load, normalize, save, remove
+from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
 CONAN_CONF = 'conan.conf'
@@ -33,36 +35,6 @@ PROFILES_FOLDER = "profiles"
 HOOKS_FOLDER = "hooks"
 TEMPLATES_FOLDER = "templates"
 GENERATORS_FOLDER = "generators"
-
-
-def _is_case_insensitive_os():
-    system = platform.system()
-    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
-
-
-if _is_case_insensitive_os():
-    def _check_ref_case(ref, store_folder):
-        if not os.path.exists(store_folder):
-            return
-
-        tmp = store_folder
-        for part in ref.dir_repr().split("/"):
-            items = os.listdir(tmp)
-            try:
-                idx = [item.lower() for item in items].index(part.lower())
-                if part != items[idx]:
-                    raise ConanException("Requested '{requested}', but found case incompatible"
-                                         " recipe with name '{existing}' in the cache. Case"
-                                         " insensitive filesystem can't manage this.\n Remove"
-                                         " existing recipe '{existing}' and try again.".format(
-                        requested=str(ref), existing=items[idx]
-                    ))
-                tmp = os.path.normpath(tmp + os.sep + part)
-            except ValueError:
-                return
-else:
-    def _check_ref_case(ref, store_folder):  # @UnusedVariable
-        pass
 
 
 class ClientCache(object):
@@ -81,37 +53,108 @@ class ClientCache(object):
         self.editable_packages = EditablePackages(self.cache_folder)
         # paths
         self._store_folder = self.config.storage_path or os.path.join(self.cache_folder, "data")
-        # Just call it to make it raise in case of short_paths misconfiguration
-        _ = self.config.short_paths_home
+
+        mkdir(self._store_folder)
+        db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+        self._data_cache = DataCache(self._store_folder, db_filename)
+
+    def closedb(self):
+        self._data_cache.closedb()
+
+    def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
+                         new_path=None, new_remote=None, new_build_id=None):
+        new_ref = ConanReference(new_ref) if new_ref else None
+        return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
+                                                 new_remote, new_build_id)
+
+    def dump(self):
+        out = StringIO()
+        self._data_cache.dump(out)
+        return out.getvalue()
+
+    def assign_rrev(self, layout: RecipeLayout, ref: ConanReference):
+        return self._data_cache.assign_rrev(layout, ref)
+
+    def assign_prev(self, layout: PackageLayout, ref: ConanReference):
+        return self._data_cache.assign_prev(layout, ref)
+
+    def ref_layout(self, ref):
+        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
+
+    def pkg_layout(self, ref):
+        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
+
+    def get_ref_layout(self, ref):
+        return self._data_cache.get_reference_layout(ConanReference(ref))
+
+    def get_pkg_layout(self, ref):
+        return self._data_cache.get_package_layout(ConanReference(ref))
+
+    def remove_layout(self, layout):
+        layout.remove()
+        self._data_cache.remove(ConanReference(layout.reference))
+
+    def set_remote(self, ref, remote):
+        return self._data_cache.set_remote(ConanReference(ref), remote)
+
+    def get_remote(self, ref):
+        return self._data_cache.get_remote(ConanReference(ref))
 
     def all_refs(self):
-        subdirs = list_folder_subdirs(basedir=self._store_folder, level=4)
-        return [ConanFileReference.load_dir_repr(folder) for folder in subdirs]
+        # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
+        #  this part in the future
+        #  check that we are returning not only the latest ref but all of them
+        return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
+                self._data_cache.list_references()]
+
+    def get_package_revisions(self, ref, only_latest_prev=False):
+        return [
+            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
+                                   validate=False) for pref in
+            self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
+
+    def get_package_ids(self, ref):
+        return [
+            PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
+                                   validate=False) for pref in
+            self._data_cache.get_package_ids(ConanReference(ref))]
+
+    def get_build_id(self, ref):
+        return self._data_cache.get_build_id(ConanReference(ref))
+
+    def get_recipe_revisions(self, ref, only_latest_rrev=False):
+        return [ConanFileReference.loads(f"{rrev['reference']}#{rrev['rrev']}") for rrev in
+                self._data_cache.get_recipe_revisions(ConanReference(ref), only_latest_rrev)]
+
+    def get_latest_rrev(self, ref):
+        rrevs = self.get_recipe_revisions(ref, True)
+        return rrevs[0] if rrevs else None
+
+    def get_latest_prev(self, ref):
+        prevs = self.get_package_revisions(ref, True)
+        return prevs[0] if prevs else None
+
+    def get_timestamp(self, ref):
+        return self._data_cache.get_timestamp(ConanReference(ref))
 
     @property
     def store(self):
         return self._store_folder
 
     def installed_as_editable(self, ref):
-        return isinstance(self.package_layout(ref), PackageEditableLayout)
+        # TODO: cache2.0 editables not yet managed
+        return False
+        #return isinstance(self.package_layout(ref), PackageEditableLayout)
 
     @property
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
 
+    # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
+    #  that call this directly
     def package_layout(self, ref, short_paths=None):
         assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
-        if edited_ref:
-            conanfile_path = edited_ref["path"]
-            layout_file = edited_ref["layout"]
-            return PackageEditableLayout(os.path.dirname(conanfile_path), layout_file, ref,
-                                         conanfile_path)
-        else:
-            _check_ref_case(ref, self.store)
-            base_folder = os.path.normpath(os.path.join(self.store, ref.dir_repr()))
-            return PackageCacheLayout(base_folder=base_folder, ref=ref,
-                                      short_paths=short_paths, no_lock=self._no_locks())
+        return PackageCacheLayout(ref, self)
 
     @property
     def remotes_path(self):
@@ -212,10 +255,6 @@ class ClientCache(object):
     def default_profile(self):
         self.initialize_default_profile()
         default_profile, _ = read_profile(self.default_profile_path, os.getcwd(), self.profiles_path)
-
-        # Mix profile settings with environment
-        mixed_settings = _mix_settings_with_env(default_profile.settings)
-        default_profile.settings = mixed_settings
         return default_profile
 
     @property
@@ -245,20 +284,6 @@ class ClientCache(object):
                 if os.path.isfile(generator) and generator.endswith(".py"):
                     generators.append(generator)
         return generators
-
-    def delete_empty_dirs(self, deleted_refs):
-        """ Method called by ConanRemover.remove() to clean up from the cache empty folders
-        :param deleted_refs: The recipe references that the remove() has been removed
-        """
-        for ref in deleted_refs:
-            ref_path = self.package_layout(ref).base_folder()
-            for _ in range(4):
-                if os.path.exists(ref_path):
-                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
-                        os.rmdir(ref_path)
-                    except OSError:
-                        break  # not empty
-                ref_path = os.path.dirname(ref_path)
 
     def remove_locks(self):
         folders = list_folder_subdirs(self._store_folder, 4)
@@ -319,36 +344,3 @@ class ClientCache(object):
         if os.path.exists(self.settings_path):
             remove(self.settings_path)
         self.initialize_settings()
-
-
-def _mix_settings_with_env(settings):
-    """Reads CONAN_ENV_XXXX variables from environment
-    and if it's defined uses these value instead of the default
-    from conf file. If you specify a compiler with ENV variable you
-    need to specify all the subsettings, the file defaulted will be
-    ignored"""
-
-    # FIXME: Conan 2.0. This should be removed, it only applies to default profile, not others
-
-    def get_env_value(name_):
-        env_name = "CONAN_ENV_%s" % name_.upper().replace(".", "_")
-        return os.getenv(env_name, None)
-
-    def get_setting_name(env_name):
-        return env_name[10:].lower().replace("_", ".")
-
-    ret = OrderedDict()
-    for name, value in settings.items():
-        if get_env_value(name):
-            ret[name] = get_env_value(name)
-        else:
-            # being a subsetting, if parent exist in env discard this, because
-            # env doesn't define this setting. EX: env=>Visual Studio but
-            # env doesn't define compiler.libcxx
-            if "." not in name or not get_env_value(name.split(".")[0]):
-                ret[name] = value
-    # Now read if there are more env variables
-    for env, value in sorted(os.environ.items()):
-        if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
-            ret[get_setting_name(env)] = value
-    return ret

@@ -1,10 +1,13 @@
 import textwrap
 
+import pytest
+
 from conans.client.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
 from conans.model.profile import Profile
 from conans.test.integration.graph.core.cross_build._base_test_case import CrossBuildingBaseTestCase
 
 
+@pytest.mark.xfail(reason="cache2.0 will not pass modifying the cache manually, revisit")
 class ClassicProtocExampleBase(CrossBuildingBaseTestCase):
     """ There is an application that requires the protobuf library, and also
         build_requires the protoc executable to generate some files, but protoc

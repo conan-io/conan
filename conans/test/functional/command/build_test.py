@@ -183,37 +183,6 @@ class AConan(ConanFile):
                       client.out)
         self.assertIn("Src folder=>%s" % os.path.join(client.current_folder, "mysrc"), client.out)
 
-    def test_build_dots_names(self):
-        """ Try to reuse variables loaded from txt generator => deps_cpp_info
-        """
-        client = TestClient()
-        conanfile_dep = """
-from conans import ConanFile
-
-class AConan(ConanFile):
-    pass
-"""
-        client.save({CONANFILE: conanfile_dep})
-        client.run("create . Hello.Pkg/0.1@lasote/testing")
-        client.run("create . Hello-Tools/0.1@lasote/testing")
-        conanfile_scope_env = """
-from conans import ConanFile
-
-class AConan(ConanFile):
-    requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
-
-    def build(self):
-        self.output.info("HELLO ROOT PATH: %s" %
-            self.deps_cpp_info["Hello.Pkg"].rootpath.replace('\\\\', '/'))
-        self.output.info("HELLO ROOT PATH: %s" %
-            self.deps_cpp_info["Hello-Tools"].rootpath.replace('\\\\', '/'))
-"""
-        client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("build conanfile.py --build=missing")
-
-        self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
-        self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
-
     @pytest.mark.tool_cmake
     def test_build_cmake_install(self):
         client = TestClient()

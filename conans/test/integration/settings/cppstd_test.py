@@ -1,5 +1,7 @@
 import unittest
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 
@@ -44,6 +46,7 @@ class TestConan(ConanFile):
                    '-s compiler.libcxx="libstdc++11" '
                    '-s compiler.version="8" -s cppstd=20')
 
+    @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_set_default_package_id(self):
         client = TestClient()
         conanfile = """from conans import ConanFile

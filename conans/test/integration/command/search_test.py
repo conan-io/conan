@@ -7,11 +7,10 @@ import time
 import unittest
 from collections import OrderedDict
 
-from mock import patch
 import pytest
+from mock import patch
 
 from conans.model.manifest import FileTreeManifest
-from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANINFO, EXPORT_FOLDER, PACKAGES_FOLDER
 from conans.server.revision_list import RevisionList
@@ -107,7 +106,7 @@ conan_vars4 = """[settings]
 """
 
 
-@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
+@pytest.mark.xfail(reason="Completely re-design these tests for Cache 2.0")
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
@@ -165,26 +164,6 @@ class SearchTest(unittest.TestCase):
                                                        PACKAGES_FOLDER,
                                                        "hello.txt"): "Hello"},
                          self.client.cache.store)
-        # Fake metadata
-
-        def create_metadata(folder, pids):
-            metadata = PackageMetadata()
-            metadata.recipe.revision = "myreciperev"
-            for pid in pids:
-                metadata.packages[pid].revision = "mypackagerev"
-                metadata.packages[pid].recipe_revision = "myreciperev"
-            save(os.path.join(self.client.cache.store, folder, "metadata.json"), metadata.dumps())
-
-        create_metadata(root_folder1, ["WindowsPackageSHA", "PlatformIndependantSHA",
-                                       "LinuxPackageSHA"])
-        create_metadata(root_folder11, ["WindowsPackageSHA"])
-        create_metadata(root_folder12, ["WindowsPackageSHA"])
-        create_metadata(root_folder2, ["a44f541cd44w57"])
-        create_metadata(root_folder3, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder4, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder5, ["e4f7vdwcv4w55d"])
-        create_metadata(root_folder6, ["LinuxPackageCustom"])
-        create_metadata(root_folder_tool, ["winx86", "winx64", "linx86", "linx64"])
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
@@ -1142,7 +1121,7 @@ class Test(ConanFile):
         # This searches by pattern
         client.run("search lib/1.0")
         self.assertIn("Existing package recipes:", client.out)
-        self.assertIn("lib/1.0\n", client.out)
+        self.assertIn("lib/1.0", client.out)
 
         #  Support for explicit ref without user/channel
         client.run("search lib/1.0@")
@@ -1166,7 +1145,7 @@ class Test(ConanFile):
         self.assertIn("Package_ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
 
-@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
+@pytest.mark.xfail(reason="cache2.0 order of search output is not implemented yet, check this")
 class SearchOrder(unittest.TestCase):
     def test_search(self):
         client = TestClient(default_server_user=True)
@@ -1198,6 +1177,7 @@ class SearchOrder(unittest.TestCase):
 @pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRevisionsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_recipe_revisions(self):
         test_server = TestServer(users={"user": "password"})  # exported users and passwords
         servers = {"default": test_server}
@@ -1218,7 +1198,7 @@ class Test(ConanFile):
 
         # If the recipe doesn't have associated remote, there is no time
         client.run("search lib/1.0@user/testing --revisions")
-        self.assertIn("bd761686d5c57b31f4cd85fd0329751f (No time)", client.out)
+        self.assertIn("bd761686d5c57b31f4cd85fd0329751f", client.out)
 
         # test that the pattern search with --revisions enabled works
         client.run("search li* --revisions")
@@ -1343,6 +1323,7 @@ class Test(ConanFile):
         self.assertIsNotNone(j[0]["time"])
         self.assertEqual(len(j), 1)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
     def test_search_not_found(self):
         # Search not found for both package and recipe
         test_server = TestServer(users={"conan": "password"})  # exported users and passwords

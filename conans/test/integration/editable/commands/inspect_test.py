@@ -3,10 +3,14 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                          "TODO: cache2.0 fix with editables")
 class InspectCommandTest(unittest.TestCase):
     conanfile_base = textwrap.dedent("""\
         from conans import ConanFile

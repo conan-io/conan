@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized.parameterized import parameterized
 
 from conans.client.tools.files import replace_in_file
@@ -439,9 +440,7 @@ class Pkg(ConanFile):
 
         ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
         pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
-        conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
+        conaninfo = client.load(os.path.join(pkg_folder[0], "conaninfo.txt"))
 
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)

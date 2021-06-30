@@ -33,23 +33,26 @@ class MyPkg(ConanFile):
 
 class UploadTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="cache2.0 will remove -p make sense for 2.0?")
     def test_upload_dirty(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("Hello", "0.1")})
         client.run("create . lasote/testing")
         ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        layout = client.cache.package_layout(pref.ref)
-        pkg_folder = os.path.join(layout.base_folder(), PACKAGES_FOLDER, pref.id)
+
+        rrev = client.cache.get_latest_rrev(ref)
+        prev = client.cache.get_latest_prev(rrev)
+        pkg_folder = client.cache.pkg_layout(prev).package()
         set_dirty(pkg_folder)
 
         client.run("upload * --all --confirm", assert_error=True)
         self.assertIn(f"ERROR: Hello/0.1@lasote/testing:{NO_SETTINGS_PACKAGE_ID}: "
                       "Upload package to 'default' failed: Package %s is corrupted, aborting upload"
-                      % str(pref), client.out)
+                      % str(prev), client.out)
         self.assertIn("Remove it with 'conan remove Hello/0.1@lasote/testing -p=%s'"
                       % NO_SETTINGS_PACKAGE_ID, client.out)
 
+        # TODO: cache2.0 check if this makes sense for 2.0, xfail test for the moment
         client.run("remove Hello/0.1@lasote/testing -p=%s -f" % NO_SETTINGS_PACKAGE_ID)
         client.run("upload * --all --confirm")
 
@@ -164,6 +167,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", client.out)
         self.assertIn("Uploading conanfile.py", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 query not yet implemented")
     def test_query_upload(self):
         client = TestClient(default_server_user=True)
         conanfile_upload_query = textwrap.dedent("""
@@ -220,7 +224,9 @@ class UploadTest(unittest.TestCase):
             self.assertIn("ERROR: Hello0/1.2.1@user/testing: Upload recipe to 'default' failed: "
                           "Error gzopen conan_sources.tgz", client.out)
 
-            export_download_folder = client.cache.package_layout(ref).download_export()
+            latest_rrev = client.cache.get_latest_rrev(ref)
+            export_download_folder = client.cache.ref_layout(latest_rrev).download_export()
+
             tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
@@ -268,9 +274,10 @@ class UploadTest(unittest.TestCase):
                      "include/hello.h": ""})
         client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        packages_folder = client.cache.package_layout(ref).packages()
-        pkg_id = os.listdir(packages_folder)[0]
-        package_folder = os.path.join(packages_folder, pkg_id)
+        latest_rrev = client.cache.get_latest_rrev(ref)
+        pkg_ids = client.cache.get_package_ids(latest_rrev)
+        latest_prev = client.cache.get_latest_prev(pkg_ids[0])
+        package_folder = client.cache.pkg_layout(latest_prev).package()
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/hello.h"))
         client.run("upload Hello0/1.2.1@frodo/stable --all --check", assert_error=True)
@@ -295,9 +302,10 @@ class UploadTest(unittest.TestCase):
                       "hello.cpp": "int i=1"})
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        manifest = client2.cache.package_layout(ref).recipe_manifest()
+        latest_rrev = client2.cache.get_latest_rrev(ref)
+        manifest = client2.cache.ref_layout(latest_rrev).recipe_manifest()
         manifest.time += 10
-        manifest.save(client2.cache.package_layout(ref).export())
+        manifest.save(client2.cache.ref_layout(latest_rrev).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client2.out)
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
@@ -320,9 +328,10 @@ class UploadTest(unittest.TestCase):
         client2.save(files)
         client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
-        manifest = client2.cache.package_layout(ref).recipe_manifest()
+        rrev = client2.cache.get_latest_rrev(ref)
+        manifest = client2.cache.ref_layout(rrev).recipe_manifest()
         manifest.time += 10
-        manifest.save(client2.cache.package_layout(ref).export())
+        manifest.save(client2.cache.ref_layout(rrev).export())
         client2.run("upload Hello0/1.2.1@frodo/stable")
         self.assertNotIn("Uploading conanmanifest.txt", client2.out)
         assert "Uploading Hello0/1.2.1@frodo/stable to remote" in client2.out
@@ -609,6 +618,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@user/testing --all -r server2")
         self.assertNotIn("ERROR: 'server1'", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: metadata test, check again in the future")
     def test_upload_export_pkg(self):
         """
         Package metadata created when doing an export-pkg and then uploading the package works
@@ -713,6 +723,7 @@ class MyPkg(ConanFile):
         self.assertIn(f"Uploading package 1/1: {NO_SETTINGS_PACKAGE_ID} to 'default'",
                       client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: revisit metadata tests")
     def test_checksums_metadata(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})

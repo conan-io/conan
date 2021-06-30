@@ -293,12 +293,15 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         return self._conan.test(args.path, args.reference,
                                 args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, remote_name=args.remote, update=args.update,
-                                build_modes=args.build, test_build_folder=args.test_build_folder,
+                                args.env_host, conf=args.conf_host, remote_name=args.remote,
+                                update=args.update, build_modes=args.build,
+                                test_build_folder=args.test_build_folder,
                                 lockfile=args.lockfile, profile_build=profile_build)
 
     def create(self, *args):
@@ -354,13 +357,18 @@ class Command(object):
         info = None
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
-            info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder,
-                                      args.build,
-                                      args.remote, args.update,
+            info = self._conan.create(args.path, name=name, version=version, user=user,
+                                      channel=channel, profile_names=args.profile_host,
+                                      settings=args.settings_host, conf=args.conf_host,
+                                      options=args.options_host, env=args.env_host,
+                                      test_folder=args.test_folder,
+                                      build_modes=args.build,
+                                      remote_name=args.remote, update=args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
@@ -472,7 +480,9 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         cwd = os.getcwd()
 
@@ -488,6 +498,7 @@ class Command(object):
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings_host, options=args.options_host,
                                            env=args.env_host, profile_names=args.profile_host,
+                                           conf=args.conf_host,
                                            profile_build=profile_build,
                                            remote_name=args.remote,
                                            build=args.build,
@@ -506,6 +517,7 @@ class Command(object):
                                                      settings=args.settings_host,
                                                      options=args.options_host,
                                                      env=args.env_host,
+                                                     conf=args.conf_host,
                                                      profile_names=args.profile_host,
                                                      profile_build=profile_build,
                                                      remote_name=args.remote,
@@ -671,7 +683,9 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         # INSTALL SIMULATION, NODES TO INSTALL
         if args.build is not None:
@@ -681,6 +695,7 @@ class Command(object):
                                                        options=args.options_host,
                                                        env=args.env_host,
                                                        profile_names=args.profile_host,
+                                                       conf=args.conf_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update)
@@ -697,6 +712,7 @@ class Command(object):
                                     options=args.options_host,
                                     env=args.env_host,
                                     profile_names=args.profile_host,
+                                    conf=args.conf_host,
                                     profile_build=profile_build,
                                     update=args.update,
                                     build=args.dry_build,
@@ -826,7 +842,8 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 
@@ -903,7 +920,8 @@ class Command(object):
         self._warn_python_version()
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 
@@ -962,7 +980,10 @@ class Command(object):
 
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
@@ -974,6 +995,7 @@ class Command(object):
                                           env=args.env_host,
                                           settings=args.settings_host,
                                           options=args.options_host,
+                                          conf=args.conf_host,
                                           profile_build=profile_build,
                                           force=args.force,
                                           user=user,
@@ -1248,8 +1270,7 @@ class Command(object):
                     raise ConanException(exc_msg)
 
                 info = self._conan.search_recipes(args.pattern_or_reference, remote_name=None,
-                                                  case_sensitive=args.case_sensitive,
-                                                  fill_revisions=True)
+                                                  case_sensitive=args.case_sensitive)
                 self._outputer.print_search_references(info["results"],
                                                        args.pattern_or_reference,
                                                        args.raw, all_remotes_search=None)
@@ -1825,9 +1846,11 @@ class Command(object):
             self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
             profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                                       options=args.options_host, env=args.env_host)
+                                       options=args.options_host, env=args.env_host,
+                                       conf=args.conf_host)
 
             self._conan.lock_create(path=args.path,
                                     reference=args.reference,
@@ -1929,12 +1952,12 @@ class Command(object):
     @staticmethod
     def _check_lockfile_args(args):
         if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build):
-            raise ConanException("Cannot use profile, settings, options or env 'build' when "
+                              args.env_build or args.conf_build):
+            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
                                  "using lockfile")
         if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host):
-            raise ConanException("Cannot use profile, settings, options or env 'host' when "
+                              args.env_host or args.conf_host):
+            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
                                  "using lockfile")
         if args.lockfile_out and not args.lockfile:
             raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
@@ -2098,7 +2121,17 @@ def _add_profile_arguments(parser):
                                  ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
                                                                                  short_suffix))
 
-    for item_fn in [environment_args, options_args, profile_args, settings_args]:
+    def conf_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-c{}".format(short_suffix),
+                            "--conf{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='conf_{}'.format(machine),
+                            help='Configuration to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -c{} '
+                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
+                                                                                     short_suffix))
+
+    for item_fn in [environment_args, options_args, profile_args, settings_args, conf_args]:
         item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")

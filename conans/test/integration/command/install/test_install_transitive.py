@@ -29,13 +29,6 @@ def client():
     return c
 
 
-def test_install_combined(client):
-    client.run("install . --build=missing")
-    client.run("install . --build=missing --build Hello1")
-    assert "Hello0/0.1@lasote/stable: Already installed!" in client.out
-    assert "Hello1/0.1@lasote/stable: Forced build from source" in client.out
-
-
 def test_install_transitive_cache(client):
     client.run("install Hello2/0.1@lasote/stable --build=missing")
     assert "Hello0/0.1@lasote/stable: Generating the package" in client.out
@@ -53,6 +46,7 @@ def test_partials(client):
         assert "No package matching" not in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0")
 def test_reuse(client):
     for lang, id0, id1 in [(0, "3475bd55b91ae904ac96fde0f106a136ab951a5e",
                                "5faecfb46fd09e49f1812d732d6360bc1663e3ab"),
