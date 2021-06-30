@@ -283,7 +283,7 @@ class TestLinear(GraphManagerTest):
 
     def test_header_only(self):
         # app -> libb0.1 -> liba0.1 (header_only)
-        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header library"))
+        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library"))
         libb = GenConanfile().with_requirement("liba/0.1")
         self.recipe_conanfile("libb/0.1", libb)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])

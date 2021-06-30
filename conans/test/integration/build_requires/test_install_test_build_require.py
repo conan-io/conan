@@ -17,7 +17,7 @@ def client():
         from conans.tools import save, chdir
         class Pkg(ConanFile):
             settings = "os"
-            package_type = "run library"
+            package_type = "shared-library"
             def package(self):
                 with chdir(self.package_folder):
                     echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.os)

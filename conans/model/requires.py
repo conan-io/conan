@@ -53,13 +53,13 @@ class Requirement:
         """
         if self.run is not None:
             return
-        pkg_type = node.package_type
+        pkg_type = node.conanfile.package_type
         if pkg_type is PackageType.APP:
             # Change the default requires include&link to False for APPS
             self.include = False
             self.link = False
             self.run = True
-        elif pkg_type in (PackageType.SHARED, PackageType.RUN):
+        elif pkg_type is PackageType.SHARED:
             self.run = True
         elif pkg_type is PackageType.STATIC:
             self.run = False
@@ -112,20 +112,18 @@ class Requirement:
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
-            if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.RUN or require.run:
+            if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, include=False, link=False, build=True,
                                                  run=True, public=False, direct=False)
                 return downstream_require
             return
 
         # Regular and test requires
-        if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.RUN:
+        if dep_pkg_type is PackageType.SHARED:
             if pkg_type is PackageType.SHARED:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             elif pkg_type is PackageType.STATIC:
                 downstream_require = Requirement(require.ref, include=False, link=True, run=True)
-            elif pkg_type is PackageType.RUN:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             elif pkg_type is PackageType.APP:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=True)
             else:
@@ -134,8 +132,6 @@ class Requirement:
                 downstream_require = require.copy()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
-            elif pkg_type is PackageType.RUN:
                 downstream_require = Requirement(require.ref, include=False, link=False, run=False)
             elif pkg_type is PackageType.STATIC:
                 downstream_require = Requirement(require.ref, include=False, link=True, run=False)

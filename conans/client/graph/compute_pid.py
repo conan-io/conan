@@ -23,6 +23,7 @@ def compute_package_id(node, new_config):
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
+        dep_conanfile = dep_node.conanfile
         if require.build:
             if dep_package_id:
                 req_info = RequirementInfo(dep_node.pref, dep_package_id)
@@ -30,17 +31,17 @@ def compute_package_id(node, new_config):
         else:
             if dep_package_id is None:  # Automatically deducing package_id
                 if require.include or require.link:  # linked
-                    if node.package_type is PackageType.SHARED:
-                        if dep_node.package_type is PackageType.SHARED:
+                    if conanfile.package_type is PackageType.SHARED:
+                        if dep_conanfile.package_type is PackageType.SHARED:
                             dep_package_id = "minor_mode"
                         else:
                             dep_package_id = "recipe_revision_mode"
-                    elif node.package_type is PackageType.STATIC:
-                        if dep_node.package_type is PackageType.HEADER:
+                    elif conanfile.package_type is PackageType.STATIC:
+                        if dep_conanfile.package_type is PackageType.HEADER:
                             dep_package_id = "recipe_revision_mode"
                         else:
                             dep_package_id = "minor_mode"
-                    elif node.package_type is PackageType.HEADER:
+                    elif conanfile.package_type is PackageType.HEADER:
                         dep_package_id = "unrelated_mode"
             req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
             data[require] = req_info
