@@ -2,6 +2,7 @@ import fnmatch
 import json
 import os
 import stat
+import traceback
 from collections import OrderedDict, namedtuple
 from six.moves.urllib.parse import urlparse
 
@@ -221,11 +222,7 @@ class Remotes(object):
 
     def __getitem__(self, remote_name):
         try:
-            remote = self._remotes[remote_name]
-            if remote.disabled:
-                raise ConanException("Remote '%s' is disabled" % remote_name)
-            else:
-                return remote
+            return self._remotes[remote_name]
         except KeyError:
             raise NoRemoteAvailable("No remote '%s' defined in remotes" % remote_name)
 

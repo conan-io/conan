@@ -363,8 +363,8 @@ def test_install_disabled_remote(client):
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
-    assert "ERROR: Remote 'default' is disabled" in client.out
+    client.run("install Pkg/0.1@lasote/testing -r default")
+    assert "Pkg/0.1@lasote/testing: Already installed!" in client.out
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
@@ -372,7 +372,7 @@ def test_install_disabled_remote(client):
     assert "ERROR: Remote 'default' is disabled" in client.out
 
 
-def test_install_skip_disabled_remote(client):
+def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),
                                              "server3": TestServer()}),
@@ -386,6 +386,17 @@ def test_install_skip_disabled_remote(client):
     client.run("remote disable default")
     client.run("install Pkg/0.1@lasote/testing", assert_error=False)
     assert "Trying with 'default'..." not in client.out
+
+
+def test_install_without_update_fail(client):
+    # https://github.com/conan-io/conan/issues/9183
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@")
+    client.run("upload * --confirm --all -r default")
+    client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+    client.run("remote disable default")
+    client.run("install .")
+    assert "zlib/1.0: Already installed" in client.out
 
 
 def test_install_version_range_reference(client):
