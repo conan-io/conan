@@ -483,6 +483,8 @@ class GenericSystemBlock(Block):
         """)
 
     def _get_toolset(self, generator):
+        if generator is None or ("Visual" not in generator and "Xcode" not in generator):
+            return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_base = settings.get_safe("compiler.base")
