@@ -9,6 +9,12 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 def test_update_flows():
+
+    # - when a revision is installed from a remote it takes the date from the remote, not
+    # creating a new one
+    # - if we want to install the revision and create it with a new date use --update-date
+    # (name to be revisited)
+
     server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     server3 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})

@@ -53,10 +53,8 @@ class ConanProxy(object):
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
-        # TODO: cache2.0: check with new --update flows
         recipe_layout = self._cache.get_ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
-        # TODO: cache2.0: check if we want to get the remote through the layout
         cur_remote = self._cache.get_remote(recipe_layout.reference)
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
@@ -66,49 +64,25 @@ class ConanProxy(object):
         if check_updates:
             remote, latest_rrev, remote_time = self._get_latest_rrev_from_remotes(ref.copy_clear_rev(),
                                                                                   remotes.values())
-            # check if we already have the latest in local cache
             if latest_rrev:
+                # check if we already have the latest in local cache
                 if latest_rrev.revision != ref.revision:
                     # TODO: check the timezone
                     cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)
                     if cache_time < remote_time:
                         # the remote one is newer
+                        output.info("Retrieving from remote '%s'..." % remote.name)
                         remote, new_ref = self._download_recipe(latest_rrev, output, remotes, remote)
-                        status = RECIPE_DOWNLOADED
+                        status = RECIPE_UPDATED
                         return conanfile_path, status, remote, new_ref
+                    else:
+                        status = RECIPE_NEWER
+                else:
+                    status = RECIPE_INCACHE
+                return conanfile_path, status, selected_remote, ref
         else:
             status = RECIPE_INCACHE
             return conanfile_path, status, cur_remote, ref
-
-        # Checking updates in the server
-        if not selected_remote:
-            status = RECIPE_NO_REMOTE
-            return conanfile_path, status, None, ref
-
-        try:  # get_recipe_manifest can fail, not in server
-            upstream_manifest, ref = self._remote_manager.get_recipe_manifest(ref, selected_remote)
-        except NotFoundException:
-            status = RECIPE_NOT_IN_REMOTE
-            return conanfile_path, status, selected_remote, ref
-
-        read_manifest = recipe_layout.recipe_manifest()
-        # TODO: cache2.0 check this for 2.0
-        if upstream_manifest != read_manifest:
-            if upstream_manifest.time > read_manifest.time:
-                if update:
-                    DiskRemover().remove_recipe(recipe_layout, output=output)
-                    output.info("Retrieving from remote '%s'..." % selected_remote.name)
-                    self._download_recipe(recipe_layout, ref, output, remotes, selected_remote)
-                    status = RECIPE_UPDATED
-                    return conanfile_path, status, selected_remote, ref
-                else:
-                    status = RECIPE_UPDATEABLE
-            else:
-                status = RECIPE_NEWER
-        else:
-            status = RECIPE_INCACHE
-
-        return conanfile_path, status, selected_remote, ref
 
     def _get_latest_rrev_from_remotes(self, reference, remotes):
         remotes_results = []
