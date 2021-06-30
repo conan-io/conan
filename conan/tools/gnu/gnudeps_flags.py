@@ -2,7 +2,7 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
-from sys import platform
+import platform
 
 from conan.tools.microsoft import unix_path
 

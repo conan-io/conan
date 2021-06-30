@@ -1,9 +1,11 @@
 import json
 import os
+import platform
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import use_win_mingw
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
+from conan.tools.microsoft import unix_path
 from conans.client.build import join_arguments
 from conans.util.files import load
 
@@ -13,7 +15,6 @@ class Autotools(object):
     def __init__(self, conanfile, win_shell=False):
         self._conanfile = conanfile
         self._win_shell = win_shell
-
 
         args_path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
         if os.path.isfile(args_path):
@@ -30,7 +31,11 @@ class Autotools(object):
         if not self._conanfile.should_configure:
             return
 
-        cmd = "{}/configure {}".format(self._conanfile.source_folder, self._configure_args)
+        configure_cmd = "{}/configure".format(self._conanfile.source_folder)
+        if self._win_shell and platform.system() == "Windows":
+            subsystem = self._conanfile.conf["tools.win.shell:subsystem"]
+            configure_cmd = unix_path(configure_cmd, subsystem=subsystem)
+        cmd = "{} {}".format(configure_cmd, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
         self._conanfile.run(cmd, win_shell=self._win_shell)
 

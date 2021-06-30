@@ -24,8 +24,9 @@ class VirtualRunEnv:
     dependencies, and also from profiles
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, win_shell=False):
         self._conanfile = conanfile
+        self._win_shell = win_shell
 
     def environment(self):
         """ collects the runtime information from dependencies. For normal libraries should be
@@ -43,8 +44,8 @@ class VirtualRunEnv:
 
         return runenv
 
-    def generate(self, win_shell=False, auto_activate=False):
+    def generate(self, auto_activate=False):
         run_env = self.environment()
         if run_env:
             save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate,
-                        win_shell=win_shell)
+                        win_shell=self._win_shell)

@@ -62,4 +62,5 @@ class AutotoolsDeps:
 
     def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        save_script(self._conanfile, env, "conanautotoolsdeps", auto_activate=auto_activate)
+        save_script(self._conanfile, env, "conanautotoolsdeps", auto_activate=auto_activate,
+                    win_shell=self._win_shell)

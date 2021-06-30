@@ -95,7 +95,7 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self, placeholder, pathsep=os.pathsep, subsystem=None):
+    def get_str(self, placeholder, pathsep=os.pathsep):
         """
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
@@ -108,6 +108,7 @@ class _EnvValue:
                 if placeholder:
                     values.append(placeholder.format(name=self._name))
             else:
+                conanfile.conf["tools.win.shell:subsystem"]
                 if subsystem and self._path:
                     from conan.tools.microsoft.win import unix_path
                     v = unix_path(v, subsystem=subsystem)
@@ -208,8 +209,7 @@ class Environment:
         content = "\n".join(result)
         return content
 
-    def get_sh_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep,
-                        subsystem=None):
+    def get_sh_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -231,7 +231,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", pathsep, subsystem=subsystem)
+            value = varvalues.get_str("${name}", pathsep)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -372,10 +372,8 @@ def save_script(conanfile, env, name, auto_activate=True, win_shell=False):
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
         contents = env.get_bat_contents(path)
     else:
-        subsystem = conanfile.conf["tools.win.shell:subsystem"] \
-            if win_shell and platform.system() == "Windows" else None
         path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
-        contents = env.get_sh_contents(path, subsystem=subsystem)
+        contents = env.get_sh_contents(path)
 
     save(path, contents)
 

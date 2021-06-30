@@ -15,7 +15,7 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None):
+def run_in_windows_shell(conanfile, command, cwd=None, env=None):
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
     if env:
         # Passing env invalidates the conanfile.environment_scripts
@@ -25,7 +25,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None)
         env_shell = [f for f in conanfile.environment_scripts if f.lower().endswith(".sh")]
         env_win = env or [f for f in conanfile.environment_scripts if f.lower().endswith(".bat")]
 
-    subsystem = subsystem or conanfile.conf["tools.win.shell:subsystem"]
+    subsystem = conanfile.conf["tools.win.shell:subsystem"]
     shell_path = conanfile.conf["tools.win.shell:path"]
 
     if not platform.system() == "Windows":
@@ -54,7 +54,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None)
     cwd = cwd or os.getcwd()
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
-    cwd_inside = unix_path(cwd, subsystem=subsystem)
+    cwd_inside = unix_path(cwd, win_shell=True)
     wrapped_user_cmd = command
     if env_shell:
         # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
@@ -72,7 +72,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None)
         cwd=cwd,
         wrapped_shell=wrapped_shell,
         inside_command=inside_command)
-
+    conanfile.output.info('Running in windows shell: %s' % final_command)
     return conanfile._conan_runner(final_command, output=conanfile.output, subprocess=True)
 
 
@@ -87,7 +87,7 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def unix_path(path, subsystem):
+def unix_path(conanfile, path):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!"""
     if not path:
@@ -96,6 +96,7 @@ def unix_path(path, subsystem):
     if not platform.system() == "Windows":
         return path
 
+    subsystem = conanfile.conf["tools.win.shell:subsystem"]
     if os.path.exists(path):
         # if the path doesn't exist (and abs) we cannot guess the casing
         path = get_cased_path(path)

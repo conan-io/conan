@@ -390,7 +390,6 @@ class ConanFile(object):
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, with_login=True, env=None, win_shell=False):
         # NOTE: "win_shell" is the new "win_bash" for Conan 2.0
-
         subsystem = (subsystem or self.conf["tools.win.shell:subsystem"]) \
             if (win_shell or win_bash) else None
 
