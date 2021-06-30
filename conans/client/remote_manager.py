@@ -99,7 +99,9 @@ class RemoteManager(object):
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
-        ref = self._resolve_latest_ref(ref, remote)
+        if not ref.revision:
+            ref = self._resolve_latest_ref(ref, remote)
+
         layout = self._cache.ref_layout(ref)
         layout.export_remove()
 
