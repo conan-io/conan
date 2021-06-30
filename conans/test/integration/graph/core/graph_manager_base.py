@@ -63,9 +63,10 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
-        layout = self.cache.package_layout(ref)
+        layout = self.cache.get_latest_ref_layout(ref)
         save(layout.conanfile(), str(conanfile))
         # Need to complete de metadata = revision + manifest
+        # FIXME: 2.0: update_metadata() method does not exist anymore
         with layout.update_metadata() as metadata:
             metadata.recipe.revision = "123"
         manifest = FileTreeManifest.create(layout.export())
@@ -103,11 +104,12 @@ class GraphManagerTest(unittest.TestCase):
             test_conanfile = test_conanfile.with_package_info(
                 cpp_info={"libs": ["mylib{}{}lib".format(name, version)]},
                 env_info={"MYENV": ["myenv{}{}env".format(name, version)]})
-        save(self.cache.package_layout(ref).conanfile(), str(test_conanfile))
-        with self.cache.package_layout(ref).update_metadata() as metadata:
+        save(self.cache.get_latest_ref_layout(ref).conanfile(), str(test_conanfile))
+        # FIXME: 2.0: update_metadata() method does not exist anymore
+        with self.cache.get_latest_ref_layout(ref).update_metadata() as metadata:
             metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.cache.package_layout(ref).export())
-        manifest.save(self.cache.package_layout(ref).export())
+        manifest = FileTreeManifest.create(self.cache.get_latest_ref_layout(ref).export())
+        manifest.save(self.cache.get_latest_ref_layout(ref).export())
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
                     install=True):

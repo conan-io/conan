@@ -120,7 +120,7 @@ def test_reuse():
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
     client.run("install %s --build missing" % str(ref))
 
-    pkg_layout = client.get_latest_pkg_layout(ref)
+    pkg_layout = client.cache.get_latest_pkg_layout(ref)
     assert os.path.exists(pkg_layout.build())
     assert os.path.exists(pkg_layout.package())
 
@@ -131,7 +131,7 @@ def test_reuse():
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build missing" % str(ref))
 
-    pkg_layout = other_client.get_latest_pkg_layout(ref)
+    pkg_layout = other_client.cache.get_latest_pkg_layout(ref)
     assert not os.path.exists(pkg_layout.build())
     assert os.path.exists(pkg_layout.package())
 
@@ -139,7 +139,7 @@ def test_reuse():
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build" % str(ref))
 
-    pkg_layout = other_client.get_latest_pkg_layout(ref)
+    pkg_layout = other_client.cache.get_latest_pkg_layout(ref)
     assert os.path.exists(pkg_layout.build())
     assert os.path.exists(pkg_layout.package())
 
@@ -147,7 +147,7 @@ def test_reuse():
     other_client = TestClient(servers=client.servers, users=client.users)
     other_client.run("install %s --build HelloInvalid" % str(ref))
 
-    pkg_layout = other_client.get_latest_pkg_layout(ref)
+    pkg_layout = other_client.cache.get_latest_pkg_layout(ref)
     assert "No package matching 'HelloInvalid' pattern" in other_client.out
     assert not os.path.exists(pkg_layout.build())
 

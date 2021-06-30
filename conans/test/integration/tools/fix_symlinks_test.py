@@ -82,7 +82,7 @@ class FixSymlinksTestCase(unittest.TestCase):
 
         # Check the work is done
         pkg_ref = PackageReference(self.name_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        package_folder = t.cache.package_layout(self.name_ref).package(pkg_ref)
+        package_folder = t.cache.get_latest_pkg_layout(pkg_ref).package()
 
         self.assertListEqual(sorted(os.listdir(package_folder)),
                              ['abs_to_file_in_folder.txt',

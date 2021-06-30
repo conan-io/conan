@@ -358,7 +358,7 @@ class MyPkg(ConanFile):
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         client.run("create . %s" % ref.full_str(), assert_error=True)
         self.assertIn("Build error", client.out)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_folder = client.cache.get_latest_pkg_layout(ref).package()
         self.assertFalse(os.path.exists(package_folder))
 
     def test_create_with_name_and_version(self):

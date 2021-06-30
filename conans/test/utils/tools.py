@@ -669,22 +669,6 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_pkg_layout(self, ref: ConanFileReference) -> PackageLayout:
-        """Get the latest PackageLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_rrev(ref)
-        # Given the latest recipe revision we can get the latest package ID and
-        # get the corresponding PackageLayout
-        all_package_ids = self.cache.get_package_ids(latest_rrev)
-        latest_prev = self.cache.get_latest_prev(all_package_ids[0])
-        pkg_layout = self.cache.get_pkg_layout(latest_prev)
-        return pkg_layout
-
-    def get_latest_ref_layout(self, ref: ConanFileReference) -> RecipeLayout:
-        """Get the latest PackageLayout given a file reference"""
-        latest_rrev = self.cache.get_latest_rrev(ref)
-        pkg_layout = self.cache.get_ref_layout(latest_rrev)
-        return pkg_layout
-
 
 class TurboTestClient(TestClient):
     tmp_json_name = ".tmp_json"

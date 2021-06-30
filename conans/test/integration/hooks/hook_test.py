@@ -194,7 +194,7 @@ class HookTest(unittest.TestCase):
 
         client.run("export . danimtb/testing")
 
-        conanfile_cache_path = client.cache.package_layout(
+        conanfile_cache_path = client.cache.get_latest_ref_layout(
             ConanFileReference("basic", "0.1", "danimtb", "testing")).conanfile()
 
         self._check_export(conanfile_path, conanfile_cache_path, client.out)

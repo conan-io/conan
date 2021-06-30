@@ -537,16 +537,16 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
-            origin_path = cache.package_layout(ref).export()
+            origin_path = cache.get_latest_ref_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
-            packages = cache.package_layout(ref).packages()
+            packages = cache.get_package_revisions(ref)
             if not os.path.exists(packages):
                 continue
             for package in os.listdir(packages):
                 pref = PackageReference(ref, package, "mypackagerev")
-                origin_path = cache.package_layout(ref).package(pref)
+                origin_path = cache.get_latest_pkg_layout(ref).package()
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)

@@ -134,6 +134,22 @@ class ClientCache(object):
         prevs = self.get_package_revisions(ref, True)
         return prevs[0] if prevs else None
 
+    def get_latest_pkg_layout(self, ref: ConanReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        latest_rrev = self.get_latest_rrev(ref)
+        # Given the latest recipe revision we can get the latest package ID and
+        # get the corresponding PackageLayout
+        all_package_ids = self.get_package_ids(latest_rrev)
+        latest_prev = self.get_latest_prev(all_package_ids[0])
+        pkg_layout = self.get_pkg_layout(latest_prev)
+        return pkg_layout
+
+    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+        """Get the latest RecipeLayout given a file reference"""
+        latest_rrev = self.get_latest_rrev(ref)
+        ref_layout = self.get_ref_layout(latest_rrev)
+        return ref_layout
+
     def get_timestamp(self, ref):
         return self._data_cache.get_timestamp(ConanReference(ref))
 
