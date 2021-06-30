@@ -5,11 +5,12 @@ from conans.model.new_build_info import NewCppInfo
 
 
 class AutotoolsDeps:
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, win_shell=False):
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
         self._conanfile = conanfile
         self._cpp_info = None
+        self._win_shell = win_shell
 
     @property
     def cpp_info(self):
@@ -25,7 +26,7 @@ class AutotoolsDeps:
         return self._cpp_info
 
     def environment(self):
-        flags = GnuDepsFlags(self._conanfile, self.cpp_info)
+        flags = GnuDepsFlags(self._conanfile, self.cpp_info, win_shell=self._win_shell)
 
         # cpp_flags
         cpp_flags = []

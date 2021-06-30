@@ -161,7 +161,7 @@ class Environment:
     def prepend_path(self, name, value):
         self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
 
-    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def get_bat_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -192,9 +192,9 @@ class Environment:
             value = varvalues.get_str("%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
         content = "\n".join(result)
-        save(filename, content)
+        return content
 
-    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def get_ps1_contents(self, generate_deactivate=False, pathsep=os.pathsep):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -206,9 +206,10 @@ class Environment:
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
-        save(filename, content)
+        return content
 
-    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep, win_shell=None):
+    def get_sh_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep,
+                        subsystem=None):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -230,8 +231,6 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            if win_shell:
-                subsystem = conanfile.conf["tools.win.shell:subsystem"]
             value = varvalues.get_str("${name}", pathsep, subsystem=subsystem)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
@@ -239,7 +238,7 @@ class Environment:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
-        save(filename, content)
+        return content
 
     def compose(self, other):
         """
@@ -367,14 +366,18 @@ class ProfileEnvironment:
         return result
 
 
-def save_script(conanfile, env, name, auto_activate, win_shell=False):
+def save_script(conanfile, env, name, auto_activate=True, win_shell=False):
     # FIXME: using platform is not ideal but settings might be incomplete
     if platform.system() == "Windows" and not win_shell:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
-        env.save_bat(path)
+        contents = env.get_bat_contents(path)
     else:
+        subsystem = conanfile.conf["tools.win.shell:subsystem"] \
+            if win_shell and platform.system() == "Windows" else None
         path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
-        env.save_sh(path, win_shell=win_shell)
+        contents = env.get_sh_contents(path, subsystem=subsystem)
+
+    save(path, contents)
 
     if auto_activate:
         register_environment_script(conanfile, path)

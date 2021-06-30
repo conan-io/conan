@@ -5,6 +5,7 @@ import subprocess
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
+from conan.tools.files import save
 from conans.errors import ConanException
 
 MSYS2 = 'msys2'
@@ -40,7 +41,8 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None)
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
-        msys2_mode_env.save_bat(path)
+        contents = msys2_mode_env.get_bat_contents(path)
+        save(conanfile, path, contents)
         env_win.append(path)
 
     # Needed to change to that dir inside the bash shell
@@ -83,7 +85,6 @@ def escape_windows_cmd(command):
     """
     quoted_arg = subprocess.list2cmdline([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
-
 
 
 def unix_path(path, subsystem):

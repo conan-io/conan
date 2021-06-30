@@ -2,13 +2,11 @@ import os
 import textwrap
 from xml.dom import minidom
 
-
 from conan.tools.env.environment import register_environment_script
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
 from conans.client.tools import intel_compilervars_command
 from conans.errors import ConanException
 from conans.util.files import save, load
-
 
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
@@ -89,7 +87,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        VCvars(self._conanfile).generate()
+        write_conanvcvars(self._conanfile)
 
     @staticmethod
     def _msvs_toolset(settings):

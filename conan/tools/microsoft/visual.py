@@ -1,5 +1,4 @@
 import os
-import textwrap
 
 from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException

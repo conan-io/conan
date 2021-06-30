@@ -2,12 +2,16 @@
     This is a helper class which offers a lot of useful methods and attributes
 """
 # FIXME: only for tools.gnu? perhaps it should be a global module
+from sys import platform
+
+from conan.tools.microsoft import unix_path
 
 
 class GnuDepsFlags(object):
 
-    def __init__(self, conanfile, cpp_info):
+    def __init__(self, conanfile, cpp_info, win_shell=False):
         self._conanfile = conanfile
+        self._win_shell = win_shell
 
         # From cppinfo, calculated flags
         self.include_paths = self._format_include_paths(cpp_info.includedirs)
@@ -112,6 +116,10 @@ class GnuDepsFlags(object):
         return result
 
     def _adjust_path(self, path):
+        if self._win_shell and platform.system() == "Windows":
+            subsystem = self._conanfile.conf["tools.win.shell:subsystem"]
+            return unix_path(path, subsystem=subsystem)
+
         if self._base_compiler == 'Visual Studio':
             path = path.replace('/', '\\')
         else:

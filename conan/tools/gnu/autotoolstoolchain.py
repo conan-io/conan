@@ -13,8 +13,9 @@ from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, win_shell=False):
         self._conanfile = conanfile
+        self._win_shell = _win_shell
         build_type = self._conanfile.settings.get_safe("build_type")
 
         self.configure_args = []
@@ -139,9 +140,9 @@ class AutotoolsToolchain:
         env.append("LDFLAGS", self.ldflags)
         return env
 
-    def generate(self, env=None, win_shell=False, auto_activate=True):
+    def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        save_script(self._conanfile, env, "conanautotoolstoolchain", win_shell=win_shell,
+        save_script(self._conanfile, env, "conanautotoolstoolchain", win_shell=self._win_shell,
                     auto_activate=auto_activate)
         self.generate_args()
 
