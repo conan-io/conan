@@ -15,7 +15,7 @@ from conans.tools import args_to_string
 class AutotoolsToolchain:
     def __init__(self, conanfile, win_shell=False):
         self._conanfile = conanfile
-        self._win_shell = _win_shell
+        self._win_shell = win_shell
         build_type = self._conanfile.settings.get_safe("build_type")
 
         self.configure_args = []
