@@ -148,6 +148,7 @@ class InfoTest(unittest.TestCase):
         self.assertNotIn("virtual", self.client.out)
         self.assertNotIn("Required", self.client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit")
     def test_reuse(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
