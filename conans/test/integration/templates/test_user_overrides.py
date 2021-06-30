@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.assets.templates import SEARCH_TABLE_HTML, INFO_GRAPH_DOT, INFO_GRAPH_HTML
 from conans.client.tools import save
 from conans.model.ref import ConanFileReference
@@ -21,6 +23,7 @@ class UserOverridesTemplatesTestCase(unittest.TestCase):
         cls.t.run("create app.py {}@ -s os=Windows".format(cls.app_ref))
         cls.t.run("create app.py {}@ -s os=Linux".format(cls.app_ref))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_table_html(self):
         table_template_path = os.path.join(self.t.cache_folder, 'templates', SEARCH_TABLE_HTML)
         save(table_template_path, content='{{ base_template_path }}')

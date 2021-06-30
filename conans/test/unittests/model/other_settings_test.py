@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.settings import bad_value_msg, undefined_value
@@ -65,6 +67,7 @@ cppstd=11""", client.out)
                       "'c2f0c2641722089d9b11cd646c47d239af044b5a' created",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_custom_settings(self):
         settings = textwrap.dedent("""\
             os:

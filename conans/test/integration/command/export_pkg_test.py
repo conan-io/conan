@@ -122,6 +122,7 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile

@@ -29,52 +29,55 @@ class SearchRecorderTest(unittest.TestCase):
                                          "fakefake_settings2", "fakefake_requires2")
         info = self.search_recorder.get_info()
         expected_result = {
-                               "error": False,
-                               "results": [
-                                   {
-                                        "remote": "remote1",
-                                        "items": [
-                                            {
-                                                "recipe": {
-                                                    "id": "fake/0.1@user/channel"
-                                                },
-                                                "packages": [
-                                                    {
-                                                        "id": "fake_package_id",
-                                                        "options": "fake_options",
-                                                        "settings": "fake_settings",
-                                                        "requires": "fake_requires"
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                   },
-                                   {
-                                       "remote": "remote2",
-                                       "items": [
-                                           {
-                                               "recipe": {
-                                                   "id": "fakefake/0.1@user/channel"
-                                               },
-                                               "packages": [
-                                                   {
-                                                       "id": "fakefake_package_id1",
-                                                       "options": "fakefake_options1",
-                                                       "settings": "fakefake_settings1",
-                                                       "requires": "fakefake_requires1"
-                                                   },
-                                                   {
-                                                       "id": "fakefake_package_id2",
-                                                       "options": "fakefake_options2",
-                                                       "settings": "fakefake_settings2",
-                                                       "requires": "fakefake_requires2"
-                                                   }
-                                               ]
-                                           }
-                                       ]
-                                   }
-                               ]
+            "error": False,
+            "results": [
+                {
+                     "remote": "remote1",
+                     "items": [
+                         {
+                             "recipe": {
+                                 "name": "fake",
+                                 "id": "fake/0.1@user/channel"
+                             },
+                             "packages": [
+                                 {
+                                     "id": "fake_package_id",
+                                     "options": "fake_options",
+                                     "settings": "fake_settings",
+                                     "requires": "fake_requires"
+                                 }
+                             ]
+                         }
+                     ]
+                },
+                {
+                    "remote": "remote2",
+                    "items": [
+                        {
+                            "recipe": {
+                                "name": "fakefake",
+                                "id": "fakefake/0.1@user/channel"
+                            },
+                            "packages": [
+                                {
+                                    "id": "fakefake_package_id1",
+                                    "options": "fakefake_options1",
+                                    "settings": "fakefake_settings1",
+                                    "requires": "fakefake_requires1"
+                                },
+                                {
+                                    "id": "fakefake_package_id2",
+                                    "options": "fakefake_options2",
+                                    "settings": "fakefake_settings2",
+                                    "requires": "fakefake_requires2"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
+
         self.assertEqual(expected_result, info)
 
     def test_unordered(self):
@@ -99,6 +102,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake1",
                                                 "id": "fake1/0.1@user/channel"
                                             },
                                             "packages": [
@@ -117,6 +121,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake2",
                                                 "id": "fake2/0.1@user/channel"
                                             },
                                             "packages": [
@@ -141,6 +146,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake3",
                                                 "id": "fake3/0.1@user/channel"
                                             },
                                             "packages": []
@@ -164,6 +170,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake1",
                                                 "id": "fake1/0.1@user/channel"
                                             }
                                         }
@@ -174,6 +181,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake2",
                                                 "id": "fake2/0.1@user/channel"
                                             }
                                         }
@@ -184,6 +192,7 @@ class SearchRecorderTest(unittest.TestCase):
                                     "items": [
                                         {
                                             "recipe": {
+                                                "name": "fake3",
                                                 "id": "fake3/0.1@user/channel"
                                             }
                                         }

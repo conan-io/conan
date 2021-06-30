@@ -3,7 +3,7 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
@@ -84,6 +84,7 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source",
                          client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -127,6 +128,7 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_name_command_line(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -196,6 +198,7 @@ class Pkg(ConanFile):
         client.run("create . Hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -208,6 +211,7 @@ class Pkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder(self):
         client = TestClient()
         client.save({"subfolder/conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -216,6 +220,7 @@ class Pkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder_with_different_name(self):
         # Now with a different name
         client = TestClient()

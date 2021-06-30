@@ -106,6 +106,7 @@ def test_create_test_package_with_layout(conanfile):
     assert "hey! testing" in client.out
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_cache_in_layout(conanfile):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed

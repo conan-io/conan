@@ -82,6 +82,7 @@ class PathLengthLimitTest(unittest.TestCase):
             client.run('remove "*" -f')
             self.assertEqual(len(os.listdir(short_home)), 0)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload(self):
         test_server = TestServer([],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
@@ -135,6 +136,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_folder))
         self.assertEqual(load(os.path.join(package_folder + "/file0.txt")), "file0 content")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_basic(self):
         client = TestClient()
         files = {"conanfile.py": base}
@@ -171,6 +173,7 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertFalse(os.path.exists(link_build))
             self.assertFalse(os.path.exists(link_package))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_basic_disabled(self):
         client = TestClient()
         conanfile = GenConanfile().with_short_paths(True)

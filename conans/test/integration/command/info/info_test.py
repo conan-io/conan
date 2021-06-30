@@ -4,6 +4,7 @@ import textwrap
 import unittest
 from datetime import datetime
 
+import pytest
 
 from conans import __version__ as client_version
 
@@ -290,6 +291,7 @@ class InfoTest2(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_name("Nothing").with_version("0.1")})
         client.run("export . user/testing")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_failed_info(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_require("Pkg/1.0.x@user/testing")})

@@ -2,6 +2,8 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference
 from conans.test.utils.tools import TestClient
 
@@ -35,6 +37,7 @@ class CreateEditablePackageTest(unittest.TestCase):
         t.run('editable add . {}'.format(ref))
         self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_editable_list_search(self):
         ref = ConanFileReference.loads('lib/version@user/name')
         t = TestClient()
