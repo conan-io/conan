@@ -62,9 +62,11 @@ class ConanProxy(object):
         check_updates = check_updates or update
 
         if check_updates:
+
             remote, latest_rrev, remote_time = self._get_latest_rrev_from_remotes(ref.copy_clear_rev(),
                                                                                   remotes.values())
             if latest_rrev:
+                remotes.select(remote.name)
                 # check if we already have the latest in local cache
                 if latest_rrev.revision != ref.revision:
                     # TODO: check the timezone
@@ -80,14 +82,22 @@ class ConanProxy(object):
                 else:
                     status = RECIPE_INCACHE
                 return conanfile_path, status, selected_remote, ref
+            else:
+                status = RECIPE_NOT_IN_REMOTE
+                return conanfile_path, status, selected_remote, ref
         else:
             status = RECIPE_INCACHE
             return conanfile_path, status, cur_remote, ref
 
     def _get_latest_rrev_from_remotes(self, reference, remotes):
         remotes_results = []
+        output = ScopedOutput(str(reference), self._out)
+
+        output.info(f"Checking all remotes: ({', '.join([remote.name for remote in remotes])}) "
+                    f"to get the latest recipe revision")
         for remote in remotes:
             try:
+                output.info(f"Checking remote: {remote.name}")
                 remote_rrevs = self._remote_manager.get_recipe_revisions(reference, remote)
                 if len(remote_rrevs) > 0:
                     remotes_results.append({'remote': remote,
