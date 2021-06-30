@@ -32,7 +32,7 @@ class Autotools(object):
 
         cmd = "{}/configure {}".format(self._conanfile.source_folder, self._configure_args)
         self._conanfile.output.info("Calling:\n > %s" % cmd)
-        self._conanfile.run(cmd,  new_win_bash=self._win_shell)
+        self._conanfile.run(cmd, win_shell=self._win_shell)
 
     def make(self, target=None):
         make_program = self._conanfile.conf["tools.gnu:make_program"]

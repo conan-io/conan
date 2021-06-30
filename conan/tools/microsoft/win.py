@@ -16,10 +16,13 @@ SFU = 'sfu'  # Windows Services for UNIX
 
 def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None):
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
-    env = [env] if not isinstance(env, list) and env is not None else env
-
-    env_shell = [f for f in conanfile.environment_scripts if f.lower().endswith(".sh")]
-    env_win = env or [f for f in conanfile.environment_scripts if f.lower().endswith(".bat")]
+    if env:
+        # Passing env invalidates the conanfile.environment_scripts
+        env_win = [env] if not isinstance(env, list) else env
+        env_shell = []
+    else:
+        env_shell = [f for f in conanfile.environment_scripts if f.lower().endswith(".sh")]
+        env_win = env or [f for f in conanfile.environment_scripts if f.lower().endswith(".bat")]
 
     subsystem = subsystem or conanfile.conf["tools.win.shell:subsystem"]
     shell_path = conanfile.conf["tools.win.shell:path"]
@@ -45,6 +48,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, subsystem=None, env=None)
     if env_win:
         wrapped_shell = environment_wrap_command(env_win, shell_path, subsystem=subsystem,
                                                  cwd=conanfile.generators_folder)
+
     cwd = cwd or os.getcwd()
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
