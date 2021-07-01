@@ -268,6 +268,8 @@ class RemoteManager(object):
 
     def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))
+        if remote.disabled:
+            raise ConanException("Remote '%s' is disabled" % remote.name)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:
