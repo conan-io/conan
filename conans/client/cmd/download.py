@@ -14,7 +14,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     try:
-        ref = remote_manager.get_recipe(ref, remote)
+        ref, ref_time = remote_manager.get_recipe(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
 

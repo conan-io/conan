@@ -14,23 +14,16 @@ def test_update_flows():
     # creating a new one
     # - if we want to install the revision and create it with a new date use --update-date
     # (name to be revisited)
-
-    server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-    server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-    server3 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
     servers = OrderedDict()
-    servers["server1"] = server1
-    servers["server2"] = server2
-    servers["server3"] = server3
-    client = TestClient(servers=servers)
-    client.run("user lasote -p mypass -r server1")
-    client.run("user lasote -p mypass -r server2")
-    client.run("user lasote -p mypass -r server3")
+    for index in range(3):
+        servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
 
+    client = TestClient(servers=servers)
     client2 = TestClient(servers=servers)
-    client2.run("user lasote -p mypass -r server1")
-    client2.run("user lasote -p mypass -r server2")
-    client2.run("user lasote -p mypass -r server3")
+
+    for index in range(3):
+        client.run(f"user lasote -p mypass -r server{index + 1}")
+        client2.run(f"user lasote -p mypass -r server{index + 1}")
 
     # create a new rrev, client2 has an older revision than all the servers
     client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_provides("somelib/1.0.0")})

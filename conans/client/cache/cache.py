@@ -62,10 +62,10 @@ class ClientCache(object):
         self._data_cache.closedb()
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_build_id=None):
+                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
         new_ref = ConanReference(new_ref) if new_ref else None
         return self._data_cache.update_reference(ConanReference(old_ref), new_ref, new_path,
-                                                 new_remote, new_build_id)
+                                                 new_remote, new_timestamp, new_build_id)
 
     def dump(self):
         out = StringIO()
@@ -94,11 +94,20 @@ class ClientCache(object):
         layout.remove()
         self._data_cache.remove(ConanReference(layout.reference))
 
+    def get_remote(self, ref):
+        return self._data_cache.get_remote(ConanReference(ref))
+
     def set_remote(self, ref, remote):
         return self._data_cache.set_remote(ConanReference(ref), remote)
 
-    def get_remote(self, ref):
-        return self._data_cache.get_remote(ConanReference(ref))
+    def get_timestamp(self, ref):
+        return self._data_cache.get_timestamp(ConanReference(ref))
+
+    def set_timestamp(self, ref, timestamp):
+        return self._data_cache.update_reference(ref, new_timestamp=timestamp)
+
+    def set_timestamp(self, ref):
+        return self._data_cache.get_timestamp(ConanReference(ref))
 
     def all_refs(self):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
@@ -133,9 +142,6 @@ class ClientCache(object):
     def get_latest_prev(self, ref):
         prevs = self.get_package_revisions(ref, True)
         return prevs[0] if prevs else None
-
-    def get_timestamp(self, ref):
-        return self._data_cache.get_timestamp(ConanReference(ref))
 
     @property
     def store(self):

@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import uuid
 from io import StringIO
 
@@ -107,13 +108,13 @@ class DataCache:
         new_path = self._get_or_create_reference_path(new_ref)
 
         try:
-            self._db.update_reference(old_ref, new_ref, new_path=new_path)
+            self._db.update_reference(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
         except ReferencesDbTable.ReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self._db.delete_ref_by_path(old_path)
-            # TODO: cache2.0 should we update the timestamp here?
-            self._db.update_reference(new_ref)
+            # TODO: cache2.0 check this, we update the timestamp here
+            self._db.update_reference(new_ref, new_timestamp=time.time())
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
         #  we are putting the exported files for the reference, but maybe we could
@@ -132,7 +133,7 @@ class DataCache:
         old_path = self._db.try_get_reference_directory(old_pref)
         new_path = self._get_or_create_reference_path(new_pref)
         try:
-            self._db.update_reference(old_pref, new_pref, new_path=new_path)
+            self._db.update_reference(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
         except ReferencesDbTable.ReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
@@ -148,15 +149,16 @@ class DataCache:
             else:
                 raise ConanException(f"Cache folder: {self._full_path(new_path)} associated to "
                                      f"reference: {new_pref.full_reference} should exist.")
-            self._db.update_reference(new_pref)
+            # TODO: cache2.0 check this, we update the timestamp here
+            self._db.update_reference(new_pref, new_timestamp=time.time())
 
         shutil.move(self._full_path(old_path), self._full_path(new_path))
 
         return new_path
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_build_id=None):
-        self._db.update_reference(old_ref, new_ref, new_path, new_remote, new_build_id)
+                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
+        self._db.update_reference(old_ref, new_ref, new_path, new_remote, new_timestamp, new_build_id)
 
     def list_references(self, only_latest_rrev=False):
         """ Returns an iterator to all the references inside cache. The argument 'only_latest_rrev'

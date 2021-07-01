@@ -34,10 +34,11 @@ class CacheDatabase:
             self._references.dump(conn, output)
 
     def update_reference(self, old_ref: ConanReference, new_ref: ConanReference = None,
-                         new_path=None, new_remote=None, new_build_id=None):
+                         new_path=None, new_remote=None, new_timestamp=None, new_build_id=None):
         with self.connection() as conn:
             try:
-                self._references.update(conn, old_ref, new_ref, new_path, new_remote, new_build_id)
+                self._references.update(conn, old_ref, new_ref, new_path, new_remote, new_timestamp,
+                                        new_build_id)
             except sqlite3.IntegrityError:
                 raise ReferencesDbTable.ReferenceAlreadyExist(
                     f"Reference '{new_ref.full_reference}' already exists")

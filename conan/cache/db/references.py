@@ -127,20 +127,19 @@ class ReferencesDbTable(BaseDbTable):
 
     def set_remote(self, conn, ref: ConanReference, remote):
         where_clause = self._where_clause(ref)
-        mew_remote = f'"{remote}"' if remote else 'NULL'
+        new_remote = f'"{remote}"' if remote else 'NULL'
         query = f"UPDATE {self.table_name} " \
-                f"SET {self.columns.remote}={mew_remote} " \
+                f"SET {self.columns.remote}={new_remote} " \
                 f"WHERE {where_clause};"
         r = conn.execute(query)
         return r.lastrowid
 
     def update(self, conn, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
-               new_remote=None, new_build_id=None):
+               new_remote=None, new_timestamp=None, new_build_id=None):
         if not new_ref:
             new_ref = old_ref
-        timestamp = time.time()
         where_clause = self._where_clause(old_ref)
-        set_clause = self._set_clause(new_ref, path=new_path, timestamp=timestamp,
+        set_clause = self._set_clause(new_ref, path=new_path, timestamp=new_timestamp,
                                       remote=new_remote, build_id=new_build_id)
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \

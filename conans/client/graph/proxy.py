@@ -6,9 +6,8 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
                                        RECIPE_UPDATED, RECIPE_EDITABLE)
 from conans.client.output import ScopedOutput
-from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException
-from conans.util.dates import from_iso8601_to_datetime
+from conans.util.dates import from_iso8601_to_datetime, from_timestamp_to_iso8601
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -47,7 +46,7 @@ class ConanProxy(object):
 
         # NOT in disk, must be retrieved from remotes
         if not ref:
-            remote, new_ref = self._download_recipe(reference, output, remotes, remotes.selected)
+            remote, new_ref, new_ref_time = self._download_recipe(reference, output, remotes, remotes.selected)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -74,7 +73,7 @@ class ConanProxy(object):
                     if cache_time < remote_time:
                         # the remote one is newer
                         output.info("Retrieving from remote '%s'..." % remote.name)
-                        remote, new_ref = self._download_recipe(latest_rrev, output, remotes, remote)
+                        remote, new_ref, new_ref_time = self._download_recipe(latest_rrev, output, remotes, remote)
                         status = RECIPE_UPDATED
                         return conanfile_path, status, remote, new_ref
                     else:
@@ -119,12 +118,12 @@ class ConanProxy(object):
     # TODO: refactor this
     def _download_recipe(self, ref, output, remotes, remote):
 
-        def _retrieve_from_remote(the_remote):
+        def _retrieve_from_remote(the_remote, reference):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
-            _ref = self._remote_manager.get_recipe(ref, the_remote)
+            _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
             output.info("Downloaded recipe revision %s" % _ref.revision)
-            return _ref
+            return _ref, _ref_time
 
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
@@ -138,8 +137,9 @@ class ConanProxy(object):
 
         if remote:
             try:
-                new_ref = _retrieve_from_remote(remote)
-                return remote, new_ref
+                new_ref, new_ref_time = _retrieve_from_remote(remote, ref)
+                # TODO: check if we have to return the time here as well
+                return remote, new_ref, None
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
                 raise NotFoundException(msg)
@@ -157,6 +157,5 @@ class ConanProxy(object):
             msg = "Unable to find '%s' in remotes" % ref.full_str()
             raise NotFoundException(msg)
 
-        ref = latest_rrev
-        new_ref = _retrieve_from_remote(remote)
-        return remote, new_ref
+        new_ref, new_ref_time = _retrieve_from_remote(remote, latest_rrev)
+        return remote, new_ref, new_ref_time
