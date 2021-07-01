@@ -196,15 +196,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ref = ConanFileReference(name, version, user, channel, revision, validate=validate)
         return ref
 
-    @staticmethod
-    def load_dir_repr(dir_repr):
-        name, version, user, channel = dir_repr.split("/")
-        if user == "_":
-            user = None
-        if channel == "_":
-            channel = None
-        return ConanFileReference(name, version, user, channel)
-
     def __str__(self):
         if self.name is None and self.version is None:
             return ""
