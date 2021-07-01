@@ -113,7 +113,7 @@ class ClientCache(object):
                                    validate=False) for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref: ConanFileReference) -> List[PackageReference]:
+    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
                                    validate=False) for pref in
@@ -138,7 +138,7 @@ class ClientCache(object):
         """Get the latest PackageLayout given a file reference"""
         latest_rrev = self.get_latest_rrev(ref)
         # Given the latest recipe revision we can get the latest package ID and
-        # get the corresponding PackageLayout
+        # the corresponding PackageLayout
         all_package_ids = self.get_package_ids(latest_rrev)
         latest_prev = self.get_latest_prev(all_package_ids[0])
         pkg_layout = self.get_pkg_layout(latest_prev)

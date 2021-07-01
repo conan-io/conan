@@ -71,7 +71,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.package_layout(ref).recipe_manifest()
+                manifest = self._cache.get_ref_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 

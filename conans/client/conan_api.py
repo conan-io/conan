@@ -1051,7 +1051,7 @@ class ConanAPIV1(object):
     def remove_system_reqs(self, reference):
         try:
             ref = ConanFileReference.loads(reference)
-            self.app.cache.package_layout(ref).remove_system_reqs()
+            self.app.cache.get_pkg_layout(ref).remove_system_reqs()
             self.app.out.info(
                 "Cache system_reqs from %s has been removed" % repr(ref))
         except Exception as error:
