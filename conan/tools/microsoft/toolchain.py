@@ -2,6 +2,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from conan.tools.env.environment import save_script, register_environment_script
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
 from conans.client.tools import intel_compilervars_command
 from conans.errors import ConanException
@@ -33,7 +34,9 @@ def write_conanvcvars(conanfile):
             @echo off
             {}
             """.format(cvars))
-        save(os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE), content)
+        path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
+        save(path, content)
+        register_environment_script(conanfile, path)
 
 
 def vs_ide_version(conanfile):
