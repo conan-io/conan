@@ -99,7 +99,7 @@ class Conan(ConanFile):
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py --build=missing")
         pref = PackageReference.loads("Hello/0.1@lasote/testing:%s" % NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref).package(pref).replace("\\", "/")
+        package_folder = client.cache.get_latest_pkg_layout(pref).package().replace("\\", "/")
         self.assertIn("my_conanfile.py: INCLUDE PATH: %s/include" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO ROOT PATH: %s" % package_folder, client.out)
         self.assertIn("my_conanfile.py: HELLO INCLUDE PATHS: %s/include"

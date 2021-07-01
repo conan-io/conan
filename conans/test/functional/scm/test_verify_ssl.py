@@ -7,7 +7,6 @@ import pytest
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
-from conans.paths import DATA_YML
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -73,7 +72,7 @@ class GitVerifySSLTestCase(unittest.TestCase):
         # Check the verify_ssl value is stored and propagated with the proper value
         self.client.run("config set general.scm_to_conandata=1")
         self.client.run("export . {}".format(self.ref))
-        content = load(os.path.join(self.client.cache.package_layout(self.ref).export(), DATA_YML))
+        content = load(self.client.cache.get_latest_ref_layout(self.ref).conandata())
         if self.verify_ssl in [None, True]:
             self.assertNotIn('verify_ssl', content)
         elif self.verify_ssl in ['None']:
