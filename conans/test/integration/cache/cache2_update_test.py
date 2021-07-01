@@ -3,20 +3,21 @@ from collections import OrderedDict
 
 from mock import patch
 
+from conans.model.ref import ConanFileReference
 from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
 def test_update_flows():
-
     # - when a revision is installed from a remote it takes the date from the remote, not
     # creating a new one
     # - if we want to install the revision and create it with a new date use --update-date
     # (name to be revisited)
     servers = OrderedDict()
     for index in range(3):
-        servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
+        servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                                   users={"lasote": "mypass"})
 
     client = TestClient(servers=servers)
     client2 = TestClient(servers=servers)
@@ -25,33 +26,37 @@ def test_update_flows():
         client.run(f"user lasote -p mypass -r server{index + 1}")
         client2.run(f"user lasote -p mypass -r server{index + 1}")
 
-    # create a new rrev, client2 has an older revision than all the servers
-    client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_provides("somelib/1.0.0")})
+    # create a new rrev, client2 will have an older revision than all the servers
+    client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 0")})
     client2.run("create .")
 
     # upload the same revision, will have different timestamps on each server
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0")})
     client.run("remote list")
     client.run("create .")
-    # same revision with different datest
-    # TODO: different revision with different dates
-    the_time = time.time()
+
+    # all these revisions uploaded to the servers will be older than the ones we create in local
+    the_time = time.time() - 1000
 
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
-    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_provides("new_revision/1.0.0")})
+    # upload other revision
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 1")})
     client.run("create .")
-
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+
+    # TESTING WITHOUT SPECIFIC REVISIONS AND WITH NO REMOTES: conan install liba/1.0.0
+    # - In conan 2.X no remote means search in all remotes
 
     # client2 already has a revision for this recipe, don't install anything
     client2.run("install liba/1.0.0@")
+    assert "liba/1.0.0 from local cache - Cache" in client2.out
     assert "liba/1.0.0: Already installed!" in client2.out
 
     client.run("remove * -f")
@@ -72,18 +77,67 @@ def test_update_flows():
     assert "liba/1.0.0 from 'server3' - Cache" in client.out
     assert "liba/1.0.0: Already installed!" in client.out
 
+    client.run("remove * -f")
+
+    # we create a newer revision in client
+    # we already have a revision for liba/1.0.0 so don't install anything
+    # --> result: don't install anything
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 2")})
+    client.run("create .")
+    client.run("install liba/1.0.0@")
+    assert "liba/1.0.0: Already installed!" in client.out
+
+    # we already have a newer revision in the client
+    # we will check all the remotes, find the latest revision
+    # this revision will be oldest than the one in the cache
+    # --> result: don't install anything
+    client.run("install liba/1.0.0@ --update")
+    assert "liba/1.0.0 from local cache - Newer" in client.out
+    assert "liba/1.0.0: Already installed!" in client.out
+
+    # create newer revisions in servers so that the ones from the clients are older
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new rev in servers")})
+    client.run("create .")
+    the_time = time.time()
+    for index in range(3):
+        the_time = the_time + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+
     # now check for newer references with --update for client2 that has an older revision
     # when we use --update: first check all remotes (no -r argument) get latest revision
     # check if it is in cache, if it is --> stop, if it is not --> check date and install
     # --> result: install rev from server3
     client2.run("install liba/1.0.0@ --update")
-    assert "liba/1.0.0: Downloaded recipe revision 70d7d7aab6c02d9c44d7418a7a33d120" in client2.out
+    assert "liba/1.0.0 from 'server3' - Updated" in client2.out
+    assert "liba/1.0.0: Downloaded recipe revision 358f80db50845bf1ffb32f4a7ab562f7" in client2.out
     assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
            " from remote 'server3'" in client2.out
 
-    # note: we have to consider two cases: the same revision has different dates and also
-    # we have different revisions with different dates, if we check server1 and has rev1
-    # should we check if theres a newer?
+    # TESTING WITH SPECIFIC REVISIONS AND WITH NO REMOTES: conan install liba/1.0.0#rrev
+    # - In conan 2.X no remote means search in all remotes
+
+    # check one revision we already have will not be installed
+    # we search for that revision in the cache, we found it
+    # --> result: don't install that
+    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    client.run(f"install {latest_rrev}@#{latest_rrev.revision}")
+    assert "liba/1.0.0 from 'server1' - Cache" in client.out
+    assert "liba/1.0.0: Already installed!" in client.out
+
+    client.run("remove * -f")
+    # have a newer different revision in the cache, but ask for an specific revision that is in
+    # the servers, will try to find that revision and install it from the first server found
+    # --> result: install new revision asked
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("newer rev cache")})
+    client.run("create .")
+    client.run(f"install {latest_rrev}@#{latest_rrev.revision}")
+    assert "liba/1.0.0: Not found in local cache, looking in remotes..." in client.out
+    assert "liba/1.0.0: Checking all remotes: (server1, server2, server3)" in client.out
+    assert "liba/1.0.0: Checking remote: server1" in client.out
+    assert "liba/1.0.0: Checking remote: server2" not in client.out
+    assert "liba/1.0.0: Checking remote: server3" not in client.out
+    assert "liba/1.0.0: Trying with 'server1'..." in client.out
 
 
 def test_update_flows_version_ranges():
