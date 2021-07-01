@@ -56,7 +56,7 @@ class TestConan(ConanFile):
         self.assertIn("Pkg/0.1@user/testing package(): Packaged 1 '.md' file: LICENSE.md",
                       client.out)
         pref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"), package_id)
-        pkg_folder = client.cache.get_latest_pkg_layout(ref).package()
+        pkg_folder = client.cache.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
         self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))
