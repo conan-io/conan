@@ -159,7 +159,7 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_env("")
+    env = profile_env.get_env(ConanFileMock(), "")
     with environment_append({"MyVar1": "$MyVar1",
                              "MyVar2": "$MyVar2",
                              "MyVar3": "$MyVar3",
@@ -170,7 +170,7 @@ def test_profile():
         assert env.get("MyVar4") == ""
         assert env.get("MyVar5") == ''
 
-        env = profile_env.get_env("mypkg1/1.0")
+        env = profile_env.get_env(ConanFileMock(), "mypkg1/1.0")
         assert env.get("MyVar1") == "MyValue1"
         assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 

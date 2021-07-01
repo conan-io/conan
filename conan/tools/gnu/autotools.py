@@ -39,7 +39,7 @@ class Autotools(object):
     def make(self, target=None):
         make_program = self._conanfile.conf["tools.gnu:make_program"]
         if make_program is None:
-            make_program = "mingw32-make" if use_win_mingw(self._conanfile) else "make"
+            make_program = "mingw32-make" if self._use_win_mingw() else "make"
 
         str_args = self._make_args
         jobs = ""
@@ -52,3 +52,20 @@ class Autotools(object):
         if not self._conanfile.should_install:
             return
         self.make(target="install")
+
+    def _use_win_mingw(self):
+        if hasattr(self._conanfile, 'settings_build'):
+            os_build = self._conanfile.settings_build.get_safe('os')
+        else:
+            os_build = self._conanfile.settings.get_safe("os")
+
+        if os_build == "Windows":
+            compiler = self._conanfile.settings.get_safe("compiler")
+            sub = self._conanfile.settings.get_safe("os.subsystem")
+            if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
+                return False
+            else:
+                if self._conanfile.win_shell:
+                    return False
+                return True
+        return False

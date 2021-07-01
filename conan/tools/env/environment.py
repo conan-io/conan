@@ -249,6 +249,8 @@ class Environment:
             existing = self._values.get(k)
             if existing is None:
                 self._values[k] = v.copy()
+                # FIXME: Ugly
+                self._values[k]._conanfile = self._conanfile
             else:
                 existing.compose(v)
 

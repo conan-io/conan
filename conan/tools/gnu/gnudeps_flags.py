@@ -41,7 +41,7 @@ class GnuDepsFlags(object):
             return []
         if self._base_compiler in self._GCC_LIKE:
             rpath_separator = ","
-            return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
+            return ['-Wl,-rpath%s"%s"' % (rpath_separator, self._adjust_path(x))
                     for x in lib_paths if x]
         return []
 
