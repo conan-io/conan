@@ -41,11 +41,11 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
         raise ConanException("Cannot wrap command with different envs, {} - {}".format(bats, shs))
 
     if bats:
-        command = " && ".join('"{}"'.format(b) for b in bats)
-        return '{} && "{}"'.format(command, cmd)
+        launchers = " && ".join('"{}"'.format(b) for b in bats)
+        return '{} && {}'.format(launchers, cmd)
     elif shs:
-        command = " && ".join('. "{}"'.format(f) for f in shs)
-        return '{} && "{}"'.format(command, cmd)
+        launchers = " && ".join('. "{}"'.format(f) for f in shs)
+        return '{} && {}'.format(launchers, cmd)
     else:
         return cmd
 
@@ -125,7 +125,6 @@ class _EnvValue:
 
 class Environment:
     def __init__(self, conanfile):
-        # TODO: Maybe we need to pass conanfile to get the [conf]
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
         self._conanfile = conanfile
@@ -252,6 +251,7 @@ class Environment:
                 self._values[k] = v.copy()
             else:
                 existing.compose(v)
+
         return self
 
     # Methods to user access to the environment object as a dict
@@ -305,15 +305,22 @@ class ProfileEnvironment:
     def __repr__(self):
         return repr(self._environments)
 
-    def get_env(self, ref):
+    def get_env(self, conanfile, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
-        result = Environment(conanfile=None)
+        result = Environment(conanfile)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
                 result = env.compose(result)
+
+        # FIXME: Ugly
+        # Fill the conanfile
+        result._conanfile = conanfile
+        for envitem in result._values.values():
+            envitem._conanfile = conanfile
+
         return result
 
     def compose(self, other):

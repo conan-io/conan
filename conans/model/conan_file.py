@@ -212,7 +212,7 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):

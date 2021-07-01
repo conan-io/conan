@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
@@ -53,7 +54,8 @@ def client():
             settings = "os"
             def package(self):
                 with chdir(self.package_folder):
-                    echo = "@echo off\necho MYGTEST={}!!".format(self.settings.os)
+                    prefix = "@echo off\n" if self.settings.os == "Windows" else ""
+                    echo = "{}echo MYGTEST={}!!".format(prefix, self.settings.os)
                     save("bin/mygtest.bat", echo)
                     save("bin/mygtest.sh", echo)
                     os.chmod("bin/mygtest.sh", 0o777)
@@ -103,14 +105,14 @@ def test_complete(client):
     client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycmake.{}".format(ext),
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycmake.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCMAKE=Windows!!" in client.out
     assert "MYOPENSSL=Windows!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command("conanrunenv",
+    cmd = environment_wrap_command(ConanFileMock(), "conanrunenv",
                                    "mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                   sep=os.sep),
                                    cwd=client.current_folder)
@@ -206,7 +208,7 @@ def test_profile_buildenv():
     client.run("install . -pr=myprofile")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command("conanbuildenv", "mycompiler.{}".format(ext),
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuildenv", "mycompiler.{}".format(ext),
                                    cwd=client.current_folder)
     client.run_command(cmd)
     assert "MYCOMPILER!!" in client.out
