@@ -205,9 +205,8 @@ def test_auto_can_be_automated():
     def _check(client):
         # Check exported files
         ref = ConanFileReference.loads("pkg/1.0")
-        pkg_layout = client.cache.get_latest_pkg_layout(ref)
         ref_layout = client.cache.get_latest_ref_layout(ref)
-        assert load(pkg_layout.conanfile()) == conanfile
+        assert load(ref_layout.conanfile()) == conanfile
         exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         assert conan_data['.conan']['scm'] == {"type": "git",

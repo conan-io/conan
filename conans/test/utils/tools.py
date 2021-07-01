@@ -661,7 +661,7 @@ class TestClient(object):
 
         if not isinstance(reference, ConanFileReference):
             reference = ConanFileReference.loads(reference)
-        layout = self.cache.get_ref_layout(reference)
+        layout = self.cache.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
         if ".conan" in data:
