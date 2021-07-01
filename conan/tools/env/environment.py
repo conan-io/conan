@@ -13,17 +13,18 @@ class _EnvVarPlaceHolder:
     pass
 
 
-def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
+def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
     from conan.tools.microsoft.win import unix_path
-    assert filename
-    filenames = [filename] if not isinstance(filename, list) else filename
+    assert env_filenames
+    filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs = [], []
 
+    cwd = cwd or os.getcwd()
+
     for f in filenames:
-        f = f if os.path.isabs(f) else os.path.join(cwd, f) if cwd else f
+        f = f if os.path.isabs(f) else os.path.join(cwd, f)
         if f.lower().endswith(".sh"):
-            if subsystem:
-                f = unix_path(f, subsystem)
+            f = unix_path(conanfile, f)
             shs.append(f)
         elif f.lower().endswith(".bat"):
             bats.append(f)
@@ -33,8 +34,7 @@ def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
             if os.path.isfile(path_bat):
                 bats.append(path_bat)
             elif os.path.isfile(path_sh):
-                if subsystem:
-                    path_sh = unix_path(path_sh, subsystem)
+                path_sh = unix_path(conanfile, path_sh)
                 shs.append(path_sh)
 
     if bats and shs:
@@ -42,25 +42,25 @@ def environment_wrap_command(filename, cmd, cwd=None, subsystem=None):
 
     if bats:
         command = " && ".join('"{}"'.format(b) for b in bats)
-        return "{} && {}".format(command, cmd)
+        return '{} && "{}"'.format(command, cmd)
     elif shs:
-        # FIXME: This is tricky, use always absolute paths?
-        curdir = "./" if cwd is None and subsystem is None else ""
-        command = " && ".join('. "{}{}"'.format(curdir, f) for f in shs)
-        return "{} && {}".format(command, cmd)
+        command = " && ".join('. "{}"'.format(f) for f in shs)
+        return '{} && "{}"'.format(command, cmd)
     else:
         return cmd
 
 
 class _EnvValue:
-    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
+    def __init__(self, conanfile, name, value=_EnvVarPlaceHolder, separator=" ",
+                 path=False):
+        self._conanfile = conanfile
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
 
     def copy(self):
-        return _EnvValue(self._name, self._values, self._sep, self._path)
+        return _EnvValue(self._conanfile, self._name, self._values, self._sep, self._path)
 
     @property
     def is_path(self):
@@ -108,15 +108,14 @@ class _EnvValue:
                 if placeholder:
                     values.append(placeholder.format(name=self._name))
             else:
-                conanfile.conf["tools.win.shell:subsystem"]
-                if subsystem and self._path:
+                if self._path:
                     from conan.tools.microsoft.win import unix_path
-                    v = unix_path(v, subsystem=subsystem)
+                    v = unix_path(self._conanfile, v)
                 values.append(v)
         if self._path:
-            if subsystem:
-                pathsep = ":"
+            pathsep = ":" if self._conanfile.win_shell else pathsep
             return pathsep.join(values)
+
         return self._sep.join(values)
 
     def get_value(self, pathsep=os.pathsep):
@@ -125,10 +124,11 @@ class _EnvValue:
 
 
 class Environment:
-    def __init__(self):
+    def __init__(self, conanfile):
         # TODO: Maybe we need to pass conanfile to get the [conf]
         # It being ordered allows for Windows case-insensitive composition
         self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._conanfile = conanfile
 
     def __bool__(self):
         return bool(self._values)
@@ -139,28 +139,28 @@ class Environment:
         return repr(self._values)
 
     def define(self, name, value, separator=" "):
-        self._values[name] = _EnvValue(name, value, separator, path=False)
+        self._values[name] = _EnvValue(self._conanfile, name, value, separator, path=False)
 
     def define_path(self, name, value):
-        self._values[name] = _EnvValue(name, value, path=True)
+        self._values[name] = _EnvValue(self._conanfile, name, value, path=True)
 
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
         """
-        self._values[name] = _EnvValue(name, None)
+        self._values[name] = _EnvValue(self._conanfile, name, None)
 
     def append(self, name, value, separator=None):
-        self._values.setdefault(name, _EnvValue(name)).append(value, separator)
+        self._values.setdefault(name, _EnvValue(self._conanfile, name)).append(value, separator)
 
     def append_path(self, name, value):
-        self._values.setdefault(name, _EnvValue(name, path=True)).append(value)
+        self._values.setdefault(name, _EnvValue(self._conanfile, name, path=True)).append(value)
 
     def prepend(self, name, value, separator=None):
-        self._values.setdefault(name, _EnvValue(name)).prepend(value, separator)
+        self._values.setdefault(name, _EnvValue(self._conanfile, name)).prepend(value, separator)
 
     def prepend_path(self, name, value):
-        self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
+        self._values.setdefault(name, _EnvValue(self._conanfile, name, path=True)).prepend(value)
 
     def get_bat_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
@@ -310,7 +310,7 @@ class ProfileEnvironment:
         it is only called when conanfile.buildenv is called
         the last one found in the profile file has top priority
         """
-        result = Environment()
+        result = Environment(conanfile=None)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
                 result = env.compose(result)
@@ -346,7 +346,7 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
-                env = Environment()
+                env = Environment(conanfile=None)
                 if method == "unset":
                     env.unset(name)
                 else:
@@ -366,9 +366,9 @@ class ProfileEnvironment:
         return result
 
 
-def save_script(conanfile, env, name, auto_activate=True, win_shell=False):
+def save_script(conanfile, env, name, auto_activate=True):
     # FIXME: using platform is not ideal but settings might be incomplete
-    if platform.system() == "Windows" and not win_shell:
+    if platform.system() == "Windows" and not conanfile.win_shell:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
         contents = env.get_bat_contents(path)
     else:

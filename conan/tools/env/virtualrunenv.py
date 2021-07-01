@@ -2,10 +2,10 @@ from conan.tools.env import Environment
 from conan.tools.env.environment import save_script
 
 
-def runenv_from_cpp_info(cpp_info):
+def runenv_from_cpp_info(conanfile, cpp_info):
     """ return an Environment deducing the runtime information from a cpp_info
     """
-    dyn_runenv = Environment()
+    dyn_runenv = Environment(conanfile)
     if cpp_info is None:  # This happens when the dependency is a private one = BINARY_SKIP
         return dyn_runenv
     if cpp_info.bin_paths:  # cpp_info.exes is not defined yet
@@ -24,15 +24,14 @@ class VirtualRunEnv:
     dependencies, and also from profiles
     """
 
-    def __init__(self, conanfile, win_shell=False):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._win_shell = win_shell
 
     def environment(self):
         """ collects the runtime information from dependencies. For normal libraries should be
         very occasional
         """
-        runenv = Environment()
+        runenv = Environment(self._conanfile)
         # FIXME: Missing profile info
         # FIXME: Cache value?
 
@@ -40,12 +39,11 @@ class VirtualRunEnv:
         for require in self._conanfile.dependencies.host.values():
             if require.runenv_info:
                 runenv.compose(require.runenv_info)
-            runenv.compose(runenv_from_cpp_info(require.cpp_info))
+            runenv.compose(runenv_from_cpp_info(self._conanfile, require.cpp_info))
 
         return runenv
 
     def generate(self, auto_activate=False):
         run_env = self.environment()
         if run_env:
-            save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate,
-                        win_shell=self._win_shell)
+            save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate)

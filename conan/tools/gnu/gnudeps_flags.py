@@ -9,9 +9,8 @@ from conan.tools.microsoft import unix_path
 
 class GnuDepsFlags(object):
 
-    def __init__(self, conanfile, cpp_info, win_shell=False):
+    def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
-        self._win_shell = win_shell
 
         # From cppinfo, calculated flags
         self.include_paths = self._format_include_paths(cpp_info.includedirs)
@@ -116,14 +115,12 @@ class GnuDepsFlags(object):
         return result
 
     def _adjust_path(self, path):
-        if self._win_shell and platform.system() == "Windows":
-            subsystem = self._conanfile.conf["tools.win.shell:subsystem"]
-            return unix_path(path, subsystem=subsystem)
-
         if self._base_compiler == 'Visual Studio':
             path = path.replace('/', '\\')
         else:
             path = path.replace('\\', '/')
+
+        path = unix_path(self._conanfile, path)
         return '"%s"' % path if ' ' in path else path
 
     @property

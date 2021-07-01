@@ -13,9 +13,8 @@ from conans.tools import args_to_string
 
 
 class AutotoolsToolchain:
-    def __init__(self, conanfile, win_shell=False):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
-        self._win_shell = win_shell
         build_type = self._conanfile.settings.get_safe("build_type")
 
         self.configure_args = []
@@ -99,7 +98,7 @@ class AutotoolsToolchain:
             return "-Y _%s" % str(libcxx)
 
     def environment(self):
-        env = Environment()
+        env = Environment(conanfile=self._conanfile)
         # defines
         if self.ndebug:
             self.defines.append(self.ndebug)
@@ -142,8 +141,7 @@ class AutotoolsToolchain:
 
     def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        save_script(self._conanfile, env, "conanautotoolstoolchain", win_shell=self._win_shell,
-                    auto_activate=auto_activate)
+        save_script(self._conanfile, env, "conanautotoolstoolchain", auto_activate=auto_activate)
         self.generate_args()
 
     def generate_args(self):

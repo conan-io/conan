@@ -36,7 +36,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
                              "needed to run commands in a Windows subsystem")
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
-        msys2_mode_env = Environment()
+        msys2_mode_env = Environment(conanfile)
         _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
@@ -48,19 +48,19 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
     # Needed to change to that dir inside the bash shell
     wrapped_shell = '"%s"' % shell_path if " " in shell_path else shell_path
     if env_win:
-        wrapped_shell = environment_wrap_command(env_win, shell_path, subsystem=subsystem,
+        wrapped_shell = environment_wrap_command(conanfile, env_win, shell_path,
                                                  cwd=conanfile.generators_folder)
 
     cwd = cwd or os.getcwd()
     if not os.path.isabs(cwd):
         cwd = os.path.join(os.getcwd(), cwd)
-    cwd_inside = unix_path(cwd, win_shell=True)
+    cwd_inside = unix_path(conanfile, cwd)
     wrapped_user_cmd = command
     if env_shell:
         # Wrapping the inside_command enable to prioritize our environment, otherwise /usr/bin go
         # first and there could be commands that we want to skip
-        wrapped_user_cmd = environment_wrap_command(env_shell, command, subsystem=subsystem,
-                                                   cwd=conanfile.generators_folder)
+        wrapped_user_cmd = environment_wrap_command(conanfile, env_shell, command,
+                                                    cwd=conanfile.generators_folder)
     inside_command = 'cd "{cwd_inside}" && ' \
                      '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,
                                                  wrapped_user_cmd=wrapped_user_cmd)
@@ -93,7 +93,7 @@ def unix_path(conanfile, path):
     if not path:
         return None
 
-    if not platform.system() == "Windows":
+    if not platform.system() == "Windows" or not conanfile.win_shell:
         return path
 
     subsystem = conanfile.conf["tools.win.shell:subsystem"]
