@@ -1,8 +1,8 @@
 import json
 
 from conans.cli.cli import cli_out_write
+from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.client.output import Color
-from conans.cli.command import conan_command, Extender
 
 
 def _output_search_cli(info):
@@ -50,10 +50,10 @@ search_formatters = {
 }
 
 
-@conan_command(group="Consumer", formatters=search_formatters)
+@conan_command(group=COMMAND_GROUPS['consumer'], formatters=search_formatters)
 def search(conan_api, parser, *args, **kwargs):
     """
-    Searches for package recipes whose name contain <query> in a remote or in the local cache
+    Searches for package recipes in a remote or remotes
     """
     parser.add_argument("query",
                         help="Search query to find package recipe reference, e.g., 'boost', 'lib*'")

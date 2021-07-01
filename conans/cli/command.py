@@ -4,6 +4,12 @@ import textwrap
 from conans.errors import ConanException
 
 
+COMMAND_GROUPS = {
+    'consumer': 'Consumer commands',
+    'misc': 'Miscellaneous commands'
+}
+
+
 class Extender(argparse.Action):
     """Allows using the same flag several times in command and creates a list with the values.
     For example:
@@ -98,11 +104,11 @@ class BaseConanCommand(object):
 
 
 class ConanCommand(BaseConanCommand):
-    def __init__(self, method, group, formatters=None):
+    def __init__(self, method, group=None, formatters=None):
         super().__init__(method, formatters=formatters)
         self._subcommands = {}
         self._subcommand_parser = None
-        self._group = group or "Misc commands"
+        self._group = group or COMMAND_GROUPS['misc']
         self._name = method.__name__.replace("_", "-")
         self._parser = argparse.ArgumentParser(description=self._doc,
                                                prog="conan {}".format(self._name),
@@ -154,7 +160,7 @@ class ConanSubCommand(BaseConanCommand):
         self._init_formatters()
 
 
-def conan_command(group, formatters=None):
+def conan_command(group=None, formatters=None):
     def decorator(f):
         cmd = ConanCommand(f, group, formatters=formatters)
         return cmd

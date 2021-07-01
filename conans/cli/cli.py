@@ -166,8 +166,8 @@ class Cli(object):
         return exit_error
 
 
-def cli_out_write(data, fg=None, bg=None):
-    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
+def cli_out_write(data, fg=None, bg=None, endline="\n"):
+    data = "{}{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL, endline)
     sys.stdout.write(data)
 
 

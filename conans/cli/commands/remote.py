@@ -1,7 +1,7 @@
 import json
 
 from conans.cli.cli import cli_out_write
-from conans.cli.command import conan_command, conan_subcommand, OnceArgument
+from conans.cli.command import conan_command, conan_subcommand, OnceArgument, COMMAND_GROUPS
 
 
 def output_remote_list_json(info):
@@ -96,7 +96,7 @@ def remote_disable(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
 
-@conan_command(group="Misc commands")
+@conan_command()
 def remote(conan_api, parser, *args, **kwargs):
     """
     Manages the remote list and the package recipes associated with a remote.
