@@ -615,7 +615,7 @@ class TestClient(object):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.get_latest_rrev(ref)
+        rrev = self.cache.get_latest_rrev(ref).revision
         return ref.copy_with_rev(rrev)
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
