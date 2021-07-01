@@ -104,7 +104,7 @@ class ClientCache(object):
         return self._data_cache.get_timestamp(ConanReference(ref))
 
     def set_timestamp(self, ref, timestamp):
-        return self._data_cache.update_reference(ref, new_timestamp=timestamp)
+        return self._data_cache.update_reference(ConanReference(ref), new_timestamp=timestamp)
 
     def all_refs(self):
         # TODO: cache2.0 we are not validating the reference here because it can be a uuid, check
