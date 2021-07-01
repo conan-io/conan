@@ -65,8 +65,10 @@ class VirtualEnv:
         # FIXME: Missing profile info
         # FIXME: Cache value?
 
-        # Visitor, breadth-first
-        for require in self._conanfile.dependencies.host.values():
+        host = self._conanfile.dependencies.host
+        test = self._conanfile.dependencies.test
+
+        for require in list(host.values()) + list(test.values()):
             if require.runenv_info:
                 runenv.compose(require.runenv_info)
             runenv.compose(self._runenv_from_cpp_info(require.cpp_info))
