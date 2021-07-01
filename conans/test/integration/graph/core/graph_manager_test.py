@@ -854,6 +854,17 @@ class PureOverrideTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(liba, "liba/0.2#123", dependents=[libb])
 
+    def test_discarded_override(self):
+        # app ->---(override)------> liba0.2
+        consumer = self.consumer_conanfile(GenConanfile("app", "0.1")
+                                           .with_requirement("liba/0.2", override=True))
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(1, len(deps_graph.nodes))
+        app = deps_graph.root
+        # TODO: No Revision??? Because of consumer?
+        self._check_node(app, "app/0.1", deps=[])
+
 
 class TestProjectApp(GraphManagerTest):
     """

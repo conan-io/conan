@@ -9,7 +9,7 @@ class Requirement:
     """ A user definition of a requires in a conanfile
     """
     def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
-                 transitive_headers=None, test=False, package_id_mode=None, force=None,
+                 transitive_headers=None, test=False, package_id_mode=None, force=False,
                  override=False, direct=True):
         # By default this is a generic library requirement
         self.ref = ref

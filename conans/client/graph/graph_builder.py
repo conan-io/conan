@@ -49,6 +49,7 @@ class DepsGraphBuilder(object):
                     self._initialize_requires(new_node, dep_graph, check_updates, update, remotes)
                     open_requires.extendleft((r, new_node)
                                              for r in reversed(new_node.conanfile.requires.values()))
+            self._remove_overrides(dep_graph)
             check_graph_provides(dep_graph)
         except GraphError as e:
             dep_graph.error = e
@@ -283,3 +284,10 @@ class DepsGraphBuilder(object):
             raise GraphError.runtime(node, new_node)
 
         return new_node
+
+    @staticmethod
+    def _remove_overrides(dep_graph):
+        for node in dep_graph.nodes:
+            to_remove = [r for r in node.transitive_deps if r.override]
+            for r in to_remove:
+                node.transitive_deps.pop(r)
