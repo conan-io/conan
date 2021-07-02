@@ -1697,10 +1697,6 @@ class Command(object):
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
         add_parser.add_argument('path', help='Path to the package folder in the user workspace')
         add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
-        add_parser.add_argument("-l", "--layout",
-                                help='Relative or absolute path to a file containing the layout.'
-                                ' Relative paths will be resolved first relative to current dir, '
-                                'then to local cache "layouts" folder')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
         remove_parser.add_argument('reference',
@@ -1712,7 +1708,7 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
@@ -1725,7 +1721,6 @@ class Command(object):
             for k, v in self._conan.editable_list().items():
                 self._out.info("%s" % k)
                 self._out.writeln("    Path: %s" % v["path"])
-                self._out.writeln("    Layout: %s" % v["layout"])
 
     def frogarian(self, *args):
         """
