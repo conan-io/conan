@@ -126,18 +126,38 @@ def test_update_flows():
     assert "liba/1.0.0: Already installed!" in client.out
 
     client.run("remove * -f")
+    client.run("remove '*' -f -r server1")
+    client.run("remove '*' -f -r server2")
+    client.run("remove '*' -f -r server3")
+
+    # create older revisions in servers
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("older rev in servers")})
+    client.run("create .")
+    server_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    the_time = time.time() - 100
+    for index in range(3):
+        the_time = the_time + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+
+    client.run("remove * -f")
+
     # have a newer different revision in the cache, but ask for an specific revision that is in
     # the servers, will try to find that revision and install it from the first server found
-    # --> result: install new revision asked
+    # will not check all the remotes for the latest
+    # --> result: install new revision asked, but the latest revision remains the other one, because
+    # the one installed took the date from the server and it's older
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("newer rev cache")})
     client.run("create .")
-    client.run(f"install {latest_rrev}@#{latest_rrev.revision}")
+    client.run(f"install {server_rrev}@#{server_rrev.revision}")
     assert "liba/1.0.0: Not found in local cache, looking in remotes..." in client.out
     assert "liba/1.0.0: Checking all remotes: (server1, server2, server3)" in client.out
     assert "liba/1.0.0: Checking remote: server1" in client.out
     assert "liba/1.0.0: Checking remote: server2" not in client.out
     assert "liba/1.0.0: Checking remote: server3" not in client.out
     assert "liba/1.0.0: Trying with 'server1'..." in client.out
+    latest_cache_revision = client.cache.get_latest_rrev(server_rrev.copy_clear_rev())
+    assert latest_cache_revision != server_rrev
 
 
 def test_update_flows_version_ranges():
