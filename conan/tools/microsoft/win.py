@@ -22,8 +22,8 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
         env_win = [env] if not isinstance(env, list) else env
         env_shell = []
     else:
-        env_shell = [f for f in conanfile.environment_scripts if f.lower().endswith(".sh")]
-        env_win = env or [f for f in conanfile.environment_scripts if f.lower().endswith(".bat")]
+        env_shell = ["conanenv.sh"]
+        env_win = ["conanenv.bat"]
 
     subsystem = conanfile.conf["tools.win.bash:subsystem"]
     shell_path = conanfile.conf["tools.win.bash:path"]
@@ -41,8 +41,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
         msys2_mode_env.define("MSYSTEM", _msystem)
         msys2_mode_env.define("MSYS2_PATH_TYPE", "inherit")
         path = os.path.join(conanfile.generators_folder, "msys2_mode.bat")
-        contents = msys2_mode_env.get_bat_contents(path)
-        save(conanfile, path, contents)
+        msys2_mode_env.save_bat(path)
         env_win.append(path)
 
     # Needed to change to that dir inside the bash shell
@@ -72,7 +71,7 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
         cwd=cwd,
         wrapped_shell=wrapped_shell,
         inside_command=inside_command)
-    conanfile.output.info('Running in windows shell: %s' % final_command)
+    conanfile.output.info('Running in windows bash: %s' % final_command)
     return conanfile._conan_runner(final_command, output=conanfile.output, subprocess=True)
 
 
@@ -97,6 +96,9 @@ def unix_path(conanfile, path):
         return path
 
     subsystem = conanfile.conf["tools.win.bash:subsystem"]
+    if not subsystem:
+        raise ConanException("The config 'tools.win.bash:subsystem' is "
+                             "needed to run commands in a Windows subsystem")
     if os.path.exists(path):
         # if the path doesn't exist (and abs) we cannot guess the casing
         path = get_cased_path(path)

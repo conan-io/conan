@@ -24,10 +24,12 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
     for f in filenames:
         f = f if os.path.isabs(f) else os.path.join(cwd, f)
         if f.lower().endswith(".sh"):
-            f = unix_path(conanfile, f)
-            shs.append(f)
+            if os.path.isfile(f):
+                f = unix_path(conanfile, f)
+                shs.append(f)
         elif f.lower().endswith(".bat"):
-            bats.append(f)
+            if os.path.isfile(f):
+                bats.append(f)
         else:  # Simple name like "conanrunenv"
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)

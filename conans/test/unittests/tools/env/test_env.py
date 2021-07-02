@@ -260,7 +260,8 @@ def test_env_files():
 
     with chdir(folder):
         if platform.system() == "Windows":
-            save("test.bat", env.get_bat_contents("test.bat", pathsep=":", generate_deactivate=True))
+            env.save_bat("test.bat", pathsep=":", generate_deactivate=True)
+
             save("display.bat", display_bat)
             cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
             check(cmd)
@@ -272,7 +273,7 @@ def test_env_files():
             # stdout, stderr = decode_text(stdout), decode_text(stderr)
             # check(cmd)
         else:
-            save("test.sh", env.get_sh_contents("test.sh", pathsep=":", generate_deactivate=True))
+            env.save_sh("test.sh", pathsep=":", generate_deactivate=True)
             save("display.sh", display_sh)
             os.chmod("display.sh", 0o777)
             cmd = '. ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
@@ -368,7 +369,7 @@ def test_env_win_bash():
     env.append("MyPath", "D:/Otherpath")
     sh_path = os.path.join(folder, "foo.sh")
     with mock.patch("platform.system", side_effect=lambda: "Windows"):
-        save(sh_path, env.get_sh_contents(sh_path))
+        env.save_sh(sh_path)
     with open(sh_path) as f:
         content = f.read()
         assert 'MyVar="MyValue"' in content
