@@ -5,6 +5,10 @@ from collections import OrderedDict
 from collections import namedtuple
 from io import StringIO
 
+from conans.model.manifest import discarded_file
+
+from conans.util.env_reader import get_env
+
 import conans
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
@@ -1094,13 +1098,41 @@ class ConanAPIV1(object):
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
+
+        def get_path(cache, ref, path, package_id):
+            """ Return the contents for the given `path` inside current layout, it can
+                be a single file or the list of files in a directory
+
+                :param package_id: will retrieve the contents from the package directory
+                :param path: path relative to the cache reference or package folder
+            """
+            assert not os.path.isabs(path)
+
+            if package_id is None:  # Get the file in the exported files
+                folder = cache.get_latest_ref_layout(ref).export()
+            else:
+                pref = PackageReference(ref, package_id)
+                folder = cache.get_latest_pkg_layout(pref).package()
+
+            abs_path = os.path.join(folder, path)
+
+            if not os.path.exists(abs_path):
+                raise NotFoundException("The specified path doesn't exist")
+
+            if os.path.isdir(abs_path):
+                # FIXME: 2.0: This env variable should not be declared here
+                keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
+                return sorted([path_ for path_ in os.listdir(abs_path)
+                               if not discarded_file(path, keep_python)])
+            else:
+                return load(abs_path)
+
         ref = ConanFileReference.loads(reference)
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote_name:
-            package_layout = self.app.cache.package_layout(ref, short_paths=None)
-            return package_layout.get_path(path=path, package_id=package_id), path
+            return get_path(self.app.cache, ref, path, package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
             if not ref.revision:
