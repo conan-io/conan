@@ -398,9 +398,10 @@ class ConanFile(object):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
                 if win_bash:
-                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd)
+                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
+                                                     msys_mingw=msys_mingw, with_login=with_login)
                 elif self.win_bash:  # New, Conan 2.0
-                    from conan.tools.microsoft.win import run_in_windows_shell
+                    from conan.tools.microsoft.subsystems import run_in_windows_shell
                     return run_in_windows_shell(self, command=cmd, cwd=cwd, env=_env)
             _env = _env or "conanenv"
             command = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)

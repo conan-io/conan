@@ -31,7 +31,7 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create . foo/1.0@")
-    save(client.cache.new_config_path, "tools.win.bash:subsystem=cygwin")
+    save(client.cache.new_config_path, "tools.microsoft.bash:subsystem=cygwin")
     return client
 
 

@@ -361,7 +361,7 @@ def test_dict_access():
 def test_env_win_bash():
     conanfile = ConanFileMock()
     conanfile.win_bash = True
-    conanfile.conf = {"tools.win.bash:subsystem": "msys2"}
+    conanfile.conf = {"tools.microsoft.bash:subsystem": "msys2"}
     folder = temp_folder()
     env = Environment(conanfile)
     env.define("MyVar", "MyValue")

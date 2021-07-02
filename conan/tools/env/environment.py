@@ -14,7 +14,7 @@ class _EnvVarPlaceHolder:
 
 
 def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
-    from conan.tools.microsoft.win import unix_path
+    from conan.tools.microsoft.subsystems import unix_path
     assert env_filenames
     filenames = [env_filenames] if not isinstance(env_filenames, list) else env_filenames
     bats, shs = [], []
@@ -111,7 +111,7 @@ class _EnvValue:
                     values.append(placeholder.format(name=self._name))
             else:
                 if self._path:
-                    from conan.tools.microsoft.win import unix_path
+                    from conan.tools.microsoft.subsystems import unix_path
                     v = unix_path(self._conanfile, v)
                 values.append(v)
         if self._path:

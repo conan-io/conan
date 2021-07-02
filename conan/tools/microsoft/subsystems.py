@@ -5,7 +5,6 @@ import subprocess
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
-from conan.tools.files import save
 from conans.errors import ConanException
 
 MSYS2 = 'msys2'
@@ -25,14 +24,14 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
         env_shell = ["conanenv.sh"]
         env_win = ["conanenv.bat"]
 
-    subsystem = conanfile.conf["tools.win.bash:subsystem"]
-    shell_path = conanfile.conf["tools.win.bash:path"]
+    subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
+    shell_path = conanfile.conf["tools.microsoft.bash:path"]
 
     if not platform.system() == "Windows":
         raise ConanException("Command only for Windows operating system")
 
     if not subsystem or not shell_path:
-        raise ConanException("The config 'tools.win.bash:subsystem' and 'tools.win.bash:path' are "
+        raise ConanException("The config 'tools.microsoft.bash:subsystem' and 'tools.microsoft.bash:path' are "
                              "needed to run commands in a Windows subsystem")
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
@@ -89,15 +88,13 @@ def escape_windows_cmd(command):
 def unix_path(conanfile, path):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!"""
-    if not path:
-        return None
 
     if not platform.system() == "Windows" or not conanfile.win_bash:
         return path
 
-    subsystem = conanfile.conf["tools.win.bash:subsystem"]
+    subsystem = conanfile.conf["tools.microsoft.bash:subsystem"]
     if not subsystem:
-        raise ConanException("The config 'tools.win.bash:subsystem' is "
+        raise ConanException("The config 'tools.microsoft.bash:subsystem' is "
                              "needed to run commands in a Windows subsystem")
     if os.path.exists(path):
         # if the path doesn't exist (and abs) we cannot guess the casing
