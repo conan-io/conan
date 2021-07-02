@@ -69,6 +69,8 @@ class ConanProxy(object):
                                                                            remotes.values())
             if latest_rrev:
                 # check if we already have the latest in local cache
+                # TODO: cache2.0 --update flows: should we get the revision with newer time even
+                #  if we have that one already installed in the cache with an older date?
                 if latest_rrev.revision != ref.revision:
                     # TODO: check the timezone
                     cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)

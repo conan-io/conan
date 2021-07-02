@@ -126,6 +126,7 @@ def test_update_flows():
     assert "liba/1.0.0: Already installed!" in client.out
 
     client.run("remove * -f")
+
     client.run("remove '*' -f -r server1")
     client.run("remove '*' -f -r server2")
     client.run("remove '*' -f -r server3")
@@ -158,6 +159,27 @@ def test_update_flows():
     assert "liba/1.0.0: Trying with 'server1'..." in client.out
     latest_cache_revision = client.cache.get_latest_rrev(server_rrev.copy_clear_rev())
     assert latest_cache_revision != server_rrev
+
+    # now we have the same revision with different dates in the servers and in the cache
+    # in this case, if we specify --update should we check all remotes and try to install the
+    # latest one or just take the first (same behaviour that the one without --update)
+    # TODO: cache2.0 --update flows check the desired behaviour here
+
+    client.run("remove * -f")
+    client.run("remove '*' -f -r server1")
+    client.run("remove '*' -f -r server2")
+    client.run("remove '*' -f -r server3")
+
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new case")})
+    client.run("create .")
+    server_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    the_time = time.time() + 10
+    for index in range(3):
+        the_time = the_time + 10
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+
+    client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
 
 
 def test_update_flows_version_ranges():
