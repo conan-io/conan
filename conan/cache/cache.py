@@ -65,6 +65,11 @@ class DataCache:
         else:
             return self._get_tmp_path()
 
+    def get_reference_layout(self, ref: ConanReference):
+        assert ref.rrev, "Recipe revision must be known to get the reference layout"
+        path = self._get_or_create_reference_path(ref)
+        return RecipeLayout(ref, os.path.join(self.base_folder, path))
+
     def get_or_create_reference_layout(self, ref: ConanReference):
         path = self._get_or_create_reference_path(ref)
 
@@ -89,11 +94,6 @@ class DataCache:
         self._create_path(package_path, remove_contents=created)
 
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
-
-    def get_reference_layout(self, ref: ConanReference):
-        assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        path = self._get_or_create_reference_path(ref)
-        return RecipeLayout(ref, os.path.join(self.base_folder, path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the package layout"
