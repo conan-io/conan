@@ -105,13 +105,15 @@ class ConanProxy(object):
             try:
                 output.info(f"Checking remote: {remote.name}")
                 remote_rrevs = self._remote_manager.get_recipe_revisions(reference, remote)
-                if len(remote_rrevs) > 0:
+                for rrev in remote_rrevs:
                     results.append({'remote': remote,
-                                    'reference': reference.copy_with_rev(remote_rrevs[0].get("revision")),
-                                    'time': from_iso8601_to_datetime(remote_rrevs[0].get("time"))})
-                    # first server matching result with revision return that value
-                    if reference.revision:
-                        break
+                                    'reference': reference.copy_with_rev(rrev.get("revision")),
+                                    'time': from_iso8601_to_datetime(rrev.get("time"))})
+                # first server matching result with revision return that value
+                # if the revision was specified the server will return only one
+                # value with that revision match
+                if reference.revision and len(results) > 0:
+                    break
             except NotFoundException:
                 pass
 
