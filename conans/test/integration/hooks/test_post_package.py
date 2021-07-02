@@ -35,7 +35,7 @@ class PostPackageTestCase(unittest.TestCase):
             pref = t.create(ConanFileReference.loads("name/version@user/channel"))
 
         # Check that we are considering the same file
-        pkg_layout = t.cache.get_latest_pkg_layout(pref)
+        pkg_layout = t.get_latest_pkg_layout(pref)
         self.assertEqual(post_package_hook.manifest_path,
                          os.path.join(pkg_layout.package(), CONAN_MANIFEST))
         # Now the file exists and contains info about created file
@@ -66,7 +66,7 @@ class PostPackageTestCase(unittest.TestCase):
                                 args="--package-folder=.")
 
         # Check that we are considering the same file
-        pkg_layout = t.cache.get_latest_pkg_layout(pref)
+        pkg_layout = t.get_latest_pkg_layout(pref)
         self.assertEqual(post_package_hook.manifest_path,
                          os.path.join(pkg_layout.package(), CONAN_MANIFEST))
         # Now the file exists and contains info about created file

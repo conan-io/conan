@@ -41,7 +41,7 @@ class HelloConan(ConanFile):
         client.run("config set general.skip_broken_symlinks_check=True")
         pref = client.create(ref, conanfile=conanfile)
         self.assertIn("Created package", client.out)
-        p_folder = client.cache.get_latest_pkg_layout(ref).package()
+        p_folder = client.get_latest_pkg_layout(ref).package()
 
         # The link is there
         link_path = os.path.join(p_folder, "link.txt")

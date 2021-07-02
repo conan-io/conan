@@ -19,8 +19,8 @@ class CMakePathsGeneratorTest(unittest.TestCase):
         pref1 = client.create(ref1)
         pref2 = client.create(ref2, conanfile=GenConanfile().with_requirement(ref1))
         client.run("install {} -g cmake_paths".format(ref2))
-        pfolder1 = client.cache.get_latest_pkg_layout(pref1).package().replace("\\", "/")
-        pfolder2 = client.cache.get_latest_pkg_layout(pref2).package().replace("\\", "/")
+        pfolder1 = client.get_latest_pkg_layout(pref1).package().replace("\\", "/")
+        pfolder2 = client.get_latest_pkg_layout(pref2).package().replace("\\", "/")
         contents = client.load("conan_paths.cmake")
         expected = 'set(CONAN_LIB2_ROOT "{pfolder2}")\r\n' \
                    'set(CONAN_LIB1_ROOT "{pfolder1}")\r\n' \
@@ -82,7 +82,7 @@ find_package(Hello0 REQUIRED)
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
         ref = ConanFileReference.loads("Hello0/0.1@user/channel")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.get_latest_pkg_layout(ref).package()
+        package_folder = client.get_latest_pkg_layout(ref).package()
         # Check that the CONAN_HELLO0_ROOT has been replaced with the real abs path
         self.assertIn("ROOT PATH: %s" % package_folder.replace("\\", "/"), client.out)
 

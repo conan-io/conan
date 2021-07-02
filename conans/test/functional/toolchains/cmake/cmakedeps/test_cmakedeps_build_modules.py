@@ -125,7 +125,7 @@ class CMakeFindPathMultiGeneratorTest(unittest.TestCase):
         client.run("create .")
         ref = ConanFileReference("test", "1.0", None, None)
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
-        package_path = client.cache.get_latest_pkg_layout(ref).package()
+        package_path = client.get_latest_pkg_layout(ref).package()
         modules_path = os.path.join(package_path, "share", "cmake")
         self.assertEqual(set(os.listdir(modules_path)),
                          {"FindFindModule.cmake", "my-module.cmake"})

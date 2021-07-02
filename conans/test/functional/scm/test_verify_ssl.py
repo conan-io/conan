@@ -72,7 +72,7 @@ class GitVerifySSLTestCase(unittest.TestCase):
         # Check the verify_ssl value is stored and propagated with the proper value
         self.client.run("config set general.scm_to_conandata=1")
         self.client.run("export . {}".format(self.ref))
-        content = load(self.client.cache.get_latest_ref_layout(self.ref).conandata())
+        content = load(self.client.get_latest_ref_layout(self.ref).conandata())
         if self.verify_ssl in [None, True]:
             self.assertNotIn('verify_ssl', content)
         elif self.verify_ssl in ['None']:

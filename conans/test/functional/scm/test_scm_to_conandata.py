@@ -34,7 +34,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        ref_layout = t.cache.get_latest_ref_layout(self.ref)
+        ref_layout = t.get_latest_ref_layout(self.ref)
         exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(ref_layout.conandata())
@@ -66,7 +66,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        ref_layout = t.cache.get_latest_ref_layout(self.ref)
+        ref_layout = t.get_latest_ref_layout(self.ref)
         exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(ref_layout.conandata())
@@ -98,7 +98,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        ref_layout = t.cache.get_latest_ref_layout(self.ref)
+        ref_layout = t.get_latest_ref_layout(self.ref)
         exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(ref_layout.conandata())
@@ -146,7 +146,7 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        ref_layout = t.cache.get_latest_ref_layout(self.ref)
+        ref_layout = t.get_latest_ref_layout(self.ref)
         exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
         exported_conandata = load(ref_layout.conandata())
@@ -205,7 +205,7 @@ def test_auto_can_be_automated():
     def _check(client):
         # Check exported files
         ref = ConanFileReference.loads("pkg/1.0")
-        ref_layout = client.cache.get_latest_ref_layout(ref)
+        ref_layout = client.get_latest_ref_layout(ref)
         assert load(ref_layout.conanfile()) == conanfile
         exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)

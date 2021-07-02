@@ -34,7 +34,7 @@ class HelloConan(ConanFile):
         client.upload_all(ref)
 
         # We can uncompress it without warns
-        p_folder = client.cache.get_latest_pkg_layout(ref).download_package()
+        p_folder = client.get_latest_pkg_layout(ref).download_package()
         tgz = os.path.join(p_folder, PACKAGE_TGZ_NAME)
         client.run_command('gzip -d "{}"'.format(tgz))
         client.run_command('tar tvf "{}"'.format(os.path.join(p_folder, "conan_package.tar")))

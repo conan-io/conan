@@ -1109,10 +1109,11 @@ class ConanAPIV1(object):
             assert not os.path.isabs(path)
 
             if package_id is None:  # Get the file in the exported files
-                folder = cache.get_latest_ref_layout(ref).export()
+                latest_rrev = cache.get_latest_rrev(ref)
+                folder = cache.get_ref_layout(latest_rrev).export()
             else:
-                pref = PackageReference(ref, package_id)
-                folder = cache.get_latest_pkg_layout(pref).package()
+                latest_pref = cache.get_latest_prev(PackageReference(ref, package_id))
+                folder = cache.get_pkg_layout(latest_pref).package()
 
             abs_path = os.path.join(folder, path)
 

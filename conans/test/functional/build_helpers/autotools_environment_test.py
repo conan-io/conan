@@ -56,7 +56,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                      "hello.cpp": body})
         client.run("create . danimtb/testing")
         pref = PackageReference.loads("test/1.0@danimtb/testing:%s" % NO_SETTINGS_PACKAGE_ID)
-        pkg_path = client.cache.get_latest_pkg_layout(pref).package()
+        pkg_path = client.get_latest_pkg_layout(pref).package()
 
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
 
@@ -64,6 +64,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                           "autotools.configure(args=['--bindir=${prefix}/superbindir', '--libdir=${prefix}/superlibdir'])")
         client.save({"conanfile.py": new_conanfile})
         client.run("create . danimtb/testing")
-        pkg_path = client.cache.get_latest_pkg_layout(pref).package()
+        pkg_path = client.get_latest_pkg_layout(pref).package()
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["superlibdir", "superbindir"]]
         [self.assertNotIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]

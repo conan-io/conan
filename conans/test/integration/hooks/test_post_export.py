@@ -29,7 +29,7 @@ def test_called_before_digest(self):
 
     t = TestClient()
     t.save({'conanfile.py': conanfile})
-    ref_layout = t.cache.get_latest_ref_layout(ref)
+    ref_layout = t.get_latest_ref_layout(ref)
 
     def mocked_post_export(*args, **kwargs):
         # There shouldn't be a digest yet

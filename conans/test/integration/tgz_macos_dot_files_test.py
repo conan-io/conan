@@ -82,7 +82,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
 
         # Check if the metadata travels through the Conan commands
         pref = PackageReference.loads("lib/version@user/channel:%s" % NO_SETTINGS_PACKAGE_ID)
-        pkg_folder = t.cache.get_latest_pkg_layout(pref).package()
+        pkg_folder = t.get_latest_pkg_layout(pref).package()
 
         # 1) When copied to the package folder, the metadata is lost
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=False)
@@ -92,7 +92,7 @@ class TgzMacosDotFilesTest(unittest.TestCase):
         self._test_for_metadata(pkg_folder, 'file.txt', dot_file_expected=True)
 
         # 3) In the upload process, the metadata is lost again
-        export_download_folder = t.cache.get_latest_ref_layout(pref).download_export()
+        export_download_folder = t.get_latest_ref_layout(pref).download_export()
         tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
         self.assertFalse(os.path.exists(tgz))
         t.run("upload lib/version@user/channel")

@@ -276,7 +276,7 @@ class TestPackageInfo(unittest.TestCase):
         dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
-        package_folder = client.cache.get_latest_pkg_layout(dep_ref).package()
+        package_folder = client.get_latest_pkg_layout(dep_ref).package()
 
         expected_comp_starlight_include_paths = [os.path.join(package_folder, "galaxy", "starlight")]
         expected_comp_planet_include_paths = [os.path.join(package_folder, "galaxy", "planet")]

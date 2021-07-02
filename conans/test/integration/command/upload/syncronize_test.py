@@ -119,6 +119,6 @@ class SynchronizeTest(unittest.TestCase):
     @staticmethod
     def _create_manifest(client, pref):
         # Create the manifest to be able to upload the package
-        pack_path = client.cache.get_latest_pkg_layout(ref).package()
+        pack_path = client.get_latest_pkg_layout(ref).package()
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

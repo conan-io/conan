@@ -81,9 +81,9 @@ def test_update_not_date():
     assert package_reference in client.out
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-    export_folder = client.cache.get_latest_ref_layout(ref).export()
+    export_folder = client.get_latest_ref_layout(ref).export()
     recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-    package_folder = client.cache.get_latest_pkg_layout(ref).package()
+    package_folder = client.get_latest_pkg_layout(ref).package()
     package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
     def timestamps():
@@ -155,7 +155,7 @@ def test_reuse():
 
     client2.run("install Hello0/1.0@lasote/stable --update")
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
-    package_path = client2.cache.get_latest_pkg_layout(ref).package()
+    package_path = client2.get_latest_pkg_layout(ref).package()
     header = load(os.path.join(package_path, "header.h"))
     assert header == "//EMPTY!"
 
@@ -268,7 +268,7 @@ def test_remove_old_sources():
     assert "Pkg/0.1@lasote/channel:%s - Download" % NO_SETTINGS_PACKAGE_ID in client.out
     assert "Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID in client.out
     ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
-    header = os.path.join(client.cache.get_latest_pkg_layout(ref).package(), "header.h")
+    header = os.path.join(client.get_latest_pkg_layout(ref).package(), "header.h")
     assert load(header) == "mycontent2"
 
 

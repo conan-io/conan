@@ -101,7 +101,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # This is not updating the remote in the registry with a --update
         # Is this a bug?
         # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = self.c_v2.cache.get_latest_pkg_layout(self.ref).load_metadata()
+        metadata = self.c_v2.get_latest_pkg_layout(self.ref).load_metadata()
         self.assertEqual("default", metadata.recipe.remote)
 
     def test_diamond_revisions_conflict(self):
@@ -151,7 +151,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Create an alias to the first revision
         self.c_v2.run("alias lib/latest@conan/stable {}".format(pref.ref.full_str()))
         alias_ref = ConanFileReference.loads("lib/latest@conan/stable")
-        exported = load(self.c_v2.cache.get_latest_ref_layout(alias_ref).conanfile())
+        exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
         self.assertIn('alias = "{}"'.format(pref.ref.full_str()), exported)
 
         self.c_v2.upload_all(ConanFileReference.loads("lib/latest@conan/stable"))

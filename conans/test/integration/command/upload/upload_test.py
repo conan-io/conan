@@ -66,7 +66,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload * --all --confirm")
         self.assertNotIn("Uploading conan_package.tgz", client.out)
 
-        package_folder = client.cache.get_latest_pkg_layout(ref).package()
+        package_folder = client.get_latest_pkg_layout(ref).package()
         package_file_path = os.path.join(package_folder, "myfile.sh")
 
         if platform.system() == "Linux":
@@ -255,7 +255,7 @@ class UploadTest(unittest.TestCase):
                           "Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
-            download_folder = client.cache.get_latest_pkg_layout(pref).download_package()
+            download_folder = client.get_latest_pkg_layout(pref).download_package()
             tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
@@ -635,7 +635,7 @@ class MyPkg(ConanFile):
                          NO_SETTINGS_PACKAGE_ID, client.out)
         ref = ConanFileReference("hello", "1.0", "user", "testing")
         # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = client.cache.get_latest_pkg_layout(ref).load_metadata()
+        metadata = client.get_latest_pkg_layout(ref).load_metadata()
         self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
         self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
 
@@ -731,7 +731,7 @@ class MyPkg(ConanFile):
         client.run('upload lib/1.0 -c --all -r default')
         ref = ConanFileReference("lib", "1.0", "user", "channel")
         # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = client.cache.get_latest_pkg_layout(ref).load_metadata()
+        metadata = client.get_latest_pkg_layout(ref).load_metadata()
         package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
         package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
             "sha1"]
@@ -744,7 +744,7 @@ class MyPkg(ConanFile):
         client.run('remove * -f')
         client.run('install lib/1.0@user/channel -r default')
         # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = client.cache.get_latest_pkg_layout(ref).load_metadata()
+        metadata = client.get_latest_pkg_layout(ref).load_metadata()
         self.assertEqual(
             metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
             package_md5)

@@ -57,7 +57,7 @@ def test_download_recipe_twice(setup):
     new_client.run("download Hello0/0.1@lasote/stable")
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
-    conanfile_path = new_client.cache.get_latest_ref_layout(ref).conanfile()
+    conanfile_path = new_client.get_latest_ref_layout(ref).conanfile()
     assert conanfile == load(conanfile_path)
 
     new_client.run("download Hello0/0.1@lasote/stable")
@@ -74,7 +74,7 @@ def test_download_packages_twice(setup):
 
     new_client.run("download Hello0/0.1@lasote/stable")
     ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-    package_folder = new_client.cache.get_latest_pkg_layout(ref).package()
+    package_folder = new_client.get_latest_pkg_layout(ref).package()
     got_header = load(os.path.join(package_folder, "helloHello0.h"))
     assert expected_header_contents == got_header
 

@@ -49,7 +49,7 @@ class ConanTraceTest(unittest.TestCase):
             ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             client.save({"conanfile.py": base})
             client.run("create . lasote/stable")
-            package_dir = client.cache.get_latest_pkg_layout(ref).package()
+            package_dir = client.get_latest_pkg_layout(ref).package()
             log_file_packaged_ = os.path.join(package_dir, RUN_LOG_NAME)
             out = "\n".join([str(out), str(client.out)])
             return log_file_packaged_, out

@@ -211,7 +211,7 @@ def test_export_pkg():
     pref = PackageReference(ref, package_id)
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = client.cache.get_latest_pkg_layout(ref).package()
+    pf = client.get_latest_pkg_layout(ref).package()
 
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
@@ -261,7 +261,7 @@ def test_export_pkg_local():
     client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-    pf_cache = client.cache.get_latest_pkg_layout(ref).package()
+    pf_cache = client.get_latest_pkg_layout(ref).package()
 
     # Check the artifacts packaged, THERE IS NO "my_package" in the cache
     assert "my_package" not in pf_cache
@@ -272,7 +272,7 @@ def test_export_pkg_local():
     client.run("create . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-    pf_cache = client.cache.get_latest_pkg_layout(ref).package()
+    pf_cache = client.get_latest_pkg_layout(ref).package()
     assert "my_package" not in pf_cache
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
@@ -323,6 +323,6 @@ def test_imports():
     package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("foo/1.0@")
     pref = PackageReference(ref, package_id)
-    bfolder = client.cache.get_latest_pkg_layout(ref).build()
+    bfolder = client.get_latest_pkg_layout(ref).build()
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out

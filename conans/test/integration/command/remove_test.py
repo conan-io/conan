@@ -23,7 +23,7 @@ def test_remove_locks():
     client.run("create . lasote/testing")
     assert 'does not contain a number!' not in client.out
     ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-    conan_folder = client.cache.get_latest_ref_layout(ref).base_folder()
+    conan_folder = client.get_latest_ref_layout(ref).base_folder()
     assert "locks" in os.listdir(conan_folder)
     assert os.path.exists(conan_folder + ".count")
     assert os.path.exists(conan_folder + ".count.lock")
@@ -138,14 +138,14 @@ class RemoveTest(unittest.TestCase):
                     "%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(
                     i) + "905eefe3570dd09a8453b30b9272bb44"
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
-            exports_sources_dir = client.cache.get_latest_ref_layout(ref).export_sources()
+            exports_sources_dir = client.get_latest_ref_layout(ref).export_sources()
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.cache.store)
 
         # Create the manifests to be able to upload
         for pref in prefs:
-            pkg_folder = client.cache.get_latest_pkg_layout(pref).package()
+            pkg_folder = client.get_latest_pkg_layout(pref).package()
             expected_manifest = FileTreeManifest.create(pkg_folder)
             files["%s/%s/%s/%s" % (pref.ref.dir_repr(),
                                    PACKAGES_FOLDER,
@@ -188,7 +188,7 @@ class RemoveTest(unittest.TestCase):
                         if isinstance(base_path, ServerStore):
                             pref = PackageReference(ref, sha)
                             try:
-                                prev = self.client.cache.get_latest_pkg_layout(pref)
+                                prev = self.client.get_latest_pkg_layout(pref)
                             except:
                                 # This whole test is a crap, we cannot guess remote revision
                                 # if the package is not in local anymore

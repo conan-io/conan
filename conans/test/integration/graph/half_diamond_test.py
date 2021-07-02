@@ -49,7 +49,7 @@ class HalfDiamondTest(unittest.TestCase):
                       self.client.out)
 
         ref = ConanFileReference.loads("Hello2/0.1@")
-        pkg_folder = self.client.cache.get_latest_pkg_layout(ref).package()
+        pkg_folder = self.client.get_latest_pkg_layout(ref).package()
         conaninfo = self.client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
         self.assertEqual(1, conaninfo.count("Hello0/0.1@lasote/stable"))

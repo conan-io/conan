@@ -661,13 +661,29 @@ class TestClient(object):
 
         if not isinstance(reference, ConanFileReference):
             reference = ConanFileReference.loads(reference)
-        layout = self.cache.get_latest_ref_layout(reference)
+        layout = self.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
         if ".conan" in data:
             return self._create_scm_info(data[".conan"])
         else:
             return self._create_scm_info(dict())
+
+    def get_latest_pkg_layout(self, ref: ConanReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        # Given the latest recipe revision we can get the latest package ID and
+        # the corresponding PackageLayout
+        all_package_ids = self.cache.get_package_ids(latest_rrev)
+        latest_prev = self.cache.get_latest_prev(all_package_ids[0])
+        pkg_layout = self.cache.get_pkg_layout(latest_prev)
+        return pkg_layout
+
+    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+        """Get the latest RecipeLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        ref_layout = self.cache.get_ref_layout(latest_rrev)
+        return ref_layout
 
 
 class TurboTestClient(TestClient):

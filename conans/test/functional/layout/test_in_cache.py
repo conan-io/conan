@@ -122,9 +122,9 @@ def test_cache_in_layout(conanfile):
     package_id = re.search(r"lib/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, package_id)
-    sf = client.cache.get_latest_ref_layout(ref).source()
-    bf = client.cache.get_latest_pkg_layout(ref).build()
-    pf = client.cache.get_latest_pkg_layout(ref).package()
+    sf = client.get_latest_ref_layout(ref).source()
+    bf = client.get_latest_pkg_layout(ref).build()
+    pf = client.get_latest_pkg_layout(ref).package()
 
     source_folder = os.path.join(sf, "my_sources")
     build_folder = os.path.join(bf, "my_build")

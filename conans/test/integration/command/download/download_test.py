@@ -22,7 +22,7 @@ def test_download_recipe():
 
     assert "Downloading conanfile.py" in client.out
     assert "Downloading conan_package.tgz" not in client.out
-    ref_layout = client.cache.get_latest_ref_layout(ref)
+    ref_layout = client.get_latest_ref_layout(ref)
     export_foder = ref_layout.export()
     assert os.path.exists(os.path.join(export_foder, "conanfile.py"))
     assert conanfile == load(os.path.join(export_foder, "conanfile.py"))
@@ -55,7 +55,7 @@ def test_download_with_sources():
     client.run(f"remove {ref} -f")
     client.run(f"download {ref}")
 
-    ref_layout = client.cache.get_latest_ref_layout(ref)
+    ref_layout = client.get_latest_ref_layout(ref)
     source = ref_layout.export_sources()
 
     assert "Downloading conan_sources.tgz" in client.out
@@ -75,7 +75,7 @@ def test_download_reference_without_packages():
     # Check 'No remote binary packages found' warning
     assert "WARN: No remote binary packages found in remote" in client.out
     # Check at least conanfile.py is downloaded
-    ref_layout = client.cache.get_latest_ref_layout(ref)
+    ref_layout = client.get_latest_ref_layout(ref)
     assert os.path.exists(ref_layout.conanfile())
 
 
@@ -100,8 +100,8 @@ def test_download_reference_with_packages():
 
     client.run(f"download {ref}")
 
-    pkg_layout = client.cache.get_latest_pkg_layout(ref=ref)
-    ref_layout = client.cache.get_latest_ref_layout(ref=ref)
+    pkg_layout = client.get_latest_pkg_layout(ref=ref)
+    ref_layout = client.get_latest_ref_layout(ref=ref)
 
     # Check not 'No remote binary packages found' warning
     assert "WARN: No remote binary packages found in remote" not in client.out
@@ -143,8 +143,8 @@ def test_download_full_reference():
 
     client.run("download pkg/0.1@lasote/stable:{}".format(NO_SETTINGS_PACKAGE_ID))
 
-    pkg_layout = client.cache.get_latest_pkg_layout(ref)
-    ref_layout = client.cache.get_latest_ref_layout(ref)
+    pkg_layout = client.get_latest_pkg_layout(ref)
+    ref_layout = client.get_latest_ref_layout(ref)
 
     # Check not 'No remote binary packages found' warning
     assert "WARN: No remote binary packages found in remote" not in client.out
@@ -184,8 +184,8 @@ def test_download_package_argument():
 
     client.run(f"download {ref} -p {NO_SETTINGS_PACKAGE_ID}")
 
-    pkg_layout = client.cache.get_latest_pkg_layout(ref)
-    ref_layout = client.cache.get_latest_ref_layout(ref)
+    pkg_layout = client.get_latest_pkg_layout(ref)
+    ref_layout = client.get_latest_ref_layout(ref)
 
     # Check not 'No remote binary packages found' warning
     assert "WARN: No remote binary packages found in remote" not in client.out

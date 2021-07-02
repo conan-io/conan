@@ -30,7 +30,7 @@ class MyPkg(ConanFile):
     def test_basic(self):
         pref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
                                 NO_SETTINGS_PACKAGE_ID)
-        path = os.path.join(self.client.cache.get_latest_pkg_layout(pref).package(), "myheader.h")
+        path = os.path.join(self.client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
         os.chmod(path, 0o777)
@@ -55,7 +55,7 @@ class MyPkg(ConanFile):
         client.run("install Pkg/0.1@lasote/channel")
         pref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
                                 NO_SETTINGS_PACKAGE_ID)
-        path = os.path.join(client.cache.get_latest_pkg_layout(pref).package(), "myheader.h")
+        path = os.path.join(client.get_latest_pkg_layout(pref).package(), "myheader.h")
         with self.assertRaises(IOError):
             save(path, "Bye World")
         os.chmod(path, 0o777)

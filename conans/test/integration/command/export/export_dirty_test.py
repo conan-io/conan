@@ -29,7 +29,7 @@ class SourceDirtyTest(unittest.TestCase):
         self.assertIn("ERROR: pkg/1.0@user/channel: Error in source() method, line 6", client.out)
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         # Check that we can debug and see the folder
-        self.assertEqual(load(os.path.join(client.cache.get_latest_ref_layout(ref).source(),
+        self.assertEqual(load(os.path.join(client.get_latest_ref_layout(ref).source(),
                                            "somefile.txt")),
                          "hello world!!!")
         client.run("create . pkg/1.0@user/channel", assert_error=True)
@@ -40,7 +40,7 @@ class SourceDirtyTest(unittest.TestCase):
         self.assertIn("pkg/1.0@user/channel: Source folder is corrupted, forcing removal",
                       client.out)
         # Check that it is empty
-        self.assertEqual(os.listdir(os.path.join(client.cache.get_latest_ref_layout(ref).source())), [])
+        self.assertEqual(os.listdir(os.path.join(client.get_latest_ref_layout(ref).source())), [])
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows for rmdir block")
@@ -57,7 +57,7 @@ class ExportDirtyTest(unittest.TestCase):
                           "main.cpp": ""})
         self.client.run("create . pkg/0.1@user/stable")
         ref = ConanFileReference.loads("pkg/0.1@user/stable")
-        source_path = self.client.cache.get_latest_ref_layout(ref).source()
+        source_path = self.client.get_latest_ref_layout(ref).source()
         file_open = os.path.join(source_path, "main.cpp")
 
         self.f = open(file_open, 'wb')

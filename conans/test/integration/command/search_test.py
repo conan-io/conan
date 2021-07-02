@@ -17,7 +17,6 @@ from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
 from conans.util.files import list_folder_subdirs, load
-from conans.util.files import save
 from conans import __version__ as client_version
 
 
@@ -537,7 +536,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         refs = [ConanFileReference(*folder.split("/"), revision="myreciperev")
                 for folder in subdirs]
         for ref in refs:
-            origin_path = cache.get_latest_ref_layout(ref).export()
+            origin_path = self.client.get_latest_ref_layout(ref).export()
             dest_path = server_store.export(ref)
             shutil.copytree(origin_path, dest_path)
             server_store.update_last_revision(ref)
@@ -546,7 +545,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 continue
             for package in os.listdir(packages):
                 pref = PackageReference(ref, package, "mypackagerev")
-                origin_path = cache.get_latest_pkg_layout(ref).package()
+                origin_path = self.client.get_latest_pkg_layout(ref).package()
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)
