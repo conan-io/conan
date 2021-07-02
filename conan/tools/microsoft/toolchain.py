@@ -36,6 +36,7 @@ def write_conanvcvars(conanfile, auto_activate=True):
             """.format(cvars))
         path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
         save(path, content)
+
         if auto_activate:
             register_environment_script(conanfile, path)
 

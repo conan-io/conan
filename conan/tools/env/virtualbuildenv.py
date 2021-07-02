@@ -18,6 +18,7 @@ class VirtualBuildEnv:
         """
         # FIXME: Cache value?
         build_env = Environment(self._conanfile)
+
         # Top priority: profile
         profile_env = self._conanfile.buildenv
         build_env.compose(profile_env)

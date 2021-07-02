@@ -86,6 +86,7 @@ class DepsGraphBuilder(object):
             r = Requirement(ref)
             r.build_require = True
             r.build_require_context = context
+            r.force_host_context = getattr(ref, "force_host_context", False)
             build_requires.append(r)
 
         if graph_lock:

@@ -161,7 +161,7 @@ class Environment:
     def prepend_path(self, name, value):
         self._values.setdefault(name, _EnvValue(self._conanfile, name, path=True)).prepend(value)
 
-    def get_bat_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             setlocal
@@ -191,10 +191,11 @@ class Environment:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
-        content = "\n".join(result)
-        return content
 
-    def get_ps1_contents(self, generate_deactivate=False, pathsep=os.pathsep):
+        content = "\n".join(result)
+        save(filename, content)
+
+    def save_ps1(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         # FIXME: This is broken and doesnt work
         deactivate = ""
         capture = textwrap.dedent("""\
@@ -206,9 +207,9 @@ class Environment:
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
-        return content
+        save(filename, content)
 
-    def get_sh_contents(self, filename, generate_deactivate=False, pathsep=os.pathsep):
+    def save_sh(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
             echo Capturing current environment in deactivate_{filename}
             echo echo Restoring variables >> deactivate_{filename}
@@ -237,7 +238,7 @@ class Environment:
                 result.append('unset {}'.format(varname))
 
         content = "\n".join(result)
-        return content
+        save(filename, content)
 
     def compose(self, other):
         """
@@ -253,7 +254,6 @@ class Environment:
                 self._values[k]._conanfile = self._conanfile
             else:
                 existing.compose(v)
-
         return self
 
     # Methods to user access to the environment object as a dict
@@ -375,16 +375,14 @@ class ProfileEnvironment:
         return result
 
 
-def save_script(conanfile, env, name, auto_activate=True):
+def save_script(conanfile, env, name, auto_activate):
     # FIXME: using platform is not ideal but settings might be incomplete
     if platform.system() == "Windows" and not conanfile.win_bash:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
-        contents = env.get_bat_contents(path)
+        env.save_bat(path)
     else:
         path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
-        contents = env.get_sh_contents(path)
-
-    save(path, contents)
+        env.save_sh(path)
 
     if auto_activate:
         register_environment_script(conanfile, path)

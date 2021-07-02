@@ -28,14 +28,15 @@ class _RecipeBuildRequires(OrderedDict):
         for build_require in build_requires:
             self.add(build_require, context=self._default_context)
 
-    def add(self, build_require, context):
+    def add(self, build_require, context, force_host_context=False):
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
+        build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
         self[(build_require.name, context)] = build_require
 
     def __call__(self, build_require, force_host_context=False):
         context = CONTEXT_HOST if force_host_context else self._default_context
-        self.add(build_require, context)
+        self.add(build_require, context, force_host_context)
 
     def __str__(self):
         items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
