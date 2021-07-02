@@ -98,11 +98,12 @@ def test_update_flows():
     # create newer revisions in servers so that the ones from the clients are older
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new rev in servers")})
     client.run("create .")
+    rev_to_upload = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
     the_time = time.time()
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+            client.run(f"upload {rev_to_upload.full_str()} -r server{index + 1} --all -c")
 
     # now check for newer references with --update for client2 that has an older revision
     # when we use --update: first check all remotes (no -r argument) get latest revision
@@ -110,7 +111,7 @@ def test_update_flows():
     # --> result: install rev from server3
     client2.run("install liba/1.0.0@ --update")
     assert "liba/1.0.0 from 'server3' - Updated" in client2.out
-    assert "liba/1.0.0: Downloaded recipe revision 358f80db50845bf1ffb32f4a7ab562f7" in client2.out
+    assert f"liba/1.0.0: Downloaded recipe revision {rev_to_upload.revision}" in client2.out
     assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
            " from remote 'server3'" in client2.out
 
@@ -161,9 +162,10 @@ def test_update_flows():
     assert latest_cache_revision != server_rrev
 
     # now we have the same revision with different dates in the servers and in the cache
-    # in this case, if we specify --update should we check all remotes and try to install the
-    # latest one or just take the first (same behaviour that the one without --update)
-    # TODO: cache2.0 --update flows check the desired behaviour here
+    # in this case, if we specify --update we will check all the remotes, if that revision
+    # has a newer date in the servers we will take that date from the server but we will not
+    # install anything, we are considering revisions fully inmutable in 2.0
+    # --> results: update revision date in cache, do not install anything
 
     client.run("remove * -f")
     client.run("remove '*' -f -r server1")
@@ -179,6 +181,26 @@ def test_update_flows():
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
+    client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
+
+    # --update
+    # now in server: older revisions
+    # in cache: we have the revision from the servers installed but it's not the latest
+    # --> result: don't install the revision from servers
+
+    client.run("remove * -f")
+
+    # re-create the last one we uploaded to the servers so that it has newer date
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new case")})
+    client.run("create .")
+
+    # create a new revision in cache that will be the latest
+    client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("this is the latest")})
+    client.run("create .")
+
+    cache_revisions = client.cache.get_recipe_revisions(ConanFileReference.loads("liba/1.0.0"))
+
+    # try to install the one from the servers
     client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
 
 
