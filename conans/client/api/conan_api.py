@@ -167,25 +167,23 @@ class ConanAPIV2(object):
         return {}
 
     @api_method
-    def search_recipes(self, remotes, query):
+    def search_recipes(self, remote, query):
         search_recorder = SearchRecorder()
+        search_recorder.add_remote(remote.name)
 
-        for remote in remotes:
-            search_recorder.add_remote(remote.name)
+        remotes = self.app.cache.registry.load_remotes()
+        search = Search(self.app.cache, self.app.remote_manager, remotes)
 
-            remotes = self.app.cache.registry.load_remotes()
-            search = Search(self.app.cache, self.app.remote_manager, remotes)
+        try:
+            references = search.search_recipes(query, remote.name)
+        except ConanException as exc:
+            search_recorder.error = True
+            exc.info = search_recorder.get_info()
+            raise
 
-            try:
-                references = search.search_recipes(query, remote.name)
-            except ConanException as exc:
-                search_recorder.error = True
-                exc.info = search_recorder.get_info()
-                raise
-
-            for remote_name, refs in references.items():
-                for ref in refs:
-                    search_recorder.add_recipe(remote_name, ref, with_packages=False)
+        for remote_name, refs in references.items():
+            for ref in refs:
+                search_recorder.add_recipe(remote_name, ref, with_packages=False)
 
         return search_recorder.get_info()
 

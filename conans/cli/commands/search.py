@@ -6,37 +6,34 @@ from conans.client.output import Color
 
 
 def _output_search_cli(info):
-    if info["error"]:
-        # TODO: Handle errors
-        return
-
-    if "results" not in info or not info["results"]:
-        return
-
-    multiple_remotes = len(info["results"]) > 1
-    indentation = 2 if multiple_remotes else 0
+    indentation = 2
     remote_color = Color.BRIGHT_BLUE
     recipe_color = Color.BRIGHT_WHITE
     reference_color = Color.WHITE
 
-    for result in info["results"]:
+    for remote_results in info:
+        if remote_results["error"]:
+            # TODO: Handle errors
+            return
 
-        # We only show the name of the remotes if there are multiple remotes
-        if multiple_remotes:
+        if "results" not in remote_results or not remote_results["results"]:
+            return
+
+        for result in remote_results["results"]:
             cli_out_write("{}:".format(result["remote"]), remote_color)
 
-        if "items" not in result or not result["items"]:
-            cli_out_write("{}There are no matching recipes".format(" " * indentation))
-            continue
+            if "items" not in result or not result["items"]:
+                cli_out_write("{}There are no matching recipes".format(" " * indentation))
+                continue
 
-        current_recipe = None
-        for recipe in result["items"]:
-            if recipe["recipe"]["name"] != current_recipe:
-                current_recipe = recipe["recipe"]["name"]
-                cli_out_write("{}{}".format(" " * indentation, current_recipe), recipe_color)
+            current_recipe = None
+            for recipe in result["items"]:
+                if recipe["recipe"]["name"] != current_recipe:
+                    current_recipe = recipe["recipe"]["name"]
+                    cli_out_write("{}{}".format(" " * indentation, current_recipe), recipe_color)
 
-            reference = recipe["recipe"]["id"]
-            cli_out_write("{}{}".format(" " * (indentation + 2), reference), reference_color)
+                reference = recipe["recipe"]["id"]
+                cli_out_write("{}{}".format(" " * (indentation + 2), reference), reference_color)
 
 
 def _output_search_json(info):
@@ -62,5 +59,8 @@ def search(conan_api, parser, *args, **kwargs):
     args = parser.parse_args(*args)
 
     remotes = conan_api.get_active_remotes(args.remote)
-    results = conan_api.search_recipes(remotes, args.query)
+
+    results = []
+    for remote in remotes:
+        results.append(conan_api.search_recipes(remote, args.query))
     return results
