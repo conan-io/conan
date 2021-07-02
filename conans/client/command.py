@@ -347,6 +347,8 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
         parser.add_argument("--build-require", action='store_true', default=False,
                             help='The provided reference is a build-require')
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
@@ -392,7 +394,8 @@ class Command(object):
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build,
-                                      is_build_require=args.build_require)
+                                      is_build_require=args.build_require,
+                                      require_overrides=args.require_override)
         except ConanException as exc:
             info = exc.info
             raise
@@ -496,6 +499,8 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
@@ -529,7 +534,8 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile,
-                                           lockfile_out=args.lockfile_out)
+                                           lockfile_out=args.lockfile_out,
+                                           require_overrides=args.require_override)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -554,7 +560,8 @@ class Command(object):
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
                                                      lockfile_node_id=args.lockfile_node_id,
-                                                     is_build_require=args.build_require)
+                                                     is_build_require=args.build_require,
+                                                     require_overrides=args.require_override)
 
         except ConanException as exc:
             info = exc.info

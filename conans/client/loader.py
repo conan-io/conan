@@ -198,7 +198,7 @@ class ConanFileLoader(object):
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
-                      channel=None, lock_python_requires=None):
+                      channel=None, lock_python_requires=None, require_overrides=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
@@ -220,6 +220,11 @@ class ConanFileLoader(object):
             conanfile.options.initialize_upstream(profile_host.user_options,
                                                   name=conanfile.name)
             profile_host.user_options.clear_unscoped_options()
+
+            if require_overrides is not None:
+                for req_override in require_overrides:
+                    req_override = ConanFileReference.loads(req_override)
+                    conanfile.requires.override(req_override)
 
             return conanfile
         except ConanInvalidConfiguration:
@@ -298,7 +303,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None, is_build_require=False):
+                     build_requires_options=None, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
@@ -312,6 +317,11 @@ class ConanFileLoader(object):
         else:
             for reference in references:
                 conanfile.requires.add_ref(reference)
+
+        if require_overrides is not None:
+            for req_override in require_overrides:
+                req_override = ConanFileReference.loads(req_override)
+                conanfile.requires.override(req_override)
 
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
