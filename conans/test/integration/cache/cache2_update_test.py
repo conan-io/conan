@@ -161,6 +161,8 @@ def test_update_flows():
     latest_cache_revision = client.cache.get_latest_rrev(server_rrev.copy_clear_rev())
     assert latest_cache_revision != server_rrev
 
+    # TODO: add last test but with --update
+
     # now we have the same revision with different dates in the servers and in the cache
     # in this case, if we specify --update we will check all the remotes, if that revision
     # has a newer date in the servers we will take that date from the server but we will not
@@ -179,9 +181,10 @@ def test_update_flows():
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
-            client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
+            client.run(f"upload {server_rrev.full_str()} -r server{index + 1} --all -c")
 
     client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
+    # TODO: implement date update and checks in this case
 
     # --update
     # now in server: older revisions
@@ -202,6 +205,7 @@ def test_update_flows():
 
     # try to install the one from the servers
     client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
+    # TODO: implement checks in this case
 
 
 def test_update_flows_version_ranges():
