@@ -2,7 +2,7 @@ import os
 import platform
 import subprocess
 import textwrap
-from unittest import mock
+import mock
 
 import pytest
 
