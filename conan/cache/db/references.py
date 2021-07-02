@@ -173,9 +173,11 @@ class ReferencesDbTable(BaseDbTable):
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.prev} IS NULL ' \
                     f'GROUP BY {self.columns.reference} ' \
-                    f'ORDER BY MAX({self.columns.timestamp}) ASC'
+                    f'ORDER BY {self.columns.timestamp} DESC'
         else:
-            query = f'SELECT * FROM {self.table_name} WHERE {self.columns.prev} IS NULL;'
+            query = f'SELECT * FROM {self.table_name} ' \
+                    f'WHERE {self.columns.prev} IS NULL ' \
+                    f'ORDER BY {self.columns.timestamp} DESC;'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
@@ -206,7 +208,8 @@ class ReferencesDbTable(BaseDbTable):
                     f'AND {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.pkgid} = "{ref.pkgid}" ' \
                     f'{check_prev} ' \
-                    f'AND {self.columns.prev} IS NOT NULL '
+                    f'AND {self.columns.prev} IS NOT NULL ' \
+                    f'ORDER BY {self.columns.timestamp} DESC'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
@@ -220,13 +223,14 @@ class ReferencesDbTable(BaseDbTable):
                 f'{self.columns.prev}, ' \
                 f'{self.columns.path}, ' \
                 f'{self.columns.remote}, ' \
-                f'MAX({self.columns.timestamp}), ' \
+                f'{self.columns.timestamp}, ' \
                 f'{self.columns.build_id} ' \
                 f'FROM {self.table_name} ' \
                 f'WHERE {self.columns.rrev} = "{ref.rrev}" ' \
                 f'AND {self.columns.reference} = "{ref.reference}" ' \
                 f'AND {self.columns.pkgid} IS NOT NULL ' \
-                f'GROUP BY {self.columns.pkgid} '
+                f'GROUP BY {self.columns.pkgid} ' \
+                f'ORDER BY {self.columns.timestamp} DESC'
         r = conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
@@ -253,7 +257,8 @@ class ReferencesDbTable(BaseDbTable):
                     f'WHERE {self.columns.reference} = "{ref.reference}" ' \
                     f'AND {self.columns.prev} IS NULL ' \
                     f'{check_rrev} ' \
-                    f'AND {self.columns.pkgid} IS NULL '
+                    f'AND {self.columns.pkgid} IS NULL ' \
+                    f'ORDER BY {self.columns.timestamp} DESC'
 
         r = conn.execute(query)
         for row in r.fetchall():
