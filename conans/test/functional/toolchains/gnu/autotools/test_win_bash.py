@@ -17,8 +17,8 @@ def test_autotools_bash_complete():
     client = TestClient(path_with_spaces=False)
     bash_path = tools_locations["msys2"]["Windows"]["default"] + "/bash.exe"
     save(client.cache.new_config_path, textwrap.dedent("""
-            tools.win.bash:subsystem=msys2
-            tools.win.bash:path={}
+            tools.microsoft.bash:subsystem=msys2
+            tools.microsoft.bash:path={}
             """.format(bash_path)))
 
     main = gen_function_cpp(name="main")
