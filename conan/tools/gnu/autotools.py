@@ -65,7 +65,7 @@ class Autotools(object):
             if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
                 return False
             else:
-                if self._conanfile.win_shell:
+                if self._conanfile.win_bash:
                     return False
                 return True
         return False

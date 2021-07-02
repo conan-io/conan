@@ -357,10 +357,10 @@ def test_dict_access():
     assert dict(env.items()) == {"MyVar": "MyValue"}
 
 
-def test_env_win_shell():
+def test_env_win_bash():
     conanfile = ConanFileMock()
-    conanfile.win_shell = True
-    conanfile.conf = {"tools.win.shell:subsystem": "msys2"}
+    conanfile.win_bash = True
+    conanfile.conf = {"tools.win.bash:subsystem": "msys2"}
     folder = temp_folder()
     env = Environment(conanfile)
     env.define("MyVar", "MyValue")

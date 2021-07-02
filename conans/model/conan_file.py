@@ -141,7 +141,7 @@ class ConanFile(object):
     patterns = None
 
     # Run in windows bash
-    win_shell = None
+    win_bash = None
 
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
@@ -392,14 +392,14 @@ class ConanFile(object):
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
             ignore_errors=False, run_environment=False, with_login=True, env=None):
-        # NOTE: "win_shell" is the new "win_bash" for Conan 2.0
+        # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
         def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
             if platform.system() == "Windows":
                 if win_bash:
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd)
-                elif self.win_shell:  # New, Conan 2.0
+                elif self.win_bash:  # New, Conan 2.0
                     from conan.tools.microsoft.win import run_in_windows_shell
                     return run_in_windows_shell(self, command=cmd, cwd=cwd, env=_env)
             _env = _env or "conanenv"

@@ -113,7 +113,7 @@ class _EnvValue:
                     v = unix_path(self._conanfile, v)
                 values.append(v)
         if self._path:
-            pathsep = ":" if self._conanfile.win_shell else pathsep
+            pathsep = ":" if self._conanfile.win_bash else pathsep
             return pathsep.join(values)
 
         return self._sep.join(values)
@@ -377,7 +377,7 @@ class ProfileEnvironment:
 
 def save_script(conanfile, env, name, auto_activate=True):
     # FIXME: using platform is not ideal but settings might be incomplete
-    if platform.system() == "Windows" and not conanfile.win_shell:
+    if platform.system() == "Windows" and not conanfile.win_bash:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
         contents = env.get_bat_contents(path)
     else:
