@@ -146,7 +146,7 @@ class ConanProxy(object):
             try:
                 new_ref, new_ref_time = _retrieve_from_remote(remote, ref)
                 # TODO: check if we have to return the time here as well
-                return remote, new_ref, None
+                return remote, new_ref, new_ref_time
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
                 raise NotFoundException(msg)
