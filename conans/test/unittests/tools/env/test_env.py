@@ -91,7 +91,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
     env.compose(env2)
     with environment_append({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
-    assert env.var("MyVar").get_str("{name}") == result
+    assert env.var("MyVar").get_str(conanfile, "{name}") == result
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
@@ -124,7 +124,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
     else:
         env2.unset("MyVar")
     env.compose(env2)
-    assert env.var("MyVar").get_str("{name}", pathsep=":") == result
+    assert env.var("MyVar").get_str(conanfile, "{name}", pathsep=":") == result
 
 
 def test_profile():

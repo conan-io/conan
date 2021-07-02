@@ -53,16 +53,15 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
 
 
 class _EnvValue:
-    def __init__(self, conanfile, name, value=_EnvVarPlaceHolder, separator=" ",
+    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ",
                  path=False):
-        self._conanfile = conanfile
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
 
     def copy(self):
-        return _EnvValue(self._conanfile, self._name, self._values, self._sep, self._path)
+        return _EnvValue(self._name, self._values, self._sep, self._path)
 
     @property
     def is_path(self):
@@ -97,7 +96,7 @@ class _EnvValue:
             new_value[index:index + 1] = other._values  # replace the placeholder
             self._values = new_value
 
-    def get_str(self, placeholder, pathsep=os.pathsep):
+    def get_str(self, conanfile, placeholder, pathsep=os.pathsep):
         """
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
@@ -112,17 +111,17 @@ class _EnvValue:
             else:
                 if self._path:
                     from conan.tools.microsoft.subsystems import unix_path
-                    v = unix_path(self._conanfile, v)
+                    v = unix_path(conanfile, v)
                 values.append(v)
         if self._path:
-            pathsep = ":" if self._conanfile.win_bash else pathsep
+            pathsep = ":" if conanfile.win_bash else pathsep
             return pathsep.join(values)
 
         return self._sep.join(values)
 
-    def get_value(self, pathsep=os.pathsep):
+    def get_value(self, conanfile, pathsep=os.pathsep):
         previous_value = os.getenv(self._name)
-        return self.get_str(previous_value, pathsep)
+        return self.get_str(conanfile, previous_value, pathsep)
 
 
 class Environment:
@@ -140,28 +139,28 @@ class Environment:
         return repr(self._values)
 
     def define(self, name, value, separator=" "):
-        self._values[name] = _EnvValue(self._conanfile, name, value, separator, path=False)
+        self._values[name] = _EnvValue(name, value, separator, path=False)
 
     def define_path(self, name, value):
-        self._values[name] = _EnvValue(self._conanfile, name, value, path=True)
+        self._values[name] = _EnvValue(name, value, path=True)
 
     def unset(self, name):
         """
         clears the variable, equivalent to a unset or set XXX=
         """
-        self._values[name] = _EnvValue(self._conanfile, name, None)
+        self._values[name] = _EnvValue(name, None)
 
     def append(self, name, value, separator=None):
-        self._values.setdefault(name, _EnvValue(self._conanfile, name)).append(value, separator)
+        self._values.setdefault(name, _EnvValue(name)).append(value, separator)
 
     def append_path(self, name, value):
-        self._values.setdefault(name, _EnvValue(self._conanfile, name, path=True)).append(value)
+        self._values.setdefault(name, _EnvValue(name, path=True)).append(value)
 
     def prepend(self, name, value, separator=None):
-        self._values.setdefault(name, _EnvValue(self._conanfile, name)).prepend(value, separator)
+        self._values.setdefault(name, _EnvValue(name)).prepend(value, separator)
 
     def prepend_path(self, name, value):
-        self._values.setdefault(name, _EnvValue(self._conanfile, name, path=True)).prepend(value)
+        self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
 
     def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
@@ -191,7 +190,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("%{name}%", pathsep)
+            value = varvalues.get_str(self._conanfile, "%{name}%", pathsep)
             result.append('set {}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -205,7 +204,7 @@ class Environment:
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("$env:{name}", pathsep)
+            value = varvalues.get_str(self._conanfile, "$env:{name}", pathsep)
             result.append('$env:{}={}'.format(varname, value))
 
         content = "\n".join(result)
@@ -233,7 +232,7 @@ class Environment:
            """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
         for varname, varvalues in self._values.items():
-            value = varvalues.get_str("${name}", pathsep)
+            value = varvalues.get_str(self._conanfile, "${name}", pathsep)
             if value:
                 result.append('export {}="{}"'.format(varname, value))
             else:
@@ -252,8 +251,6 @@ class Environment:
             existing = self._values.get(k)
             if existing is None:
                 self._values[k] = v.copy()
-                # FIXME: Ugly
-                self._values[k]._conanfile = self._conanfile
             else:
                 existing.compose(v)
         return self
@@ -263,16 +260,16 @@ class Environment:
         return self._values.keys()
 
     def __getitem__(self, name):
-        return self._values[name].get_value()
+        return self._values[name].get_value(self._conanfile)
 
     def get(self, name, default=None):
         v = self._values.get(name)
         if v is None:
             return default
-        return v.get_value()
+        return v.get_value(self._conanfile)
 
     def items(self):
-        return {k: v.get_value() for k, v in self._values.items()}.items()
+        return {k: v.get_value(self._conanfile) for k, v in self._values.items()}.items()
 
     def var(self, name):
         return self._values[name]
