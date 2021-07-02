@@ -23,7 +23,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -165,13 +164,6 @@ class ClientCache(object):
     @property
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
-
-    # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
-    #  that call this directly
-    def package_layout(self, ref, short_paths=None):
-        raise Exception("buuuuuuuhhhhh")
-        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        return PackageCacheLayout(ref, self)
 
     @property
     def remotes_path(self):
