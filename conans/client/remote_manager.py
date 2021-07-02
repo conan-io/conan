@@ -150,7 +150,7 @@ class RemoteManager(object):
         touch_folder(export_sources_folder)
 
     def get_package(self, conanfile, pref, remote, output, recorder):
-        ref_layout = self._cache.ref_layout(pref.ref)
+        ref_layout = self._cache.get_ref_layout(pref.ref)
         conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
