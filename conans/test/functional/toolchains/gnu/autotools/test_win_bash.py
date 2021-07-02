@@ -49,7 +49,7 @@ def test_autotools_bash_complete():
                 env = Environment(self)
                 env.define("CXX", "cl")
                 env.define("CC", "cl")
-                save_script(self, env, "conan_compiler", auto_activate=True)
+                save_script(self, env, "conan_compiler")
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and

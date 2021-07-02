@@ -377,7 +377,7 @@ class ProfileEnvironment:
         return result
 
 
-def save_script(conanfile, env, name, auto_activate):
+def save_script(conanfile, env, name, auto_activate=True):
     # FIXME: using platform is not ideal but settings might be incomplete
     if platform.system() == "Windows" and not conanfile.win_bash:
         path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
