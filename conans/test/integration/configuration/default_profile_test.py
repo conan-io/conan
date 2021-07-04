@@ -101,7 +101,7 @@ class MyConanfile(ConanFile):
     settings = "os", "compiler", "arch"
     options = {"option1": ["1", "2"]}
     default_options = "option1=1"
-    generators = "VirtualEnv"
+    generators = "VirtualBuildEnv"
 
     def configure(self):
         assert(self.settings.os=="Windows")

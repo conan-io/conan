@@ -212,7 +212,7 @@ from conans import ConanFile
 
 class HelloTestConan(ConanFile):
     test_type = "build_requires"
-    generators = "VirtualEnv"
+    generators = "VirtualBuildEnv"
 
     def build(self):
         if platform.system() == "Windows":

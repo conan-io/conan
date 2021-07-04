@@ -222,6 +222,10 @@ def test_profile_buildenv():
 
 
 def test_transitive_order():
+    # conanfile.py -(br)-> cmake -> openssl (unknown=static)
+    #     \                    \-(br)-> gcc
+    #      \--------(br)-> gcc
+    #       \---------------------> openssl
     gcc = textwrap.dedent(r"""
         from conans import ConanFile
         class Pkg(ConanFile):

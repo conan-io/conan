@@ -147,62 +147,6 @@ def test_complete(client):
     assert "MYGTEST=Linux!!" in client.out
 
 
-def test_transitive_order():
-    # conanfile.py -(br)-> cmake -> openssl (unknown=static)
-    #     \                    \-(br)-> gcc
-    #      \--------(br)-> gcc
-    #       \---------------------> openssl
-    gcc = textwrap.dedent(r"""
-        from conans import ConanFile
-        class Pkg(ConanFile):
-            def package_info(self):
-                self.runenv_info.append("MYVAR", "MyGCCValue")
-        """)
-    openssl = textwrap.dedent(r"""
-        from conans import ConanFile
-        class Pkg(ConanFile):
-            settings = "os"
-            build_requires = "gcc/1.0"
-            def package_info(self):
-                self.runenv_info.append("MYVAR", "MyOpenSSL{}Value".format(self.settings.os))
-        """)
-    cmake = textwrap.dedent(r"""
-        from conans import ConanFile
-        class Pkg(ConanFile):
-            requires = "openssl/1.0"
-            build_requires = "gcc/1.0"
-            def package_info(self):
-                self.runenv_info.append("MYVAR", "MyCMakeRunValue")
-                self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
-        """)
-    client = TestClient()
-    client.save({"gcc/conanfile.py": gcc,
-                 "cmake/conanfile.py": cmake,
-                 "openssl/conanfile.py": openssl})
-
-    client.run("export gcc gcc/1.0@")
-    client.run("export openssl openssl/1.0@")
-    client.run("export cmake cmake/1.0@")
-
-    consumer = textwrap.dedent(r"""
-        from conans import ConanFile
-        from conan.tools.env import VirtualEnv
-        class Pkg(ConanFile):
-            requires = "openssl/1.0"
-            build_requires = "cmake/1.0", "gcc/1.0"
-            def generate(self):
-                env = VirtualEnv(self)
-                buildenv = env.build_environment()
-                self.output.info("BUILDENV: {}!!!".format(buildenv.get("MYVAR")))
-                runenv = env.run_environment()
-                self.output.info("RUNENV: {}!!!".format(runenv.get("MYVAR")))
-        """)
-    client.save({"conanfile.py": consumer}, clean_first=True)
-    client.run("install . -s:b os=Windows -s:h os=Linux --build -g VirtualEnv")
-    assert "BUILDENV: MyGCCValue MyCMakeRunValue MyCMakeBuildValue!!!" in client.out
-    assert "RUNENV: MyOpenSSLLinuxValue!!!" in client.out
-
-
 tool_conanfile = """from conans import ConanFile
 
 class Tool(ConanFile):

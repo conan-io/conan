@@ -73,7 +73,7 @@ def test_shared_requires_static():
            requires = "libb/0.1"
            default_options = {"libb:shared": True}
            settings = "os", "compiler", "arch", "build_type"
-           generators = "CMakeToolchain", "CMakeDeps", "VirtualEnv"
+           generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
            def build(self):
                cmake = CMake(self)
@@ -125,7 +125,7 @@ def test_transitive_binary_skipped():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    c.run("build . -g VirtualEnv")
+    c.run("build . -g VirtualRunEnv")
     command = environment_wrap_command("conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
