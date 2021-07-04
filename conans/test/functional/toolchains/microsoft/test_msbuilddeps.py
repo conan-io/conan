@@ -410,7 +410,6 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("create . ")
         client.save(pkg_cmake("Hello1", "1.0", ["Hello0/1.0"]), clean_first=True)
         client.run("create . ")
-        print(client.out)
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
@@ -594,10 +593,8 @@ class MSBuildGeneratorTest(unittest.TestCase):
             from conans import ConanFile, load
             class HelloConan(ConanFile):
                 settings = "os", "build_type", "compiler", "arch"
+                build_requires = "tool/1.0"
                 generators = "MSBuildDeps"
-
-                def build_requirements(self):
-                    self.build_requires("tool/1.0", force_host_context=True)
 
                 def build(self):
                     deps = load("conandeps.props")
