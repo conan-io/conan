@@ -59,6 +59,7 @@ def test_test_package():
             requires = "pkg/1.0"
         """)
     client.save({"conanfile.py": consumer})
-    client.run("install . -s:b os=Windows -s:h os=Linux --build=missing")
+    client.run("install . -s:b os=Windows -s:h os=Linux -s:h compiler=gcc -s:h compiler.version=7 "
+               "-s:h compiler.libcxx=libstdc++11 --build=missing")
     cmake_data = client.load("pkg-release-x86_64-data.cmake")
     assert "gtest" not in cmake_data
