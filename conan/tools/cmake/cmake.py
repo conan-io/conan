@@ -109,8 +109,7 @@ class CMake(object):
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
-            vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-            self._conanfile.run(command, env=["conanbuildenv", vcvars])
+            self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
@@ -136,8 +135,7 @@ class CMake(object):
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-        self._conanfile.run(command, env=["conanbuildenv", vcvars])
+        self._conanfile.run(command)
 
     def build(self, build_type=None, target=None):
         if not self._conanfile.should_build:

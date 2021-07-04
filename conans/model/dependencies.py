@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.client.graph.graph import BINARY_SKIP
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.ref import ConanFileReference
+
 from conans.model.requires import Requirement
 
 
@@ -72,7 +73,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True})
+        return self.filter({"build": False, "direct": True, "test": False})
 
     @property
     def direct_build(self):
@@ -80,7 +81,11 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def host(self):
-        return self.filter({"build": False})
+        return self.filter({"build": False, "test": False})
+
+    @property
+    def test(self):
+        return self.filter({"build": False, "test": True})
 
     @property
     def build(self):

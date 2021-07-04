@@ -35,8 +35,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         # so as the xxx-conf.cmake files won't be generated, don't include them as find_dependency
         # This is because in Conan 2.0 model, only the pure tools like CMake will be build_requires
         # for example a framework test won't be a build require but a "test/not public" require.
-        dependency_filenames = self.get_dependency_filenames() \
-            if not self.conanfile.is_build_context else []
+        dependency_filenames = self._get_dependency_filenames()
         package_folder = self.conanfile.package_folder.replace('\\', '/')\
                                                       .replace('$', '\\$').replace('"', '\\"')
         return {"global_cpp": global_cpp,
@@ -135,15 +134,19 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         ret.reverse()
         return ret
 
-    def get_dependency_filenames(self):
+    def _get_dependency_filenames(self):
+        if self.conanfile.is_build_context:
+            return []
         ret = []
+        direct_host = self.conanfile.dependencies.direct_host
         if self.conanfile.new_cpp_info.required_components:
             for dep_name, _ in self.conanfile.new_cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
-                    req = self.conanfile.dependencies.direct_host[dep_name]
+                    req = direct_host[dep_name]
                     ret.append(get_file_name(req))
-        elif self.conanfile.dependencies.direct_host:
-            ret = [get_file_name(r) for r in self.conanfile.dependencies.direct_host.values()]
+        elif direct_host:
+            ret = [get_file_name(r) for r in direct_host.values()]
+
         return ret
 
 
