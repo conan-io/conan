@@ -538,7 +538,8 @@ class PublicBuildRequiresTest(GraphManagerTest):
                                 (cmake, False, False, True, False)])
 
     def test_conflict_diamond(self):
-        # app -> lib -(br public)-> cmake
+        # app -> libb -(br public)-> cmake/0.1
+        #   \--> libc -(br public)-> cmake/0.2
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("cmake/0.1",
