@@ -4,7 +4,6 @@ import re
 import textwrap
 from collections import OrderedDict
 
-import six
 from jinja2 import Template
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
@@ -39,11 +38,11 @@ class Variables(OrderedDict):
 
     def quote_preprocessor_strings(self):
         for key, var in self.items():
-            if isinstance(var, six.string_types):
+            if isinstance(var, str):
                 self[key] = '"{}"'.format(var)
         for config, data in self._configuration_types.items():
             for key, var in data.items():
-                if isinstance(var, six.string_types):
+                if isinstance(var, str):
                     data[key] = '"{}"'.format(var)
 
 

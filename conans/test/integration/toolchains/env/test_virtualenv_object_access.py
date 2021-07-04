@@ -30,24 +30,23 @@ def test_virtualenv_object_access(client):
     conanfile = textwrap.dedent("""
     import os
     from conans import ConanFile
-    from conan.tools.env import VirtualEnv
+    from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 
     class ConanFileToolsTest(ConanFile):
         requires = "foo/1.0"
 
         def build(self):
-          env = VirtualEnv(self)
-          build_env = env.build_environment()
-          run_env = env.run_environment()
+          build_env = VirtualBuildEnv(self).environment()
+          run_env = VirtualRunEnv(self).environment()
           self.output.warn("Foo: *{}*".format(build_env["Foo"]))
           self.output.warn("runFoo: *{}*".format(run_env["runFoo"]))
           self.output.warn("Hello: *{}*".format(build_env["Hello"]))
 
-          with env.build_environment().apply():
+          with build_env.apply():
+            with run_env.apply():
               self.output.warn("Applied Foo: *{}*".format(os.getenv("Foo", "")))
               self.output.warn("Applied Hello: *{}*".format(os.getenv("Hello", "")))
               self.output.warn("Applied runFoo: *{}*".format(os.getenv("runFoo", "")))
-
     """)
 
     profile = textwrap.dedent("""

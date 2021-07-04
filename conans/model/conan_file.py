@@ -147,6 +147,8 @@ class ConanFile(object):
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
 
+        self.environment_scripts = []  # Accumulate the env scripts generated in order
+
         # layout() method related variables:
         self.folders = Folders()
         self.patterns = Patterns()
@@ -371,7 +373,7 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+            ignore_errors=False, run_environment=False, with_login=True, env="conanenv"):
 
         command = environment_wrap_command(env, command, cwd=self.generators_folder)
 
