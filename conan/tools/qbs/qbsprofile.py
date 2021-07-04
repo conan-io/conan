@@ -294,7 +294,8 @@ class QbsProfile(object):
             '_profile_values_from_setup': self._profile_values_from_setup,
             '_profile_values_from_env': self._profile_values_from_env,
             'build_variant': self._build_variant,
-            'architecture': self._architecture if not self._profile_values_from_setup["qbs.architecture"] else None,
+            'architecture': self._architecture if not
+                self._profile_values_from_setup.get("qbs.architecture") else None,
             'optimization': self._optimization,
             'sysroot': self._sysroot,
             'position_independent_code': self._position_independent_code,

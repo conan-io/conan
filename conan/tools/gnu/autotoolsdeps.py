@@ -1,4 +1,5 @@
 from conan.tools.env import Environment
+from conan.tools.env.environment import save_script
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.model.new_build_info import NewCppInfo
 
@@ -58,6 +59,6 @@ class AutotoolsDeps:
         env.append("CFLAGS", cflags)
         return env
 
-    def generate(self, env=None):
+    def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        env.save_script("conanautotoolsdeps")
+        save_script(self._conanfile, env, "conanautotoolsdeps", auto_activate=auto_activate)

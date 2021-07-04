@@ -36,8 +36,7 @@ class Meson(object):
         cmd += ' "{}" "{}"'.format(self._build_dir, source)
         if self._conanfile.package_folder:
             cmd += ' -Dprefix="{}"'.format(self._conanfile.package_folder)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
+        self._conanfile.run(cmd)
 
     def build(self, target=None):
         cmd = 'meson compile -C "{}"'.format(self._build_dir)
@@ -46,18 +45,16 @@ class Meson(object):
             cmd += " {}".format(njobs)
         if target:
             cmd += " {}".format(target)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
+        self._conanfile.run(cmd)
 
     def install(self):
         cmd = 'meson install -C "{}"'.format(self._build_dir)
         # TODO: Do we need vcvars for install?
         vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-        self._conanfile.run(cmd, env=["conanbuildenv", vcvars])
+        self._conanfile.run(cmd)
 
     def test(self):
         cmd = 'meson test -v -C "{}"'.format(self._build_dir)
         # TODO: Do we need vcvars for test?
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
         # TODO: This should use conanrunenv, but what if meson itself is a build-require?
-        self._conanfile.run(cmd, env=["conanbuildenv", "conanrunenv", vcvars])
+        self._conanfile.run(cmd)

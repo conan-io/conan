@@ -601,15 +601,15 @@ class MSBuildGeneratorTest(unittest.TestCase):
 
                 def build(self):
                     deps = load("conandeps.props")
-                    assert "conan_tool.props" in deps
-                    self.output.info("Conan_tools.props in deps")
+                    assert "conan_tool.props" not in deps
+                    self.output.info("Conan_tools.props not in deps")
             """)
         client.save({"conanfile.py": conanfile})
         client.run("install .")
         deps = client.load("conandeps.props")
-        self.assertIn("conan_tool.props", deps)
+        self.assertNotIn("conan_tool.props", deps)
         client.run("create . pkg/0.1@")
-        self.assertIn("Conan_tools.props in deps", client.out)
+        self.assertIn("Conan_tools.props not in deps", client.out)
 
     def test_install_transitive_build_requires(self):
         # https://github.com/conan-io/conan/issues/8170
@@ -629,7 +629,7 @@ class MSBuildGeneratorTest(unittest.TestCase):
         client.run("install . -g MSBuildDeps -pr:b=default -pr:h=default --build=missing")
         pkg = client.load("conan_pkg_release_x64.props")
         assert "conan_dep.props" in pkg
-        assert "tool_test" in pkg  # test requires are there
+        assert "tool_test" not in pkg  # test requires are not there
         assert "tool_build" not in pkg
 
 

@@ -7,11 +7,12 @@ from conans.model.ref import ConanFileReference
 
 class Requirement(object):
 
-    def __init__(self, ref, build=False, direct=True):
+    def __init__(self, ref, build=False, direct=True, test=False):
         # By default this is a generic library requirement
         self.ref = ref
         self.build = build  # This dependent node is a build tool that is executed at build time only
         self.direct = direct
+        self.test = test
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -83,20 +84,23 @@ class ConanFileDependencies(UserRequirementsDict):
     @staticmethod
     def from_node(node):
         # TODO: This construction will be easier in 2.0
-        build, host = [], []
+        build, test, host = [], [], []
         for edge in node.dependencies:
-            if edge.build_require and edge.dst.context == CONTEXT_BUILD:
-                build.append(edge.dst)
+            if edge.build_require:
+                if not edge.require.force_host_context:
+                    build.append(edge.dst)
+                else:
+                    test.append(edge.dst)
             else:
                 host.append(edge.dst)
 
         d = OrderedDict()
 
-        def expand(nodes, is_build):
+        def expand(nodes, is_build, is_test):
             all_nodes = set(nodes)
             for n in nodes:
                 conanfile = ConanFileInterface(n.conanfile)
-                d[Requirement(n.ref, build=is_build)] = conanfile
+                d[Requirement(n.ref, build=is_build, test=is_test)] = conanfile
 
             next_nodes = nodes
             while next_nodes:
@@ -109,10 +113,11 @@ class ConanFileDependencies(UserRequirementsDict):
                 next_nodes = new_nodes
                 for n in next_nodes:
                     conanfile = ConanFileInterface(n.conanfile)
-                    d[Requirement(n.ref, build=is_build, direct=False)] = conanfile
+                    d[Requirement(n.ref, build=is_build, test=is_test, direct=False)] = conanfile
 
-        expand(host, is_build=False)
-        expand(build, is_build=True)
+        expand(host, is_build=False, is_test=False)
+        expand(build, is_build=True, is_test=False)
+        expand(test, is_build=False, is_test=True)
 
         return ConanFileDependencies(d)
 
@@ -121,7 +126,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def direct_host(self):
-        return self.filter({"build": False, "direct": True})
+        return self.filter({"build": False, "direct": True, "test": False})
 
     @property
     def direct_build(self):
@@ -129,7 +134,11 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @property
     def host(self):
-        return self.filter({"build": False})
+        return self.filter({"build": False, "test": False})
+
+    @property
+    def test(self):
+        return self.filter({"build": False, "test": True})
 
     @property
     def build(self):
