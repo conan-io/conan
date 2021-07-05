@@ -390,8 +390,10 @@ class OpenSSLConan(ConanFile):
         #    self.assertFalse(os.path.exists(f))
 
     def _create_packages_and_builds(self):
-        reg_builds = self.client.get_latest_pkg_layout(self.ref).build()
-        reg_packs = self.client.get_latest_pkg_layout(self.ref).package()
+        pref = self.client.get_latest_prev(self.ref)
+        pkg_layout = self.client.get_latest_pkg_layout(pref)
+        reg_builds = pkg_layout.build()
+        reg_packs = pkg_layout.package()
 
         folders = [os.path.join(reg_builds, '342525g4f52f35f'),
                    os.path.join(reg_builds, 'ew9o8asdf908asdf80'),

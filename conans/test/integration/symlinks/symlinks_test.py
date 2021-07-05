@@ -46,10 +46,11 @@ Hello/0.1@lasote/stable
 @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
 class SymLinksTest(unittest.TestCase):
 
-    def _check(self, client, ref, build=True):
-        folders = [client.get_latest_pkg_layout(ref).package(), client.current_folder]
+    def _check(self, client, pref, build=True):
+        pkg_layout = client.get_latest_pkg_layout(pref)
+        folders = [pkg_layout.package(), client.current_folder]
         if build:
-            folders.append(client.get_latest_ref_layout(ref).build())
+            folders.append(pkg_layout.build())
         for base in folders:
             filepath = os.path.join(base, "file1.txt")
             link = os.path.join(base, "file1.txt.1")
@@ -129,7 +130,7 @@ class TestConan(ConanFile):
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
 
-        pkg_layout = client.get_latest_pkg_layout(ref)
+        pkg_layout = client.get_latest_pkg_layout(pref)
         ref_layout = client.get_latest_ref_layout(ref)
 
         for folder in [ref_layout.export(),
@@ -225,10 +226,10 @@ class ConanSymlink(ConanFile):
                                        "another_other_directory")
         self.assertTrue(os.path.exists(cache_other_dir))
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_file = os.path.join(client.get_latest_pkg_layout(ref).package(),
+        package_file = os.path.join(client.get_latest_pkg_layout(pref).package(),
                                     "another_directory", "not_to_copy.txt")
         self.assertFalse(os.path.exists(package_file))
-        package_other_dir = os.path.join(client.get_latest_pkg_layout(ref).package(),
+        package_other_dir = os.path.join(client.get_latest_pkg_layout(pref).package(),
                                          "another_other_directory")
         self.assertFalse(os.path.exists(package_other_dir))
         client.save({"conanfile.py": conanfile % "True"})
@@ -277,7 +278,7 @@ class ConanSymlink(ConanFile):
         self.assertEqual(os.path.realpath(sf_symlink), os.path.join(sf, "release"))
 
         # Assert that the symlink is preserved when copy to build folder
-        bf = client.get_latest_pkg_layout(ref).build(pref)
+        bf = client.get_latest_pkg_layout(pref).build()
         bf_symlink = os.path.join(bf, "debug")
         self.assertTrue(os.path.islink(bf_symlink))
         self.assertEqual(os.path.realpath(bf_symlink), os.path.join(bf, "release"))

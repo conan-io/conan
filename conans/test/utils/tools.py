@@ -669,13 +669,15 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_pkg_layout(self, ref: ConanReference) -> PackageLayout:
-        """Get the latest PackageLayout given a file reference"""
+    def get_latest_prev(self, ref: ConanReference) -> PackageReference:
+        """Get the latest PackageReference given a ConanReference"""
         latest_rrev = self.cache.get_latest_rrev(ref)
-        # Given the latest recipe revision we can get the latest package ID and
-        # the corresponding PackageLayout
         all_package_ids = self.cache.get_package_ids(latest_rrev)
-        latest_prev = self.cache.get_latest_prev(all_package_ids[0])
+        return self.cache.get_latest_prev(all_package_ids[0])
+
+    def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        latest_prev = self.cache.get_latest_prev(pref)
         pkg_layout = self.cache.get_pkg_layout(latest_prev)
         return pkg_layout
 

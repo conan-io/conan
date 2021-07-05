@@ -542,7 +542,8 @@ class CMakeInstallTest(unittest.TestCase):
         client.run("create . pkg/0.1@")
         self.assertIn("pkg/0.1 package(): Packaged 1 '.h' file: header.h", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
-        package_folder = client.get_latest_pkg_layout(ref).package()
+        pref = client.get_latest_prev(ref)
+        package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
 
 

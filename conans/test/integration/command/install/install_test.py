@@ -227,7 +227,7 @@ def test_install_broken_reference(client):
     ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
-    rmdir(os.path.join(client.get_latest_pkg_layout(ref).base_folder()))
+    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 

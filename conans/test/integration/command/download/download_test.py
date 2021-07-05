@@ -100,8 +100,9 @@ def test_download_reference_with_packages():
 
     client.run(f"download {ref}")
 
-    pkg_layout = client.get_latest_pkg_layout(ref=ref)
-    ref_layout = client.get_latest_ref_layout(ref=ref)
+    pref = client.get_latest_prev(ref)
+    pkg_layout = client.get_latest_pkg_layout(pref)
+    ref_layout = client.get_latest_ref_layout(ref)
 
     # Check not 'No remote binary packages found' warning
     assert "WARN: No remote binary packages found in remote" not in client.out
@@ -143,7 +144,8 @@ def test_download_full_reference():
 
     client.run("download pkg/0.1@lasote/stable:{}".format(NO_SETTINGS_PACKAGE_ID))
 
-    pkg_layout = client.get_latest_pkg_layout(ref)
+    pref = client.get_latest_prev(ref)
+    pkg_layout = client.get_latest_pkg_layout(pref)
     ref_layout = client.get_latest_ref_layout(ref)
 
     # Check not 'No remote binary packages found' warning
@@ -184,7 +186,8 @@ def test_download_package_argument():
 
     client.run(f"download {ref} -p {NO_SETTINGS_PACKAGE_ID}")
 
-    pkg_layout = client.get_latest_pkg_layout(ref)
+    pref = client.get_latest_prev(ref)
+    pkg_layout = client.get_latest_pkg_layout(pref)
     ref_layout = client.get_latest_ref_layout(ref)
 
     # Check not 'No remote binary packages found' warning

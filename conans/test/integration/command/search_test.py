@@ -545,7 +545,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
                 continue
             for package in os.listdir(packages):
                 pref = PackageReference(ref, package, "mypackagerev")
-                origin_path = self.client.get_latest_pkg_layout(ref).package()
+                origin_path = self.client.get_latest_pkg_layout(pref).package()
                 dest_path = server_store.package(pref)
                 shutil.copytree(origin_path, dest_path)
                 server_store.update_last_package_revision(pref)

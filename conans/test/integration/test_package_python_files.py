@@ -2,8 +2,8 @@ import os
 import textwrap
 
 from conans.util.files import load
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 def test_package_python_files():
@@ -32,7 +32,8 @@ def test_package_python_files():
     assert "myfile.pyc" in manifest
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
-    pkg_folder = client.get_latest_pkg_layout(ref).package()
+    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    pkg_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyc"))
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyo"))
     assert os.path.isfile(os.path.join(pkg_folder, ".DS_Store"))

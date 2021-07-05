@@ -1,14 +1,12 @@
 import os
-import shutil
 import unittest
-
 
 from conans.client.tools.files import untargz
 from conans.model.manifest import FileTreeManifest
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.paths import EXPORT_TGZ_NAME
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.test_files import temp_folder, uncompress_packaged_files
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load, save
 
@@ -119,6 +117,6 @@ class SynchronizeTest(unittest.TestCase):
     @staticmethod
     def _create_manifest(client, pref):
         # Create the manifest to be able to upload the package
-        pack_path = client.get_latest_pkg_layout(ref).package()
+        pack_path = client.get_latest_pkg_layout(pref).package()
         expected_manifest = FileTreeManifest.create(pack_path)
         expected_manifest.save(pack_path)

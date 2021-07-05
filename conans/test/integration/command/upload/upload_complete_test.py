@@ -140,7 +140,7 @@ class UploadTest(unittest.TestCase):
 
         self.server_pack_folder = self.test_server.server_store.package(self.pref)
 
-        package_folder = self.client.get_latest_pkg_layout(self.ref).package()
+        package_folder = self.client.get_latest_pkg_layout(self.pref).package()
         save(os.path.join(package_folder, "include", "lib1.h"), "//header")
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),

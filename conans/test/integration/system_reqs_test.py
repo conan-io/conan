@@ -35,7 +35,8 @@ def test_force_system_reqs_rerun():
     client.run("install Test/0.1@user/channel")
     assert "*+Running system requirements+*" not in client.out
     ref = ConanFileReference.loads("Test/0.1@user/channel")
-    reqs_file = client.get_latest_pkg_layout(ref).system_reqs_package()
+    pref = client.get_latest_prev(ref)
+    reqs_file = client.get_latest_pkg_layout(pref).system_reqs_package()
     os.unlink(reqs_file)
     client.run("install Test/0.1@user/channel")
     assert "*+Running system requirements+*" in client.out
@@ -68,23 +69,23 @@ def test_per_package():
     client.run("install Test/0.1@user/testing --build missing")
     assert "*+Running system requirements+*" in client.out
     ref = ConanFileReference.loads("Test/0.1@user/testing")
-    assert not os.path.exists(client.get_latest_pkg_layout(ref).system_reqs_package())
     pref = PackageReference(ref, "f0ba3ca2c218df4a877080ba99b65834b9413798")
+    assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
     load_file = load(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert "Installed my stuff" in load_file
 
     # Run again
     client.run("install Test/0.1@user/testing --build missing")
     assert "*+Running system requirements+*" not in client.out
-    assert not os.path.exists(client.get_latest_pkg_layout(ref).system_reqs_package())
+    assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
     load_file = load(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert "Installed my stuff" in load_file
 
     # Run with different option
     client.run("install Test/0.1@user/testing -o myopt=False --build missing")
     assert "*+Running system requirements+*" in client.out
-    assert not os.path.exists(client.get_latest_pkg_layout(ref).system_reqs_package())
     pref2 = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    assert not os.path.exists(client.get_latest_pkg_layout(pref2).system_reqs_package())
     load_file = load(client.get_latest_pkg_layout(pref2).system_reqs_package())
     assert "Installed my stuff" in load_file
 
@@ -116,14 +117,14 @@ def test_global():
     ref = ConanFileReference.loads("Test/0.1@user/testing")
     pref = PackageReference(ref, "a527106fd9f2e3738a55b02087c20c0a63afce9d")
     assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
-    load_file = load(client.get_latest_pkg_layout(ref).system_reqs_package())
+    load_file = load(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert "Installed my stuff" in load_file
 
     # Run again
     client.run("install Test/0.1@user/testing --build missing")
     assert "*+Running system requirements+*" not in client.out
     assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
-    load_file = load(client.get_latest_pkg_layout(ref).system_reqs_package())
+    load_file = load(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert "Installed my stuff" in load_file
 
     # Run with different option
@@ -132,14 +133,14 @@ def test_global():
     pref2 = PackageReference(ref, "54c9626b48cefa3b819e64316b49d3b1e1a78c26")
     assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert not os.path.exists(client.get_latest_pkg_layout(pref2).system_reqs_package())
-    load_file = load(client.get_latest_pkg_layout(ref).system_reqs_package())
+    load_file = load(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert "Installed my stuff" in load_file
 
     # remove packages
     client.run("remove Test* -f -p")
     assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
     assert not os.path.exists(client.get_latest_pkg_layout(pref2).system_reqs_package())
-    assert not os.path.exists(client.get_latest_pkg_layout(ref).system_reqs_package())
+    assert not os.path.exists(client.get_latest_pkg_layout(pref).system_reqs_package())
 
 
 def test_wrong_output():
@@ -153,7 +154,9 @@ def test_wrong_output():
     client.run("install Test/0.1@user/testing --build missing")
     assert "*+Running system requirements+*" in client.out
     ref = ConanFileReference.loads("Test/0.1@user/testing")
-    pkg_layout = client.get_latest_pkg_layout(ref)
+    latest_rrev = client.cache.get_latest_rrev(ref)
+    pref = PackageReference(latest_rrev, "f0ba3ca2c218df4a877080ba99b65834b9413798")
+    pkg_layout = client.get_latest_pkg_layout(pref)
     assert not os.path.exists(pkg_layout.system_reqs())
     load_file = load(pkg_layout.system_reqs_package())
     assert '' == load_file
@@ -165,7 +168,8 @@ def test_remove_system_reqs():
     client = TestClient()
     files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
     client.save(files)
-    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(ref).system_reqs_package())
+    pref = client.get_latest_prev(ref)
+    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs_package())
 
     # create package to populate system_reqs folder
     assert not os.path.exists(system_reqs_path)
@@ -190,7 +194,8 @@ def test_remove_system_reqs():
 
     # Wildcard system_reqs removal
     ref_other = ConanFileReference.loads("Test/0.1@user/channel_other")
-    system_reqs_path_other = os.path.dirname(client.get_latest_pkg_layout(ref_other).system_reqs())
+    pref_other = client.get_latest_prev(ref_other)
+    system_reqs_path_other = os.path.dirname(client.get_latest_pkg_layout(pref_other).system_reqs())
 
     client.run("create . user/channel_other")
     client.run("remove --system-reqs '*'")
@@ -241,7 +246,8 @@ def test_permission_denied_remove_system_reqs():
     client = TestClient()
     files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
     client.save(files)
-    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(ref).system_reqs_package())
+    pref = client.get_latest_prev(ref)
+    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs_package())
 
     # create package to populate system_reqs folder
     assert not os.path.exists(system_reqs_path)
@@ -271,7 +277,8 @@ def test_duplicate_remove_system_reqs():
     client = TestClient()
     files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "")}
     client.save(files)
-    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(ref).system_reqs_package())
+    pref = client.get_latest_prev(ref)
+    system_reqs_path = os.path.dirname(client.get_latest_pkg_layout(pref).system_reqs_package())
 
     # create package to populate system_reqs folder
     assert not os.path.exists(system_reqs_path)
