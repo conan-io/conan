@@ -273,8 +273,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
-                                NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
+                                           NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
@@ -733,8 +733,8 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
-                                NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
+                                           NO_SETTINGS_PACKAGE_ID)
         bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))

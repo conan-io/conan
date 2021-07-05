@@ -126,7 +126,7 @@ class DeployGeneratorPermissionsTest(unittest.TestCase):
 
         self.client = TurboTestClient()
         self.client.create(self.ref1, conanfile1)
-        pref = PackageReference(self.ref1, NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_prev(self.ref1, NO_SETTINGS_PACKAGE_ID)
         package_folder = self.client.get_latest_pkg_layout(pref).package()
         self.header_path = os.path.join(package_folder, "include", "header1.h")
         self.assertTrue(os.path.exists(self.header_path))
@@ -154,7 +154,7 @@ class DeployGeneratorSymbolicLinkTest(unittest.TestCase):
 
         self.client = TurboTestClient()
         self.client.create(self.ref, conanfile)
-        pref = PackageReference(self.ref, NO_SETTINGS_PACKAGE_ID)
+        pref = self.client.get_latest_prev(self.ref, NO_SETTINGS_PACKAGE_ID)
         package_folder = self.client.get_latest_pkg_layout(pref).package()
         self.header_path = os.path.join(package_folder, "include", "header.h")
         self.link_path = os.path.join(package_folder, "include", "header.h.lnk")

@@ -243,7 +243,8 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_prev(ConanFileReference.loads("Hello0/1.2.1@user/testing"),
+                                      NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:

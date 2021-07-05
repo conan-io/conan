@@ -81,7 +81,7 @@ find_package(Hello0 REQUIRED)
             client.run_command("cmake .. -DCMAKE_TOOLCHAIN_FILE=../conan_paths.cmake")
         self.assertIn("HELLO FROM THE Hello0 FIND PACKAGE!", client.out)
         ref = ConanFileReference.loads("Hello0/0.1@user/channel")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_prev(ref, package_id=NO_SETTINGS_PACKAGE_ID)
         package_folder = client.get_latest_pkg_layout(pref).package()
         # Check that the CONAN_HELLO0_ROOT has been replaced with the real abs path
         self.assertIn("ROOT PATH: %s" % package_folder.replace("\\", "/"), client.out)

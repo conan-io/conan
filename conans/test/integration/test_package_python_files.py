@@ -32,7 +32,7 @@ def test_package_python_files():
     assert "myfile.pyc" in manifest
     assert "myfile.pyo" in manifest
     assert ".DS_Store" not in manifest
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
+    pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
     pkg_folder = client.get_latest_pkg_layout(pref).package()
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyc"))
     assert os.path.isfile(os.path.join(pkg_folder, "myfile.pyo"))

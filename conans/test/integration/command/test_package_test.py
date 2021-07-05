@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conans.client import tools
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
@@ -267,7 +267,8 @@ class HelloReuseConan(ConanFile):
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
         client.run("test test Hello/0.1@lasote/stable")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_prev(ConanFileReference.loads("Hello/0.1@lasote/stable"),
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
