@@ -1676,7 +1676,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.profile.__doc__,
                                          prog="conan profile",
                                          formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand')
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "profile" command
