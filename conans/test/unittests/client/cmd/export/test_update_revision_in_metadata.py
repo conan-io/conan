@@ -7,11 +7,12 @@ from collections import namedtuple
 import pytest
 from mock import mock
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import TestBufferConanOutput
 
+
+# TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
