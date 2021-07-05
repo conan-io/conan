@@ -157,4 +157,4 @@ class ConanOutput(object):
 
 def cli_out_write(data, fg=None, bg=None, endline="\n"):
     data = "{}{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL, endline)
-    sys.stderr.write(data)
+    sys.stdout.write(data)
