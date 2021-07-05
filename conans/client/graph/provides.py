@@ -20,7 +20,7 @@ def check_graph_provides(dep_graph):
                     raise GraphError.provides(node, dep_node)
 
                 # Then, check if collides with other requirements
-                new_req = dep_require.copy()
+                new_req = dep_require.copy_requirement()
                 new_req.ref = ConanFileReference(provide, new_req.ref.version, new_req.ref.user,
                                                  new_req.ref.channel, validate=False)
                 existing = node.transitive_deps.get(new_req)

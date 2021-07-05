@@ -30,7 +30,7 @@ def compute_package_id(node, new_config):
                 build_data[require] = req_info
         else:
             if dep_package_id is None:  # Automatically deducing package_id
-                if require.include or require.link:  # linked
+                if require.headers or require.libs:  # linked
                     if conanfile.package_type is PackageType.SHARED:
                         if dep_conanfile.package_type is PackageType.SHARED:
                             dep_package_id = "minor_mode"

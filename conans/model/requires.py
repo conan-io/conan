@@ -8,17 +8,19 @@ from conans.model.ref import ConanFileReference
 class Requirement:
     """ A user definition of a requires in a conanfile
     """
-    def __init__(self, ref, include=True, link=True, build=False, run=None, public=True,
-                 transitive_headers=None, test=False, package_id_mode=None, force=False,
-                 override=False, direct=True):
+    def __init__(self, ref, *, headers=True, libs=True, build=False, run=None, visible=True,
+                 transitive_headers=None, transitive_libs=None, test=False, package_id_mode=None,
+                 force=False, override=False, direct=True):
+        # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
-        self.include = include  # This dependent node has headers that must be -I<include-path>
-        self.link = link
+        self.headers = headers  # This dependent node has headers that must be -I<headers-path>
+        self.libs = libs
         self.build = build  # This dependent node is a build tool that is executed at build time only
         self.run = run  # node contains executables, shared libs or data necessary at host run time
-        self.public = public  # Even if not linked or visible, the node is unique, can conflict
+        self.visible = visible  # Even if not libsed or visible, the node is unique, can conflict
         self.transitive_headers = transitive_headers
+        self.transitive_libs = transitive_libs
         self.test = test
         self.package_id_mode = package_id_mode
         self.force = force
@@ -28,9 +30,11 @@ class Requirement:
     def __repr__(self):
         return repr(self.__dict__)
 
-    def copy(self):
-        return Requirement(self.ref, self.include, self.link, self.build, self.run, self.public,
-                           self.transitive_headers)
+    def copy_requirement(self):
+        return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
+                           run=self.run, visible=self.visible,
+                           transitive_headers=self.transitive_headers,
+                           transitive_libs=self.transitive_libs)
 
     @property
     def version_range(self):
@@ -55,9 +59,9 @@ class Requirement:
             return
         pkg_type = node.conanfile.package_type
         if pkg_type is PackageType.APP:
-            # Change the default requires include&link to False for APPS
-            self.include = False
-            self.link = False
+            # Change the default requires headers&libs to False for APPS
+            self.headers = False
+            self.libs = False
             self.run = True
         elif pkg_type is PackageType.SHARED:
             self.run = True
@@ -65,18 +69,18 @@ class Requirement:
             self.run = False
         elif pkg_type is PackageType.HEADER:
             self.run = False
-            self.link = False
-            self.include = True
+            self.libs = False
+            self.headers = True
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
 
     def __eq__(self, other):
         return (self.ref.name == other.ref.name and self.build == other.build and
-                ((self.include and other.include) or
-                 (self.link and other.link) or
+                ((self.headers and other.headers) or
+                 (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.public and other.public) or
+                 (self.visible and other.visible) or
                  (self.ref == other.ref)))
 
     def aggregate(self, other):
@@ -84,10 +88,10 @@ class Requirement:
         to be aggregated
         """
         assert self.build == other.build
-        self.include |= other.include
-        self.link |= other.link
+        self.headers |= other.headers
+        self.libs |= other.libs
         self.run = self.run or other.run
-        self.public |= other.public
+        self.visible |= other.visible
         # TODO: self.package_id_mode => Choose more restrictive?
 
     def __ne__(self, other):
@@ -100,68 +104,71 @@ class Requirement:
         to such "consumer".
         Result can be None if nothing is to be propagated
         """
-        if require.public is False:
+        if require.visible is False:
             # TODO: We could implement checks in case private is violated (e.g shared libs)
             return
 
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
-            downstream_require = Requirement(require.ref, include=False, link=False, build=True,
-                                             run=False, public=True, direct=False)
+            downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
+                                             run=False, visible=True, direct=False)
             return downstream_require
 
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
             if dep_pkg_type is PackageType.SHARED or require.run:
-                downstream_require = Requirement(require.ref, include=False, link=False, build=True,
-                                                 run=True, public=False, direct=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
+                                                 run=True, visible=False, direct=False)
                 return downstream_require
             return
 
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, include=False, link=True, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=True, run=True)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=True)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=True)
             else:
                 assert pkg_type is PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
-                downstream_require = require.copy()
+                downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.STATIC:
             if pkg_type is PackageType.SHARED:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
             elif pkg_type is PackageType.STATIC:
-                downstream_require = Requirement(require.ref, include=False, link=True, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=True, run=False)
             elif pkg_type is PackageType.APP:
-                downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+                downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
             else:
                 assert pkg_type is PackageType.UNKNOWN
                 # TODO: This is undertested, changing it did not break tests
-                downstream_require = require.copy()
+                downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
-            downstream_require = Requirement(require.ref, include=False, link=False, run=False)
+            downstream_require = Requirement(require.ref, headers=False, libs=False, run=False)
         else:
             # Unknown, default. This happens all the time while check_downstream as shared is unknown
             # FIXME
-            downstream_require = require.copy()
+            downstream_require = require.copy_requirement()
 
-        assert require.public, "at this point require should be public"
+        assert require.visible, "at this point require should be visible"
 
-        if require.transitive_headers:
-            downstream_require.include = True
+        if require.transitive_headers is not None:
+            downstream_require.headers = require.transitive_headers
+
+        if require.transitive_libs is not None:
+            downstream_require.libs = require.transitive_libs
 
         # If non-default, then the consumer requires has priority
-        if self.public is False:
-            downstream_require.public = False
+        if self.visible is False:
+            downstream_require.visible = False
 
-        if self.include is False:
-            downstream_require.include = False
+        if self.headers is False:
+            downstream_require.headers = False
 
-        if self.link is False:
-            downstream_require.link = False
+        if self.libs is False:
+            downstream_require.libs = False
 
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:
@@ -179,9 +186,9 @@ class BuildRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, package_id_mode=None, public=False):
+    def __call__(self, ref, package_id_mode=None, visible=False):
         # TODO: Check which arguments could be user-defined
-        self._requires.build_require(ref, package_id_mode=package_id_mode, public=public)
+        self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible)
 
 
 class TestRequirements:
@@ -228,10 +235,10 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, public=False):
+    def build_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False):
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = ConanFileReference.loads(ref)
-        req = Requirement(ref, include=False, link=False, build=True, run=True, public=public,
+        req = Requirement(ref, headers=False, libs=False, build=True, run=True, visible=visible,
                           package_id_mode=package_id_mode)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
@@ -239,7 +246,7 @@ class Requirements:
 
     def test_require(self, ref):
         ref = ConanFileReference.loads(ref)
-        req = Requirement(ref, include=True, link=True, build=False, run=None, public=False,
+        req = Requirement(ref, headers=True, libs=True, build=False, run=None, visible=False,
                           test=True, package_id_mode=None)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))

@@ -9,7 +9,7 @@ def test_private_skip():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . dep/1.0@")
-    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", public=False)})
+    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", visible=False)})
     client.run("create . pkg/1.0@")
     client.run("remove dep/1.0 -p -f")  # Dep binary is removed not used at all
 
@@ -23,7 +23,7 @@ def test_private_no_skip():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . dep/1.0@")
-    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", public=False)})
+    client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", visible=False)})
     client.run("create . pkg/1.0@")
 
     # But if we want to build pkg, no skip
@@ -43,7 +43,7 @@ def test_consumer_no_skip():
     client.save({"conanfile.py": GenConanfile().with_requires("dep/1.0")})
     client.run("create . pkg/1.0@")
     package_id = re.search(r"pkg/1.0:(\S+)", str(client.out)).group(1)
-    client.save({"conanfile.py": GenConanfile().with_requirement("pkg/1.0", public=False)})
+    client.save({"conanfile.py": GenConanfile().with_requirement("pkg/1.0", visible=False)})
 
     client.run("install . ")
 

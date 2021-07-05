@@ -14,8 +14,8 @@ def _check_transitive(node, transitive_deps):
 
     for v1, v2 in zip(values, transitive_deps):
         assert v1.node is v2[0]
-        assert v1.require.include is v2[1]
-        assert v1.require.link is v2[2]
+        assert v1.require.headers is v2[1]
+        assert v1.require.libs is v2[2]
         assert v1.require.build is v2[3]
         assert v1.require.run is v2[4]
 
@@ -519,7 +519,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # app -> lib -(br public)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                               public=True))
+                                                                               visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -543,9 +543,9 @@ class PublicBuildRequiresTest(GraphManagerTest):
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                                public=True))
+                                                                                visible=True))
         self.recipe_conanfile("libc/0.1", GenConanfile().with_build_requirement("cmake/0.2",
-                                                                                public=True))
+                                                                                visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1",
                                                                                "libc/0.1"),

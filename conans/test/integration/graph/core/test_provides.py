@@ -54,8 +54,8 @@ class TestProvidesTest(GraphManagerTest):
         self.recipe_conanfile("libb/0.1", GenConanfile().with_provides("feature"))
         if private:
             consumer = self.consumer_conanfile(GenConanfile("app", "0.1").
-                                               with_requirement("libb/0.1", public=False).
-                                               with_requirement("libc/0.1", public=False))
+                                               with_requirement("libb/0.1", visible=False).
+                                               with_requirement("libc/0.1", visible=False))
         else:
             consumer = self.consumer_conanfile(GenConanfile("app", "0.1").
                                                with_requires("libb/0.1", "libc/0.1"))
@@ -75,9 +75,9 @@ class TestProvidesTest(GraphManagerTest):
     def test_private_no_conflict(self):
         # app (provides libjpeg) -(private)-> br/v1 -(private)-> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
-        self.recipe_conanfile("br/0.1", GenConanfile().with_requirement("br_lib/0.1", public=False))
+        self.recipe_conanfile("br/0.1", GenConanfile().with_requirement("br_lib/0.1", visible=False))
         path = self.consumer_conanfile(GenConanfile("app", "0.1").
-                                       with_requirement("br/0.1", public=False).
+                                       with_requirement("br/0.1", visible=False).
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)

@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from conans.model.pkg_type import PackageType
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"

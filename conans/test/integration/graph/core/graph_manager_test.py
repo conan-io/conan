@@ -12,8 +12,8 @@ def _check_transitive(node, transitive_deps):
 
     for v1, v2 in zip(values, transitive_deps):
         assert v1.node is v2[0]
-        assert v1.require.include is v2[1]
-        assert v1.require.link is v2[2]
+        assert v1.require.headers is v2[1]
+        assert v1.require.libs is v2[2]
         assert v1.require.build is v2[3]
         assert v1.require.run is v2[4]
 
@@ -71,6 +71,30 @@ class TestLinear(GraphManagerTest):
         # node, include, link, build, run
         _check_transitive(app, [(libb, True, True, False, None),
                                 (liba, True, True, False, None)])
+        _check_transitive(libb, [(liba, True, True, False, None)])
+
+    def test_transitive_propagate_link(self):
+        # app -> libb0.1 -> liba0.1
+        # transitive_link=False will avoid propagating linkage requirement
+        self.recipe_cache("liba/0.1")
+        self.recipe_conanfile("libb/0.1", GenConanfile().with_requirement("liba/0.1",
+                                                                          transitive_libs=False))
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        app = deps_graph.root
+        libb = app.dependencies[0].dst
+        liba = libb.dependencies[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, include, link, build, run
+        _check_transitive(app, [(libb, True, True, False, None),
+                                (liba, True, False, False, None)])
         _check_transitive(libb, [(liba, True, True, False, None)])
 
     def test_transitive_all_static(self):
@@ -142,10 +166,11 @@ class TestLinear(GraphManagerTest):
                                 (liba, False, False, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
-    def test_transitive_all_shared_transitive_headers(self):
+    def test_transitive_all_shared_transitive_headers_libs(self):
         # app -> libb0.1 (shared) -> liba0.1 (shared)
         self.recipe_cache("liba/0.1", option_shared=True)
-        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True)
+        libb = GenConanfile().with_requirement("liba/0.1", transitive_headers=True,
+                                               transitive_libs=True)
         libb.with_shared_option(True)
         self.recipe_conanfile("libb/0.1", libb)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
@@ -164,7 +189,7 @@ class TestLinear(GraphManagerTest):
         # node, include, link, build, run
         # Default for app->liba is that it doesn't link, libb shared will isolate symbols by default
         _check_transitive(app, [(libb, True, True, False, True),
-                                (liba, True, False, False, True)])
+                                (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
     def test_middle_shared_up_static(self):
@@ -262,7 +287,7 @@ class TestLinear(GraphManagerTest):
     def test_private(self):
         # app -> libb0.1 -(private) -> liba0.1
         self.recipe_cache("liba/0.1")
-        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        libb = GenConanfile().with_requirement("liba/0.1", visible=False)
         self.recipe_conanfile("libb/0.1", libb)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
 
@@ -425,8 +450,8 @@ class TestDiamond(GraphManagerTest):
         self.recipe_cache("liba/0.1")
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_cache("libc/0.1", ["liba/0.1"])
-        libd = GenConanfile().with_requirement("libb/0.1", public=False)
-        libd.with_requirement("libc/0.1", public=False)
+        libd = GenConanfile().with_requirement("libb/0.1", visible=False)
+        libd.with_requirement("libc/0.1", visible=False)
         self.recipe_conanfile("libd/0.1", libd)
         consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
 
@@ -460,7 +485,7 @@ class TestDiamond(GraphManagerTest):
         # This private allows to avoid the liba conflict
         self.recipe_cache("liba/0.1", option_shared=False)
         self.recipe_cache("liba/0.2", option_shared=False)
-        libb = GenConanfile().with_requirement("liba/0.1", public=False)
+        libb = GenConanfile().with_requirement("liba/0.1", visible=False)
         libb.with_shared_option(True)
         self.recipe_conanfile("libb/0.1", libb)
         self.recipe_cache("libc/0.1", ["liba/0.2"], option_shared=True)
@@ -547,8 +572,8 @@ class TestDiamond(GraphManagerTest):
         self.recipe_cache("liba/0.2")
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_cache("libc/0.1", ["liba/0.2"])
-        libd = GenConanfile().with_requirement("libb/0.1", public=False)
-        libd.with_requirement("libc/0.1", public=False)
+        libd = GenConanfile().with_requirement("libb/0.1", visible=False)
+        libd.with_requirement("libc/0.1", visible=False)
         self.recipe_conanfile("libd/0.1", libd)
         consumer = self.recipe_consumer("app/0.1", ["libd/0.1"])
 
@@ -616,11 +641,11 @@ class TestDiamondMultiple(GraphManagerTest):
         self.recipe_cache("libb/0.1", ["liba/0.1"])
         self.recipe_cache("libc/0.1", ["liba/0.1"])
         self._cache_recipe("libd/0.1", GenConanfile().with_require("libb/0.1")
-                           .with_requirement("libc/0.1", public=False))
+                           .with_requirement("libc/0.1", visible=False))
         self.recipe_cache("libe/0.1", ["libd/0.1"])
         self.recipe_cache("libf/0.1", ["libd/0.1"])
         consumer = self.consumer_conanfile(GenConanfile("app", "0.1").with_require("libe/0.1")
-                                           .with_requirement("libf/0.1", public=False))
+                                           .with_requirement("libf/0.1", visible=False))
 
         deps_graph = self.build_consumer(consumer)
 
@@ -880,9 +905,9 @@ class TestProjectApp(GraphManagerTest):
         self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.1"))
 
         deps_graph = self.build_graph(GenConanfile("project", "0.1")
-                                      .with_requirement("app1/0.1", include=False, link=False,
+                                      .with_requirement("app1/0.1", headers=False, libs=False,
                                                         build=False, run=True)
-                                      .with_requirement("app2/0.1", include=False, link=False,
+                                      .with_requirement("app2/0.1", headers=False, libs=False,
                                                         build=False, run=True)
                                       )
 
@@ -915,9 +940,9 @@ class TestProjectApp(GraphManagerTest):
         self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.2"))
 
         deps_graph = self.build_graph(GenConanfile("project", "0.1")
-                                      .with_requirement("app1/0.1", include=False, link=False,
+                                      .with_requirement("app1/0.1", headers=False, libs=False,
                                                         build=False, run=True)
-                                      .with_requirement("app2/0.1", include=False, link=False,
+                                      .with_requirement("app2/0.1", headers=False, libs=False,
                                                         build=False, run=True),
                                       install=False)
 
@@ -983,10 +1008,10 @@ class TestProjectApp(GraphManagerTest):
         self._cache_recipe("app2/0.1", GenConanfile().with_requirement("lib/0.2"))
 
         deps_graph = self.build_graph(GenConanfile("project", "0.1")
-                                      .with_requirement("app1/0.1", include=False, link=False,
-                                                        build=False, run=True, public=False)
-                                      .with_requirement("app2/0.1", include=False, link=False,
-                                                        build=False, run=True, public=False)
+                                      .with_requirement("app1/0.1", headers=False, libs=False,
+                                                        build=False, run=True, visible=False)
+                                      .with_requirement("app2/0.1", headers=False, libs=False,
+                                                        build=False, run=True, visible=False)
                                       )
 
         self.assertEqual(5, len(deps_graph.nodes))
