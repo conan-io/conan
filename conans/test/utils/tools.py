@@ -677,7 +677,12 @@ class TestClient(object):
 
     def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
-        latest_prev = self.cache.get_latest_prev(pref)
+        # Let's make it easier for all the test clients
+        if pref.ref.revision is None:
+            pref_ = PackageReference(self.cache.get_latest_rrev(pref.ref), pref.id)
+        else:
+            pref_ = pref
+        latest_prev = self.cache.get_latest_prev(pref_)
         pkg_layout = self.cache.get_pkg_layout(latest_prev)
         return pkg_layout
 
