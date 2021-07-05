@@ -189,7 +189,7 @@ class _PackageBuilder(object):
         pref = node.pref
 
         # TODO: cache2.0 fix this
-        recipe_layout = self._cache.ref_layout(pref.ref)
+        recipe_layout = self._cache.get_ref_layout(pref.ref)
 
         base_source = recipe_layout.source()
         conanfile_path = recipe_layout.conanfile()

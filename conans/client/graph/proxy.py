@@ -51,7 +51,7 @@ class ConanProxy(object):
         # NOT in disk, must be retrieved from remotes
         if not ref:
             remote, new_ref = self._download_recipe(reference, output, remotes, remotes.selected)
-            recipe_layout = self._cache.ref_layout(new_ref)
+            recipe_layout = self._cache.get_ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
