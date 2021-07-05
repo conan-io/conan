@@ -188,7 +188,7 @@ class DepsCppCmake(object):
             return '"%s"' % ";".join(p.replace('\\', '/').replace('$', '\\$') for p in values)
 
         self.include_paths = join_paths(cpp_info.includedirs)
-        if require and not require.include:
+        if require and not require.headers:
             self.include_paths = ""
         self.lib_paths = join_paths(cpp_info.libdirs)
         self.res_paths = join_paths(cpp_info.resdirs)
@@ -201,7 +201,7 @@ class DepsCppCmake(object):
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)
-        if require and not require.link:
+        if require and not require.libs:
             self.lib_paths = ""
             self.libs = ""
             self.system_libs = ""
@@ -219,7 +219,7 @@ class DepsCppCmake(object):
         self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
         self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
-        if require and not require.link and not require.include:
+        if require and not require.libs and not require.headers:
             self.defines = ""
             self.compile_definitions = ""
             self.cxxflags_list = ""
