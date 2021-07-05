@@ -368,21 +368,6 @@ class PackageIDTest(unittest.TestCase):
         self.assertEqual(str(info.settings.os_build), "Linux")
         self.assertEqual(str(info.settings.arch_build), "x86")
 
-    def test_std_non_matching_with_cppstd(self):
-        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
-                     channel="user/testing",
-                     settings=["compiler", "cppstd", ]
-                     )
-        self.client.run('install Hello/1.2.0@user/testing'
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 --build')
-
-        self.client.run('install Hello/1.2.0@user/testing'
-                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
-                        ' -s compiler.version=7.2 -s cppstd=gnu14',
-                        assert_error=True)  # Default
-        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
-
     def test_std_non_matching_with_compiler_cppstd(self):
         self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
                      channel="user/testing",
