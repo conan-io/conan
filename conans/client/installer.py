@@ -462,7 +462,7 @@ class BinaryInstaller(object):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
-        package_layout = self._cache.get_ref_layout(self._cache.get_latest_rrev(ref))
+        package_layout = self._cache.get_ref_layout(ref)
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
