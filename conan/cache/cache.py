@@ -20,6 +20,7 @@ class DataCache:
     def __init__(self, base_folder, db_filename):
         self._base_folder = os.path.realpath(base_folder)
         self._db = CacheDatabase(filename=db_filename)
+        self.counter = 0
 
     def closedb(self):
         self._db.close()
@@ -30,9 +31,13 @@ class DataCache:
         output.write(f"\nBase folder: {self._base_folder}\n\n")
         self._db.dump(output)
 
-    def _create_path(self, relative_path, remove_contents=True):
+    def _create_new_path(self, relative_path):
         path = self._full_path(relative_path)
-        if os.path.exists(path) and remove_contents:
+        os.makedirs(path)
+
+    def _clear_path(self, relative_path):
+        path = self._full_path(relative_path)
+        if os.path.exists(path):
             self._remove_path(relative_path)
         os.makedirs(path, exist_ok=True)
 
@@ -47,64 +52,69 @@ class DataCache:
     def base_folder(self):
         return self._base_folder
 
+    def _get_tmp_path(self):
+        self.counter = self.counter + 1
+        return os.path.join("tmp", str(self.counter))
+
     @staticmethod
-    def _get_tmp_path():
-        return os.path.join("tmp", str(uuid.uuid4()))
+    def _get_path(ref: ConanReference):
+        return md5(ref.full_reference)
 
-    def _get_or_create_reference_path(self, ref: ConanReference):
-        """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
-        if ref.rrev:
-            return md5(ref.full_reference)
-        else:
-            return self._get_tmp_path()
-
-    def _get_or_create_package_path(self, ref: ConanReference):
-        """ Returns a folder for a Conan-Reference, it's deterministic if revision is known """
-        if ref.prev:
-            return md5(ref.full_reference)
-        else:
-            return self._get_tmp_path()
-
-    def get_or_create_reference_layout(self, ref: ConanReference):
-        path = self._get_or_create_reference_path(ref)
-
-        if not ref.rrev:
-            ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, RREV_UNKNOWN,
-                                 ref.pkgid, ref.prev)
-
-        reference_path, created = self._db.get_or_create_reference(path, ref)
-        self._create_path(reference_path, remove_contents=created)
-
+    def create_tmp_reference_layout(self, ref: ConanReference):
+        assert not ref.rrev, "Recipe revision should be unknown"
+        ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, RREV_UNKNOWN,
+                             ref.pkgid, ref.prev)
+        reference_path = self._get_tmp_path()
+        self._db.create_reference(reference_path, ref)
+        self._create_new_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
-    def get_or_create_package_layout(self, pref: ConanReference):
+    def create_tmp_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get or create the package layout"
         assert pref.pkgid, "Package id must be known to get or create the package layout"
-        package_path = self._get_or_create_package_path(pref)
-        if not pref.prev:
-            pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
-                                  pref.pkgid, PREV_UNKNOWN)
+        assert not pref.prev, "Package revision should be unknown"
+        pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
+                              pref.pkgid, PREV_UNKNOWN)
+        package_path = self._get_tmp_path()
+        self._db.create_reference(package_path, pref)
+        self._create_new_path(package_path)
+        return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
-        package_path, created = self._db.get_or_create_reference(package_path, pref)
-        self._create_path(package_path, remove_contents=created)
+    def create_reference_layout(self, ref: ConanReference):
+        assert ref.rrev, "Recipe revision must be known to create the package layout"
+        ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, ref.rrev,
+                             ref.pkgid, ref.prev)
+        reference_path = self._get_path(ref)
+        self._db.create_reference(reference_path, ref)
+        self._clear_path(reference_path)
+        return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
+    def create_package_layout(self, pref: ConanReference):
+        assert pref.rrev, "Recipe revision must be known to create the package layout"
+        assert pref.pkgid, "Package id must be known to create the package layout"
+        assert pref.prev, "Package revision should be known to create the package layout"
+        pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
+                              pref.pkgid, pref.prev)
+        package_path = self._get_path(pref)
+        self._db.create_reference(package_path, pref)
+        self._clear_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        path = self._get_or_create_reference_path(ref)
-        return RecipeLayout(ref, os.path.join(self.base_folder, path))
+        reference_path = self._get_path(ref)
+        return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the package layout"
-        assert pref.prev, "Package revision must be known to get the package layout"
         assert pref.pkgid, "Package id must be known to get the package layout"
-        package_path = self._get_or_create_package_path(pref)
+        assert pref.prev, "Package revision must be known to get the package layout"
+        package_path = self._get_path(pref)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         old_path = self._db.try_get_reference_directory(old_ref)
-        new_path = self._get_or_create_reference_path(new_ref)
+        new_path = self._get_path(new_ref)
 
         try:
             self._db.update_reference(old_ref, new_ref, new_path=new_path)
@@ -130,7 +140,14 @@ class DataCache:
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
         old_path = self._db.try_get_reference_directory(old_pref)
-        new_path = self._get_or_create_reference_path(new_pref)
+        new_path = self._get_path(new_pref)
+        if os.path.exists(self._full_path(new_path)):
+            try:
+                rmdir(self._full_path(new_path))
+            except OSError as e:
+                raise ConanException(f"{self._full_path(new_path)}\n\nFolder: {str(e)}\n"
+                                     "Couldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry")
         try:
             self._db.update_reference(old_pref, new_pref, new_path=new_path)
         except ReferencesDbTable.ReferenceAlreadyExist:
@@ -138,16 +155,6 @@ class DataCache:
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks
             self._db.delete_ref_by_path(old_path)
-            if os.path.exists(self._full_path(new_path)):
-                try:
-                    rmdir(self._full_path(new_path))
-                except OSError as e:
-                    raise ConanException(f"{self._full_path(new_path)}\n\nFolder: {str(e)}\n"
-                                         "Couldn't remove folder, might be busy or open\n"
-                                         "Close any app using it, and retry")
-            else:
-                raise ConanException(f"Cache folder: {self._full_path(new_path)} associated to "
-                                     f"reference: {new_pref.full_reference} should exist.")
             self._db.update_reference(new_pref)
 
         shutil.move(self._full_path(old_path), self._full_path(new_path))

@@ -308,7 +308,7 @@ class PackageIDTest(unittest.TestCase):
             latest_rrev = self.client.cache.get_latest_rrev(hello_ref)
             pkg_ids = self.client.cache.get_package_ids(latest_rrev)
             latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
-            layout = self.client.cache.get_pkg_layout(latest_prev)
+            layout = self.client.cache.pkg_layout(latest_prev)
             return ConanInfo.loads(load(os.path.join(layout.package(), CONANINFO)))
 
         info = install_and_get_info(None)  # Default
@@ -362,7 +362,7 @@ class PackageIDTest(unittest.TestCase):
         latest_rrev = self.client.cache.get_latest_rrev(ref)
         pkg_ids = self.client.cache.get_package_ids(latest_rrev)
         latest_prev = self.client.cache.get_latest_prev(pkg_ids[0])
-        layout = self.client.cache.get_pkg_layout(latest_prev)
+        layout = self.client.cache.pkg_layout(latest_prev)
         pkg_folder = layout.package()
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEqual(str(info.settings.os_build), "Linux")

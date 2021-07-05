@@ -11,7 +11,7 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
                profile_host, profile_build, graph_lock, root_ref, force, remotes):
     cache, output, hook_manager = app.cache, app.out, app.hook_manager
     graph_manager = app.graph_manager
-    conan_file_path = cache.ref_layout(ref).conanfile()
+    conan_file_path = cache.create_ref_layout(ref).conanfile()
     if not os.path.exists(conan_file_path):
         raise ConanException("Package recipe '%s' does not exist" % str(ref))
 

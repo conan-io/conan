@@ -58,7 +58,7 @@ class BuildIdTest(unittest.TestCase):
         pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             "f3989dcba0ab50dc5ed9b40ede202bdd7b421f09")
         prev_debug = client.cache.get_latest_prev(pref_debug)
-        layout = client.cache.get_pkg_layout(prev_debug)
+        layout = client.cache.pkg_layout(prev_debug)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
@@ -67,7 +67,7 @@ class BuildIdTest(unittest.TestCase):
         pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               "ab2e9f86b4109980930cdc685f4a320b359e7bb4")
         prev_release = client.cache.get_latest_prev(pref_release)
-        layout = client.cache.get_pkg_layout(prev_release)
+        layout = client.cache.pkg_layout(prev_release)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
@@ -76,7 +76,7 @@ class BuildIdTest(unittest.TestCase):
         pref_debug = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                             "322de4b4a41f905f6b18f454ab5f498690b39c2a")
         prev_debug = client.cache.get_latest_prev(pref_debug)
-        layout = client.cache.get_pkg_layout(prev_debug)
+        layout = client.cache.pkg_layout(prev_debug)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Debug", conaninfo)
@@ -85,7 +85,7 @@ class BuildIdTest(unittest.TestCase):
         pref_release = PackageReference.loads(f"Pkg/0.1@user/channel#{latest_rrev.revision}:"
                                               "24c3aa2d6c5929d53bd86b31e020c55d96b265c7")
         prev_release = client.cache.get_latest_prev(pref_release)
-        layout = client.cache.get_pkg_layout(prev_release)
+        layout = client.cache.pkg_layout(prev_release)
         conaninfo = load(os.path.join(layout.package(), "conaninfo.txt"))
         self.assertIn("os=Linux", conaninfo)
         self.assertIn("build_type=Release", conaninfo)
@@ -224,8 +224,8 @@ class BuildIdTest(unittest.TestCase):
                 prevs.extend(client.cache.get_package_revisions(pkg_id))
             build_folders = []
             for prev in prevs:
-                if os.path.exists(client.cache.get_pkg_layout(prev).build()):
-                    build_folders.append(client.cache.get_pkg_layout(prev).build())
+                if os.path.exists(client.cache.pkg_layout(prev).build()):
+                    build_folders.append(client.cache.pkg_layout(prev).build())
             self.assertEqual(1, len(build_folders))
             self.assertEqual(2, len(pkg_ids))
             return build_folders[0], pkg_ids

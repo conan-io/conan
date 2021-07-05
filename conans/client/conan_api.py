@@ -1133,7 +1133,7 @@ class ConanAPIV1(object):
         # with that name
         latest_rrev = self.app.cache.get_latest_rrev(ref)
         if latest_rrev:
-            alias_conanfile_path = self.app.cache.get_ref_layout(latest_rrev).conanfile()
+            alias_conanfile_path = self.app.cache.ref_layout(latest_rrev).conanfile()
             if os.path.exists(alias_conanfile_path):
                 conanfile = self.app.loader.load_basic(alias_conanfile_path)
                 if not getattr(conanfile, 'alias', None):

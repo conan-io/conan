@@ -36,12 +36,12 @@ class PackageCacheLayout(object):
 
     def ref_layout(self):
         latest_rrev = self._cache.get_latest_rrev(self._ref)
-        return self._cache.get_ref_layout(latest_rrev)
+        return self._cache.ref_layout(latest_rrev)
 
     def pkg_layout(self, pref):
         latest_rrev = self._cache.get_latest_rrev(pref.ref)
         latest_prev = self._cache.get_latest_prev(PackageReference(latest_rrev, pref.id))
-        return self._cache.get_pkg_layout(latest_prev)
+        return self._cache.pkg_layout(latest_prev)
 
     def base_folder(self):
         return self.ref_layout().base_folder
@@ -76,7 +76,7 @@ class PackageCacheLayout(object):
         build_folders = []
         for package_id in package_ids:
             prev = self._cache.get_latest_prev(package_id)
-            build_folders.append(self._cache.get_pkg_layout(prev).build())
+            build_folders.append(self._cache.pkg_layout(prev).build())
         return build_folders
 
     def packages(self):
@@ -85,7 +85,7 @@ class PackageCacheLayout(object):
         packages_folders = []
         for package_id in package_ids:
             prev = self._cache.get_latest_prev(package_id)
-            packages_folders.append(self._cache.get_pkg_layout(prev).package())
+            packages_folders.append(self._cache.pkg_layout(prev).package())
         return packages_folders
 
     def package(self, pref):
