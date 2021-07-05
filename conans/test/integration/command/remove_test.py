@@ -1,6 +1,5 @@
 import os
 import sys
-import textwrap
 import unittest
 
 import pytest
@@ -17,68 +16,72 @@ from conans.util.files import load
 
 
 @pytest.mark.xfail(reason="cache2.0: TODO: FIX for new locking system")
-def test_remove_locks():
-    client = TestClient()
-    client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
-    client.run("create . lasote/testing")
-    assert 'does not contain a number!' not in client.out
-    ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
-    conan_folder = client.get_latest_ref_layout(ref).base_folder()
-    assert "locks" in os.listdir(conan_folder)
-    assert os.path.exists(conan_folder + ".count")
-    assert os.path.exists(conan_folder + ".count.lock")
-    client.run("remove * --locks", assert_error=True)
-    assert "ERROR: Specifying a pattern is not supported" in client.out
-    client.run("remove", assert_error=True)
-    assert 'ERROR: Please specify a pattern to be removed ("*" for all)' in client.out
-    client.run("remove --locks")
-    assert "locks" not in os.listdir(conan_folder)
-    assert not os.path.exists(conan_folder + ".count")
-    assert not os.path.exists(conan_folder + ".count.lock")
+class RemoveLocksTest(unittest.TestCase):
+    def test_remove_locks(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.1")})
+        client.run("create . lasote/testing")
+        self.assertNotIn('does not contain a number!', client.out)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/testing")
+        conan_folder = client.get_latest_ref_layout(ref).base_folder()
+        self.assertIn("locks", os.listdir(conan_folder))
+        self.assertTrue(os.path.exists(conan_folder + ".count"))
+        self.assertTrue(os.path.exists(conan_folder + ".count.lock"))
+        client.run("remove * --locks", assert_error=True)
+        self.assertIn("ERROR: Specifying a pattern is not supported", client.out)
+        client.run("remove", assert_error=True)
+        self.assertIn('ERROR: Please specify a pattern to be removed ("*" for all)', client.out)
+        client.run("remove --locks")
+        self.assertNotIn("locks", os.listdir(conan_folder))
+        self.assertFalse(os.path.exists(conan_folder + ".count"))
+        self.assertFalse(os.path.exists(conan_folder + ".count.lock"))
 
 
-def test_remove_registry():
-    test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-    servers = {"default": test_server}
-    client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-    client.save({"conanfile.py": GenConanfile()})
-    client.run("create . Test/0.1@lasote/testing")
-    client.run("upload * --all --confirm")
-    client.run('remove "*" -f')
-    client.run("remote list_pref Test/0.1@lasote/testing")
-    assert "Test/0.1@lasote/testing" not in client.out
-    registry_content = load(client.cache.remotes_path)
-    assert "Test/0.1@lasote/testing" not in registry_content
+class RemoveRegistryTest(unittest.TestCase):
+
+    def test_remove_registry(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . Test/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        client.run('remove "*" -f')
+        client.run("remote list_pref Test/0.1@lasote/testing")
+        self.assertNotIn("Test/0.1@lasote/testing", client.out)
+        registry_content = load(client.cache.remotes_path)
+        self.assertNotIn("Test/0.1@lasote/testing", registry_content)
 
 
-def test_remove_query():
-    test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
-    servers = {"default": test_server}
-    client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
-    conanfile = textwrap.dedent("""
-    from conans import ConanFile
-    class Test(ConanFile):
-        settings = "os"
-    """)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . Test/0.1@lasote/testing -s os=Windows")
-    client.run("create . Test/0.1@lasote/testing -s os=Linux")
-    client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
-    client.run("create . Test2/0.1@lasote/testing")
-    client.run("upload * --all --confirm")
-    for remote in ("", "-r=default"):
-        client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
-        client.run("search Test/0.1@lasote/testing %s" % remote)
-        assert "os: Windows" not in client.out
-        assert "os: Linux" in client.out
+class RemoveOutdatedTest(unittest.TestCase):
 
-        client.run("remove Test2/0.1@lasote/testing -q=os=Windows -f %s" % remote)
-        client.run("search Test2/0.1@lasote/testing %s" % remote)
-        assert "Package_ID: %s" % NO_SETTINGS_PACKAGE_ID in client.out
-        client.run("remove Test2/0.1@lasote/testing -q=os=None -f %s" % remote)
-        client.run("search Test2/0.1@lasote/testing %s" % remote)
-        assert "Package_ID: %s" % NO_SETTINGS_PACKAGE_ID not in client.out
-        assert "There are no packages" in client.out
+    def test_remove_query(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Test/0.1@lasote/testing -s os=Windows")
+        client.run("create . Test/0.1@lasote/testing -s os=Linux")
+        client.save({"conanfile.py": conanfile.replace("settings", "pass #")})
+        client.run("create . Test2/0.1@lasote/testing")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("remove Test/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertNotIn("os: Windows", client.out)
+            self.assertIn("os: Linux", client.out)
+
+            client.run("remove Test2/0.1@lasote/testing -q=os=Windows -f %s" % remote)
+            client.run("search Test2/0.1@lasote/testing %s" % remote)
+            self.assertIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+            client.run("remove Test2/0.1@lasote/testing -q=os=None -f %s" % remote)
+            client.run("search Test2/0.1@lasote/testing %s" % remote)
+            self.assertNotIn("Package_ID: %s" % NO_SETTINGS_PACKAGE_ID, client.out)
+            self.assertIn("There are no packages", client.out)
 
 
 conaninfo = '''
@@ -95,8 +98,6 @@ conaninfo = '''
   HelloInfo1/0.45@myuser/testing:33333
 [recipe_revision]
 '''
-
-# TODO: remove unittest dependency from all the tests
 
 
 @pytest.mark.xfail(reason="cache2.0: TODO: Write new tests for 2.0")
@@ -173,7 +174,7 @@ class RemoveTest(unittest.TestCase):
                 ref = ConanFileReference.loads(self.root_folder[k])
                 if isinstance(base_path, ServerStore):
                     try:
-                        rev = self.client.cache.get_latest_rrev(ref)
+                        rev = self.client.cache.get_latest_rrev(ref).revision
                     except:
                         # This whole test is a crap, we cannot guess remote revision
                         # if the package is not in local anymore
@@ -188,7 +189,7 @@ class RemoveTest(unittest.TestCase):
                         if isinstance(base_path, ServerStore):
                             pref = PackageReference(ref, sha)
                             try:
-                                prev = self.client.get_latest_pkg_layout(pref)
+                                prev = self.client.cache.get_latest_prev(pref).revision
                             except:
                                 # This whole test is a crap, we cannot guess remote revision
                                 # if the package is not in local anymore
