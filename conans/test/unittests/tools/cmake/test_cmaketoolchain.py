@@ -15,12 +15,17 @@ def conanfile():
     c = ConanFile(Mock(), None)
     c.settings = "os", "compiler", "build_type", "arch"
     c.initialize(Settings({"os": ["Windows"],
-                           "compiler": ["gcc"],
+                           "compiler": {"gcc": {"libcxx": ["libstdc++"]}},
                            "build_type": ["Release"],
                            "arch": ["x86"]}), EnvValues())
     c.settings.build_type = "Release"
     c.settings.arch = "x86"
+    c.settings.compiler = "gcc"
+    c.settings.compiler.libcxx = "libstdc++"
     c.conf = Conf()
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
     return c
 
 
@@ -32,34 +37,49 @@ def test_cmake_toolchain(conanfile):
 
 def test_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.pre_blocks.remove("generic_system")
+    toolchain.blocks.remove("generic_system")
     content = toolchain.content
     assert 'CMAKE_BUILD_TYPE' not in content
 
 
 def test_template_remove(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    toolchain.pre_blocks["generic_system"].template = ""
+    toolchain.blocks["generic_system"].template = ""
     content = toolchain.content
     assert 'CMAKE_BUILD_TYPE' not in content
 
 
 def test_template_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.pre_blocks["generic_system"].template
-    toolchain.pre_blocks["generic_system"].template = tmp.replace("CMAKE_BUILD_TYPE", "OTHER_THING")
+    tmp = toolchain.blocks["generic_system"].template
+    toolchain.blocks["generic_system"].template = tmp.replace("CMAKE_BUILD_TYPE", "OTHER_THING")
     content = toolchain.content
     assert 'set(OTHER_THING "Release"' in content
 
 
 def test_context_change(conanfile):
     toolchain = CMakeToolchain(conanfile)
-    tmp = toolchain.pre_blocks["generic_system"]
+    tmp = toolchain.blocks["generic_system"]
 
     def context(self):
         assert self
         return {"build_type": "SuperRelease"}
     tmp.context = types.MethodType(context, tmp)
+    content = toolchain.content
+    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+
+
+def test_context_update(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    build_type = toolchain.blocks["generic_system"].values["build_type"]
+    toolchain.blocks["generic_system"].values["build_type"] = "Super" + build_type
+    content = toolchain.content
+    assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
+
+
+def test_context_replace(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks["generic_system"].values = {"build_type": "SuperRelease"}
     content = toolchain.content
     assert 'set(CMAKE_BUILD_TYPE "SuperRelease"' in content
 
@@ -73,7 +93,7 @@ def test_replace_block(conanfile):
         def context(self):
             return {}
 
-    toolchain.pre_blocks["generic_system"] = MyBlock
+    toolchain.blocks["generic_system"] = MyBlock
     content = toolchain.content
     assert 'HelloWorld' in content
     assert 'CMAKE_BUILD_TYPE' not in content
@@ -88,7 +108,7 @@ def test_add_new_block(conanfile):
         def context(self):
             return {"myvar": "World"}
 
-    toolchain.pre_blocks["mynewblock"] = MyBlock
+    toolchain.blocks["mynewblock"] = MyBlock
     content = toolchain.content
     assert 'Hello World!!!' in content
     assert 'CMAKE_BUILD_TYPE' in content
@@ -105,7 +125,18 @@ def test_extend_block(conanfile):
             c["build_type"] = c["build_type"] + "Super"
             return c
 
-    toolchain.pre_blocks["generic_system"] = MyBlock
+    toolchain.blocks["generic_system"] = MyBlock
     content = toolchain.content
     assert 'Hello ReleaseSuper!!' in content
     assert 'CMAKE_BUILD_TYPE' not in content
+
+
+def test_user_toolchain(conanfile):
+    toolchain = CMakeToolchain(conanfile)
+    toolchain.blocks["user_toolchain"].user_toolchain = "myowntoolchain.cmake"
+    content = toolchain.content
+    assert 'include(myowntoolchain.cmake)' in content
+
+    toolchain = CMakeToolchain(conanfile)
+    content = toolchain.content
+    assert 'include(' not in content

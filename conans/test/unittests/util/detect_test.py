@@ -86,3 +86,10 @@ class DetectTest(unittest.TestCase):
             result = dict(result)
             self.assertEqual(expected_arch, result['arch'])
             self.assertEqual(expected_arch, result['arch_build'])
+
+    @mock.patch("conans.client.conf.detect._clang_compiler", return_value=("clang", "9"))
+    def test_detect_clang_gcc_toolchain(self, _):
+        output = TestBufferConanOutput()
+        with tools.environment_append({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+            detect_defaults_settings(output, profile_path="./MyProfile")
+            self.assertIn("CC and CXX: clang-9 --gcc-toolchain", output)

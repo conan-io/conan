@@ -5,6 +5,7 @@ import pytest
 
 from conan.tools.cmake import CMakeToolchain
 from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 from conans.test.functional.utils import check_vs_runtime, check_exe_run
 from conans.test.utils.tools import TestClient
@@ -77,7 +78,7 @@ def test_locally_build_linux(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
-    ldpath = os.path.join(client.current_folder, "mydeploy", "hello")
+    ldpath = os.path.join(client.current_folder, "mydeploy", "hello", "lib")
     client.run_command("LD_LIBRARY_PATH='{}' ./mydeploy/hello/myapp".format(ldpath))
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
@@ -113,6 +114,41 @@ def test_locally_build_msvc(build_type, shared, client):
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
     client.run_command(r"mydeploy\hello\myapp.exe")
     check_exe_run(client.out, ["main", "hello"], "msvc", "19", build_type, "x86_64", cppstd="14")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.tool_compiler
+@pytest.mark.tool_ninja
+def test_locally_build_msvc_toolset(client):
+    msvc_version = "15"
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=19.0
+        compiler.runtime=dynamic
+        compiler.cppstd=14
+        build_type=Release
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.microsoft.msbuild:vs_version = 15
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile")
+
+    client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
+                       '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
+                       '-DCMAKE_BUILD_TYPE=Release')
+
+    client.run_command("conanvcvars.bat && ninja")
+
+    client.run_command("myapp.exe")
+
+    # Checking that compiler is indeed version 19.0, not 19.1-default of VS15
+    check_exe_run(client.out, ["main", "hello"], "msvc", "19.0", "Release", "x86_64", cppstd="14")
+    check_vs_runtime("myapp.exe", client, msvc_version, "Release", architecture="amd64")
+    check_vs_runtime("mylibrary.lib", client, msvc_version, "Release", architecture="amd64")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
@@ -160,3 +196,34 @@ def test_locally_build_macos(build_type, shared, client):
     client.run_command(command_str)
     check_exe_run(client.out, ["main", "hello"], "apple-clang", None, build_type, "x86_64",
                   cppstd=None)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
+@pytest.mark.tool_visual_studio
+def test_ninja_conf():
+    conanfile = GenConanfile().with_generator("CMakeToolchain").with_settings("os", "compiler",
+                                                                              "build_type", "arch")
+    profile = textwrap.dedent("""
+        [settings]
+        os=Windows
+        compiler=msvc
+        compiler.version=19.1
+        compiler.runtime=dynamic
+        compiler.cppstd=14
+        build_type=Release
+        arch=x86_64
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr=profile")
+    conanbuild = client.load("conanbuild.json")
+    assert '"cmake_generator": "Ninja"' in conanbuild
+    vcvars = client.load("conanvcvars.bat")
+    assert "2017" in vcvars
+
+    # toolchain cannot define the CMAKE_GENERATOR_TOOLSET for Ninja
+    cmake = client.load("conan_toolchain.cmake")
+    assert "CMAKE_GENERATOR_TOOLSET" not in cmake

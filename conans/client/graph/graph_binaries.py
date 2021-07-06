@@ -61,7 +61,10 @@ class GraphBinariesAnalyzer(object):
 
             if self._cache.config.revisions_enabled:
                 metadata = package_layout.load_metadata()
-                rec_rev = metadata.packages[pref.id].recipe_revision
+
+                rec_rev = metadata.packages[
+                    pref.id].recipe_revision if pref.id in metadata.packages else None
+
                 if rec_rev and rec_rev != node.ref.revision:
                     node.conanfile.output.warn("The package {} doesn't belong to the installed "
                                                "recipe revision, removing folder".format(pref))
@@ -157,18 +160,27 @@ class GraphBinariesAnalyzer(object):
 
         # If it has lock
         locked = node.graph_lock_node
-        if locked and locked.package_id:  # if package_id = None, nothing to lock here
-            # First we update the package_id, just in case there are differences or something
-            if locked.package_id != node.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
-                raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
-                                     % (repr(locked.ref), node.package_id, locked.package_id))
-            locked.package_id = node.package_id  # necessary for PACKAGE_ID_UNKNOWN
+        if locked and locked.package_id and locked.package_id != PACKAGE_ID_UNKNOWN:
             pref = PackageReference(locked.ref, locked.package_id, locked.prev)  # Keep locked PREV
             self._process_node(node, pref, build_mode, update, remotes)
             if node.binary == BINARY_MISSING and build_mode.allowed(node.conanfile):
                 node.binary = BINARY_BUILD
             if node.binary == BINARY_BUILD:
                 locked.unlock_prev()
+
+            if node.package_id != locked.package_id:  # It was a compatible package
+                # https://github.com/conan-io/conan/issues/9002
+                # We need to iterate to search the compatible combination
+                for compatible_package in node.conanfile.compatible_packages:
+                    comp_package_id = compatible_package.package_id()
+                    if comp_package_id == locked.package_id:
+                        node._package_id = locked.package_id  # FIXME: Ugly definition of private
+                        node.conanfile.settings.values = compatible_package.settings
+                        node.conanfile.options.values = compatible_package.options
+                        break
+                else:
+                    raise ConanException("'%s' package-id '%s' doesn't match the locked one '%s'"
+                                         % (repr(locked.ref), node.package_id, locked.package_id))
         else:
             assert node.prev is None, "Non locked node shouldn't have PREV in evaluate_node"
             assert node.binary is None, "Node.binary should be None if not locked"
@@ -231,14 +243,19 @@ class GraphBinariesAnalyzer(object):
         metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
+
+        metadata = metadata or package_layout.load_metadata()
         if not remote:
             # If the remote_name is not given, follow the binary remote, or the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            metadata = metadata or package_layout.load_metadata()
-            remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+            if pref.id in metadata.packages:
+                remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
+            else:
+                remote_name = metadata.recipe.remote
             remote = remotes.get(remote_name)
 
-        if package_layout.package_id_exists(pref.id):  # Binary already in cache, check for updates
+        if package_layout.package_id_exists(pref.id) and pref.id in metadata.packages:
+            # Binary already in cache, check for updates
             self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
             recipe_hash = None
         else:  # Binary does NOT exist locally

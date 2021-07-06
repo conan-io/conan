@@ -43,8 +43,10 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             else:
                 assert arch is None, "checked don't know how to validate this architecture"
 
-            assert "{} _MSC_VER{}".format(name, version.replace(".", "")) in output
-            assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
+            if version:
+                assert "{} _MSC_VER{}".format(name, version.replace(".", "")) in output
+            if cppstd:
+                assert "{} _MSVC_LANG20{}".format(name, cppstd) in output
 
         elif compiler in ["gcc", "clang", "apple-clang"]:
             if compiler == "gcc":

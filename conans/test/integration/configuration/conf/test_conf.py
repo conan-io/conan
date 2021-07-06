@@ -133,3 +133,23 @@ def test_new_config_file_required_version():
         client.run("install .")
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
             in str(excinfo.value))
+
+
+def test_composition_conan_conf_overwritten_by_cli_arg(client):
+    conf = textwrap.dedent("""\
+        tools.microsoft.msbuild:verbosity=Quiet
+        tools.microsoft.msbuild:performance=Slow
+        """)
+    save(client.cache.new_config_path, conf)
+    profile = textwrap.dedent("""\
+        [conf]
+        tools.microsoft.msbuild:verbosity=Minimal
+        tools.microsoft.msbuild:robustness=High
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile -c tools.microsoft.msbuild:verbosity=Detailed "
+               "-c tools.meson.meson:verbosity=Super")
+    assert "tools.microsoft.msbuild:verbosity$Detailed" in client.out
+    assert "tools.microsoft.msbuild:performance$Slow" in client.out
+    assert "tools.microsoft.msbuild:robustness$High" in client.out
+    assert "tools.meson.meson:verbosity$Super" in client.out
