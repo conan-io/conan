@@ -73,8 +73,7 @@ def test_download_packages_twice(setup):
     expected_header_contents = "x"
 
     new_client.run("download Hello0/0.1@lasote/stable")
-    ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-    pref = client.get_latest_prev(ref)
+    pref = client.get_latest_prev("Hello0/0.1@lasote/stable", package_id=package_ids[0])
     package_folder = new_client.get_latest_pkg_layout(pref).package()
     got_header = load(os.path.join(package_folder, "helloHello0.h"))
     assert expected_header_contents == got_header
