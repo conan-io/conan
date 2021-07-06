@@ -1109,7 +1109,7 @@ class ConanAPIV1(object):
             latest_rrev = cache.get_latest_rrev(ref)
 
             if package_id is None:  # Get the file in the exported files
-                folder = cache.get_ref_layout(latest_rrev).export()
+                folder = cache.ref_layout(latest_rrev).export()
             else:
                 latest_pref = cache.get_latest_prev(PackageReference(latest_rrev, package_id))
                 folder = cache.get_pkg_layout(latest_pref).package()

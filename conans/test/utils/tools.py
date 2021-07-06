@@ -687,13 +687,13 @@ class TestClient(object):
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
         latest_prev = self.cache.get_latest_prev(pref)
-        pkg_layout = self.cache.get_pkg_layout(latest_prev)
+        pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
     def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
         latest_rrev = self.cache.get_latest_rrev(ref)
-        ref_layout = self.cache.get_ref_layout(latest_rrev)
+        ref_layout = self.cache.ref_layout(latest_rrev)
         return ref_layout
 
 
