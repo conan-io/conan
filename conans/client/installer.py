@@ -448,7 +448,7 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
 
-                    package_layout = self._cache.temp_pkg_layout(node.pref) if \
+                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
                         not node.pref.revision else self._cache.pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)
@@ -528,7 +528,7 @@ class BinaryInstaller(object):
                     raise ConanException("should this happen?")
                     pkg_layout = self._cache.pkg_layout(pref)
                 else:
-                    pkg_layout = self._cache.temp_pkg_layout(pref)
+                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
         else:
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV

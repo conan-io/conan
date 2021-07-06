@@ -29,7 +29,7 @@ class AliasConanfile(ConanFile):
     revision_mode = "%s"
 """ % (target_ref.full_str(), revision_mode)
 
-    alias_layout = cache.temp_ref_layout(alias_ref)
+    alias_layout = cache.create_temp_ref_layout(alias_ref)
 
     save(alias_layout.conanfile(), conanfile)
     manifest = FileTreeManifest.create(alias_layout.export())
@@ -79,7 +79,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
         conanfile = loader.load_export(conanfile_path, conanfile.name, conanfile.version,
                                        ref.user, ref.channel, python_requires)
 
-    recipe_layout = cache.temp_ref_layout(ref)
+    recipe_layout = cache.create_temp_ref_layout(ref)
 
     _check_settings_for_warnings(conanfile, output)
 
