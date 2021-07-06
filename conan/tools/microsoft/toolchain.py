@@ -2,17 +2,17 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conan.tools.env.environment import save_script, register_environment_script
+from conan.tools.env.environment import register_environment_script
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
 from conans.client.tools import intel_compilervars_command
 from conans.errors import ConanException
 from conans.util.files import save, load
 
-
 CONAN_VCVARS_FILE = "conanvcvars.bat"
 
 
-def write_conanvcvars(conanfile):
+def write_conanvcvars(conanfile, auto_activate=True):
+    # FIXME: Write a VCVars generator for the final user
     """
     write a conanvcvars.bat file with the good args from settings
     """
@@ -51,7 +51,9 @@ def write_conanvcvars(conanfile):
             """.format(cvars))
         path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
         save(path, content)
-        register_environment_script(conanfile, path)
+
+        if auto_activate:
+            register_environment_script(conanfile, path)
 
 
 def vs_ide_version(conanfile):
