@@ -849,7 +849,7 @@ class CollectLibTestCase(unittest.TestCase):
         conanfile = ConanFileMock()
         # Without package_folder
         conanfile.package_folder = None
-        result = conanfile.collect_libs()
+        result = tools.collect_libs(conanfile)
         self.assertEqual([], result)
 
         # Default behavior
@@ -857,28 +857,28 @@ class CollectLibTestCase(unittest.TestCase):
         mylib_path = os.path.join(conanfile.package_folder, "lib", "mylib.lib")
         save(mylib_path, "")
         conanfile.cpp_info = CppInfo("", "")
-        result = conanfile.collect_libs()
+        result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
 
         # Custom folder
         customlib_path = os.path.join(conanfile.package_folder, "custom_folder", "customlib.lib")
         save(customlib_path, "")
-        result = conanfile.collect_libs(folder="custom_folder")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
         self.assertEqual(["customlib"], result)
 
         # Custom folder doesn't exist
-        result = conanfile.collect_libs(folder="fake_folder")
+        result = tools.collect_libs(conanfile, folder="fake_folder")
         self.assertEqual([], result)
         self.assertIn("Lib folder doesn't exist, can't collect libraries:", conanfile.output)
 
         # Use cpp_info.libdirs
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = conanfile.collect_libs()
+        result = tools.collect_libs(conanfile)
         self.assertEqual(["customlib", "mylib"], result)
 
         # Custom folder with multiple libdirs should only collect from custom folder
         self.assertEqual(["lib", "custom_folder"], conanfile.cpp_info.libdirs)
-        result = conanfile.collect_libs(folder="custom_folder")
+        result = tools.collect_libs(conanfile, folder="custom_folder")
         self.assertEqual(["customlib"], result)
 
         # Warn same lib different folders
@@ -890,7 +890,7 @@ class CollectLibTestCase(unittest.TestCase):
         save(custom_mylib_path, "")
         save(lib_mylib_path, "")
         conanfile.cpp_info.libdirs = ["lib", "custom_folder"]
-        result = conanfile.collect_libs()
+        result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
         self.assertIn("Library 'mylib' was either already found in a previous "
                       "'conanfile.cpp_info.libdirs' folder or appears several times with a "
@@ -904,7 +904,7 @@ class CollectLibTestCase(unittest.TestCase):
         save(lib_mylib_path, "")
         no_folder_path = os.path.join(conanfile.package_folder, "no_folder")
         conanfile.cpp_info.libdirs = ["no_folder", "lib"]  # 'no_folder' does NOT exist
-        result = conanfile.collect_libs()
+        result = tools.collect_libs(conanfile)
         self.assertEqual(["mylib"], result)
         self.assertIn("WARN: Lib folder doesn't exist, can't collect libraries: %s"
                       % no_folder_path, conanfile.output)
