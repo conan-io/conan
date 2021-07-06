@@ -9,7 +9,8 @@ from jinja2 import Template
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
-from conan.tools.microsoft.toolchain import write_conanvcvars, vs_ide_version
+from conan.tools.microsoft.toolchain import write_conanvcvars
+from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -482,6 +483,8 @@ class GenericSystemBlock(Block):
         """)
 
     def _get_toolset(self, generator):
+        if generator is None or ("Visual" not in generator and "Xcode" not in generator):
+            return None
         settings = self._conanfile.settings
         compiler = settings.get_safe("compiler")
         compiler_base = settings.get_safe("compiler.base")

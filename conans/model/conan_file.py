@@ -1,4 +1,5 @@
 import os
+import platform
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
@@ -126,6 +127,9 @@ class ConanFile(object):
     folders = None
     patterns = None
 
+    # Run in windows bash
+    win_bash = None
+
     def __init__(self, output, runner, display_name="", user=None, channel=None):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
@@ -138,8 +142,8 @@ class ConanFile(object):
         self.compatible_packages = []
         self._conan_requester = None
 
-        self.buildenv_info = Environment()
-        self.runenv_info = Environment()
+        self.buildenv_info = Environment(self)
+        self.runenv_info = Environment(self)
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -194,7 +198,7 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):
@@ -369,16 +373,22 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanenv"):
+            ignore_errors=False, run_environment=False, with_login=True, env=None):
+        # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
-        command = environment_wrap_command(env, command, cwd=self.generators_folder)
-
-        def _run():
-            if not win_bash:
-                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+        def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
-            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, with_login=with_login)
+            if platform.system() == "Windows":
+                if win_bash:
+                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
+                                                     msys_mingw=msys_mingw, with_login=with_login)
+                elif self.win_bash:  # New, Conan 2.0
+                    from conan.tools.microsoft.subsystems import run_in_windows_bash
+                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
+            _env = _env or "conanenv"
+            command = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+
         if run_environment:
             # When using_build_profile the required environment is already applied through
             # 'conanfile.env' in the contextmanager 'get_env_context_manager'
@@ -389,9 +399,9 @@ class ConanFile(object):
                           (os.environ.get('DYLD_LIBRARY_PATH', ''),
                            os.environ.get("DYLD_FRAMEWORK_PATH", ''),
                            command)
-            retcode = _run()
+            retcode = _run(command, env)
         else:
-            retcode = _run()
+            retcode = _run(command, env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

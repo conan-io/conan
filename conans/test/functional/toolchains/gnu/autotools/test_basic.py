@@ -9,6 +9,7 @@ from conan.tools.env.environment import environment_wrap_command
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conans.test.assets.sources import gen_function_cpp
 from conans.test.functional.utils import check_exe_run
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 from conans.util.files import touch
 
@@ -91,7 +92,8 @@ def build_windows_subsystem(profile, make_program):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(["conanbuildenv",
+    cmd = environment_wrap_command(ConanFileMock(),
+                                   ["conanbuildenv",
                                     "conanautotoolstoolchain",
                                     "conanautotoolsdeps"], make_program, cwd=client.current_folder)
     client.run_command(cmd)

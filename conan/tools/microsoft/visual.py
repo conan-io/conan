@@ -4,6 +4,25 @@ from conans.client.tools.win import vs_installation_path
 from conans.errors import ConanException
 
 
+def vs_ide_version(conanfile):
+    compiler = conanfile.settings.get_safe("compiler")
+    compiler_version = (conanfile.settings.get_safe("compiler.base.version") or
+                        conanfile.settings.get_safe("compiler.version"))
+    if compiler == "msvc":
+        toolset_override = conanfile.conf["tools.microsoft.msbuild:vs_version"]
+        if toolset_override:
+            visual_version = toolset_override
+        else:
+            version = compiler_version[:4]  # Remove the latest version number 19.1X if existing
+            _visuals = {'19.0': '14',  # TODO: This is common to CMake, refactor
+                        '19.1': '15',
+                        '19.2': '16'}
+            visual_version = _visuals[version]
+    else:
+        visual_version = compiler_version
+    return visual_version
+
+
 def msvc_runtime_flag(conanfile):
     settings = conanfile.settings
     compiler = settings.get_safe("compiler")
