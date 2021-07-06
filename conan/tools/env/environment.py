@@ -265,6 +265,7 @@ class Environment:
                 self._values[k] = v.copy()
             else:
                 existing.compose(v)
+
         return self
 
     # Methods to user access to the environment object as a dict
@@ -328,6 +329,9 @@ class ProfileEnvironment:
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
                 result = env.compose(result)
 
+        # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
+        #        hasn't conanfile
+        result._conanfile = conanfile
         return result
 
     def compose(self, other):
