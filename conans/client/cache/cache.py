@@ -78,16 +78,22 @@ class ClientCache(object):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
-
-    def pkg_layout(self, ref):
-        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
-
-    def get_ref_layout(self, ref):
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
-    def get_pkg_layout(self, ref):
+    def pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
+
+    def create_ref_layout(self, ref):
+        return self._data_cache.create_reference_layout(ConanReference(ref))
+
+    def create_pkg_layout(self, ref):
+        return self._data_cache.create_package_layout(ConanReference(ref))
+
+    def create_temp_ref_layout(self, ref):
+        return self._data_cache.create_tmp_reference_layout(ConanReference(ref))
+
+    def create_temp_pkg_layout(self, ref):
+        return self._data_cache.create_tmp_package_layout(ConanReference(ref))
 
     def remove_layout(self, layout):
         layout.remove()

@@ -71,7 +71,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.get_ref_layout(ref).recipe_manifest()
+                manifest = self._cache.ref_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -126,7 +126,7 @@ class CommandOutputer(object):
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
                 # ref already has the revision ID, not needed to get it again
-                ref_layout = self._cache.get_ref_layout(ref)
+                ref_layout = self._cache.ref_layout(ref)
                 item_data["export_folder"] = ref_layout.export()
                 item_data["source_folder"] = ref_layout.source()
                 pref_build_id = build_id(conanfile) or package_id

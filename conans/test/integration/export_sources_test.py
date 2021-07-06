@@ -89,9 +89,8 @@ class ExportsSourcesTest(unittest.TestCase):
         latest_prev = self.client.cache.get_latest_prev(PackageReference(latest_rrev,
                                                                          NO_SETTINGS_PACKAGE_ID))
         if latest_prev:
-            pkg_layout = self.client.cache.get_pkg_layout(latest_prev)
+            pkg_layout = self.client.cache.pkg_layout(latest_prev)
             self.package_folder = pkg_layout.package()
-
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same

@@ -51,13 +51,13 @@ class ConanProxy(object):
         # NOT in disk, must be retrieved from remotes
         if not ref:
             remote, new_ref = self._download_recipe(reference, output, remotes, remotes.selected)
-            recipe_layout = self._cache.get_ref_layout(new_ref)
+            recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
 
         # TODO: cache2.0: check with new --update flows
-        recipe_layout = self._cache.get_ref_layout(ref)
+        recipe_layout = self._cache.ref_layout(ref)
         conanfile_path = recipe_layout.conanfile()
         # TODO: cache2.0: check if we want to get the remote through the layout
         cur_remote = self._cache.get_remote(recipe_layout.reference)

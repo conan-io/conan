@@ -39,7 +39,7 @@ def test_override(client):
     latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("MinGWBuild/0.1@lasote/testing"))
     pkg_ids = client.cache.get_package_ids(latest_rrev)
     latest_prev = client.cache.get_latest_prev(pkg_ids[0])
-    package_path = client.cache.get_pkg_layout(latest_prev).package()
+    package_path = client.cache.pkg_layout(latest_prev).package()
     conaninfo = load(os.path.join(package_path, CONANINFO))
     assert "compiler=gcc" in conaninfo
 
@@ -47,7 +47,7 @@ def test_override(client):
     latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
     pkg_ids = client.cache.get_package_ids(latest_rrev)
     latest_prev = client.cache.get_latest_prev(pkg_ids[0])
-    package_path = client.cache.get_pkg_layout(latest_prev).package()
+    package_path = client.cache.pkg_layout(latest_prev).package()
     conaninfo = load(os.path.join(package_path, CONANINFO))
     assert "compiler=Visual Studio" in conaninfo
     assert "compiler.version=14" in conaninfo
