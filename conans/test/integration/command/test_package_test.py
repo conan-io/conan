@@ -3,7 +3,7 @@ import textwrap
 import unittest
 
 from conans.client import tools
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
 from conans.util.files import load
@@ -266,14 +266,20 @@ class HelloReuseConan(ConanFile):
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        client.run("test test Hello/0.1@lasote/stable")
-        pref = PackageReference.loads("Hello/0.1@lasote/stable:%s" % NO_SETTINGS_PACKAGE_ID)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        client.run(f"test test {str(ref)}")
+        pref = client.get_latest_prev(ref,
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
-        client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
+        client.run(f"test test {str(ref)}")  # Test do not rebuild the package
+        pref = client.get_latest_prev(ref,
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
-                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
+        pref = client.get_latest_prev(ref,
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
-                         load(os.path.join(client.cache.package_layout(pref.ref).package(pref), "FindXXX.cmake")))
+                         load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
