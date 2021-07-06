@@ -2,7 +2,7 @@ import os
 import shutil
 from collections import OrderedDict
 from io import StringIO
-
+from typing import List
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
@@ -23,7 +23,6 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -119,7 +118,7 @@ class ClientCache(object):
                                    validate=False) for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref):
+    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
                                    validate=False) for pref in
@@ -155,12 +154,6 @@ class ClientCache(object):
     @property
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
-
-    # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
-    #  that call this directly
-    def package_layout(self, ref, short_paths=None):
-        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        return PackageCacheLayout(ref, self)
 
     @property
     def remotes_path(self):

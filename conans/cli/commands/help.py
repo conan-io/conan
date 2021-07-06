@@ -1,6 +1,6 @@
 import textwrap
 
-from conans.cli.cli import cli_out_write
+from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.errors import ConanException
 from conans.cli.command import conan_command
@@ -17,7 +17,7 @@ def output_help_cli(commands, groups):
         cli_out_write(group_name, Color.BRIGHT_MAGENTA)
         for name in comm_names:
             # future-proof way to ensure tabular formatting
-            cli_out_write(fmt % name, Color.GREEN)
+            cli_out_write(fmt % name, Color.GREEN, endline="")
 
             # Help will be all the lines up to the first empty one
             docstring_lines = commands[name].doc.split('\n')

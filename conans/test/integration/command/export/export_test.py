@@ -328,8 +328,8 @@ class OpenSSLConan(ConanFile):
                   "executable": "myexe"}
         client2.save(files2)
         client2.run("export . lasote/stable")
-        reg_path2 = client2.cache.package_layout(self.ref).export()
-        digest2 = FileTreeManifest.load(client2.cache.package_layout(self.ref).export())
+        reg_path2 = client2.get_latest_ref_layout(self.ref).export()
+        digest2 = FileTreeManifest.load(client2.get_latest_ref_layout(self.ref).export())
 
         self.assertNotIn('A new Conan version was exported', client2.out)
         self.assertNotIn('Cleaning the old builds ...', client2.out)
@@ -368,8 +368,8 @@ class OpenSSLConan(ConanFile):
         client2.save(files2)
         client2.run("export . lasote/stable")
 
-        reg_path3 = client2.cache.package_layout(self.ref).export()
-        digest3 = FileTreeManifest.load(client2.cache.package_layout(self.ref).export())
+        reg_path3 = client2.get_latest_ref_layout(self.ref).export()
+        digest3 = FileTreeManifest.load(client2.get_latest_ref_layout(self.ref).export())
 
         self.assertIn('%s: A new conanfile.py version was exported' % str(self.ref),
                       self.client.out)
@@ -390,8 +390,10 @@ class OpenSSLConan(ConanFile):
         #    self.assertFalse(os.path.exists(f))
 
     def _create_packages_and_builds(self):
-        reg_builds = self.client.cache.package_layout(self.ref).builds()
-        reg_packs = self.client.cache.package_layout(self.ref).packages()
+        pref = self.client.get_latest_prev(self.ref)
+        pkg_layout = self.client.get_latest_pkg_layout(pref)
+        reg_builds = pkg_layout.build()
+        reg_packs = pkg_layout.package()
 
         folders = [os.path.join(reg_builds, '342525g4f52f35f'),
                    os.path.join(reg_builds, 'ew9o8asdf908asdf80'),
@@ -492,9 +494,9 @@ def test_export_casing():
     assert client.load("FILE1") == "file1 UPPERCASE"
     client.run("export . pkg/0.1@")
     ref = ConanFileReference.loads("pkg/0.1@")
-    export_src_folder = client.cache.package_layout(ref).export_sources()
+    export_src_folder = client.get_latest_ref_layout(ref).export_sources()
     assert load(os.path.join(export_src_folder, "test")) == "some lowercase"
     assert load(os.path.join(export_src_folder, "TEST")) == "some UPPERCASE"
-    exports_folder = client.cache.package_layout(ref).export()
+    exports_folder = client.get_latest_ref_layout(ref).export()
     assert load(os.path.join(exports_folder, "file1")) == "file1 lowercase"
     assert load(os.path.join(exports_folder, "FILE1")) == "file1 UPPERCASE"

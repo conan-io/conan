@@ -1,6 +1,5 @@
 from conans.client.build.cppstd_flags import cppstd_flag
 from conans.errors import ConanException
-from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.log import logger
 
 
@@ -10,40 +9,25 @@ def preprocess(settings):
 
 
 def _check_cppstd(settings):
-    compiler = settings.get_safe("compiler")
-    compiler_version = settings.get_safe("compiler.version")
-    cppstd = settings.get_safe("cppstd")
     compiler_cppstd = settings.get_safe("compiler.cppstd")
 
-    if not cppstd and not compiler_cppstd:
+    if not compiler_cppstd:
         return
 
-    # Checks: one or the other, but not both
-    if cppstd and compiler_cppstd:
-        raise ConanException("Do not use settings 'compiler.cppstd' together with 'cppstd'."
-                             " Use only the former one.")
-
-    conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd'", cppstd)
-
+    compiler = settings.get_safe("compiler")
     if compiler not in ("gcc", "clang", "apple-clang", "Visual Studio"):
         return
 
+    compiler_version = settings.get_safe("compiler.version")
     # Check that we have a flag available for that value of the C++ Standard
-    def check_flag_available(values_range, value, setting_id):
-        available = [v for v in values_range if cppstd_flag(compiler, compiler_version, v)]
-        if str(value) not in available:
-            raise ConanException("The specified '%s=%s' is not available "
-                                 "for '%s %s'. Possible values are %s'" % (setting_id,
-                                                                           value,
-                                                                           compiler,
-                                                                           compiler_version,
-                                                                           available))
+    values_range = settings.compiler.cppstd.values_range
 
-    if cppstd:
-        check_flag_available(settings.cppstd.values_range, cppstd, "cppstd")
-    else:
-        check_flag_available(settings.compiler.cppstd.values_range,
-                             compiler_cppstd, "compiler.cppstd")
+    available = [v for v in values_range if cppstd_flag(compiler, compiler_version, v)]
+    if compiler_cppstd not in available:
+        raise ConanException("The specified 'compiler.cppstd=%s' is not available "
+                             "for '%s %s'. Possible values are %s'" % (compiler_cppstd,
+                                                                       compiler, compiler_version,
+                                                                       available))
 
 
 def _fill_runtime(settings):

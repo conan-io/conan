@@ -327,7 +327,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
-        self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
+        self.assertTrue(os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(),
                                                     "other.txt")))
 
     def test_reuse_system_requirements(self):
