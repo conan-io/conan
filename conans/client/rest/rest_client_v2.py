@@ -182,6 +182,7 @@ class RestV2Methods(RestCommonMethods):
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
+            # As the filenames are sorted, the last one is always "conanmanifest.txt"
             if self._output and not self._output.is_terminal:
                 msg = "Uploading: %s" % filename if not display_name else (
                     "Uploading %s -> %s" % (filename, display_name))

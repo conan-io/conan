@@ -4,7 +4,7 @@ from os.path import join, normpath, relpath
 from conans import DEFAULT_REVISION_V1
 from conans.errors import ConanException, PackageNotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER
+from conans.paths import EXPORT_FOLDER, PACKAGES_FOLDER, CONAN_MANIFEST
 from conans.server.revision_list import RevisionList
 
 REVISIONS_FILE = "revisions.txt"
@@ -82,12 +82,18 @@ class ServerStore(object):
     def get_recipe_file_list(self, ref):
         """Returns a {filepath: md5} """
         assert isinstance(ref, ConanFileReference)
-        return self._get_file_list(self.export(ref))
+        files = self._get_file_list(self.export(ref))
+        if CONAN_MANIFEST not in files:
+            raise RecipeNotFoundException(ref)
+        return files
 
     def get_package_file_list(self, pref):
         """Returns a {filepath: md5} """
         assert isinstance(pref, PackageReference)
-        return self._get_file_list(self.package(pref))
+        files = self._get_file_list(self.package(pref))
+        if CONAN_MANIFEST not in files:
+            raise PackageNotFoundException(pref)
+        return files
 
     def _get_file_list(self, relative_path):
         file_list = self._storage_adapter.get_file_list(relative_path)
