@@ -318,10 +318,6 @@ class ConanFile(object):
                 raise ConanException("user not defined, but self.user is used in conanfile")
         return self._conan_user
 
-    def collect_libs(self, folder=None):
-        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
-        return tools.collect_libs(self, folder=folder)
-
     @property
     def build_policy_missing(self):
         return self.build_policy == "missing"
