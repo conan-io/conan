@@ -22,6 +22,7 @@ DEFAULT_CONFIGURATION = {
     "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
     "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
     "tools.cmake:skip_test": "Do not execute CMake.test() when enabled",
+    "tools.meson:skip_test": "Do not execute Meson.test() when enabled",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
