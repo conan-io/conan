@@ -5,9 +5,7 @@ import unittest
 
 import pytest
 
-from conans.client import tools
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE
+from conans.model.ref import ConanFileReference
 from conans.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conans.test.assets.sources import gen_function_cpp, gen_function_h
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
@@ -55,7 +53,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
                      "hello.h": header,
                      "hello.cpp": body})
         client.run("create . danimtb/testing")
-        pref = PackageReference.loads("test/1.0@danimtb/testing:%s" % NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_prev(ConanFileReference.loads("test/1.0@danimtb/testing"),
+                                      NO_SETTINGS_PACKAGE_ID)
         pkg_path = client.get_latest_pkg_layout(pref).package()
 
         [self.assertIn(folder, os.listdir(pkg_path)) for folder in ["lib", "bin"]]
