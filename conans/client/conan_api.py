@@ -281,7 +281,9 @@ class ConanAPIV1(object):
                 except NotFoundException:
                     raise RecipeNotFoundException(ref)
                 else:
-                    ref = self.app.remote_manager.get_recipe(ref, remote)
+                    ref_in_cache = self.app.cache.get_recipe_revisions(ref)
+                    ref = self.app.remote_manager.get_recipe(ref, remote) if len(ref_in_cache) == 0 \
+                        else ref_in_cache[0]
 
             result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result
