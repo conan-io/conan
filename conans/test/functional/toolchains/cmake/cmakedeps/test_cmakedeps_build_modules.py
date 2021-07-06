@@ -6,6 +6,9 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.cmake import gen_cmakelists
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -266,3 +269,60 @@ class TestNoNamespaceTarget:
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
+
+
+def test_targets_declared_in_build_modules():
+    """If a require is declaring the component targets in a build_module, CMakeDeps is
+       fine with it, not needed to locate it as a conan declared component"""
+
+    client = TestClient()
+    conanfile_hello = str(GenConanfile().with_name("hello").with_version("1.0")
+                          .with_exports_sources("*.cmake", "*.h"))
+    conanfile_hello += """
+    def package(self):
+        self.copy("*.h", dst="include")
+        self.copy("*.cmake", dst="cmake")
+
+    def package_info(self):
+        self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"])
+    """
+    my_modules = textwrap.dedent("""
+    add_library(cool_component INTERFACE)
+    target_include_directories(cool_component INTERFACE ${CMAKE_CURRENT_LIST_DIR}/../include/)
+    add_library(hello::invented ALIAS cool_component)
+    """)
+    hello_h = "int cool_header_only=1;"
+    client.save({"conanfile.py": conanfile_hello,
+                 "my_modules.cmake": my_modules, "hello.h": hello_h})
+    client.run("create .")
+
+    conanfile = GenConanfile().with_cmake_build().with_requires("hello/1.0")\
+        .with_exports_sources("*.txt", "*.cpp").with_name("app").with_version("1.0")
+    main_cpp = textwrap.dedent("""
+        #include <iostream>
+        #include "hello.h"
+
+        int main(){
+            std::cout << "cool header value: " << cool_header_only;
+            return 0;
+        }
+        """)
+
+    cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(project CXX)
+
+        find_package(hello COMPONENTS invented)
+        add_executable(myapp main.cpp)
+        target_link_libraries(myapp hello::invented)
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelist, "main.cpp": main_cpp})
+    client.run("create .")
+    assert "Conan: Including build module" in client.out
+    assert "my_modules.cmake" in client.out
+    assert "Conan: Component 'invented' found in package 'hello'" in client.out
