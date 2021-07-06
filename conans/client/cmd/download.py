@@ -18,7 +18,7 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     except NotFoundException:
         raise RecipeNotFoundException(ref)
 
-    layout = cache.create_ref_layout(ref)
+    layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
     conanfile = loader.load_basic(conan_file_path)
 

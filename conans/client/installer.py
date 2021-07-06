@@ -397,7 +397,7 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             # TODO: cache2.0 check locks
-            pkg_layout = self._cache.create_pkg_layout(n.pref)
+            pkg_layout = self._cache.pkg_layout(n.pref)
             with pkg_layout.package_lock():
                 self._download_pkg(n)
 
