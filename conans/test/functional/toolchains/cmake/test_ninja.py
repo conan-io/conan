@@ -78,7 +78,7 @@ def test_locally_build_linux(build_type, shared, client):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
     client.run("install hello/1.0@ -g=deploy -if=mydeploy {}".format(settings))
-    ldpath = os.path.join(client.current_folder, "mydeploy", "hello")
+    ldpath = os.path.join(client.current_folder, "mydeploy", "hello", "lib")
     client.run_command("LD_LIBRARY_PATH='{}' ./mydeploy/hello/myapp".format(ldpath))
     check_exe_run(client.out, ["main", "hello"], "gcc", None, build_type, "x86_64", cppstd=None)
 
