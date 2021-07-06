@@ -176,7 +176,7 @@ class DepsGraphBuilder(object):
             try:
                 pointed_ref = ConanFileReference.loads(dep_conanfile.alias)
             except Exception as e:
-                raise ConanException(f"Alias definition error in {alias}: {str(e)}")
+                raise ConanException("Alias definition error in {}: {}".format(alias, str(e)))
 
             # UPDATE THE REQUIREMENT!
             require.ref = require.range_ref = pointed_ref
