@@ -1,4 +1,3 @@
-from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.client.tools.win import vcvars_dict
 
@@ -19,5 +18,3 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
                     value.extend(settings_vars.pop(name, []))
 
             self.env.update(settings_vars)
-        else:
-            self.env = AutoToolsBuildEnvironment(conanfile).vars_dict
