@@ -31,13 +31,9 @@ class DataCache:
         output.write(f"\nBase folder: {self._base_folder}\n\n")
         self._db.dump(output)
 
-    def _create_new_path(self, relative_path):
+    def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
-        os.makedirs(path)
-
-    def _clear_path(self, relative_path):
-        path = self._full_path(relative_path)
-        if os.path.exists(path):
+        if os.path.exists(path) and remove_contents:
             self._remove_path(relative_path)
         os.makedirs(path, exist_ok=True)
 
@@ -66,7 +62,7 @@ class DataCache:
                              ref.pkgid, ref.prev)
         reference_path = self._get_tmp_path()
         self._db.create_reference(reference_path, ref)
-        self._create_new_path(reference_path)
+        self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def create_tmp_package_layout(self, pref: ConanReference):
@@ -77,7 +73,7 @@ class DataCache:
                               pref.pkgid, PREV_UNKNOWN)
         package_path = self._get_tmp_path()
         self._db.create_reference(package_path, pref)
-        self._create_new_path(package_path)
+        self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def create_reference_layout(self, ref: ConanReference):
@@ -85,8 +81,8 @@ class DataCache:
         ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, ref.rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_path(ref)
-        self._db.create_reference(reference_path, ref)
-        self._clear_path(reference_path)
+        self._db.get_or_create_reference(reference_path, ref)
+        self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
     def create_package_layout(self, pref: ConanReference):
@@ -96,8 +92,8 @@ class DataCache:
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
                               pref.pkgid, pref.prev)
         package_path = self._get_path(pref)
-        self._db.create_reference(package_path, pref)
-        self._clear_path(package_path)
+        self._db.get_or_create_reference(package_path, pref)
+        self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def get_reference_layout(self, ref: ConanReference):

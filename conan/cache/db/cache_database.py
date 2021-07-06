@@ -61,7 +61,19 @@ class CacheDatabase:
             database, it will create the entry for the reference using the path given as argument.
         """
         with self.connection() as conn:
-            self._references.save(conn, path, ref)
+            self._references.save(conn, path, ref, reset_timestamp=True)
+
+    def get_or_create_reference(self, path, ref: ConanReference):
+        """ Returns the path for the given reference. If the reference doesn't exist in the
+            database, it will create the entry for the reference using the path given as argument.
+        """
+        with self.connection() as conn:
+            try:
+                ref_data = self._references.get(conn, ref)
+                return ref_data["path"], False
+            except ReferencesDbTable.ReferenceDoesNotExist:
+                self._references.save(conn, path, ref)
+                return path, True
 
     def list_references(self, only_latest_rrev):
         with self.connection() as conn:

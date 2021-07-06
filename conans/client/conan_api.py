@@ -1188,8 +1188,9 @@ class ConanAPIV1(object):
         pkg_revs = self.app.cache.get_package_revisions(pref, only_latest_prev=True)
         pkg_rev = pkg_revs[0] if pkg_revs else None
         if not remote_name:
+            if not pkg_rev:
+                raise PackageNotFoundException(pref)
             # Check the time in the associated remote if any
-            pkg_layout = self.app.cache.pkg_layout(pkg_rev)
             remote_name = self.app.cache.get_remote(pkg_rev)
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None
