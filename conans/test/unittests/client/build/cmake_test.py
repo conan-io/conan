@@ -23,6 +23,7 @@ from conans.model.settings import Settings
 from conans.test.utils.mocks import MockSettings, ConanFileMock
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import load, save
+from conans.model.conf import ConfDefinition
 
 
 def _format_path_as_cmake(pathstr):
@@ -1604,3 +1605,13 @@ build_type: [ Release]
         cmake = CMake(conanfile, generator="Visual Studio 15 2017", generator_platform="x64", toolset="v141,host=x64")
         self.assertIn('-G "Visual Studio 15 2017 Win64"', cmake.command_line)
         self.assertIn('-T "v141,host=x64"', cmake.command_line)
+
+    def test_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.cmake:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        cmake = CMake(conanfile, generator="Unix Makefiles")
+        cmake.test()
+        self.assertIsNone(conanfile.command)

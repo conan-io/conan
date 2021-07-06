@@ -151,6 +151,8 @@ class CMake(object):
     def test(self, build_type=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
             return
+        if self._conanfile.conf["tools.cmake:skip_test"]:
+            return
         if not target:
             is_multi = is_multi_configuration(self._generator)
             target = "RUN_TESTS" if is_multi else "test"
