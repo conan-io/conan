@@ -1,5 +1,4 @@
 from conan.tools.env import Environment
-from conan.tools.env.environment import save_script
 from conan.tools.env.virtualrunenv import runenv_from_cpp_info
 
 
@@ -17,7 +16,8 @@ class VirtualBuildEnv:
         of build_requires defining information for consumers
         """
         # FIXME: Cache value?
-        build_env = Environment()
+        build_env = Environment(self._conanfile)
+
         # Top priority: profile
         profile_env = self._conanfile.buildenv
         build_env.compose(profile_env)
@@ -31,7 +31,7 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 build_env.compose(build_require.runenv_info)
             # Then the implicit
-            build_env.compose(runenv_from_cpp_info(build_require.cpp_info))
+            build_env.compose(runenv_from_cpp_info(self._conanfile, build_require.cpp_info))
 
         # Requires in host context can also bring some direct buildenv_info
         for require in self._conanfile.dependencies.host.values():
@@ -43,4 +43,4 @@ class VirtualBuildEnv:
     def generate(self, auto_activate=True):
         build_env = self.environment()
         if build_env:  # Only if there is something defined
-            save_script(self._conanfile, build_env, "conanbuildenv", auto_activate=auto_activate)
+            build_env.save_script("conanbuildenv", auto_activate=auto_activate)

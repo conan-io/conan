@@ -1,4 +1,6 @@
-import os
+import textwrap
+
+from jinja2 import Template
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
@@ -6,9 +8,6 @@ from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
-
-import textwrap
-from jinja2 import Template
 
 
 class MesonToolchain(object):

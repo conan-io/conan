@@ -1,6 +1,5 @@
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import Environment
-from conan.tools.env.environment import save_script
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
 from conans.model.new_build_info import NewCppInfo
 
@@ -53,7 +52,7 @@ class AutotoolsDeps:
             cxxflags.append(srf)
             ldflags.append(srf)
 
-        env = Environment()
+        env = Environment(self._conanfile)
         env.append("CPPFLAGS", cpp_flags)
         env.append("LIBS", flags.libs)
         env.append("LDFLAGS", ldflags)
@@ -63,4 +62,4 @@ class AutotoolsDeps:
 
     def generate(self, env=None, auto_activate=True):
         env = env or self.environment()
-        save_script(self._conanfile, env, "conanautotoolsdeps", auto_activate=auto_activate)
+        env.save_script("conanautotoolsdeps", auto_activate=auto_activate)
