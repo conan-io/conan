@@ -266,15 +266,20 @@ class HelloReuseConan(ConanFile):
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
         client.run("create . lasote/stable")
-        client.run("test test Hello/0.1@lasote/stable")
-        pref = client.get_latest_prev(ConanFileReference.loads("Hello/0.1@lasote/stable"),
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        client.run(f"test test {str(ref)}")
+        pref = client.get_latest_prev(ref,
                                       NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
-        client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
+        client.run(f"test test {str(ref)}")  # Test do not rebuild the package
+        pref = client.get_latest_prev(ref,
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
         client.run("create . lasote/stable")  # create rebuild the package
+        pref = client.get_latest_prev(ref,
+                                      NO_SETTINGS_PACKAGE_ID)
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.get_latest_pkg_layout(pref).package(), "FindXXX.cmake")))
