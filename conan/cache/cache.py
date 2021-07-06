@@ -57,7 +57,11 @@ class DataCache:
 
     def create_tmp_reference_layout(self, ref: ConanReference):
         assert not ref.rrev, "Recipe revision should be unknown"
-        ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, RREV_UNKNOWN,
+        # even if they are temporal, we have to assign unique revisions to temporal references
+        # until we know the calculated revision so that we don't store multiple references
+        # with same rrev or prev
+        temp_rrev = f"{RREV_UNKNOWN}-{str(uuid.uuid4())}"
+        ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, temp_rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_tmp_path()
         self._db.create_reference(reference_path, ref)
@@ -68,8 +72,9 @@ class DataCache:
         assert pref.rrev, "Recipe revision must be known to get or create the package layout"
         assert pref.pkgid, "Package id must be known to get or create the package layout"
         assert not pref.prev, "Package revision should be unknown"
+        temp_prev = f"{PREV_UNKNOWN}-{str(uuid.uuid4())}"
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
-                              pref.pkgid, PREV_UNKNOWN)
+                              pref.pkgid, temp_prev)
         package_path = self._get_tmp_path()
         self._db.create_reference(package_path, pref)
         self._create_path(package_path)
