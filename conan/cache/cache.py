@@ -48,7 +48,7 @@ class DataCache:
         return self._base_folder
 
     @staticmethod
-    def _get_tmp_path(self):
+    def _get_tmp_path():
         return os.path.join("tmp", str(uuid.uuid4()))
 
     @staticmethod
