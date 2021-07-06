@@ -64,7 +64,7 @@ class DataCache:
         ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, temp_rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_tmp_path()
-        self._db.create_reference(reference_path, ref)
+        self._db.create_tmp_reference(reference_path, ref)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -76,7 +76,7 @@ class DataCache:
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
                               pref.pkgid, temp_prev)
         package_path = self._get_tmp_path()
-        self._db.create_reference(package_path, pref)
+        self._db.create_tmp_reference(package_path, pref)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
@@ -85,7 +85,7 @@ class DataCache:
         ref = ConanReference(ref.name, ref.version, ref.user, ref.channel, ref.rrev,
                              ref.pkgid, ref.prev)
         reference_path = self._get_path(ref)
-        self._db.get_or_create_reference(reference_path, ref)
+        self._db.create_reference(reference_path, ref)
         self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
 
@@ -96,7 +96,7 @@ class DataCache:
         pref = ConanReference(pref.name, pref.version, pref.user, pref.channel, pref.rrev,
                               pref.pkgid, pref.prev)
         package_path = self._get_path(pref)
-        self._db.get_or_create_reference(package_path, pref)
+        self._db.create_reference(package_path, pref)
         self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
