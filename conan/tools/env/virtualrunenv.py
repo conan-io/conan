@@ -1,5 +1,4 @@
 from conan.tools.env import Environment
-from conan.tools.env.environment import save_script
 
 
 def runenv_from_cpp_info(conanfile, cpp_info):
@@ -48,4 +47,4 @@ class VirtualRunEnv:
     def generate(self, auto_activate=False):
         run_env = self.environment()
         if run_env:
-            save_script(self._conanfile, run_env, "conanrunenv", auto_activate=auto_activate)
+            run_env.save_script("conanrunenv", auto_activate=auto_activate)

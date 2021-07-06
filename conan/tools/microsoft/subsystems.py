@@ -14,7 +14,7 @@ WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def run_in_windows_shell(conanfile, command, cwd=None, env=None):
+def run_in_windows_bash(conanfile, command, cwd=None, env=None):
     """ Will run a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
     if env:
         # Passing env invalidates the conanfile.environment_scripts
@@ -62,9 +62,8 @@ def run_in_windows_shell(conanfile, command, cwd=None, env=None):
     inside_command = 'cd "{cwd_inside}" && ' \
                      '{wrapped_user_cmd}'.format(cwd_inside=cwd_inside,
                                                  wrapped_user_cmd=wrapped_user_cmd)
-    if platform.system() == "Windows":
-        # cmd.exe shell
-        inside_command = escape_windows_cmd(inside_command)
+
+    inside_command = escape_windows_cmd(inside_command)
 
     final_command = 'cd "{cwd}" && {wrapped_shell} --login -c {inside_command}'.format(
         cwd=cwd,

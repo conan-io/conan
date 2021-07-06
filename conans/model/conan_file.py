@@ -401,8 +401,8 @@ class ConanFile(object):
                     return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
                                                      msys_mingw=msys_mingw, with_login=with_login)
                 elif self.win_bash:  # New, Conan 2.0
-                    from conan.tools.microsoft.subsystems import run_in_windows_shell
-                    return run_in_windows_shell(self, command=cmd, cwd=cwd, env=_env)
+                    from conan.tools.microsoft.subsystems import run_in_windows_bash
+                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             _env = _env or "conanenv"
             command = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
             return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)

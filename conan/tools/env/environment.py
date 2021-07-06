@@ -241,6 +241,18 @@ class Environment:
         content = "\n".join(result)
         save(filename, content)
 
+    def save_script(self, name, auto_activate=True):
+        # FIXME: using platform is not ideal but settings might be incomplete
+        if platform.system() == "Windows" and not self._conanfile.win_bash:
+            path = os.path.join(self._conanfile.generators_folder, "{}.bat".format(name))
+            self.save_bat(path)
+        else:
+            path = os.path.join(self._conanfile.generators_folder, "{}.sh".format(name))
+            self.save_sh(path)
+
+        if auto_activate:
+            register_environment_script(self._conanfile, path)
+
     def compose(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
@@ -316,12 +328,6 @@ class ProfileEnvironment:
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
                 result = env.compose(result)
 
-        # FIXME: Ugly
-        # Fill the conanfile
-        result._conanfile = conanfile
-        for envitem in result._values.values():
-            envitem._conanfile = conanfile
-
         return result
 
     def compose(self, other):
@@ -372,19 +378,6 @@ class ProfileEnvironment:
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
         return result
-
-
-def save_script(conanfile, env, name, auto_activate=True):
-    # FIXME: using platform is not ideal but settings might be incomplete
-    if platform.system() == "Windows" and not conanfile.win_bash:
-        path = os.path.join(conanfile.generators_folder, "{}.bat".format(name))
-        env.save_bat(path)
-    else:
-        path = os.path.join(conanfile.generators_folder, "{}.sh".format(name))
-        env.save_sh(path)
-
-    if auto_activate:
-        register_environment_script(conanfile, path)
 
 
 def register_environment_script(conanfile, path):

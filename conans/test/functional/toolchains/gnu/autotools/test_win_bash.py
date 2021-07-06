@@ -31,7 +31,7 @@ def test_autotools_bash_complete():
         from conans import ConanFile
         from conan.tools.gnu import Autotools
         from conan.tools.microsoft.toolchain import write_conanvcvars
-        from conan.tools.env import save_script, Environment
+        from conan.tools.env import Environment
 
         class TestConan(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
@@ -49,7 +49,7 @@ def test_autotools_bash_complete():
                 env = Environment(self)
                 env.define("CXX", "cl")
                 env.define("CC", "cl")
-                save_script(self, env, "conan_compiler")
+                env.save_script("conan_compiler")
 
             def build(self):
                 # These commands will run in bash activating first the vcvars and

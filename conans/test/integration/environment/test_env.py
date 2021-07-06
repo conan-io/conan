@@ -173,10 +173,9 @@ def test_profile_buildenv():
     conanfile = textwrap.dedent("""\
         import os, platform
         from conans import ConanFile
-        from conan.tools.env import save_script
         class Pkg(ConanFile):
             def generate(self):
-                save_script(self, self.buildenv, "pkgenv")
+                self.buildenv.save_script("pkgenv")
                 if platform.system() != "Windows":
                     os.chmod("pkgenv.sh", 0o777)
 
