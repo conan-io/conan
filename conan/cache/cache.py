@@ -20,7 +20,6 @@ class DataCache:
     def __init__(self, base_folder, db_filename):
         self._base_folder = os.path.realpath(base_folder)
         self._db = CacheDatabase(filename=db_filename)
-        self.counter = 0
 
     def closedb(self):
         self._db.close()
@@ -48,9 +47,9 @@ class DataCache:
     def base_folder(self):
         return self._base_folder
 
+    @staticmethod
     def _get_tmp_path(self):
-        self.counter = self.counter + 1
-        return os.path.join("tmp", str(self.counter))
+        return os.path.join("tmp", str(uuid.uuid4()))
 
     @staticmethod
     def _get_path(ref: ConanReference):
