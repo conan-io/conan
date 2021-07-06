@@ -561,6 +561,146 @@ class GraphLockCITest(unittest.TestCase):
         self.assertEqual(nodes["3"]["package_id"], "6e9742c2106791c1c777da8ccfb12a1408385d8d")
         self.assertEqual(nodes["3"]["prev"], "f971905c142e0de728f32a7237553622")
 
+    def test_override(self):
+        client = TestClient()
+        client.run("config set general.default_package_id_mode=full_package_mode")
+
+        # The original (unresolved) graph shows the requirements how they are
+        # specified in the package recipes.  The graph contains conflicts:
+        # There are three different versions of PkgA and two different versions
+        # of PkgB.
+        #
+        # The overridden (resolved) graph shows the requirements after
+        # conflicts have been resolved by overriding required package versions
+        # in package PkgE.  This graph contains only one version per package.
+        #
+        # Original (unresolved) graph:       :  Overridden (resolved) graph:
+        # ============================       :  ============================
+        #                                    :
+        # PkgA/0.1   PkgA/0.2    PkgA/0.3    :                       PkgA/0.3
+        #    |          |           |\____   :       __________________/|
+        #    |          |           |     \  :      /                   |
+        # PkgB/0.1      |        PkgB/0.3 |  :  PkgB/0.1                |
+        #    |\____     | _________/      |  :     |\_______   ________/|
+        #    |     \    |/                |  :     |        \ /         |
+        #    |     | PkgC/0.2             |  :     |      PkgC/0.2      |
+        #    |     |    |                 |  :     |         |          |
+        #    |     |    |                 |  :     |         |          |
+        # PkgD/0.1 |    |                 |  :  PkgD/0.1     |          |
+        #    | ___/____/_________________/   :     | _______/__________/
+        #    |/                              :     |/
+        # PkgE/0.1                           :  PkgE/0.1
+
+        # PkgA/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.1!",
+        })
+        client.run("export . PkgA/0.1@user/channel")
+
+        # PkgA/0.2
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.2!",
+        })
+        client.run("export . PkgA/0.2@user/channel")
+
+        # PkgA/0.3
+        client.save({
+            "conanfile.py": conanfile.format(requires=""),
+            "myfile.txt": "This is PkgA/0.3!",
+        })
+        client.run("export . PkgA/0.3@user/channel")
+
+        # PkgB/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.1@user/channel"'),
+            "myfile.txt": "This is PkgB/0.1!",
+        })
+        client.run("export . PkgB/0.1@user/channel")
+
+        # PkgB/0.3
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgA/0.3@user/channel"'),
+            "myfile.txt": "This is PkgB/0.3!",
+        })
+        client.run("export . PkgB/0.3@user/channel")
+
+        # PkgC/0.2
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.dedent("""
+                # This comment line is required to yield the correct indentation
+                    def requirements(self):
+                        self.requires("PkgA/0.2@user/channel", override=True)
+                        self.requires("PkgB/0.3@user/channel", override=False)
+                """)),
+            "myfile.txt": "This is PkgC/0.2!",
+        })
+        client.run("export . PkgC/0.2@user/channel")
+
+        # PkgD/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires='requires="PkgB/0.1@user/channel"'),
+            "myfile.txt": "This is PkgD/0.1!",
+        })
+        client.run("export . PkgD/0.1@user/channel")
+
+        # PkgE/0.1
+        client.save({
+            "conanfile.py": conanfile.format(requires=textwrap.dedent("""
+                # This comment line is required to yield the correct indentation
+                    def requirements(self):
+                        self.requires("PkgA/0.3@user/channel", override=True)
+                        self.requires("PkgB/0.1@user/channel", override=True)
+                        self.requires("PkgC/0.2@user/channel", override=False)
+                        self.requires("PkgD/0.1@user/channel", override=False)
+                """)),
+            "myfile.txt": "This is PkgE/0.1!",
+        })
+        client.run("export . PkgE/0.1@user/channel")
+
+        client.run("lock create --reference=PkgE/0.1@user/channel --lockfile-out=master.lock")
+
+        while True:
+            client.run("lock build-order master.lock --json=build_order.json")
+            json_file = os.path.join(client.current_folder, "build_order.json")
+            to_build = json.loads(load(json_file))
+            if not to_build:
+                break
+            ref, _, _, _ = to_build[0].pop(0)
+            client.run("lock create --reference=%s --lockfile=master.lock "
+                       "--lockfile-out=derived.lock" % ref)
+            client.run("install %s --build=%s --lockfile=derived.lock "
+                       "--lockfile-out=update.lock" % (ref, ref))
+            client.run("lock update master.lock update.lock")
+
+        client.run("install PkgE/0.1@user/channel --lockfile=master.lock")
+        filtered_output = [
+            line for line in str(client.out).splitlines()
+            if any(pattern in line for pattern in ["SELF FILE", "DEP FILE"])
+        ]
+        expected_output = [
+            "PkgA/0.3@user/channel: SELF FILE: This is PkgA/0.3!",
+            "PkgB/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgB/0.1@user/channel: SELF FILE: This is PkgB/0.1!",
+            "PkgC/0.2@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgC/0.2@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgC/0.2@user/channel: SELF FILE: This is PkgC/0.2!",
+            "PkgD/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgD/0.1@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgD/0.1@user/channel: SELF FILE: This is PkgD/0.1!",
+            "PkgE/0.1@user/channel: DEP FILE PkgA: This is PkgA/0.3!",
+            "PkgE/0.1@user/channel: DEP FILE PkgB: This is PkgB/0.1!",
+            "PkgE/0.1@user/channel: DEP FILE PkgC: This is PkgC/0.2!",
+            "PkgE/0.1@user/channel: DEP FILE PkgD: This is PkgD/0.1!",
+            "PkgE/0.1@user/channel: SELF FILE: This is PkgE/0.1!",
+        ]
+        self.assertListEqual(
+            sorted(filtered_output),
+            sorted(expected_output),
+            msg="Original client output:\n%s" % client.out,
+        )
+
 
 class CIPythonRequiresTest(unittest.TestCase):
     python_req = textwrap.dedent("""

@@ -524,6 +524,8 @@ class GraphLock(object):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
+        # Important to remove the overrides, they do not need to be locked or evaluated
+        requires = [r for r in requires if not r.override]
         if not node.graph_lock_node:
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
