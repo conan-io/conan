@@ -669,13 +669,18 @@ class TestClient(object):
         else:
             return self._create_scm_info(dict())
 
-    def get_latest_prev(self, ref: ConanReference, package_id=None) -> PackageReference:
+    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PackageReference:
         """Get the latest PackageReference given a ConanReference"""
-        latest_rrev = self.cache.get_latest_rrev(ref)
+        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
+        latest_rrev = self.cache.get_latest_rrev(ref_)
         if package_id:
             pref = PackageReference(latest_rrev, package_id)
         else:
-            pref = self.cache.get_package_ids(latest_rrev)[0]
+            package_ids = self.cache.get_package_ids(latest_rrev)
+            # Let's check if there are several packages because we don't want random behaviours
+            assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
+                                          f"provide a single package_id instead"
+            pref = package_ids[0]
         return self.cache.get_latest_prev(pref)
 
     def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
