@@ -26,6 +26,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2 = TurboTestClient(servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
+    @pytest.mark.xfail(reason="cache2.0 rewrite with --update flows")
     def test_install_binary_iterating_remotes_same_rrev(self):
         """We have two servers (remote1 and remote2), first with a recipe but the
         second one with a PREV of the binary.
@@ -48,25 +49,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2.run("install {}".format(self.ref))
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
-
-    def test_install_binary_iterating_remotes_different_rrev(self):
-        """We have two servers (remote1 and remote2), first with a recipe RREV1 but the
-        second one with other RREV2 a PREV of the binary.
-        If a client installs without specifying -r remote1, it wont find in remote2 the binary"""
-
-        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv1"))
-        self.c_v2.upload_all(self.ref, remote="default")
-        self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
-
-        # Same RREV, different PREV
-        pref = self.c_v2.create(self.ref, conanfile=GenConanfile().with_build_msg("REv2"))
-        self.c_v2.upload_all(self.ref, remote="remote2")
-        self.c_v2.remove_all()
-
-        # Install, it will iterate remotes, resolving the package from remote2, but the recipe
-        # from default
-        self.c_v2.run("install {}".format(self.ref), assert_error=True)
-        self.assertIn("{} - Missing".format(pref), self.c_v2.out)
 
     @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_update_recipe_iterating_remotes(self):
