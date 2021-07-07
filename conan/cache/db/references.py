@@ -113,11 +113,11 @@ class ReferencesDbTable(BaseDbTable):
                 f"No entry for reference '{ref.full_reference}'")
         return row[0]
 
-    def save(self, conn, path, ref: ConanReference, remote=None):
+    def save(self, conn, path, ref: ConanReference, remote=None, reset_timestamp=False):
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
-        timestamp = 0
+        timestamp = time.time() if not reset_timestamp else 0
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
         r = conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',

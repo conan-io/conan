@@ -100,10 +100,8 @@ class RemoteManager(object):
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
-        if not ref.revision:
-            ref = self._resolve_latest_ref(ref, remote)
-
-        layout = self._cache.ref_layout(ref)
+        ref = self._resolve_latest_ref(ref, remote)
+        layout = self._cache.create_ref_layout(ref)
         layout.export_remove()
 
         t1 = time.time()
@@ -163,7 +161,7 @@ class RemoteManager(object):
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         latest_prev = self.get_latest_package_revision(pref, remote)
-        pkg_layout = self._cache.pkg_layout(latest_prev)
+        pkg_layout = self._cache.create_pkg_layout(latest_prev)
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)

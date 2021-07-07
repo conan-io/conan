@@ -568,9 +568,9 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("--type", "-t", choices=["git", "dir", "file", "url"],
+        install_subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
                                        help='Type of remote config')
-        install_subparser.add_argument("--args", "-a",
+        install_subparser.add_argument("-a", "--args",
                                        help='String with extra arguments for "git clone"')
         install_subparser.add_argument("-sf", "--source-folder",
                                        help='Install files only from a source subfolder from the '
@@ -1554,7 +1554,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.profile.__doc__,
                                          prog="conan profile",
                                          formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand')
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "profile" command

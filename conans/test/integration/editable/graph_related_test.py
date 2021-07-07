@@ -32,7 +32,7 @@ class EmptyCacheTestMixin(object):
         self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]},
                             path_with_spaces=False)
         self.ref = ConanFileReference.loads('lib/version@user/channel')
-        self.assertFalse(os.path.exists(self.t.cache.package_layout(self.ref).base_folder()))
+        self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
 
     def tearDown(self):
         self.t.run('editable remove {}'.format(self.ref))
@@ -48,15 +48,15 @@ class ExistingCacheTestMixin(object):
         self.ref = ConanFileReference.loads('lib/version@user/channel')
         self.t.save(files={'conanfile.py': conanfile})
         self.t.run('create . {}'.format(self.ref))
-        self.assertTrue(os.path.exists(self.t.cache.package_layout(self.ref).base_folder()))
-        self.assertListEqual(sorted(os.listdir(self.t.cache.package_layout(self.ref).base_folder())),
+        self.assertTrue(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
+        self.assertListEqual(sorted(os.listdir(self.t.get_latest_ref_layout(self.ref).base_folder)),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'metadata.json.lock', 'package', 'source'])
 
     def tearDown(self):
         self.t.run('editable remove {}'.format(self.ref))
-        self.assertTrue(os.path.exists(self.t.cache.package_layout(self.ref).base_folder()))
-        self.assertListEqual(sorted(os.listdir(self.t.cache.package_layout(self.ref).base_folder())),
+        self.assertTrue(os.path.exists(self.t.get_latest_ref_layout(self.ref).base_folder))
+        self.assertListEqual(sorted(os.listdir(self.t.get_latest_ref_layout(self.ref).base_folder)),
                              ['build', 'export', 'export_source', 'locks', 'metadata.json',
                               'metadata.json.lock', 'package', 'source'])
 
@@ -81,7 +81,7 @@ class RelatedToGraphBehavior(object):
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all'.format(ref_parent))
         self.t.run('remove {} --force'.format(ref_parent))
-        self.assertFalse(os.path.exists(self.t.cache.package_layout(ref_parent).base_folder()))
+        self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder))
 
         # Create our project and link it
         self.t.save(files={'conanfile.py':
@@ -95,7 +95,7 @@ class RelatedToGraphBehavior(object):
         self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded",
                       self.t.out)
-        self.assertTrue(os.path.exists(self.t.cache.package_layout(ref_parent).base_folder()))
+        self.assertTrue(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder()))
 
     @parameterized.expand([(True,), (False,)])
     @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
@@ -107,7 +107,7 @@ class RelatedToGraphBehavior(object):
         self.t.run('create . {}'.format(ref_parent))
         self.t.run('upload {} --all'.format(ref_parent))
         self.t.run('remove {} --force'.format(ref_parent))
-        self.assertFalse(os.path.exists(self.t.cache.package_layout(ref_parent).base_folder()))
+        self.assertFalse(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder()))
 
         # Create our project and link it
         path_to_lib = os.path.join(self.t.current_folder, 'lib')
@@ -131,7 +131,7 @@ class RelatedToGraphBehavior(object):
                       self.t.out)
         self.assertIn("    lib/version@user/channel from user folder - Editable", self.t.out)
         self.assertIn("    parent/version@lasote/channel from 'default' - Downloaded", self.t.out)
-        self.assertTrue(os.path.exists(self.t.cache.package_layout(ref_parent).base_folder()))
+        self.assertTrue(os.path.exists(self.t.get_latest_ref_layout(ref_parent).base_folder()))
 
 
 class CreateLinkOverEmptyCache(EmptyCacheTestMixin, RelatedToGraphBehavior, unittest.TestCase):

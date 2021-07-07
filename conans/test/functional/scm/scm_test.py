@@ -109,7 +109,7 @@ class ConanLib(ConanFile):
         conanfile = conanfile.replace('"onesubfolder"', '"othersubfolder"')
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
-        folder = self.client.cache.package_layout(self.ref).source()
+        folder = self.client.get_latest_ref_layout(self.ref).source()
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
 
@@ -178,7 +178,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
 
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
 
@@ -226,7 +226,7 @@ class ConanLib(ConanFile):
 
         # Check that the conanfile is on the source/conan
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        source_folder = self.client.cache.package_layout(ref).source()
+        source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
     def test_deleted_source_folder(self):
@@ -273,9 +273,9 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
-                                NO_SETTINGS_PACKAGE_ID)
-        bf = self.client.cache.package_layout(pref.ref).build(pref)
+        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
+                                           NO_SETTINGS_PACKAGE_ID)
+        bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(bf, ".git")))
@@ -444,7 +444,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
 
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, _ = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
         self.assertFalse(os.path.exists(os.path.join(submodule_path, "submodule")))
@@ -476,7 +476,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
 
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
@@ -488,7 +488,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
 
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         submodule_path, subsubmodule_path = _relative_paths(folder)
         self.assertTrue(os.path.exists(os.path.join(folder, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(submodule_path, "submodule")))
@@ -644,7 +644,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create . user/channel")
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         self.assertIn("othersubfolder", os.listdir(folder))
         self.assertTrue(os.path.exists(os.path.join(folder, "othersubfolder", "myfile")))
 
@@ -695,7 +695,7 @@ class ConanLib(ConanFile):
         self.client.run("create . user/channel")
 
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        folder = self.client.cache.package_layout(ref).source()
+        folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(folder, "mysub", "myfile.txt")))
         self.assertFalse(os.path.exists(os.path.join(folder, "mysub", "conanfile.py")))
 
@@ -710,7 +710,7 @@ class ConanLib(ConanFile):
 
         # Check that the conanfile is on the source/conan
         ref = ConanFileReference.loads("lib/0.1@user/channel")
-        source_folder = self.client.cache.package_layout(ref).source()
+        source_folder = self.client.get_latest_ref_layout(ref).source()
         self.assertTrue(os.path.exists(os.path.join(source_folder, "conan", "conanfile.py")))
 
     def test_deleted_source_folder(self):
@@ -733,9 +733,9 @@ class ConanLib(ConanFile):
 
         self.client.run("create . user/channel")
         self.assertIn("Copying sources to build folder", self.client.out)
-        pref = PackageReference(ConanFileReference.loads("lib/0.1@user/channel"),
-                                NO_SETTINGS_PACKAGE_ID)
-        bf = self.client.cache.package_layout(pref.ref).build(pref)
+        pref = self.client.get_latest_prev(ConanFileReference.loads("lib/0.1@user/channel"),
+                                           NO_SETTINGS_PACKAGE_ID)
+        bf = self.client.get_latest_pkg_layout(pref).build()
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile.txt")))
         self.assertTrue(os.path.exists(os.path.join(bf, "myfile")))
         self.assertTrue(os.path.exists(os.path.join(bf, ".svn")))
@@ -907,7 +907,7 @@ class ConanLib(ConanFile):
 
             # We confirm that the replacement hasn't been done
             ref = ConanFileReference.loads("lib/0.1@")
-            folder = self.client.cache.package_layout(ref).export()
+            folder = self.client.get_latest_ref_layout(ref).export()
             conanfile_contents = load(os.path.join(folder, "conanfile.py"))
             self.assertIn('"revision": "auto"', conanfile_contents)
             self.assertIn('"url": "auto"', conanfile_contents)

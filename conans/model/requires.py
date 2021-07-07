@@ -20,6 +20,7 @@ class Requirement(object):
         self.private = private
         self.build_require = False
         self.build_require_context = None
+        self.force_host_context = False
         self._locked_id = None
 
     def lock(self, locked_ref, locked_id):
