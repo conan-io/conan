@@ -1,10 +1,12 @@
 import json
 import textwrap
 import unittest
-
+import os
 import pytest
 
+from conans import tools
 from conans.client.profile_loader import read_profile, _load_profile
+from conans.model.graph_lock import LOCKFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 
@@ -276,6 +278,10 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
 
     def test_extract_profiles_host_only(self):
+        """ By default, ONLY host profile is present in conan.lock, build profile MUST NOT be there
+            The profile extracted MUST be equal to that one listed in conan.lock
+            An info message MUST be showed when a profile is extracted
+        """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock create conanfile.py")
@@ -290,6 +296,9 @@ class LockRecipeTest(unittest.TestCase):
         assert host_profile_lock.dumps() == host_profile_file.dumps()
 
     def test_extract_profiles_build_and_host(self):
+        """ When build profile is listed in the lockfile, it MUST be extracted, AND be equal to
+            the content listed in conan.lock
+        """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock create conanfile.py -pr:b default")
@@ -309,16 +318,30 @@ class LockRecipeTest(unittest.TestCase):
         assert build_profile_lock.dumps() == build_profile_file.dumps()
 
     def test_extract_profiles_missing_lockfile(self):
+        """ When conan.lock is NOT present in the current folder AND lockfile path is not listed
+            as argument, then the command MUST fail.
+            If --lockfile is an invalid path, the command MUST fail too.
+        """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock extract-profiles host_profile build_profile", assert_error=True)
         assert "ERROR: Missing lockfile" in client.out
+        client.run("lock extract-profiles host_profile build_profile --lockfile=tempranillo.lock", assert_error=True)
+        assert "ERROR: Missing lockfile" in client.out
 
     def test_extract_profiles_custom_lockfile(self):
+        """ When lockfile is passed as argument, it MUST be used instead of conan.lock.
+        """
         client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("lock create conanfile.py --lockfile-out=foobar.lock")
+        client.run("lock create conanfile.py")
+        tools.replace_in_file(os.path.join(client.current_folder, LOCKFILE), "arch", "xarchx")
         client.run("lock extract-profiles --lockfile=foobar.lock host_profile build_profile")
         assert "Generated host profile" in client.out
         client.run("profile show host_profile")
         assert "Configuration for profile host_profile" in client.out
+        lock_json = json.loads(client.load("foobar.lock"))
+        host_profile_lock, _ = _load_profile(lock_json["profile_host"], None, None)
+        host_profile_file, _ = read_profile("host_profile", None, client.current_folder)
+        assert host_profile_lock.dumps() == host_profile_file.dumps()
