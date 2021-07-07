@@ -8,6 +8,7 @@ import six
 from jinja2 import Template
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
 from conan.tools.microsoft.visual import vs_ide_version, write_conanvcvars
@@ -697,6 +698,8 @@ class CMakeToolchain(object):
                                        ("find_paths", FindConfigFiles),
                                        ("rpath", SkipRPath),
                                        ("shared", SharedLibBock)])
+
+        check_using_build_profile(self._conanfile)
 
     def _context(self):
         """ Returns dict, the context for the template

@@ -1,5 +1,6 @@
 import os
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -26,7 +27,20 @@ class CMakeDeps(object):
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
 
+        check_using_build_profile(self._conanfile)
+
+        # Enable/Disable checking if a component target exists or not
+        self.check_components_exist = False
+
     def generate(self):
+        # FIXME: Remove this in 2.0
+        if not hasattr(self._conanfile, "settings_build") and \
+                      (self.build_context_activated or self.build_context_build_modules or
+                       self.build_context_suffix):
+            raise ConanException("The 'build_context_activated' and 'build_context_build_modules' of"
+                                 " the CMakeDeps generator cannot be used without specifying a build"
+                                 " profile. e.g: -pr:b=default")
+
         # Current directory is the generators_folder
         generator_files = self.content
         for generator_file, content in generator_files.items():
