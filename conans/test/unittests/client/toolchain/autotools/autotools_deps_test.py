@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import mock
+import pytest
 from mock import Mock
 
 from conan.tools.gnu import AutotoolsDeps
@@ -42,18 +43,27 @@ def get_cpp_info(name):
     return cppinfo
 
 
-def test_foo():
+@pytest.fixture
+def dep1():
     dep1 = ConanFile(Mock(), None)
     dep1.cpp_info = get_cpp_info("dep1")
     dep1._conan_node = Mock()
     dep1._conan_node.ref = ConanFileReference.loads("dep1/1.0")
     dep1.package_folder = "/path/to/folder_dep1"
+    return dep1
 
+
+@pytest.fixture
+def dep2():
     dep2 = ConanFile(Mock(), None)
     dep2.cpp_info = get_cpp_info("dep2")
     dep2._conan_node = Mock()
     dep2._conan_node.ref = ConanFileReference.loads("dep2/1.0")
     dep2.package_folder = "/path/to/folder_dep2"
+    return dep2
+
+
+def test_calculate_environment(dep1, dep2):
 
     with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
         req1 = Requirement(ConanFileReference.loads("dep1/1.0"))
@@ -72,8 +82,7 @@ def test_foo():
              "cppstd": "17"})
         deps = AutotoolsDeps(consumer)
         # deps.generate()
-        env = deps.environment()
-        assert env["LDFLAGS"] == 'dep1_shared_link_flag dep2_shared_link_flag ' \
+        assert deps.environment["LDFLAGS"] == 'dep1_shared_link_flag dep2_shared_link_flag ' \
                                  'dep1_exe_link_flag dep2_exe_link_flag ' \
                                  '-framework dep1_oneframework -framework dep1_twoframework ' \
                                  '-framework dep2_oneframework -framework dep2_twoframework ' \
@@ -84,6 +93,55 @@ def test_foo():
                                  '-Wl,-rpath,"/path/to/folder_dep1/one/lib/path/dep1" ' \
                                  '-Wl,-rpath,"/path/to/folder_dep2/one/lib/path/dep2" ' \
                                  '--sysroot=/path/to/folder/dep1'
+
+        assert deps.environment["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag ' \
+                                               '--sysroot=/path/to/folder/dep1'
+        assert deps.environment["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag ' \
+                                             '--sysroot=/path/to/folder/dep1'
+
+
+def test_adjust_before_generate(dep1, dep2):
+
+    with mock.patch('conans.ConanFile.dependencies', new_callable=mock.PropertyMock) as mock_deps:
+        req1 = Requirement(ConanFileReference.loads("dep1/1.0"))
+        req2 = Requirement(ConanFileReference.loads("dep2/1.0"))
+        deps = OrderedDict()
+        deps[req1] = ConanFileInterface(dep1)
+        deps[req2] = ConanFileInterface(dep2)
+        mock_deps.return_value = ConanFileDependencies(deps)
+        consumer = ConanFile(Mock(), None)
+        consumer.settings = MockSettings(
+            {"build_type": "Release",
+             "arch": "x86",
+             "compiler": "gcc",
+             "compiler.libcxx": "libstdc++11",
+             "compiler.version": "7.1",
+             "cppstd": "17"})
+        deps = AutotoolsDeps(consumer)
+
+        # We can access the cpp_info and modify it
+        deps.cpp_info.includedirs = ["/other/includedir"]
+
+        # Later we can access to the flags and modify them
+        deps.cpp_flags.append("NewCppFlag")
+
+        # !!! If we modify now the deps.cpp_info after accessing the cpp_flags it raises
+        with pytest.raises(Exception) as execinfo:
+            deps.cpp_info.includedirs = []
+        assert str(execinfo.value) == "Error in AutotoolsDeps: You cannot access '.cpp_info' once " \
+                                      "the flags have been calculated"
+
+        # Even later modify the environment
+        env = deps.environment
+
+        # !!!! If we modify the flags after accesing the environment it raises
+        with pytest.raises(Exception) as execinfo:
+            deps.cpp_flags.clear()
+        assert str(execinfo.value) == "Error in AutotoolsDeps: You cannot access the flags once " \
+                                      "the environment has been calculated"
+
+        assert env["CPPFLAGS"] == '-I/other/includedir -Ddep1_onedefinition -Ddep1_twodefinition ' \
+                                  '-Ddep2_onedefinition -Ddep2_twodefinition NewCppFlag'
 
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
         assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
