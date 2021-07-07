@@ -45,13 +45,21 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
 
 def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output,
                        recorder, parallel):
-    short_paths = conanfile.short_paths
 
     def _download(package_id):
         pref = PackageReference(ref, package_id)
+        # TODO: cache2.0 here when specifying a package_id with conan download
+        #  we are not checking the remote for the latest package revision
+        #  maybe we want to add an argument to conan download like --update
+        check_pref_cache = cache.get_package_revisions(pref)
+        skip_download = (len(check_pref_cache) > 0)
         if output and not output.is_terminal:
-            output.info("Downloading %s" % str(pref))
-        remote_manager.get_package(conanfile, pref, remote, output, recorder)
+            message = f"Downloading {str(pref)}" if not skip_download \
+                else f"Skip {pref.full_str()} download, already in cache"
+            output.info(message)
+
+        if not skip_download:
+            remote_manager.get_package(conanfile, pref, remote, output, recorder)
 
     if parallel is not None:
         output.info("Downloading binary packages in %s parallel threads" % parallel)
