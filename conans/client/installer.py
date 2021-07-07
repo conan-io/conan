@@ -19,7 +19,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -485,33 +484,6 @@ class BinaryInstaller(object):
             copied_files = run_imports(conanfile)
             report_copied_files(copied_files, output)
             return
-
-        node.conanfile.cpp_info.filter_empty = False
-        # OLD EDITABLE LAYOUTS:
-        # Try with package-provided file
-        editable_cpp_info = package_layout.editable_cpp_info()
-        if editable_cpp_info:
-            editable_cpp_info.apply_to(ref,
-                                       conanfile.cpp_info,
-                                       settings=conanfile.settings,
-                                       options=conanfile.options)
-            build_folder = editable_cpp_info.folder(ref, EditableLayout.BUILD_FOLDER,
-                                                    settings=conanfile.settings,
-                                                    options=conanfile.options)
-            if build_folder is not None:
-                build_folder = os.path.join(base_path, build_folder)
-                output = conanfile.output
-                self._generator_manager.write_generators(conanfile, build_folder, build_folder,
-                                                         output)
-                write_toolchain(conanfile, build_folder, output)
-                save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
-                output.info("Generated %s" % CONANINFO)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
-                # Build step might need DLLs, binaries as protoc to generate source files
-                # So execute imports() before build, storing the list of copied_files
-                copied_files = run_imports(conanfile)
-                report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, processed_package_references, remotes, pkg_layout):
         pref = node.pref

@@ -23,6 +23,8 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
+
+from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
 
@@ -78,6 +80,10 @@ class ClientCache(object):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
+        edited_ref = self.editable_packages.get(ref.copy_clear_rev())
+        if edited_ref:
+            conanfile_path = edited_ref["path"]
+            return PackageEditableLayout(os.path.dirname(conanfile_path), ref, conanfile_path)
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
     def pkg_layout(self, ref):
