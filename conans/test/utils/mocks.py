@@ -181,6 +181,7 @@ class ConanFileMock(ConanFile):
         self._conan_channel = None
         self.environment_scripts = []
         self.win_bash = None
+        self.conf = None
 
     def run(self, command, win_bash=False, subsystem=None, env=None):
         assert win_bash is False
