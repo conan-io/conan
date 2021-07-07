@@ -427,6 +427,30 @@ def test_same_names():
 @pytest.mark.tool_cmake
 class TestComponentsCMakeGenerators:
 
+    def test_component_not_found(self):
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class GreetingsConan(ConanFile):
+                def package_info(self):
+                    self.cpp_info.components["hello"].libs = ["hello"]
+        """)
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create . greetings/0.0.1@")
+
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class WorldConan(ConanFile):
+                requires = "greetings/0.0.1"
+                def package_info(self):
+                    self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
+        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("create . world/0.0.1@")
+        client.run("install world/0.0.1@ -g CMakeDeps", assert_error=True)
+        assert ("Component 'greetings::non-existent' not found in 'greetings' "
+                "package requirement" in client.out)
+
     def test_component_not_found_same_name_as_pkg_require(self):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator("CMakeDeps")
         mypkg = GenConanfile("mypkg", "0.1").with_setting("build_type").with_generator("CMakeDeps")
@@ -457,6 +481,31 @@ class TestComponentsCMakeGenerators:
 
                 settings = "build_type"
             """)
+
+        def test_component_not_found(self):
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                class GreetingsConan(ConanFile):
+                    def package_info(self):
+                        self.cpp_info.components["hello"].libs = ["hello"]
+            """)
+            client = TestClient()
+            client.save({"conanfile.py": conanfile})
+            client.run("create . greetings/0.0.1@")
+
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                class WorldConan(ConanFile):
+                    requires = "greetings/0.0.1"
+                    def package_info(self):
+                        self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
+            """)
+            client.save({"conanfile.py": conanfile})
+            client.run("create . world/0.0.1@")
+            client.run("install world/0.0.1@ -g CMakeDeps", assert_error=True)
+            assert ("Component 'greetings::non-existent' not found in 'greetings' "
+                    "package requirement" in client.out)
+
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
         client.run("create zlib.py")
