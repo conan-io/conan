@@ -1495,6 +1495,22 @@ class ConanAPIV1(object):
         graph_lock_file.save(lockfile_out)
         self.app.out.info("Generated lockfile: %s" % lockfile_out)
 
+    @api_method
+    def lock_extract_profiles(self, host_profile_name, build_profile_name, lockfile=None, cwd=None):
+        cwd = cwd or os.getcwd()
+        lockfile = lockfile or LOCKFILE
+        lockfile_path = _make_abs_path(lockfile, cwd)
+        host_profile_path = _make_abs_path(host_profile_name, cwd)
+        build_profile_path = _make_abs_path(build_profile_name, cwd)
+        revisions_enabled = self.app.config.revisions_enabled
+        lockfile_handle = GraphLockFile.load(lockfile_path, revisions_enabled)
+        if lockfile_handle.profile_host:
+            save(host_profile_path, lockfile_handle.profile_host.dumps())
+            self.app.out.info("Generated host profile: {}".format(host_profile_path))
+        if lockfile_handle.profile_build:
+            save(build_profile_path, lockfile_handle.profile_build.dumps())
+            self.app.out.info("Generated build profile: {}".format(build_profile_path))
+
 
 Conan = ConanAPIV1
 

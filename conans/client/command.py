@@ -1988,6 +1988,13 @@ class Command(object):
                                                                  help='Clean modified flag')
         clean_modified_bundle_cmd.add_argument('bundle', help='Path to lockfile bundle')
 
+        profile_cmd = subparsers.add_parser('extract-profiles',
+                                            help='Extract host and build profiles from a lockfile')
+        profile_cmd.add_argument('host_profile_name', help='Path to host profile to be extracted')
+        profile_cmd.add_argument('build_profile_name', help='Path to build profile to be extracted')
+        profile_cmd.add_argument('-l', '--lockfile', action=OnceArgument,
+                                 help='Path to lockfile to be used as a base')
+
         args = parser.parse_args(*args)
         self._warn_python_version()
 
@@ -2038,6 +2045,9 @@ class Command(object):
                                     base=args.base,
                                     lockfile=args.lockfile,
                                     lockfile_out=args.lockfile_out)
+        elif args.subcommand == "extract-profiles":
+            self._conan.lock_extract_profiles(args.host_profile_name, args.build_profile_name,
+                                              args.lockfile)
 
     def _show_help(self):
         """

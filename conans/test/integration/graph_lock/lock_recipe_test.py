@@ -4,6 +4,7 @@ import unittest
 
 import pytest
 
+from conans.client.profile_loader import read_profile, _load_profile
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.env_reader import get_env
 
@@ -273,3 +274,51 @@ class LockRecipeTest(unittest.TestCase):
         self.assertIn("liba/0.1:cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31 - Build", client.out)
         self.assertIn("libb/0.1:Package_ID_unknown - Unknown", client.out)
         self.assertIn("cmake/1.0:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 - Cache", client.out)
+
+    def test_extract_profiles_host_only(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("lock create conanfile.py")
+        client.run("lock extract-profiles host_profile build_profile")
+        assert "Generated host profile" in client.out
+        assert "Generated build profile" not in client.out
+        client.run("profile show host_profile")
+        assert "Configuration for profile host_profile" in client.out
+        lock_json = json.loads(client.load("conan.lock"))
+        host_profile_lock, _ = _load_profile(lock_json["profile_host"], None, None)
+        host_profile_file, _ = read_profile("host_profile", None, client.current_folder)
+        assert host_profile_lock.dumps() == host_profile_file.dumps()
+
+    def test_extract_profiles_build_and_host(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("lock create conanfile.py -pr:b default")
+        client.run("lock extract-profiles host_profile build_profile")
+        assert "Generated host profile" in client.out
+        assert "Generated build profile" in client.out
+        client.run("profile show host_profile")
+        assert "Configuration for profile host_profile" in client.out
+        client.run("profile show build_profile")
+        assert "Configuration for profile build_profile" in client.out
+        lock_json = json.loads(client.load("conan.lock"))
+        host_profile_lock, _ = _load_profile(lock_json["profile_host"], None, None)
+        build_profile_lock, _ = _load_profile(lock_json["profile_build"], None, None)
+        host_profile_file, _ = read_profile("host_profile", None, client.current_folder)
+        build_profile_file, _ = read_profile("build_profile", None, client.current_folder)
+        assert host_profile_lock.dumps() == host_profile_file.dumps()
+        assert build_profile_lock.dumps() == build_profile_file.dumps()
+
+    def test_extract_profiles_missing_lockfile(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("lock extract-profiles host_profile build_profile", assert_error=True)
+        assert "ERROR: Missing lockfile" in client.out
+
+    def test_extract_profiles_custom_lockfile(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("lock create conanfile.py --lockfile-out=foobar.lock")
+        client.run("lock extract-profiles --lockfile=foobar.lock host_profile build_profile")
+        assert "Generated host profile" in client.out
+        client.run("profile show host_profile")
+        assert "Configuration for profile host_profile" in client.out
