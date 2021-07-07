@@ -207,9 +207,12 @@ def save_toolchain_args(content, generators_folder=None):
     :param content: `dict` all the information to be saved into the toolchain file.
     :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
     """
-    args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
-        else CONAN_TOOLCHAIN_ARGS_FILE
-    toolchain_config = configparser.ConfigParser()
-    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content
-    with open(args_file, "w") as f:
-        toolchain_config.write(f)
+    # Let's prune None values
+    content_ = {k: v for k, v in content.items() if v is not None}
+    if content_:
+        args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
+            else CONAN_TOOLCHAIN_ARGS_FILE
+        toolchain_config = configparser.ConfigParser()
+        toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+        with open(args_file, "w") as f:
+            toolchain_config.write(f)
