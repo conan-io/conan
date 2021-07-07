@@ -1,7 +1,7 @@
 from conans.client.output import ScopedOutput
 from conans.client.source import retrieve_exports_sources
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.errors import NotFoundException, RecipeNotFoundException
+from conans.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from multiprocessing.pool import ThreadPool
 
 
@@ -49,11 +49,15 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
 
     def _download(package_id):
         pref = PackageReference(ref, package_id)
-        # TODO: cache2.0 here when specifying a package_id with conan download
-        #  we are not checking the remote for the latest package revision
-        #  maybe we want to add an argument to conan download like --update
-        check_pref_cache = cache.get_package_revisions(pref)
-        skip_download = (len(check_pref_cache) > 0)
+        try:
+            if not pref.revision:
+                pref = remote_manager.get_latest_package_revision(pref, remote)
+        except NotFoundException:
+            raise PackageNotFoundException(pref)
+        else:
+            check_pref_cache = cache.get_package_revisions(pref)
+            skip_download = (len(check_pref_cache) > 0)
+
         if output and not output.is_terminal:
             message = f"Downloading {str(pref)}" if not skip_download \
                 else f"Skip {pref.full_str()} download, already in cache"

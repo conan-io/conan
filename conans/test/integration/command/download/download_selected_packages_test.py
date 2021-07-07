@@ -50,8 +50,7 @@ def test_download_some_reference(setup):
 
     new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (package_ids[0],
                                                                       package_ids[1]))
-    assert f"Skip Hello0/0.1@lasote/stable#{latest_prev.ref.revision}:" \
-           f"{latest_prev.id} download, already in cache" in new_client.out
+    assert f"Skip {latest_prev.full_str()} download, already in cache" in new_client.out
     latest_rrev = new_client.cache.get_latest_rrev(ref)
     packages = new_client.cache.get_package_ids(latest_rrev)
     package_ids = [package.id for package in packages]
