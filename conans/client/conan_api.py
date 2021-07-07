@@ -47,8 +47,7 @@ from conans.client.source import config_source_local
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import (ConanException, RecipeNotFoundException,
-                           NotFoundException)
-from conans.model.editable_layout import get_editable_abs_path
+                           PackageNotFoundException, NotFoundException)
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
 from conans.model.lock_bundle import LockBundle
 from conans.model.manifest import discarded_file
@@ -1237,7 +1236,7 @@ class ConanAPIV1(object):
             return self.app.remote_manager.get_package_revisions(pref, remote=remote)
 
     @api_method
-    def editable_add(self, path, reference, layout, cwd):
+    def editable_add(self, path, reference, cwd):
         # Retrieve conanfile.py from target_path
         target_path = _get_conanfile_path(path=path, cwd=cwd, py=True)
 
@@ -1252,10 +1251,7 @@ class ConanAPIV1(object):
                                  "conanfile.py ({}/{}) must match".
                                  format(ref, target_conanfile.name, target_conanfile.version))
 
-        layout_abs_path = get_editable_abs_path(layout, cwd, self.app.cache.cache_folder)
-        if layout_abs_path:
-            self.app.out.success("Using layout file: %s" % layout_abs_path)
-        self.app.cache.editable_packages.add(ref, target_path, layout_abs_path)
+        self.app.cache.editable_packages.add(ref, target_path)
 
     @api_method
     def editable_remove(self, reference):
