@@ -1497,6 +1497,13 @@ class ConanAPIV1(object):
 
     @api_method
     def lock_extract_profiles(self, host_profile_name, build_profile_name, lockfile=None, cwd=None):
+        """ Extract host and build profile from a conan lockfile
+            :param host_profile_name: File name to be used to store the host profile content
+            :param build_profile_name: File name to be used to store the build profile content
+            :param lockfile: Lockfile path to be read. When None, then is conan.lock
+            :param cwd: Current folder to locale the default lockfile. When None, then is getcwd()
+            :return: None
+        """
         cwd = cwd or os.getcwd()
         lockfile = lockfile or LOCKFILE
         lockfile_path = _make_abs_path(lockfile, cwd)
