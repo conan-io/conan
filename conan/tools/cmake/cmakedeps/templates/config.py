@@ -24,7 +24,8 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         return {"file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
-                "target_namespace": self.target_namespace}
+                "target_namespace": self.target_namespace,
+                "check_components_exist": self.cmakedeps.check_components_exist}
 
     @property
     def template(self):
@@ -52,6 +53,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
             include({{ '${_BUILD_MODULE}' }})
         endforeach()
 
+        {% if check_components_exist %}
         # Check that the specified components in the find_package(Foo COMPONENTS x y z) are there
         # This is the variable filled by CMake with the requested components in find_package
         if({{ target_namespace }}_FIND_COMPONENTS)
@@ -63,5 +65,5 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 endif()
             endforeach()
         endif()
-
+        {% endif %}
         """)

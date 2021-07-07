@@ -6,9 +6,7 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.assets.sources import gen_function_cpp
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -271,7 +269,8 @@ class TestNoNamespaceTarget:
             t.run_command('cmake --build . --config Release')  # Compiles and links.
 
 
-def test_targets_declared_in_build_modules():
+@pytest.mark.parametrize("check_components_exist", [False, True, None])
+def test_targets_declared_in_build_modules(check_components_exist):
     """If a require is declaring the component targets in a build_module, CMakeDeps is
        fine with it, not needed to locate it as a conan declared component"""
 
@@ -296,8 +295,36 @@ def test_targets_declared_in_build_modules():
                  "my_modules.cmake": my_modules, "hello.h": hello_h})
     client.run("create .")
 
-    conanfile = GenConanfile().with_cmake_build().with_requires("hello/1.0")\
-        .with_exports_sources("*.txt", "*.cpp").with_name("app").with_version("1.0")
+    conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeDeps
+
+            class HelloConan(ConanFile):
+                name = 'app'
+                version = '1.0'
+                exports_sources = "*.txt", "*.cpp"
+                generators = "CMakeToolchain"
+                requires = ("hello/1.0", )
+                settings = "os", "compiler", "arch", "build_type"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    {}
+                    deps.generate()
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+    """)
+    if check_components_exist is False:
+        conanfile = conanfile.format("deps.check_components_exist=False")
+    elif check_components_exist is True:
+        conanfile = conanfile.format("deps.check_components_exist=True")
+    else:
+        conanfile = conanfile.format("")
+
     main_cpp = textwrap.dedent("""
         #include <iostream>
         #include "hello.h"
@@ -316,13 +343,17 @@ def test_targets_declared_in_build_modules():
         cmake_minimum_required(VERSION 3.15)
         project(project CXX)
 
-        find_package(hello COMPONENTS invented)
+        find_package(hello COMPONENTS invented missing)
         add_executable(myapp main.cpp)
         target_link_libraries(myapp hello::invented)
     """)
     client.save({"conanfile.py": conanfile,
                  "CMakeLists.txt": cmakelist, "main.cpp": main_cpp})
-    client.run("create .")
+    client.run("create .", assert_error=check_components_exist)
+    assert bool(check_components_exist) == ("Conan: Component 'missing' NOT found in package "
+                                            "'hello'" in client.out)
+
     assert "Conan: Including build module" in client.out
     assert "my_modules.cmake" in client.out
-    assert "Conan: Component 'invented' found in package 'hello'" in client.out
+    assert bool(check_components_exist) == ("Conan: Component 'invented' found in package 'hello'"
+                                            in client.out)

@@ -29,6 +29,9 @@ class CMakeDeps(object):
 
         check_using_build_profile(self._conanfile)
 
+        # Enable/Disable checking if a component target exists or not
+        self.check_components_exist = False
+
     def generate(self):
         # FIXME: Remove this in 2.0
         if not hasattr(self._conanfile, "settings_build") and \
