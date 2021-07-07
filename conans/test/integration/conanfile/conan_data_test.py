@@ -31,7 +31,7 @@ class ConanDataTest(unittest.TestCase):
                      "conandata.yml": conandata})
         ref = ConanFileReference.loads("Lib/0.1@user/testing")
         client.run("export . {}".format(ref))
-        export_folder = client.cache.package_layout(ref).export()
+        export_folder = client.get_latest_ref_layout(ref).export()
         exported_data = os.path.join(export_folder, "conandata.yml")
         data = yaml.safe_load(load(exported_data))
         self.assertEqual(data, {"foo": {"bar": "as"}})
@@ -77,7 +77,7 @@ sources:
         client.run("create . {}".format(ref))
         self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
         self.assertIn("My URL:", client.out)
-        export_folder = client.cache.package_layout(ref).export()
+        export_folder = client.get_latest_ref_layout(ref).export()
         self.assertTrue(os.path.exists(os.path.join(export_folder, "conandata.yml")))
 
         # Transitive loaded?
@@ -140,7 +140,7 @@ sources:
         client.run("create . {}".format(ref))
         self.assertIn("OK!", client.out)
 
-        source_folder = client.cache.package_layout(ref).source()
+        source_folder = client.get_latest_ref_layout(ref).source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
         self.assertEqual("foo", load(downloaded_file))
 

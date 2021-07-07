@@ -482,10 +482,8 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
     def test_minor_mode(self,):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_requirement("cmake/0.1", package_id_mode="minor_mode"))
-
+                              with_build_requirement("cmake/[*]", package_id_mode="minor_mode"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
@@ -501,8 +499,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # Change the dependency to next minor
-        self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_requirement("cmake/0.2", package_id_mode="minor_mode"))
+        self.recipe_conanfile("cmake/0.2", GenConanfile())
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer

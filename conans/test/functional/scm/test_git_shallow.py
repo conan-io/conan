@@ -8,7 +8,6 @@ from parameterized import parameterized
 from parameterized.parameterized import parameterized_class
 
 from conans.model.ref import ConanFileReference
-from conans.paths import DATA_YML
 from conans.test.utils.scm import create_local_git_repo
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
@@ -83,7 +82,7 @@ class GitShallowTestCase(unittest.TestCase):
         client.run_command('git clone "{}" .'.format(url))
 
         client.run("export . {}".format(self.ref))
-        content = load(os.path.join(client.cache.package_layout(self.ref).export(), DATA_YML))
+        content = load(client.get_latest_ref_layout(self.ref).conandata())
         if self.shallow in [None, True]:
             self.assertNotIn('shallow', content)
         elif self.shallow in ['None']:

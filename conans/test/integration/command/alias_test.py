@@ -36,6 +36,51 @@ class Pkg(ConanFile):
         self.assertIn("ERROR: Reference 'Pkg/0.1@user/testing' is already a package",
                       client.out)
 
+    def test_basic(self):
+        test_server = TestServer()
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        for i in (1, 2):
+            client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
+            client.run("export . lasote/channel")
+
+        client.run("alias Hello/(0.X)@lasote/channel Hello/0.1@lasote/channel")
+        conanfile_chat = textwrap.dedent("""
+            from conans import ConanFile
+            class TestConan(ConanFile):
+                name = "Chat"
+                version = "1.0"
+                requires = "Hello/(0.X)@lasote/channel"
+                """)
+        client.save({"conanfile.py": conanfile_chat}, clean_first=True)
+        client.run("export . lasote/channel")
+        client.save({"conanfile.txt": "[requires]\nChat/1.0@lasote/channel"}, clean_first=True)
+
+        client.run("install . --build=missing")
+
+        self.assertIn("Hello/0.1@lasote/channel from local", client.out)
+        self.assertNotIn("Hello/0.X@lasote/channel", client.out)
+
+        ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
+        pref = client.get_latest_prev(ref)
+        pkg_folder = client.get_latest_pkg_layout(pref).package()
+        conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
+
+        self.assertIn("Hello/0.1@lasote/channel", conaninfo)
+        self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
+
+        client.run('upload "*" --all --confirm')
+        client.run('remove "*" -f')
+
+        client.run("install .")
+        self.assertIn("Hello/0.1@lasote/channel from 'default'", client.out)
+        self.assertNotIn("Hello/0.X@lasote/channel from", client.out)
+
+        client.run("alias Hello/(0.X)@lasote/channel Hello/0.2@lasote/channel")
+        client.run("install . --build=missing")
+        self.assertIn("Hello/0.2", client.out)
+        self.assertNotIn("Hello/0.1", client.out)
+
     def test_not_override_package(self):
         """ Do not override a package with an alias
 

@@ -19,6 +19,8 @@ from requests.exceptions import HTTPError
 from urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
+from conan.cache.conan_reference import ConanReference
+from conan.cache.conan_reference_layout import PackageLayout, RecipeLayout
 from conans import load, REVISIONS
 from conans.cli.cli import Cli, CLI_V2_COMMANDS
 from conans.client.api.conan_api import ConanAPIV2
@@ -55,7 +57,7 @@ NO_SETTINGS_PACKAGE_ID = "357add7d387f11a959f3ee7d4fc9c2487dbaa604"
 
 def inc_recipe_manifest_timestamp(cache, reference, inc_time):
     ref = ConanFileReference.loads(reference)
-    path = cache.package_layout(ref).export()
+    path = cache.get_latest_rrev(ref).export()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -63,7 +65,7 @@ def inc_recipe_manifest_timestamp(cache, reference, inc_time):
 
 def inc_package_manifest_timestamp(cache, package_reference, inc_time):
     pref = PackageReference.loads(package_reference)
-    path = cache.package_layout(pref.ref).package(pref)
+    path = cache.get_latest_prev(package_reference).package()
     manifest = FileTreeManifest.load(path)
     manifest.time += inc_time
     manifest.save(path)
@@ -613,7 +615,7 @@ class TestClient(object):
         if conanfile:
             self.save({"conanfile.py": conanfile})
         self.run("export . {} {}".format(ref.full_str(), args or ""))
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref).revision
         return ref.copy_with_rev(rrev)
 
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None):
@@ -659,13 +661,40 @@ class TestClient(object):
 
         if not isinstance(reference, ConanFileReference):
             reference = ConanFileReference.loads(reference)
-        layout = self.cache.package_layout(reference)
+        layout = self.get_latest_ref_layout(reference)
         content = load(layout.conandata())
         data = yaml.safe_load(content)
         if ".conan" in data:
             return self._create_scm_info(data[".conan"])
         else:
             return self._create_scm_info(dict())
+
+    def get_latest_prev(self, ref: ConanReference or str, package_id=None) -> PackageReference:
+        """Get the latest PackageReference given a ConanReference"""
+        ref_ = ConanFileReference.loads(ref) if isinstance(ref, str) else ref
+        latest_rrev = self.cache.get_latest_rrev(ref_)
+        if package_id:
+            pref = PackageReference(latest_rrev, package_id)
+        else:
+            package_ids = self.cache.get_package_ids(latest_rrev)
+            # Let's check if there are several packages because we don't want random behaviours
+            assert len(package_ids) == 1, f"There are several packages for {latest_rrev}, please, " \
+                                          f"provide a single package_id instead"
+            pref = package_ids[0]
+        return self.cache.get_latest_prev(pref)
+
+    def get_latest_pkg_layout(self, pref: PackageReference) -> PackageLayout:
+        """Get the latest PackageLayout given a file reference"""
+        # Let's make it easier for all the test clients
+        latest_prev = self.cache.get_latest_prev(pref)
+        pkg_layout = self.cache.pkg_layout(latest_prev)
+        return pkg_layout
+
+    def get_latest_ref_layout(self, ref: ConanReference) -> RecipeLayout:
+        """Get the latest RecipeLayout given a file reference"""
+        latest_rrev = self.cache.get_latest_rrev(ref)
+        ref_layout = self.cache.ref_layout(latest_rrev)
+        return ref_layout
 
 
 class TurboTestClient(TestClient):
@@ -714,13 +743,13 @@ class TurboTestClient(TestClient):
         self.run("export-pkg . {} {} --json {}".format(ref.full_str(),
                                                        args or "", self.tmp_json_name),
                  assert_error=assert_error)
-        rrev = self.cache.package_layout(ref).recipe_revision()
+        rrev = self.cache.get_latest_rrev(ref)
         data = json.loads(self.load(self.tmp_json_name))
         if assert_error:
             return None
         package_id = data["installed"][0]["packages"][0]["id"]
         package_ref = PackageReference(ref, package_id)
-        prev = self.cache.package_layout(ref.copy_clear_rev()).package_revision(package_ref)
+        prev = self.cache.get_latest_prev(package_ref)
         return package_ref.copy_with_revs(rrev, prev)
 
     def recipe_exists(self, ref):

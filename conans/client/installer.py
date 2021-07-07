@@ -19,7 +19,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.editable_layout import EditableLayout
 from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -81,7 +80,7 @@ class _PackageBuilder(object):
             # build_folder but belongs to the same recipe revision, so reuse the build_folder
             # from the one that is already build
             if build_prev.id != pref.id:
-                other_pkg_layout = self._cache.get_pkg_layout(build_prev)
+                other_pkg_layout = self._cache.pkg_layout(build_prev)
                 build_folder = other_pkg_layout.build()
                 skip_build = True
             elif build_prev == pref:
@@ -252,7 +251,7 @@ def _remove_folder_raising(folder):
                              "Close any app using it, and retry" % str(e))
 
 
-def _handle_system_requirements(conan_file, pref, cache, out):
+def _handle_system_requirements(conan_file, package_layout, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -263,7 +262,6 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
-    package_layout = cache.pkg_layout(pref)
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package()
 
@@ -278,9 +276,6 @@ def _handle_system_requirements(conan_file, pref, cache, out):
         save(system_reqs_path, ret)
     else:
         save(system_reqs_package_path, ret)
-    # TODO: cache2.0 this part should be refactored, returning package_layout to pass
-    #  to _handle_node_cache
-    return package_layout
 
 
 def call_system_requirements(conanfile, output):
@@ -402,7 +397,7 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             # TODO: cache2.0 check locks
-            pkg_layout = self._cache.get_pkg_layout(n.pref)
+            pkg_layout = self._cache.pkg_layout(n.pref)
             with pkg_layout.package_lock():
                 self._download_pkg(n)
 
@@ -451,15 +446,18 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                    pkg_layout = _handle_system_requirements(conan_file, node.pref, self._cache,
-                                                             output)
-                    self._handle_node_cache(node, processed_package_refs, remotes, pkg_layout)
+
+                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
+                        not node.pref.revision else self._cache.pkg_layout(node.pref)
+
+                    _handle_system_requirements(conan_file, package_layout, output)
+                    self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
     def _handle_node_editable(self, node, profile_host, profile_build, graph_lock):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
-        package_layout = self._cache.package_layout(ref)
+        package_layout = self._cache.get_pkg_layout(ref)
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
@@ -484,33 +482,6 @@ class BinaryInstaller(object):
             report_copied_files(copied_files, output)
             return
 
-        node.conanfile.cpp_info.filter_empty = False
-        # OLD EDITABLE LAYOUTS:
-        # Try with package-provided file
-        editable_cpp_info = package_layout.editable_cpp_info()
-        if editable_cpp_info:
-            editable_cpp_info.apply_to(ref,
-                                       conanfile.cpp_info,
-                                       settings=conanfile.settings,
-                                       options=conanfile.options)
-            build_folder = editable_cpp_info.folder(ref, EditableLayout.BUILD_FOLDER,
-                                                    settings=conanfile.settings,
-                                                    options=conanfile.options)
-            if build_folder is not None:
-                build_folder = os.path.join(base_path, build_folder)
-                output = conanfile.output
-                self._generator_manager.write_generators(conanfile, build_folder, build_folder,
-                                                         output)
-                write_toolchain(conanfile, build_folder, output)
-                save(os.path.join(build_folder, CONANINFO), conanfile.info.dumps())
-                output.info("Generated %s" % CONANINFO)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-                graph_lock_file.save(os.path.join(build_folder, "conan.lock"))
-                # Build step might need DLLs, binaries as protoc to generate source files
-                # So execute imports() before build, storing the list of copied_files
-                copied_files = run_imports(conanfile)
-                report_copied_files(copied_files, output)
-
     def _handle_node_cache(self, node, processed_package_references, remotes, pkg_layout):
         pref = node.pref
         assert pref.id, "Package-ID without value"
@@ -521,13 +492,18 @@ class BinaryInstaller(object):
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
         if processed_prev is None:  # This package-id has not been processed before
-            pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
+            if not pkg_layout:
+                if pref.revision:
+                    raise ConanException("should this happen?")
+                    pkg_layout = self._cache.pkg_layout(pref)
+                else:
+                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
         else:
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
             pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
-            pkg_layout = self._cache.get_pkg_layout(pref)
+            pkg_layout = self._cache.pkg_layout(pref)
 
         with pkg_layout.package_lock():
             if processed_prev is None:  # This package-id has not been processed before

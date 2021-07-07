@@ -39,7 +39,7 @@ def export_pkg(app, recorder, ref, source_folder, build_folder, package_folder,
     if existing_id and not force:
         raise ConanException("Package already exists. Please use --force, -f to overwrite it")
 
-    pkg_layout = cache.pkg_layout(pref)
+    pkg_layout = cache.pkg_layout(pref) if pref.revision else cache.create_temp_pkg_layout(pref)
     pkg_layout.package_remove()
 
     dest_package_folder = pkg_layout.package()
