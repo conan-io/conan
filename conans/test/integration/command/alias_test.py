@@ -37,14 +37,12 @@ class Pkg(ConanFile):
                       client.out)
 
     def test_basic(self):
-        test_server = TestServer()
-        servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(default_server_user=True)
         for i in (1, 2):
             client.save({"conanfile.py": GenConanfile().with_name("Hello").with_version("0.%s" % i)})
             client.run("export . lasote/channel")
 
-        client.run("alias Hello/(0.X)@lasote/channel Hello/0.1@lasote/channel")
+        client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
         conanfile_chat = textwrap.dedent("""
             from conans import ConanFile
             class TestConan(ConanFile):
@@ -66,8 +64,8 @@ class Pkg(ConanFile):
         pkg_folder = client.get_latest_pkg_layout(pref).package()
         conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
-        self.assertIn("Hello/0.1@lasote/channel", conaninfo)
-        self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)
+        self.assertIn("Hello/0.1", conaninfo)
+        self.assertNotIn("Hello/0.X", conaninfo)
 
         client.run('upload "*" --all --confirm')
         client.run('remove "*" -f')
@@ -76,7 +74,7 @@ class Pkg(ConanFile):
         self.assertIn("Hello/0.1@lasote/channel from 'default'", client.out)
         self.assertNotIn("Hello/0.X@lasote/channel from", client.out)
 
-        client.run("alias Hello/(0.X)@lasote/channel Hello/0.2@lasote/channel")
+        client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
         client.run("install . --build=missing")
         self.assertIn("Hello/0.2", client.out)
         self.assertNotIn("Hello/0.1", client.out)
