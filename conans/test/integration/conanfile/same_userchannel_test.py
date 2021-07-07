@@ -58,7 +58,8 @@ class HelloConan(ConanFile):
     build_policy = "missing"
 
     def requirements(self):
-        self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
+        user_channel = "{}/{}".format(self.user, self.channel) if self.user else ""
+        self.requires("Say/0.1@{}".format(user_channel))
 
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
@@ -84,17 +85,14 @@ class HelloConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        print(self.client.out)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: user not defined, but self.user is used in"
-                      " conanfile", self.client.out)
+        self.assertIn("ERROR: Failed requirement 'Say/0.1' from 'conanfile.py (Hello/0.1)'",
+                      self.client.out)
 
         self.client.run("install . @lasote/stable")
         self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
-        self.client.run("install .")
+        self.client.run("install . @other/testing")
         self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
 
