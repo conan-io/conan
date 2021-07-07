@@ -3,7 +3,7 @@ import textwrap
 from jinja2 import Template
 
 from conan.tools.env import VirtualBuildEnv
-from conan.tools.microsoft.toolchain import write_conanvcvars
+from conan.tools.microsoft.visual import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
