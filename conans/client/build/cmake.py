@@ -333,7 +333,7 @@ class CMake(object):
 
     def test(self, args=None, build_dir=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True) or \
-           self._conanfile.conf["tools.cmake:skip_test"]:
+           self._conanfile.conf["tools.build:skip_test"]:
             return
         if not target:
             target = "RUN_TESTS" if self.is_multi_configuration else "test"

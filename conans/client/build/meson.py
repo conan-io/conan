@@ -227,7 +227,7 @@ class Meson(object):
 
     def test(self, args=None, build_dir=None, targets=None):
         if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True) or \
-           self._conanfile.conf["tools.meson:skip_test"]:
+           self._conanfile.conf["tools.build:skip_test"]:
             return
         if not targets:
             targets = ["test"]
@@ -240,7 +240,7 @@ class Meson(object):
 
     def meson_test(self, args=None, build_dir=None):
         if not self._conanfile.should_test or not get_env("CONAN_RUN_TESTS", True) or \
-           self._conanfile.conf["tools.meson:skip_test"]:
+           self._conanfile.conf["tools.build:skip_test"]:
             return
         self._run_meson_command(subcommand='test', args=args, build_dir=build_dir)
 

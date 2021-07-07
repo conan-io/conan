@@ -63,7 +63,7 @@ class MesonTest(unittest.TestCase):
 
     def test_conf_skip_test(self):
         conf = ConfDefinition()
-        conf.loads("tools.meson:skip_test=1")
+        conf.loads("tools.build:skip_test=1")
         conanfile = ConanFileMock()
         conanfile.settings = Settings()
         conanfile.conf = conf.get_conanfile_conf(None)
