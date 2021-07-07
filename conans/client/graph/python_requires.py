@@ -130,11 +130,13 @@ class PyRequireLoader(object):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes)
         path, _, _, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
-                                                     channel=new_ref.channel)
+        conanfile, module = loader.load_basic_module(path, lock_python_requires)
         conanfile.name = new_ref.name
         # FIXME Conan 2.0 version should be a string, not a Version object
         conanfile.version = new_ref.version
+        conanfile.user = new_ref.user
+        # TODO: Is tihs really necessary?
+        conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)

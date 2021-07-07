@@ -175,8 +175,6 @@ class ConanFileMock(ConanFile):
         self.folders.set_base_build(".")
         self.folders.set_base_install("myinstallfolder")
         self.folders.set_base_generators(".")
-        self._conan_user = None
-        self._conan_channel = None
         self.environment_scripts = []
         self.win_bash = None
 
