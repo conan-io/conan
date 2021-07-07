@@ -2,6 +2,7 @@ import os
 import textwrap
 from xml.dom import minidom
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env.environment import register_environment_script
 from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
 from conans.client.tools import intel_compilervars_command
@@ -87,6 +88,7 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile.settings)
+        check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
