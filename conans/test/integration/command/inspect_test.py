@@ -26,7 +26,6 @@ class ConanInspectTest(unittest.TestCase):
         self.assertIn("ERROR: Unable to find 'non-existing/version@user/channel' in remotes",
                       client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 check why this is failing with conan inspect")
     def test_inspect_remote(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")})
@@ -40,7 +39,9 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -r=default -a settings")
         self.assertIn("settings: os", client.out)
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        # we got in cache the revision from the remote but still the latest
+        # revision in cache is the last we created
+        self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("remove * -f")
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
