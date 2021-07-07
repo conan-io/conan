@@ -19,7 +19,6 @@ class VCVars:
 
 
 def write_conanvcvars(conanfile, auto_activate=True):
-    # FIXME: Write a VCVars generator for the final user
     """
     write a conanvcvars.bat file with the good args from settings
     """
