@@ -439,8 +439,9 @@ class Pkg(ConanFile):
         self.assertNotIn("Hello/0.X@lasote/channel", client.out)
 
         ref = ConanFileReference.loads("Chat/1.0@lasote/channel")
-        pkg_folder = client.cache.package_layout(ref).packages()
-        conaninfo = client.load(os.path.join(pkg_folder[0], "conaninfo.txt"))
+        pref = client.get_latest_prev(ref)
+        pkg_folder = client.get_latest_pkg_layout(pref).package()
+        conaninfo = client.load(os.path.join(pkg_folder, "conaninfo.txt"))
 
         self.assertIn("Hello/0.1@lasote/channel", conaninfo)
         self.assertNotIn("Hello/0.X@lasote/channel", conaninfo)

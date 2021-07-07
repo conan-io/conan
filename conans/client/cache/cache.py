@@ -2,7 +2,7 @@ import os
 import shutil
 from collections import OrderedDict
 from io import StringIO
-
+from typing import List
 from jinja2 import Environment, select_autoescape, FileSystemLoader, ChoiceLoader
 
 from conan.cache.cache import DataCache
@@ -23,7 +23,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.settings import Settings
 from conans.paths import ARTIFACTS_PROPERTIES_FILE
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
+
 from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.util.files import list_folder_subdirs, load, normalize, save, remove, mkdir
 from conans.util.locks import Lock
@@ -80,20 +80,26 @@ class ClientCache(object):
         return self._data_cache.assign_prev(layout, ref)
 
     def ref_layout(self, ref):
-        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
-
-    def pkg_layout(self, ref):
-        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
-
-    def get_ref_layout(self, ref):
         edited_ref = self.editable_packages.get(ref.copy_clear_rev())
         if edited_ref:
             conanfile_path = edited_ref["path"]
-            return PackageEditableLayout(os.path.dirname(conanfile_path), ref,conanfile_path)
+            return PackageEditableLayout(os.path.dirname(conanfile_path), ref, conanfile_path)
         return self._data_cache.get_reference_layout(ConanReference(ref))
 
-    def get_pkg_layout(self, ref):
+    def pkg_layout(self, ref):
         return self._data_cache.get_package_layout(ConanReference(ref))
+
+    def create_ref_layout(self, ref):
+        return self._data_cache.create_reference_layout(ConanReference(ref))
+
+    def create_pkg_layout(self, ref):
+        return self._data_cache.create_package_layout(ConanReference(ref))
+
+    def create_temp_ref_layout(self, ref):
+        return self._data_cache.create_tmp_reference_layout(ConanReference(ref))
+
+    def create_temp_pkg_layout(self, ref):
+        return self._data_cache.create_tmp_package_layout(ConanReference(ref))
 
     def remove_layout(self, layout):
         layout.remove()
@@ -118,7 +124,7 @@ class ClientCache(object):
                                    validate=False) for pref in
             self._data_cache.get_package_revisions(ConanReference(ref), only_latest_prev)]
 
-    def get_package_ids(self, ref):
+    def get_package_ids(self, ref: ConanReference) -> List[PackageReference]:
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}',
                                    validate=False) for pref in
@@ -154,12 +160,6 @@ class ClientCache(object):
     @property
     def config_install_file(self):
         return os.path.join(self.cache_folder, "config_install.json")
-
-    # TODO: cache2.0 this will be removed in the future is just to adapt to some tests
-    #  that call this directly
-    def package_layout(self, ref, short_paths=None):
-        assert isinstance(ref, ConanFileReference), "It is a {}".format(type(ref))
-        return PackageCacheLayout(ref, self)
 
     @property
     def remotes_path(self):

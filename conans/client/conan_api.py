@@ -3,11 +3,9 @@ import os
 import sys
 from collections import OrderedDict
 from collections import namedtuple
-
 from io import StringIO
 
 import conans
-from conan.cache.conan_reference import ConanReference
 from conans import __version__ as client_version
 from conans.client.cache.cache import ClientCache
 from conans.client.cmd.build import cmd_build
@@ -21,10 +19,8 @@ from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
-from conans.client.conanfile.package import run_package_method
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.generators import GeneratorManager
-from conans.client.graph.graph import RECIPE_EDITABLE
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.printer import print_graph
@@ -33,7 +29,6 @@ from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.importer import run_imports, undo_imports
-from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import deps_install
 from conans.client.migrations import ClientMigrator
@@ -55,14 +50,15 @@ from conans.errors import (ConanException, RecipeNotFoundException,
                            PackageNotFoundException, NotFoundException)
 from conans.model.graph_lock import GraphLockFile, LOCKFILE, GraphLock
 from conans.model.lock_bundle import LockBundle
+from conans.model.manifest import discarded_file
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.dates import iso8601_to_str, from_timestamp_to_iso8601
+from conans.util.dates import from_timestamp_to_iso8601
+from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
@@ -1056,7 +1052,7 @@ class ConanAPIV1(object):
     def remove_system_reqs(self, reference):
         try:
             ref = ConanFileReference.loads(reference)
-            self.app.cache.package_layout(ref).remove_system_reqs()
+            self.app.cache.get_pkg_layout(ref).remove_system_reqs()
             self.app.out.info(
                 "Cache system_reqs from %s has been removed" % repr(ref))
         except Exception as error:
@@ -1099,13 +1095,43 @@ class ConanAPIV1(object):
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote_name=None):
+
+        def get_path(cache, ref, path, package_id):
+            """ Return the contents for the given `path` inside current layout, it can
+                be a single file or the list of files in a directory
+
+                :param package_id: will retrieve the contents from the package directory
+                :param path: path relative to the cache reference or package folder
+            """
+            assert not os.path.isabs(path)
+
+            latest_rrev = cache.get_latest_rrev(ref)
+
+            if package_id is None:  # Get the file in the exported files
+                folder = cache.ref_layout(latest_rrev).export()
+            else:
+                latest_pref = cache.get_latest_prev(PackageReference(latest_rrev, package_id))
+                folder = cache.get_pkg_layout(latest_pref).package()
+
+            abs_path = os.path.join(folder, path)
+
+            if not os.path.exists(abs_path):
+                raise NotFoundException("The specified path doesn't exist")
+
+            if os.path.isdir(abs_path):
+                # FIXME: 2.0: This env variable should not be declared here
+                keep_python = get_env("CONAN_KEEP_PYTHON_FILES", False)
+                return sorted([path_ for path_ in os.listdir(abs_path)
+                               if not discarded_file(path, keep_python)])
+            else:
+                return load(abs_path)
+
         ref = ConanFileReference.loads(reference)
         if not path:
             path = "conanfile.py" if not package_id else "conaninfo.txt"
 
         if not remote_name:
-            package_layout = self.app.cache.package_layout(ref, short_paths=None)
-            return package_layout.get_path(path=path, package_id=package_id), path
+            return get_path(self.app.cache, ref, path, package_id), path
         else:
             remote = self.get_remote_by_name(remote_name)
             if not ref.revision:
@@ -1132,7 +1158,7 @@ class ConanAPIV1(object):
         # with that name
         latest_rrev = self.app.cache.get_latest_rrev(ref)
         if latest_rrev:
-            alias_conanfile_path = self.app.cache.get_ref_layout(latest_rrev).conanfile()
+            alias_conanfile_path = self.app.cache.ref_layout(latest_rrev).conanfile()
             if os.path.exists(alias_conanfile_path):
                 conanfile = self.app.loader.load_basic(alias_conanfile_path)
                 if not getattr(conanfile, 'alias', None):
@@ -1187,8 +1213,9 @@ class ConanAPIV1(object):
         pkg_revs = self.app.cache.get_package_revisions(pref, only_latest_prev=True)
         pkg_rev = pkg_revs[0] if pkg_revs else None
         if not remote_name:
+            if not pkg_rev:
+                raise PackageNotFoundException(pref)
             # Check the time in the associated remote if any
-            pkg_layout = self.app.cache.pkg_layout(pkg_rev)
             remote_name = self.app.cache.get_remote(pkg_rev)
             remote = self.app.cache.registry.load_remotes()[remote_name] if remote_name else None
             rev_time = None

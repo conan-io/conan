@@ -1,6 +1,6 @@
 import json
 
-from conans.cli.cli import cli_out_write
+from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.cli.command import conan_command, Extender
 

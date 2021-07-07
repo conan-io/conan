@@ -7,19 +7,20 @@ from collections import namedtuple
 import pytest
 from mock import mock
 
-from conans.model.ref import ConanFileReference
-from conans.paths.package_layouts.package_cache_layout import PackageCacheLayout
-from conans.test.utils.test_files import temp_folder
 from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import TestBufferConanOutput
 
+
+# TODO: 2.0: add some unittests for the new cache on getting the fields that replace the metadata
 
 class UpdateRevisionInMetadataTests(unittest.TestCase):
 
     def setUp(self):
         ref = ConanFileReference.loads("lib/version@user/channel")
-        self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
-                                                 short_paths=False, no_lock=True)
+        # FIXME: 2.0: PackageCacheLayout does not exist anymore
+        # self.package_layout = PackageCacheLayout(base_folder=temp_folder(), ref=ref,
+        #                                          short_paths=False, no_lock=True)
         self.output = TestBufferConanOutput()
 
     @pytest.mark.xfail(reason="cache2.0")

@@ -80,7 +80,7 @@ class _PackageBuilder(object):
             # build_folder but belongs to the same recipe revision, so reuse the build_folder
             # from the one that is already build
             if build_prev.id != pref.id:
-                other_pkg_layout = self._cache.get_pkg_layout(build_prev)
+                other_pkg_layout = self._cache.pkg_layout(build_prev)
                 build_folder = other_pkg_layout.build()
                 skip_build = True
             elif build_prev == pref:
@@ -251,7 +251,7 @@ def _remove_folder_raising(folder):
                              "Close any app using it, and retry" % str(e))
 
 
-def _handle_system_requirements(conan_file, pref, cache, out):
+def _handle_system_requirements(conan_file, package_layout, out):
     """ check first the system_reqs/system_requirements.txt existence, if not existing
     check package/sha1/
 
@@ -262,7 +262,6 @@ def _handle_system_requirements(conan_file, pref, cache, out):
     if type(conan_file).system_requirements == ConanFile.system_requirements:
         return
 
-    package_layout = cache.pkg_layout(pref)
     system_reqs_path = package_layout.system_reqs()
     system_reqs_package_path = package_layout.system_reqs_package()
 
@@ -277,9 +276,6 @@ def _handle_system_requirements(conan_file, pref, cache, out):
         save(system_reqs_path, ret)
     else:
         save(system_reqs_package_path, ret)
-    # TODO: cache2.0 this part should be refactored, returning package_layout to pass
-    #  to _handle_node_cache
-    return package_layout
 
 
 def call_system_requirements(conanfile, output):
@@ -400,7 +396,7 @@ class BinaryInstaller(object):
             # We cannot embed the package_lock inside the remote.get_package()
             # because the handle_node_cache has its own lock
             # TODO: cache2.0 check locks
-            pkg_layout = self._cache.get_pkg_layout(n.pref)
+            pkg_layout = self._cache.pkg_layout(n.pref)
             with pkg_layout.package_lock():
                 self._download_pkg(n)
 
@@ -450,9 +446,12 @@ class BinaryInstaller(object):
                         self._binaries_analyzer.reevaluate_node(node, remotes, build_mode, update)
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
-                    pkg_layout = _handle_system_requirements(conan_file, node.pref, self._cache,
-                                                             output)
-                    self._handle_node_cache(node, processed_package_refs, remotes, pkg_layout)
+
+                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
+                        not node.pref.revision else self._cache.pkg_layout(node.pref)
+
+                    _handle_system_requirements(conan_file, package_layout, output)
+                    self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
 
         # Finally, propagate information to root node (ref=None)
         self._propagate_info(root_node)
@@ -461,7 +460,7 @@ class BinaryInstaller(object):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
-        package_layout = self._cache.package_layout(ref)
+        package_layout = self._cache.get_pkg_layout(ref)
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
@@ -496,13 +495,18 @@ class BinaryInstaller(object):
         bare_pref = PackageReference(pref.ref, pref.id)
         processed_prev = processed_package_references.get(bare_pref)
         if processed_prev is None:  # This package-id has not been processed before
-            pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
+            if not pkg_layout:
+                if pref.revision:
+                    raise ConanException("should this happen?")
+                    pkg_layout = self._cache.pkg_layout(pref)
+                else:
+                    pkg_layout = self._cache.create_temp_pkg_layout(pref)
         else:
             # We need to update the PREV of this node, as its processing has been skipped,
             # but it could be that another node with same PREF was built and obtained a new PREV
             node.prev = processed_prev
             pref = pref.copy_with_revs(pref.ref.revision, processed_prev)
-            pkg_layout = self._cache.get_pkg_layout(pref)
+            pkg_layout = self._cache.pkg_layout(pref)
 
         with pkg_layout.package_lock():
             if processed_prev is None:  # This package-id has not been processed before

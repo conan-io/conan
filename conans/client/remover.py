@@ -140,27 +140,27 @@ class ConanRemover(object):
             prev_remove_build = self._get_revisions_to_remove(ref, build_ids, all_package_revisions)
 
         if src:
-            recipe_layout = self._cache.get_ref_layout(ref)
+            recipe_layout = self._cache.ref_layout(ref)
             recipe_layout.sources_remove()
 
         if package_ids is None and build_ids is None:
             for package in all_package_revisions:
-                package_layout = self._cache.get_pkg_layout(package)
+                package_layout = self._cache.pkg_layout(package)
                 self._cache.remove_layout(package_layout)
         else:
             # for -p argument we remove the whole package, for -b just the build folder
             for package in prev_remove:
-                package_layout = self._cache.get_pkg_layout(package)
+                package_layout = self._cache.pkg_layout(package)
                 self._cache.remove_layout(package_layout)
 
             for package in prev_remove_build:
-                package_layout = self._cache.get_pkg_layout(package)
+                package_layout = self._cache.pkg_layout(package)
                 package_layout.build_remove()
                 # also remove the build_id from the db if any
                 self._cache.update_reference(package, new_build_id="")
 
         if not src and remove_recipe:
-            ref_layout = self._cache.get_ref_layout(ref)
+            ref_layout = self._cache.ref_layout(ref)
             self._cache.remove_layout(ref_layout)
 
     def remove(self, pattern, remote_name, src=None, build_ids=None, package_ids_filter=None,
