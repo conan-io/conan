@@ -14,9 +14,12 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     hook_manager.execute("pre_download", reference=ref, remote=remote)
 
     try:
-        ref = remote_manager.get_recipe(ref, remote)
+        _, ref = remote_manager.get_recipe_manifest(ref, remote)
     except NotFoundException:
         raise RecipeNotFoundException(ref)
+    else:
+        ref_in_cache = cache.get_recipe_revisions(ref)
+        ref = remote_manager.get_recipe(ref, remote) if len(ref_in_cache) == 0 else ref_in_cache[0]
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
