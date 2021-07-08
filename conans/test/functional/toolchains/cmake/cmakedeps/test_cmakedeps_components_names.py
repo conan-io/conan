@@ -429,7 +429,6 @@ class TestComponentsCMakeGenerators:
     def test_component_not_found(self):
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-
             class GreetingsConan(ConanFile):
                 def package_info(self):
                     self.cpp_info.components["hello"].libs = ["hello"]
@@ -440,10 +439,8 @@ class TestComponentsCMakeGenerators:
 
         conanfile = textwrap.dedent("""
             from conans import ConanFile
-
             class WorldConan(ConanFile):
                 requires = "greetings/0.0.1"
-
                 def package_info(self):
                     self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
         """)
@@ -452,46 +449,6 @@ class TestComponentsCMakeGenerators:
         client.run("install world/0.0.1@ -g CMakeDeps", assert_error=True)
         assert ("Component 'greetings::non-existent' not found in 'greetings' "
                 "package requirement" in client.out)
-
-    def test_component_not_found_cmake(self):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-
-            class GreetingsConan(ConanFile):
-                def package_info(self):
-                    self.cpp_info.components["hello"].cxxflags = ["flags"]
-        """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("create . greetings/0.0.1@")
-
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            from conan.tools.cmake import CMake
-
-            class ConsumerConan(ConanFile):
-                settings = "build_type", "os", "arch", "compiler"
-                generators = "CMakeDeps", "CMakeToolchain"
-                requires = "greetings/0.0.1"
-
-                def build(self):
-                    cmake = CMake(self)
-                    cmake.configure()
-        """)
-        cmakelists = textwrap.dedent("""
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            set(CMAKE_CXX_ABI_COMPILED 1)
-            cmake_minimum_required(VERSION 3.0)
-            project(Consumer CXX)
-
-            find_package(greetings COMPONENTS hello)
-            find_package(greetings COMPONENTS non-existent)
-            """)
-        client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
-        client.run("install .")
-        client.run("build .", assert_error=True)
-        assert "Conan: Component 'hello' found in package 'greetings'" in client.out
-        assert "Conan: Component 'non-existent' NOT found in package 'greetings'" in client.out
 
     def test_component_not_found_same_name_as_pkg_require(self):
         zlib = GenConanfile("zlib", "0.1").with_setting("build_type").with_generator("CMakeDeps")
@@ -505,6 +462,49 @@ class TestComponentsCMakeGenerators:
         consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
             .with_generator("CMakeDeps")\
             .with_requirement(ConanFileReference("final", "0.1", None, None))
+
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMakeDeps
+            class HelloConan(ConanFile):
+                name = 'consumer'
+                version = '0.1'
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.check_components_exist = True
+                    deps.generate()
+
+                def requirements(self):
+                    self.requires("final/0.1")
+
+                settings = "build_type"
+            """)
+
+        def test_component_not_found(self):
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                class GreetingsConan(ConanFile):
+                    def package_info(self):
+                        self.cpp_info.components["hello"].libs = ["hello"]
+            """)
+            client = TestClient()
+            client.save({"conanfile.py": conanfile})
+            client.run("create . greetings/0.0.1@")
+
+            conanfile = textwrap.dedent("""
+                from conans import ConanFile
+                class WorldConan(ConanFile):
+                    requires = "greetings/0.0.1"
+                    def package_info(self):
+                        self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
+            """)
+            client.save({"conanfile.py": conanfile})
+            client.run("create . world/0.0.1@")
+            client.run("install world/0.0.1@ -g CMakeDeps", assert_error=True)
+            assert ("Component 'greetings::non-existent' not found in 'greetings' "
+                    "package requirement" in client.out)
+
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
         client.run("create zlib.py")
@@ -643,3 +643,93 @@ class TestComponentsCMakeGenerators:
         assert 'middle: Release!' in client.out
         assert 'expected/1.0: Hello World Release!' in client.out
         assert 'variant/1.0: Hello World Release!' in client.out
+
+
+@pytest.mark.parametrize("check_components_exist", [False, True, None])
+def test_targets_declared_in_build_modules(check_components_exist):
+    """If a require is declaring the component targets in a build_module, CMakeDeps is
+       fine with it, not needed to locate it as a conan declared component"""
+
+    client = TestClient()
+    conanfile_hello = str(GenConanfile().with_name("hello").with_version("1.0")
+                          .with_exports_sources("*.cmake", "*.h"))
+    conanfile_hello += """
+    def package(self):
+        self.copy("*.h", dst="include")
+        self.copy("*.cmake", dst="cmake")
+
+    def package_info(self):
+        self.cpp_info.set_property("cmake_build_modules", ["cmake/my_modules.cmake"])
+    """
+    my_modules = textwrap.dedent("""
+    add_library(cool_component INTERFACE)
+    target_include_directories(cool_component INTERFACE ${CMAKE_CURRENT_LIST_DIR}/../include/)
+    add_library(hello::invented ALIAS cool_component)
+    """)
+    hello_h = "int cool_header_only=1;"
+    client.save({"conanfile.py": conanfile_hello,
+                 "my_modules.cmake": my_modules, "hello.h": hello_h})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            from conan.tools.cmake import CMake, CMakeDeps
+
+            class HelloConan(ConanFile):
+                name = 'app'
+                version = '1.0'
+                exports_sources = "*.txt", "*.cpp"
+                generators = "CMakeToolchain"
+                requires = ("hello/1.0", )
+                settings = "os", "compiler", "arch", "build_type"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    {}
+                    deps.generate()
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+    """)
+    if check_components_exist is False:
+        conanfile = conanfile.format("deps.check_components_exist=False")
+    elif check_components_exist is True:
+        conanfile = conanfile.format("deps.check_components_exist=True")
+    else:
+        conanfile = conanfile.format("")
+
+    main_cpp = textwrap.dedent("""
+        #include <iostream>
+        #include "hello.h"
+
+        int main(){
+            std::cout << "cool header value: " << cool_header_only;
+            return 0;
+        }
+        """)
+
+    cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(project CXX)
+
+        find_package(hello COMPONENTS invented missing)
+        add_executable(myapp main.cpp)
+        target_link_libraries(myapp hello::invented)
+    """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelist, "main.cpp": main_cpp})
+    client.run("create .", assert_error=check_components_exist)
+    assert bool(check_components_exist) == ("Conan: Component 'missing' NOT found in package "
+                                            "'hello'" in client.out)
+
+    assert "Conan: Including build module" in client.out
+    assert "my_modules.cmake" in client.out
+    assert bool(check_components_exist) == ("Conan: Component 'invented' found in package 'hello'"
+                                            in client.out)

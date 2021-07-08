@@ -201,6 +201,7 @@ class GenConanfile(object):
         self._generators = self._generators or []
         self._generators.append("CMakeDeps")
         self._generators.append("CMakeToolchain")
+        self.with_settings("os", "compiler", "arch", "build_type")
         self._cmake_build = True
         return self
 
