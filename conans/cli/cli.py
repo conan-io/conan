@@ -22,7 +22,8 @@ from conans.util.log import logger
 
 CLI_V2_COMMANDS = [
     'help',
-    'search'
+    'search',
+    'list'
 ]
 
 

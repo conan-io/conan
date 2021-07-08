@@ -80,15 +80,12 @@ class TestRemotes:
         self._add_remote(remote_name)
         self._add_recipe(remote_name, recipe_name)
 
-        self.client.run("remote list")
-
-        assert "remote1: http://fake" in self.client.out
-
         self.client.run("search -r {} {}".format(remote_name, "test_recipe"))
 
         expected_output = (
-            "test_recipe\n"
-            "  {}\n".format(recipe_name)
+            "remote1:\n"
+            "  test_recipe\n"
+            "    {}\n".format(recipe_name)
         )
 
         assert expected_output == self.client.out
@@ -134,9 +131,10 @@ class TestRemotes:
         remote2_recipe2 = "test_recipe/2.1.0@user/channel"
 
         expected_output = (
-            "test_recipe\n"
-            "  test_recipe/1.0.0@user/channel\n"
-            "  test_recipe/1.1.0@user/channel\n"
+            "remote1:\n"
+            "  test_recipe\n"
+            "    test_recipe/1.0.0@user/channel\n"
+            "    test_recipe/1.1.0@user/channel\n"
         )
 
         self._add_remote(remote1)
@@ -204,12 +202,13 @@ class TestRemotes:
         remote1_recipe4 = "test_another/4.1.0@user/channel"
 
         expected_output = (
-            "test_another\n"
-            "  test_another/2.1.0@user/channel\n"
-            "  test_another/4.1.0@user/channel\n"
-            "test_recipe\n"
-            "  test_recipe/1.0.0@user/channel\n"
-            "  test_recipe/1.1.0@user/channel\n"
+            "remote1:\n"
+            "  test_another\n"
+            "    test_another/2.1.0@user/channel\n"
+            "    test_another/4.1.0@user/channel\n"
+            "  test_recipe\n"
+            "    test_recipe/1.0.0@user/channel\n"
+            "    test_recipe/1.1.0@user/channel\n"
         )
 
         self._add_remote(remote1)

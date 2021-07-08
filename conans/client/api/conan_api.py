@@ -7,8 +7,8 @@ from tqdm import tqdm
 import conans
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
+from conans.client.api.helpers.search import Search, get_recipe_name
 from conans.client.cache.cache import ClientCache
-from conans.client.cmd.search import Search
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.generators import GeneratorManager
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
@@ -19,7 +19,6 @@ from conans.client.graph.range_resolver import RangeResolver
 from conans.client.hook_manager import HookManager
 from conans.client.loader import ConanFileLoader
 from conans.client.migrations import ClientMigrator
-from conans.client.recorder.search_recorder import SearchRecorder
 from conans.client.remote_manager import RemoteManager
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.conan_requester import ConanRequester
@@ -167,26 +166,58 @@ class ConanAPIV2(object):
         return {}
 
     @api_method
-    def search_recipes(self, remote, query):
-        search_recorder = SearchRecorder()
-        search_recorder.add_remote(remote.name)
+    def search_local_recipes(self, query):
+        data = {
+            "remote": None,
+            "error": False,
+            "results": None
+        }
 
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
 
         try:
-            references = search.search_recipes(query, remote.name)
+            references = search.search_local_recipes(query)
         except ConanException as exc:
-            search_recorder.error = True
-            exc.info = search_recorder.get_info()
+            data["error"] = True
             raise
 
+        results = []
+        for reference in references:
+            reference = repr(reference)
+            result = {
+                "name": get_recipe_name(reference),
+                "id": reference
+            }
+            results.append(result)
+
+        data["results"] = results
+        return data
+
+    @api_method
+    def search_remote_recipes(self, remote, query):
+        data = {
+            "remote": remote.name,
+            "error": False,
+            "results": None
+        }
+
+        remotes = self.app.cache.registry.load_remotes()
+        search = Search(self.app.cache, self.app.remote_manager, remotes)
+
+        results = []
+        references = search.search_remote_recipes(query, remote.name)
         for remote_name, refs in references.items():
             for ref in refs:
-                search_recorder.add_recipe(remote_name, ref, with_packages=False)
+                ref = repr(ref)
+                result = {
+                    "name": get_recipe_name(ref),
+                    "id": ref
+                }
+                results.append(result)
 
-        return search_recorder.get_info()
-
+        data["results"] = results
+        return data
 
     @api_method
     def get_active_remotes(self, remote_names):
