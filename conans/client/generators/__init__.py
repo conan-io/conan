@@ -1,3 +1,5 @@
+import os
+import textwrap
 import traceback
 from os.path import join
 
@@ -9,9 +11,7 @@ from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
-from .virtualbuildenv import VirtualBuildEnvGenerator
 from .virtualenv import VirtualEnvGenerator
-from .virtualenv_python import VirtualEnvPythonGenerator
 from .virtualrunenv import VirtualRunEnvGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
@@ -25,16 +25,14 @@ class GeneratorManager(object):
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "virtualenv": VirtualEnvGenerator,
-                            "virtualenv_python": VirtualEnvPythonGenerator,
-                            "virtualbuildenv": VirtualBuildEnvGenerator,
                             "virtualrunenv": VirtualRunEnvGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain",
-                                "BazelDeps", "BazelToolchain", "PkgConfigDeps"]
+                                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
+                                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -81,9 +79,12 @@ class GeneratorManager(object):
         elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
-        elif generator_name == "VirtualEnv":
-            from conan.tools.env.virtualenv import VirtualEnv
-            return VirtualEnv
+        elif generator_name == "VirtualBuildEnv":
+            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+            return VirtualBuildEnv
+        elif generator_name == "VirtualRunEnv":
+            from conan.tools.env.virtualrunenv import VirtualRunEnv
+            return VirtualRunEnv
         elif generator_name == "BazelDeps":
             from conan.tools.google import BazelDeps
             return BazelDeps
@@ -184,6 +185,36 @@ def write_toolchain(conanfile, path, output):
     if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         mkdir(path)
         with chdir(path):
-            from conan.tools.env.virtualenv import VirtualEnv
-            env = VirtualEnv(conanfile)
+            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+            from conan.tools.env import VirtualRunEnv
+            env = VirtualBuildEnv(conanfile)
             env.generate()
+
+            env = VirtualRunEnv(conanfile)
+            env.generate()
+
+    output.highlight("Aggregating env generators")
+    _generate_aggregated_env(conanfile)
+
+
+def _generate_aggregated_env(conanfile):
+    from conan.tools.microsoft import unix_path
+    bats = []
+    shs = []
+
+    for s in conanfile.environment_scripts:
+        path = os.path.join(conanfile.generators_folder, s)
+        if path.lower().endswith(".bat"):
+            bats.append(path)
+        elif path.lower().endswith(".sh"):
+            shs.append(unix_path(conanfile, path))
+    if shs:
+        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
+        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
+    if bats:
+        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
+        bat_content = textwrap.dedent("""\
+                        @echo off
+                        {}
+                        """.format(lines))
+        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)

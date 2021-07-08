@@ -66,7 +66,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload * --all --confirm")
         self.assertNotIn("Uploading conan_package.tgz", client.out)
 
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_folder = client.get_latest_pkg_layout(pref).package()
         package_file_path = os.path.join(package_folder, "myfile.sh")
 
         if platform.system() == "Linux":
@@ -243,7 +243,8 @@ class UploadTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . user/testing")
-        pref = PackageReference.loads("Hello0/1.2.1@user/testing:" + NO_SETTINGS_PACKAGE_ID)
+        pref = client.get_latest_prev(ConanFileReference.loads("Hello0/1.2.1@user/testing"),
+                                      NO_SETTINGS_PACKAGE_ID)
 
         def gzopen_patched(name, mode="r", fileobj=None, **kwargs):
             if name == PACKAGE_TGZ_NAME:
@@ -255,7 +256,7 @@ class UploadTest(unittest.TestCase):
                           "Upload package to 'default' failed: Error gzopen conan_package.tgz",
                           client.out)
 
-            download_folder = client.cache.package_layout(pref.ref).download_package(pref)
+            download_folder = client.get_latest_pkg_layout(pref).download_package()
             tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
             self.assertTrue(os.path.exists(tgz))
             self.assertTrue(is_dirty(tgz))
@@ -499,6 +500,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Uploading conan_package.tgz", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):
         """ Check that the option --dry does not upload anything
         """
@@ -634,7 +636,8 @@ class MyPkg(ConanFile):
         self.assertNotIn("Binary package hello/1.0@user/testing:5%s not found" %
                          NO_SETTINGS_PACKAGE_ID, client.out)
         ref = ConanFileReference("hello", "1.0", "user", "testing")
-        metadata = client.cache.package_layout(ref).load_metadata()
+        # FIXME: 2.0: load_metadata() method does not exist anymore
+        metadata = client.get_latest_pkg_layout(pref).load_metadata()
         self.assertIn(NO_SETTINGS_PACKAGE_ID, metadata.packages)
         self.assertTrue(metadata.packages[NO_SETTINGS_PACKAGE_ID].revision)
 
@@ -729,7 +732,8 @@ class MyPkg(ConanFile):
         client.run('create . lib/1.0@user/channel')
         client.run('upload lib/1.0 -c --all -r default')
         ref = ConanFileReference("lib", "1.0", "user", "channel")
-        metadata = client.cache.package_layout(ref).load_metadata()
+        # FIXME: 2.0: load_metadata() method does not exist anymore
+        metadata = client.get_latest_pkg_layout(pref).load_metadata()
         package_md5 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"]
         package_sha1 = metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"][
             "sha1"]
@@ -741,7 +745,8 @@ class MyPkg(ConanFile):
         self.assertEqual(recipe_sha1, "b97d6b26be5bd02252a44c265755f873cf5ec70b")
         client.run('remove * -f')
         client.run('install lib/1.0@user/channel -r default')
-        metadata = client.cache.package_layout(ref).load_metadata()
+        # FIXME: 2.0: load_metadata() method does not exist anymore
+        metadata = client.get_latest_pkg_layout(pref).load_metadata()
         self.assertEqual(
             metadata.packages[NO_SETTINGS_PACKAGE_ID].checksums["conan_package.tgz"]["md5"],
             package_md5)
@@ -800,7 +805,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         assert "Uploading Hello0/1.2.1@user/testing to remote" in client.out
 
-    @pytest.mark.xfail(reason="cache2.0 will pass when search with --revisions output is fixed")
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload_with_recipe_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
@@ -813,6 +818,7 @@ class MyPkg(ConanFile):
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload_with_package_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)

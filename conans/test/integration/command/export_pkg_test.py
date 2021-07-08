@@ -101,10 +101,11 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkgs_folders = client.cache.package_layout(ref).packages()
-        conaninfo = load(os.path.join(pkgs_folders[0], "conaninfo.txt"))
+        pref = client.get_latest_prev(ref)
+        latest_package = client.get_latest_pkg_layout(pref).package()
+        conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
-        manifest = load(os.path.join(pkgs_folders[0], "conanmanifest.txt"))
+        manifest = load(os.path.join(latest_package, "conanmanifest.txt"))
         self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
@@ -120,6 +121,7 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile
@@ -319,10 +321,10 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build")
         conanfile = GenConanfile().with_name("Hello1").with_version("0.1")\
-                                  .with_require(hello_ref)
+                                  .with_import("from conans import tools").with_require(hello_ref)
 
         conanfile = str(conanfile) + """\n    def package_info(self):
-        self.cpp_info.libs = self.collect_libs()
+        self.cpp_info.libs = tools.collect_libs(self)
     def package(self):
         self.copy("*")
         """
@@ -483,14 +485,14 @@ class TestConan(ConanFile):
         client.run("create . pkg/0.1@", assert_error=True)
         self.assertIn("Can't build while installing", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
-        layout = client.cache.package_layout(ref)
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        build_folder = layout.build(pref)
+        layout = client.get_latest_pkg_layout(pref)
+        build_folder = layout.build()
         self.assertTrue(is_dirty(build_folder))
-        self.assertTrue(layout.package_is_dirty(pref))
+        self.assertTrue(layout.package_is_dirty())
 
         client.run("export-pkg . pkg/0.1@")
-        self.assertFalse(layout.package_is_dirty(pref))
+        self.assertFalse(layout.package_is_dirty())
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
 
