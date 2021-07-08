@@ -35,8 +35,10 @@ def client_weird_lib_name():
                 self.copy("*.lib", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
                 ext = "a" if platform.system() != "Windows" else "lib"
+                prefix = "lib" if platform.system() != "Windows" else ""
                 os.chdir(os.path.join(self.package_folder, "lib"))
-                os.rename("hello_0.1.{}".format(ext), "he!llo@0.1.{}".format(ext))
+                os.rename("{}hello_0.1.{}".format(prefix, ext),
+                          "{}he!llo@0.1.{}".format(prefix, ext))
 
             def package_info(self):
                 self.cpp_info.libs = ["he!llo@0.1"]
