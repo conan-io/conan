@@ -639,16 +639,10 @@ class ConanInfo(object):
                 self.full_settings.compiler.version):
             default = cppstd_default(self.full_settings)
 
-            if str(self.full_settings.cppstd) == default:
-                self.settings.cppstd = None
-
             if str(self.full_settings.compiler.cppstd) == default:
                 self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
-        if self.full_settings.cppstd:
-            self.settings.cppstd = self.full_settings.cppstd
-
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 

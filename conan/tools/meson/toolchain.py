@@ -1,13 +1,12 @@
-import os
+import textwrap
 
-from conan.tools.env import VirtualEnv
+from jinja2 import Template
+
+from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft.toolchain import write_conanvcvars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
-
-import textwrap
-from jinja2 import Template
 
 
 class MesonToolchain(object):
@@ -64,7 +63,7 @@ class MesonToolchain(object):
     endian = {{endian}}
     """)
 
-    def __init__(self, conanfile, env=os.environ):
+    def __init__(self, conanfile):
         self._conanfile = conanfile
         self._build_type = self._conanfile.settings.get_safe("build_type")
         self._base_compiler = self._conanfile.settings.get_safe("compiler.base") or \
@@ -74,7 +73,7 @@ class MesonToolchain(object):
         self._cppstd = cppstd_from_settings(self._conanfile.settings)
         self._shared = self._conanfile.options.get_safe("shared")
         self._fpic = self._conanfile.options.get_safe("fPIC")
-        self._build_env = VirtualEnv(self._conanfile).build_environment()
+        self._build_env = VirtualBuildEnv(self._conanfile).environment()
 
         self.definitions = dict()
         self.preprocessor_definitions = dict()

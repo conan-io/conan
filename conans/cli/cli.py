@@ -7,8 +7,6 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
-from colorama import Style
-
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
@@ -68,23 +66,11 @@ class Cli(object):
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
 
-    @property
-    def conan_api(self):
-        return self._conan_api
-
-    @property
-    def commands(self):
-        return self._commands
-
-    @property
-    def groups(self):
-        return self._groups
-
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
         """
         matches = get_close_matches(
-            word=command, possibilities=self.commands.keys(), n=5, cutoff=0.75)
+            word=command, possibilities=self._commands.keys(), n=5, cutoff=0.75)
 
         if len(matches) == 0:
             return
@@ -100,8 +86,8 @@ class Cli(object):
         self._out.info("")
 
     def help_message(self):
-        self.commands["help"].method(self.conan_api, self.commands["help"].parser,
-                                     commands=self.commands, groups=self.groups)
+        self._commands["help"].method(self._conan_api, self._commands["help"].parser,
+                                      commands=self._commands, groups=self._groups)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -118,7 +104,7 @@ class Cli(object):
             self.help_message()
             return SUCCESS
         try:
-            command = self.commands[command_argument]
+            command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
                 self._out.info("Conan version %s" % client_version)

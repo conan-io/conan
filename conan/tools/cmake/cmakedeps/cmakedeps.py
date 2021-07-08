@@ -39,6 +39,7 @@ class CMakeDeps(object):
 
         host_req = self._conanfile.dependencies.host
         build_req = self._conanfile.dependencies.direct_build
+        test_req = self._conanfile.dependencies.test
 
         # Check if the same package is at host and build and the same time
         activated_br = {r.ref.name for r in build_req.values()
@@ -53,7 +54,7 @@ class CMakeDeps(object):
                                      "generator.".format(common_name))
 
         # Iterate all the transitive requires
-        for require, dep in list(host_req.items()) + list(build_req.items()):
+        for require, dep in list(host_req.items()) + list(build_req.items()) + list(test_req.items()):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with cmakedeps.build_context_activated

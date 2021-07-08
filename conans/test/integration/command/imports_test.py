@@ -245,14 +245,7 @@ class SymbolicImportsTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 editables not supported yet")
     def test_imports_symbolic_from_editable(self):
-        layout = textwrap.dedent("""
-            [libdirs]
-            .
-            [bindirs]
-            .
-            """)
-        self.client.save({"layout": layout})
-        self.client.run("editable add . pkg/0.1@ --layout=layout")
+        self.client.run("editable add . pkg/0.1@")
         self.consumer.run("install .")
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))

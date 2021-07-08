@@ -6,6 +6,7 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
@@ -40,23 +41,12 @@ class ForbiddenRemoveTest(unittest.TestCase):
 
 
 class ForbiddenCommandsTest(unittest.TestCase):
-    conanfile = textwrap.dedent("""\
-        from conans import ConanFile
-
-        class APck(ConanFile):
-            pass
-        """)
 
     def setUp(self):
         self.ref = ConanFileReference.loads('lib/version@user/name')
-
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.t = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        self.t.save(files={'conanfile.py': self.conanfile,
-                           "mylayout": "", })
+        self.t = TestClient(default_server_user=True)
+        self.t.save({'conanfile.py': GenConanfile()})
         self.t.run('editable add . {}'.format(self.ref))
-        self.assertTrue(self.t.cache.installed_as_editable(self.ref))
 
     @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
                               "TODO: cache2.0 fix with editables")

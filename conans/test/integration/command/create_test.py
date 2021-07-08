@@ -358,10 +358,10 @@ class MyPkg(ConanFile):
             """)
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         client.run("create . %s" % ref.full_str(), assert_error=True)
+        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertIn("Build error", client.out)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertFalse(os.path.exists(package_folder))
 
     def test_create_with_name_and_version(self):

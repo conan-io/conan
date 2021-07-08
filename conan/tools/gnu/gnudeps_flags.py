@@ -1,7 +1,13 @@
-from conans.model.new_build_info import NewCppInfo
+"""
+    This is a helper class which offers a lot of useful methods and attributes
+"""
+# FIXME: only for tools.gnu? perhaps it should be a global module
+import platform
+
+from conan.tools.microsoft import unix_path
 
 
-class AutoToolsDepsFlags(object):
+class GnuDepsFlags(object):
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
@@ -35,7 +41,7 @@ class AutoToolsDepsFlags(object):
             return []
         if self._base_compiler in self._GCC_LIKE:
             rpath_separator = ","
-            return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
+            return ['-Wl,-rpath%s"%s"' % (rpath_separator, self._adjust_path(x))
                     for x in lib_paths if x]
         return []
 
@@ -109,13 +115,12 @@ class AutoToolsDepsFlags(object):
         return result
 
     def _adjust_path(self, path):
-        # FIXME: Missing support for subsystems
         if self._base_compiler == 'Visual Studio':
             path = path.replace('/', '\\')
         else:
             path = path.replace('\\', '/')
-        # if win_bash:
-        #    path = unix_path(path, subsystem)
+
+        path = unix_path(self._conanfile, path)
         return '"%s"' % path if ' ' in path else path
 
     @property
