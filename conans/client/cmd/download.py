@@ -19,8 +19,8 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
     except NotFoundException:
         raise RecipeNotFoundException(ref)
     else:
-        ref_in_cache = cache.get_recipe_revisions(ref)
-        ref = remote_manager.get_recipe(ref, remote) if len(ref_in_cache) == 0 else ref_in_cache[0]
+        if not cache.exists_rrev(ref):
+            ref = remote_manager.get_recipe(ref, remote)
 
     layout = cache.ref_layout(ref)
     conan_file_path = layout.conanfile()
@@ -55,8 +55,7 @@ def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remot
         except NotFoundException:
             raise PackageNotFoundException(pref)
         else:
-            check_pref_cache = cache.get_package_revisions(pref)
-            skip_download = (len(check_pref_cache) > 0)
+            skip_download = cache.exists_prev(pref)
 
         if output and not output.is_terminal:
             message = f"Downloading {str(pref)}" if not skip_download \
