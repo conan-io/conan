@@ -29,7 +29,7 @@ def test_vcvars_generator(auto_activate):
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
-    if auto_activate:
+    if auto_activate is True or auto_activate is None:
         bat_contents = client.load("conanenv.bat")
         assert "conanvcvars.bat" in bat_contents
     else:
