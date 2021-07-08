@@ -129,8 +129,8 @@ class Cli(object):
             self._conan_api.config_install(None, None)
 
         try:
-            command.run(self.conan_api, self.commands[command_argument].parser,
-                        args[0][1:], commands=self.commands, groups=self.groups)
+            command.run(self._conan_api, self._commands[command_argument].parser,
+                        args[0][1:], commands=self._commands, groups=self._groups)
             exit_error = SUCCESS
         except SystemExit as exc:
             if exc.code != 0:
@@ -151,11 +151,6 @@ class Cli(object):
             self._conan_api.out.error(msg)
 
         return exit_error
-
-
-def cli_out_write(data, fg=None, bg=None, endline="\n"):
-    data = "{}{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL, endline)
-    sys.stdout.write(data)
 
 
 def main(args):
