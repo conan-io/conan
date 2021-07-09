@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
 
