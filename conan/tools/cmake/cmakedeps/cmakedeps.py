@@ -1,6 +1,5 @@
 import os
 
-from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
 from conan.tools.cmake.cmakedeps.templates.config_version import ConfigVersionTemplate
 from conan.tools.cmake.cmakedeps.templates.macros import MacrosTemplate
@@ -26,8 +25,6 @@ class CMakeDeps(object):
         # If specified, the files/targets/variables for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
-
-        check_using_build_profile(self._conanfile)
 
         # Enable/Disable checking if a component target exists or not
         self.check_components_exist = False
