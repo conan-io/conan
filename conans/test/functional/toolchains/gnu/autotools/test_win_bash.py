@@ -30,7 +30,7 @@ def test_autotools_bash_complete():
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.gnu import Autotools
-        from conan.tools.microsoft.toolchain import write_conanvcvars
+        from conan.tools.microsoft import VCVars
         from conan.tools.env import Environment
 
         class TestConan(ConanFile):
@@ -41,8 +41,7 @@ def test_autotools_bash_complete():
 
             def generate(self):
                 # Add vcvars launcher
-                # FIXME: Write a generator class for the vcvars
-                write_conanvcvars(self)
+                VCVars(self).generate()
 
                 # Force autotools to use "cl" compiler
                 # FIXME: Should this be added to AutotoolsToolchain when visual?
