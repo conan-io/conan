@@ -18,12 +18,3 @@ class Search(object):
         refs = self._remote_manager.search_recipes(remote, pattern)
         references[remote.name] = sorted(refs)
         return references
-
-
-def get_recipe_name(recipe_reference):
-    try:
-        recipe_name = str(recipe_reference).split('/')[0]
-    except Exception:
-        recipe_name = str(recipe_reference)
-
-    return recipe_name

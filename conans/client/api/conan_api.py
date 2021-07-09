@@ -7,7 +7,7 @@ from tqdm import tqdm
 import conans
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
-from conans.client.api.helpers.search import Search, get_recipe_name
+from conans.client.api.helpers.search import Search
 from conans.client.cache.cache import ClientCache
 from conans.client.conf.required_version import check_required_conan_version
 from conans.client.generators import GeneratorManager
@@ -184,10 +184,9 @@ class ConanAPIV2(object):
 
         results = []
         for reference in references:
-            reference = repr(reference)
             result = {
-                "name": get_recipe_name(reference),
-                "id": reference
+                "name": reference.name,
+                "id": repr(reference)
             }
             results.append(result)
 
@@ -206,13 +205,12 @@ class ConanAPIV2(object):
         search = Search(self.app.cache, self.app.remote_manager, remotes)
 
         results = []
-        references = search.search_remote_recipes(query, remote.name)
-        for remote_name, refs in references.items():
-            for ref in refs:
-                ref = repr(ref)
+        remote_references = search.search_remote_recipes(query, remote.name)
+        for remote_name, references in remote_references.items():
+            for reference in references:
                 result = {
-                    "name": get_recipe_name(ref),
-                    "id": ref
+                    "name": reference.name,
+                    "id": repr(reference)
                 }
                 results.append(result)
 
