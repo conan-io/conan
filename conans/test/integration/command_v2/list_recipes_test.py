@@ -19,23 +19,11 @@ class TestListRecipesBase:
         self.client.run("user username -p passwd -r {}".format(remote_name))
 
     def _create_recipe(self, reference):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class MyLib(ConanFile):
-                pass
-            """)
-
-        self.client.save({'conanfile.py': conanfile})
+        self.client.save({'conanfile.py': GenConanfile()})
         self.client.run("create . {}".format(reference))
 
     def _upload_recipe(self, remote, reference):
-        conanfile = textwrap.dedent("""
-            from conans import ConanFile
-            class MyLib(ConanFile):
-                pass
-            """)
-
-        self.client.save({'conanfile.py': conanfile})
+        self.client.save({'conanfile.py': GenConanfile()})
         self.client.run("export . {}".format(reference))
         self.client.run("upload --force -r {} {}".format(remote, reference))
 
