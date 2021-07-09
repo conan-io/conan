@@ -66,12 +66,10 @@ class CMake(object):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
-        self._generator = None
 
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
-        if toolchain_file_content:
-            self._generator = toolchain_file_content.get("cmake_generator")
-            self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
+        self._generator = toolchain_file_content.get("cmake_generator")
+        self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 

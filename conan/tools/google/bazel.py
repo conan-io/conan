@@ -37,10 +37,6 @@ class Bazel(object):
         self._conanfile.run(command)
 
     def _get_bazel_project_configuration(self):
-        self._bazel_config = None
-        self._bazelrc_path = None
-
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
-        if toolchain_file_content:
-            self._bazel_config = toolchain_file_content.get("bazel_config")
-            self._bazelrc_path = toolchain_file_content.get("bazelrc_path")
+        self._bazel_config = toolchain_file_content.get("bazel_config")
+        self._bazelrc_path = toolchain_file_content.get("bazelrc_path")

@@ -9,13 +9,9 @@ class Autotools(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-        self._configure_args = None
-        self._make_args = None
-
         toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
-        if toolchain_file_content:
-            self._configure_args = toolchain_file_content.get("configure_args")
-            self._make_args = toolchain_file_content.get("make_args")
+        self._configure_args = toolchain_file_content.get("configure_args")
+        self._make_args = toolchain_file_content.get("make_args")
 
     def configure(self):
         """
