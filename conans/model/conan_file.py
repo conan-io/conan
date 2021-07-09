@@ -210,9 +210,6 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
 
-        conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                       " please update your recipe.", 'cppstd' in self.settings.fields)
-
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self._conan_dep_cpp_info = None  # Will be initialized at processing time

@@ -53,16 +53,4 @@ class TargetsTemplate(CMakeDepsFileTemplate):
         foreach(f ${CONFIG_FILES})
             include(${f})
         endforeach()
-
-        # This is the variable filled by CMake with the requested components in find_package
-        if({{ target_namespace }}_FIND_COMPONENTS)
-            foreach(_FIND_COMPONENT {{ '${'+target_namespace+'_FIND_COMPONENTS}' }})
-                list(FIND {{ pkg_name }}_COMPONENT_NAMES "${_FIND_COMPONENT}" _index)
-                if(${_index} EQUAL -1)
-                    conan_message(FATAL_ERROR "Conan: Component '${_FIND_COMPONENT}' NOT found in package '{{ pkg_name }}'")
-                else()
-                    conan_message(STATUS "Conan: Component '${_FIND_COMPONENT}' found in package '{{ pkg_name }}'")
-                endif()
-            endforeach()
-        endif()
         """)
