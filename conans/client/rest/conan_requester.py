@@ -105,8 +105,12 @@ class ConanRequester(object):
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):
-            user_agent = "Conan/%s (Python %s) %s" % (client_version, platform.python_version(),
-                                                      requests.utils.default_user_agent())
+            platform_info = "; ".join([
+                " ".join([platform.system(), platform.release()]),
+                "Python "+platform.python_version(),
+                platform.machine()])
+            user_agent = "Conan/%s (%s) %s" % (client_version, platform_info,
+                                               requests.utils.default_user_agent())
             kwargs["headers"]["User-Agent"] = user_agent
 
         return kwargs

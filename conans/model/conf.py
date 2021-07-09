@@ -16,8 +16,11 @@ DEFAULT_CONFIGURATION = {
     "tools.gnu.make:jobs": "Argument for the -j parameter when running Make generator",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.env.virtualenv:auto_use": "Automatically activate virtualenvs when changing into a directory",
+    "tools.cmake.cmaketoolchain:generator": "User defined CMake generator to use instead of default",
     "tools.cmake.cmaketoolchain:msvc_parallel_compile": "Argument for the /MP when running msvc",
     "tools.cmake.cmaketoolchain:find_package_prefer_config": "Argument for the CMAKE_FIND_PACKAGE_PREFER_CONFIG",
+    "tools.cmake.cmaketoolchain:toolchain_file": "Use other existing file rather than conan_toolchain.cmake one",
+    "tools.cmake.cmaketoolchain:user_toolchain": "Inject existing user toolchain at the beginning of conan_toolchain.cmake",
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
     "tools.files.download:retry_wait": "Seconds to wait between download attempts",
@@ -43,6 +46,9 @@ class Conf(object):
             raise ConanException("Conf '{}' must be lowercase".format(name))
         self._values[name] = value
 
+    def __delitem__(self, name):
+        del self._values[name]
+
     def __repr__(self):
         return "Conf: " + repr(self._values)
 
@@ -58,9 +64,19 @@ class Conf(object):
 
     def update(self, other):
         """
+        :param other: has more priority than current one
         :type other: Conf
         """
         self._values.update(other._values)
+
+    def compose(self, other):
+        """
+        :param other: other has less priority than current one
+        :type other: Conf
+        """
+        for k, v in other._values.items():
+            if k not in self._values:
+                self._values[k] = v
 
     @property
     def sha(self):
@@ -86,6 +102,11 @@ class ConfDefinition(object):
         """ if a module name is requested for this, always goes to the None-Global config
         """
         return self._pattern_confs.get(None, Conf())[module_name]
+
+    def __delitem__(self, module_name):
+        """ if a module name is requested for this, always goes to the None-Global config
+        """
+        del self._pattern_confs.get(None, Conf())[module_name]
 
     def get_conanfile_conf(self, ref_str):
         result = Conf()
@@ -118,16 +139,22 @@ class ConfDefinition(object):
                 new_v.update(existing)
             self._pattern_confs[k] = new_v
 
-    def dumps(self):
+    def as_list(self):
         result = []
         # It is necessary to convert the None for sorting
         for pattern, conf in sorted(self._pattern_confs.items(),
                                     key=lambda x: ("", x[1]) if x[0] is None else x):
             for name, value in sorted(conf.items()):
                 if pattern:
-                    result.append("{}:{}={}".format(pattern, name, value))
+                    result.append(("{}:{}".format(pattern, name), value))
                 else:
-                    result.append("{}={}".format(name, value))
+                    result.append((name, value))
+        return result
+
+    def dumps(self):
+        result = []
+        for name, value in self.as_list():
+            result.append("{}={}".format(name, value))
         return "\n".join(result)
 
     def loads(self, text, profile=False):
@@ -138,19 +165,27 @@ class ConfDefinition(object):
                 continue
             try:
                 left, value = line.split("=", 1)
-                value = value.strip()
-                left = left.strip()
-                if left.count(":") >= 2:
-                    pattern, name = left.split(":", 1)
-                else:
-                    pattern, name = None, left
-            except Exception:
+            except ValueError:
                 raise ConanException("Error while parsing conf value '{}'".format(line))
+            else:
+                self.update(left.strip(), value.strip(), profile=profile)
 
-            if not _is_profile_module(name):
-                if profile:
-                    raise ConanException("[conf] '{}' not allowed in profiles".format(line))
-                if pattern is not None:
-                    raise ConanException("Conf '{}' cannot have a package pattern".format(line))
-            conf = self._pattern_confs.setdefault(pattern, Conf())
-            conf[name] = value
+    def update(self, key, value, profile=False):
+        """
+        Add/update a new/existing Conf line
+
+        >> update("tools.microsoft.msbuild:verbosity", "Detailed")
+        """
+        if key.count(":") >= 2:
+            pattern, name = key.split(":", 1)
+        else:
+            pattern, name = None, key
+
+        if not _is_profile_module(name):
+            if profile:
+                raise ConanException("[conf] '{}' not allowed in profiles".format(key))
+            if pattern is not None:
+                raise ConanException("Conf '{}' cannot have a package pattern".format(key))
+
+        conf = self._pattern_confs.setdefault(pattern, Conf())
+        conf[name] = value

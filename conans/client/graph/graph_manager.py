@@ -28,14 +28,15 @@ class _RecipeBuildRequires(OrderedDict):
         for build_require in build_requires:
             self.add(build_require, context=self._default_context)
 
-    def add(self, build_require, context):
+    def add(self, build_require, context, force_host_context=False):
         if not isinstance(build_require, ConanFileReference):
             build_require = ConanFileReference.loads(build_require)
+        build_require.force_host_context = force_host_context  # Dirty, but will be removed in 2.0
         self[(build_require.name, context)] = build_require
 
     def __call__(self, build_require, force_host_context=False):
         context = CONTEXT_HOST if force_host_context else self._default_context
-        self.add(build_require, context)
+        self.add(build_require, context, force_host_context)
 
     def __str__(self):
         items = ["{} ({})".format(br, ctxt) for (_, ctxt), br in self.items()]
@@ -97,7 +98,6 @@ class GraphManager(object):
             if test:
                 conanfile.display_name = "%s (test package)" % str(test)
                 conanfile.output.scope = conanfile.display_name
-
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
             conanfile = self._loader.load_conanfile_txt(conanfile_path, profile_host=profile_host)
@@ -107,14 +107,15 @@ class GraphManager(object):
         return conanfile
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
-                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None):
+                   remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
+                   is_build_require=False):
         """ main entry point to compute a full dependency graph
         """
         profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
         graph_lock, root_ref = graph_info.graph_lock, graph_info.root
 
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
-                                         root_ref, lockfile_node_id)
+                                         root_ref, lockfile_node_id, is_build_require)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
@@ -133,7 +134,7 @@ class GraphManager(object):
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
-                        lockfile_node_id):
+                        lockfile_node_id, is_build_require):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
@@ -148,7 +149,7 @@ class GraphManager(object):
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
             return self._load_root_direct_reference(reference, graph_lock, profile_host,
-                                                    lockfile_node_id)
+                                                    lockfile_node_id, is_build_require)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
@@ -203,7 +204,8 @@ class GraphManager(object):
 
         return root_node
 
-    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id):
+    def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id,
+                                    is_build_require):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
@@ -212,9 +214,11 @@ class GraphManager(object):
             raise ConanException("Revisions not enabled in the client, specify a "
                                  "reference without revision")
 
-        conanfile = self._loader.load_virtual([reference], profile)
+        conanfile = self._loader.load_virtual([reference], profile,
+                                              is_build_require=is_build_require)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        if graph_lock:  # Find the Node ID in the lock of current root
+        # Build_requires cannot be found as early as this, because there is no require yet
+        if graph_lock and not is_build_require:  # Find the Node ID in the lock of current root
             graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
         return root_node
 
@@ -302,13 +306,9 @@ class GraphManager(object):
             return
 
         for node in graph.ordered_iterate(nodes_subset):
-            # Virtual conanfiles doesn't have output, but conanfile.py and conanfile.txt do
-            # FIXME: To be improved and build a explicit model for this
-            if node.recipe == RECIPE_VIRTUAL:
-                continue
             # Packages with PACKAGE_ID_UNKNOWN might be built in the future, need build requires
             if (node.binary not in (BINARY_BUILD, BINARY_EDITABLE, BINARY_UNKNOWN)
-                    and node.recipe != RECIPE_CONSUMER):
+                    and node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)):
                 continue
             package_build_requires = self._get_recipe_build_requires(node.conanfile, default_context)
             str_ref = str(node.ref)
@@ -317,6 +317,8 @@ class GraphManager(object):
             # downstream profile-defined build-requires
             new_profile_build_requires = []
             for pattern, build_requires in profile_build_requires.items():
+                if node.recipe == RECIPE_VIRTUAL:  # Virtual do not get profile build requires
+                    continue
                 if ((node.recipe == RECIPE_CONSUMER and pattern == "&") or
                         (node.recipe != RECIPE_CONSUMER and pattern == "&!") or
                         fnmatch.fnmatch(str_ref, pattern)):
@@ -359,7 +361,7 @@ class GraphManager(object):
             if new_profile_build_requires:
                 _recurse_build_requires(new_profile_build_requires, {})
 
-            if graph_lock:
+            if graph_lock and node.recipe != RECIPE_VIRTUAL:
                 graph_lock.check_locked_build_requires(node, package_build_requires,
                                                        new_profile_build_requires)
 

@@ -6,7 +6,7 @@ from conans.test.utils.tools import TestClient, GenConanfile
 class DeprecatedTestCase(unittest.TestCase):
     def test_no_deprecated(self):
         t = TestClient()
-        t.save({'taskflow.py': GenConanfile("cpp-taskflow", "1.0").with_deprecated("")})
+        t.save({'taskflow.py': GenConanfile("cpp-taskflow", "1.0").with_deprecated("''")})
         t.run("create taskflow.py")
 
         self.assertNotIn("Please, consider changing your requirements.", t.out)

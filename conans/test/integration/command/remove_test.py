@@ -10,10 +10,9 @@ from conans import DEFAULT_REVISION_V1
 from conans.model.manifest import FileTreeManifest
 from conans.model.package_metadata import PackageMetadata
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import BUILD_FOLDER, CONANFILE, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
+from conans.paths import BUILD_FOLDER, CONANINFO, CONAN_MANIFEST, EXPORT_FOLDER, \
     PACKAGES_FOLDER, SRC_FOLDER
 from conans.server.store.server_store import ServerStore
-from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, GenConanfile
 from conans.util.env_reader import get_env
@@ -137,8 +136,8 @@ conaninfo = '''
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
-        hello_files = cpp_hello_conan_files("Hello")
-        test_conanfile_contents = hello_files[CONANFILE]
+        test_conanfile_contents = str(GenConanfile("Hello", "0.1"))
+        hello_files = {"conanfile.py": test_conanfile_contents}
 
         self.server_folder = temp_folder()
         test_server = TestServer(users={"myuser": "mypass"},

@@ -64,7 +64,7 @@ def test_conf_error_per_package():
     text = "*:core:verbosity=minimal"
     c = ConfDefinition()
     with pytest.raises(ConanException,
-                       match=r"Conf '\*:core:verbosity=minimal' cannot have a package pattern"):
+                       match=r"Conf '\*:core:verbosity' cannot have a package pattern"):
         c.loads(text)
 
 

@@ -505,26 +505,19 @@ class GraphLock(object):
             if locked_node.options is not None:  # This was a "partial" one, not a "base" one
                 node.conanfile.options.values = locked_node.options
 
-    def _node_requires(self, node):
-        """Returns the node ids of the requirements of a given node.  The
-        result is returned as a tuple of two lists.  The first list contains
-        the node ids of the direct requirements.  The second list contains the
-        node ids of the transitive requirements.
-        """
-        direct_requires = node.requires or []
-        transitive_requires = []
-        for id in direct_requires:
-            current_direct_requires, current_transitive_requires = \
-                self._node_requires(self._nodes[id])
-            transitive_requires += current_direct_requires
-            transitive_requires += current_transitive_requires
-        return (direct_requires, transitive_requires)
-
     def lock_node(self, node, requires, build_requires=False):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
+        # Important to remove the overrides, they do not need to be locked or evaluated
+        requires = [r for r in requires if not r.override]
         if not node.graph_lock_node:
+            # For --build-require case, this is the moment the build require can be locked
+            if build_requires and node.recipe == RECIPE_VIRTUAL:
+                for require in requires:
+                    node_id = self._find_node_by_requirement(require.ref)
+                    locked_ref = self._nodes[node_id].ref
+                    require.lock(locked_ref, node_id)
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
             # If it is a test_package, with a build_require, it shouldn't even try to find it in
@@ -541,29 +534,15 @@ class GraphLock(object):
 
         locked_node = node.graph_lock_node
         if build_requires:
-            direct_locked_requires = locked_node.build_requires or []
-            # The transitive_locked_requires variable is only used for
-            # requirements with 'override=True'.  But build_requires don't have
-            # the override property.  Hence, this variable is not used and may
-            # be empty.
-            transitive_locked_requires = []
+            locked_requires = locked_node.build_requires or []
         else:
-            direct_locked_requires, transitive_locked_requires = self._node_requires(locked_node)
+            locked_requires = locked_node.requires or []
 
-        direct_locked_requires_refs, transitive_locked_requires_refs = [
-            {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_) for id_ in locked_requires}
-            for locked_requires in [direct_locked_requires, transitive_locked_requires]
-        ]
+        refs = {self._nodes[id_].ref.name: (self._nodes[id_].ref, id_) for id_ in locked_requires}
 
         for require in requires:
             try:
-                if require.override:
-                    # Requirements with 'override=true' are not included in the
-                    # 'requires' field of the corresponding node.  Hence, we
-                    # need to search the transitive requirements.
-                    locked_ref, locked_id = transitive_locked_requires_refs[require.ref.name]
-                else:
-                    locked_ref, locked_id = direct_locked_requires_refs[require.ref.name]
+                locked_ref, locked_id = refs[require.ref.name]
             except KeyError:
                 t = "Build-require" if build_requires else "Require"
                 msg = "%s '%s' cannot be found in lockfile" % (t, require.ref.name)
@@ -578,7 +557,7 @@ class GraphLock(object):
         # 2 sources (profile, recipe), can't be checked at once
         if not self._relaxed and not build_requires:
             declared_requires = set([r.ref.name for r in requires])
-            for require in direct_locked_requires:
+            for require in locked_requires:
                 req_node = self._nodes[require]
                 if req_node.ref.name not in declared_requires:
                     raise ConanException("'%s' locked requirement '%s' not found"
@@ -588,6 +567,8 @@ class GraphLock(object):
         if self._relaxed:
             return
         locked_node = node.graph_lock_node
+        if locked_node is None:
+            return
         locked_requires = locked_node.build_requires
         if not locked_requires:
             return
