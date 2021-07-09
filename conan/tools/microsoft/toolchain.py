@@ -56,7 +56,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        VCVars.generate(self._conanfile)
+        VCVars(self._conanfile).generate()
 
     @staticmethod
     def _msvs_toolset(settings):

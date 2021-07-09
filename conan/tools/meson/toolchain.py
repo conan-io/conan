@@ -313,4 +313,4 @@ class MesonToolchain(object):
             self._write_cross_file()
         else:
             self._write_native_file()
-        VCVars.generate(self._conanfile)
+        VCVars(self._conanfile).generate()
