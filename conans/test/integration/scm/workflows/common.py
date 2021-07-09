@@ -20,6 +20,9 @@ class TestWorkflow(object):
         {extra_header}
 
         class Pkg(ConanFile):
+            user = "user"
+            channel = "channel"
+
             scm = {{"type": "{type}",
                    "url": {url},
                    "revision": "auto",
@@ -43,8 +46,7 @@ class TestWorkflow(object):
                                                        self.path_from_conanfile_to_root)),
                          '.')
 
-        with environment_append({'CONAN_USERNAME': "user", "CONAN_CHANNEL": "channel"}):
-            super(TestWorkflow, self).run(*args, **kwargs)
+        super(TestWorkflow, self).run(*args, **kwargs)
 
     def _run_local_test(self, t, working_dir, path_to_conanfile):
         old_wd = t.current_folder

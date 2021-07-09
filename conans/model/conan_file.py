@@ -84,9 +84,11 @@ def get_env_context_manager(conanfile):
 class ConanFile(object):
     """ The base class for all package recipes
     """
-
     name = None
     version = None  # Any str, can be "1.1" or whatever
+    user = None
+    channel = None
+
     url = None  # The URL where this File is located, as github, to collaborate in package
     # The license of the PACKAGE, just a shortcut, does not replace or
     # change the actual license of the source code
@@ -111,10 +113,6 @@ class ConanFile(object):
     in_local_cache = True
     develop = False
 
-    # Defaulting the reference fields
-    default_channel = None
-    default_user = None
-
     # Settings and Options
     settings = None
     options = None
@@ -130,14 +128,12 @@ class ConanFile(object):
     # Run in windows bash
     win_bash = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None):
+    def __init__(self, output, runner, display_name=""):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
-        self._conan_user = user
-        self._conan_channel = channel
 
         self.compatible_packages = []
         self._conan_requester = None
@@ -294,30 +290,9 @@ class ConanFile(object):
         # the deps_env_info objects available
         tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
-        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
-                                                 self._conan_channel)
+        ret, multiple = tmp_env_values.env_dicts(self.name, self.version)
         ret.update(multiple)
         return ret
-
-    @property
-    def channel(self):
-        if not self._conan_channel:
-            _env_channel = os.getenv("CONAN_CHANNEL")
-            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
-            self._conan_channel = _env_channel or self.default_channel
-            if not self._conan_channel:
-                raise ConanException("channel not defined, but self.channel is used in conanfile")
-        return self._conan_channel
-
-    @property
-    def user(self):
-        if not self._conan_user:
-            _env_username = os.getenv("CONAN_USERNAME")
-            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
-            self._conan_user = _env_username or self.default_user
-            if not self._conan_user:
-                raise ConanException("user not defined, but self.user is used in conanfile")
-        return self._conan_user
 
     @property
     def build_policy_missing(self):
