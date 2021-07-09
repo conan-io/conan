@@ -87,7 +87,7 @@ class PkgConfigDeps(object):
             if dep.new_cpp_info.has_components:
                 components = self._get_components(dep.ref.name, dep)
                 for comp_genname, comp_cpp_info, comp_requires_gennames in components:
-                    pkg_comp_genname = "%s_%s" % (pkg_genname, comp_genname)
+                    pkg_comp_genname = "%s-%s" % (pkg_genname, comp_genname)
                     ret["%s.pc" % pkg_comp_genname] = self._pc_file_content(
                         pkg_comp_genname, comp_cpp_info,
                         comp_requires_gennames, dep.package_folder,

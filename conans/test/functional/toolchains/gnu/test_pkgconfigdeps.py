@@ -252,5 +252,5 @@ def test_custom_content_components():
     client.run("create . pkg/0.1@")
     client.run("install pkg/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("pkg_mycomponent.pc")
+    pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
