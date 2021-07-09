@@ -3,7 +3,7 @@ import textwrap
 from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.errors import ConanException
-from conans.cli.command import conan_command, COMMAND_GROUPS
+from conans.cli.command import conan_command
 
 
 def output_help_cli(commands, groups):

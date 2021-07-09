@@ -1,7 +1,7 @@
 import json
 
 from conans.cli.output import cli_out_write
-from conans.cli.command import conan_command, conan_subcommand, OnceArgument, COMMAND_GROUPS
+from conans.cli.command import conan_command, conan_subcommand, OnceArgument
 
 
 def output_remote_list_json(info):
