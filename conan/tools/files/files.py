@@ -195,13 +195,16 @@ def load_toolchain_args(generators_folder=None):
     args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
         else CONAN_TOOLCHAIN_ARGS_FILE
     toolchain_config = configparser.ConfigParser()
-    toolchain_config.read(args_file)
+    toolchain_file = toolchain_config.read(args_file)
+    if not toolchain_file:
+        raise ConanException("The file %s does not exist. Please, make sure that it was not"
+                             " generated in another folder." % args_file)
     try:
         return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
     except KeyError:
-        raise ConanException("Something was wrong reading the %s file. Review if the path is "
-                             "correct or the section [%s] exist" % (args_file,
-                                                                    CONAN_TOOLCHAIN_ARGS_SECTION))
+        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
+                             " as the default one of all your configuration variables." %
+                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
 
 
 def save_toolchain_args(content, generators_folder=None):
