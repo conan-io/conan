@@ -15,7 +15,7 @@ def test_toolchain_empty_config():
     client.run("install .")
 
     config = load_toolchain_args(client.current_folder)
-    assert config is None
+    assert not config
 
 
 def test_toolchain_loads_config_from_profile():
