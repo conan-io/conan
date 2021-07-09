@@ -15,10 +15,10 @@ class VCVars:
         self._conanfile = conanfile
 
     def generate(self, auto_activate=True):
-        write_conanvcvars(self._conanfile, auto_activate=auto_activate)
+        _write_conanvcvars(self._conanfile, auto_activate=auto_activate)
 
 
-def write_conanvcvars(conanfile, auto_activate=True):
+def _write_conanvcvars(conanfile, auto_activate=True):
     """
     write a conanvcvars.bat file with the good args from settings
     """

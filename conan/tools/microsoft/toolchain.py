@@ -3,7 +3,7 @@ import textwrap
 from xml.dom import minidom
 
 from conan.tools._check_build_profile import check_using_build_profile
-from conan.tools.microsoft.visual import write_conanvcvars
+from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
 
@@ -56,7 +56,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        write_conanvcvars(self._conanfile)
+        VCVars.generate(self._conanfile)
 
     @staticmethod
     def _msvs_toolset(settings):

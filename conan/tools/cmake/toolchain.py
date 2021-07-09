@@ -11,7 +11,8 @@ from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
-from conan.tools.microsoft.visual import vs_ide_version, write_conanvcvars
+from conan.tools.microsoft import VCVars
+from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
 
@@ -728,7 +729,7 @@ class CMakeToolchain(object):
             save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
-            write_conanvcvars(self._conanfile)
+            VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 
     def _writebuild(self, toolchain_file):
