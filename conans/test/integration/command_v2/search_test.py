@@ -8,8 +8,8 @@ from conans.test.utils.tools import TestClient, TestServer
 
 class TestSearch:
 
-    @pytest.fixture(autouse=True)
-    def _setup(self):
+    @pytest.fixture
+    def remotes(self):
         self.servers = OrderedDict()
         self.servers["remote1"] = TestServer(server_capabilities=[])
         self.servers["remote2"] = TestServer(server_capabilities=[])
@@ -23,7 +23,7 @@ class TestSearch:
         self.client.run("search", assert_error=True)
         assert "error: the following arguments are required: query" in self.client.out
 
-    def test_search_no_matching_recipes(self):
+    def test_search_no_matching_recipes(self, remotes):
         expected_output = ("remote1:\n"
                            "  There are no matching recipes\n"
                            "remote2:\n"
@@ -39,7 +39,7 @@ class TestSearch:
         self.client.run("search whatever", assert_error=True)
         assert "ERROR: The remotes registry is empty" in self.client.out
 
-    def test_search_disabled_remote(self):
+    def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1", assert_error=True)
         assert "ERROR: Remote 'remote1' is disabled" in self.client.out
