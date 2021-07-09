@@ -91,7 +91,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
     env.compose(env2)
     with environment_append({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
-    assert env.var("MyVar").get_str(conanfile, "{name}") == result
+    assert env._values["MyVar"].get_str(conanfile, "{name}") == result
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
@@ -124,7 +124,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
     else:
         env2.unset("MyVar")
     env.compose(env2)
-    assert env.var("MyVar").get_str(conanfile, "{name}", pathsep=":") == result
+    assert env._values["MyVar"].get_str(conanfile, "{name}", pathsep=":") == result
 
 
 def test_profile():
@@ -374,3 +374,19 @@ def test_env_win_bash():
         content = f.read()
         assert 'MyVar="MyValue"' in content
         assert 'MyPath="/c/path/to/something:/d/otherpath"' in content
+
+
+def test_public_access():
+    env = Environment(conanfile)
+    env.define("MyVar", "MyValue")
+    env.append("MyVar", "MyValue2")
+    env.define_path("MyPath", "c:/path/to/something")
+    env.append_path("MyPath", "D:/Otherpath")
+    for name, values in env.items():
+        if name == "MyVar":
+            assert values == "MyValue MyValue2"
+        if name == "MyPath":
+            assert values == "c:/path/to/something{}D:/Otherpath".format(os.pathsep)
+
+    env.remove("MyPath", "D:/Otherpath")
+    assert env.get("MyPath") == "c:/path/to/something"

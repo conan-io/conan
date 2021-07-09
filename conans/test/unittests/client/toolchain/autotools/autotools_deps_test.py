@@ -1,3 +1,5 @@
+import os
+import platform
 from collections import OrderedDict
 
 import mock
@@ -10,6 +12,7 @@ from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import ConanFileDependencies, Requirement
 from conans.model.ref import ConanFileReference
 from conans.test.utils.mocks import MockSettings
+from conans.test.utils.test_files import temp_folder
 
 
 def get_cpp_info(name):
@@ -71,19 +74,35 @@ def test_foo():
              "compiler.version": "7.1",
              "cppstd": "17"})
         deps = AutotoolsDeps(consumer)
-        # deps.generate()
-        env = deps.environment()
-        assert env["LDFLAGS"] == 'dep1_shared_link_flag dep2_shared_link_flag ' \
+
+        env = deps.environment
+
+        # Customize the environment
+        env.remove("LDFLAGS", "dep2_shared_link_flag")
+        env.remove("LDFLAGS", "-F /path/to/folder_dep1/one/framework/path/dep1")
+        env.append("LDFLAGS", "OtherSuperStuff")
+
+        # The contents are of course modified
+        assert env["LDFLAGS"] == 'dep1_shared_link_flag ' \
                                  'dep1_exe_link_flag dep2_exe_link_flag ' \
                                  '-framework dep1_oneframework -framework dep1_twoframework ' \
                                  '-framework dep2_oneframework -framework dep2_twoframework ' \
-                                 '-F /path/to/folder_dep1/one/framework/path/dep1 ' \
                                  '-F /path/to/folder_dep2/one/framework/path/dep2 ' \
                                  '-L/path/to/folder_dep1/one/lib/path/dep1 ' \
                                  '-L/path/to/folder_dep2/one/lib/path/dep2 ' \
                                  '-Wl,-rpath,"/path/to/folder_dep1/one/lib/path/dep1" ' \
                                  '-Wl,-rpath,"/path/to/folder_dep2/one/lib/path/dep2" ' \
-                                 '--sysroot=/path/to/folder/dep1'
+                                 '--sysroot=/path/to/folder/dep1 OtherSuperStuff'
 
         assert env["CXXFLAGS"] == 'dep1_a_cxx_flag dep2_a_cxx_flag --sysroot=/path/to/folder/dep1'
         assert env["CFLAGS"] == 'dep1_a_c_flag dep2_a_c_flag --sysroot=/path/to/folder/dep1'
+        folder = temp_folder()
+        consumer.folders.set_base_install(folder)
+        deps.generate()
+        extension = ".bat" if platform.system() == "Windows" else ".sh"
+
+        # The generated file also contains the changes
+        with open(os.path.join(folder, "conanautotoolsdeps{}".format(extension))) as _f:
+            contents = _f.read()
+            assert "path/to/folder_dep1/one/framework/path/dep1" not in contents
+            assert "OtherSuperStuff" in contents
