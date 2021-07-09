@@ -39,39 +39,38 @@ def list_recipes_json_formatter(info):
     cli_out_write(myjson)
 
 
-search_formatters = {
+list_recipes_formatters = {
     "cli": list_recipes_cli_formatter,
     "json": list_recipes_json_formatter
 }
 
 
-@conan_subcommand(formatters=search_formatters)
+@conan_subcommand(formatters=list_recipes_formatters)
 def list_recipes(conan_api, parser, subparser, *args):
     """
     Search available recipes in the local cache or in the remotes
     """
     subparser.add_argument(
         "query",
-        nargs='?',
         help="Search query to find package recipe reference, e.g., 'boost', 'lib*'"
     )
-    subparser.add_argument("-r", "--remote", default=None, action=Extender,
+    remotes_group = subparser.add_mutually_exclusive_group()
+    remotes_group.add_argument("-r", "--remote", default=None, action=Extender,
                            help="Name of the remote to add")
+    remotes_group.add_argument("-a", "--all-remotes", action='store_true',
+                           help="Search in all the remotes")
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
     args = parser.parse_args(*args)
 
-    if not args.cache and not args.remote:
-        # If neither remote nor cache are defined, show results from cache and all remotes
+    if not args.cache and not args.remote and not args.all_remotes:
+        # If neither remote nor cache are defined, show results only from cache
         args.cache = True
-        remotes = conan_api.get_active_remotes(args.remote)
-    elif args.cache and not args.remote:
-        # If cache is defined but not remote, show results only from the cache
-        remotes = None
-    else:
-        remotes = conan_api.get_active_remotes(args.remote)
 
-    if remotes and not args.query:
-        parser.error("If searching in a remote, a query string must be provided.")
+    remotes = None
+    if args.all_remotes:
+        remotes = conan_api.get_active_remotes(None)
+    elif args.remote:
+        remotes = conan_api.get_active_remotes(args.remote)
 
     results = []
     if args.cache:
