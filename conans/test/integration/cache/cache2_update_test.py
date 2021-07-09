@@ -11,20 +11,25 @@ from conans.test.utils.tools import TestClient, TestServer
 
 def test_update_flows():
     # - when a revision is installed from a remote it takes the date from the remote, not
-    # creating a new one
+    # updating the date to the current time
     # - if we want to install the revision and create it with a new date use --update-date
-    # (name to be revisited)
+    # (name to be decided)
+    # - revisions are considered inmutable: if for example we do a conan install --update of a
+    # revision that is already in the cache, but has a newer date in the remote, we will not install
+    # anything, just updating the date in the cache to the one in the remote, so if you want to
+    # get what the remote has you have to re-install you will have to remove the local
+    # package and install from server
     servers = OrderedDict()
     for index in range(3):
         servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                                   users={"lasote": "mypass"})
+                                                   users={"user": "password"})
 
-    client = TestClient(servers=servers)
-    client2 = TestClient(servers=servers)
+    users = {"server1": [("user", "password")],
+             "server2": [("user", "password")],
+             "server3": [("user", "password")]}
 
-    for index in range(3):
-        client.run(f"user lasote -p mypass -r server{index + 1}")
-        client2.run(f"user lasote -p mypass -r server{index + 1}")
+    client = TestClient(servers=servers, users=users)
+    client2 = TestClient(servers=servers, users=users)
 
     # create a new rrev, client2 will have an older revision than all the servers
     client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 0")})
