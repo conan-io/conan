@@ -63,3 +63,6 @@ class PackageEditableLayout(object):
 
     def get_path(self, package_id=None, path=None):
         raise ConanException("Operation not allowed on a package installed as editable")
+
+    def package_ids(self):
+        raise ConanException("Package in editable mode cannot list binaries")
