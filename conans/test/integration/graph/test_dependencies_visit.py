@@ -41,3 +41,26 @@ def test_dependencies_visit():
 
     assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
     assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
+
+
+def test_dependencies_visit_settings_options():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os").
+                with_option("shared", [True, False]).with_default_option("shared", False)})
+    client.run("create . openssl/0.1@ -s os=Linux")
+    client.save({"conanfile.py": GenConanfile().with_requires("openssl/0.1")})
+    client.run("create . pkg/0.1@  -s os=Linux")
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            requires = "pkg/0.1"
+
+            def generate(self):
+                dep = self.dependencies["openssl"]
+                self.output.info("SETTINGS: {}!".format(dep.settings.os))
+                self.output.info("OPTIONS: shared={}!".format(dep.options.shared))
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s os=Linux")
+    assert "conanfile.py: SETTINGS: Linux!" in client.out
+    assert "conanfile.py: OPTIONS: shared=False!" in client.out
