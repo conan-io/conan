@@ -10,15 +10,18 @@ from conans.test.utils.tools import TestClient, TestServer
 
 
 def test_update_flows():
-    # - when a revision is installed from a remote it takes the date from the remote, not
+    # NOTES:
+    # - When a revision is installed from a remote it takes the date from the remote, not
     # updating the date to the current time
-    # - if we want to install the revision and create it with a new date use --update-date
+    # - If we want to install the revision and create it with a new date use --update-date
     # (name to be decided)
-    # - revisions are considered inmutable: if for example we do a conan install --update of a
+    # - Revisions are considered inmutable: if for example we do a conan install --update of a
     # revision that is already in the cache, but has a newer date in the remote, we will not install
     # anything, just updating the date in the cache to the one in the remote, so if you want to
     # get what the remote has you have to re-install you will have to remove the local
     # package and install from server
+    # - In conan 2.X no remote means search in all remotes
+
     servers = OrderedDict()
     for index in range(3):
         servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
@@ -31,16 +34,16 @@ def test_update_flows():
     client = TestClient(servers=servers, users=users)
     client2 = TestClient(servers=servers, users=users)
 
-    # create a new rrev, client2 will have an older revision than all the servers
+    # create a revision 0 in client2, client2 will have an older revision than all the servers
     client2.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 0")})
     client2.run("create .")
 
-    # upload the same revision, will have different timestamps on each server
+    # other revision created in client
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0")})
-    client.run("remote list")
     client.run("create .")
 
-    # all these revisions uploaded to the servers will be older than the ones we create in local
+    # we are patching the time all these revisions uploaded to the servers
+    # will be older than the ones we create in local
     the_time = time.time() - 1000
 
     for index in range(3):
@@ -48,7 +51,7 @@ def test_update_flows():
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
-    # upload other revision
+    # upload other revision 1 we create in client
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new revision 1")})
     client.run("create .")
     for index in range(3):
@@ -56,8 +59,14 @@ def test_update_flows():
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
-    # TESTING WITHOUT SPECIFIC REVISIONS AND WITH NO REMOTES: conan install liba/1.0.0
-    # - In conan 2.X no remote means search in all remotes
+    # NOW WE HAVE:
+    # | CLIENT    | CLIENT2   | SERVER0    | SERVER1   | SERVER2    |
+    # |-----------|-----------|------------|-----------|------------|
+    # | REV1  (20)| REV0 (0)  | REV1(-960) | REV1(-950)| REV1 (-940)|
+    # | REV   (10)|           | REV (-990) | REV (-980)| REV  (-970)|
+    # |           |           |            |           |            |
+
+    # 1. TESTING WITHOUT SPECIFIC REVISIONS AND WITH NO REMOTES: "conan install liba/1.0.0"
 
     # client2 already has a revision for this recipe, don't install anything
     client2.run("install liba/1.0.0@")
