@@ -1,13 +1,7 @@
-import json
-import os
-import platform
-
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conan.tools._compilers import use_win_mingw
+from conan.tools.files import load_toolchain_args
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.microsoft import unix_path
 from conans.client.build import join_arguments
-from conans.util.files import load
 
 
 class Autotools(object):
@@ -15,11 +9,9 @@ class Autotools(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-        args_path = os.path.join(conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
-        if os.path.isfile(args_path):
-            args = json.loads(load(args_path))
-            self._configure_args = args.get("configure_args")
-            self._make_args = args.get("make_args")
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        self._configure_args = toolchain_file_content.get("configure_args")
+        self._make_args = toolchain_file_content.get("make_args")
 
     def configure(self):
         """
