@@ -2,58 +2,10 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conan.tools.env.environment import register_environment_script
-from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
-from conans.client.tools import intel_compilervars_command
+from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
-
-CONAN_VCVARS_FILE = "conanvcvars.bat"
-
-
-def write_conanvcvars(conanfile, auto_activate=True):
-    # FIXME: Write a VCVars generator for the final user
-    """
-    write a conanvcvars.bat file with the good args from settings
-    """
-    os_ = conanfile.settings.get_safe("os")
-    if os_ != "Windows":
-        return
-
-    compiler = conanfile.settings.get_safe("compiler")
-    cvars = None
-    if compiler == "intel":
-        cvars = intel_compilervars_command(conanfile)
-    elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = vs_ide_version(conanfile)
-        vcvarsarch = vcvars_arch(conanfile)
-        vcvars_ver = None
-        if compiler == "Visual Studio":
-            toolset = conanfile.settings.get_safe("compiler.toolset")
-            if toolset is not None:
-                vcvars_ver = {"v140": "14.0",
-                              "v141": "14.1",
-                              "v142": "14.2"}.get(toolset)
-        else:
-            # Code similar to CMakeToolchain toolset one
-            compiler_version = str(conanfile.settings.compiler.version)
-            version_components = compiler_version.split(".")
-            assert len(version_components) >= 2  # there is a 19.XX
-            minor = version_components[1]
-            # The equivalent of compiler 19.26 is toolset 14.26
-            vcvars_ver = "14.{}".format(minor)
-        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                               winsdk_version=None, vcvars_ver=vcvars_ver)
-    if cvars:
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(cvars))
-        path = os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE)
-        save(path, content)
-
-        if auto_activate:
-            register_environment_script(conanfile, path)
 
 
 def vs_ide_version(conanfile):
@@ -87,6 +39,7 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile.settings)
+        check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
@@ -103,7 +56,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        write_conanvcvars(self._conanfile)
+        VCVars(self._conanfile).generate()
 
     @staticmethod
     def _msvs_toolset(settings):

@@ -67,6 +67,9 @@ class _EnvValue:
     def is_path(self):
         return self._path
 
+    def remove(self, value):
+        self._values.remove(value)
+
     def append(self, value, separator=None):
         if separator is not None:
             self._sep = separator
@@ -161,6 +164,9 @@ class Environment:
 
     def prepend_path(self, name, value):
         self._values.setdefault(name, _EnvValue(name, path=True)).prepend(value)
+
+    def remove(self, name, value):
+        self._values[name].remove(value)
 
     def save_bat(self, filename, generate_deactivate=False, pathsep=os.pathsep):
         deactivate = textwrap.dedent("""\
@@ -282,14 +288,8 @@ class Environment:
         return v.get_value(self._conanfile)
 
     def items(self):
+        """returns {str: str} (varname: value)"""
         return {k: v.get_value(self._conanfile) for k, v in self._values.items()}.items()
-
-    def var(self, name):
-        return self._values[name]
-
-    def var_items(self):
-        # Access to the dict items, so users can do what they want with the underlying env-var
-        return self._values.items()
 
     def __eq__(self, other):
         """

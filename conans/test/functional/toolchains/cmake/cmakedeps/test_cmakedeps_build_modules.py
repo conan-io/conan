@@ -6,6 +6,7 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -266,3 +267,4 @@ class TestNoNamespaceTarget:
             assert str(t.out).count('>> Build-module is included') == 2  # FIXME: Known bug
             assert '>> nonamespace libs: library::library' in t.out
             t.run_command('cmake --build . --config Release')  # Compiles and links.
+

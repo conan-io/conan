@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import pytest
@@ -61,7 +60,8 @@ class HelloConan(ConanFile):
     build_policy = "missing"
 
     def requirements(self):
-        self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
+        user_channel = "{}/{}".format(self.user, self.channel) if self.user else ""
+        self.requires("Say/0.1@{}".format(user_channel))
 
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
@@ -87,31 +87,16 @@ class HelloConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: user not defined, but self.user is used in"
-                      " conanfile", self.client.out)
+        self.assertIn("ERROR: Failed requirement 'Say/0.1' from 'conanfile.py (Hello/0.1)'",
+                      self.client.out)
 
-        os.environ["CONAN_USERNAME"] = "lasote"
-        self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py (Hello/0.1): "
-                      "Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: channel not defined, but self.channel is used in"
-                      " conanfile", self.client.out)
-
-        os.environ["CONAN_CHANNEL"] = "stable"
-        self.client.run("install .")
+        self.client.run("install . @lasote/stable")
         self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.out)
         self.assertNotIn("other/testing", self.client.out)
 
-        os.environ["CONAN_USERNAME"] = "other"
-        os.environ["CONAN_CHANNEL"] = "testing"
-        self.client.run("install .")
+        self.client.run("install . @other/testing")
         self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.out)
         self.assertNotIn("lasote/stable", self.client.out)
-
-        del os.environ["CONAN_USERNAME"]
-        del os.environ["CONAN_CHANNEL"]
 
         # Now use the default_ methods to declare user and channel
         self.client = TestClient()
@@ -122,13 +107,13 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     build_policy = "missing"
-    default_user = "userfoo"
+    user = "userfoo"
 
     def build(self):
         self.output.info("Building %s/%s" % (self.user, self.channel) )
 
     @property
-    def default_channel(self):
+    def channel(self):
         return "channelbar"
 """
         self.client.save({"conanfile.py": conanfile})
@@ -151,27 +136,6 @@ class SayConan(ConanFile):
         self.output.info("MYCHANNEL: %s" % self.channel)
 """
         client.save({"conanfile.py": conanfile})
-        client.run("install . -e CONAN_USERNAME=myuser -e CONAN_CHANNEL=mychannel")
-        self.assertIn("MYUSER: myuser", client.out)
-        self.assertIn("MYCHANNEL: mychannel", client.out)
-
-    def test_profile(self):
-        # https://github.com/conan-io/conan/issues/2254
-        client = TestClient()
-        conanfile = """
-from conans import ConanFile
-
-class SayConan(ConanFile):
-    def build_requirements(self):
-        self.output.info("MYUSER: %s" % self.user)
-        self.output.info("MYCHANNEL: %s" % self.channel)
-"""
-        myprofile = """[env]
-CONAN_USERNAME=myuser
-CONAN_CHANNEL=mychannel
-"""
-        client.save({"conanfile.py": conanfile,
-                     "myprofile": myprofile})
-        client.run("install . -pr=myprofile")
+        client.run("install . @myuser/mychannel")
         self.assertIn("MYUSER: myuser", client.out)
         self.assertIn("MYCHANNEL: mychannel", client.out)

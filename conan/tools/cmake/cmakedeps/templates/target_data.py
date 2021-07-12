@@ -229,4 +229,3 @@ class DepsCppCmake(object):
 
         build_modules = cpp_info.get_property("cmake_build_modules", "CMakeDeps") or []
         self.build_modules_paths = join_paths(build_modules)
-
