@@ -1,4 +1,3 @@
-import json
 import os
 import re
 import textwrap
@@ -6,11 +5,11 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools._compilers import architecture_flag, use_win_mingw
 from conan.tools.cmake.utils import is_multi_configuration, get_file_name
-from conan.tools.microsoft.toolchain import write_conanvcvars
+from conan.tools.files import save_toolchain_args
+from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conans.errors import ConanException
 from conans.util.files import load, save
@@ -728,7 +727,7 @@ class CMakeToolchain(object):
             save(self.filename, self.content)
         # Generators like Ninja or NMake requires an active vcvars
         if self.generator is not None and "Visual" not in self.generator:
-            write_conanvcvars(self._conanfile)
+            VCVars(self._conanfile).generate()
         self._writebuild(toolchain_file)
 
     def _writebuild(self, toolchain_file):
@@ -740,7 +739,7 @@ class CMakeToolchain(object):
         result["cmake_toolchain_file"] = toolchain_file or self.filename
 
         if result:
-            save(CONAN_TOOLCHAIN_ARGS_FILE, json.dumps(result))
+            save_toolchain_args(result)
 
     def _get_generator(self, recipe_generator):
         # Returns the name of the generator to be used by CMake

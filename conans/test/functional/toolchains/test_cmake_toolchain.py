@@ -1,9 +1,9 @@
-import json
 import os
 import platform
 
 import pytest
 
+from conan.tools.files import load_toolchain_args
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
@@ -61,5 +61,5 @@ def test_cmake_toolchain_custom_toolchain():
     client.save({"conanfile.py": conanfile})
     client.run("install .")
     assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
-    buildjson = json.loads(client.load("conanbuild.json"))
-    assert "mytoolchain.cmake" == buildjson["cmake_toolchain_file"]
+    build_content = load_toolchain_args(client.current_folder)
+    assert "mytoolchain.cmake" == build_content["cmake_toolchain_file"]

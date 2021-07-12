@@ -67,6 +67,10 @@ class ConanFileInterface:
         return self._conanfile.settings_build
 
     @property
+    def options(self):
+        return self._conanfile.options
+
+    @property
     def context(self):
         return self._conanfile.context
 
