@@ -22,6 +22,8 @@ def test_update_flows():
     # package and install from server
     # - In conan 2.X no remote means search in all remotes
 
+    liba = ConanFileReference.loads("liba/1.0.0")
+
     servers = OrderedDict()
     for index in range(3):
         servers[f"server{index + 1}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
@@ -135,7 +137,7 @@ def test_update_flows():
     # create newer revisions in servers so that the ones from the clients are older
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new rev in servers")})
     client.run("create .")
-    rev_to_upload = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    rev_to_upload = client.cache.get_latest_rrev(liba)
     the_time = 2000000000.0
     for index in range(3):
         the_time = the_time + 10
@@ -174,7 +176,7 @@ def test_update_flows():
     # check one revision we already have will not be installed
     # we search for that revision in the cache, we found it
     # --> result: don't install that
-    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    latest_rrev = client.cache.get_latest_rrev(liba)
     client.run(f"install {latest_rrev}@#{latest_rrev.revision}")
     assert "liba/1.0.0 from 'server1' - Cache" in client.out
     assert "liba/1.0.0: Already installed!" in client.out
@@ -188,7 +190,7 @@ def test_update_flows():
     # create new older revisions in servers
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("older rev in servers")})
     client.run("create .")
-    server_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    server_rrev = client.cache.get_latest_rrev(liba)
     the_time = 0.0
     for index in range(3):
         the_time = the_time + 10
@@ -237,12 +239,6 @@ def test_update_flows():
 
     # TODO: add last test but with --update
 
-    # now we have the same revision with different dates in the servers and in the cache
-    # in this case, if we specify --update we will check all the remotes, if that revision
-    # has a newer date in the servers we will take that date from the server but we will not
-    # install anything, we are considering revisions fully inmutable in 2.0
-    # --> results: update revision date in cache, do not install anything
-
     client.run("remove * -f")
     client.run("remove '*' -f -r server1")
     client.run("remove '*' -f -r server2")
@@ -250,14 +246,32 @@ def test_update_flows():
 
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("new case")})
     client.run("create .")
-    server_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0"))
+    server_rrev = client.cache.get_latest_rrev(liba)
     the_time = time.time() + 10
     for index in range(3):
         the_time = the_time + 10
         with patch.object(RevisionList, '_now', return_value=the_time):
             client.run(f"upload {server_rrev.full_str()} -r server{index + 1} --all -c")
 
+    latest_server_time = the_time
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # | REV6(2002)  | REV3 (2030)| REV6(2003) |REV6(2004) | REV6(2005) |
+    # |             | REV0 (1000)|            |           |            |
+    # |             |            |            |           |            |
+
     client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
+
+    # now we have the same revision with different dates in the servers and in the cache
+    # in this case, if we specify --update we will check all the remotes, if that revision
+    # has a newer date in the servers we will take that date from the server but we will not
+    # install anything, we are considering revisions fully inmutable in 2.0
+    # --> results: update revision date in cache, do not install anything
+
+    latest_rrev_cache = client.cache.get_latest_rrev(liba)
+    assert latest_server_time == client.cache.get_timestamp(latest_rrev_cache)
+
     # TODO: implement date update and checks in this case
 
     # --update
@@ -275,7 +289,7 @@ def test_update_flows():
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("this is the latest")})
     client.run("create .")
 
-    cache_revisions = client.cache.get_recipe_revisions(ConanFileReference.loads("liba/1.0.0"))
+    cache_revisions = client.cache.get_recipe_revisions(liba)
 
     # try to install the one from the servers
     client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
