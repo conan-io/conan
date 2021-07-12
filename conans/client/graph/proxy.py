@@ -52,9 +52,6 @@ class ConanProxy(object):
             remote, new_ref, new_ref_time = self._download_recipe(reference, output, remotes,
                                                                   remotes.selected, check_all_servers)
             recipe_layout = self._cache.ref_layout(new_ref)
-            # TODO: cache2.0: take time from remote. check if this is the strategy we want to follow
-            timestamp = datetime.timestamp(new_ref_time)
-            self._cache.set_timestamp(new_ref, timestamp)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
             return conanfile_path, status, remote, new_ref
@@ -138,6 +135,8 @@ class ConanProxy(object):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
+            timestamp = datetime.timestamp(_ref_time)
+            self._cache.set_timestamp(_ref, timestamp)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             return _ref, _ref_time
 
