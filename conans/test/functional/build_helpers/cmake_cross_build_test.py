@@ -44,6 +44,9 @@ def test_cross_build_test_package():
         include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
         conan_basic_setup(TARGETS)
 
+        # For the OLD cmake generators this is needed, only supported with CMakeToolchain
+        set(hello_DIR ${CMAKE_BINARY_DIR})
+
         find_package(hello REQUIRED CONFIG)
 
         add_executable(example example.cpp)
