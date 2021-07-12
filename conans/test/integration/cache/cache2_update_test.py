@@ -44,7 +44,7 @@ def test_update_flows():
 
     # we are patching the time all these revisions uploaded to the servers
     # will be older than the ones we create in local
-    the_time = time.time() - 1000
+    the_time = 0.0
 
     for index in range(3):
         the_time = the_time + 10
@@ -60,11 +60,11 @@ def test_update_flows():
             client.run(f"upload liba/1.0.0 -r server{index + 1} --all -c")
 
     # NOW WE HAVE:
-    # | CLIENT    | CLIENT2   | SERVER0    | SERVER1   | SERVER2    |
-    # |-----------|-----------|------------|-----------|------------|
-    # | REV1  (20)| REV0 (0)  | REV1(-960) | REV1(-950)| REV1 (-940)|
-    # | REV   (10)|           | REV (-990) | REV (-980)| REV  (-970)|
-    # |           |           |            |           |            |
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # | REV1  (1020)| REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # | REV   (1010)|            | REV (10)   | REV (20)  | REV  (30)  |
+    # |             |            |            |           |            |
 
     # 1. TESTING WITHOUT SPECIFIC REVISIONS AND WITH NO REMOTES: "conan install liba/1.0.0"
 
@@ -75,14 +75,31 @@ def test_update_flows():
 
     client.run("remove * -f")
 
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # |             | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # |             |            | REV (10)   | REV (20)  | REV  (30)  |
+    # |             |            |            |           |            |
+
+    client.run("install liba/1.0.0@")
+
     # will not find revisions for the recipe -> search all remotes and install the
     # latest revision between all of them, in 2.0 no remotes means search in all of them
     # remote3 has the latest revision so we should pick that one
     # --> result: install rev from remote3
-    client.run("install liba/1.0.0@")
     assert "liba/1.0.0 from 'server3' - Downloaded" in client.out
     assert "liba/1.0.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9" \
            " from remote 'server3'" in client.out
+
+    latest_rrev = client.cache.get_latest_rrev(ConanFileReference.loads("liba/1.0.0@"))
+    # check that we have stored REV1 in client with the same date from the server3
+    assert client.cache.get_timestamp(latest_rrev) == the_time
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # |REV1 (60)    | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # |             |            | REV (10)   | REV (20)  | REV  (30)  |
+    # |             |            |            |           |            |
 
     # It will first check all the remotes and
     # will find the latest revision: rev from server3
