@@ -1,6 +1,9 @@
+import os
+import textwrap
 import traceback
 from os.path import join
 
+from conan.tools.env import VirtualRunEnv
 from conans.client.generators.cmake_find_package import CMakeFindPackageGenerator
 from conans.client.generators.cmake_find_package_multi import CMakeFindPackageMultiGenerator
 from conans.client.generators.compiler_args import CompilerArgsGenerator
@@ -67,7 +70,9 @@ class GeneratorManager(object):
                             "markdown": MarkdownGenerator}
         self._new_generators = ["CMakeToolchain", "CMakeDeps", "MSBuildToolchain",
                                 "MesonToolchain", "MSBuildDeps", "QbsToolchain", "msbuild",
-                                "VirtualEnv", "AutotoolsDeps", "AutotoolsToolchain", "AutotoolsGen"]
+                                "VirtualRunEnv", "VirtualBuildEnv", "AutotoolsDeps",
+                                "AutotoolsToolchain", "BazelDeps", "BazelToolchain", "PkgConfigDeps",
+                                "VCVars"]
 
     def add(self, name, generator_class, custom=False):
         if name not in self._generators or custom:
@@ -99,9 +104,9 @@ class GeneratorManager(object):
         elif generator_name == "AutotoolsToolchain":
             from conan.tools.gnu import AutotoolsToolchain
             return AutotoolsToolchain
-        elif generator_name == "AutotoolsGen":
-            from conan.tools.gnu import AutotoolsGen
-            return AutotoolsGen
+        elif generator_name == "PkgConfigDeps":
+            from conan.tools.gnu import PkgConfigDeps
+            return PkgConfigDeps
         elif generator_name == "MSBuildToolchain":
             from conan.tools.microsoft import MSBuildToolchain
             return MSBuildToolchain
@@ -111,15 +116,24 @@ class GeneratorManager(object):
         elif generator_name in ("MSBuildDeps", "msbuild"):
             from conan.tools.microsoft import MSBuildDeps
             return MSBuildDeps
-        elif generator_name == "CMakeDeps":
-            from conan.tools.cmake import CMakeDeps
-            return CMakeDeps
+        elif generator_name == "VCVars":
+            from conan.tools.microsoft import VCVars
+            return VCVars
         elif generator_name == "QbsToolchain" or generator_name == "QbsProfile":
             from conan.tools.qbs.qbsprofile import QbsProfile
             return QbsProfile
-        elif generator_name == "VirtualEnv":
-            from conan.tools.env.virtualenv import VirtualEnv
-            return VirtualEnv
+        elif generator_name == "VirtualBuildEnv":
+            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+            return VirtualBuildEnv
+        elif generator_name == "VirtualRunEnv":
+            from conan.tools.env.virtualrunenv import VirtualRunEnv
+            return VirtualRunEnv
+        elif generator_name == "BazelDeps":
+            from conan.tools.google import BazelDeps
+            return BazelDeps
+        elif generator_name == "BazelToolchain":
+            from conan.tools.google import BazelToolchain
+            return BazelToolchain
         else:
             raise ConanException("Internal Conan error: Generator '{}' "
                                  "not commplete".format(generator_name))
@@ -189,6 +203,19 @@ class GeneratorManager(object):
                 raise ConanException(e)
 
 
+def _receive_conf(conanfile):
+    """  collect conf_info from the immediate build_requires, aggregate it and injects/update
+    current conf
+    """
+    # TODO: Open question 1: Only build_requires can define config?
+    # TODO: Only direct build_requires?
+    # TODO: Is really the best mechanism to define this info? Better than env-vars?
+    # Conf only for first level build_requires
+    for build_require in conanfile.dependencies.direct_build.values():
+        if build_require.conf_info:
+            conanfile.conf.compose(build_require.conf_info)
+
+
 def write_toolchain(conanfile, path, output):
     if hasattr(conanfile, "toolchain"):
         msg = ("\n*****************************************************************\n"
@@ -198,6 +225,8 @@ def write_toolchain(conanfile, path, output):
                "********************************************************************\n"
                "********************************************************************\n")
         raise ConanException(msg)
+
+    _receive_conf(conanfile)
 
     if hasattr(conanfile, "generate"):
         output.highlight("Calling generate()")
@@ -209,6 +238,36 @@ def write_toolchain(conanfile, path, output):
     # tools.env.virtualenv:auto_use will be always True in Conan 2.0
     if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
         with chdir(path):
-            from conan.tools.env.virtualenv import VirtualEnv
-            env = VirtualEnv(conanfile)
+            from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+            env = VirtualBuildEnv(conanfile)
             env.generate()
+
+            env = VirtualRunEnv(conanfile)
+            env.generate()
+
+    output.highlight("Aggregating env generators")
+    _generate_aggregated_env(conanfile)
+
+
+def _generate_aggregated_env(conanfile):
+    from conan.tools.microsoft import unix_path
+    bats = []
+    shs = []
+
+    for s in conanfile.environment_scripts:
+        path = os.path.join(conanfile.generators_folder, s)
+        if path.lower().endswith(".bat"):
+            bats.append(path)
+        elif path.lower().endswith(".sh"):
+            shs.append(unix_path(conanfile, path))
+    if shs:
+        sh_content = ". " + " && . ".join('"{}"'.format(s) for s in shs)
+        save(os.path.join(conanfile.generators_folder, "conanenv.sh"), sh_content)
+    if bats:
+        lines = "\r\n".join('call "{}"'.format(b) for b in bats)
+        bat_content = textwrap.dedent("""\
+                        @echo off
+                        {}
+                        """.format(lines))
+        save(os.path.join(conanfile.generators_folder, "conanenv.bat"), bat_content)
+

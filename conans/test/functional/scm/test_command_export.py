@@ -34,8 +34,9 @@ class ExportErrorCommandTestCase(unittest.TestCase):
                                                                 rev_value=rev_value)
                           })
         self.client.run("export . lib/version@user/channel", assert_error=True)
-        self.assertIn("ERROR: Not a valid '{}' repository".format(repo_type.lower()),
-                      self.client.out)
+        self.assertIn("ERROR: '{}' is not a valid '{}' repository".format(
+                      self.client.current_folder, repo_type.lower()), self.client.out)
+
 
 @pytest.mark.tool_git
 class ExportCommandTestCase(unittest.TestCase):

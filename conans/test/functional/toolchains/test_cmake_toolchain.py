@@ -1,9 +1,12 @@
+import os
 import platform
 
 import pytest
 
+from conan.tools.files import load_toolchain_args
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
+from conans.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -35,3 +38,28 @@ def test_cmake_toolchain_win_toolset(compiler, version, runtime):
     else:
         value = "v142"
     assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
+
+
+def test_cmake_toolchain_user_toolchain():
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
+        with_generator("CMakeToolchain")
+    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:user_toolchain=mytoolchain.cmake")
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "include(mytoolchain.cmake)" in toolchain
+
+
+def test_cmake_toolchain_custom_toolchain():
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
+        with_generator("CMakeToolchain")
+    save(client.cache.new_config_path, "tools.cmake.cmaketoolchain:toolchain_file=mytoolchain.cmake")
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    assert not os.path.exists(os.path.join(client.current_folder, "conan_toolchain.cmake"))
+    build_content = load_toolchain_args(client.current_folder)
+    assert "mytoolchain.cmake" == build_content["cmake_toolchain_file"]

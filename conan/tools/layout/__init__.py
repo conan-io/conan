@@ -5,6 +5,31 @@ from conans.client.file_copier import FileCopier
 from conans.errors import ConanException
 
 
+def cmake_layout(conanfile, generator=None):
+    gen = conanfile.conf["tools.cmake.cmaketoolchain:generator"] or generator
+    if gen:
+        multi = "Visual" in gen or "Xcode" in gen or "Multi-Config" in gen
+    elif conanfile.settings.compiler == "Visual Studio" or conanfile.settings.compiler == "msvc":
+        multi = True
+    else:
+        multi = False
+
+    conanfile.folders.source = "src"
+    if multi:
+        conanfile.folders.build = "build"
+        conanfile.folders.generators = "build/conan"
+    else:
+        build_type = str(conanfile.settings.build_type).lower()
+        conanfile.folders.build = "cmake-build-{}".format(build_type)
+        conanfile.folders.generators = os.path.join(conanfile.folders.build, "conan")
+
+    conanfile.cpp.source.includedirs = ["."]
+    if multi:
+        conanfile.cpp.build.libdirs = ["{}".format(conanfile.settings.build_type)]
+    else:
+        conanfile.cpp.build.libdirs = ["."]
+
+
 def clion_layout(conanfile):
     if not conanfile.settings.get_safe("build_type"):
         raise ConanException("The 'clion_layout' requires the 'build_type' setting")
@@ -54,7 +79,6 @@ class LayoutPackager(object):
             raise ConanException("There are components declared in source_cpp_info.components"
                                  " or in build_cpp_info.components that are not declared in"
                                  " package_cpp_info.components")
-
 
         if cnames:
             for cname in cnames:

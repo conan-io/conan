@@ -1,10 +1,9 @@
-import json
+import os
 import os
 import platform
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
-from conan.tools.cmake import CMakeToolchain
 from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.files import load_toolchain_args
 from conan.tools.gnu.make import make_jobs_cmd_line_arg
 from conan.tools.meson.meson import ninja_jobs_cmd_line_arg
 from conan.tools.microsoft.msbuild import msbuild_verbosity_cmd_line_arg, \
@@ -13,7 +12,7 @@ from conans.client import tools
 from conans.client.tools.files import chdir
 from conans.client.tools.oss import cpu_count, args_to_string
 from conans.errors import ConanException
-from conans.util.files import mkdir, load
+from conans.util.files import mkdir
 
 
 def _validate_recipe(conanfile):
@@ -67,10 +66,10 @@ class CMake(object):
         # Store a reference to useful data
         self._conanfile = conanfile
         self._parallel = parallel
-        self._generator = None
-        args_file = os.path.join(self._conanfile.generators_folder, CONAN_TOOLCHAIN_ARGS_FILE)
-        if os.path.exists(args_file):
-            self._generator = json.loads(load(args_file))["cmake_generator"]
+
+        toolchain_file_content = load_toolchain_args(self._conanfile.generators_folder)
+        self._generator = toolchain_file_content.get("cmake_generator")
+        self._toolchain_file = toolchain_file_content.get("cmake_toolchain_file")
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
@@ -87,21 +86,27 @@ class CMake(object):
         generator_folder = self._conanfile.generators_folder
 
         mkdir(build_folder)
-        arg_list = '-DCMAKE_TOOLCHAIN_FILE="{}" -DCMAKE_INSTALL_PREFIX="{}" "{}"'.format(
-            os.path.join(generator_folder, CMakeToolchain.filename).replace("\\", "/"),
-            self._conanfile.package_folder.replace("\\", "/"),
-            source)
 
+        arg_list = [self._cmake_program]
+        if self._generator:
+            arg_list.append('-G "{}"'.format(self._generator))
+        if self._toolchain_file:
+            if os.path.isabs(self._toolchain_file):
+                toolpath = self._toolchain_file
+            else:
+                toolpath = os.path.join(generator_folder, self._toolchain_file)
+            arg_list.append('-DCMAKE_TOOLCHAIN_FILE="{}"'.format(toolpath.replace("\\", "/")))
+        if self._conanfile.package_folder:
+            pkg_folder = self._conanfile.package_folder.replace("\\", "/")
+            arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
         if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
-            arg_list += ' -DCMAKE_SH="CMAKE_SH-NOTFOUND"'
+            arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
+        arg_list.append('"{}"'.format(source))
 
-        generator = '-G "{}" '.format(self._generator) if self._generator else ""
-        command = "%s %s%s" % (self._cmake_program, generator, arg_list)
-
+        command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
         with chdir(build_folder):
-            vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-            self._conanfile.run(command, env=["conanbuildenv", vcvars])
+            self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
         bf = self._conanfile.build_folder
@@ -127,8 +132,7 @@ class CMake(object):
         arg_list = " ".join(filter(None, arg_list))
         command = "%s --build %s" % (self._cmake_program, arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
-        vcvars = os.path.join(self._conanfile.install_folder, "conanvcvars")
-        self._conanfile.run(command, env=["conanbuildenv", vcvars])
+        self._conanfile.run(command)
 
     def build(self, build_type=None, target=None):
         if not self._conanfile.should_build:
@@ -143,6 +147,8 @@ class CMake(object):
 
     def test(self, build_type=None, target=None, output_on_failure=False):
         if not self._conanfile.should_test:
+            return
+        if self._conanfile.conf["tools.build:skip_test"]:
             return
         if not target:
             is_multi = is_multi_configuration(self._generator)

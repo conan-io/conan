@@ -2,38 +2,10 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from conan.tools.microsoft.visual import vcvars_command, vcvars_arch
-from conans.client.tools import intel_compilervars_command
+from conan.tools._check_build_profile import check_using_build_profile
+from conan.tools.microsoft.visual import VCVars
 from conans.errors import ConanException
 from conans.util.files import save, load
-
-
-CONAN_VCVARS_FILE = "conanvcvars.bat"
-
-
-def write_conanvcvars(conanfile):
-    """
-    write a conanvcvars.bat file with the good args from settings
-    """
-    os_ = conanfile.settings.get_safe("os")
-    if os_ != "Windows":
-        return
-
-    compiler = conanfile.settings.get_safe("compiler")
-    cvars = None
-    if compiler == "intel":
-        cvars = intel_compilervars_command(conanfile)
-    elif compiler == "Visual Studio" or compiler == "msvc":
-        vs_version = vs_ide_version(conanfile)
-        vcvarsarch = vcvars_arch(conanfile)
-        cvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                               winsdk_version=None, vcvars_ver=None)
-    if cvars:
-        content = textwrap.dedent("""\
-            @echo off
-            {}
-            """.format(cvars))
-        save(os.path.join(conanfile.generators_folder, CONAN_VCVARS_FILE), content)
 
 
 def vs_ide_version(conanfile):
@@ -67,6 +39,7 @@ class MSBuildToolchain(object):
         self.runtime_library = self._runtime_library(conanfile.settings)
         self.cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self.toolset = self._msvs_toolset(conanfile.settings)
+        check_using_build_profile(self._conanfile)
 
     def _name_condition(self, settings):
         props = [("Configuration", self.configuration),
@@ -83,7 +56,7 @@ class MSBuildToolchain(object):
         config_filename = "conantoolchain{}.props".format(name)
         self._write_config_toolchain(config_filename)
         self._write_main_toolchain(config_filename, condition)
-        write_conanvcvars(self._conanfile)
+        VCVars(self._conanfile).generate()
 
     @staticmethod
     def _msvs_toolset(settings):
@@ -135,7 +108,7 @@ class MSBuildToolchain(object):
     def _write_config_toolchain(self, config_filename):
 
         def format_macro(key, value):
-            return '%s="%s"' % (key, value) if value is not None else key
+            return '%s=%s' % (key, value) if value is not None else key
 
         toolchain_file = textwrap.dedent("""\
             <?xml version="1.0" encoding="utf-8"?>

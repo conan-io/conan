@@ -509,7 +509,15 @@ class GraphLock(object):
         """ apply options and constraints on requirements of a node, given the information from
         the lockfile. Requires remove their version ranges.
         """
+        # Important to remove the overrides, they do not need to be locked or evaluated
+        requires = [r for r in requires if not r.override]
         if not node.graph_lock_node:
+            # For --build-require case, this is the moment the build require can be locked
+            if build_requires and node.recipe == RECIPE_VIRTUAL:
+                for require in requires:
+                    node_id = self._find_node_by_requirement(require.ref)
+                    locked_ref = self._nodes[node_id].ref
+                    require.lock(locked_ref, node_id)
             # This node is not locked yet, but if it is relaxed, one requirement might
             # match the root node of the exising lockfile
             # If it is a test_package, with a build_require, it shouldn't even try to find it in
@@ -559,6 +567,8 @@ class GraphLock(object):
         if self._relaxed:
             return
         locked_node = node.graph_lock_node
+        if locked_node is None:
+            return
         locked_requires = locked_node.build_requires
         if not locked_requires:
             return

@@ -107,14 +107,14 @@ def _get_default_compiler(output):
             if compiler:
                 return compiler
         else:
+            if "clang" in command.lower():
+                return _clang_compiler(output, command)
             if "gcc" in command:
                 gcc = _gcc_compiler(output, command)
                 if platform.system() == "Darwin" and gcc is None:
                     output.error("%s detected as a frontend using apple-clang. "
                                  "Compiler not supported" % command)
                 return gcc
-            if "clang" in command.lower():
-                return _clang_compiler(output, command)
             if platform.system() == "SunOS" and command.lower() == "cc":
                 return _sun_cc_compiler(output, command)
         # I am not able to find its version

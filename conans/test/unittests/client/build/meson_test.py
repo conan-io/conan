@@ -10,6 +10,7 @@ from conans.client.build.meson import Meson
 from conans.client.conf import get_default_settings_yml
 from conans.client.tools import args_to_string, environment_append
 from conans.errors import ConanException
+from conans.model.conf import ConfDefinition
 from conans.model.settings import Settings
 from conans.test.utils.mocks import MockDepsCppInfo, ConanFileMock
 from conans.test.utils.test_files import temp_folder
@@ -59,6 +60,16 @@ class MesonTest(unittest.TestCase):
         with environment_append({"CONAN_RUN_TESTS": "0"}):
             meson.test()
             self.assertIsNone(conan_file.command)
+
+    def test_conf_skip_test(self):
+        conf = ConfDefinition()
+        conf.loads("tools.build:skip_test=1")
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf = conf.get_conanfile_conf(None)
+        meson = Meson(conanfile)
+        meson.test()
+        self.assertIsNone(conanfile.command)
 
     def test_folders(self):
         settings = Settings.loads(get_default_settings_yml())

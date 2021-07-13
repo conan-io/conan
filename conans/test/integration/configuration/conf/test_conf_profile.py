@@ -17,7 +17,7 @@ def client():
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeToolchain"
 
-            def run(self, cmd, env):  # INTERCEPTOR of running
+            def run(self, cmd):  # INTERCEPTOR of running
                 self.output.info("RECIPE-RUN: {}".format(cmd))
 
             def build(self):
@@ -104,7 +104,7 @@ def test_config_profile_forbidden(client):
     client.save({"myprofile": profile})
     client.run("install . pkg/0.1@ -pr=myprofile", assert_error=True)
     assert ("ERROR: Error reading 'myprofile' profile: [conf] "
-            "'cache:verbosity=Minimal' not allowed in profiles" in client.out)
+            "'cache:verbosity' not allowed in profiles" in client.out)
 
 
 def test_msbuild_config():

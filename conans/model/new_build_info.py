@@ -104,6 +104,9 @@ class NewCppInfo(object):
                 setattr(self, varname, [])
             merge_list(getattr(other, varname), getattr(self, varname))
 
+        if self.sysroot is None and other.sysroot:
+            self.sysroot = other.sysroot
+
         if other._generator_properties:
             if not self._generator_properties:
                 self._generator_properties = {}
@@ -182,26 +185,21 @@ class NewCppInfo(object):
                         if dest is None:
                             setattr(self.components[None], n, [])
                         dest += [i for i in getattr(component, n) if i not in dest]
-                # Aggregate the properties
-                if component._generator_properties:
-                    if self.components[None]._generator_properties is None:
-                        self.components[None]._generator_properties = {}
-                    for gen_name, properties in component._generator_properties.items():
-                        # The same property is overwritten if declared twice
-                        self.components[None]._generator_properties.\
-                            setdefault(gen_name, {}).update(properties)
+
+                # NOTE: The properties are not aggregated because they might refer only to the
+                # component like "cmake_target_name" describing the target name FOR THE component
+                # not the namespace.
 
                 if component.requires:
                     if self.components[None].requires is None:
                         self.components[None].requires = []
                     self.components[None].requires.extend(component.requires)
-                # The generator properties are not aggregated, should be defined in the root
-                # cpp info if needed
+
             # FIXME: What to do about sysroot?
-        # Leave only the aggregated value
-        main_value = self.components[None]
-        self.components = DefaultOrderedDict(lambda: _NewComponent())
-        self.components[None] = main_value
+            # Leave only the aggregated value
+            main_value = self.components[None]
+            self.components = DefaultOrderedDict(lambda: _NewComponent())
+            self.components[None] = main_value
 
     def copy(self):
         ret = NewCppInfo()
@@ -270,7 +268,9 @@ def from_old_cppinfo(old):
 
     for cname, c in old.components.items():
         if c.build_modules:
-            _copy_build_modules_to_property(c, ret.components[cname])
+            # The build modules properties are applied to the root cppinfo, not per component
+            # because it is something global that makes no sense to be set at a component
+            _copy_build_modules_to_property(c, ret)
     return ret
 
 

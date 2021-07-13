@@ -422,7 +422,6 @@ class AppleTest(Base):
                 "CMAKE_C_FLAGS_RELEASE": "-O3 -DNDEBUG",
                 "CMAKE_SHARED_LINKER_FLAGS": "-m64",
                 "CMAKE_EXE_LINKER_FLAGS": "-m64",
-                "CMAKE_SKIP_RPATH": "1",
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
