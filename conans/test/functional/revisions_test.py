@@ -26,7 +26,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.c_v2 = TurboTestClient(servers=self.servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
-    @pytest.mark.xfail(reason="cache2.0 rewrite with --update flows")
     def test_install_binary_iterating_remotes_same_rrev(self):
         """We have two servers (remote1 and remote2), first with a recipe but the
         second one with a PREV of the binary.
@@ -50,7 +49,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_update_recipe_iterating_remotes(self):
         """We have two servers (remote1 and remote2), both with a recipe but the second one with a
         new RREV. If a client installs without specifying -r remote1, it WONT iterate
@@ -61,7 +59,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         with environment_append({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
         self.c_v2.upload_all(self.ref, remote="default")
-
         time.sleep(1)
 
         other_v2 = TurboTestClient(servers=self.servers)
@@ -71,20 +68,25 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         other_v2.upload_all(self.ref, remote="remote2")
 
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
+        # doing --update it will find a newer same revision in remote2 and update the date and server
+        # of the revision in the local cache
+        # TODO: cache2.0 we get the recipe from remote 2 but package rev still is the one from
+        #  is this what we want?
         self.c_v2.run("install {} --update".format(self.ref))
+        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
         self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
-        # If we force remote2, it will find an update
+        # This should do the same than before
         self.c_v2.run("install {} --update -r remote2".format(self.ref))
-        self.assertIn("{} - Update".format(pref), self.c_v2.out)
-        self.assertIn("Retrieving package {} from remote 'remote2' ".format(pref.id),
-                      self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache", self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
 
-        # This is not updating the remote in the registry with a --update
-        # Is this a bug?
-        # FIXME: 2.0: load_metadata() method does not exist anymore
-        metadata = self.c_v2.get_latest_pkg_layout(self.ref).load_metadata()
-        self.assertEqual("default", metadata.recipe.remote)
+        # TODO: cache2.0 In 2.0 --update updates the server in the registry
+        #  is this the desired behaviour?
+        latest_rrev = self.c_v2.cache.get_latest_rrev(self.ref)
+        assert self.c_v2.cache.get_remote(latest_rrev) == "remote2"
+        latest_prev = self.c_v2.cache.get_latest_prev(pref)
+        assert self.c_v2.cache.get_remote(latest_prev) == "default"
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,
