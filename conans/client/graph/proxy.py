@@ -4,7 +4,7 @@ from requests.exceptions import RequestException
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
-                                       RECIPE_UPDATED, RECIPE_EDITABLE)
+                                       RECIPE_UPDATED, RECIPE_EDITABLE, RECIPE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
 from conans.util.dates import from_iso8601_to_datetime, from_timestamp_to_iso8601
@@ -49,8 +49,8 @@ class ConanProxy(object):
             # in 2.0 revisions are completely inmutable so if we specified the revision
             # we don't want to check all servers, just get the first match
             check_all_servers = False if reference.revision else True
-            remote, new_ref, new_ref_time = self._download_recipe(reference, output, remotes,
-                                                                  remotes.selected, check_all_servers)
+            remote, new_ref = self._download_recipe(reference, output, remotes,
+                                                    remotes.selected, check_all_servers)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -72,23 +72,36 @@ class ConanProxy(object):
                                                                            check_all_servers=True)
             if latest_rrev:
                 # check if we already have the latest in local cache
-                # TODO: cache2.0 --update flows: should we get the revision with newer time even
-                #  if we have that one already installed in the cache with an older date?
+                # TODO: cache2.0 here if we already have a revision in the cache but we add the
+                #  --update argument and we find that same revision in server, we will not
+                #  download anything but we will UPDATE the date of that revision in the
+                #  local cache and WE ARE ALSO UPDATING THE REMOTE
+                #  Check if this is the flow we want to follow
+                # TODO: check the timezone stuff
+                cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)
                 if latest_rrev.revision != ref.revision:
-                    # TODO: check the timezone
-                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)
                     if cache_time < remote_time:
                         remotes.select(remote.name)
                         # the remote one is newer
                         output.info("Retrieving from remote '%s'..." % remote.name)
-                        remote, new_ref, new_ref_time = self._download_recipe(latest_rrev, output,
-                                                                              remotes, remote)
+                        remote, new_ref = self._download_recipe(latest_rrev, output,
+                                                                remotes, remote)
                         status = RECIPE_UPDATED
                         return conanfile_path, status, remote, new_ref
                     else:
                         status = RECIPE_NEWER
                 else:
-                    status = RECIPE_INCACHE
+                    # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
+                    #  the date
+                    if cache_time >= remote_time:
+                        status = RECIPE_INCACHE
+                    else:
+                        selected_remote = remote
+                        remotes.select(remote.name)
+                        self._cache.update_reference(ref,
+                                                     new_timestamp=datetime.timestamp(remote_time),
+                                                     new_remote=selected_remote.name)
+                        status = RECIPE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
             else:
                 status = RECIPE_NOT_IN_REMOTE
@@ -135,10 +148,9 @@ class ConanProxy(object):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
-            timestamp = datetime.timestamp(_ref_time)
-            self._cache.set_timestamp(_ref, timestamp)
+            self._cache.set_timestamp(_ref, datetime.timestamp(_ref_time))
             output.info("Downloaded recipe revision %s" % _ref.revision)
-            return _ref, _ref_time
+            return _ref
 
         if remote:
             output.info("Retrieving from server '%s' " % remote.name)
@@ -152,8 +164,8 @@ class ConanProxy(object):
 
         if remote:
             try:
-                new_ref, new_ref_time = _retrieve_from_remote(remote, ref)
-                return remote, new_ref, new_ref_time
+                new_ref = _retrieve_from_remote(remote, ref)
+                return remote, new_ref
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(ref), remote.name)
                 raise NotFoundException(msg)
@@ -171,5 +183,5 @@ class ConanProxy(object):
             msg = "Unable to find '%s' in remotes" % ref.full_str()
             raise NotFoundException(msg)
 
-        new_ref, new_ref_time = _retrieve_from_remote(remote, latest_rrev)
-        return remote, new_ref, new_ref_time
+        new_ref = _retrieve_from_remote(remote, latest_rrev)
+        return remote, new_ref
