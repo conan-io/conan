@@ -702,18 +702,18 @@ def test_consumer_specific_settings():
 
     # Regular install with release
     client.run("install . -s build_type=Release")
-    assert "I'm dep and my build type is Release"
-    assert "I'm None and my build type is Release"
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Release" in client.out
 
     # Now the dependency by name
     client.run("install . -s dep:build_type=Debug")
-    assert "I'm dep and my build type is Debug"
-    assert "I'm None and my build type is Release"
+    assert "I'm dep and my build type is Debug" in client.out
+    assert "I'm None and my build type is Release" in client.out
 
     # Now the consumer using $
     client.run("install . -s $:build_type=Debug")
-    assert "I'm dep and my build type is Release"
-    assert "I'm None and my build type is Debug"
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Debug" in client.out
 
     # Now use a conanfile.txt
     client.save({"conanfile.txt": textwrap.dedent("""
@@ -723,20 +723,34 @@ def test_consumer_specific_settings():
 
     # Regular install with release
     client.run("install . -s build_type=Release")
-    assert "I'm dep and my build type is Release"
-    assert "I'm None and my build type is Release"
+    assert "I'm dep and my build type is Release" in client.out
 
     # Now the dependency by name
     client.run("install . -s dep:build_type=Debug")
-    assert "I'm dep and my build type is Debug"
-    assert "I'm None and my build type is Release"
+    assert "I'm dep and my build type is Debug" in client.out
 
     # Now the consumer using $
-    client.run("install . -s $:build_type=Debug")
-    assert "I'm dep and my build type is Release"
-    assert "I'm None and my build type is Debug"
-
+    client.run("install . -s $:build_type=Debug  -g CMakeToolchain")
+    assert "I'm dep and my build type is Release" in client.out
     # Verify the cmake toolchain takes Debug
-    client.run("install . -s $:build_type=Debug -g CMakeToolchain")
     contents = client.load("conan_toolchain.cmake")
     assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
+
+
+def test_consumer_specific_settings_from_profile():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    profile = textwrap.dedent("""
+        include(default)
+        [settings]
+        $:build_type=Debug
+    """)
+    client.save({"conanfile.py": conanfile, "my_profile.txt": profile})
+    client.run("install . --profile my_profile.txt")
+    assert "I'm hello and my build type is Debug" in client.out
