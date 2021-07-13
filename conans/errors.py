@@ -132,6 +132,17 @@ class ConanExceptionInUserConanfileMethod(ConanException):
 
 
 class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
+    """
+    This binary, for the requested configuration and package-id cannot exist
+    """
+    pass
+
+
+class ConanInvalidBuildConfiguration(ConanExceptionInUserConanfileMethod):
+    """
+    This binary, for the requested configuration cannot be built, but a
+    compatible_package, or built with other configuration, might be possible
+    """
     pass
 
 
