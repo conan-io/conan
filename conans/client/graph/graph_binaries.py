@@ -83,10 +83,7 @@ class GraphBinariesAnalyzer(object):
 
         if not node.binary:
             node.binary = BINARY_CACHE
-            # TODO: cache2.0: remove metadata
-            # metadata = metadata or package_layout.load_metadata()
-            # node.prev = metadata.packages[pref.id].revision
-            assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
+            assert node.prev, "PREV for %s is None" % str(pref)
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
@@ -350,6 +347,12 @@ class GraphBinariesAnalyzer(object):
                     conanfile.info.invalid = BINARY_INVALID, str(e)
                 except ConanInvalidBuildConfiguration as e:
                     conanfile.info.invalid = BINARY_INVALID_BUILD, str(e)
+
+        try:
+            conanfile.settings.validate()  # All has to be ok!
+            conanfile.options.validate()
+        except ConanException:
+            conanfile.info.invalid = BINARY_INVALID_BUILD, str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
