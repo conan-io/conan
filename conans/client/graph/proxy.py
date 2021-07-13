@@ -4,7 +4,8 @@ from requests.exceptions import RequestException
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
-                                       RECIPE_UPDATED, RECIPE_EDITABLE, RECIPE_DATE_UPDATED)
+                                       RECIPE_UPDATED, RECIPE_EDITABLE,
+                                       RECIPE_INCACHE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
 from conans.util.dates import from_iso8601_to_datetime, from_timestamp_to_iso8601
@@ -101,7 +102,7 @@ class ConanProxy(object):
                         self._cache.update_reference(ref,
                                                      new_timestamp=datetime.timestamp(remote_time),
                                                      new_remote=selected_remote.name)
-                        status = RECIPE_DATE_UPDATED
+                        status = RECIPE_INCACHE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
             else:
                 status = RECIPE_NOT_IN_REMOTE

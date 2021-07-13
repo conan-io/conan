@@ -106,9 +106,29 @@ def test_update_flows():
     client.run("install liba/1.0.0@ --update")
     # It will first check all the remotes and
     # will find the latest revision: REV1 from server3
-    # --> result: we already have the revision installed so do nothing
+    # --> result: we already have the revision installed and is newer so do nothing
     assert "liba/1.0.0 from 'server3' - Cache" in client.out
     assert "liba/1.0.0: Already installed!" in client.out
+
+    # now create a newer REV1 in server1 and if we do --update it should update the date
+    # to the date in server1 and associate that remote but not install anything
+
+    client.run("remove liba/1.0.0 -f -r server1")
+    the_time = 100.0
+    with patch.object(RevisionList, '_now', return_value=the_time):
+        client.run(f"upload liba/1.0.0 -r server1 --all -c")
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # |REV1 (60)    | REV0 (1000)| REV1(100)  | REV1(50)  | REV1 (60)  |
+    # |             |            | REV (10)   | REV (20)  | REV  (30)  |
+    # |             |            |            |           |            |
+
+    client.run("install liba/1.0.0@ --update")
+    # --> result: Update date and server because server1 has a newer date
+    latest_rrev = client.cache.get_latest_rrev(liba)
+    assert client.cache.get_timestamp(latest_rrev) == the_time
+    assert "liba/1.0.0 from 'server1' - Cache (Updated date)" in client.out
 
     # we create a newer revision in client
     client.run("remove * -f")
@@ -117,7 +137,7 @@ def test_update_flows():
 
     # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
     # |-------------|------------|------------|-----------|------------|
-    # | REV2 (2000) | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # | REV2 (2000) | REV0 (1000)| REV1(100)  | REV1(50)  | REV1 (60)  |
     # |             |            | REV (10)   | REV (20)  | REV  (30)  |
     # |             |            |            |           |            |
 
@@ -138,6 +158,7 @@ def test_update_flows():
     client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV3")})
     client.run("create .")
     rev_to_upload = client.cache.get_latest_rrev(liba)
+    # the future
     the_time = 3000000000.0
     for index in range(3):
         the_time = the_time + 10
@@ -147,7 +168,7 @@ def test_update_flows():
     # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
     # |-------------|------------|------------|-----------|------------|
     # | REV2 (2000) | REV0 (1000)| REV3(3010) | REV3(3020)| REV3 (3030)|
-    # |             |            | REV1(40)   | REV1(50)  | REV1 (60)  |
+    # |             |            | REV1(100)  | REV1(50)  | REV1 (60)  |
     # |             |            | REV (10)   | REV (20)  | REV  (30)  |
     # |             |            |            |           |            |
 
@@ -166,7 +187,7 @@ def test_update_flows():
     # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
     # |-------------|------------|------------|-----------|------------|
     # | REV2 (2000) | REV3 (3030)| REV3(3010) | REV3(3020)| REV3 (3030)|
-    # |             | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # |             | REV0 (1000)| REV1(100)  | REV1(50)  | REV1 (60)  |
     # |             |            | REV (10)   | REV (20)  | REV  (30)  |
     # |             |            |            |           |            |
 
@@ -247,7 +268,7 @@ def test_update_flows():
     latest_cache_revision = client.cache.get_latest_rrev(server_rrev.copy_clear_rev())
     assert latest_cache_revision != server_rrev
     assert the_time == client.cache.get_timestamp(server_rrev)
-    assert "liba/1.0.0 from 'server3' - Updated date" in client.out
+    assert "liba/1.0.0 from 'server3' - Cache (Updated date)" in client.out
 
     client.run("remove * -f")
     client.run("remove '*' -f -r server1")
@@ -281,7 +302,7 @@ def test_update_flows():
 
     latest_rrev_cache = client.cache.get_latest_rrev(liba)
     assert latest_server_time == client.cache.get_timestamp(latest_rrev_cache)
-    assert "liba/1.0.0 from 'server3' - Updated date" in client.out
+    assert "liba/1.0.0 from 'server3' - Cache (Updated date)" in client.out
 
     # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
     # |-------------|------------|------------|-----------|------------|

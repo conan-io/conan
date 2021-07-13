@@ -5,7 +5,7 @@ from conans.model.ref import PackageReference
 RECIPE_DOWNLOADED = "Downloaded"
 RECIPE_INCACHE = "Cache"  # The previously installed recipe in cache is being used
 RECIPE_UPDATED = "Updated"
-RECIPE_DATE_UPDATED = "Updated date"
+RECIPE_INCACHE_DATE_UPDATED = "Cache (Updated date)"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
