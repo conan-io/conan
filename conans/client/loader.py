@@ -172,7 +172,7 @@ class ConanFileLoader(object):
         return conanfile
 
     @staticmethod
-    def _initialize_conanfile(conanfile, profile):
+    def _initialize_conanfile(conanfile, profile, is_consumer):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
@@ -186,6 +186,11 @@ class ConanFileLoader(object):
             # First, try to get a match directly by name (without needing *)
             # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
             pkg_settings = package_settings_values.get(conanfile.name)
+
+            if is_consumer and "$" in package_settings_values:
+                # "$" overrides the "name" scoped settings.
+                pkg_settings = package_settings_values.get("$")
+
             if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref_str, pattern):
@@ -212,7 +217,7 @@ class ConanFileLoader(object):
         conanfile.output.scope = conanfile.display_name
         conanfile.in_local_cache = False
         try:
-            self._initialize_conanfile(conanfile, profile_host)
+            self._initialize_conanfile(conanfile, profile_host, is_consumer=True)
 
             # The consumer specific
             conanfile.develop = True
@@ -244,7 +249,7 @@ class ConanFileLoader(object):
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True
         try:
-            self._initialize_conanfile(conanfile, profile)
+            self._initialize_conanfile(conanfile, profile, is_consumer=False)
             return conanfile
         except ConanInvalidConfiguration:
             raise
@@ -263,12 +268,18 @@ class ConanFileLoader(object):
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
+        tmp_settings = profile.processed_settings.copy()
+        package_settings_values = profile.package_settings_values
+        if "$" in package_settings_values:
+            pkg_settings = package_settings_values.get("$")
+            if pkg_settings:
+                tmp_settings.update_values(pkg_settings)
         conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
-        conanfile.settings = profile.processed_settings.copy_values()
+        conanfile.settings = tmp_settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)

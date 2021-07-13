@@ -681,3 +681,62 @@ def test_profile_from_temp_absolute_path():
     recipe_path = os.path.join(client.current_folder, "current", "conanfile.txt")
     client.run('install "{}" -pr="{}"'.format(recipe_path, profile_path))
     assert "os=AIX" in client.out
+
+
+def test_consumer_specific_settings():
+    client = TestClient()
+    dep = str(GenConanfile().with_settings("build_type"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    dep += configure
+    client.save({"conanfile.py": dep})
+    client.run("create . dep/1.0@")
+    client.run("create . dep/1.0@ -s build_type=Debug")
+
+    consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0"))
+    consumer += configure
+    client.save({"conanfile.py": consumer})
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release"
+    assert "I'm None and my build type is Release"
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug"
+    assert "I'm None and my build type is Release"
+
+    # Now the consumer using $
+    client.run("install . -s $:build_type=Debug")
+    assert "I'm dep and my build type is Release"
+    assert "I'm None and my build type is Debug"
+
+    # Now use a conanfile.txt
+    client.save({"conanfile.txt": textwrap.dedent("""
+            [requires]
+            dep/1.0
+    """)}, clean_first=True)
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release"
+    assert "I'm None and my build type is Release"
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug"
+    assert "I'm None and my build type is Release"
+
+    # Now the consumer using $
+    client.run("install . -s $:build_type=Debug")
+    assert "I'm dep and my build type is Release"
+    assert "I'm None and my build type is Debug"
+
+    # Verify the cmake toolchain takes Debug
+    client.run("install . -s $:build_type=Debug -g CMakeToolchain")
+    contents = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
