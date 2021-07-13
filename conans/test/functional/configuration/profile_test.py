@@ -729,12 +729,14 @@ def test_consumer_specific_settings():
     client.run("install . -s dep:build_type=Debug")
     assert "I'm dep and my build type is Debug" in client.out
 
-    # Now the consumer using $
-    client.run("install . -s $:build_type=Debug  -g CMakeToolchain")
-    assert "I'm dep and my build type is Release" in client.out
-    # Verify the cmake toolchain takes Debug
-    contents = client.load("conan_toolchain.cmake")
-    assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
+    # Test that the generators take the setting
+    if platform.system() != "Windows":  # Toolchain in windows is multiconfig
+        # Now the consumer using $
+        client.run("install . -s $:build_type=Debug  -g CMakeToolchain")
+        assert "I'm dep and my build type is Release" in client.out
+        # Verify the cmake toolchain takes Debug
+        contents = client.load("conan_toolchain.cmake")
+        assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
 
 
 def test_consumer_specific_settings_from_profile():
