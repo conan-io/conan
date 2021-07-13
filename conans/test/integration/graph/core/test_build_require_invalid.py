@@ -1,352 +1,205 @@
 import textwrap
 
 import pytest
-from conans.test.utils.tools import TestClient
+
+from conans.test.assets.genconanfile import GenConanfile
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
-@pytest.fixture(scope="module")
-def setup_client_with_build_requires():
-    client = TestClient()
-    conanfile_validate = textwrap.dedent("""
+class TestInvalidConfiguration:
+    """
+    ConanInvalidConfiguration blocks any usage or build
+    """
+    conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conans.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
+            settings = "os"
 
             def validate(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
+                if self.settings.os == "Windows":
+                    raise ConanInvalidConfiguration("Package does not work in Windows!")
+       """)
+    package_id = "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
+    invalid = "Invalid"
 
-            def package_id(self):
-                del self.info.settings.compiler
-        """)
-    conanfile_configure = textwrap.dedent("""
+    @pytest.fixture(scope="class")
+    def client(self):
+        client = TestClient()
+        client.save({"pkg/conanfile.py": self.conanfile})
+        client.run("create pkg pkg/0.1@ -s os=Linux")
+        return client
+
+    def test_invalid(self, client):
+        conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Windows", assert_error=True)
+        assert "pkg/0.1: {}: Package does not work in Windows!".format(self.invalid) in client.out
+
+    def test_invalid_info(self, client):
+        """
+        the conan info command does not raise, but it outputs info
+        """
+        conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("info consumer -s os=Windows")
+        assert "Binary: {}".format(self.invalid) in client.out
+
+    def test_valid(self, client):
+        conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Linux")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+    def test_invalid_build_require(self, client):
+        conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Windows", assert_error=True)
+        assert "pkg/0.1: {}: Package does not work in Windows!".format(self.invalid) in client.out
+
+    def test_valid_build_require_two_profiles(self, client):
+        conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s:b os=Linux -s:h os=Windows")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+
+class TestInvalidConfigurationRemovePackageId(TestInvalidConfiguration):
+    """
+    ConanInvalidConfiguration blocks even if package-id removes setting, test to verify
+    the behavior of ConanInvalidConfiguration is the same
+    """
+    conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conans.errors import ConanInvalidConfiguration
 
         class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def configure(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-            def package_id(self):
-                del self.info.settings.compiler
-        """)
-    conanfile_build = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.errors import ConanInvalidConfiguration
-
-        class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def build(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-            def package_id(self):
-                del self.info.settings.compiler
-        """)
-    conanfile_validate_remove_build_type = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.errors import ConanUnbuildableConfiguration
-
-        class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
+            settings = "os"
 
             def validate(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
+                if self.settings.os == "Windows":
+                    raise ConanInvalidConfiguration("Package does not work in Windows!")
 
             def package_id(self):
-                del self.info.settings.compiler
-                del self.info.settings.build_type
+                del self.info.settings.os
         """)
-    conanfile_configure_remove_build_type = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.errors import ConanInvalidConfiguration
-
-        class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def configure(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-            def package_id(self):
-                del self.info.settings.compiler
-                del self.info.settings.build_type
-        """)
-    conanfile_build_remove_build_type = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.errors import ConanInvalidConfiguration
-
-        class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def build(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-            def package_id(self):
-                del self.info.settings.compiler
-                del self.info.settings.build_type
-        """)
-    conanfile_validate_compatible = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.errors import ConanInvalidConfiguration
-
-            class Conan(ConanFile):
-                name = "br"
-                version = "1.0.0"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def validate(self):
-                    if self.settings.build_type == "Debug":
-                        raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-                def package_id(self):
-                    del self.info.settings.compiler
-                    if self.settings.build_type == "Debug":
-                        compatible_pkg = self.info.clone()
-                        compatible_pkg.settings.build_type = "Release"
-                        self.compatible_packages.append(compatible_pkg)
-            """)
-    conanfile_validate_compatible_unbuildable = textwrap.dedent("""
-        from conans import ConanFile
-        from conans.errors import ConanUnbuildableConfiguration
-
-        class Conan(ConanFile):
-            name = "br"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def validate(self):
-                if self.settings.build_type == "Debug":
-                    raise ConanUnbuildableConfiguration("br cannot be built in debug mode")
-
-            def package_id(self):
-                del self.info.settings.compiler
-                if self.settings.build_type == "Debug":
-                    compatible_pkg = self.info.clone()
-                    compatible_pkg.settings.build_type = "Release"
-                    self.compatible_packages.append(compatible_pkg)
-        """)
-    conanfile_configure_compatible = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.errors import ConanInvalidConfiguration
-
-            class Conan(ConanFile):
-                name = "br"
-                version = "1.0.0"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def configure(self):
-                    if self.settings.build_type == "Debug":
-                        raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-                def package_id(self):
-                    del self.info.settings.compiler
-                    if self.settings.build_type == "Debug":
-                        compatible_pkg = self.info.clone()
-                        compatible_pkg.settings.build_type = "Release"
-                        self.compatible_packages.append(compatible_pkg)
-            """)
-    conanfile_build_compatible = textwrap.dedent("""
-            from conans import ConanFile
-            from conans.errors import ConanInvalidConfiguration
-
-            class Conan(ConanFile):
-                name = "br"
-                version = "1.0.0"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def build(self):
-                    if self.settings.build_type == "Debug":
-                        raise ConanInvalidConfiguration("br cannot be built in debug mode")
-
-                def package_id(self):
-                    del self.info.settings.compiler
-                    if self.settings.build_type == "Debug":
-                        compatible_pkg = self.info.clone()
-                        compatible_pkg.settings.build_type = "Release"
-                        self.compatible_packages.append(compatible_pkg)
-            """)
-    conanfile_consumer = textwrap.dedent("""
-        from conans import ConanFile
-
-        class Conan(ConanFile):
-            name = "libA"
-            version = "1.0.0"
-            settings = "os", "compiler", "build_type", "arch"
-            build_requires = "br/1.0.0"
-        """)
-    client.save({"br_validate.py": conanfile_validate,
-                 "br_configure.py": conanfile_configure,
-                 "br_build.py": conanfile_build,
-                 "br_validate_remove_build_type.py": conanfile_validate_remove_build_type,
-                 "br_configure_remove_build_type.py": conanfile_configure_remove_build_type,
-                 "br_build_remove_build_type.py": conanfile_build_remove_build_type,
-                 "br_validate_compatible.py": conanfile_validate_compatible,
-                 "br_validate_compatible_unbuildable.py": conanfile_validate_compatible_unbuildable,
-                 "br_configure_compatible.py": conanfile_configure_compatible,
-                 "br_build_compatible.py": conanfile_build_compatible,
-                 "consumer.py": conanfile_consumer})
-    return client
+    package_id = NO_SETTINGS_PACKAGE_ID
 
 
-def test_create_invalid_validate(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate.py")  # In Release mode, it works
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
-    # Expected, we are telling the br to use Debug mode
-    assert "br/1.0.0: Invalid ID: br cannot be built in debug mode" in client.out
+class TestInvalidBuildConfiguration(TestInvalidConfiguration):
+    """
+    ConanInvalidBuildConfiguration still blocks if not removing settings
+    This configuration does NOT really make sense without removing in package_id
+    or using compatible_packages
+    """
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conans.errors import ConanInvalidBuildConfiguration
+
+       class Conan(ConanFile):
+           settings = "os"
+
+           def validate(self):
+               if self.settings.os == "Windows":
+                   raise ConanInvalidBuildConfiguration("Package does not work in Windows!")
+       """)
+    invalid = "InvalidBuild"
 
 
-def test_create_invalid_configure(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure.py")
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
-    # Expected, we are telling the br to use Debug mode
-    assert "ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode" in client.out
+class TestInvalidBuildPackageID:
+    """
+    ConanInvalidBuildConfiguration will not block if setting is removed from package_id
+    """
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conans.errors import ConanInvalidBuildConfiguration
+
+       class Conan(ConanFile):
+           settings = "os"
+
+           def validate(self):
+               if self.settings.os == "Windows":
+                   raise ConanInvalidBuildConfiguration("Package does not work in Windows!")
+
+           def package_id(self):
+               del self.info.settings.os
+       """)
+    package_id = NO_SETTINGS_PACKAGE_ID
+    windows_package_id = NO_SETTINGS_PACKAGE_ID
+
+    @pytest.fixture(scope="class")
+    def client(self):
+        client = TestClient()
+
+        client.save({"pkg/conanfile.py": self.conanfile})
+        client.run("create pkg pkg/0.1@ -s os=Linux")
+        return client
+
+    def test_valid(self, client):
+        conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Windows")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+        client.run("install consumer -s os=Linux")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+    def test_invalid_try_build(self, client):
+        conanfile_consumer = GenConanfile().with_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Windows --build", assert_error=True)
+        # Only when trying to build, it will try to build the Windows one
+        assert "pkg/0.1:{} - InvalidBuild".format(self.windows_package_id) in client.out
+        assert "pkg/0.1: InvalidBuild: Package does not work in Windows!" in client.out
+
+    def test_valid_build_require(self, client):
+        conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s os=Windows")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+        client.run("install consumer -s os=Linux")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+    def test_valid_build_require_two_profiles(self, client):
+        conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
+        client.save({"consumer/conanfile.py": conanfile_consumer})
+        client.run("install consumer -s:b os=Linux -s:h os=Windows")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
+
+        client.run("install consumer -s:b os=Windows -s:h os=Windows")
+        assert "pkg/0.1:{} - Cache".format(self.package_id) in client.out
+        assert "pkg/0.1: Already installed!" in client.out
 
 
-def test_create_invalid_build(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build.py")
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
-    assert "ERROR: Missing binary: br/1.0.0" in client.out
-    client.run("create consumer.py -s build_type=Debug --build", assert_error=True)
-    assert "ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode" in client.out
+class TestInvalidBuildCompatible(TestInvalidBuildPackageID):
+    """
+    ConanInvalidBuildConfiguration will not block if compatible_packages fallback
+    """
+    conanfile = textwrap.dedent("""
+       from conans import ConanFile
+       from conans.errors import ConanInvalidBuildConfiguration
 
+       class Conan(ConanFile):
+           settings = "os"
 
-def test_create_validate_remove_build_type(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate_remove_build_type.py")
-    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
-    client.run("create consumer.py -s build_type=Debug")
+           def validate(self):
+               if self.settings.os == "Windows":
+                   raise ConanInvalidBuildConfiguration("Package does not work in Windows!")
 
-
-def test_create_configure_remove_build_type(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure_remove_build_type.py")
-    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
-
-
-def test_create_build_remove_build_type(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build_remove_build_type.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "br/1.0.0 from local cache - Cache" in client.out
-
-
-def test_create_validate_compatible(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate_compatible.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "Using compatible package" in client.out
-
-
-def test_create_validate_compatible_unbuildable(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate_compatible_unbuildable.py")
-    client.run("create consumer.py -s build_type=Debug")
-    print(client.out)
-    assert "Using compatible package" in client.out
-
-
-def test_create_configure_compatible(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure_compatible.py")
-    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
-    client.run("create consumer.py -s build_type=Debug", assert_error=True)
-
-
-def test_create_build_compatible(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build_compatible.py")
-    client.run("create consumer.py -s build_type=Debug")
-    assert "Using compatible package" in client.out
-
-
-def test_create_validate_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate.py")
-    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
-
-
-def test_create_configure_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure.py")
-    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
-
-
-def test_create_build_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build.py")
-    client.run("create consumer.py -pr:b=default -s:h build_type=Debug -pr:h=default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
-
-
-def test_create_validate_remove_build_type_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate_remove_build_type.py")
-    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-
-
-def test_create_configure_remove_build_type_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure_remove_build_type.py")
-    # FIXME: This should NOT fail with -> ERROR: br/1.0.0: Invalid configuration: br cannot be built in debug mode
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default", assert_error=True)
-
-
-def test_create_build_remove_build_type_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build_remove_build_type.py")
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "br/1.0.0 from local cache - Cache" in client.out
-
-
-def test_create_validate_compatible_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_validate_compatible.py")
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
-    assert "Using compatible package" in client.out
-
-
-def test_create_configure_compatible_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_configure_compatible.py")
-    # FIXME: This should NOT fail with -> br/1.0.0: Invalid ID: br cannot be built in debug mode
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default", assert_error=True)
-
-
-def test_create_build_compatible_two_profiles(setup_client_with_build_requires):
-    client = setup_client_with_build_requires
-    client.run("create br_build_compatible.py")
-    client.run("create consumer.py -s:b build_type=Debug -pr:b default "
-               "-s:h build_type=Debug -pr:h default")
+           def package_id(self):
+               if self.settings.os == "Windows":
+                   compatible_pkg = self.info.clone()
+                   compatible_pkg.settings.os = "Linux"
+                   self.compatible_packages.append(compatible_pkg)
+       """)
+    package_id = "cb054d0b3e1ca595dc66bc2339d40f1f8f04ab31"
+    windows_package_id = "3475bd55b91ae904ac96fde0f106a136ab951a5e"

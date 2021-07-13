@@ -151,7 +151,7 @@ class ConanInvalidConfiguration(ConanExceptionInUserConanfileMethod):
     pass
 
 
-class ConanUnbuildableConfiguration(ConanExceptionInUserConanfileMethod):
+class ConanInvalidBuildConfiguration(ConanExceptionInUserConanfileMethod):
     """
     This binary, for the requested configuration cannot be built, but a
     compatible_package, or built with other configuration, might be possible
