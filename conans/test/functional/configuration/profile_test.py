@@ -739,6 +739,36 @@ def test_consumer_specific_settings():
         assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
 
 
+def test_create_and_priority_of_consumer_specific_setting():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("foo").with_version("1.0"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s foo:build_type=Debug")
+    assert "I'm foo and my build type is Debug" in client.out
+
+    client.run("create . -s foo:build_type=Debug -s $:build_type=Release")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # The order doesn't matter
+    client.run("create . -s $:build_type=Release -s foo:build_type=Debug ")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # With test_package also works
+    test = str(GenConanfile().with_test("pass").with_setting("build_type"))
+    test += configure
+    client.save({"test_package/conanfile.py": test})
+    client.run("create . -s $:build_type=Debug -s build_type=Release")
+    assert "I'm foo and my build type is Debug" in client.out
+    # the test package recipe has debug too
+    assert "I'm None and my build type is Debug" in client.out
+
+
 def test_consumer_specific_settings_from_profile():
     client = TestClient()
     conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))

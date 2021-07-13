@@ -172,7 +172,7 @@ class ConanFileLoader(object):
         return conanfile
 
     @staticmethod
-    def _initialize_conanfile(conanfile, profile, is_consumer):
+    def _initialize_conanfile(conanfile, profile):
         # Prepare the settings for the loaded conanfile
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
@@ -187,7 +187,7 @@ class ConanFileLoader(object):
             # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
             pkg_settings = package_settings_values.get(conanfile.name)
 
-            if is_consumer and "$" in package_settings_values:
+            if conanfile.develop and "$" in package_settings_values:
                 # "$" overrides the "name" scoped settings.
                 pkg_settings = package_settings_values.get("$")
 
@@ -217,10 +217,10 @@ class ConanFileLoader(object):
         conanfile.output.scope = conanfile.display_name
         conanfile.in_local_cache = False
         try:
-            self._initialize_conanfile(conanfile, profile_host, is_consumer=True)
+            conanfile.develop = True
+            self._initialize_conanfile(conanfile, profile_host)
 
             # The consumer specific
-            conanfile.develop = True
             profile_host.user_options.descope_options(conanfile.name)
             conanfile.options.initialize_upstream(profile_host.user_options,
                                                   name=conanfile.name)
@@ -249,7 +249,7 @@ class ConanFileLoader(object):
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True
         try:
-            self._initialize_conanfile(conanfile, profile, is_consumer=False)
+            self._initialize_conanfile(conanfile, profile)
             return conanfile
         except ConanInvalidConfiguration:
             raise
