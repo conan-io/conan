@@ -115,10 +115,10 @@ class TestRemotes(TestListRecipesBase):
         expected_output = (
             r"Local Cache:\n"
             r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/2.0.0@user/channel#.*\n"
             r"    test_recipe/2.1.0@user/channel#.*\n"
+            r"    test_recipe/2.0.0@user/channel#.*\n"
+            r"    test_recipe/1.1.0@user/channel#.*\n"
+            r"    test_recipe/1.0.0@user/channel#.*\n"
             r"remote1:\n"
             r"  test_recipe\n"
             r"    test_recipe/1.0.0@user/channel\n"
