@@ -63,9 +63,10 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remote list_pref pkg/1.0@")
         self.assertNotIn("pkg", client.out)
         client.run("remote list_ref --no-remote")
-        self.assertIn("pkg/1.0: None", client.out)
+        latest_prev = client.get_latest_prev("pkg/1.0")
+        self.assertIn(f"{latest_prev.ref.full_str()}: None", client.out)
         client.run("remote list_pref pkg/1.0 --no-remote")
-        self.assertIn("pkg/1.0#f3367e0e7d170aa12abccb175fee5f97:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9#cf924fbb5ed463b8bb960cf3a4ad4f3a: None", client.out)
+        self.assertIn(f"{latest_prev.full_str()}: None", client.out)
 
     @staticmethod
     def _create(client, number, version, modifier=""):
@@ -143,11 +144,10 @@ class MultiRemotesTest(unittest.TestCase):
         # client_b.run("info Hello0/0.0@lasote/stable -u")
         # self.assertIn("Recipe: Cache", client_b.out)
         # self.assertIn("Binary: Cache", client_b.out)
-        jander = client_b.cache.dump()
         client_b.run("remote list_ref")
-        self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
+        latest_rrev = client_b.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.0@lasote/stable"))
+        self.assertIn(f"{latest_rrev.full_str()}: default", client_b.out)
 
-    @pytest.mark.xfail(reason="cache2.0 --update revisit")
     def test_conan_install_update(self):
         """
         Checks conan install --update works only with the remote associated
@@ -165,13 +165,13 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remove '*' -f")
 
         client.run("install Hello0/0.0@lasote/stable")
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
+        # If we don't set a remote we find between all remotes and get the latest
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Downloaded", client.out)
         client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Cache", client.out)
 
-        # Check that it really updates from the indicated remote
-        client.run("install Hello0/0.0@lasote/stable --update -r local")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
+        client.run("install Hello0/0.0@lasote/stable --update -r default")
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
 
         sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
