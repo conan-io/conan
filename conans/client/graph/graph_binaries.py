@@ -83,10 +83,7 @@ class GraphBinariesAnalyzer(object):
 
         if not node.binary:
             node.binary = BINARY_CACHE
-            # TODO: cache2.0: remove metadata
-            # metadata = metadata or package_layout.load_metadata()
-            # node.prev = metadata.packages[pref.id].revision
-            assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
+            assert node.prev, f"PREV for {str(pref)} is None"
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
