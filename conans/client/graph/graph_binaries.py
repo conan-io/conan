@@ -82,7 +82,10 @@ class GraphBinariesAnalyzer(object):
                 else:
                     if cache_time < remote_latest_prev_time and remote_latest_prev != pref:
                         node.binary = BINARY_UPDATE
-                        node.prev = remote_latest_prev.revision  # With revision
+                        node.prev = remote_latest_prev.revision
+                        output.warn("Current package is older than remote upstream one")
+                    else:
+                        output.warn("Current package is newer than remote upstream one")
             elif remotes:
                 pass  # Current behavior: no remote explicit or in metadata, do not update
             else:
