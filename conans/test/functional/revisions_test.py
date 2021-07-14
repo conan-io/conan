@@ -147,7 +147,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Read current revision
         self.assertEqual(pref.ref.revision, self.c_v2.recipe_revision(self.ref))
 
-    @pytest.mark.xfail(reason="cache2.0 rewrite with db info instead of metadata")
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get
         the revision from upstream"""
@@ -157,7 +156,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
 
         # Remove all from c_v2 local
         self.c_v2.remove_all()
-        self.assertRaises(RecipeNotFoundException, self.c_v2.recipe_revision, self.ref)
+        assert len(self.c_v2.cache.get_recipe_revisions(self.ref)) == 0
 
         self.c_v2.run("install {}".format(self.ref))
         local_rev = self.c_v2.recipe_revision(self.ref)
@@ -200,7 +199,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         prev = client.package_revision(pref2)
         self.assertIsNotNone(prev)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_update_on_package_update(self):
         """
         A client v2 upload RREV with PREV1
@@ -249,7 +247,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         client.run(command, assert_error=True)
         self.assertIn("ERROR: Missing prebuilt package for '{}'".format(self.ref), client.out)
 
-    @pytest.mark.xfail(reason="cache2.0 revisit with --update flows")
     def test_revision_install_explicit_mismatch_rrev(self):
         # If we have a recipe in local, but we request to install a different one with RREV
         # It fail and won't look the remotes unless --update
@@ -257,9 +254,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         ref = client.export(self.ref)
         command = "install {}#fakerevision".format(ref)
         client.run(command, assert_error=True)
-        self.assertIn("The 'f3367e0e7d170aa12abccb175fee5f97' revision recipe in the local "
-                      "cache doesn't match the requested 'lib/1.0@conan/testing#fakerevision'. "
-                      "Use '--update' to check in the remote", client.out)
+        self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
         command = "install {}#fakerevision --update".format(ref)
         client.run(command, assert_error=True)
         self.assertIn("Unable to find '{}#fakerevision' in remotes".format(ref), client.out)
@@ -1040,12 +1035,11 @@ class ServerRevisionsIndexes(unittest.TestCase):
         self.assertEqual(revs, [pref4.revision])
 
 
-@pytest.mark.xfail(reason="cache2.0: revisit when --update flows implemented")
 def test_necessary_update():
     # https://github.com/conan-io/conan/issues/7235
+    # allow_explicit_revision_update should not be necessary with new default flows and multi
+    # revision cache
     c = TestClient(default_server_user=True)
-    save(c.cache.new_config_path, "core:allow_explicit_revision_update=True")
-    c.run("config set general.revisions_enabled=True")
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . pkg/0.1@")
     rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
