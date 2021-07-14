@@ -309,6 +309,7 @@ class RevisionsUpdateTest(unittest.TestCase):
         self.assertIn("PkgA/0.1: Downloaded recipe revision 7f1110e1ae8d852b6d55f7f121864de6",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_version_ranges_revisions_update(self):
         # https://github.com/conan-io/conan/issues/7333
         client = TestClient(default_server_user=True)
@@ -554,3 +555,18 @@ def test_error_test_command():
     client.run("test test_package pkg/1.0@")
     assert "dep/1.0" not in client.out
     assert "dep/1.1" in client.out
+
+
+def test_override_not_locked():
+    # https://github.com/conan-io/conan/pull/8907
+    client = TestClient()
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": GenConanfile().with_requires("dep/[*]"),
+                 "consumer/conanfile.py":
+                     GenConanfile().with_requirement("pkg/1.0").with_requirement("dep/1.0",
+                                                                                 override=True)})
+    client.run("create dep dep/1.0@")
+    client.run("create dep dep/1.1@")
+    client.run("create pkg pkg/1.0@")
+    client.run("lock create consumer/conanfile.py --lockfile-out=app1.lock")
+    client.run("install consumer/conanfile.py --lockfile app1.lock")

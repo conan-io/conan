@@ -35,7 +35,6 @@ from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, colorama_initialize
 from conans.client.profile_loader import profile_from_args, read_profile
 from conans.client.recorder.action_recorder import ActionRecorder
-from conans.client.recorder.search_recorder import SearchRecorder
 from conans.client.recorder.upload_recoder import UploadRecorder
 from conans.client.remote_manager import RemoteManager
 from conans.client.remover import ConanRemover
@@ -871,49 +870,31 @@ class ConanAPIV1(object):
             exc.info = info
             raise
 
-    @api_method
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
-        search_recorder = SearchRecorder()
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
-
-        try:
-            references = search.search_recipes(pattern, remote_name, case_sensitive)
-        except ConanException as exc:
-            search_recorder.error = True
-            exc.info = search_recorder.get_info()
-            raise
-
-        for remote_name, refs in references.items():
-            for ref in refs:
-                search_recorder.add_recipe(remote_name, ref, with_packages=False)
-        return search_recorder.get_info()
-
-    @api_method
-    def search_packages(self, reference, query=None, remote_name=None):
-        search_recorder = SearchRecorder()
-        remotes = self.app.cache.registry.load_remotes()
-        search = Search(self.app.cache, self.app.remote_manager, remotes)
-
-        try:
-            ref = ConanFileReference.loads(reference)
-            references = search.search_packages(ref, remote_name, query=query)
-        except ConanException as exc:
-            search_recorder.error = True
-            exc.info = search_recorder.get_info()
-            raise
-
-        for remote_name, remote_ref in references.items():
-            search_recorder.add_recipe(remote_name, ref)
-            if remote_ref.ordered_packages:
-                for package_id, properties in remote_ref.ordered_packages.items():
-                    # Artifactory uses field 'requires', conan_center 'full_requires'
-                    requires = properties.get("requires", []) or properties.get("full_requires", [])
-                    search_recorder.add_package(remote_name, ref,
-                                                package_id, properties.get("options", []),
-                                                properties.get("settings", []),
-                                                requires)
-        return search_recorder.get_info()
+    # @api_method
+    # def search_packages(self, reference, query=None, remote_name=None):
+    #     search_recorder = SearchRecorder()
+    #     remotes = self.app.cache.registry.load_remotes()
+    #     search = Search(self.app.cache, self.app.remote_manager, remotes)
+    #
+    #     try:
+    #         ref = ConanFileReference.loads(reference)
+    #         references = search.search_packages(ref, remote_name, query=query)
+    #     except ConanException as exc:
+    #         search_recorder.error = True
+    #         exc.info = search_recorder.get_info()
+    #         raise
+    #
+    #     for remote_name, remote_ref in references.items():
+    #         search_recorder.add_recipe(remote_name, ref)
+    #         if remote_ref.ordered_packages:
+    #             for package_id, properties in remote_ref.ordered_packages.items():
+    #                 # Artifactory uses field 'requires', conan_center 'full_requires'
+    #                 requires = properties.get("requires", []) or properties.get("full_requires", [])
+    #                 search_recorder.add_package(remote_name, ref,
+    #                                             package_id, properties.get("options", []),
+    #                                             properties.get("settings", []),
+    #                                             requires)
+    #     return search_recorder.get_info()
 
     @api_method
     def upload(self, pattern, package=None, remote_name=None, all_packages=False, confirm=False,

@@ -20,6 +20,8 @@ from conans.util.log import logger
 
 CLI_V2_COMMANDS = [
     'help',
+    'search',
+    'list'
 ]
 
 
@@ -126,10 +128,29 @@ class Cli(object):
         ) and is_config_install_scheduled(self._conan_api):
             self._conan_api.config_install(None, None)
 
-        command.run(self._conan_api, self._commands[command_argument].parser,
-                    args[0][1:], commands=self._commands, groups=self._groups)
+        try:
+            command.run(self._conan_api, self._commands[command_argument].parser,
+                        args[0][1:], commands=self._commands, groups=self._groups)
+            exit_error = SUCCESS
+        except SystemExit as exc:
+            if exc.code != 0:
+                logger.error(exc)
+                self._conan_api.out.error("Exiting with code: %d" % exc.code)
+            exit_error = exc.code
+        except ConanInvalidConfiguration as exc:
+            exit_error = ERROR_INVALID_CONFIGURATION
+            self._conan_api.out.error(exc)
+        except ConanException as exc:
+            exit_error = ERROR_GENERAL
+            self._conan_api.out.error(exc)
+        except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
+            exit_error = ERROR_GENERAL
+            msg = exception_message_safe(exc)
+            self._conan_api.out.error(msg)
 
-        return SUCCESS
+        return exit_error
 
 
 def main(args):
@@ -147,6 +168,7 @@ def main(args):
         6: Invalid configuration (done)
     """
 
+    # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
     if command_argument not in CLI_V2_COMMANDS:
         from conans.client.command import main as v1_main
@@ -178,25 +200,6 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    try:
-        cli = Cli(conan_api)
-        exit_error = cli.run(args)
-    except SystemExit as exc:
-        if exc.code != 0:
-            logger.error(exc)
-            conan_api.out.error("Exiting with code: %d" % exc.code)
-        exit_error = exc.code
-    except ConanInvalidConfiguration as exc:
-        exit_error = ERROR_INVALID_CONFIGURATION
-        conan_api.out.error(exc)
-    except ConanException as exc:
-        exit_error = ERROR_GENERAL
-        conan_api.out.error(exc)
-    except Exception as exc:
-        import traceback
-        print(traceback.format_exc())
-        exit_error = ERROR_GENERAL
-        msg = exception_message_safe(exc)
-        conan_api.out.error(msg)
-
+    cli = Cli(conan_api)
+    exit_error = cli.run(args)
     sys.exit(exit_error)

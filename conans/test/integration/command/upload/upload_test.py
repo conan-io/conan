@@ -500,6 +500,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
         self.assertIn("Uploading conan_package.tgz", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_skip_upload(self):
         """ Check that the option --dry does not upload anything
         """
@@ -804,7 +805,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@user/testing --all -r default")
         assert "Uploading Hello0/1.2.1@user/testing to remote" in client.out
 
-    @pytest.mark.xfail(reason="cache2.0 will pass when search with --revisions output is fixed")
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload_with_recipe_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
@@ -817,6 +818,7 @@ class MyPkg(ConanFile):
         search_result = client.search("pkg/1.0@user/channel --revisions -r default")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_upload_with_package_revision(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)

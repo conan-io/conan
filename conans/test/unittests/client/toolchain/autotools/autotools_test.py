@@ -2,10 +2,9 @@ import os
 
 from mock import Mock
 
-from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE
+from conan.tools.files import save_toolchain_args
 from conan.tools.gnu import Autotools
 from conans import ConanFile
-from conans.client.tools.files import save
 from conans.model.conf import Conf
 from conans.test.unittests.util.tools_test import RunnerMock
 from conans.test.utils.mocks import MockSettings
@@ -15,10 +14,10 @@ from conans.test.utils.test_files import temp_folder
 def test_configure_arguments():
     tmp = temp_folder()
     os.chdir(tmp)
-    save(CONAN_TOOLCHAIN_ARGS_FILE, """
-    {"configure_args": "my_configure_args",
-     "make_args": "my_make_args"}
-    """)
+    save_toolchain_args({
+        "configure_args": "my_configure_args",
+        "make_args": "my_make_args"}
+    )
     runner = RunnerMock()
     conanfile = ConanFile(Mock(), runner=runner)
     conanfile.settings = MockSettings({})

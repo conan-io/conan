@@ -18,6 +18,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         client.run("download pkg/1.0@user/channel#fakerevision", assert_error=True)
         self.assertIn("ERROR: Recipe not found: 'pkg/1.0@user/channel#fakerevision'", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev(self):
         ref = ConanFileReference.loads("pkg/1.0@user/channel")
         client = TurboTestClient(default_server_user=True)
@@ -32,6 +33,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         search_result = client.search("pkg/1.0@user/channel --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_rrev_no_user_channel(self):
         ref = ConanFileReference.loads("pkg/1.0@")
         servers = {"default": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
@@ -49,6 +51,7 @@ class DownloadRevisionsTest(unittest.TestCase):
         search_result = client.search("pkg/1.0@ --revisions")[0]
         self.assertIn(pref.ref.revision, search_result["revision"])
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_download_revs_enabled_with_prev(self):
         # https://github.com/conan-io/conan/issues/6106
         ref = ConanFileReference.loads("pkg/1.0@user/channel")

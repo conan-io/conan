@@ -55,6 +55,7 @@ class RemoveRegistryTest(unittest.TestCase):
 
 class RemoveOutdatedTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_remove_query(self):
         test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
         servers = {"default": test_server}

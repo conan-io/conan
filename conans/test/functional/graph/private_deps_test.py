@@ -280,6 +280,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.out)
         self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_consumer_private(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
         self._export_upload("Hello1", "0.1", deps=["Hello0/0.1@lasote/stable"],
