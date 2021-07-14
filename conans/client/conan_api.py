@@ -962,7 +962,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_ref(self, no_remote=False):
         result = {}
-        for ref in self.app.cache.all_refs():
+        for ref in self.app.cache.all_refs(only_latest_rrev=True):
             result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
             return {str(r): remote_name for r, remote_name in result.items() if not remote_name}

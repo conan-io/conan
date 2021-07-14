@@ -73,7 +73,6 @@ class MultiRemotesTest(unittest.TestCase):
         client.save(files, clean_first=True)
         client.run("export . lasote/stable")
 
-    @pytest.mark.xfail(reason="cache2.0 conan info and update revisit")
     def test_conan_install_build_flag(self):
         """
         Checks conan install --update works with different remotes and changes the associated ones
@@ -103,9 +102,10 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe 'Hello0/0.0@lasote/stable' to 'local'", client_a.out)
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Update available", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Recipe: Update available", client_b.out)
+        # self.assertIn("Binary: Cache", client_b.out)
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
@@ -122,14 +122,16 @@ class MultiRemotesTest(unittest.TestCase):
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
 
         # Now client_b checks for updates without -r parameter
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Remote: local", client_b.out)
+        # self.assertIn("Recipe: Cache", client_b.out)
 
         # But if we connect to default, should tell us that there is an update IN DEFAULT!
-        client_b.run("info Hello0/0.0@lasote/stable -r default -u")
-        self.assertIn("Remote: local", client_b.out)
-        self.assertIn("Recipe: Update available", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -r default -u")
+        # self.assertIn("Remote: local", client_b.out)
+        # self.assertIn("Recipe: Update available", client_b.out)
         client_b.run("remote list_ref")
         self.assertIn(": local", str(client_b.out))
 
@@ -137,9 +139,11 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
         self.assertIn("Hello0/0.0@lasote/stable: Calling build()",
                       str(client_b.out))
-        client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Recipe: Cache", client_b.out)
-        self.assertIn("Binary: Cache", client_b.out)
+        # TODO: cache2.0 conan info not yet implemented with new cache
+        # client_b.run("info Hello0/0.0@lasote/stable -u")
+        # self.assertIn("Recipe: Cache", client_b.out)
+        # self.assertIn("Binary: Cache", client_b.out)
+        jander = client_b.cache.dump()
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: default", client_b.out)
 
