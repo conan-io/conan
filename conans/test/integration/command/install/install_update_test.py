@@ -13,7 +13,6 @@ from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServ
 from conans.util.files import load, save
 
 
-@pytest.mark.xfail(reason="cache2.0 TODO: revisit with new update flows")
 def test_update_binaries():
     client = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
@@ -56,13 +55,12 @@ def test_update_binaries():
     client2.run("create . Pkg/0.1@lasote/testing")
     client2.run("install Pkg/0.1@lasote/testing")
     value2 = load(os.path.join(client2.current_folder, "file.txt"))
-    client2.run("install Pkg/0.1@lasote/testing --update")
+    client2.run("install Pkg/0.1@lasote/testing --update -r default")
     assert "Current package is newer than remote upstream one" in client2.out
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
     assert value2 == new_value
 
 
-@pytest.mark.xfail(reason="cache2.0 TODO: revisit with new update flows")
 def test_update_not_date():
     client = TestClient(default_server_user=True)
     # Regression for https://github.com/conan-io/conan/issues/949
@@ -77,22 +75,18 @@ def test_update_not_date():
     client.run("remote list_ref")
     assert "Hello0/1.0@lasote/stable" in client.out
     client.run("remote list_pref Hello0/1.0@lasote/stable")
-    package_reference = f"Hello0/1.0@lasote/stable:{NO_SETTINGS_PACKAGE_ID}"
+    prev = client.get_latest_prev("Hello0/1.0@lasote/stable")
+    package_reference = f"Hello0/1.0@lasote/stable#{prev.ref.revision}:{prev.id}"
     assert package_reference in client.out
 
     ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
     export_folder = client.get_latest_ref_layout(ref).export()
     recipe_manifest = os.path.join(export_folder, CONAN_MANIFEST)
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-    package_folder = client.get_latest_pkg_layout(pref).package()
+    package_folder = client.cache.pkg_layout(prev).package()
     package_manifest = os.path.join(package_folder, CONAN_MANIFEST)
 
-    def timestamps():
-        recipe_timestamp = load(recipe_manifest).splitlines()[0]
-        package_timestamp = load(package_manifest).splitlines()[0]
-        return recipe_timestamp, package_timestamp
-
-    initial_timestamps = timestamps()
+    initial_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
+    initial_package_timestamp = client.cache.get_timestamp(prev)
 
     time.sleep(1)
 
@@ -105,10 +99,13 @@ def test_update_not_date():
     assert "Hello0/1.0@lasote/stable" in client.out
 
     client.run("remote list_pref Hello0/1.0@lasote/stable")
-    assert f"Hello0/1.0@lasote/stable:{NO_SETTINGS_PACKAGE_ID}" in client.out
+    assert f"Hello0/1.0@lasote/stable#{prev.ref.revision}:{prev.id}" in client.out
 
-    rebuild_timestamps = timestamps()
-    assert rebuild_timestamps != initial_timestamps
+    rebuild_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
+    rebuild_package_timestamp = client.cache.get_timestamp(client.get_latest_prev(ref))
+
+    assert rebuild_recipe_timestamp != initial_recipe_timestamp
+    assert rebuild_package_timestamp != initial_package_timestamp
 
     # back to the consumer, try to update
     client.save({"conanfile.py": GenConanfile("Hello1", "1.0").
@@ -117,23 +114,15 @@ def test_update_not_date():
     client.run("install . --update")
     # *1 With revisions here is removing the package because it doesn't belong to the recipe
 
-    assert "Hello0/1.0@lasote/stable from 'default' - Newer" in client.out
-    failed_update_timestamps = timestamps()
-    assert rebuild_timestamps == failed_update_timestamps
+    assert "Hello0/1.0@lasote/stable from local cache - Newer" in client.out
 
-    # hack manifests, put old time
-    for manifest_file in (recipe_manifest, package_manifest):
-        manifest = load(manifest_file)
-        lines = manifest.splitlines()
-        lines[0] = "123"
-        save(manifest_file, "\n".join(lines))
+    failed_update_recipe_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(ref))
+    failed_update_package_timestamp = client.cache.get_timestamp(client.get_latest_prev(ref))
 
-    client.run("install . --update")
-    update_timestamps = timestamps()
-    assert update_timestamps == initial_timestamps
+    assert rebuild_recipe_timestamp == failed_update_recipe_timestamp
+    assert rebuild_package_timestamp == failed_update_package_timestamp
 
 
-@pytest.mark.xfail(reason="cache2.0 TODO: revisit with new update flows")
 def test_reuse():
     client = TestClient(default_server_user=True)
     conanfile = GenConanfile("Hello0", "1.0").with_exports("*").with_package("self.copy('*')")
@@ -183,7 +172,6 @@ def test_upload_doesnt_follow_pref():
     assert "Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
 def test_install_update_following_pref():
     conanfile = textwrap.dedent("""
         import os, random
@@ -228,7 +216,6 @@ def test_update_binaries_failed():
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no remote defined" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
 def test_update_binaries_no_package_error():
     client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile()})
@@ -239,43 +226,6 @@ def test_update_binaries_no_package_error():
     assert "Pkg/0.1@lasote/testing: WARN: Can't update, no package in remote" in client.out
 
 
-@pytest.mark.xfail(reason="cache2.0: revisit with --update flows")
-def test_remove_old_sources():
-    # https://github.com/conan-io/conan/issues/1841
-    test_server = TestServer()
-
-    def upload(header_content):
-        c = TestClient(servers={"default": test_server}, users={"default": [("lasote", "mypass")]})
-        base = textwrap.dedent('''
-            from conans import ConanFile
-            class ConanLib(ConanFile):
-                exports_sources = "*"
-                def package(self):
-                    self.copy("*")
-            ''')
-        c.save({"conanfile.py": base,
-                "header.h": header_content})
-        c.run("create . Pkg/0.1@lasote/channel")
-        c.run("upload * --confirm --all")
-        return c
-
-    client = upload("mycontent1")
-    time.sleep(1)
-    upload("mycontent2")
-
-    client.run("install Pkg/0.1@lasote/channel -u")
-
-    # The binary package is not updated but downloaded, because the local one we have
-    # belongs to a different revision and it is removed
-    assert "Pkg/0.1@lasote/channel:%s - Download" % NO_SETTINGS_PACKAGE_ID in client.out
-    assert "Pkg/0.1@lasote/channel: Retrieving package %s" % NO_SETTINGS_PACKAGE_ID in client.out
-    ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
-    pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-    header = os.path.join(client.get_latest_pkg_layout(pref).package(), "header.h")
-    assert load(header) == "mycontent2"
-
-
-@pytest.mark.xfail(reason="cache2.0")
 def test_fail_usefully_when_failing_retrieving_package():
     ref = ConanFileReference.loads("lib/1.0@conan/stable")
     ref2 = ConanFileReference.loads("lib2/1.0@conan/stable")
