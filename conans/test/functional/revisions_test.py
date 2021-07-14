@@ -67,6 +67,8 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
             other_v2.create(self.ref, conanfile=conanfile)
         other_v2.upload_all(self.ref, remote="remote2")
 
+        remote2_latest_prev = other_v2.get_latest_prev(self.ref)
+
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
         # doing --update it will find a newer same revision in remote2 and update the date and server
         # of the revision in the local cache
@@ -74,19 +76,16 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         #  is this what we want?
         self.c_v2.run("install {} --update".format(self.ref))
         self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
-        self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing:{} - Update".format(pref.id), self.c_v2.out)
+        self.assertIn("lib/1.0@conan/testing: Downloaded package revision {}".
+                      format(remote2_latest_prev.revision), self.c_v2.out)
+        assert self.c_v2.cache.get_remote(remote2_latest_prev) == "remote2"
+        assert self.c_v2.cache.get_remote(self.c_v2.cache.get_latest_rrev(self.ref)) == "remote2"
 
         # This should do the same than before
         self.c_v2.run("install {} --update -r remote2".format(self.ref))
         self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache", self.c_v2.out)
         self.assertIn("lib/1.0@conan/testing:{} - Cache".format(pref.id), self.c_v2.out)
-
-        # TODO: cache2.0 In 2.0 --update updates the server in the registry
-        #  is this the desired behaviour?
-        latest_rrev = self.c_v2.cache.get_latest_rrev(self.ref)
-        assert self.c_v2.cache.get_remote(latest_rrev) == "remote2"
-        latest_prev = self.c_v2.cache.get_latest_prev(pref)
-        assert self.c_v2.cache.get_remote(latest_prev) == "default"
 
     def test_diamond_revisions_conflict(self):
         """ If we have a diamond because of pinned conflicting revisions in the requirements,

@@ -1,4 +1,5 @@
-from conan.cache.conan_reference import ConanReference
+from datetime import datetime, timezone
+
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
@@ -10,6 +11,7 @@ from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
+from conans.util.dates import from_iso8601_to_datetime
 
 
 class GraphBinariesAnalyzer(object):
@@ -60,22 +62,27 @@ class GraphBinariesAnalyzer(object):
                 package_layout.package_remove()
                 return
 
-    def _evaluate_cache_pkg(self, node, package_layout, pref, remote, remotes, update):
+    def _evaluate_cache_pkg(self, node, pref, remote, remotes, update):
         if update:
             output = node.conanfile.output
             if remote:
                 try:
-                    tmp = self._remote_manager.get_package_manifest(pref, remote)
-                    upstream_manifest, pref = tmp
+                    # if there's a later package revision in the remote we will take that one
+                    pkg_id = PackageReference(pref.ref, pref.id)
+                    remote_prevs = self._remote_manager.get_package_revisions(pkg_id, remote)
+                    remote_latest_prev = PackageReference(pref.ref, pref.id,
+                                                          revision=remote_prevs[0].get("revision"))
+                    remote_latest_prev_time = from_iso8601_to_datetime(remote_prevs[0].get("time"))
+                    # TODO: check the timezone stuff
+                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(pref), timezone.utc)
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    package_folder = package_layout.package()
-                    if self._check_update(upstream_manifest, package_folder, output):
+                    if cache_time < remote_latest_prev_time:
                         node.binary = BINARY_UPDATE
-                        node.prev = pref.revision  # With revision
+                        node.prev = remote_latest_prev.revision  # With revision
             elif remotes:
                 pass  # Current behavior: no remote explicit or in metadata, do not update
             else:
@@ -242,8 +249,7 @@ class GraphBinariesAnalyzer(object):
 
         if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
             node.prev = latest_prev_for_pkg_id.revision
-            package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id)
-            self._evaluate_cache_pkg(node, package_layout, latest_prev_for_pkg_id, remote, remotes, update)
+            self._evaluate_cache_pkg(node, latest_prev_for_pkg_id, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
             remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
