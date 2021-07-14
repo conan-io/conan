@@ -1,12 +1,15 @@
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 
 
 class InfoOptionsTest(unittest.TestCase):
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_info_options(self):
         # packages with dash
         client = TestClient()

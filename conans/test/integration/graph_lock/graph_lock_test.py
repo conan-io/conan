@@ -309,6 +309,7 @@ class RevisionsUpdateTest(unittest.TestCase):
         self.assertIn("PkgA/0.1: Downloaded recipe revision 7f1110e1ae8d852b6d55f7f121864de6",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_version_ranges_revisions_update(self):
         # https://github.com/conan-io/conan/issues/7333
         client = TestClient(default_server_user=True)

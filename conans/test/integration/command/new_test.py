@@ -2,6 +2,7 @@ import os
 import textwrap
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans import __version__ as client_version
@@ -120,6 +121,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t')
@@ -152,6 +154,7 @@ class NewCommandTest(unittest.TestCase):
                            ("my_package", "MyPackage"),
                            ("my.Package", "MyPackage"),
                            ("my+package", "MyPackage")])
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_naming(self, package_name, python_class_name):
         """ packages with dash
         """
@@ -171,6 +174,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("{}/1.3@myuser/testing".format(package_name), client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_header(self):
         client = TestClient()
         client.run('new MyPackage/1.3 -t -i')
@@ -189,6 +193,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_sources(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t -s')
@@ -206,6 +211,7 @@ class NewCommandTest(unittest.TestCase):
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_new_purec(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -c -t --source')

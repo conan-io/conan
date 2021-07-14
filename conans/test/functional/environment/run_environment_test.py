@@ -48,6 +48,7 @@ class RunEnvironmentTest(unittest.TestCase):
         self.assertIn("Hello Hello0", client.out)
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 @pytest.mark.tool_cmake
 class RunEnvironmentSharedTest(unittest.TestCase):
 
