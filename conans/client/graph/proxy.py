@@ -87,8 +87,10 @@ class ConanProxy(object):
                         output.info("Retrieving from remote '%s'..." % remote.name)
                         remote, new_ref = self._download_recipe(latest_rrev, output,
                                                                 remotes, remote)
+                        new_recipe_layout = self._cache.ref_layout(new_ref)
+                        new_conanfile_path = new_recipe_layout.conanfile()
                         status = RECIPE_UPDATED
-                        return conanfile_path, status, remote, new_ref
+                        return new_conanfile_path, status, remote, new_ref
                     else:
                         status = RECIPE_NEWER
                 else:
