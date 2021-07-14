@@ -80,7 +80,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    if cache_time < remote_latest_prev_time:
+                    if cache_time < remote_latest_prev_time and remote_latest_prev != pref:
                         node.binary = BINARY_UPDATE
                         node.prev = remote_latest_prev.revision  # With revision
             elif remotes:
