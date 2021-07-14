@@ -962,12 +962,12 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_ref(self, no_remote=False):
         result = {}
-        for ref in self.app.cache.all_refs(only_latest_rrev=True):
+        for ref in self.app.cache.all_refs():
             result[ref] = self.app.cache.get_remote(ref)
         if no_remote:
-            return {str(r): remote_name for r, remote_name in result.items() if not remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if not remote_name}
         else:
-            return {str(r): remote_name for r, remote_name in result.items() if remote_name}
+            return {r.full_str(): remote_name for r, remote_name in result.items() if remote_name}
 
     @api_method
     def remote_add_ref(self, reference, remote_name):
