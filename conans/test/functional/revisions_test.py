@@ -1033,25 +1033,3 @@ class ServerRevisionsIndexes(unittest.TestCase):
         revs = [r.revision
                 for r in self.server.server_store.get_package_revisions(pref)]
         self.assertEqual(revs, [pref4.revision])
-
-
-def test_necessary_update():
-    # https://github.com/conan-io/conan/issues/7235
-    # allow_explicit_revision_update should not be necessary with new default flows and multi
-    # revision cache
-    c = TestClient(default_server_user=True)
-    c.save({"conanfile.py": GenConanfile()})
-    c.run("create . pkg/0.1@")
-    rrev1 = "f3367e0e7d170aa12abccb175fee5f97"
-    c.run("upload * --all -c")
-    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    c.run("create . ")
-    rrev2 = "27ec09effe18a84f465dbc350e496335"
-    c.run("upload * --all -c")
-
-    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev1))})
-    c.run("install .")
-    assert rrev1 in c.out
-    c.save({"conanfile.py": GenConanfile("app", "0.1").with_requires("pkg/0.1#{}".format(rrev2))})
-    c.run("install .")
-    assert rrev2 in c.out
