@@ -535,7 +535,8 @@ class ConanAPIV1(object):
                           manifests_interactive=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
-                          lockfile_node_id=None, is_build_require=False, conf=None):
+                          lockfile_node_id=None, is_build_require=False, conf=None,
+                          user_space_install=False):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -560,7 +561,8 @@ class ConanAPIV1(object):
                          generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id,
                          is_build_require=is_build_require,
-                         add_txt_generator=False)
+                         add_txt_generator=False,
+                         user_space_install=user_space_install)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -579,7 +581,8 @@ class ConanAPIV1(object):
                 remote_name=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, lockfile_out=None, profile_build=None, conf=None):
+                lockfile=None, lockfile_out=None, profile_build=None, conf=None,
+                local_folder=False):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -611,7 +614,8 @@ class ConanAPIV1(object):
                          manifest_interactive=manifest_interactive,
                          generators=generators,
                          no_imports=no_imports,
-                         recorder=recorder)
+                         recorder=recorder,
+                         local_folder=local_folder)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)

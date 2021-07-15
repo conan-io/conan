@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL
@@ -22,7 +23,7 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
                  build_modes=None, update=False, manifest_folder=None, manifest_verify=False,
                  manifest_interactive=False, generators=None, no_imports=False,
                  create_reference=None, keep_build=False, recorder=None, lockfile_node_id=None,
-                 is_build_require=False, add_txt_generator=True):
+                 is_build_require=False, add_txt_generator=True, local_folder=False):
 
     """ Fetch and build all dependencies for the given reference
     @param app: The ConanApp instance with all collaborators
@@ -96,6 +97,17 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     conanfile.folders.set_base_install(install_folder)
     conanfile.folders.set_base_imports(install_folder)
     conanfile.folders.set_base_generators(base_folder)
+
+    if local_folder:
+        for cf in conanfile.dependencies.host.values():  # TODO: build requires? collisions suffix?
+            _name = cf.ref.name
+            if conanfile.settings.get_safe("build_type"):
+                _name += "-{}".format(str(conanfile.settings.build_type))
+            _f = os.path.join(conanfile.generators_folder, _name)
+            shutil.copytree(cf._conanfile.package_folder, _f, symlinks=True)
+            cf._conanfile.folders.set_base_package(_f)
+            if hasattr(cf._conanfile, "post_install"):  # TODO we need a name
+                cf._conanfile.post_install()
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 

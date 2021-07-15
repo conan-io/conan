@@ -497,6 +497,10 @@ class Command(object):
         parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
 
+        parser.add_argument("-lf", "--local-folder", default=False, action='store_true',
+                            help="Fetch all the binary packages to the user space generator folder "
+                                 "and redirects the generators to that folder")
+
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
 
@@ -529,7 +533,8 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile,
-                                           lockfile_out=args.lockfile_out)
+                                           lockfile_out=args.lockfile_out,
+                                           local_folder=args.local_folder)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -554,7 +559,8 @@ class Command(object):
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
                                                      lockfile_node_id=args.lockfile_node_id,
-                                                     is_build_require=args.build_require)
+                                                     is_build_require=args.build_require,
+                                                     user_space_install=args.user_space)
 
         except ConanException as exc:
             info = exc.info
