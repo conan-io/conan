@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
+from dateutil.tz import gettz
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
@@ -73,8 +74,7 @@ class GraphBinariesAnalyzer(object):
                     remote_latest_prev = PackageReference(pref.ref, pref.id,
                                                           revision=remote_prevs[0].get("revision"))
                     remote_latest_prev_time = from_iso8601_to_datetime(remote_prevs[0].get("time"))
-                    # TODO: check the timezone stuff
-                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(pref), timezone.utc)
+                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(pref), gettz())
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
                 except NoRemoteAvailable:

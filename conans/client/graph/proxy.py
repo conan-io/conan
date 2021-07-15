@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from requests.exceptions import RequestException
+from dateutil.tz import gettz
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
@@ -78,8 +79,7 @@ class ConanProxy(object):
                 #  download anything but we will UPDATE the date of that revision in the
                 #  local cache and WE ARE ALSO UPDATING THE REMOTE
                 #  Check if this is the flow we want to follow
-                # TODO: check the timezone stuff
-                cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), timezone.utc)
+                cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), gettz())
                 if latest_rrev.revision != ref.revision:
                     if cache_time < remote_time:
                         remotes.select(remote.name)
