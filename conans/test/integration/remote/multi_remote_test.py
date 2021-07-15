@@ -1,11 +1,13 @@
 import unittest
 from collections import OrderedDict
+import time
 from time import sleep
 
-import pytest
+from mock import patch
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
+from conans.server.revision_list import RevisionList
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -217,7 +219,9 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("remote0=http://", self.client.out)
 
         # The remote, once fixed does not change
-        self.client.run("upload %s -r=remote1" % str(ref))
+        the_time = time.time() - 10.0
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.client.run("upload %s -r=remote1" % str(ref))
         self.client.run("info %s" % str(ref))
         self.assertIn("remote0=http://", self.client.out)
 

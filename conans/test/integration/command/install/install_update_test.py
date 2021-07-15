@@ -4,10 +4,11 @@ import time
 from collections import OrderedDict
 from time import sleep
 
-import pytest
+from mock import patch
 
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
+from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     TurboTestClient, GenConanfile
 from conans.util.files import load, save
@@ -195,12 +196,13 @@ def test_install_update_following_pref():
     client.run("remote update_ref %s r1" % ref)
 
     # Update package in r2 from a different client
-    time.sleep(1)
     client2 = TestClient(servers=servers, users=client.users)
     ref = "Pkg/0.1@lasote/testing"
     client2.save({"conanfile.py": conanfile})
     client2.run("create . %s" % ref)
-    client2.run("upload %s --all -r r2" % ref)
+    the_time = time.time() + 10
+    with patch.object(RevisionList, '_now', return_value=the_time):
+        client2.run("upload %s --all -r r2" % ref)
 
     # Update from client, it will get the binary from r2
     client.run("install %s --update" % ref)
