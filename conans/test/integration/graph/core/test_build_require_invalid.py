@@ -56,7 +56,7 @@ class TestInvalidConfiguration:
     def test_invalid_build_require(self, client):
         conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})
-        client.run("install consumer -s os=Windows", assert_error=True)
+        client.run("install consumer -s:h os=Windows -s:b os=Windows", assert_error=True)
         assert "pkg/0.1: {}: Package does not work in Windows!".format(self.invalid) in client.out
 
     def test_valid_build_require_two_profiles(self, client):
