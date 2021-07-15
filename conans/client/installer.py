@@ -12,7 +12,7 @@ from conans.client.file_copier import report_copied_files
 from conans.client.generators import write_toolchain
 from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_EDITABLE, \
     BINARY_MISSING, BINARY_SKIP, BINARY_UPDATE, BINARY_UNKNOWN, CONTEXT_HOST, BINARY_INVALID, \
-    BINARY_INVALID_BUILD
+    BINARY_ERROR
 from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
@@ -324,7 +324,7 @@ class BinaryInstaller(object):
             for node in level:
                 if node.binary == BINARY_MISSING:
                     missing.append(node)
-                elif node.binary in (BINARY_INVALID, BINARY_INVALID_BUILD):
+                elif node.binary in (BINARY_INVALID, BINARY_ERROR):
                     invalid.append(node)
                 elif node.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
                     downloads.append(node)

@@ -3,9 +3,9 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
-                                       BINARY_INVALID, BINARY_INVALID_BUILD)
+                                       BINARY_INVALID, BINARY_ERROR)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException, ConanInvalidConfiguration, ConanInvalidBuildConfiguration
+    ConanException, ConanInvalidConfiguration, ConanErrorConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -207,12 +207,17 @@ class GraphBinariesAnalyzer(object):
                 locked.complete_base_node(node.package_id, node.prev)
 
         if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
-                node.conanfile.info.invalid[0] == BINARY_INVALID_BUILD):
-            node.binary = BINARY_INVALID_BUILD
+                node.conanfile.info.invalid[0] == BINARY_INVALID):
+            node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
+            node.binary = BINARY_INVALID
 
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):
+            return
+
+        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
+            node.binary = BINARY_ERROR
             return
 
         if node.recipe == RECIPE_EDITABLE:
@@ -345,14 +350,14 @@ class GraphBinariesAnalyzer(object):
                     conanfile.validate()
                 except ConanInvalidConfiguration as e:
                     conanfile.info.invalid = BINARY_INVALID, str(e)
-                except ConanInvalidBuildConfiguration as e:
-                    conanfile.info.invalid = BINARY_INVALID_BUILD, str(e)
+                except ConanErrorConfiguration as e:
+                    conanfile.info.invalid = BINARY_ERROR, str(e)
 
         try:
             conanfile.settings.validate()  # All has to be ok!
             conanfile.options.validate()
         except ConanException:
-            conanfile.info.invalid = BINARY_INVALID_BUILD, str(e)
+            conanfile.info.invalid = BINARY_INVALID, str(e)
 
         info = conanfile.info
         node.package_id = info.package_id()
