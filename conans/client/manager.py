@@ -99,14 +99,16 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
     conanfile.folders.set_base_generators(base_folder)
 
     if local_folder:
-        for cf in conanfile.dependencies.host.values():  # TODO: build requires? collisions suffix?
+        for cf in conanfile.dependencies.values():
             _name = cf.ref.name
             if conanfile.settings.get_safe("build_type"):
                 _name += "-{}".format(str(conanfile.settings.build_type))
-            _f = os.path.join(conanfile.generators_folder, _name)
+            _pre_folder = "build" if cf.is_build_context else "host"
+            _f = os.path.join(conanfile.generators_folder, _pre_folder, _name)
+            # The folder _f is .../host/hello-Release/ inside the generators folder
             shutil.copytree(cf._conanfile.package_folder, _f, symlinks=True)
             cf._conanfile.folders.set_base_package(_f)
-            if hasattr(cf._conanfile, "install"):  # TODO we need a name
+            if hasattr(cf._conanfile, "install"):
                 cf._conanfile.install()
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out

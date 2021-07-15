@@ -57,11 +57,12 @@ def test_local_contents_and_generators():
         path = os.path.join(client.current_folder, "build", "conan")
 
     # The packages are there and are always scoped by build_type
-    assert os.path.exists(os.path.join(path, "hello-Release", "my_hello.lib"))
-    assert os.path.exists(os.path.join(path, "hello-Release", "my_hello_bis.lib"))
-    assert os.path.exists(os.path.join(path, "chat-Release", "my_chat.lib"))
+    assert os.path.exists(os.path.join(path, "host", "hello-Release", "my_hello.lib"))
+    assert os.path.exists(os.path.join(path, "host", "hello-Release", "my_hello_bis.lib"))
+    assert os.path.exists(os.path.join(path, "host", "chat-Release", "my_chat.lib"))
 
     # The generators point to the user space folder
     contents = load(os.path.join(path, "chat-release-x86_64-data.cmake"))
-    assert 'set(chat_PACKAGE_FOLDER_RELEASE "{}")'.format(os.path.join(path, "chat-Release")) \
+    assert 'set(chat_PACKAGE_FOLDER_RELEASE "{}")'.format(os.path.join(path, "host",
+                                                                       "chat-Release")) \
            in contents
