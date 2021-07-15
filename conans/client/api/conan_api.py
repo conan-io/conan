@@ -26,7 +26,7 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
@@ -227,7 +227,6 @@ class ConanAPIV2(object):
 
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
-
         results = []
         remote_references = search.search_remote_recipes(query, remote.name)
         for remote_name, references in remote_references.items():
@@ -249,7 +248,14 @@ class ConanAPIV2(object):
         if not remote:
             raise ConanException("Must get a remote")
 
-        return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
+        try:
+            return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
+        except NotFoundException:
+            # This exception must be catched manually due to a server inconsistency:
+            # Artifactory API returns an empty result if the recipe doesn't exist, but
+            # Conan Server returns a 404. This probably should be fixed server side,
+            # but in the meantime we must handle it here
+            return []
 
     @api_method
     def get_local_recipe_revisions(self, reference):
