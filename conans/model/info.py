@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
+from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
@@ -546,6 +547,7 @@ class ConanInfo(object):
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         if requires_sha == PACKAGE_ID_INVALID:
+            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
             return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
