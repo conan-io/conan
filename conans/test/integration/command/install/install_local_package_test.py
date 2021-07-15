@@ -1,5 +1,6 @@
 import os
 import platform
+import textwrap
 
 from conans import load
 from conans.test.assets.genconanfile import GenConanfile
@@ -32,22 +33,26 @@ def test_local_contents_and_generators():
     client.save({"conanfile.py": chat})
     client.run("create .")
 
-    consumer = str(GenConanfile()
-                   .with_import("import os")
-                   .with_import("from conan.tools.files import save")
-                   .with_import("from conan.tools.layout import cmake_layout")
-                   .with_name("consumer")
-                   .with_version("1.0").with_requires("chat/1.0")
-                   .with_settings("os", "arch", "compiler", "build_type")
-                   .with_requirement("chat/1.0")
-                   .with_generator("CMakeDeps")
-               )
-    consumer += """
-    def layout(self):
-        cmake_layout(self)
-    """
+    consumer = textwrap.dedent("""
+        from conans import ConanFile
+        import os
+        from conan.tools.files import save
+        from conan.tools.layout import cmake_layout
+        class HelloConan(ConanFile):
+            name = 'consumer'
+            version = '1.0'
+            settings = "os", "arch", "compiler", "build_type"
+            generators = "CMakeDeps"
+            requires = ("chat/1.0", )
+
+            def requirements(self):
+                self.requires("chat/1.0")
+
+            def layout(self):
+                cmake_layout(self)
+    """)
     client.save({"conanfile.py": consumer})
-    client.run("install . --local-folder -if=my_install")
+    client.run("install . --local-folder")
     multi = platform.system() == "Windows"
     if not multi:
         path = os.path.join(client.current_folder, "cmake-build-release", "conan")
