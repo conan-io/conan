@@ -130,47 +130,11 @@ class TestRemotes(TestListRecipeRevisionsBase):
     def test_search_in_all_remotes_and_cache(self):
         expected_output = (
             r"Local Cache:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"    test_recipe/2.0.0@user/channel#.*\n"
-            r"    test_recipe/2.1.0@user/channel#.*\n"
+            r"  test_recipe/1.0.0@user/channel#.*\n"
             r"remote1:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel\n"
-            r"    test_recipe/1.1.0@user/channel\n"
+            r"  test_recipe/1.0.0@user/channel#.*\n"
             r"remote2:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/2.0.0@user/channel\n"
-            r"    test_recipe/2.1.0@user/channel\n"
-        )
-
-        remote1 = "remote1"
-        remote2 = "remote2"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, "test_recipe/1.0.0")
-        self._upload_recipe(remote1, "test_recipe/1.1.0")
-
-        self._add_remote(remote2)
-        self._upload_recipe(remote2, "test_recipe/1.0.0")
-        self._upload_recipe(remote2, "test_recipe/2.1.0")
-
-        self.client.run("list recipe-revisions -a -c test_recipe/1.0.0")
-        output = str(self.client.out)
-
-        assert bool(re.match(expected_output, output, re.MULTILINE))
-
-    def test_search_in_all_remotes(self):
-        expected_output = (
-            r"remote1:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel\n"
-            r"    test_recipe/1.1.0@user/channel\n"
-            r"remote2:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/2.0.0@user/channel\n"
-            r"    test_recipe/2.1.0@user/channel\n"
+            r"  There are no matching recipes\n"
         )
 
         remote1 = "remote1"
@@ -184,72 +148,9 @@ class TestRemotes(TestListRecipeRevisionsBase):
         self._upload_recipe(remote2, "test_recipe/2.0.0@user/channel")
         self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
-        self.client.run("list recipe-revisions -a test_recipe")
+        self.client.run("list recipe-revisions -a -c test_recipe/1.0.0@user/channel")
         output = str(self.client.out)
 
-        assert bool(re.match(expected_output, output, re.MULTILINE))
-
-    def test_search_in_one_remote(self):
-        remote1 = "remote1"
-        remote2 = "remote2"
-
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-        remote1_recipe2 = "test_recipe/1.1.0@user/channel"
-        remote2_recipe1 = "test_recipe/2.0.0@user/channel"
-        remote2_recipe2 = "test_recipe/2.1.0@user/channel"
-
-        expected_output = (
-            "remote1:\n"
-            "  test_recipe\n"
-            "    test_recipe/1.0.0@user/channel\n"
-            "    test_recipe/1.1.0@user/channel\n"
-        )
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self._upload_recipe(remote1, remote1_recipe2)
-
-        self._add_remote(remote2)
-        self._upload_recipe(remote2, remote2_recipe1)
-        self._upload_recipe(remote2, remote2_recipe2)
-
-        self.client.run("list recipe-revisions -r remote1 test_recipe")
-        assert expected_output in self.client.out
-
-    def test_search_package_found_in_one_remote(self):
-
-        remote1 = "remote1"
-        remote2 = "remote2"
-
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-        remote1_recipe2 = "test_recipe/1.1.0@user/channel"
-        remote2_recipe1 = "another_recipe/2.0.0@user/channel"
-        remote2_recipe2 = "another_recipe/2.1.0@user/channel"
-
-        expected_output = (
-            r"Local Cache:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"remote1:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel\n"
-            r"    test_recipe/1.1.0@user/channel\n"
-            r"remote2:\n"
-            r"  There are no matching recipes\n"
-        )
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self._upload_recipe(remote1, remote1_recipe2)
-
-        self._add_remote(remote2)
-        self._upload_recipe(remote2, remote2_recipe1)
-        self._upload_recipe(remote2, remote2_recipe2)
-
-        self.client.run("list recipe-revisions -a -c test_recipe")
-
-        output = str(self.client.out)
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
@@ -264,40 +165,17 @@ class TestRemotes(TestListRecipeRevisionsBase):
         self._upload_recipe(remote1, remote1_recipe1)
         self._upload_recipe(remote1, remote1_recipe2)
 
-        self.client.run("list recipe-revisions -r wrong_remote test_recipe", assert_error=True)
+        self.client.run("list recipe-revisions -r wrong_remote test_recipe/1.0.0@user/channel", assert_error=True)
         assert expected_output in self.client.out
 
-    def test_search_wildcard(self):
+    def test_wildcard_not_accepted(self):
         remote1 = "remote1"
-
         remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-        remote1_recipe2 = "test_recipe/1.1.0@user/channel"
-        remote1_recipe3 = "test_another/2.1.0@user/channel"
-        remote1_recipe4 = "test_another/4.1.0@user/channel"
 
-        expected_output = (
-            r"Local Cache:\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel#.*\n"
-            r"    test_recipe/1.1.0@user/channel#.*\n"
-            r"  test_another\n"
-            r"    test_another/2.1.0@user/channel#.*\n"
-            r"    test_another/4.1.0@user/channel#.*\n"
-            r"remote1:\n"
-            r"  test_another\n"
-            r"    test_another/2.1.0@user/channel\n"
-            r"    test_another/4.1.0@user/channel\n"
-            r"  test_recipe\n"
-            r"    test_recipe/1.0.0@user/channel\n"
-            r"    test_recipe/1.1.0@user/channel\n"
-        )
+        expected_output = "is an invalid name. Valid names MUST begin with a letter, number or underscore"
 
         self._add_remote(remote1)
         self._upload_recipe(remote1, remote1_recipe1)
-        self._upload_recipe(remote1, remote1_recipe2)
-        self._upload_recipe(remote1, remote1_recipe3)
-        self._upload_recipe(remote1, remote1_recipe4)
+        self.client.run("list recipe-revisions -a -c test_*", assert_error=True)
 
-        self.client.run("list recipe-revisions -a -c test_*")
-        output = str(self.client.out)
-        assert bool(re.match(expected_output, output, re.MULTILINE))
+        assert expected_output in self.client.out
