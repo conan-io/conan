@@ -80,5 +80,14 @@ def test_local_contents_and_generators():
                 client.run_command("./chat")
                 assert "Consumer: {}!".format(bt) in client.out
     else:
-        # WIP
-        pass
+        with client.chdir("build"):
+            client.run_command("cmake .. -D CMAKE_TOOLCHAIN_FILE=conan/conan_toolchain.cmake")
+            client.run_command("cmake --build . --config Release")
+            with client.chdir("Release"):
+                client.run_command("chat.exe")
+            assert "Consumer: Release!" in client.out
+
+            client.run_command("cmake --build . --config Debug")
+            with client.chdir("Debug"):
+                client.run_command("chat.exe")
+            assert "Consumer: Debug!" in client.out
