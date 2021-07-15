@@ -97,7 +97,7 @@ class TestValidate(unittest.TestCase):
         client.run("create . pkg/0.1@ -s os=Windows", assert_error=True)
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
-        
+
         client.run("info pkg/0.1@ -s os=Windows")
         self.assertIn("ID: {}".format(NO_SETTINGS_PACKAGE_ID), client.out)
 
