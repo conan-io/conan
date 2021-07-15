@@ -5,11 +5,13 @@ import unittest
 from collections import OrderedDict
 
 import pytest
+from mock import patch
 
 from conans import load
 from conans.client.tools import environment_append
 from conans.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.model.ref import ConanFileReference
+from conans.server.revision_list import RevisionList
 from conans.test.utils.tools import TestServer, TurboTestClient, GenConanfile, TestClient
 from conans.util.env_reader import get_env
 from conans.util.files import save
@@ -33,20 +35,23 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         conanfile = GenConanfile().with_package_file("file.txt", env_var="MY_VAR")
         with environment_append({"MY_VAR": "1"}):
             pref = self.c_v2.create(self.ref, conanfile=conanfile)
-        self.c_v2.upload_all(self.ref, remote="default")
+        the_time = time.time()
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.c_v2.upload_all(self.ref, remote="default")
         self.c_v2.run("remove {} -p {} -f -r default".format(self.ref, pref.id))
-
         # Same RREV, different PREV
         with environment_append({"MY_VAR": "2"}):
             pref2 = self.c_v2.create(self.ref, conanfile=conanfile)
 
-        self.c_v2.upload_all(self.ref, remote="remote2")
+        the_time = the_time + 10.0
+        with patch.object(RevisionList, '_now', return_value=the_time):
+            self.c_v2.upload_all(self.ref, remote="remote2")
         self.c_v2.remove_all()
 
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
         self.c_v2.run("install {}".format(self.ref))
-        self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
+        self.assertIn("{} from 'remote2' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
 
     def test_update_recipe_iterating_remotes(self):
