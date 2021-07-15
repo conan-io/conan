@@ -106,8 +106,8 @@ def deps_install(app, ref_or_path, install_folder, base_folder, graph_info, remo
             _f = os.path.join(conanfile.generators_folder, _name)
             shutil.copytree(cf._conanfile.package_folder, _f, symlinks=True)
             cf._conanfile.folders.set_base_package(_f)
-            if hasattr(cf._conanfile, "post_install"):  # TODO we need a name
-                cf._conanfile.post_install()
+            if hasattr(cf._conanfile, "install"):  # TODO we need a name
+                cf._conanfile.install()
 
     output = conanfile.output if root_node.recipe != RECIPE_VIRTUAL else out
 

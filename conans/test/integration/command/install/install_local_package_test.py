@@ -17,7 +17,7 @@ def test_local_contents_and_generators():
     def package(self):
         save(self, os.path.join(self.package_folder, "my_hello.lib"), "contents")
 
-    def post_install(self):
+    def install(self):
         save(self, os.path.join(self.package_folder, "my_hello_bis.lib"), "contents")
     """
     client.save({"conanfile.py": hello})
@@ -44,9 +44,6 @@ def test_local_contents_and_generators():
             settings = "os", "arch", "compiler", "build_type"
             generators = "CMakeDeps"
             requires = ("chat/1.0", )
-
-            def requirements(self):
-                self.requires("chat/1.0")
 
             def layout(self):
                 cmake_layout(self)
