@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 from collections import OrderedDict
 
@@ -82,6 +83,19 @@ def test_update_flows():
     # |             | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
     # |             |            | REV (10)   | REV (20)  | REV  (30)  |
     # |             |            |            |           |            |
+
+    current_time = time.time()
+    client.run("install liba/1.0.0@ --make-latest")
+    new_timestamp = client.cache.get_timestamp(client.cache.get_latest_rrev(liba))
+    assert new_timestamp > current_time
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # |current_time | REV0 (1000)| REV1(40)   | REV1(50)  | REV1 (60)  |
+    # |             |            | REV (10)   | REV (20)  | REV  (30)  |
+    # |             |            |            |           |            |
+
+    client.run("remove * -f")
 
     client.run("install liba/1.0.0@")
 

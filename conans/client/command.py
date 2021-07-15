@@ -333,6 +333,10 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
         parser.add_argument("--build-require", action='store_true', default=False,
                             help='The provided reference is a build-require')
+        parser.add_argument("--make-latest", action='store_true', default=False,
+                            help='If any reference is installed from a remote, update the date'
+                                 ' to the installation date (the default is taking the time from'
+                                 ' the server)')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
@@ -374,7 +378,8 @@ class Command(object):
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build,
-                                      is_build_require=args.build_require)
+                                      is_build_require=args.build_require,
+                                      make_latest=args.make_latest)
         except ConanException as exc:
             info = exc.info
             raise
@@ -476,6 +481,11 @@ class Command(object):
         parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
 
+        parser.add_argument("--make-latest", action='store_true', default=False,
+                            help='If any reference is installed from a remote, update the date'
+                                 ' to the installation date (the default is taking the time from'
+                                 ' the server)')
+
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
 
@@ -506,7 +516,8 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile,
-                                           lockfile_out=args.lockfile_out)
+                                           lockfile_out=args.lockfile_out,
+                                           make_latest=args.make_latest)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -528,7 +539,8 @@ class Command(object):
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
                                                      lockfile_node_id=args.lockfile_node_id,
-                                                     is_build_require=args.build_require)
+                                                     is_build_require=args.build_require,
+                                                     make_latest=args.make_latest)
 
         except ConanException as exc:
             info = exc.info

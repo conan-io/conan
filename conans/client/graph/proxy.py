@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import datetime
+import time
 
 from requests.exceptions import RequestException
 from dateutil.tz import gettz
@@ -20,7 +21,7 @@ class ConanProxy(object):
         self._out = output
         self._remote_manager = remote_manager
 
-    def get_recipe(self, ref, check_updates, update, remotes):
+    def get_recipe(self, ref, check_updates, update, remotes, make_latest=False):
 
         # TODO: cache2.0 check editables
         # if isinstance(layout, PackageEditableLayout):
@@ -32,7 +33,7 @@ class ConanProxy(object):
 
         # TODO: cache2.0 Check with new locks
         # with layout.conanfile_write_lock(self._out):
-        result = self._get_recipe(ref, check_updates, update, remotes)
+        result = self._get_recipe(ref, check_updates, update, remotes, make_latest)
         conanfile_path, status, remote, new_ref = result
 
         if status not in (RECIPE_DOWNLOADED, RECIPE_UPDATED):
@@ -40,7 +41,7 @@ class ConanProxy(object):
 
         return conanfile_path, status, remote, new_ref
 
-    def _get_recipe(self, reference, check_updates, update, remotes):
+    def _get_recipe(self, reference, check_updates, update, remotes, make_latest=False):
         output = ScopedOutput(str(reference), self._out)
 
         # check if it there's any revision of this recipe in the local cache
@@ -52,7 +53,8 @@ class ConanProxy(object):
             # we don't want to check all servers, just get the first match
             check_all_servers = False if reference.revision else True
             remote, new_ref = self._download_recipe(reference, output, remotes,
-                                                    remotes.selected, check_all_servers)
+                                                    remotes.selected, check_all_servers,
+                                                    make_latest=make_latest)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
@@ -145,13 +147,15 @@ class ConanProxy(object):
     # searches in all the remotes and downloads the latest from all of them
     # TODO: refactor this, it's confusing
     #  get the recipe selection with _get_rrev_from_remotes out from here if possible
-    def _download_recipe(self, ref, output, remotes, remote, check_all_servers=True):
+    def _download_recipe(self, ref, output, remotes, remote, check_all_servers=True,
+                         make_latest=False):
 
         def _retrieve_from_remote(the_remote, reference):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
-            self._cache.set_timestamp(_ref, datetime.timestamp(_ref_time))
+            new_timestamp = datetime.timestamp(_ref_time) if not make_latest else time.time()
+            self._cache.set_timestamp(_ref, new_timestamp)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             return _ref
 

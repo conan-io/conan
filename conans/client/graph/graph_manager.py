@@ -72,7 +72,7 @@ class GraphManager(object):
     def load_graph(self, reference, create_reference, profile_host, profile_build, graph_lock,
                    root_ref, build_mode, check_updates, update,
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
-                   is_build_require=False):
+                   is_build_require=False, make_latest=False):
         """ main entry point to compute a full dependency graph
         """
         assert profile_host is not None
@@ -82,7 +82,8 @@ class GraphManager(object):
                                          root_ref, lockfile_node_id, is_build_require)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
-                                         apply_build_requires=apply_build_requires)
+                                         apply_build_requires=apply_build_requires,
+                                         make_latest=make_latest)
         # Run some validations once the graph is built
         self._validate_graph_provides(deps_graph)
         return deps_graph
@@ -207,7 +208,8 @@ class GraphManager(object):
         return root_node
 
     def _resolve_graph(self, root_node, profile_host, profile_build, graph_lock, build_mode,
-                       check_updates, update, remotes, recorder, apply_build_requires=True):
+                       check_updates, update, remotes, recorder, apply_build_requires=True,
+                       make_latest=False):
         build_mode = BuildMode(build_mode, self._output)
         deps_graph = self._load_graph(root_node, check_updates, update,
                                       build_mode=build_mode, remotes=remotes,
@@ -215,7 +217,7 @@ class GraphManager(object):
                                       profile_host=profile_host,
                                       profile_build=profile_build,
                                       apply_build_requires=apply_build_requires,
-                                      graph_lock=graph_lock)
+                                      graph_lock=graph_lock, make_latest=make_latest)
 
         version_ranges_output = self._resolver.output
         if version_ranges_output:
@@ -312,13 +314,13 @@ class GraphManager(object):
 
     def _load_graph(self, root_node, check_updates, update, build_mode, remotes,
                     recorder, profile_host, profile_build, apply_build_requires,
-                    graph_lock):
+                    graph_lock, make_latest=False):
         assert isinstance(build_mode, BuildMode)
         profile_host_build_requires = profile_host.build_requires
         builder = DepsGraphBuilder(self._proxy, self._output, self._loader, self._resolver,
                                    recorder)
         graph = builder.load_graph(root_node, check_updates, update, remotes, profile_host,
-                                   profile_build, graph_lock)
+                                   profile_build, graph_lock, make_latest=make_latest)
 
         self._recurse_build_requires(graph, builder, check_updates, update, build_mode,
                                      remotes, profile_host_build_requires, recorder, profile_host,
