@@ -85,10 +85,9 @@ def test_editable_cmake_osx(generator):
 
 
 def editable_cmake_exe(generator):
-    multi = (generator is None and platform.system() == "Windows") or \
-            generator in ("Ninja Multi-Config", "Xcode")
+    # This test works because it is not multi-config or single config, but explicit in
+    # --install folder
     c = TestClient()
-    print(c.current_folder)
     if generator is not None:
         c.save({"global.conf": "tools.cmake.cmaketoolchain:generator={}".format(generator)},
                path=os.path.join(c.cache.cache_folder))
