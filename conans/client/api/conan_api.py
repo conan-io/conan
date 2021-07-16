@@ -1,4 +1,3 @@
-import fnmatch
 import os
 import time
 
