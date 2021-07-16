@@ -51,3 +51,12 @@ class CreateEditablePackageTest(unittest.TestCase):
         self.assertIn("Reference 'lib/version@user/name' in editable mode", t.out)
         t.run('install lib/version@user/name')
         self.assertIn("Installing package: lib/version@user/name", t.out)
+
+    @pytest.mark.xfail(reason="Editables not taken into account for cache2.0 yet."
+                              "TODO: cache2.0 fix with editables")
+    def test_search(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . "lib/0.1@"')
+        t.run('search lib/0.1@', assert_error=True)
+        assert "Package in editable mode cannot list binaries" in t.out

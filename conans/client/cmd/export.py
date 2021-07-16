@@ -50,23 +50,7 @@ def cmd_export(app, conanfile_path, name, version, user, channel,
     loader, cache, hook_manager, output = app.loader, app.cache, app.hook_manager, app.out
     conanfile = loader.load_export(conanfile_path, name, version, user, channel)
 
-    # FIXME: Conan 2.0, deprecate CONAN_USER AND CONAN_CHANNEL and remove this try excepts
-    # Take the default from the env vars if they exist to not break behavior
-    try:
-        user = conanfile.user
-    except ConanV2Exception:
-        raise
-    except ConanException:
-        user = None
-
-    try:
-        channel = conanfile.channel
-    except ConanV2Exception:
-        raise
-    except ConanException:
-        channel = None
-
-    ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    ref = ConanFileReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
 

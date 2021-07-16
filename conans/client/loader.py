@@ -31,20 +31,17 @@ class ConanFileLoader(object):
         self._cached_conanfile_classes = {}
         self._requester = requester
 
-    def load_basic(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
-                   display=""):
+    def load_basic(self, conanfile_path, lock_python_requires=None, display=""):
         """ loads a conanfile basic object without evaluating anything
         """
-        return self.load_basic_module(conanfile_path, lock_python_requires, user, channel,
-                                      display)[0]
+        return self.load_basic_module(conanfile_path, lock_python_requires, display)[0]
 
-    def load_basic_module(self, conanfile_path, lock_python_requires=None, user=None, channel=None,
-                          display=""):
+    def load_basic_module(self, conanfile_path, lock_python_requires=None, display=""):
         """ loads a conanfile basic object without evaluating anything, returns the module too
         """
         cached = self._cached_conanfile_classes.get(conanfile_path)
         if cached and cached[1] == lock_python_requires:
-            conanfile = cached[0](self._output, self._runner, display, user, channel)
+            conanfile = cached[0](self._output, self._runner, display)
             conanfile._conan_requester = self._requester
             if hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(str(conanfile), "init"):
@@ -75,7 +72,7 @@ class ConanFileLoader(object):
 
             self._cached_conanfile_classes[conanfile_path] = (conanfile, lock_python_requires,
                                                               module)
-            result = conanfile(self._output, self._runner, display, user, channel)
+            result = conanfile(self._output, self._runner, display)
             result._conan_requester = self._requester
             if hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(str(result), "init"):
@@ -116,7 +113,7 @@ class ConanFileLoader(object):
     def load_named(self, conanfile_path, name, version, user, channel, lock_python_requires=None):
         """ loads the basic conanfile object and evaluates its name and version
         """
-        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, user, channel)
+        conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires)
 
         # Export does a check on existing name & version
         if name:
@@ -129,6 +126,18 @@ class ConanFileLoader(object):
                 raise ConanException("Package recipe with version %s!=%s"
                                      % (version, conanfile.version))
             conanfile.version = version
+
+        if user:
+            if conanfile.user and user != conanfile.user:
+                raise ConanException("Package recipe with user %s!=%s"
+                                     % (user, conanfile.user))
+            conanfile.user = user
+
+        if channel:
+            if conanfile.channel and channel != conanfile.channel:
+                raise ConanException("Package recipe with channel %s!=%s"
+                                     % (channel, conanfile.channel))
+            conanfile.channel = channel
 
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
@@ -154,9 +163,8 @@ class ConanFileLoader(object):
         if not conanfile.version:
             raise ConanException("conanfile didn't specify version")
 
-        # FIXME Conan 2.0, conanfile.version should be a string, not a version object
-
-        ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+        ref = ConanFileReference(conanfile.name, conanfile.version, conanfile.user,
+                                 conanfile.channel)
         conanfile.display_name = str(ref)
         conanfile.output.scope = conanfile.display_name
         return conanfile
@@ -167,9 +175,9 @@ class ConanFileLoader(object):
         # Mixing the global settings with the specified for that name if exist
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
-        if conanfile._conan_user is not None:
+        if conanfile.user is not None:
             ref_str = "%s/%s@%s/%s" % (conanfile.name, conanfile.version,
-                                       conanfile._conan_user, conanfile._conan_channel)
+                                       conanfile.user, conanfile.channel)
         else:
             ref_str = "%s/%s" % (conanfile.name, conanfile.version)
         if package_settings_values:
@@ -222,14 +230,15 @@ class ConanFileLoader(object):
         from the reference, not evaluated. Main way to load from the cache
         """
         try:
-            conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires,
-                                                  ref.user, ref.channel, str(ref))
+            conanfile, _ = self.load_basic_module(conanfile_path, lock_python_requires, str(ref))
         except Exception as e:
             raise ConanException("%s: Cannot load recipe.\n%s" % (str(ref), str(e)))
 
         conanfile.name = ref.name
         # FIXME Conan 2.0, version should be a string not a Version object
         conanfile.version = ref.version
+        conanfile.user = ref.user
+        conanfile.channel = ref.channel
 
         if profile.dev_reference and profile.dev_reference == ref:
             conanfile.develop = True

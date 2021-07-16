@@ -257,8 +257,6 @@ class NewCommandTest(unittest.TestCase):
         appveyor = load(os.path.join(root, "appveyor.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", appveyor)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
-        self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
-        self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
         self.assertIn(r'PYTHON: "C:\\Python37"', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 12', appveyor)
         self.assertIn('CONAN_VISUAL_VERSIONS: 14', appveyor)
@@ -267,23 +265,17 @@ class NewCommandTest(unittest.TestCase):
         travis = load(os.path.join(root, ".travis.yml"))
         self.assertIn("- CONAN_UPLOAD: \"myurl\"", travis)
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
-        self.assertIn('- CONAN_USERNAME: "myuser"', travis)
-        self.assertIn('- CONAN_CHANNEL: "testing"', travis)
         self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=conanio/gcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", gitlab)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', gitlab)
-        self.assertIn('CONAN_USERNAME: "myuser"', gitlab)
-        self.assertIn('CONAN_CHANNEL: "testing"', gitlab)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', gitlab)
 
         circleci = load(os.path.join(root, ".circleci", "config.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", circleci)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', circleci)
-        self.assertIn('CONAN_USERNAME: "myuser"', circleci)
-        self.assertIn('CONAN_CHANNEL: "testing"', circleci)
         self.assertIn('CONAN_GCC_VERSIONS: "5"', circleci)
 
     def test_new_ci_partial(self):

@@ -2,8 +2,9 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.env import VirtualBuildEnv
-from conan.tools.microsoft.toolchain import write_conanvcvars
+from conan.tools.microsoft import VCVars
 from conans.client.build.cppstd_flags import cppstd_from_settings
 from conans.client.tools.oss import cross_building, get_cross_building_settings
 from conans.util.files import save
@@ -111,6 +112,8 @@ class MesonToolchain(object):
                                              self._env_array('CXXFLAGS'))
         self.cpp_link_args = self._to_meson_value(self._env_array('LDFLAGS'))
         self.pkg_config_path = "'%s'" % self._conanfile.generators_folder
+
+        check_using_build_profile(self._conanfile)
 
     @staticmethod
     def _to_meson_value(value):
@@ -309,4 +312,4 @@ class MesonToolchain(object):
             self._write_cross_file()
         else:
             self._write_native_file()
-        write_conanvcvars(self._conanfile)
+        VCVars(self._conanfile).generate()
