@@ -461,6 +461,9 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
+        # The conanfile.imports_folder is used both by the new and old mechanism
+        conanfile.folders.set_base_imports(base_path)
+
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):
             conanfile.folders.set_base_package(base_path)
