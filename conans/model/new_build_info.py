@@ -13,14 +13,13 @@ _FIELD_VAR_NAMES = ["system_libs", "frameworks", "libs", "defines", "cflags", "c
 class _NewComponent(object):
 
     def __init__(self):
-
         # ###### PROPERTIES
         self._generator_properties = None
 
         # ###### DIRECTORIES
         self.includedirs = None  # Ordered list of include paths
         self.srcdirs = None  # Ordered list of source paths
-        self.libdirs = None # Directories to find libraries
+        self.libdirs = None  # Directories to find libraries
         self.resdirs = None  # Directories to find resources, data, etc
         self.bindirs = None  # Directories to find executables and shared libs
         self.builddirs = None
@@ -42,33 +41,34 @@ class _NewComponent(object):
     @property
     def required_component_names(self):
         """ Names of the required components of the same package (not scoped with ::)"""
-        if not self.requires:
+        if self.requires is None:
             return []
         return [r for r in self.requires if "::" not in r]
 
     def set_property(self, property_name, value, generator=None):
-        if not self._generator_properties:
+        if self._generator_properties is None:
             self._generator_properties = {}
         self._generator_properties.setdefault(generator, {})[property_name] = value
 
     def get_property(self, property_name, generator=None):
-        if not self._generator_properties:
+        if self._generator_properties is None:
             return None
-        if generator:
-            try:
-                return self._generator_properties[generator][property_name]
-            except KeyError:
-                pass
-        try:
-            return self._generator_properties[None][property_name]
+        try:  # generator = None is the dict for all generators
+            return self._generator_properties[generator][property_name]
         except KeyError:
             pass
+
+    def get_init(self, attribute, default):
+        item = getattr(self, attribute)
+        if item is not None:
+            return item
+        setattr(self, attribute, default)
+        return default
 
 
 class NewCppInfo(object):
 
-    def __init__(self,):
-        super(NewCppInfo, self).__init__()
+    def __init__(self):
         self.components = DefaultOrderedDict(lambda: _NewComponent())
         # Main package is a component with None key
         self.components[None] = _NewComponent()
@@ -77,7 +77,7 @@ class NewCppInfo(object):
         return getattr(self.components[None], attr)
 
     def __setattr__(self, attr, value):
-        if attr in ["components"]:
+        if attr == "components":
             super(NewCppInfo, self).__setattr__(attr, value)
         else:
             setattr(self.components[None], attr, value)
@@ -93,60 +93,50 @@ class NewCppInfo(object):
     def merge(self, other):
         """Merge 'other' into self. 'other' can be an old cpp_info object"""
         def merge_list(o, d):
-            for e in o:
-                if e not in d:
-                    d.append(e)
+            d.extend(e for e in o if e not in d)
 
         for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-            if getattr(other, varname) is None:
-                continue
-            if getattr(self, varname) is None:
-                setattr(self, varname, [])
-            merge_list(getattr(other, varname), getattr(self, varname))
+            other_values = getattr(other, varname)
+            if other_values is not None:
+                current_values = self.components[None].get_init(varname, [])
+                merge_list(other_values, current_values)
 
         if self.sysroot is None and other.sysroot:
             self.sysroot = other.sysroot
 
-        if other._generator_properties:
-            if not self._generator_properties:
-                self._generator_properties = {}
-            self._generator_properties.update(other._generator_properties)
-
         if other.requires:
-            if self.requires is None:
-                self.requires = []
-            merge_list(other.requires, self.requires)
+            current_values = self.components[None].get_init("requires", [])
+            merge_list(other.requires, current_values)
+
+        if other._generator_properties:
+            current_values = self.components[None].get_init("_generator_properties", {})
+            current_values.update(other._generator_properties)
 
         # COMPONENTS
         for cname, c in other.components.items():
             if cname is None:
                 continue
             for varname in _DIRS_VAR_NAMES + _FIELD_VAR_NAMES:
-                if not getattr(c, varname):
-                    continue
-                if getattr(self.components[cname], varname) is None:
-                    setattr(self.components[cname], varname, [])
-                merge_list(getattr(c, varname), getattr(self.components[cname], varname))
+                other_values = getattr(c, varname)
+                if other_values is not None:
+                    current_values = self.components[cname].get_init(varname, [])
+                    merge_list(other_values, current_values)
+
             if c.requires:
-                if self.components[cname].requires is None:
-                    self.components[cname].requires = []
-                merge_list(c.requires, self.components[cname].requires)
+                current_values = self.components[cname].get_init("requires", [])
+                merge_list(c.requires, current_values)
 
             if c._generator_properties:
-                if self.components[cname]._generator_properties is None:
-                    self.components[cname]._generator_properties = {}
-                self.components[cname]._generator_properties.update(c._generator_properties)
+                current_values = self.components[cname].get_init("_generator_properties", {})
+                current_values.update(c._generator_properties)
 
     def set_relative_base_folder(self, folder):
         """Prepend the folder to all the directories"""
         for cname, c in self.components.items():
             for varname in _DIRS_VAR_NAMES:
-                new_list = []
                 origin = getattr(self.components[cname], varname)
                 if origin is not None:
-                    for el in origin:
-                        new_list.append(os.path.join(folder, el))
-                    setattr(self.components[cname], varname, new_list)
+                    origin[:] = [os.path.join(folder, el) for el in origin]
 
     def get_sorted_components(self):
         """Order the components taking into account if they depend on another component in the
@@ -191,9 +181,8 @@ class NewCppInfo(object):
                 # not the namespace.
 
                 if component.requires:
-                    if self.components[None].requires is None:
-                        self.components[None].requires = []
-                    self.components[None].requires.extend(component.requires)
+                    current_values = self.components[None].get_init("requires", [])
+                    current_values.extend(component.requires)
 
             # FIXME: What to do about sysroot?
             # Leave only the aggregated value

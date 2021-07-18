@@ -68,6 +68,39 @@ def pkg_cmake(name, version, requires=None, exe=False):
     return files
 
 
+def pkg_cmake_test(require_name):
+    conanfile = textwrap.dedent("""\
+        import os
+        from conans import ConanFile
+        from conan.tools.cmake import CMake
+        from conan.tools.layout import cmake_layout
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeToolchain", "CMakeDeps", "VirtualRunEnv"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def test(self):
+                cmd = os.path.join(self.cpp.build_info.bindirs[0], "test")
+                self.run(cmd, env=["conanrunenv"])
+        """)
+
+    deps = [require_name]
+    src = gen_function_cpp(name="main", includes=deps, calls=deps)
+    cmake = gen_cmakelists(appname="test", appsources=["test.cpp"], find_package=deps)
+
+    return {"test_package/src/test.cpp": src,
+            "test_package/src/CMakeLists.txt": cmake,
+            "test_package/conanfile.py": conanfile}
+
+
 def pkg_cmake_app(name, version, requires=None):
     refs = [ConanFileReference.loads(r) for r in requires or []]
     pkg_name = name
