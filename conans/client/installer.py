@@ -461,15 +461,13 @@ class BinaryInstaller(object):
         base_path = package_layout.base_folder()
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
-        # The conanfile.imports_folder is used both by the new and old mechanism
-        conanfile.folders.set_base_imports(base_path)
-
         # New editables mechanism based on Folders
         if hasattr(conanfile, "layout"):
             conanfile.folders.set_base_package(base_path)
             conanfile.folders.set_base_source(base_path)
             conanfile.folders.set_base_build(base_path)
             conanfile.folders.set_base_install(base_path)
+            conanfile.folders.set_base_imports(base_path)
 
             output = conanfile.output
             output.info("Rewriting files of editable package "
@@ -519,6 +517,7 @@ class BinaryInstaller(object):
                 output.info("Generated %s" % BUILD_INFO)
                 # Build step might need DLLs, binaries as protoc to generate source files
                 # So execute imports() before build, storing the list of copied_files
+                conanfile.folders.set_base_imports(build_folder)
                 copied_files = run_imports(conanfile)
                 report_copied_files(copied_files, output)
 

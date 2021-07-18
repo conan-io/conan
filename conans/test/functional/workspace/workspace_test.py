@@ -1106,7 +1106,7 @@ def test_error_imports():
             "conanws.yml": conanws,
             "layout": layout})
     c.run("workspace install conanws.yml")
-    assert c.load("libb/filea.txt") == "HelloA!"
+    assert c.load("libb/build/filea.txt") == "HelloA!"
 
 
 def test_error_imports_modern():
