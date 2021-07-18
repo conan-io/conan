@@ -5,7 +5,7 @@ from conans.test.assets.cmake import gen_cmakelists
 from conans.test.assets.sources import gen_function_h, gen_function_cpp
 
 
-def pkg_cmake(name, version, requires=None):
+def pkg_cmake(name, version, requires=None, exe=False):
     refs = [ConanFileReference.loads(r) for r in requires or []]
     pkg_name = name
     name = name.replace(".", "_")
@@ -40,6 +40,8 @@ def pkg_cmake(name, version, requires=None):
                 self.copy("*.dylib*", dst="lib", keep_path=False)
                 self.copy("*.so", dst="lib", keep_path=False)
                 self.copy("*.a", dst="lib", keep_path=False)
+                self.copy("*app.exe", dst="bin", keep_path=False)
+                self.copy("*app", dst="bin", keep_path=False)
 
             def package_info(self):
                 self.cpp_info.libs = ["{name}"]
@@ -50,13 +52,20 @@ def pkg_cmake(name, version, requires=None):
     hdr = gen_function_h(name=name)
     deps = [r.name.replace(".", "_") for r in refs]
     src = gen_function_cpp(name=name, includes=deps, calls=deps)
-    deps = [r.name for r in refs]
-    cmake = gen_cmakelists(libname=name, libsources=["{}.cpp".format(name)], find_package=deps)
 
-    return {"src/{}.h".format(name): hdr,
-            "src/{}.cpp".format(name): src,
-            "src/CMakeLists.txt": cmake,
-            "conanfile.py": conanfile}
+    deps = [r.name for r in refs]
+    files = {"src/{}.h".format(name): hdr,
+             "src/{}.cpp".format(name): src,
+             "conanfile.py": conanfile}
+    if exe:
+        src_app = gen_function_cpp(name="main", includes=[name], calls=[name])
+        files["src/{}_app.cpp".format(name)] = src_app
+        cmake = gen_cmakelists(appname="{}_app".format(name), appsources=["{}_app.cpp".format(name)],
+                               libname=name, libsources=["{}.cpp".format(name)], find_package=deps)
+    else:
+        cmake = gen_cmakelists(libname=name, libsources=["{}.cpp".format(name)], find_package=deps)
+    files["src/CMakeLists.txt"] = cmake
+    return files
 
 
 def pkg_cmake_app(name, version, requires=None):
@@ -88,7 +97,6 @@ def pkg_cmake_app(name, version, requires=None):
             def package(self):
                 self.copy("*/app.exe", dst="bin", keep_path=False)
                 self.copy("*app", dst="bin", keep_path=False)
-
         """)
     deps = "requires = " + ", ".join('"{}"'.format(r) for r in requires) if requires else ""
     conanfile = conanfile.format(pkg_name=pkg_name, name=name, version=version, deps=deps)
