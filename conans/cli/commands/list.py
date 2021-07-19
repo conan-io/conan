@@ -35,7 +35,7 @@ def list_recipes_cli_formatter(results):
             cli_out_write("{}{}".format(" " * (indentation * 2), reference), reference_color)
 
 
-def list_recipe_revisions_cli_formatter(results):
+def _list_revisions_cli_formatter(results, ref_type="recipes"):
     for remote_results in results:
         if remote_results.get("error"):
             # TODO: Handle errors
@@ -46,49 +46,26 @@ def list_recipe_revisions_cli_formatter(results):
         else:
             cli_out_write("{}:".format(remote_results["remote"]), remote_color)
 
+        tab_space = " " * indentation
         if not remote_results.get("results"):
-            cli_out_write("{}There are no matching recipes".format(" " * indentation))
-
-        reference = remote_results["reference"]
-        for revisions in remote_results["results"]:
-            cli_out_write(
-                "{}{}#{} ({})".format(
-                    " " * indentation,
-                    reference,
-                    revisions["revision"],
-                    iso8601_to_str(revisions["time"])
-                ),
-                recipe_color
-            )
-
-
-def list_package_revisions_cli_formatter(results):
-    for remote_results in results:
-        if remote_results.get("error"):
-            # TODO: Handle errors
-            return
-
-        if not remote_results.get("remote"):
-            cli_out_write("Local Cache:", remote_color)
-        else:
-            cli_out_write("{}:".format(remote_results["remote"]), remote_color)
-
-        if not remote_results.get("results"):
-            cli_out_write("{}There are no matching recipes".format(" " * indentation))
+            cli_out_write(f"{tab_space}There are no matching {ref_type}")
 
         reference = remote_results["package_reference"]
         for revisions in remote_results["results"]:
-            cli_out_write(
-                "{}{}#{} ({})".format(
-                    " " * indentation,
-                    reference,
-                    revisions["revision"],
-                    iso8601_to_str(revisions["time"])
-                ),
-                recipe_color
-            )
+            rev = revisions["revision"]
+            date = iso8601_to_str(revisions["time"])
+            cli_out_write(f"{tab_space}{reference}#{rev} ({date})", recipe_color)
 
 
+def list_recipe_revisions_cli_formatter(results):
+    _list_revisions_cli_formatter(results)
+
+
+def list_package_revisions_cli_formatter(results):
+    _list_revisions_cli_formatter(results, ref_type="packages")
+
+
+# FIXME: it's a general formatter, perhaps we should look for another module
 def json_formatter(info):
     myjson = json.dumps(info, indent=4)
     cli_out_write(myjson)
@@ -155,6 +132,15 @@ def _add_common_list_subcommands(subparser, positional_arg_name):
     subparser.add_argument("-c", "--cache", action='store_true', help="Search in the local cache")
 
 
+def _get_remotes(conan_api, args):
+    remotes = []
+    if args.all_remotes:
+        remotes = conan_api.get_active_remotes(None)
+    elif args.remote:
+        remotes = conan_api.get_active_remotes(args.remote)
+    return remotes
+
+
 @conan_subcommand(formatters=list_recipe_revisions_formatters)
 def list_recipe_revisions(conan_api, parser, subparser, *args):
     """
@@ -167,11 +153,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         # If neither remote nor cache are defined, show results only from cache
         args.cache = True
 
-    remotes = None
-    if args.all_remotes:
-        remotes = conan_api.get_active_remotes(None)
-    elif args.remote:
-        remotes = conan_api.get_active_remotes(args.remote)
+    remotes = _get_remotes(conan_api, args)
 
     results = []
     if args.cache:
@@ -181,14 +163,14 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
             'results': conan_api.get_local_recipe_revisions(args.reference)
         }
         results.append(result)
-    if remotes:
-        for remote in remotes:
-            result = {
-                'remote': remote.name,
-                'reference': args.reference,
-                'results': conan_api.get_remote_recipe_revisions(args.reference, remote=remote)
-            }
-            results.append(result)
+
+    for remote in remotes:
+        result = {
+            'remote': remote.name,
+            'reference': args.reference,
+            'results': conan_api.get_remote_recipe_revisions(args.reference, remote=remote)
+        }
+        results.append(result)
 
     return results
 
@@ -205,11 +187,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         # If neither remote nor cache are defined, show results only from cache
         args.cache = True
 
-    remotes = None
-    if args.all_remotes:
-        remotes = conan_api.get_active_remotes(None)
-    elif args.remote:
-        remotes = conan_api.get_active_remotes(args.remote)
+    remotes = _get_remotes(conan_api, args)
 
     results = []
     if args.cache:
@@ -219,15 +197,15 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             'results': conan_api.get_local_package_revisions(args.package_reference)
         }
         results.append(result)
-    if remotes:
-        for remote in remotes:
-            result = {
-                'remote': remote.name,
-                'package_reference': args.package_reference,
-                'results': conan_api.get_remote_package_revisions(args.package_reference,
-                                                                  remote=remote)
-            }
-            results.append(result)
+
+    for remote in remotes:
+        result = {
+            'remote': remote.name,
+            'package_reference': args.package_reference,
+            'results': conan_api.get_remote_package_revisions(args.package_reference,
+                                                              remote=remote)
+        }
+        results.append(result)
 
     return results
 

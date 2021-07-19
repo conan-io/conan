@@ -85,7 +85,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipes
+          There are no matching packages
         """)
 
         self.client.run(f"list package-revisions {self._get_fake_package_refence('whatever/0.1')}")
@@ -97,11 +97,11 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching recipes
+          There are no matching packages
         remote1:
-          There are no matching recipes
+          There are no matching packages
         remote2:
-          There are no matching recipes
+          There are no matching packages
         """)
 
         pref = self._get_fake_package_refence('whatever/0.1')
@@ -156,7 +156,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
         remote1:
           {repr(pref)}#.*
         remote2:
-          There are no matching recipes""")
+          There are no matching packages""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
