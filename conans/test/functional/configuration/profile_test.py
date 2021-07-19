@@ -710,8 +710,8 @@ def test_consumer_specific_settings():
     assert "I'm dep and my build type is Debug" in client.out
     assert "I'm None and my build type is Release" in client.out
 
-    # Now the consumer using $
-    client.run("install . -s $:build_type=Debug")
+    # Now the consumer using &
+    client.run("install . -s &:build_type=Debug")
     assert "I'm dep and my build type is Release" in client.out
     assert "I'm None and my build type is Debug" in client.out
 
@@ -731,8 +731,8 @@ def test_consumer_specific_settings():
 
     # Test that the generators take the setting
     if platform.system() != "Windows":  # Toolchain in windows is multiconfig
-        # Now the consumer using $
-        client.run("install . -s $:build_type=Debug  -g CMakeToolchain")
+        # Now the consumer using &
+        client.run("install . -s &:build_type=Debug  -g CMakeToolchain")
         assert "I'm dep and my build type is Release" in client.out
         # Verify the cmake toolchain takes Debug
         contents = client.load("conan_toolchain.cmake")
@@ -752,18 +752,18 @@ def test_create_and_priority_of_consumer_specific_setting():
     client.run("create . -s foo:build_type=Debug")
     assert "I'm foo and my build type is Debug" in client.out
 
-    client.run("create . -s foo:build_type=Debug -s $:build_type=Release")
+    client.run("create . -s foo:build_type=Debug -s &:build_type=Release")
     assert "I'm foo and my build type is Release" in client.out
 
     # The order doesn't matter
-    client.run("create . -s $:build_type=Release -s foo:build_type=Debug ")
+    client.run("create . -s &:build_type=Release -s foo:build_type=Debug ")
     assert "I'm foo and my build type is Release" in client.out
 
     # With test_package also works
     test = str(GenConanfile().with_test("pass").with_setting("build_type"))
     test += configure
     client.save({"test_package/conanfile.py": test})
-    client.run("create . -s $:build_type=Debug -s build_type=Release")
+    client.run("create . -s &:build_type=Debug -s build_type=Release")
     assert "I'm foo and my build type is Debug" in client.out
     # the test package recipe has debug too
     assert "I'm None and my build type is Debug" in client.out
@@ -781,7 +781,7 @@ def test_consumer_specific_settings_from_profile():
     profile = textwrap.dedent("""
         include(default)
         [settings]
-        $:build_type=Debug
+        &:build_type=Debug
     """)
     client.save({"conanfile.py": conanfile, "my_profile.txt": profile})
     client.run("install . --profile my_profile.txt")
