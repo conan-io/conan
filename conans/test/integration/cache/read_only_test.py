@@ -36,6 +36,7 @@ class MyPkg(ConanFile):
         os.chmod(path, 0o777)
         save(path, "Bye World")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_remove(self):
         self.client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", self.client.out)

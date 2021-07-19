@@ -12,4 +12,4 @@ class CliHelpTest(unittest.TestCase):
         self.assertIn("Shows help for a specific command", client.out)
 
         client.run("help search")
-        self.assertIn("Searches for package recipes whose name contain", client.out)
+        self.assertIn("Searches for package recipes in a remote or remotes", client.out)

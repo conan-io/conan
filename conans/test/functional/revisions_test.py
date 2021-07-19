@@ -516,6 +516,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.c_v2 = TurboTestClient(servers=servers)
         self.ref = ConanFileReference.loads("lib/1.0@conan/testing")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_all_remotes_with_rrev(self):
         """If we search for the packages of a ref with the RREV in the "all" remote:
 
@@ -553,6 +554,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEqual(["Windows"], oss_r1)
         self.assertEqual(["Linux"], oss_r2)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_all_remotes_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV in the "all" remote:
 
@@ -581,6 +583,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss_r1))
         self.assertEqual(set(["Linux"]), set(oss_r2))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_a_remote_package_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV:
 
@@ -606,6 +609,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = [p["settings"]["os"] for p in data["results"][0]["items"][0]["packages"]]
         self.assertEqual(set(["SunOS", "FreeBSD"]), set(oss))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_a_local_package_without_rrev(self):
         """If we search for the packages of a ref without specifying the RREV:
 
@@ -629,6 +633,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(set(["Macos"]), set(oss))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_a_remote_package_with_rrev(self):
         """If we search for the packages of a ref specifying the RREV:
          1. With v2 client it shows the packages for that RREV"""
@@ -653,6 +658,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         oss = items[0]["settings"]["os"]
         self.assertEqual(oss, "Linux")
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_local_by_pattern(self):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
@@ -674,6 +680,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         assert [recipe for recipe in result if expected[0] in recipe]
         assert [recipe for recipe in result if expected[1] in recipe]
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_local_by_revision_pattern(self):
         """If we search for recipes with a pattern containing even the RREV:
          1. With v2 client it return the refs matching, the refs doesn't contain RREV"""
@@ -692,6 +699,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         result = items[0]["recipe"]["id"]
         self.assertIn(expected, result)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_recipes_in_remote_by_pattern(self):
         """If we search for recipes with a pattern:
          1. With v2 client it return the refs matching of the latests, the refs doesnt contain RREV"""
@@ -721,6 +729,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
 
         self.assertEqual(expected, [i["recipe"]["id"] for i in items])
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     @pytest.mark.skipif(get_env("CONAN_TEST_WITH_ARTIFACTORY", False),
                         reason="Not implemented in artifactory")
     def test_search_in_remote_by_revision_pattern(self):
@@ -768,6 +777,7 @@ class SearchingPackagesWithRevisions(unittest.TestCase):
         expected = []
         self.assertEqual(expected, items)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_search_revisions_regular_results(self):
         """If I upload several revisions to a server, we can list the times"""
         server = TestServer()

@@ -87,7 +87,7 @@ def user_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
 
-@conan_command(group="Misc")
+@conan_command()
 def user(conan_api, parser, *args, **kwargs):
     """
     Authenticates against a remote with user/pass, caching the auth token.

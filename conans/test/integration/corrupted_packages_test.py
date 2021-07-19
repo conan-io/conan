@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
 
@@ -38,6 +40,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.info_path))
         self.assertTrue(os.path.exists(self.tgz_path))
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_info_manifest_missing(self):
         os.unlink(self.info_path)
         os.unlink(self.manifest_path)
@@ -55,6 +58,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm -r default")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_manifest_missing(self):
         os.unlink(self.manifest_path)
         # Try search
@@ -70,6 +74,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.info_path)
@@ -102,6 +107,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.assertIn("Uploading conan_package.tgz", self.client.out)
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_manifest_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)
@@ -117,6 +123,7 @@ class CorruptedPackagesTest(unittest.TestCase):
         self.client.run("upload * --all --confirm")
         self._assert_all_package_files_in_server()
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_tgz_manifest_info_missing(self):
         os.unlink(self.tgz_path)
         os.unlink(self.manifest_path)

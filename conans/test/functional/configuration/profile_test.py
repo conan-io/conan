@@ -551,8 +551,8 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({CONANFILE: self.conanfile,
                           "profile1": self.profile1, "profile2": self.profile2})
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
-
         # The latest declared profile has priority
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
@@ -572,6 +572,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.run("info . --profile profile1 --profile profile2")
         self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
         # Install ref

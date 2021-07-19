@@ -638,6 +638,7 @@ class ConfigInstallSchedTest(unittest.TestCase):
         self.assertIn("Processing conan.conf", self.client.out)
         self.assertLess(os.path.getmtime(self.client.cache.config_install_file), time.time() + 1)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_sched_timeout(self):
         """ Conan config install must be executed when the scheduled time reaches
         """

@@ -1,8 +1,11 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_basic():
     client = TestClient()
     conanfile = textwrap.dedent("""

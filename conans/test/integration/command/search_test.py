@@ -1102,6 +1102,7 @@ helloTest/1.4.10@myuser/stable""".format(remote)
         self.assertIn("There are no packages matching the 'my_pkg' pattern", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchReferencesWithoutUserChannel(unittest.TestCase):
     conanfile = """from conans import ConanFile
 class Test(ConanFile):
@@ -1172,6 +1173,7 @@ class SearchOrder(unittest.TestCase):
         self.assertIn(output, client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRevisionsTest(unittest.TestCase):
 
     @pytest.mark.xfail(reason="cache2.0 revisit search command an --revisions for 2.0")
@@ -1415,6 +1417,7 @@ class Test(ConanFile):
         self.assertIn("There are no packages", client.out)
 
 
+@pytest.mark.xfail(reason="The search command tests have been moved to command_v2. This tests should be removed")
 class SearchRemoteAllTestCase(unittest.TestCase):
     def setUp(self):
         """ Create a remote called 'all' with some recipe in it """
