@@ -26,7 +26,7 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.tools import set_global_instances
@@ -257,6 +257,23 @@ class ConanAPIV2(object):
             return []
 
     @api_method
+    def get_remote_package_revisions(self, reference, remote):
+        pref = PackageReference.loads(reference)
+        if pref.revision:
+            raise ConanException("Cannot list the revisions of a specific package revision")
+        if not remote:
+            raise ConanException("Must get a remote")
+
+        try:
+            return self.app.remote_manager.get_package_revisions(pref, remote=remote)
+        except NotFoundException:
+            # This exception must be catched manually due to a server inconsistency:
+            # Artifactory API returns an empty result if the recipe doesn't exist, but
+            # Conan Server returns a 404. This probably should be fixed server side,
+            # but in the meantime we must handle it here
+            return []
+
+    @api_method
     def get_local_recipe_revisions(self, reference):
         ref = ConanFileReference.loads(reference)
         if ref.revision:
@@ -268,6 +285,23 @@ class ConanAPIV2(object):
             timestamp = self.app.cache.get_timestamp(revision)
             result = {
                 "revision": revision.revision,
+                "time": from_timestamp_to_iso8601(timestamp)
+            }
+            results.append(result)
+        return results
+
+    @api_method
+    def get_local_package_revisions(self, reference):
+        pref = PackageReference.loads(reference)
+        if pref.revision:
+            raise ConanException("Cannot list the revisions of a specific package revision")
+
+        package_revisions = self.app.cache.get_package_revisions(pref)
+        results = []
+        for pref_ in package_revisions:
+            timestamp = self.app.cache.get_timestamp(pref_)
+            result = {
+                "revision": pref_.revision,
                 "time": from_timestamp_to_iso8601(timestamp)
             }
             results.append(result)
