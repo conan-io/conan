@@ -26,17 +26,10 @@ class Patterns(object):
 
 class Infos(object):
 
-    def __init__(self, conanfile):
-        self._conanfile = conanfile
+    def __init__(self):
         self.source = NewCppInfo()
         self.build = NewCppInfo()
         self.package = NewCppInfo()
-
-    @property
-    def build_info(self):
-        build_cppinfo = self._conanfile.cpp.build.copy()
-        build_cppinfo.set_relative_base_folder(self._conanfile.folders.build_folder)
-        return build_cppinfo
 
 
 class Folders(object):

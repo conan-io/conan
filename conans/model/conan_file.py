@@ -170,7 +170,7 @@ class ConanFile(object):
         # layout() method related variables:
         self.folders = Folders()
         self.patterns = Patterns()
-        self.cpp = Infos(self)
+        self.cpp = Infos()
 
         self.patterns.source.include = ["*.h", "*.hpp", "*.hxx"]
         self.patterns.source.lib = []
