@@ -35,7 +35,7 @@ def list_recipes_cli_formatter(results):
             cli_out_write("{}{}".format(" " * (indentation * 2), reference), reference_color)
 
 
-def _list_revisions_cli_formatter(results, ref_type="recipes"):
+def _list_revisions_cli_formatter(results, is_package=False):
     for remote_results in results:
         if remote_results.get("error"):
             # TODO: Handle errors
@@ -48,9 +48,10 @@ def _list_revisions_cli_formatter(results, ref_type="recipes"):
 
         tab_space = " " * indentation
         if not remote_results.get("results"):
+            ref_type = "packages" if is_package else "recipes"
             cli_out_write(f"{tab_space}There are no matching {ref_type}")
 
-        reference = remote_results["package_reference"]
+        reference = remote_results["package_reference" if is_package else "reference"]
         for revisions in remote_results["results"]:
             rev = revisions["revision"]
             date = iso8601_to_str(revisions["time"])
@@ -62,7 +63,7 @@ def list_recipe_revisions_cli_formatter(results):
 
 
 def list_package_revisions_cli_formatter(results):
-    _list_revisions_cli_formatter(results, ref_type="packages")
+    _list_revisions_cli_formatter(results, is_package=True)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module
@@ -160,7 +161,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': None,
             'reference': args.reference,
-            'results': conan_api.get_local_recipe_revisions(args.reference)
+            'results': conan_api.get_revisions(args.reference)
         }
         results.append(result)
 
@@ -168,7 +169,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': remote.name,
             'reference': args.reference,
-            'results': conan_api.get_remote_recipe_revisions(args.reference, remote=remote)
+            'results': conan_api.get_revisions(args.reference, remote=remote)
         }
         results.append(result)
 
@@ -194,7 +195,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': None,
             'package_reference': args.package_reference,
-            'results': conan_api.get_local_package_revisions(args.package_reference)
+            'results': conan_api.get_revisions(args.package_reference, is_package=True)
         }
         results.append(result)
 
@@ -202,8 +203,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': remote.name,
             'package_reference': args.package_reference,
-            'results': conan_api.get_remote_package_revisions(args.package_reference,
-                                                              remote=remote)
+            'results': conan_api.get_revisions(args.package_reference, is_package=True, remote=remote)
         }
         results.append(result)
 
