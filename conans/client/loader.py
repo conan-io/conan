@@ -188,7 +188,7 @@ class ConanFileLoader(object):
             pkg_settings = package_settings_values.get(conanfile.name)
 
             if conanfile.develop and "&" in package_settings_values:
-                # "&c" overrides the "name" scoped settings.
+                # "&" overrides the "name" scoped settings.
                 pkg_settings = package_settings_values.get("&")
 
             if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
