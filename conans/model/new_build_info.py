@@ -53,8 +53,13 @@ class _NewComponent(object):
     def get_property(self, property_name, generator=None):
         if self._generator_properties is None:
             return None
+        if generator:
+            try:
+                return self._generator_properties[generator][property_name]
+            except KeyError:
+                pass
         try:  # generator = None is the dict for all generators
-            return self._generator_properties[generator][property_name]
+            return self._generator_properties[None][property_name]
         except KeyError:
             pass
 
