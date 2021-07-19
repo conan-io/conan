@@ -1,9 +1,11 @@
 import re
+import textwrap
 
 import pytest
 
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestListRecipeRevisionsBase:
@@ -24,12 +26,18 @@ class TestListRecipeRevisionsBase:
 
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("export . {}".format(reference))
-        self.client.run("upload --force -r {} {}".format(remote, reference))
+        self.client.run("create . {}".format(reference))
+        self.client.run("upload --force --all -r {} {}".format(remote, reference))
 
     @staticmethod
-    def _get_package_refence(recipe_name):
-        return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d:3fb49604f9c2f729b85ba3115852006824e72cab"
+    def _get_fake_package_refence(recipe_name):
+        return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d:" \
+               f"3fb49604f9c2f729b85ba3115852006824e72cab"
+
+    def _get_lastest_package_ref(self, recipe_name):
+        rref = self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
+        pref = PackageReference(rref, NO_SETTINGS_PACKAGE_ID)
+        return pref
 
 
 class TestParams(TestListRecipeRevisionsBase):
@@ -42,6 +50,11 @@ class TestParams(TestListRecipeRevisionsBase):
 
         self.client.run("list package-revisions whatever/1", assert_error=True)
         assert "ERROR: Value provided for package version, '1' (type Version), is too short" in self.client.out
+
+    def test_fails_if_reference_has_already_the_revision(self):
+        pref = self._get_fake_package_refence("whatever/1.0.0")
+        self.client.run(f"list package-revisions {pref}#fca0383e6a43348f7989f11ab8f0a92d", assert_error=True)
+        assert "ERROR: Cannot list the revisions of a specific package revision" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -70,24 +83,29 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
-        expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n")
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          There are no matching recipes
+        """)
 
-        self.client.run(f"list package-revisions {self._get_package_refence('whatever/0.1')}")
+        self.client.run(f"list package-revisions {self._get_fake_package_refence('whatever/0.1')}")
         assert expected_output == self.client.out
 
     def test_search_no_matching_recipes(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
-        expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n"
-                           "remote1:\n"
-                           "  There are no matching recipes\n"
-                           "remote2:\n"
-                           "  There are no matching recipes\n")
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          There are no matching recipes
+        remote1:
+          There are no matching recipes
+        remote2:
+          There are no matching recipes
+        """)
 
-        self.client.run(f"list package-revisions -c -a {self._get_package_refence('whatever/0.1')}")
+        pref = self._get_fake_package_refence('whatever/0.1')
+        self.client.run(f"list package-revisions -c -a {pref}")
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
@@ -97,7 +115,8 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
-        self.client.run(f"list package-revisions -r remote1 {self._get_package_refence('whatever/0.1')}", assert_error=True)
+        pref = self._get_fake_package_refence('whatever/0.1')
+        self.client.run(f"list package-revisions -r remote1 {pref}", assert_error=True)
         assert "ERROR: Remote 'remote1' is disabled" in self.client.out
 
 
@@ -107,41 +126,16 @@ class TestRemotes(TestListRecipeRevisionsBase):
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_recipe(remote_name, recipe_name)
+        pref = self._get_lastest_package_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-revisions -r remote1 {repr(pref)}")
 
-        self.client.run(f"list package-revisions -r remote1 {self._get_package_refence(recipe_name)}")
-
-        expected_output = (
-            r"remote1:\n"
-            r"  {}#.*\n".format(recipe_name)
-        )
+        expected_output = textwrap.dedent(f"""\
+        remote1:
+          {repr(pref)}#.*""")
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_search_without_user_and_channel(self):
-        remote_name = "remote1"
-        recipe_name = "test_recipe/1.0.0@user/channel"
-        self._add_remote(remote_name)
-        self._upload_recipe(remote_name, recipe_name)
-
-        self.client.run(f"list package-revisions -r remote1 {self._get_package_refence(recipe_name)}")
-
-        expected_output = (
-            "remote1:\n"
-            "  There are no matching recipes\n"
-        )
-
-        assert expected_output in self.client.out
-
     def test_search_in_all_remotes_and_cache(self):
-        expected_output = (
-            r"Local Cache:\n"
-            r"  test_recipe/1.0.0@user/channel#.*\n"
-            r"remote1:\n"
-            r"  test_recipe/1.0.0@user/channel#.*\n"
-            r"remote2:\n"
-            r"  There are no matching recipes\n"
-        )
-
         remote1 = "remote1"
         remote2 = "remote2"
 
@@ -153,9 +147,16 @@ class TestRemotes(TestListRecipeRevisionsBase):
         self._upload_recipe(remote2, "test_recipe/2.0.0@user/channel")
         self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
-        self.client.run(f"list package-revisions -a -c {self._get_package_refence('test_recipe/1.0.0@user/channel')}")
+        pref = self._get_lastest_package_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-revisions -a -c {repr(pref)}")
         output = str(self.client.out)
-
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          {repr(pref)}#.*
+        remote1:
+          {repr(pref)}#.*
+        remote2:
+          There are no matching recipes""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
@@ -170,7 +171,8 @@ class TestRemotes(TestListRecipeRevisionsBase):
         self._upload_recipe(remote1, remote1_recipe1)
         self._upload_recipe(remote1, remote1_recipe2)
 
-        self.client.run(f"list package-revisions -r wrong_remote  {self._get_package_refence(remote1_recipe1)}", assert_error=True)
+        pref = self._get_fake_package_refence(remote1_recipe1)
+        self.client.run(f"list package-revisions -r wrong_remote {pref}", assert_error=True)
         assert expected_output in self.client.out
 
     def test_wildcard_not_accepted(self):
