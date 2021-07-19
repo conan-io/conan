@@ -89,6 +89,7 @@ def pkg_cmake_test(require_name):
 
             def test(self):
                 cmd = os.path.join(self.cpp.build_info.bindirs[0], "test")
+                cmd = '"{}"'.format(cmd) # to deal with spaces in path
                 self.run(cmd, env=["conanrunenv"])
         """)
 

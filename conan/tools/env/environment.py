@@ -44,10 +44,10 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
-        return '{} && "{}"'.format(launchers, cmd)
+        return '{} && {}'.format(launchers, cmd)
     elif shs:
         launchers = " && ".join('. "{}"'.format(f) for f in shs)
-        return '{} && "{}"'.format(launchers, cmd)
+        return '{} && {}'.format(launchers, cmd)
     else:
         return cmd
 
