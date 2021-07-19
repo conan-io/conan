@@ -123,7 +123,6 @@ class DataCache:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self._db.delete_ref_by_path(old_path)
-            # TODO: cache2.0 check this, we update the timestamp here
             self._db.update_reference(new_ref, new_timestamp=time.time())
 
         # TODO: Here we are always overwriting the contents of the rrev folder where
@@ -156,7 +155,6 @@ class DataCache:
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks
             self._db.delete_ref_by_path(old_path)
-            # TODO: cache2.0 check this, we update the timestamp here
             self._db.update_reference(new_pref, new_timestamp=time.time())
 
         shutil.move(self._full_path(old_path), self._full_path(new_path))
