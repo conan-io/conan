@@ -36,7 +36,6 @@ def test_download_all(setup):
     assert set(new_package_ids) == set(package_ids)
 
 
-@pytest.mark.xfail(reason="FIXME: cache2.0 download not checking if revision is in cache before downloading")
 def test_download_some_reference(setup):
     client, ref, package_ids, _ = setup
     new_client = TestClient(servers=client.servers, users=client.users)
@@ -44,15 +43,20 @@ def test_download_some_reference(setup):
     new_client.run("download Hello0/0.1@lasote/stable -p %s" % package_ids[0])
     assert len(package_ids) == 3
 
+    # try to re-download the package we have just installed, will skip download
+    latest_prev = new_client.get_latest_prev("Hello0/0.1@lasote/stable")
+    new_client.run(f"download {latest_prev.full_str()}")
+    assert f"Skip {latest_prev.full_str()} download, already in cache" in new_client.out
+
     new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (package_ids[0],
                                                                       package_ids[1]))
+    assert f"Skip {latest_prev.full_str()} download, already in cache" in new_client.out
     latest_rrev = new_client.cache.get_latest_rrev(ref)
     packages = new_client.cache.get_package_ids(latest_rrev)
     package_ids = [package.id for package in packages]
     assert len(package_ids) == 2
 
 
-@pytest.mark.xfail(reason="FIXME: cache2.0 download not checking if revision is in cache before downloading")
 def test_download_recipe_twice(setup):
     client, ref, package_ids, conanfile = setup
     new_client = TestClient(servers=client.servers, users=client.users)
@@ -69,7 +73,6 @@ def test_download_recipe_twice(setup):
     assert conanfile == load(conanfile_path)
 
 
-@pytest.mark.xfail(reason="FIXME: cache2.0 download not checking if revision is in cache before downloading")
 def test_download_packages_twice(setup):
     client, ref, package_ids, _ = setup
     new_client = TestClient(servers=client.servers, users=client.users)
@@ -90,7 +93,6 @@ def test_download_packages_twice(setup):
     assert expected_header_contents == got_header
 
 
-@pytest.mark.xfail(reason="FIXME: cache2.0 download not checking if revision is in cache before downloading")
 def test_download_all_but_no_packages():
     # Remove all from remote
     new_client = TestClient(default_server_user=True)
