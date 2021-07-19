@@ -1,7 +1,7 @@
 import json
 
-from conans.cli.output import cli_out_write
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
+from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.util.dates import iso8601_to_str
 

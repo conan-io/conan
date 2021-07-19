@@ -4,7 +4,6 @@ import time
 from tqdm import tqdm
 
 import conans
-from conan.cache.conan_reference import ConanReference
 from conans import __version__ as client_version
 from conans.cli.output import ConanOutput
 from conans.client.api.helpers.search import Search
