@@ -187,9 +187,9 @@ class ConanFileLoader(object):
             # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
             pkg_settings = package_settings_values.get(conanfile.name)
 
-            if conanfile.develop and "$" in package_settings_values:
-                # "$" overrides the "name" scoped settings.
-                pkg_settings = package_settings_values.get("$")
+            if conanfile.develop and "&" in package_settings_values:
+                # "&" overrides the "name" scoped settings.
+                pkg_settings = package_settings_values.get("&")
 
             if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
                 for pattern, settings in package_settings_values.items():
@@ -270,8 +270,8 @@ class ConanFileLoader(object):
         conanfile = ConanFile(self._output, self._runner, display_name)
         tmp_settings = profile.processed_settings.copy()
         package_settings_values = profile.package_settings_values
-        if "$" in package_settings_values:
-            pkg_settings = package_settings_values.get("$")
+        if "&" in package_settings_values:
+            pkg_settings = package_settings_values.get("&")
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
         conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
