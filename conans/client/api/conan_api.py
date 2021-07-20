@@ -239,14 +239,11 @@ class ConanAPIV2(object):
         data["results"] = results
         return data
 
-    @api_method
-    def get_revisions(self, reference, is_package=False, remote=None):
-        if is_package:
+    def _get_revisions(self, reference, ref_type, remote=None):
+        if ref_type == "package":
             ref = PackageReference.loads(reference)
-            ref_type = "package"
         else:
             ref = ConanFileReference.loads(reference)
-            ref_type = "recipe"
 
         # Class method name to get the specific revisions
         method_name = f"get_{ref_type}_revisions"
@@ -275,6 +272,14 @@ class ConanAPIV2(object):
                 }
                 results.append(result)
             return results
+
+    @api_method
+    def get_package_revisions(self, reference, remote=None):
+        return self._get_revisions(reference, 'package', remote=remote)
+
+    @api_method
+    def get_recipe_revisions(self, reference, remote=None):
+        return self._get_revisions(reference, 'recipe', remote=remote)
 
 
 Conan = ConanAPIV2

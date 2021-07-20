@@ -5,7 +5,6 @@ from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.util.dates import iso8601_to_str
 
-indentation = 2
 remote_color = Color.BRIGHT_BLUE
 recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
@@ -20,19 +19,19 @@ def list_recipes_cli_formatter(results):
         if not remote_results.get("remote"):
             cli_out_write("Local Cache:", remote_color)
         else:
-            cli_out_write("{}:".format(remote_results["remote"]), remote_color)
+            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
 
         if not remote_results.get("results"):
-            cli_out_write("{}There are no matching recipes".format(" " * indentation))
+            cli_out_write("There are no matching recipes", indentation=2)
 
         current_recipe = None
         for recipe in remote_results["results"]:
             if recipe["name"] != current_recipe:
                 current_recipe = recipe["name"]
-                cli_out_write("{}{}".format(" " * indentation, current_recipe), recipe_color)
+                cli_out_write(current_recipe, fg=recipe_color, indentation=2)
 
             reference = recipe["id"]
-            cli_out_write("{}{}".format(" " * (indentation * 2), reference), reference_color)
+            cli_out_write(reference, fg=reference_color, indentation=2)
 
 
 def _list_revisions_cli_formatter(results, is_package=False):
@@ -42,20 +41,19 @@ def _list_revisions_cli_formatter(results, is_package=False):
             return
 
         if not remote_results.get("remote"):
-            cli_out_write("Local Cache:", remote_color)
+            cli_out_write("Local Cache:", fg=remote_color)
         else:
-            cli_out_write("{}:".format(remote_results["remote"]), remote_color)
+            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
 
-        tab_space = " " * indentation
         if not remote_results.get("results"):
             ref_type = "packages" if is_package else "recipes"
-            cli_out_write(f"{tab_space}There are no matching {ref_type}")
+            cli_out_write(f"There are no matching {ref_type}", indentation=2)
 
         reference = remote_results["package_reference" if is_package else "reference"]
         for revisions in remote_results["results"]:
             rev = revisions["revision"]
             date = iso8601_to_str(revisions["time"])
-            cli_out_write(f"{tab_space}{reference}#{rev} ({date})", recipe_color)
+            cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
 
 
 def list_recipe_revisions_cli_formatter(results):
@@ -161,7 +159,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': None,
             'reference': args.reference,
-            'results': conan_api.get_revisions(args.reference)
+            'results': conan_api.get_recipe_revisions(args.reference)
         }
         results.append(result)
 
@@ -169,7 +167,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': remote.name,
             'reference': args.reference,
-            'results': conan_api.get_revisions(args.reference, remote=remote)
+            'results': conan_api.get_recipe_revisions(args.reference, remote=remote)
         }
         results.append(result)
 
@@ -195,7 +193,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': None,
             'package_reference': args.package_reference,
-            'results': conan_api.get_revisions(args.package_reference, is_package=True)
+            'results': conan_api.get_package_revisions(args.package_reference)
         }
         results.append(result)
 
@@ -203,7 +201,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
         result = {
             'remote': remote.name,
             'package_reference': args.package_reference,
-            'results': conan_api.get_revisions(args.package_reference, is_package=True, remote=remote)
+            'results': conan_api.get_package_revisions(args.package_reference, remote=remote)
         }
         results.append(result)
 
