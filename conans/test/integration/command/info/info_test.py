@@ -697,3 +697,26 @@ class TestInfoContext:
         assert info[0]["context"] == "build"
         assert info[1]["reference"] == "pkg/1.0"
         assert info[1]["context"] == "host"
+
+
+class TestInfoPythonRequires:
+    # https://github.com/conan-io/conan/issues/9277
+
+    def test_python_requires(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . tool/0.1@")
+        conanfile = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                python_requires = "tool/0.1"
+            """)
+        client.save({"conanfile.py": conanfile})
+
+        client.run("info .")
+        assert "Python-requires:" in client.out
+        assert "tool/0.1#f3367e0e7d170aa12abccb175fee5f97" in client.out
+
+        client.run("info . --json=file.json")
+        info = json.loads(client.load("file.json"))
+        assert info[0]["python_requires"] == ['tool/0.1#f3367e0e7d170aa12abccb175fee5f97']

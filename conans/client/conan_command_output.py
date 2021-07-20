@@ -139,6 +139,11 @@ class CommandOutputer(object):
             item_data["build_id"] = build_id(conanfile)
             item_data["context"] = conanfile.context
 
+            python_requires = getattr(conanfile, "python_requires", None)
+            if python_requires and not isinstance(python_requires, dict):  # no old python requires
+                item_data["python_requires"] = [repr(r)
+                                                for r in conanfile.python_requires.all_refs()]
+
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
                 package_layout = self._cache.package_layout(ref, conanfile.short_paths)
