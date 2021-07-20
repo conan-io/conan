@@ -404,8 +404,8 @@ class ConanFile(object):
                     from conan.tools.microsoft.subsystems import run_in_windows_bash
                     return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
             _env = _env or "conanenv"
-            command = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
-            return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
 
         if run_environment:
             # When using_build_profile the required environment is already applied through
