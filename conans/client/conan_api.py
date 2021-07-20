@@ -303,6 +303,8 @@ class ConanAPIV1(object):
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
                           'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
+        # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
+        # json should contain all values for easy automation
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
