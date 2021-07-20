@@ -45,6 +45,13 @@ class Requirement(object):
             return version[1:-1]
 
     @property
+    def alias(self):
+        version = self.ref.version
+        if version.startswith("(") and version.endswith(")"):
+            return ConanFileReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
+                                      self.ref.revision, validate=False)
+
+    @property
     def is_resolved(self):
         """ returns True if the version_range reference has been already resolved to a
         concrete reference
