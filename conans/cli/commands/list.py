@@ -73,6 +73,10 @@ list_package_revisions_formatters = {
     "cli": list_package_revisions_cli_formatter,
     "json": json_formatter
 }
+list_package_ids_formatters = {
+    "cli": list_package_revisions_cli_formatter,
+    "json": json_formatter
+}
 
 
 @conan_subcommand(formatters=list_recipes_formatters)
@@ -193,6 +197,40 @@ def list_package_revisions(conan_api, parser, subparser, *args):
             'remote': remote.name,
             'package_reference': args.package_reference,
             'results': conan_api.get_package_revisions(args.package_reference, remote=remote)
+        }
+        results.append(result)
+
+    return results
+
+
+@conan_subcommand(formatters=list_package_ids_formatters)
+def list_package_ids(conan_api, parser, subparser, *args):
+    """
+    List all the package IDs for a given reference
+    """
+    _add_common_list_subcommands(subparser, "reference")
+    args = parser.parse_args(*args)
+
+    if not args.cache and not args.remote and not args.all_remotes:
+        # If neither remote nor cache are defined, show results only from cache
+        args.cache = True
+
+    remotes = _get_remotes(conan_api, args)
+
+    results = []
+    if args.cache:
+        result = {
+            'remote': None,
+            'reference': args.reference,
+            'results': conan_api.get_package_ids(args.package_reference)
+        }
+        results.append(result)
+
+    for remote in remotes:
+        result = {
+            'remote': remote.name,
+            'reference': args.reference,
+            'results': conan_api.get_package_ids(args.package_reference, remote=remote)
         }
         results.append(result)
 

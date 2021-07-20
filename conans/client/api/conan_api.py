@@ -286,5 +286,12 @@ class ConanAPIV2(object):
 
         return self._get_revisions(ref, remote=remote)
 
+    def get_package_ids(self, reference, remote=None):
+        ref = ConanFileReference.loads(reference)
+        if remote:
+            rrev = ref if ref.revision else self.app.remote_manager.search_packages(remote, ref, query)
+        else:
+            rrev = ref if ref.revision else self.app.cache.get_package_ids(ref)
+
 
 Conan = ConanAPIV2
