@@ -9,7 +9,6 @@ from conans.test.utils.tools import TestClient, TestServer
 class TestListRecipeRevisionsBase:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.users = {}
         self.client = TestClient()
 
     def _add_remote(self, remote_name):
