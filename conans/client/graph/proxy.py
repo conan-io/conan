@@ -2,7 +2,6 @@ from datetime import datetime
 import time
 
 from requests.exceptions import RequestException
-from dateutil.tz import gettz
 
 from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                        RECIPE_NOT_IN_REMOTE, RECIPE_NO_REMOTE, RECIPE_UPDATEABLE,
@@ -10,7 +9,7 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
                                        RECIPE_INCACHE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException, NotFoundException
-from conans.util.dates import from_iso8601_to_datetime, from_timestamp_to_iso8601
+from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -81,7 +80,7 @@ class ConanProxy(object):
                 #  download anything but we will UPDATE the date of that revision in the
                 #  local cache and WE ARE ALSO UPDATING THE REMOTE
                 #  Check if this is the flow we want to follow
-                cache_time = datetime.fromtimestamp(self._cache.get_timestamp(ref), gettz())
+                cache_time = self._cache.get_timestamp(ref)
                 if latest_rrev.revision != ref.revision:
                     if cache_time < remote_time:
                         remotes.select(remote.name)
@@ -104,7 +103,7 @@ class ConanProxy(object):
                         selected_remote = remote
                         remotes.select(remote.name)
                         self._cache.update_reference(ref,
-                                                     new_timestamp=datetime.timestamp(remote_time),
+                                                     new_timestamp=remote_time,
                                                      new_remote=selected_remote.name)
                         status = RECIPE_INCACHE_DATE_UPDATED
                 return conanfile_path, status, selected_remote, ref
@@ -130,7 +129,7 @@ class ConanProxy(object):
                 for rrev in remote_rrevs:
                     results.append({'remote': remote,
                                     'reference': reference.copy_with_rev(rrev.get("revision")),
-                                    'time': from_iso8601_to_datetime(rrev.get("time"))})
+                                    'time': from_iso8601_to_timestamp(rrev.get("time"))})
                 if len(results) > 0 and not check_all_servers:
                     break
             except NotFoundException:

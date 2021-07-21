@@ -12,7 +12,7 @@ from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
 from conans.util.conan_v2_mode import conan_v2_property
-from conans.util.dates import from_iso8601_to_datetime
+from conans.util.dates import from_iso8601_to_timestamp
 
 
 class GraphBinariesAnalyzer(object):
@@ -73,8 +73,8 @@ class GraphBinariesAnalyzer(object):
                     remote_prevs = self._remote_manager.get_package_revisions(pkg_id, remote)
                     remote_latest_prev = PackageReference(pref.ref, pref.id,
                                                           revision=remote_prevs[0].get("revision"))
-                    remote_latest_prev_time = from_iso8601_to_datetime(remote_prevs[0].get("time"))
-                    cache_time = datetime.fromtimestamp(self._cache.get_timestamp(pref), gettz())
+                    remote_latest_prev_time = from_iso8601_to_timestamp(remote_prevs[0].get("time"))
+                    cache_time = self._cache.get_timestamp(pref)
                 except NotFoundException:
                     output.warn("Can't update, no package in remote")
                 except NoRemoteAvailable:

@@ -16,6 +16,11 @@ def from_iso8601_to_datetime(iso_str):
     return parser.isoparse(iso_str)
 
 
+def from_iso8601_to_timestamp(iso_str):
+    datetime_time = from_iso8601_to_datetime(iso_str)
+    return datetime_time.timestamp()
+
+
 def iso8601_to_str(iso_str):
     dt = from_iso8601_to_datetime(iso_str)
     return dt.strftime('%Y-%m-%d %H:%M:%S UTC')
