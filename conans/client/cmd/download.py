@@ -38,13 +38,13 @@ def download(app, ref, package_ids, remote, recipe, recorder, remotes):
                 output.warn("No remote binary packages found in remote")
 
         parallel = cache.config.parallel_download
-        _download_binaries(conanfile, ref, package_ids, remote_manager,
+        _download_binaries(conanfile, ref, package_ids, cache, remote_manager,
                            remote, output, recorder, parallel)
     hook_manager.execute("post_download", conanfile_path=conan_file_path, reference=ref,
                          remote=remote)
 
 
-def _download_binaries(conanfile, ref, package_ids, remote_manager, remote, output,
+def _download_binaries(conanfile, ref, package_ids, cache, remote_manager, remote, output,
                        recorder, parallel):
 
     def _download(package_id):
