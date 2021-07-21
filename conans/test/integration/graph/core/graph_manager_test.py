@@ -1,12 +1,9 @@
-import pytest
-
 from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_INCACHE
 from conans.errors import ConanException
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.utils.tools import GenConanfile
 
 
-@pytest.mark.xfail(reason="cache2.0 touches manually the cache, revisit")
 class TransitiveGraphTest(GraphManagerTest):
     def test_basic(self):
         # say/0.1
@@ -17,7 +14,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(len(node.dependencies), 0)
         self.assertEqual(len(node.dependants), 0)
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_transitive(self):
         # app -> libb0.1
         self.recipe_cache("libb/0.1")
@@ -45,7 +41,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self.assertEqual(list(app.public_deps), [app, libb])
         self.assertEqual(list(libb.public_deps), list(app.public_deps))
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_transitive_two_levels(self):
         # app -> libb0.1 -> liba0.1
         self.recipe_cache("liba/0.1")
@@ -63,7 +58,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_diamond(self):
         # app -> libb0.1 -> liba0.1
         #    \-> libc0.1 ->/
@@ -86,7 +80,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_consecutive_diamonds(self):
         # app -> libe0.1 -> libd0.1 -> libb0.1 -> liba0.1
         #    \-> libf0.1 ->/    \-> libc0.1 ->/
@@ -121,7 +114,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba],  dependents=[libd], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_parallel_diamond(self):
         # app -> libb0.1 -> liba0.1
         #    \-> libc0.1 ->/
@@ -148,7 +140,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libd, "libd/0.1#123", deps=[liba], dependents=[app], closure=[liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc, libd])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_nested_diamond(self):
         # app --------> libb0.1 -> liba0.1
         #    \--------> libc0.1 ->/
@@ -175,7 +166,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libd, "libd/0.1#123", deps=[libc], dependents=[app], closure=[libc, liba])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_multiple_transitive(self):
         # https://github.com/conanio/conan/issues/4720
         # app -> libb0.1  -> libc0.1 -> libd0.1
@@ -199,7 +189,6 @@ class TransitiveGraphTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app], closure=[libc, libd])
         self._check_node(libc, "libc/0.1#123", deps=[libd], dependents=[app, libb], closure=[libd])
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_diamond_conflict(self):
         # app -> libb0.1 -> liba0.1
         #    \-> libc0.1 -> liba0.2
@@ -216,7 +205,6 @@ class TransitiveGraphTest(GraphManagerTest):
             "package."):
             self.build_consumer(consumer)
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_loop(self):
         # app -> libc0.1 -> libb0.1 -> liba0.1 ->|
         #             \<-------------------------|
@@ -230,7 +218,6 @@ class TransitiveGraphTest(GraphManagerTest):
                                     "Loop detected in context host: 'liba/0.1' requires 'libc/0.1'"):
             self.build_consumer(consumer)
 
-    @pytest.mark.xfail(reason="cache2.0 will fail because touches the cache manually, revisit")
     def test_self_loop(self):
         self.recipe_cache("liba/0.1")
         consumer = self.recipe_consumer("liba/0.2", ["liba/0.1"])

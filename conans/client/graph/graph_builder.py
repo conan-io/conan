@@ -167,7 +167,7 @@ class DepsGraphBuilder(object):
         while alias is not None:
             # if not cached, then resolve
             try:
-                result = self._proxy.get_recipe(alias, check_updates, update, remotes, self._recorder)
+                result = self._proxy.get_recipe(alias, check_updates, update, remotes)
                 conanfile_path, recipe_status, remote, new_ref = result
             except ConanException as e:
                 raise e

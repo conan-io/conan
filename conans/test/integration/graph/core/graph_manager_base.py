@@ -69,12 +69,9 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
-        layout = self.get_latest_ref_layout(ref)
+        ref = ConanFileReference.loads("{}#123".format(ref))
+        layout = self.cache.create_ref_layout(ref)
         save(layout.conanfile(), str(conanfile))
-        # Need to complete de metadata = revision + manifest
-        # FIXME: 2.0: update_metadata() method does not exist anymore
-        with layout.update_metadata() as metadata:
-            metadata.recipe.revision = "123"
         manifest = FileTreeManifest.create(layout.export())
         manifest.save(layout.export())
 
@@ -104,18 +101,17 @@ class GraphManagerTest(unittest.TestCase):
         save(path, str(conanfile))
         return path
 
-    def _cache_recipe(self, ref, test_conanfile, revision=None):
+    def _cache_recipe(self, ref, test_conanfile):
         if isinstance(test_conanfile, GenConanfile):
             name, version = test_conanfile._name, test_conanfile._version
             test_conanfile = test_conanfile.with_package_info(
                 cpp_info={"libs": ["mylib{}{}lib".format(name, version)]},
                 env_info={"MYENV": ["myenv{}{}env".format(name, version)]})
-        save(self.get_latest_ref_layout(ref).conanfile(), str(test_conanfile))
-        # FIXME: 2.0: update_metadata() method does not exist anymore
-        with self.get_latest_ref_layout(ref).update_metadata() as metadata:
-            metadata.recipe.revision = revision or "123"
-        manifest = FileTreeManifest.create(self.get_latest_ref_layout(ref).export())
-        manifest.save(self.get_latest_ref_layout(ref).export())
+        ref = ConanFileReference.loads("{}#123".format(ref))
+        layout = self.cache.create_ref_layout(ref)
+        save(layout.conanfile(), str(test_conanfile))
+        manifest = FileTreeManifest.create(layout.export())
+        manifest.save(layout.export())
 
     def build_graph(self, content, profile_build_requires=None, ref=None, create_ref=None,
                     install=True):

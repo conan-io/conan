@@ -1,13 +1,10 @@
 import textwrap
 
-import pytest
-
 from conans.client.graph.graph import CONTEXT_HOST, CONTEXT_BUILD
 from conans.model.profile import Profile
 from conans.test.integration.graph.core.cross_build.protoc_basic_test import ClassicProtocExampleBase
 
 
-@pytest.mark.xfail(reason="cache2.0 will not pass modifying the cache manually, revisit")
 class ProtocWithGTestExample(ClassicProtocExampleBase):
     """ Built on top of the ClassicProtocExample, in this use case we are adding a testing library
         to the project: we add gtest as a build_require and also the protoc executable, BUT
