@@ -271,11 +271,13 @@ class ConanAPIV1(object):
                 remotes = self.app.load_remotes()
                 remote = remotes.get_remote(remote_name)
                 try:  # get_recipe_manifest can fail, not in server
-                    _, ref = self.app.remote_manager.get_recipe_manifest(ref, remote)
+                    if not ref.revision:
+                        ref = self.app.remote_manager.get_latest_recipe_revision(ref, remote)
                 except NotFoundException:
                     raise RecipeNotFoundException(ref)
                 else:
-                    ref, ref_time = self.app.remote_manager.get_recipe(ref, remote)
+                    if not self.app.cache.exists_rrev(ref):
+                        ref, _ = self.app.remote_manager.get_recipe(ref, remote)
 
             result = self.app.proxy.get_recipe(ref, False, False, remotes)
             conanfile_path, _, _, ref = result

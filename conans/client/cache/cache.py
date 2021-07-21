@@ -124,6 +124,14 @@ class ClientCache(object):
         return [ConanFileReference.loads(f"{ref['reference']}#{ref['rrev']}", validate=False) for ref in
                 self._data_cache.list_references(only_latest_rrev=only_latest_rrev)]
 
+    def exists_rrev(self, ref):
+        matching_rrevs = self.get_recipe_revisions(ref)
+        return len(matching_rrevs) > 0
+
+    def exists_prev(self, ref):
+        matching_prevs = self.get_package_revisions(ref)
+        return len(matching_prevs) > 0
+
     def get_package_revisions(self, ref, only_latest_prev=False):
         return [
             PackageReference.loads(f'{pref["reference"]}#{pref["rrev"]}:{pref["pkgid"]}#{pref["prev"]}',
