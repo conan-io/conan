@@ -31,7 +31,7 @@ def list_recipes_cli_formatter(results):
                 cli_out_write(current_recipe, fg=recipe_color, indentation=2)
 
             reference = recipe["id"]
-            cli_out_write(reference, fg=reference_color, indentation=2)
+            cli_out_write(reference, fg=reference_color, indentation=4)
 
 
 def _list_revisions_cli_formatter(results, is_package=False):
