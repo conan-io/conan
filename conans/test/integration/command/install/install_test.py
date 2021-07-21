@@ -365,3 +365,32 @@ def test_install_error_never(client):
     assert "ERROR: --build=never not compatible with other options" in client.out
     client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
     assert "ERROR: --build=never not compatible with other options" in client.out
+
+
+class TestCliOverride:
+
+    def test_install_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("install . --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out
+
+    def test_install_ref_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/1.1@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("create . pkg/1.0@")
+        client.run("install pkg/1.0@ --require-override=zlib/1.1")
+        assert "zlib/1.1: Already installed" in client.out
+
+    def test_create_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        client.run("create . pkg/0.1@ --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out

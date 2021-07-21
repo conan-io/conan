@@ -18,7 +18,6 @@ class _PatternEntry(object):
 class Patterns(object):
 
     def __init__(self):
-
         self.source = _PatternEntry()
         self.build = _PatternEntry()
         # TODO: Pending use case
@@ -28,15 +27,14 @@ class Patterns(object):
 class Infos(object):
 
     def __init__(self):
-
         self.source = NewCppInfo()
         self.build = NewCppInfo()
         self.package = NewCppInfo()
 
 
 class Folders(object):
-    def __init__(self):
 
+    def __init__(self):
         self._base_install = None
         self._base_source = None
         self._base_build = None
