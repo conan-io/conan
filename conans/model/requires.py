@@ -122,6 +122,14 @@ class Requirements(OrderedDict):
         else:
             self[name] = new_requirement
 
+    def override(self, ref):
+        name = ref.name
+        old_requirement = self.get(ref.name)
+        if old_requirement is not None:
+            self[name] = Requirement(ref, private=False, override=False)
+        else:
+            self[name] = Requirement(ref, private=False, override=True)
+
     def update(self, down_reqs, output, own_ref, down_ref):
         """ Compute actual requirement values when downstream values are defined
         param down_reqs: the current requirements as coming from downstream to override

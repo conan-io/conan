@@ -108,14 +108,15 @@ class GraphManager(object):
 
     def load_graph(self, reference, create_reference, graph_info, build_mode, check_updates, update,
                    remotes, recorder, apply_build_requires=True, lockfile_node_id=None,
-                   is_build_require=False):
+                   is_build_require=False, require_overrides=None):
         """ main entry point to compute a full dependency graph
         """
         profile_host, profile_build = graph_info.profile_host, graph_info.profile_build
         graph_lock, root_ref = graph_info.graph_lock, graph_info.root
 
         root_node = self._load_root_node(reference, create_reference, profile_host, graph_lock,
-                                         root_ref, lockfile_node_id, is_build_require)
+                                         root_ref, lockfile_node_id, is_build_require,
+                                         require_overrides)
         deps_graph = self._resolve_graph(root_node, profile_host, profile_build, graph_lock,
                                          build_mode, check_updates, update, remotes, recorder,
                                          apply_build_requires=apply_build_requires)
@@ -134,7 +135,7 @@ class GraphManager(object):
         return deps_graph
 
     def _load_root_node(self, reference, create_reference, profile_host, graph_lock, root_ref,
-                        lockfile_node_id, is_build_require):
+                        lockfile_node_id, is_build_require, require_overrides):
         """ creates the first, root node of the graph, loading or creating a conanfile
         and initializing it (settings, options) as necessary. Also locking with lockfile
         information
@@ -149,17 +150,20 @@ class GraphManager(object):
         # create (without test_package), install|info|graph|export-pkg <ref>
         if isinstance(reference, ConanFileReference):
             return self._load_root_direct_reference(reference, graph_lock, profile_host,
-                                                    lockfile_node_id, is_build_require)
+                                                    lockfile_node_id, is_build_require,
+                                                    require_overrides)
 
         path = reference  # The reference must be pointing to a user space conanfile
         if create_reference:  # Test_package -> tested reference
-            return self._load_root_test_package(path, create_reference, graph_lock, profile_host)
+            return self._load_root_test_package(path, create_reference, graph_lock, profile_host,
+                                                require_overrides)
 
         # It is a path to conanfile.py or conanfile.txt
-        root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref)
+        root_node = self._load_root_consumer(path, graph_lock, profile_host, root_ref,
+                                             require_overrides)
         return root_node
 
-    def _load_root_consumer(self, path, graph_lock, profile, ref):
+    def _load_root_consumer(self, path, graph_lock, profile, ref, require_overrides):
         """ load a CONSUMER node from a user space conanfile.py or conanfile.txt
         install|info|create|graph <path>
         :path full path to a conanfile
@@ -188,7 +192,8 @@ class GraphManager(object):
                                                    version=ref.version,
                                                    user=ref.user,
                                                    channel=ref.channel,
-                                                   lock_python_requires=lock_python_requires)
+                                                   lock_python_requires=lock_python_requires,
+                                                   require_overrides=require_overrides)
 
             ref = ConanFileReference(conanfile.name, conanfile.version,
                                      ref.user, ref.channel, validate=False)
@@ -205,7 +210,7 @@ class GraphManager(object):
         return root_node
 
     def _load_root_direct_reference(self, reference, graph_lock, profile, lockfile_node_id,
-                                    is_build_require):
+                                    is_build_require, require_overrides):
         """ When a full reference is provided:
         install|info|graph <ref> or export-pkg .
         :return a VIRTUAL root_node with a conanfile that requires the reference
@@ -215,14 +220,16 @@ class GraphManager(object):
                                  "reference without revision")
 
         conanfile = self._loader.load_virtual([reference], profile,
-                                              is_build_require=is_build_require)
+                                              is_build_require=is_build_require,
+                                              require_overrides=require_overrides)
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         # Build_requires cannot be found as early as this, because there is no require yet
         if graph_lock and not is_build_require:  # Find the Node ID in the lock of current root
             graph_lock.find_require_and_lock(reference, conanfile, lockfile_node_id)
         return root_node
 
-    def _load_root_test_package(self, path, create_reference, graph_lock, profile):
+    def _load_root_test_package(self, path, create_reference, graph_lock, profile,
+                                require_overrides):
         """ when a test_package/conanfile.py is provided, together with the reference that is
         being created and need to be tested
         :return a CONSUMER root_node with a conanfile.py with an injected requires to the
@@ -231,7 +238,9 @@ class GraphManager(object):
         test = str(create_reference)
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = self._loader.load_consumer(path, profile, user=create_reference.user,
-                                               channel=create_reference.channel)
+                                               channel=create_reference.channel,
+                                               require_overrides=require_overrides
+                                               )
         conanfile.display_name = "%s (test package)" % str(test)
         conanfile.output.scope = conanfile.display_name
 
