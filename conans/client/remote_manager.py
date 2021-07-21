@@ -101,7 +101,11 @@ class RemoteManager(object):
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
 
         ref = self._resolve_latest_ref(ref, remote)
-        layout = self._cache.create_ref_layout(ref)
+        try:
+            layout = self._cache.ref_layout(ref)
+        except ConanException:
+            layout = self._cache.create_ref_layout(ref)
+
         layout.export_remove()
 
         t1 = time.time()

@@ -392,24 +392,16 @@ class BinaryInstaller(object):
             assert node.prev, "PREV for %s is None" % str(node.pref)
             download_nodes.append(node)
 
-        def _download(n):
-            # We cannot embed the package_lock inside the remote.get_package()
-            # because the handle_node_cache has its own lock
-            # TODO: cache2.0 check locks
-            pkg_layout = self._cache.pkg_layout(n.pref)
-            with pkg_layout.package_lock():
-                self._download_pkg(n)
-
         parallel = self._cache.config.parallel_download
         if parallel is not None:
             self._out.info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
-            thread_pool.map(_download, [n for n in download_nodes])
+            thread_pool.map(self._download_pkg, [n for n in download_nodes])
             thread_pool.close()
             thread_pool.join()
         else:
             for node in download_nodes:
-                _download(node)
+                self._download_pkg(node)
 
     def _download_pkg(self, node):
         self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,

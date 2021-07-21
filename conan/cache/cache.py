@@ -103,15 +103,19 @@ class DataCache:
 
     def get_reference_layout(self, ref: ConanReference):
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
-        reference_path = self._get_path(ref)
-        return RecipeLayout(ref, os.path.join(self.base_folder, reference_path))
+        ref_data = self._db.try_get_reference(ref)
+        ref_path = ref_data.get("path")
+        assert ref_path == self._get_path(ref), "Path from db should match expected deterministic path"
+        return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
     def get_package_layout(self, pref: ConanReference):
         assert pref.rrev, "Recipe revision must be known to get the package layout"
         assert pref.pkgid, "Package id must be known to get the package layout"
         assert pref.prev, "Package revision must be known to get the package layout"
-        package_path = self._get_path(pref)
-        return PackageLayout(pref, os.path.join(self.base_folder, package_path))
+        pref_data = self._db.try_get_reference(pref)
+        pref_path = pref_data.get("path")
+        assert pref_path == self._get_path(pref), "Path from db should match expected deterministic path"
+        return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         ref_data = self._db.try_get_reference(old_ref)
