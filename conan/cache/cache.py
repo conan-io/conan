@@ -114,7 +114,8 @@ class DataCache:
         return PackageLayout(pref, os.path.join(self.base_folder, package_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
-        old_path = self._db.try_get_reference_directory(old_ref)
+        ref_data = self._db.try_get_reference(old_ref)
+        old_path = ref_data.get("path")
         new_path = self._get_path(new_ref)
 
         try:
@@ -139,7 +140,8 @@ class DataCache:
         return new_path
 
     def _move_prev(self, old_pref: ConanReference, new_pref: ConanReference):
-        old_path = self._db.try_get_reference_directory(old_pref)
+        ref_data = self._db.try_get_reference(old_pref)
+        old_path = ref_data.get("path")
         new_path = self._get_path(new_pref)
         if os.path.exists(self._full_path(new_path)):
             try:
@@ -180,18 +182,21 @@ class DataCache:
         for it in self._db.get_package_ids(ref):
             yield it
 
-    def get_build_id(self, ref):
-        return self._db.get_build_id(ref)
-
     def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         for it in self._db.get_package_revisions(ref, only_latest_prev):
             yield it
 
+    def get_build_id(self, ref):
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("build_id")
+
     def get_remote(self, ref: ConanReference):
-        return self._db.get_remote(ref)
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("remote")
 
     def get_timestamp(self, ref):
-        return self._db.get_timestamp(ref)
+        ref_data = self._db.try_get_reference(ref)
+        return ref_data.get("timestamp")
 
     def set_remote(self, ref: ConanReference, new_remote):
         self._db.set_remote(ref, new_remote)

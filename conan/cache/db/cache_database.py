@@ -51,11 +51,11 @@ class CacheDatabase:
         with self.connection() as conn:
             self._references.remove(conn, ref)
 
-    def try_get_reference_directory(self, ref: ConanReference):
-        """ Returns the directory where the given reference is stored (or fails) """
+    def try_get_reference(self, ref: ConanReference):
+        """ Returns the reference data as a dictionary (or fails) """
         with self.connection() as conn:
             ref_data = self._references.get(conn, ref)
-            return ref_data["path"]
+            return ref_data
 
     def create_tmp_reference(self, path, ref: ConanReference):
         with self.connection() as conn:
