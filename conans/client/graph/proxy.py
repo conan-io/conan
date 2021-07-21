@@ -153,7 +153,7 @@ class ConanProxy(object):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
             _ref, _ref_time = self._remote_manager.get_recipe(reference, the_remote)
-            new_timestamp = datetime.timestamp(_ref_time) if not make_latest else time.time()
+            new_timestamp = _ref_time if not make_latest else time.time()
             self._cache.set_timestamp(_ref, new_timestamp)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             return _ref
