@@ -26,8 +26,6 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()
 
-        conanfile.settings.validate()  # All has to be ok!
-        conanfile.options.validate()
         # Recipe provides its own name if nothing else is defined
         conanfile.provides = make_tuple(conanfile.provides or conanfile.name)
 
