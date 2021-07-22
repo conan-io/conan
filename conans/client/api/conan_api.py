@@ -1,4 +1,3 @@
-import fnmatch
 import os
 import time
 
@@ -26,10 +25,12 @@ from conans.client.rest.rest_client import RestApiClientFactory
 from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
+from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.tools import set_global_instances
+from conans.util.dates import from_timestamp_to_iso8601
 from conans.util.files import exception_message_safe
 from conans.util.log import configure_logger
 
@@ -166,6 +167,28 @@ class ConanAPIV2(object):
         return {}
 
     @api_method
+    def get_active_remotes(self, remote_names):
+        remotes = self.app.cache.registry.load_remotes()
+        all_remotes = remotes.all_values()
+
+        if not all_remotes:
+            raise ConanException("The remotes registry is empty. "
+                                 "Please add at least one valid remote.")
+
+        # If no remote is specified, search in all of them
+        if not remote_names:
+            # Exclude disabled remotes
+            all_remotes = [remote for remote in all_remotes if not remote.disabled]
+            return all_remotes
+
+        active_remotes = []
+        for remote_name in remote_names:
+            remote = remotes[remote_name]
+            active_remotes.append(remote)
+
+        return active_remotes
+
+    @api_method
     def search_local_recipes(self, query):
         data = {
             "remote": None,
@@ -194,7 +217,7 @@ class ConanAPIV2(object):
         return data
 
     @api_method
-    def search_remote_recipes(self, remote, query):
+    def search_remote_recipes(self, query, remote):
         data = {
             "remote": remote.name,
             "error": False,
@@ -203,7 +226,6 @@ class ConanAPIV2(object):
 
         remotes = self.app.cache.registry.load_remotes()
         search = Search(self.app.cache, self.app.remote_manager, remotes)
-
         results = []
         remote_references = search.search_remote_recipes(query, remote.name)
         for remote_name, references in remote_references.items():
@@ -218,27 +240,38 @@ class ConanAPIV2(object):
         return data
 
     @api_method
-    def get_active_remotes(self, remote_names):
-        remotes = self.app.cache.registry.load_remotes()
-        all_remotes = remotes.all_values()
+    def get_remote_recipe_revisions(self, reference, remote):
+        ref = ConanFileReference.loads(reference)
+        if ref.revision:
+            raise ConanException("Cannot list the revisions of a specific recipe revision")
+        if not remote:
+            raise ConanException("Must get a remote")
 
-        if not all_remotes:
-            raise ConanException("The remotes registry is empty. "
-                                 "Please add at least one valid remote.")
+        try:
+            return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
+        except NotFoundException:
+            # This exception must be catched manually due to a server inconsistency:
+            # Artifactory API returns an empty result if the recipe doesn't exist, but
+            # Conan Server returns a 404. This probably should be fixed server side,
+            # but in the meantime we must handle it here
+            return []
 
-        # If no remote is specified, search in all of them
-        if not remote_names:
-            # Exclude disabled remotes
-            all_remotes = [remote for remote in all_remotes if not remote.disabled]
-            return all_remotes
+    @api_method
+    def get_local_recipe_revisions(self, reference):
+        ref = ConanFileReference.loads(reference)
+        if ref.revision:
+            raise ConanException("Cannot list the revisions of a specific recipe revision")
 
-        active_remotes = []
-        for remote_name in remote_names:
-            remote = remotes[remote_name]
-            active_remotes.append(remote)
-
-        return active_remotes
-
+        recipe_revisions = self.app.cache.get_recipe_revisions(ref)
+        results = []
+        for revision in recipe_revisions:
+            timestamp = self.app.cache.get_timestamp(revision)
+            result = {
+                "revision": revision.revision,
+                "time": from_timestamp_to_iso8601(timestamp)
+            }
+            results.append(result)
+        return results
 
 
 Conan = ConanAPIV2
