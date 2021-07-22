@@ -160,17 +160,6 @@ class TestInvalidBuildPackageID:
         assert "pkg/0.1:INVALID - Invalid" in client.out
         assert "pkg/0.1: Invalid: Package does not work in Windows!" in client.out
 
-    def test_valid_build_require(self, client):
-        conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
-        client.save({"consumer/conanfile.py": conanfile_consumer})
-        client.run("install consumer -s os=Windows")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
-        assert "pkg/0.1: Already installed!" in client.out
-
-        client.run("install consumer -s os=Linux")
-        assert "pkg/0.1:{} - Cache".format(self.linux_package_id) in client.out
-        assert "pkg/0.1: Already installed!" in client.out
-
     def test_valid_build_require_two_profiles(self, client):
         conanfile_consumer = GenConanfile().with_build_requires("pkg/0.1").with_settings("os")
         client.save({"consumer/conanfile.py": conanfile_consumer})

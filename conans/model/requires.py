@@ -43,6 +43,13 @@ class Requirement(object):
             return version[1:-1]
 
     @property
+    def alias(self):
+        version = self.ref.version
+        if version.startswith("(") and version.endswith(")"):
+            return ConanFileReference(self.ref.name, version[1:-1], self.ref.user, self.ref.channel,
+                                      self.ref.revision, validate=False)
+
+    @property
     def is_resolved(self):
         """ returns True if the version_range reference has been already resolved to a
         concrete reference
@@ -112,6 +119,14 @@ class Requirements(OrderedDict):
                                  % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
+
+    def override(self, ref):
+        name = ref.name
+        old_requirement = self.get(ref.name)
+        if old_requirement is not None:
+            self[name] = Requirement(ref, private=False, override=False)
+        else:
+            self[name] = Requirement(ref, private=False, override=True)
 
     def update(self, down_reqs, output, own_ref, down_ref):
         """ Compute actual requirement values when downstream values are defined

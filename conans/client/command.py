@@ -337,6 +337,8 @@ class Command(object):
                             help='If any reference is installed from a remote, update the date'
                                  ' to the installation date (the default is taking the time from'
                                  ' the server)')
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
@@ -379,7 +381,8 @@ class Command(object):
                                       ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build,
                                       is_build_require=args.build_require,
-                                      make_latest=args.make_latest)
+                                      make_latest=args.make_latest,
+                                      require_overrides=args.require_override)
         except ConanException as exc:
             info = exc.info
             raise
@@ -480,6 +483,8 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         parser.add_argument("--make-latest", action='store_true', default=False,
                             help='If any reference is installed from a remote, update the date'
@@ -517,7 +522,8 @@ class Command(object):
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile,
                                            lockfile_out=args.lockfile_out,
-                                           make_latest=args.make_latest)
+                                           make_latest=args.make_latest,
+                                           require_overrides=args.require_override)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -540,7 +546,8 @@ class Command(object):
                                                      lockfile_out=args.lockfile_out,
                                                      lockfile_node_id=args.lockfile_node_id,
                                                      is_build_require=args.build_require,
-                                                     make_latest=args.make_latest)
+                                                     make_latest=args.make_latest,
+                                                     require_overrides=args.require_override)
 
         except ConanException as exc:
             info = exc.info

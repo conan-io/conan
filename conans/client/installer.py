@@ -470,6 +470,7 @@ class BinaryInstaller(object):
             conanfile.folders.set_base_source(base_path)
             conanfile.folders.set_base_build(base_path)
             conanfile.folders.set_base_install(base_path)
+            conanfile.folders.set_base_imports(base_path)
 
             output = conanfile.output
             output.info("Rewriting files of editable package "

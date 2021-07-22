@@ -292,6 +292,8 @@ class ConanAPIV1(object):
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
                           'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
+        # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
+        # json should contain all values for easy automation
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
@@ -330,7 +332,7 @@ class ConanAPIV1(object):
                options=None, env=None, test_folder=None,
                build_modes=None, remote_name=None, update=False, cwd=None, test_build_folder=None,
                lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
-               is_build_require=False, conf=None, make_latest=False):
+               is_build_require=False, conf=None, make_latest=False, require_overrides=None):
         """
         API method to create a conan package
 
@@ -371,7 +373,8 @@ class ConanAPIV1(object):
             create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder,
-                   is_build_require=is_build_require, make_latest=make_latest)
+                   is_build_require=is_build_require, make_latest=make_latest, 
+                   require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -470,7 +473,7 @@ class ConanAPIV1(object):
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
                           lockfile_node_id=None, is_build_require=False, conf=None,
-                          make_latest=False):
+                          make_latest=False, require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -492,7 +495,8 @@ class ConanAPIV1(object):
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          update=update, generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id,
-                         is_build_require=is_build_require, make_latest=make_latest)
+                         is_build_require=is_build_require, make_latest=make_latest,
+                         require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -509,7 +513,9 @@ class ConanAPIV1(object):
                 settings=None, options=None, env=None,
                 remote_name=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, lockfile_out=None, profile_build=None, conf=None, make_latest=False):
+                lockfile=None, lockfile_out=None, profile_build=None, conf=None, make_latest=False,
+                require_overrides=None):
+                
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -544,7 +550,8 @@ class ConanAPIV1(object):
                          generators=generators,
                          no_imports=no_imports,
                          recorder=recorder,
-                         make_latest=make_latest)
+                         make_latest=make_latest,
+                         require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
