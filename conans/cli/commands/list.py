@@ -10,20 +10,23 @@ recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 
 
+def _print_common_list_cli_output(results, ref_type):
+    if results.get("error"):
+        # TODO: Handle errors
+        return
+
+    if results.get("remote"):
+        cli_out_write(f"{results['remote']}:", fg=remote_color)
+    else:
+        cli_out_write("Local Cache:", remote_color)
+
+    if not results.get("results"):
+        cli_out_write(f"There are no matching {ref_type}", indentation=2)
+
+
 def list_recipes_cli_formatter(results):
     for remote_results in results:
-        if remote_results.get("error"):
-            # TODO: Handle errors
-            return
-
-        if not remote_results.get("remote"):
-            cli_out_write("Local Cache:", remote_color)
-        else:
-            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
-
-        if not remote_results.get("results"):
-            cli_out_write("There are no matching recipes", indentation=2)
-
+        _print_common_list_cli_output(remote_results, "recipes")
         current_recipe = None
         for recipe in remote_results["results"]:
             if recipe["name"] != current_recipe:
@@ -36,18 +39,7 @@ def list_recipes_cli_formatter(results):
 
 def _list_revisions_cli_formatter(results, ref_type):
     for remote_results in results:
-        if remote_results.get("error"):
-            # TODO: Handle errors
-            return
-
-        if not remote_results.get("remote"):
-            cli_out_write("Local Cache:", fg=remote_color)
-        else:
-            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
-
-        if not remote_results.get("results"):
-            cli_out_write(f"There are no matching {ref_type}", indentation=2)
-
+        _print_common_list_cli_output(remote_results, ref_type)
         reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
         for revisions in remote_results["results"]:
             rev = revisions["revision"]
