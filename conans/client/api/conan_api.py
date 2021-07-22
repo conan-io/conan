@@ -1,5 +1,6 @@
 import os
 import time
+from collections import OrderedDict
 
 from tqdm import tqdm
 
@@ -29,6 +30,7 @@ from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
+from conans.search.search import search_packages
 from conans.tools import set_global_instances
 from conans.util.dates import from_timestamp_to_iso8601
 from conans.util.files import exception_message_safe
@@ -324,18 +326,23 @@ class ConanAPIV2(object):
         if remote:
             try:
                 rrev = ref if ref.revision else self.app.remote_manager.get_latest_recipe_revision(ref, remote)
-                package_props = self.app.remote_manager.search_packages(remote, rrev, None)
+                packages_props = self.app.remote_manager.search_packages(remote, rrev, None)
             except NotFoundException:
                 # This exception must be catched manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                package_props = {}
+                packages_props = {}
         else:
             rrev = ref if ref.revision else self.app.cache.get_latest_rrev(remote, ref)
             package_ids = self.app.cache.get_package_ids(rrev)
+            package_layouts = []
+            for pkg in package_ids:
+                latest_prev = self.app.cache.get_latest_prev(pkg)
+                package_layouts.append(self.app.cache.pkg_layout(latest_prev))
+            packages_props = search_packages(package_layouts, None)
 
-        return package_props
+        return packages_props
 
 
 Conan = ConanAPIV2

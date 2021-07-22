@@ -57,17 +57,7 @@ def list_package_revisions_cli_formatter(results):
 
 def list_package_ids_cli_formatter(results):
     for remote_results in results:
-        if remote_results.get("error"):
-            # TODO: Handle errors
-            return
-
-        if not remote_results.get("remote"):
-            cli_out_write("Local Cache:", fg=remote_color)
-        else:
-            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
-
-        if not remote_results.get("results"):
-            cli_out_write(f"There are no matching recipes", indentation=2)
+        _print_common_list_cli_output(remote_results, "references")
 
         reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
         for revisions in remote_results["results"]:
