@@ -123,6 +123,11 @@ class Printer(object):
 
             _print("scm", show_field="scm", name="scm")
 
+            if show("python_requires") and "python_requires" in it:
+                self._out.writeln("    Python-requires:", Color.BRIGHT_GREEN)
+                for d in it["python_requires"]:
+                    self._out.writeln("        %s" % d, Color.BRIGHT_YELLOW)
+
             if show("required") and "required_by" in it:
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in it["required_by"]:

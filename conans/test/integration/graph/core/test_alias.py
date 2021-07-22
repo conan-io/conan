@@ -1,3 +1,5 @@
+import textwrap
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.integration.graph.core.graph_manager_base import GraphManagerTest
 from conans.test.integration.graph.core.graph_manager_test import _check_transitive
@@ -180,6 +182,27 @@ class AliasBuildRequiresTest(GraphManagerTest):
         self._check_node(liba_build, "liba/0.2#123", dependents=[app])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
         self._check_node(app, "app/0.1", deps=[libb, liba_build])
+
+
+class AliasPythonRequiresTest(GraphManagerTest):
+
+    def test_python_requires(self):
+        # app ----(python-requires)---> tool/(latest) -> tool/0.1
+        self.recipe_cache("tool/0.1")
+        self.recipe_cache("tool/0.2")
+        self.alias_cache("tool/latest", "tool/0.1")
+        consumer = textwrap.dedent("""
+            from conans import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                python_requires = "tool/(latest)"
+            """)
+        deps_graph = self.build_graph(consumer)
+
+        self.assertEqual(1, len(deps_graph.nodes))
+        app = deps_graph.root
+        self._check_node(app, "app/0.1", deps=[])
 
 
 def test_mixing_aliases_and_fix_versions():

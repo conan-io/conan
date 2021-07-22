@@ -23,6 +23,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
+BINARY_ERROR = "ConfigurationError"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -196,6 +197,7 @@ class DepsGraph(object):
         self.nodes = []
         self.aliased = {}
         self.error = False
+        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def __repr__(self):

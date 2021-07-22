@@ -312,12 +312,14 @@ class AppleSystemBlock(Block):
         {% if CMAKE_SYSTEM_VERSION is defined %}
         set(CMAKE_SYSTEM_VERSION {{ CMAKE_SYSTEM_VERSION }})
         {% endif %}
-        set(DEPLOYMENT_TARGET ${CONAN_SETTINGS_HOST_MIN_OS_VERSION})
         # Set the architectures for which to build.
         set(CMAKE_OSX_ARCHITECTURES {{ CMAKE_OSX_ARCHITECTURES }} CACHE STRING "" FORCE)
         # Setting CMAKE_OSX_SYSROOT SDK, when using Xcode generator the name is enough
         # but full path is necessary for others
         set(CMAKE_OSX_SYSROOT {{ CMAKE_OSX_SYSROOT }} CACHE STRING "" FORCE)
+        {% if CMAKE_OSX_DEPLOYMENT_TARGET is defined %}
+        set(CMAKE_OSX_DEPLOYMENT_TARGET {{ CMAKE_OSX_DEPLOYMENT_TARGET }})
+        {% endif %}
         """)
 
     def _get_architecture(self):
@@ -357,9 +359,6 @@ class AppleSystemBlock(Block):
         host_os_version = self._conanfile.settings.get_safe("os.version")
         host_sdk_name = self._apple_sdk_name()
 
-        # TODO: Discuss how to handle CMAKE_OSX_DEPLOYMENT_TARGET to set min-version
-        #       add a setting? check an option and if not present set a default?
-        #       default to os.version?
         ctxt_toolchain = {}
         if host_sdk_name:
             ctxt_toolchain["CMAKE_OSX_SYSROOT"] = host_sdk_name
@@ -369,6 +368,12 @@ class AppleSystemBlock(Block):
         if os_ in ('iOS', "watchOS", "tvOS"):
             ctxt_toolchain["CMAKE_SYSTEM_NAME"] = os_
             ctxt_toolchain["CMAKE_SYSTEM_VERSION"] = host_os_version
+
+        if host_os_version:
+            # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_DEPLOYMENT_TARGET.html
+            # Despite the OSX part in the variable name(s) they apply also to other SDKs than
+            # macOS like iOS, tvOS, or watchOS.
+            ctxt_toolchain["CMAKE_OSX_DEPLOYMENT_TARGET"] = host_os_version
 
         return ctxt_toolchain
 

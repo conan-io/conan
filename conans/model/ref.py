@@ -134,7 +134,7 @@ class ConanName(object):
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and ((name.startswith("[") and name.endswith("]")) or
-                    (name.startswith("(") and name.endswith(")"))):
+                            (name.startswith("(") and name.endswith(")"))):
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 

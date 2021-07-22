@@ -15,7 +15,6 @@ from conans.client.cmd.export import cmd_export, export_alias
 from conans.client.cmd.export_pkg import export_pkg
 from conans.client.cmd.profile import (cmd_profile_create, cmd_profile_delete_key, cmd_profile_get,
                                        cmd_profile_list, cmd_profile_update)
-from conans.client.cmd.search import Search
 from conans.client.cmd.test import install_build_and_test
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.user import user_set, users_clean, users_list, token_present
@@ -56,7 +55,6 @@ from conans.paths import get_conan_user_home
 from conans.search.search import search_recipes
 from conans.tools import set_global_instances
 from conans.util.conan_v2_mode import conan_v2_error
-from conans.util.dates import from_timestamp_to_iso8601
 from conans.util.env_reader import get_env
 from conans.util.files import exception_message_safe, mkdir, save_files, load, save
 from conans.util.log import configure_logger
@@ -292,6 +290,8 @@ class ConanAPIV1(object):
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
                           'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
+        # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
+        # json should contain all values for easy automation
         for attribute in attributes:
             try:
                 attr = getattr(conanfile, attribute)
@@ -330,7 +330,7 @@ class ConanAPIV1(object):
                options=None, env=None, test_folder=None,
                build_modes=None, remote_name=None, update=False, cwd=None, test_build_folder=None,
                lockfile=None, lockfile_out=None, ignore_dirty=False, profile_build=None,
-               is_build_require=False, conf=None):
+               is_build_require=False, conf=None, require_overrides=None):
         """
         API method to create a conan package
 
@@ -371,7 +371,7 @@ class ConanAPIV1(object):
             create(self.app, new_ref, profile_host, profile_build,
                    graph_lock, root_ref, remotes, update, build_modes,
                    test_build_folder, test_folder, conanfile_path, recorder=recorder,
-                   is_build_require=is_build_require)
+                   is_build_require=is_build_require, require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -469,7 +469,8 @@ class ConanAPIV1(object):
                           remote_name=None, build=None, profile_names=None,
                           update=False, generators=None, install_folder=None, cwd=None,
                           lockfile=None, lockfile_out=None, profile_build=None,
-                          lockfile_node_id=None, is_build_require=False, conf=None):
+                          lockfile_node_id=None, is_build_require=False, conf=None,
+                          require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -491,7 +492,8 @@ class ConanAPIV1(object):
                          graph_lock=graph_lock, root_ref=root_ref, build_modes=build,
                          update=update, generators=generators, recorder=recorder,
                          lockfile_node_id=lockfile_node_id,
-                         is_build_require=is_build_require)
+                         is_build_require=is_build_require,
+                         require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -508,7 +510,8 @@ class ConanAPIV1(object):
                 settings=None, options=None, env=None,
                 remote_name=None, build=None, profile_names=None,
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None,
-                lockfile=None, lockfile_out=None, profile_build=None, conf=None):
+                lockfile=None, lockfile_out=None, profile_build=None, conf=None,
+                require_overrides=None):
         profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
                                    env=env, conf=conf)
         recorder = ActionRecorder()
@@ -542,7 +545,8 @@ class ConanAPIV1(object):
                          update=update,
                          generators=generators,
                          no_imports=no_imports,
-                         recorder=recorder)
+                         recorder=recorder,
+                         require_overrides=require_overrides)
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
@@ -1157,32 +1161,6 @@ class ConanAPIV1(object):
     @api_method
     def get_remote_by_name(self, remote_name):
         return self.app.cache.registry.load_remotes()[remote_name]
-
-    @api_method
-    def get_recipe_revisions(self, reference, remote_name=None):
-        ref = ConanFileReference.loads(reference)
-        if ref.revision:
-            raise ConanException("Cannot list the revisions of a specific recipe revision")
-
-        # TODO: cache2.0 in 1.X we checked for the remote associated with the reference
-        #  then if we had a remote there we listed all the revisions associated with that remote
-        #  check which behaviour we want here, for the moment just listing the revisions in the
-        #  local cache an forgetting about remotes if no remote is specified
-        if not remote_name:
-            rrevs = self.app.cache.get_recipe_revisions(ref)
-            # TODO: cache2.0 fix this, just adapting the return value for the moment
-            ret = []
-            for rev in rrevs:
-                timestamp = self.app.cache.get_timestamp(rev)
-                rev_dict = {
-                    "revision": rev.revision,
-                    "time": from_timestamp_to_iso8601(timestamp)
-                }
-                ret.append(rev_dict)
-            return ret
-        else:
-            remote = self.get_remote_by_name(remote_name)
-            return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
 
     @api_method
     def get_package_revisions(self, reference, remote_name=None):

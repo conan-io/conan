@@ -55,6 +55,8 @@ class DepsGraphBuilder(object):
             dep_graph.error = e
         return dep_graph
 
+
+
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
                         profile_build, graph_lock, populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities

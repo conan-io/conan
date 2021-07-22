@@ -12,6 +12,8 @@ from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.graph_binaries import GraphBinariesAnalyzer
 from conans.client.graph.graph_manager import GraphManager
 from conans.client.graph.proxy import ConanProxy
+
+from conans.client.graph.python_requires import PyRequireLoader
 from conans.client.graph.range_resolver import RangeResolver
 from conans.client.installer import BinaryInstaller
 from conans.client.loader import ConanFileLoader
@@ -50,7 +52,11 @@ class GraphManagerTest(unittest.TestCase):
         cache = self.cache
         self.resolver = RangeResolver(self.cache, self.remote_manager)
         proxy = ConanProxy(cache, self.output, self.remote_manager)
-        self.loader = ConanFileLoader(None, self.output)
+
+        pyreq_loader = PyRequireLoader(proxy, self.resolver)
+        pyreq_loader.enable_remotes(remotes=Remotes())
+        self.loader = ConanFileLoader(None, self.output, pyreq_loader=pyreq_loader)
+
         binaries = GraphBinariesAnalyzer(cache, self.output, self.remote_manager)
         self.manager = GraphManager(self.output, cache, self.remote_manager, self.loader, proxy,
                                     self.resolver, binaries)
@@ -79,12 +85,11 @@ class GraphManagerTest(unittest.TestCase):
         self._put_in_cache(ref, conanfile)
 
     def _put_in_cache(self, ref, conanfile):
-        ref = ConanFileReference.loads(repr(ref)+"#123")  # FIXME: Make access
-        recipe_layout = self.cache.create_ref_layout(ref)
-        save(recipe_layout.conanfile(), str(conanfile))
-        # Need to complete de metadata = revision + manifest
-        manifest = FileTreeManifest.create(recipe_layout.export())
-        manifest.save(recipe_layout.export())
+        ref = ConanFileReference.loads("{}#123".format(ref))
+        layout = self.cache.create_ref_layout(ref)
+        save(layout.conanfile(), str(conanfile))
+        manifest = FileTreeManifest.create(layout.export())
+        manifest.save(layout.export())
 
     def _cache_recipe(self, ref, test_conanfile, revision=None):
         # FIXME: This seems duplicated

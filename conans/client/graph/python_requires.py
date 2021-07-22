@@ -121,9 +121,14 @@ class PyRequireLoader(object):
             ref = locked
         else:
             requirement = Requirement(ref)
-            resolved_ref = self._range_resolver.resolve(requirement, "py_require", update=self._update,
-                                         remotes=self._remotes)
-            ref = resolved_ref
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
+            else:
+                resolved_ref = self._range_resolver.resolve(requirement, "py_require",
+                                                            update=self._update,
+                                                            remotes=self._remotes)
+                ref = resolved_ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):
@@ -140,6 +145,10 @@ class PyRequireLoader(object):
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
+            requirement = Requirement(ref)
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
             conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
                                                                           lock_python_requires,
                                                                           ref)

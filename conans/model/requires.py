@@ -244,6 +244,14 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
+    def override(self, ref):
+        name = ref.name
+        old_requirement = self.get(ref.name)
+        if old_requirement is not None:
+            self[name] = Requirement(ref, private=False, override=False)
+        else:
+            self[name] = Requirement(ref, private=False, override=True)
+
     def test_require(self, ref):
         ref = ConanFileReference.loads(ref)
         req = Requirement(ref, headers=True, libs=True, build=False, run=None, visible=False,

@@ -1,7 +1,9 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.model.pkg_type import PackageType
-from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration
+from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
+    ConanErrorConfiguration, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
@@ -75,7 +77,15 @@ def compute_package_id(node, new_config):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:
-                conanfile.info.invalid = str(e)
+                conanfile.info.invalid = BINARY_INVALID, str(e)
+            except ConanErrorConfiguration as e:
+                conanfile.info.invalid = BINARY_ERROR, str(e)
+
+    try:
+        conanfile.settings.validate()  # All has to be ok!
+        conanfile.options.validate()
+    except ConanException:
+        conanfile.info.invalid = BINARY_INVALID, str(e)
 
     info = conanfile.info
     node.package_id = info.package_id()

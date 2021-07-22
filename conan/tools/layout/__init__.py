@@ -26,8 +26,10 @@ def cmake_layout(conanfile, generator=None):
     conanfile.cpp.source.includedirs = ["."]
     if multi:
         conanfile.cpp.build.libdirs = ["{}".format(conanfile.settings.build_type)]
+        conanfile.cpp.build.bindirs = ["{}".format(conanfile.settings.build_type)]
     else:
         conanfile.cpp.build.libdirs = ["."]
+        conanfile.cpp.build.bindirs = ["."]
 
 
 def clion_layout(conanfile):

@@ -184,6 +184,11 @@ class ConanFileLoader(object):
             # First, try to get a match directly by name (without needing *)
             # TODO: Conan 2.0: We probably want to remove this, and leave a pure fnmatch
             pkg_settings = package_settings_values.get(conanfile.name)
+
+            if conanfile.develop and "&" in package_settings_values:
+                # "&" overrides the "name" scoped settings.
+                pkg_settings = package_settings_values.get("&")
+
             if pkg_settings is None:  # If there is not exact match by package name, do fnmatch
                 for pattern, settings in package_settings_values.items():
                     if fnmatch.fnmatchcase(ref_str, pattern):
@@ -196,7 +201,7 @@ class ConanFileLoader(object):
         conanfile.conf = profile.conf.get_conanfile_conf(ref_str)
 
     def load_consumer(self, conanfile_path, profile_host, name=None, version=None, user=None,
-                      channel=None, lock_python_requires=None):
+                      channel=None, lock_python_requires=None, require_overrides=None):
         """ loads a conanfile.py in user space. Might have name/version or not
         """
         conanfile = self.load_named(conanfile_path, name, version, user, channel,
@@ -210,14 +215,19 @@ class ConanFileLoader(object):
         conanfile.output.scope = conanfile.display_name
         conanfile.in_local_cache = False
         try:
+            conanfile.develop = True
             self._initialize_conanfile(conanfile, profile_host)
 
             # The consumer specific
-            conanfile.develop = True
             profile_host.user_options.descope_options(conanfile.name)
             conanfile.options.initialize_upstream(profile_host.user_options,
                                                   name=conanfile.name)
             profile_host.user_options.clear_unscoped_options()
+
+            if require_overrides is not None:
+                for req_override in require_overrides:
+                    req_override = ConanFileReference.loads(req_override)
+                    conanfile.requires.override(req_override)
 
             return conanfile
         except ConanInvalidConfiguration:
@@ -262,12 +272,18 @@ class ConanFileLoader(object):
 
     def _parse_conan_txt(self, contents, path, display_name, profile):
         conanfile = ConanFile(self._output, self._runner, display_name)
+        tmp_settings = profile.processed_settings.copy()
+        package_settings_values = profile.package_settings_values
+        if "&" in package_settings_values:
+            pkg_settings = package_settings_values.get("&")
+            if pkg_settings:
+                tmp_settings.update_values(pkg_settings)
         conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
-        conanfile.settings = profile.processed_settings.copy_values()
+        conanfile.settings = tmp_settings.copy_values()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -294,7 +310,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, references, profile_host, scope_options=True,
-                     build_requires_options=None, is_build_require=False):
+                     build_requires_options=None, is_build_require=False, require_overrides=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(self._output, self._runner, display_name="virtual")
@@ -309,6 +325,11 @@ class ConanFileLoader(object):
         else:
             for reference in references:
                 conanfile.requires(repr(reference))
+
+        if require_overrides is not None:
+            for req_override in require_overrides:
+                req_override = ConanFileReference.loads(req_override)
+                conanfile.requires.override(req_override)
 
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
