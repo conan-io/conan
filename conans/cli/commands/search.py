@@ -1,10 +1,10 @@
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
-from conans.cli.commands.list import list_recipes_cli_formatter, list_recipes_json_formatter
+from conans.cli.commands.list import list_recipes_cli_formatter, json_formatter
 
 
 search_formatters = {
     "cli": list_recipes_cli_formatter,
-    "json": list_recipes_json_formatter
+    "json": json_formatter
 }
 
 
@@ -23,5 +23,5 @@ def search(conan_api, parser, *args, **kwargs):
 
     results = []
     for remote in remotes:
-        results.append(conan_api.search_remote_recipes(remote, args.query))
+        results.append(conan_api.search_remote_recipes(args.query, remote))
     return results

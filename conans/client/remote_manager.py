@@ -5,7 +5,6 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
-from conan.cache.conan_reference import ConanReference
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
     PackageNotFoundException, ConanReferenceDoesNotExist
