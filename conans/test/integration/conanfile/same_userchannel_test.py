@@ -87,7 +87,7 @@ class HelloConan(ConanFile):
 
     def test_local_commands(self):
         self.client.run("install .", assert_error=True)
-        self.assertIn("ERROR: Failed requirement 'Say/0.1' from 'conanfile.py (Hello/0.1)'",
+        self.assertIn("ERROR: Package 'Say/0.1' not resolved: No remote defined",
                       self.client.out)
 
         self.client.run("install . @lasote/stable")

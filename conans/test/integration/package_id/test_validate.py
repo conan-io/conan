@@ -73,7 +73,7 @@ class TestValidate(unittest.TestCase):
         self.assertIn("pkg/0.1: Invalid: Windows not supported", client.out)
         self.assertIn("pkg/0.1:INVALID - Invalid", client.out)
         client.run("info pkg/0.1@ -s os=Windows")
-        self.assertIn("pkg/0.1: Main binary package '3475bd55b91ae904ac96fde0f106a136ab951a5e' "
+        self.assertIn("pkg/0.1: Main binary package 'cf2e4ff978548fafd099ad838f9ecb8858bf25cb' "
                       "missing. Using compatible package '02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8'",
                       client.out)
         self.assertIn("ID: 02145fcd0a1e750fb6e1d2f119ecdf21d2adaac8", client.out)

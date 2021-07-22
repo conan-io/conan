@@ -246,11 +246,14 @@ class Requirements:
 
     def override(self, ref):
         name = ref.name
-        old_requirement = self.get(ref.name)
+        req = Requirement(ref)
+        old_requirement = self._requires.get(req)
         if old_requirement is not None:
-            self[name] = Requirement(ref, private=False, override=False)
+            req.force = True
+            self._requires[req] = req
         else:
-            self[name] = Requirement(ref, private=False, override=True)
+            req.override = True
+            self._requires[req] = req
 
     def test_require(self, ref):
         ref = ConanFileReference.loads(ref)
