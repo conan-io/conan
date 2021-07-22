@@ -10,8 +10,7 @@ from io import StringIO
 from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conan.cache.db.references import ReferencesDbTable
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanReferenceAlreadyExist
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util.files import md5, rmdir
 
@@ -105,7 +104,6 @@ class DataCache:
         assert ref.rrev, "Recipe revision must be known to get the reference layout"
         ref_data = self._db.try_get_reference(ref)
         ref_path = ref_data.get("path")
-        assert ref_path == self._get_path(ref), "Path from db should match expected deterministic path"
         return RecipeLayout(ref, os.path.join(self.base_folder, ref_path))
 
     def get_package_layout(self, pref: ConanReference):
@@ -114,7 +112,6 @@ class DataCache:
         assert pref.prev, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_reference(pref)
         pref_path = pref_data.get("path")
-        assert pref_path == self._get_path(pref), "Path from db should match expected deterministic path"
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
@@ -124,7 +121,7 @@ class DataCache:
 
         try:
             self._db.update_reference(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
-        except ReferencesDbTable.ReferenceAlreadyExist:
+        except ConanReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self._db.delete_ref_by_path(old_path)
@@ -156,7 +153,7 @@ class DataCache:
                                      "Close any app using it, and retry")
         try:
             self._db.update_reference(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
-        except ReferencesDbTable.ReferenceAlreadyExist:
+        except ConanReferenceAlreadyExist:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks

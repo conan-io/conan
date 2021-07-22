@@ -102,6 +102,16 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
+class ConanReferenceDoesNotExist(ConanException):
+    """ Reference does not exist in cache db """
+    pass
+
+
+class ConanReferenceAlreadyExist(ConanException):
+    """ Reference already exists in cache db """
+    pass
+
+
 class ConanV2Exception(ConanException):
     def __str__(self):
         msg = super(ConanV2Exception, self).__str__()

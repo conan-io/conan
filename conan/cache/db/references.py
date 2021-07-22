@@ -2,7 +2,7 @@ import time
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
-from conans.errors import ConanException
+from conans.errors import ConanReferenceDoesNotExist
 
 
 class ReferencesDbTable(BaseDbTable):
@@ -16,12 +16,6 @@ class ReferencesDbTable(BaseDbTable):
                            ('timestamp', float),
                            ('build_id', str, True)]
     unique_together = ('reference', 'rrev', 'pkgid', 'prev')
-
-    class ReferenceDoesNotExist(ConanException):
-        pass
-
-    class ReferenceAlreadyExist(ConanException):
-        pass
 
     @staticmethod
     def _as_dict(row):
@@ -70,8 +64,7 @@ class ReferencesDbTable(BaseDbTable):
         r = conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ReferencesDbTable.ReferenceDoesNotExist(
-                f"No entry for reference '{ref.full_reference}'")
+            raise ConanReferenceDoesNotExist(f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
     def save(self, conn, path, ref: ConanReference, remote=None, reset_timestamp=False):

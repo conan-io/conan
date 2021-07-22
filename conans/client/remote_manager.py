@@ -7,7 +7,8 @@ from requests.exceptions import ConnectionError
 
 from conan.cache.conan_reference import ConanReference
 from conans.client.cache.remote_registry import Remote
-from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
+from conans.errors import ConanConnectionError, ConanException, NotFoundException, \
+    PackageNotFoundException, ConanReferenceDoesNotExist
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
@@ -103,7 +104,7 @@ class RemoteManager(object):
         ref = self._resolve_latest_ref(ref, remote)
         try:
             layout = self._cache.ref_layout(ref)
-        except ConanException:
+        except ConanReferenceDoesNotExist:
             layout = self._cache.create_ref_layout(ref)
 
         layout.export_remove()
@@ -165,7 +166,12 @@ class RemoteManager(object):
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
         latest_prev = self.get_latest_package_revision(pref, remote)
-        pkg_layout = self._cache.create_pkg_layout(latest_prev)
+
+        try:
+            pkg_layout = self._cache.pkg_layout(latest_prev)
+        except ConanReferenceDoesNotExist:
+            pkg_layout = self._cache.create_pkg_layout(latest_prev)
+
         pkg_layout.package_remove()  # Remove first the destination folder
         with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)

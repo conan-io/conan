@@ -17,7 +17,8 @@ from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
-                           conanfile_exception_formatter, ConanInvalidConfiguration)
+                           conanfile_exception_formatter, ConanInvalidConfiguration,
+                           ConanReferenceDoesNotExist)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvInfo
@@ -441,8 +442,13 @@ class BinaryInstaller(object):
                         if node.binary == BINARY_MISSING:
                             self._raise_missing([node])
 
-                    package_layout = self._cache.create_temp_pkg_layout(node.pref) if \
-                        not node.pref.revision else self._cache.pkg_layout(node.pref)
+                    if not node.pref.revision:
+                        package_layout = self._cache.create_temp_pkg_layout(node.pref)
+                    else:
+                        try:
+                            package_layout = self._cache.pkg_layout(node.pref)
+                        except ConanReferenceDoesNotExist:
+                            package_layout = self._cache.create_pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)

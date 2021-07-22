@@ -4,6 +4,7 @@ from io import StringIO
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.references import ReferencesDbTable
+from conans.errors import ConanReferenceAlreadyExist
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
 
@@ -40,8 +41,7 @@ class CacheDatabase:
                 self._references.update(conn, old_ref, new_ref, new_path, new_remote, new_timestamp,
                                         new_build_id)
             except sqlite3.IntegrityError:
-                raise ReferencesDbTable.ReferenceAlreadyExist(
-                    f"Reference '{new_ref.full_reference}' already exists")
+                raise ConanReferenceAlreadyExist(f"Reference '{new_ref.full_reference}' already exists")
 
     def delete_ref_by_path(self, path):
         with self.connection() as conn:
