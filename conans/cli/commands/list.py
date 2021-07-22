@@ -55,6 +55,27 @@ def list_package_revisions_cli_formatter(results):
     _list_revisions_cli_formatter(results, "packages")
 
 
+def list_package_ids_cli_formatter(results):
+    for remote_results in results:
+        if remote_results.get("error"):
+            # TODO: Handle errors
+            return
+
+        if not remote_results.get("remote"):
+            cli_out_write("Local Cache:", fg=remote_color)
+        else:
+            cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
+
+        if not remote_results.get("results"):
+            cli_out_write(f"There are no matching recipes", indentation=2)
+
+        reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
+        for revisions in remote_results["results"]:
+            rev = revisions["revision"]
+            date = iso8601_to_str(revisions["time"])
+            cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
+
+
 # FIXME: it's a general formatter, perhaps we should look for another module
 def json_formatter(info):
     myjson = json.dumps(info, indent=4)
@@ -74,7 +95,7 @@ list_package_revisions_formatters = {
     "json": json_formatter
 }
 list_package_ids_formatters = {
-    "cli": list_package_revisions_cli_formatter,
+    "cli": list_package_ids_cli_formatter,
     "json": json_formatter
 }
 
@@ -222,7 +243,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         result = {
             'remote': None,
             'reference': args.reference,
-            'results': conan_api.get_package_ids(args.package_reference)
+            'results': conan_api.get_package_ids(args.reference)
         }
         results.append(result)
 
@@ -230,7 +251,7 @@ def list_package_ids(conan_api, parser, subparser, *args):
         result = {
             'remote': remote.name,
             'reference': args.reference,
-            'results': conan_api.get_package_ids(args.package_reference, remote=remote)
+            'results': conan_api.get_package_ids(args.reference, remote=remote)
         }
         results.append(result)
 
