@@ -34,7 +34,7 @@ def list_recipes_cli_formatter(results):
             cli_out_write(reference, fg=reference_color, indentation=4)
 
 
-def _list_revisions_cli_formatter(results, is_package=False):
+def _list_revisions_cli_formatter(results, ref_type):
     for remote_results in results:
         if remote_results.get("error"):
             # TODO: Handle errors
@@ -46,10 +46,9 @@ def _list_revisions_cli_formatter(results, is_package=False):
             cli_out_write(f"{remote_results['remote']}:", fg=remote_color)
 
         if not remote_results.get("results"):
-            ref_type = "packages" if is_package else "recipes"
             cli_out_write(f"There are no matching {ref_type}", indentation=2)
 
-        reference = remote_results["package_reference" if is_package else "reference"]
+        reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
         for revisions in remote_results["results"]:
             rev = revisions["revision"]
             date = iso8601_to_str(revisions["time"])
@@ -57,11 +56,11 @@ def _list_revisions_cli_formatter(results, is_package=False):
 
 
 def list_recipe_revisions_cli_formatter(results):
-    _list_revisions_cli_formatter(results)
+    _list_revisions_cli_formatter(results, "recipes")
 
 
 def list_package_revisions_cli_formatter(results):
-    _list_revisions_cli_formatter(results, is_package=True)
+    _list_revisions_cli_formatter(results, "packages")
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module
