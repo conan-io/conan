@@ -8,7 +8,7 @@ from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
-class TestListRecipeRevisionsBase:
+class TestListPackageRevisionsBase:
     @pytest.fixture(autouse=True)
     def _setup(self):
         self.users = {}
@@ -19,10 +19,6 @@ class TestListRecipeRevisionsBase:
                                                       write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
         self.client.run("user username -p passwd -r {}".format(remote_name))
-
-    def _create_recipe(self, reference):
-        self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("create . {}".format(reference))
 
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
@@ -40,7 +36,7 @@ class TestListRecipeRevisionsBase:
         return pref
 
 
-class TestParams(TestListRecipeRevisionsBase):
+class TestParams(TestListPackageRevisionsBase):
     def test_fail_if_reference_is_not_correct(self):
         self.client.run("list package-revisions whatever", assert_error=True)
         assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
@@ -78,7 +74,7 @@ class TestParams(TestListRecipeRevisionsBase):
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
 
-class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
+class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
     def test_by_default_search_only_in_cache(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
@@ -120,7 +116,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         assert "ERROR: Remote 'remote1' is disabled" in self.client.out
 
 
-class TestRemotes(TestListRecipeRevisionsBase):
+class TestRemotes(TestListPackageRevisionsBase):
     def test_search_with_full_reference(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
