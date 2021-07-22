@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
-@pytest.mark.xfail("Feature not ready yet")
+@pytest.mark.xfail(reason="Feature not ready yet")
 def test_repackage():
     # consumer -> repackager -> liba (shared)
     #                  \------> libb (static)
