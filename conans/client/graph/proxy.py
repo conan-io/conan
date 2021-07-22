@@ -11,7 +11,6 @@ from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTAL
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.ref import ConanFileReference
-from conans.paths.package_layouts.package_editable_layout import PackageEditableLayout
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -44,6 +43,10 @@ class ConanProxy(object):
 
     def _get_recipe(self, reference, check_updates, update, remotes):
         output = ScopedOutput(str(reference), self._out)
+
+        conanfile_path = self._cache.editable_path(reference)
+        if conanfile_path is not None:
+            return conanfile_path, RECIPE_EDITABLE, None, reference
 
         # check if it there's any revision of this recipe in the local cache
         ref = self._cache.get_latest_rrev(reference)
