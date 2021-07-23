@@ -190,8 +190,10 @@ def test_install_update_following_pref():
     ref = "Pkg/0.1@lasote/testing"
     client.save({"conanfile.py": conanfile})
     client.run("create . %s" % ref)
-    client.run("upload %s --all -r r2" % ref)
-    client.run("upload %s --all -r r1" % ref)
+    the_time = time.time() - 100
+    with patch.object(RevisionList, '_now', return_value=the_time):
+        client.run("upload %s --all -r r2" % ref)
+        client.run("upload %s --all -r r1" % ref)
     # Force recipe to follow r1
     client.run("remote update_ref %s r1" % ref)
 
@@ -200,7 +202,7 @@ def test_install_update_following_pref():
     ref = "Pkg/0.1@lasote/testing"
     client2.save({"conanfile.py": conanfile})
     client2.run("create . %s" % ref)
-    the_time = time.time() + 1000
+    the_time = time.time() + 100
     with patch.object(RevisionList, '_now', return_value=the_time):
         client2.run("upload %s --all -r r2" % ref)
 
