@@ -5,13 +5,12 @@ from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
 from conans.client import tools
 from conans.client.output import ScopedOutput
-from conans.client.tools.env import environment_append, no_op
+
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException, ConanInvalidConfiguration
 from conans.model.build_info import DepsCppInfo
 from conans.model.conf import Conf
 from conans.model.dependencies import ConanFileDependencies
-from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import from_old_cppinfo
 from conans.model.options import Options, OptionsValues, PackageOptions
@@ -74,13 +73,6 @@ def create_settings(conanfile, settings):
                                         conanfile.display_name, str(e)))
 
 
-def get_env_context_manager(conanfile):
-    if not conanfile.apply_env:
-        return no_op()
-
-    return environment_append(conanfile.env)
-
-
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -99,7 +91,6 @@ class ConanFile(object):
     homepage = None
     build_policy = None
     short_paths = False
-    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
     exports = None
     exports_sources = None
     generators = []
@@ -197,7 +188,7 @@ class ConanFile(object):
             self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
 
-    def initialize(self, settings, env, buildenv=None):
+    def initialize(self, settings, buildenv=None):
         self._conan_buildenv = buildenv
         if isinstance(self.generators, str):
             self.generators = [self.generators]
@@ -211,17 +202,10 @@ class ConanFile(object):
         self._conan_dep_cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
 
-        # environment variables declared in the package_info
-        self.env_info = None  # Will be initialized at processing time
-        self.deps_env_info = DepsEnvInfo()
-
         # user declared variables
         self.user_info = None
         # Keys are the package names (only 'host' if different contexts)
         self.deps_user_info = DepsUserInfo()
-
-        # user specified env variables
-        self._conan_env_values = env.copy()  # user specified -e
 
         if self.description is not None and not isinstance(self.description, str):
             raise ConanException("Recipe 'description' must be a string.")
@@ -281,18 +265,6 @@ class ConanFile(object):
     @imports_folder.setter
     def imports_folder(self, folder):
         self.folders.set_base_imports(folder)
-
-    @property
-    def env(self):
-        """Apply the self.deps_env_info into a copy of self._conan_env_values (will prioritize the
-        self._conan_env_values, user specified from profiles or -e first, then inherited)"""
-        # Cannot be lazy cached, because it's called in configure node, and we still don't have
-        # the deps_env_info objects available
-        tmp_env_values = self._conan_env_values.copy()
-        tmp_env_values.update(self.deps_env_info)
-        ret, multiple = tmp_env_values.env_dicts(self.name, self.version)
-        ret.update(multiple)
-        return ret
 
     @property
     def build_policy_missing(self):

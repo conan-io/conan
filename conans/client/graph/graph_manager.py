@@ -7,8 +7,8 @@ from conans.client.graph.graph import BINARY_BUILD, Node, CONTEXT_HOST, CONTEXT_
 from conans.client.graph.graph_binaries import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_EDITABLE, \
     BINARY_UNKNOWN
 from conans.client.graph.graph_builder import DepsGraphBuilder
+from conans.client.tools import no_op
 from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.conan_file import get_env_context_manager
 from conans.model.ref import ConanFileReference
 
 
@@ -241,7 +241,7 @@ class GraphManager(object):
     def _get_recipe_build_requires(conanfile, default_context):
         conanfile.build_requires = _RecipeBuildRequires(conanfile, default_context)
         if hasattr(conanfile, "build_requirements"):
-            with get_env_context_manager(conanfile):
+            with no_op():
                 with conanfile_exception_formatter(str(conanfile), "build_requirements"):
                     conanfile.build_requirements()
 

@@ -288,7 +288,7 @@ class ConanAPIV1(object):
         if not attributes:
             attributes = ['name', 'version', 'url', 'homepage', 'license', 'author',
                           'description', 'topics', 'generators', 'exports', 'exports_sources',
-                          'short_paths', 'apply_env', 'build_policy', 'revision_mode', 'settings',
+                          'short_paths', 'build_policy', 'revision_mode', 'settings',
                           'options', 'default_options', 'deprecated']
         # TODO: Change this in Conan 2.0, cli stdout should display only fields with values,
         # json should contain all values for easy automation

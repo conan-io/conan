@@ -5,8 +5,8 @@ import stat
 from conans.client import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
+from conans.client.tools import no_op
 from conans.errors import ConanException
-from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.util.dates import timestamp_now
 from conans.util.env_reader import get_env
@@ -76,7 +76,7 @@ def run_imports(conanfile):
     mkdir(conanfile.imports_folder)
     file_importer = _FileImporter(conanfile, conanfile.imports_folder)
     conanfile.copy = file_importer
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         with tools.chdir(conanfile.imports_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
@@ -111,7 +111,7 @@ def run_deploy(conanfile, install_folder):
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
     conanfile.folders.set_base_install(install_folder)
-    with get_env_context_manager(conanfile):
+    with no_op():  # TODO: Remove this in a later refactor
         with tools.chdir(install_folder):
             conanfile.deploy()
 

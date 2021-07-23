@@ -5,7 +5,6 @@ import pytest
 
 from conans.client.profile_loader import ProfileParser, read_profile
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.test.utils.profiles import create_profile as _create_profile
@@ -133,18 +132,6 @@ def test_profile_loads():
     new_profile, _ = get_profile(tmp, prof)
     assert new_profile.package_settings["zlib"] == {"compiler": "gcc"}
     assert new_profile.settings["compiler"] == "Visual Studio"
-
-
-def test_profile_empty_env():
-    tmp = temp_folder()
-    profile, _ = get_profile(tmp, "")
-    assert isinstance(profile.env_values, EnvValues)
-
-
-def test_profile_empty_env_settings():
-    tmp = temp_folder()
-    profile, _ = get_profile(tmp, "[settings]")
-    assert isinstance(profile.env_values, EnvValues)
 
 
 def test_profile_loads_win():

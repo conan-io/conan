@@ -33,7 +33,6 @@ def test_cmake_virtualenv():
             requires = "hello/0.1"
             build_requires = "cmakewrapper/0.1"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
-            apply_env = False
 
             def build(self):
                 cmake = CMake(self)
@@ -82,7 +81,6 @@ def test_complete():
             default_options = {"myopenssl:shared": True}
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
             exports = "*"
-            apply_env = False
 
             def build(self):
                 cmake = CMake(self)

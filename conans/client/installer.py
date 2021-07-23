@@ -20,7 +20,6 @@ from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
-from conans.model.env_info import EnvInfo
 from conans.model.graph_lock import GraphLockFile
 from conans.model.info import PACKAGE_ID_UNKNOWN
 from conans.model.new_build_info import NewCppInfo, fill_old_cppinfo
@@ -594,14 +593,6 @@ class BinaryInstaller(object):
                 conan_file.deps_cpp_info.add(n.ref.name, dep_cpp_info)
             else:
                 conan_file.user_info_build[n.ref.name] = n.conanfile.user_info
-                env_info = EnvInfo()
-                env_info._values_ = n.conanfile.env_info._values_.copy()
-                # Add cpp_info.bin_paths/lib_paths to env_info (it is needed for runtime)
-                env_info.DYLD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                env_info.DYLD_FRAMEWORK_PATH.extend(dep_cpp_info.framework_paths)
-                env_info.LD_LIBRARY_PATH.extend(dep_cpp_info.lib_paths)
-                env_info.PATH.extend(dep_cpp_info.bin_paths)
-                conan_file.deps_env_info.update(env_info, n.ref.name)
 
     def _call_package_info(self, conanfile, package_folder, ref, is_editable):
         conanfile.cpp_info = CppInfo(conanfile.name, package_folder)
@@ -613,7 +604,6 @@ class BinaryInstaller(object):
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_install(None)
 
-        conanfile.env_info = EnvInfo()
         conanfile.user_info = UserInfo()
 
         # Get deps_cpp_info from upstream nodes

@@ -194,7 +194,6 @@ generators: []
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: None
@@ -239,7 +238,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: scm
 settings: ('os', 'arch', 'build_type', 'compiler')
@@ -284,7 +282,6 @@ deprecated: suggestion
             exports: None
             exports_sources: None
             short_paths: False
-            apply_env: True
             build_policy: None
             revision_mode: hash
             settings: ('os', 'compiler', 'arch', 'build_type')
@@ -333,7 +330,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')
@@ -361,7 +357,6 @@ generators: cmake
 exports: None
 exports_sources: None
 short_paths: False
-apply_env: True
 build_policy: None
 revision_mode: hash
 settings: ('os', 'arch', 'build_type', 'compiler')

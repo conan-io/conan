@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 from conan.tools.env.environment import ProfileEnvironment
 from conans.errors import ConanException, ConanV2Exception
 from conans.model.conf import ConfDefinition
-from conans.model.env_info import EnvValues, unquote
+from conans.model.env_info import unquote
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
@@ -228,9 +228,9 @@ def _apply_inner_profile(doc, base_profile):
     # The env vars from the current profile (read in doc)
     # are updated with the included profiles (base_profile)
     # the current env values has priority
-    current_env_values = EnvValues.loads(doc.env)
-    current_env_values.update(base_profile.env_values)
-    base_profile.env_values = current_env_values
+    # FIXME: Load Environment current_env_values = EnvValues.loads(doc.env)
+    # current_env_values.update(base_profile.env_values)
+    # base_profile.env_values = current_env_values
 
     if doc.conf:
         new_prof = ConfDefinition()
@@ -296,13 +296,7 @@ def _profile_parse_args(settings, options, envs, conf):
         return simple_items, package_items
 
     def _get_env_values(_env, _package_env):
-        _env_values = EnvValues()
-        for name, value in _env:
-            _env_values.add(name, EnvValues.load_value(value))
-        for package, data in _package_env.items():
-            for name, value in data:
-                _env_values.add(name, EnvValues.load_value(value), package)
-        return _env_values
+        return {}
 
     options = _get_tuples_list_from_extender_arg(options)
     env, package_env = _get_simple_and_package_tuples(envs)

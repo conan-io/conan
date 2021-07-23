@@ -6,7 +6,6 @@ from mock import Mock
 from conans.client.generators.json_generator import JsonGenerator
 from conans.model.build_info import CppInfo
 from conans.model.conan_file import ConanFile
-from conans.model.env_info import EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.user_info import UserInfo, DepsUserInfo
@@ -36,12 +35,6 @@ class JsonTest(unittest.TestCase):
         cpp_info.cxxflags = ["-cxxflag"]
         cpp_info.public_deps = ["MyPkg"]
         conanfile.deps_cpp_info.add(ref.name, cpp_info)
-
-        # Add env_info
-        env_info = EnvInfo()
-        env_info.VAR1 = "env_info-value1"
-        env_info.PATH.append("path-extended")
-        conanfile.deps_env_info.update(env_info, "env_info_pkg")
 
         # Add user_info
         user_info = UserInfo()

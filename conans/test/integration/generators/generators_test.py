@@ -25,7 +25,6 @@ unknown
         base = '''
 [generators]
 cmake
-virtualenv
 xcode
 ycm
     '''
@@ -34,15 +33,10 @@ ycm
         client.save(files)
         client.run("install . --build")
 
-        venv_files = ["activate.sh", "deactivate.sh", "environment.sh.env",
-                      "activate.ps1", "deactivate.ps1", "environment.ps1.env"]
-        if platform.system() == "Windows":
-            venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
-
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
-                                 LOCKFILE] + venv_files),
+                                 LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))
 
     def test_srcdirs(self):

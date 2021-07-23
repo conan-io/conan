@@ -4,7 +4,6 @@ from conans.client.build.cppstd_flags import cppstd_default
 from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
 from conans.model.values import Values
@@ -453,7 +452,6 @@ class ConanInfo(object):
         result.requires = RequirementsInfo(prefs_direct, default_package_id_mode)
         result.requires.add(prefs_indirect, default_package_id_mode)
         result.full_requires.extend(prefs_indirect)
-        result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
         result.default_std_matching()
@@ -476,8 +474,6 @@ class ConanInfo(object):
         # Requires after load are not used for any purpose, CAN'T be used, they are not correct
         result.requires = RequirementsInfo(result.full_requires, "semver_direct_mode")
 
-        # TODO: Missing handling paring of requires, but not necessary now
-        result.env_values = EnvValues.loads(parser.env)
         return result
 
     def dumps(self):
@@ -500,7 +496,6 @@ class ConanInfo(object):
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
         result.append("\n[env]")
-        result.append(indent(self.env_values.dumps()))
 
         return '\n'.join(result) + "\n"
 

@@ -11,8 +11,6 @@ from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
-from .virtualenv import VirtualEnvGenerator
-from .virtualrunenv import VirtualRunEnvGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
@@ -24,8 +22,6 @@ class GeneratorManager(object):
                             "cmake_paths": CMakePathsGenerator,
                             "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
-                            "virtualenv": VirtualEnvGenerator,
-                            "virtualrunenv": VirtualRunEnvGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
                             "markdown": MarkdownGenerator}
