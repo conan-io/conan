@@ -252,13 +252,13 @@ class ConanAPIV2(object):
         # Let's get all the revisions from a remote server
         if remote:
             try:
-                return getattr(self.app.remote_manager, method_name)(ref, remote=remote)
+                results = getattr(self.app.remote_manager, method_name)(ref, remote=remote)
             except NotFoundException:
                 # This exception must be catched manually due to a server inconsistency:
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                return []
+                results = []
         else:
             # Let's get the revisions from the local cache
             revs = getattr(self.app.cache, method_name)(ref)
@@ -270,7 +270,10 @@ class ConanAPIV2(object):
                     "time": from_timestamp_to_iso8601(timestamp)
                 }
                 results.append(result)
-            return results
+
+        return {"remote": remote.name if remote else None,
+                "reference": reference,
+                "results": results}
 
     @api_method
     def get_package_revisions(self, reference, remote=None):
@@ -279,9 +282,11 @@ class ConanAPIV2(object):
 
         :param reference: `PackageReference` without the revision
         :param remote: `Remote` object
-        :return: `list` of `dict`, e.g.,
-                 [{"revision": "73eef56f6e7c70ac852ef95a10c4473d",
-                   "time": "2021-07-20 00:56:25 UTC"}, ...]
+        :return: `dict` with all the results, e.g.,
+                 {"remote": "my_remote_name",  # or None
+                  "reference": "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a:ef93ea55bee154729e264db35ca6a16ecab77eb7",
+                  "results": [{"revision": "80b7cbe095ac7f38844b6511e69e453a",
+                               "time": "2021-07-20 00:56:25 UTC"}, ...]}
         """
         ref = PackageReference.loads(reference)
         if ref.revision:
@@ -296,9 +301,11 @@ class ConanAPIV2(object):
 
         :param reference: `ConanFileReference` without the revision
         :param remote: `Remote` object
-        :return: `list` of `dict`, e.g.,
-                 [{"revision": "73eef56f6e7c70ac852ef95a10c4473d",
-                   "time": "2021-07-20 00:56:25 UTC"}, ...]
+        :return: `dict` with all the results, e.g.,
+                 {"remote": "my_remote_name",  # or None
+                  "reference": "libyaml/0.2.5",
+                  "results": [{"revision": "80b7cbe095ac7f38844b6511e69e453a",
+                               "time": "2021-07-20 00:56:25 UTC"}, ...]}
         """
         ref = ConanFileReference.loads(reference)
         if ref.revision:
@@ -306,6 +313,7 @@ class ConanAPIV2(object):
 
         return self._get_revisions(ref, remote=remote)
 
+    @api_method
     def get_package_ids(self, reference, remote=None):
         """
         Get all the Package IDs given a recipe revision from cache or remote.
@@ -316,16 +324,21 @@ class ConanAPIV2(object):
         :param reference: `ConanFileReference` with/without revision
         :param remote: `Remote` object
         :return: `list` of `dict` with the `package-id` as keys, e.g.,
-                 {"d5f16437dd4989cc688211b95c24525589acaafd": {
-                        "settings": {"compiler": "apple-clang",...},
-                        "options": {'options': {'shared': 'False',...}},
-                        "requires": ['mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]}
+                 {"remote": "my_remote_name",  # or None
+                  "reference": "libcurl/7.77.0#2a9c4fcc8d76d891e4db529efbe24242",
+                  "results": {"d5f16437dd4989cc688211b95c24525589acaafd": {
+                                    "settings": {"compiler": "apple-clang",...},
+                                    "options": {'options': {'shared': 'False',...}},
+                                    "requires": [
+                                        'mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]}
+                            }
                  }
         """
         ref = ConanFileReference.loads(reference)
         if remote:
+            rrev = ref if ref.revision else self.app.remote_manager.get_latest_recipe_revision(ref,
+                                                                                               remote)
             try:
-                rrev = ref if ref.revision else self.app.remote_manager.get_latest_recipe_revision(ref, remote)
                 packages_props = self.app.remote_manager.search_packages(remote, rrev, None)
             except NotFoundException:
                 # This exception must be catched manually due to a server inconsistency:
@@ -342,7 +355,11 @@ class ConanAPIV2(object):
                 package_layouts.append(self.app.cache.pkg_layout(latest_prev))
             packages_props = search_packages(package_layouts, None)
 
-        return packages_props
+        return {
+            "remote": remote.name if remote else None,
+            "reference": rrev,
+            "results": packages_props
+        }
 
 
 Conan = ConanAPIV2
