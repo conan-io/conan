@@ -159,20 +159,34 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
-    env = profile_env.get_env(ConanFileMock(), "")
-    with environment_append({"MyVar1": "$MyVar1",
-                             "MyVar2": "$MyVar2",
-                             "MyVar3": "$MyVar3",
-                             "MyVar4": "$MyVar4"}):
-        assert env.get("MyVar1") == "MyValue1"
-        assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
-        assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
-        assert env.get("MyVar4") == ""
-        assert env.get("MyVar5") == ''
 
-        env = profile_env.get_env(ConanFileMock(), "mypkg1/1.0")
-        assert env.get("MyVar1") == "MyValue1"
-        assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
+    print("*"*40, profile_env.dumps())
+
+    def verify(env):
+        with environment_append({"MyVar1": "$MyVar1",
+                                 "MyVar2": "$MyVar2",
+                                 "MyVar3": "$MyVar3",
+                                 "MyVar4": "$MyVar4"}):
+            assert env.get("MyVar1") == "MyValue1"
+            assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
+            assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
+            assert env.get("MyVar4") == ""
+            assert env.get("MyVar5") == ''
+
+            env = profile_env.get_env(ConanFileMock(), "mypkg1/1.0")
+            assert env.get("MyVar1") == "MyValue1"
+            assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
+
+    e = profile_env.get_env(ConanFileMock(), "")
+    verify(e)
+
+    # test round-trip
+    text = profile_env.dumps()
+    print(text)
+    # load again
+    round_trip_profile = ProfileEnvironment.loads(text)
+    e = profile_env.get_env(ConanFileMock(), "")
+    verify(e)
 
 
 def test_env_files():

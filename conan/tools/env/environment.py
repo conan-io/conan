@@ -1,4 +1,5 @@
 import fnmatch
+import json
 import os
 import textwrap
 import platform
@@ -53,12 +54,29 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
 
 
 class _EnvValue:
-    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ",
-                 path=False):
+    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
+
+    def dumps(self):
+        result = []
+        path = "(path)" if self._path else ""
+        if not self._values:  # Empty means unset
+            result.append("{}=!".format(self._name))
+        elif _EnvVarPlaceHolder in self._values:
+            index = self._values.index(_EnvVarPlaceHolder)
+            for v in self._values[:index]:
+                result.append("{}=+{}{}".format(self._name, path, v))
+            for v in self._values[index+1:]:
+                result.append("{}+={}{}".format(self._name, path, v))
+        else:
+            append = ""
+            for v in self._values:
+                result.append("{}{}={}{}".format(self._name, append, path, v))
+                append = "+"
+        return "\n".join(result)
 
     def copy(self):
         return _EnvValue(self._name, self._values, self._sep, self._path)
@@ -138,8 +156,16 @@ class Environment:
 
     __nonzero__ = __bool__
 
+    def copy(self):
+        e = Environment(self._conanfile)
+        e._values = self._values.copy()
+        return e
+
     def __repr__(self):
         return repr(self._values)
+
+    def dumps(self):
+        return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
         self._values[name] = _EnvValue(name, value, separator, path=False)
@@ -327,7 +353,7 @@ class ProfileEnvironment:
         result = Environment(conanfile)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                result = env.compose(result)
+                result = env.copy().compose(result)
 
         # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
         #        hasn't conanfile
@@ -344,6 +370,16 @@ class ProfileEnvironment:
                 self._environments[pattern] = environment.compose(existing)
             else:
                 self._environments[pattern] = environment
+
+    def dumps(self):
+        result = []
+        for pattern, env in self._environments.items():
+            if pattern is None:
+                result.append(env.dumps())
+            else:
+                result.append("\n".join("{}:{}".format(pattern, line) if line else ""
+                                        for line in env.dumps().splitlines()))
+        return "\n".join(result)
 
     @staticmethod
     def loads(text):
