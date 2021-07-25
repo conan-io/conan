@@ -14,18 +14,15 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
-conanfile = ConanFileMock()
-
-
 def test_compose():
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.define("MyVar", "MyValue")
     env.define("MyVar2", "MyValue2")
     env.define("MyVar3", "MyValue3")
     env.define("MyVar4", "MyValue4")
     env.unset("MyVar5")
 
-    env2 = Environment(conanfile)
+    env2 = Environment(ConanFileMock())
     env2.define("MyVar", "MyNewValue")
     env2.append("MyVar2", "MyNewValue2")
     env2.prepend("MyVar3", "MyNewValue3")
@@ -41,13 +38,13 @@ def test_compose():
 
 
 def test_define_append():
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.define("MyVar", "MyValue")
     env.append("MyVar", "MyValue1")
     env.append("MyVar", ["MyValue2", "MyValue3"])
     assert env.get("MyVar") == "MyValue MyValue1 MyValue2 MyValue3"
 
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.append("MyVar", "MyValue")
     env.append("MyVar", "MyValue1")
     env.define("MyVar", "MyValue2")
@@ -78,12 +75,12 @@ def test_define_append():
                           ("unset", "", " ", "prepend", "Val2", "+", ""),
                           ])
 def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     if op1 != "unset":
         getattr(env, op1)("MyVar", v1, s1)
     else:
         env.unset("MyVar")
-    env2 = Environment(conanfile)
+    env2 = Environment(ConanFileMock())
     if op2 != "unset":
         getattr(env2, op2)("MyVar", v2, s2)
     else:
@@ -91,7 +88,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
     env.compose(env2)
     with environment_append({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
-    assert env._values["MyVar"].get_str(conanfile, "{name}") == result
+    assert env._values["MyVar"].get_str(ConanFileMock(), "{name}") == result
 
 
 @pytest.mark.parametrize("op1, v1, op2, v2, result",
@@ -113,18 +110,18 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
                           ("unset", "", "unset", "", ""),
                           ])
 def test_compose_path_combinations(op1, v1, op2, v2, result):
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     if op1 != "unset":
         getattr(env, op1+"_path")("MyVar", v1)
     else:
         env.unset("MyVar")
-    env2 = Environment(conanfile)
+    env2 = Environment(ConanFileMock())
     if op2 != "unset":
         getattr(env2, op2+"_path")("MyVar", v2)
     else:
         env2.unset("MyVar")
     env.compose(env2)
-    assert env._values["MyVar"].get_str(conanfile, "{name}", pathsep=":") == result
+    assert env._values["MyVar"].get_str(ConanFileMock(), "{name}", pathsep=":") == result
 
 
 def test_profile():
@@ -159,38 +156,24 @@ def test_profile():
         """)
 
     profile_env = ProfileEnvironment.loads(myprofile)
+    env = profile_env.get_env(ConanFileMock(), "")
+    with environment_append({"MyVar1": "$MyVar1",
+                             "MyVar2": "$MyVar2",
+                             "MyVar3": "$MyVar3",
+                             "MyVar4": "$MyVar4"}):
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
+        assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
+        assert env.get("MyVar4") == ""
+        assert env.get("MyVar5") == ''
 
-    print("*"*40, profile_env.dumps())
-
-    def verify(env):
-        with environment_append({"MyVar1": "$MyVar1",
-                                 "MyVar2": "$MyVar2",
-                                 "MyVar3": "$MyVar3",
-                                 "MyVar4": "$MyVar4"}):
-            assert env.get("MyVar1") == "MyValue1"
-            assert env.get("MyVar2", "$MyVar2") == '$MyVar2 MyValue2 MyValue2_2'
-            assert env.get("MyVar3", "$MyVar3") == 'MyValue3 $MyVar3'
-            assert env.get("MyVar4") == ""
-            assert env.get("MyVar5") == ''
-
-            env = profile_env.get_env(ConanFileMock(), "mypkg1/1.0")
-            assert env.get("MyVar1") == "MyValue1"
-            assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
-
-    e = profile_env.get_env(ConanFileMock(), "")
-    verify(e)
-
-    # test round-trip
-    text = profile_env.dumps()
-    print(text)
-    # load again
-    round_trip_profile = ProfileEnvironment.loads(text)
-    e = profile_env.get_env(ConanFileMock(), "")
-    verify(e)
+        env = profile_env.get_env(ConanFileMock(), "mypkg1/1.0")
+        assert env.get("MyVar1") == "MyValue1"
+        assert env.get("MyVar2", "$MyVar2") == 'MyValue2'
 
 
 def test_env_files():
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.define("MyVar", "MyValue")
     env.define("MyVar1", "MyValue1")
     env.append("MyVar2", "MyValue2")
@@ -297,7 +280,7 @@ def test_env_files():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_windows_case_insensitive():
     # Append and define operation over the same variable in Windows preserve order
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.define("MyVar", "MyValueA")
     env.define("MYVAR", "MyValueB")
     env.define("MyVar1", "MyValue1A")
@@ -325,18 +308,18 @@ def test_windows_case_insensitive():
 
 
 def test_dict_access():
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.append("MyVar", "MyValue", separator="@")
     ret = env.items()
     assert dict(ret) == {"MyVar": "MyValue"}
 
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.prepend("MyVar", "MyValue", separator="@")
     ret = env.items()
     assert dict(ret) == {"MyVar": "MyValue"}
     assert env["MyVar"] == "MyValue"
 
-    env2 = Environment(conanfile)
+    env2 = Environment(ConanFileMock())
     env2.define("MyVar", "MyValue2")
     env.compose(env2)
     ret = env.items()
@@ -346,7 +329,7 @@ def test_dict_access():
         _ = env["Missing"]
 
     # With previous values in the environment
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.prepend("MyVar", "MyValue", separator="@")
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
@@ -356,7 +339,7 @@ def test_dict_access():
         os.environ.clear()
         os.environ.update(old_env)
 
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.append_path("MyVar", "MyValue")
     old_env = dict(os.environ)
     os.environ.update({"MyVar": "PreviousValue"})
@@ -391,7 +374,7 @@ def test_env_win_bash():
 
 
 def test_public_access():
-    env = Environment(conanfile)
+    env = Environment(ConanFileMock())
     env.define("MyVar", "MyValue")
     env.append("MyVar", "MyValue2")
     env.define_path("MyPath", "c:/path/to/something")
@@ -404,3 +387,83 @@ def test_public_access():
 
     env.remove("MyPath", "D:/Otherpath")
     assert env.get("MyPath") == "c:/path/to/something"
+
+
+class TestProfileEnvRoundTrip:
+
+    def test_define(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1=MyValue1
+            MyPath1=(path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=MyValue1
+            MyPath1=(path)/my/path1
+            """)
+
+    def test_append(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1+=MyValue1
+            MyPath1+=(path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1+=MyValue1
+            MyPath1+=(path)/my/path1
+            """)
+
+    def test_prepend(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1=+MyValue1
+            MyPath1=+(path)/my/path1
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue1
+            MyPath1=+(path)/my/path1
+            """)
+
+    def test_combined(self):
+        myprofile = textwrap.dedent("""
+            MyVar1=+MyValue11
+            MyVar1+=MyValue12
+            MyPath1=+(path)/my/path11
+            MyPath1+=(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue11
+            MyVar1+=MyValue12
+            MyPath1=+(path)/my/path11
+            MyPath1+=(path)/my/path12
+            """)
+
+    def test_combined2(self):
+        myprofile = textwrap.dedent("""
+            MyVar1+=MyValue11
+            MyVar1=+MyValue12
+            MyPath1+=(path)/my/path11
+            MyPath1=+(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        # NOTE: This is reversed order compared to origin, prepend alwyas first
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue12
+            MyVar1+=MyValue11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path11
+            """)

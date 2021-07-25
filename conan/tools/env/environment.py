@@ -1,5 +1,4 @@
 import fnmatch
-import json
 import os
 import textwrap
 import platform
@@ -119,6 +118,7 @@ class _EnvValue:
 
     def get_str(self, conanfile, placeholder, pathsep=os.pathsep):
         """
+        :param conanfile: The conanfile is necessary to get win_bash, path separator, etc.
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
         :param pathsep: The path separator, typically ; or :
@@ -379,6 +379,8 @@ class ProfileEnvironment:
             else:
                 result.append("\n".join("{}:{}".format(pattern, line) if line else ""
                                         for line in env.dumps().splitlines()))
+        if result:
+            result.append("")
         return "\n".join(result)
 
     @staticmethod
