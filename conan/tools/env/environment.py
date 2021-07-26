@@ -345,6 +345,11 @@ class ProfileEnvironment:
     def __repr__(self):
         return repr(self._environments)
 
+    def __bool__(self):
+        return bool(self._environments)
+
+    __nonzero__ = __bool__
+
     def get_env(self, conanfile, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
