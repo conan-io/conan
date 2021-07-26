@@ -239,16 +239,13 @@ class ConanAPIV2(object):
         data["results"] = results
         return data
 
-    def _get_revisions(self, reference, ref_type, remote=None):
-        if ref_type == "package":
-            ref = PackageReference.loads(reference)
+    def _get_revisions(self, ref, remote=None):
+        if isinstance(ref, PackageReference):
+            method_name = 'get_package_revisions'
+        elif isinstance(ref, ConanFileReference):
+            method_name = 'get_recipe_revisions'
         else:
-            ref = ConanFileReference.loads(reference)
-
-        # Class method name to get the specific revisions
-        method_name = f"get_{ref_type}_revisions"
-        if ref.revision:
-            raise ConanException(f"Cannot list the revisions of a specific {ref_type} revision")
+            raise ConanException(f"Unknown reference type: {ref}")
 
         # Let's get all the revisions from a remote server
         if remote:
@@ -275,11 +272,19 @@ class ConanAPIV2(object):
 
     @api_method
     def get_package_revisions(self, reference, remote=None):
-        return self._get_revisions(reference, 'package', remote=remote)
+        ref = PackageReference.loads(reference)
+        if ref.revision:
+            raise ConanException(f"Cannot list the revisions of a specific package revision")
+
+        return self._get_revisions(ref, remote=remote)
 
     @api_method
     def get_recipe_revisions(self, reference, remote=None):
-        return self._get_revisions(reference, 'recipe', remote=remote)
+        ref = ConanFileReference.loads(reference)
+        if ref.revision:
+            raise ConanException(f"Cannot list the revisions of a specific recipe revision")
+
+        return self._get_revisions(ref, remote=remote)
 
 
 Conan = ConanAPIV2
