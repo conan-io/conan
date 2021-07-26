@@ -1,11 +1,10 @@
-import re
 import textwrap
 
 import pytest
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
+from conans.test.utils.tools import TestClient, TestServer
 
 
 class TestListPackageIdsBase:
