@@ -66,7 +66,7 @@ You can run **Conan** client and server in Windows, MacOS, and Linux.
 
   .. code-block:: bash
 
-      $ cd conan && sudo pip install -e .
+      $ cd conan-io && sudo pip install -e .
 
   If you are in Windows, using ``sudo`` is not required.
 
