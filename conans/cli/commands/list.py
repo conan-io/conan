@@ -65,16 +65,19 @@ def list_package_ids_cli_formatter(results):
         _print_common_list_cli_output(remote_results, "references")
         reference = remote_results["reference"]
         for pkg_id, props in remote_results["results"].items():
-            cli_out_write(repr(PackageReference(reference, pkg_id)), fg=reference_color, indentation=2)
+            cli_out_write(repr(PackageReference(reference, pkg_id)),
+                          fg=reference_color, indentation=2)
             for prop_name, values in props.items():
                 if prop_name in requires_fields:
-                    cli_out_write("requires:", fg=Color.BRIGHT_YELLOW, indentation=4)
-                    for req in values:
-                        cli_out_write(req, fg=Color.CYAN, indentation=6)
+                    if values:
+                        cli_out_write("requires:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                        for req in values:
+                            cli_out_write(req, fg=Color.CYAN, indentation=6)
                 elif prop_name in general_fields:
-                    cli_out_write(f"{prop_name}:", fg=Color.BRIGHT_YELLOW, indentation=4)
-                    for name, val in values.items():
-                        cli_out_write(f"{name}={val}", fg=Color.CYAN, indentation=6)
+                    if values:
+                        cli_out_write(f"{prop_name}:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                        for name, val in values.items():
+                            cli_out_write(f"{name}={val}", fg=Color.CYAN, indentation=6)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module

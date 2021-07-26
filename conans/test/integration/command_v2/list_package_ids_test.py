@@ -1,9 +1,11 @@
 import re
+import textwrap
 
 import pytest
 
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestListPackageIdsBase:
@@ -12,18 +14,36 @@ class TestListPackageIdsBase:
         self.client = TestClient()
 
     def _add_remote(self, remote_name):
-        self.client.servers[remote_name] = TestServer(users={"username": "passwd"}, write_permissions=[("*/*@*/*", "*")])
+        self.client.servers[remote_name] = TestServer(users={"username": "passwd"},
+                                                      write_permissions=[("*/*@*/*", "*")])
         self.client.update_servers()
         self.client.run("user username -p passwd -r {}".format(remote_name))
 
-    def _create_recipe(self, reference):
-        self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("create . {}".format(reference))
-
     def _upload_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
-        self.client.run("export . {}".format(reference))
-        self.client.run("upload --force -r {} {}".format(remote, reference))
+        self.client.run("create . {}".format(reference))
+        self.client.run("upload --force --all -r {} {}".format(remote, reference))
+
+    def _upload_full_recipe(self, remote, reference):
+        self.client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("file.h", "0.1")})
+        self.client.run("create . user/channel")
+        self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
+
+        self.client.save({'conanfile.py': GenConanfile().with_require("pkg/0.1@user/channel")
+                                                        .with_settings("os", "compiler",
+                                                                       "build_type", "arch")
+                                                        .with_option("shared", [True, False])
+                                                        .with_default_option("shared", False)
+                          })
+        self.client.run("create . {}".format(reference))
+        self.client.run("upload --force --all -r {} {}".format(remote, reference))
+
+    @staticmethod
+    def _get_fake_recipe_refence(recipe_name):
+        return f"{recipe_name}#fca0383e6a43348f7989f11ab8f0a92d"
+
+    def _get_lastest_recipe_ref(self, recipe_name):
+        return self.client.cache.get_latest_rrev(ConanFileReference.loads(recipe_name))
 
 
 class TestParams(TestListPackageIdsBase):
@@ -59,29 +79,34 @@ class TestParams(TestListPackageIdsBase):
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
 
-class TestListRecipesFromRemotes(TestListPackageIdsBase):
+class TestListPackagesFromRemotes(TestListPackageIdsBase):
     def test_by_default_search_only_in_cache(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
-        expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n")
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          There are no matching references
+        """)
 
-        self.client.run("list package-ids whatever/1.0")
+        self.client.run(f"list package-ids {self._get_fake_recipe_refence('whatever/0.1')}")
         assert expected_output == self.client.out
 
     def test_search_no_matching_recipes(self):
         self._add_remote("remote1")
         self._add_remote("remote2")
 
-        expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n"
-                           "remote1:\n"
-                           "  There are no matching recipes\n"
-                           "remote2:\n"
-                           "  There are no matching recipes\n")
+        expected_output = textwrap.dedent("""\
+        Local Cache:
+          There are no matching references
+        remote1:
+          There are no matching references
+        remote2:
+          There are no matching references
+        """)
 
-        self.client.run("list package-ids -c -a whatever/1.0")
+        rrev = self._get_fake_recipe_refence('whatever/0.1')
+        self.client.run(f"list package-ids -c -a {rrev}")
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
@@ -91,7 +116,8 @@ class TestListRecipesFromRemotes(TestListPackageIdsBase):
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
-        self.client.run("list package-ids -r remote1 whatever/1.0", assert_error=True)
+        rrev = self._get_fake_recipe_refence('whatever/0.1')
+        self.client.run(f"list package-ids -r remote1 {rrev}", assert_error=True)
         assert "ERROR: Remote 'remote1' is disabled" in self.client.out
 
 
@@ -100,57 +126,103 @@ class TestRemotes(TestListPackageIdsBase):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
-        self._upload_recipe(remote_name, recipe_name)
+        self._upload_full_recipe(remote_name, recipe_name)
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
 
-        self.client.run("list package-ids -r remote1 test_recipe/1.0.0@user/channel")
+        expected_output = textwrap.dedent(f"""\
+        remote1:
+          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+            settings:
+              arch=x86_64
+              build_type=Release
+              compiler=apple-clang
+              compiler.libcxx=libc++
+              compiler.version=12.0
+              os=Macos
+            options:
+              shared=False
+            requires:
+              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+        """)
 
-        expected_output = (
-            r"remote1:\n"
-            r"  {}#.*\n".format(recipe_name)
-        )
+        assert expected_output == str(self.client.out)
 
-        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
-
-    def test_search_without_user_and_channel(self):
+    def test_search_with_full_reference_but_using_ref_without_revision(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
-        self._upload_recipe(remote_name, recipe_name)
+        self._upload_full_recipe(remote_name, recipe_name)
+        ref = "test_recipe/1.0.0@user/channel"
+        self.client.run(f"list package-ids -r remote1 {repr(ref)}")
 
-        self.client.run("list package-ids -r remote1 test_recipe/1.0.0")
+        # Now, let's check that we're using the latest one by default
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        expected_output = textwrap.dedent(f"""\
+        remote1:
+          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+            settings:
+              arch=x86_64
+              build_type=Release
+              compiler=apple-clang
+              compiler.libcxx=libc++
+              compiler.version=12.0
+              os=Macos
+            options:
+              shared=False
+            requires:
+              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+        """)
 
-        expected_output = (
-            "remote1:\n"
-            "  There are no matching recipes\n"
-        )
-
-        assert expected_output in self.client.out
+        assert expected_output == str(self.client.out)
 
     def test_search_in_all_remotes_and_cache(self):
-        expected_output = (
-            r"Local Cache:\n"
-            r"  test_recipe/1.0.0@user/channel#.*\n"
-            r"remote1:\n"
-            r"  test_recipe/1.0.0@user/channel#.*\n"
-            r"remote2:\n"
-            r"  There are no matching recipes\n"
-        )
-
         remote1 = "remote1"
         remote2 = "remote2"
 
         self._add_remote(remote1)
-        self._upload_recipe(remote1, "test_recipe/1.0.0@user/channel")
-        self._upload_recipe(remote1, "test_recipe/1.1.0@user/channel")
+        self._upload_full_recipe(remote1, "test_recipe/1.0.0@user/channel")
+        self._upload_full_recipe(remote1, "test_recipe/1.1.0@user/channel")
 
         self._add_remote(remote2)
-        self._upload_recipe(remote2, "test_recipe/2.0.0@user/channel")
-        self._upload_recipe(remote2, "test_recipe/2.1.0@user/channel")
+        self._upload_full_recipe(remote2, "test_recipe/2.0.0@user/channel")
+        self._upload_full_recipe(remote2, "test_recipe/2.1.0@user/channel")
 
-        self.client.run("list package-ids -a -c test_recipe/1.0.0@user/channel")
+        # Getting the latest recipe ref
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-ids -a -c {repr(rrev)}")
         output = str(self.client.out)
-
-        assert bool(re.match(expected_output, output, re.MULTILINE))
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+            settings:
+              arch=x86_64
+              build_type=Release
+              compiler=apple-clang
+              compiler.libcxx=libc++
+              compiler.version=12.0
+              os=Macos
+            options:
+              shared=False
+            requires:
+              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+        remote1:
+          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+            settings:
+              arch=x86_64
+              build_type=Release
+              compiler=apple-clang
+              compiler.libcxx=libc++
+              compiler.version=12.0
+              os=Macos
+            options:
+              shared=False
+            requires:
+              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+        remote2:
+          There are no matching references
+        """)
+        assert expected_output == output
 
     def test_search_in_missing_remote(self):
         remote1 = "remote1"
@@ -164,7 +236,8 @@ class TestRemotes(TestListPackageIdsBase):
         self._upload_recipe(remote1, remote1_recipe1)
         self._upload_recipe(remote1, remote1_recipe2)
 
-        self.client.run("list package-ids -r wrong_remote test_recipe/1.0.0@user/channel", assert_error=True)
+        rrev = self._get_fake_recipe_refence(remote1_recipe1)
+        self.client.run(f"list package-ids -r wrong_remote {rrev}", assert_error=True)
         assert expected_output in self.client.out
 
     def test_wildcard_not_accepted(self):
