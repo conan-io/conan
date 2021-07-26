@@ -288,7 +288,7 @@ class Environment:
     def compose_env(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
-        self mandates what to do
+        self mandates what to do. If self has define(), without placeholder, that will remain
         :type other: Environment
         """
         for k, v in other._values.items():
@@ -298,6 +298,7 @@ class Environment:
             else:
                 existing.compose_env_value(v)
 
+        self._conanfile = self._conanfile or other._conanfile
         return self
 
     # Methods to user access to the environment object as a dict
@@ -358,16 +359,14 @@ class ProfileEnvironment:
         result = Environment(conanfile)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
+                # Latest declared has priority, copy() necessary to not destroy data
                 result = env.copy().compose_env(result)
-
-        # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
-        #        hasn't conanfile
-        result._conanfile = conanfile
         return result
 
-    def compose_profile_env(self, other):
+    def update_profile_env(self, other):
         """
         :type other: ProfileEnvironment
+        :param other: The argument profile has priority/precedence over the current one.
         """
         for pattern, environment in other._environments.items():
             existing = self._environments.get(pattern)
@@ -407,6 +406,7 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
+                # When loading from profile file, latest line has priority
                 env = Environment(conanfile=None)
                 if method == "unset":
                     env.unset(name)
@@ -423,7 +423,7 @@ class ProfileEnvironment:
                     result._environments[pattern] = env.compose_env(existing)
                 break
             else:
-                raise ConanException("Bad env defintion: {}".format(line))
+                raise ConanException("Bad env definition: {}".format(line))
         return result
 
 
