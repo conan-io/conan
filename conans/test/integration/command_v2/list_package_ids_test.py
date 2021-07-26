@@ -1,3 +1,4 @@
+import re
 import textwrap
 
 import pytest
@@ -29,8 +30,7 @@ class TestListPackageIdsBase:
         self.client.run("upload --force --all -r {} {}".format(remote, "pkg/0.1@user/channel"))
 
         self.client.save({'conanfile.py': GenConanfile().with_require("pkg/0.1@user/channel")
-                                                        .with_settings("os", "compiler",
-                                                                       "build_type", "arch")
+                                                        .with_settings("os", "build_type", "arch")
                                                         .with_option("shared", [True, False])
                                                         .with_default_option("shared", False)
                           })
@@ -131,21 +131,18 @@ class TestRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent(f"""\
         remote1:
-          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+          {repr(rrev)}:.*
             settings:
-              arch=x86_64
-              build_type=Release
-              compiler=apple-clang
-              compiler.libcxx=libc++
-              compiler.version=12.0
-              os=Macos
+              arch=.*
+              build_type=.*
+              os=.*
             options:
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         """)
 
-        assert expected_output == str(self.client.out)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_with_full_reference_but_using_ref_without_revision(self):
         remote_name = "remote1"
@@ -159,21 +156,18 @@ class TestRemotes(TestListPackageIdsBase):
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
         expected_output = textwrap.dedent(f"""\
         remote1:
-          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+          {repr(rrev)}:.*
             settings:
-              arch=x86_64
-              build_type=Release
-              compiler=apple-clang
-              compiler.libcxx=libc++
-              compiler.version=12.0
-              os=Macos
+              arch=.*
+              build_type=.*
+              os=.*
             options:
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         """)
 
-        assert expected_output == str(self.client.out)
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_in_all_remotes_and_cache(self):
         remote1 = "remote1"
@@ -193,27 +187,21 @@ class TestRemotes(TestListPackageIdsBase):
         output = str(self.client.out)
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+          {repr(rrev)}:.*
             settings:
-              arch=x86_64
-              build_type=Release
-              compiler=apple-clang
-              compiler.libcxx=libc++
-              compiler.version=12.0
-              os=Macos
+              arch=.*
+              build_type=.*
+              os=.*
             options:
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote1:
-          {repr(rrev)}:7b4cfcb069333452b5796da7757e7758bdaf0471
+          {repr(rrev)}:.*
             settings:
-              arch=x86_64
-              build_type=Release
-              compiler=apple-clang
-              compiler.libcxx=libc++
-              compiler.version=12.0
-              os=Macos
+              arch=.*
+              build_type=.*
+              os=.*
             options:
               shared=False
             requires:
@@ -221,7 +209,7 @@ class TestRemotes(TestListPackageIdsBase):
         remote2:
           There are no matching references
         """)
-        assert expected_output == output
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_in_missing_remote(self):
         remote1 = "remote1"
