@@ -91,6 +91,7 @@ class _UploadCollecter(object):
             if remote:
                 ref_remote = remote
             else:
+                # FIXME: The ref has already been obtained before, no sense to ask for latest
                 rrev = self._cache.get_latest_rrev(ref)
                 ref_remote = self._cache.get_remote(rrev) if rrev else None
                 ref_remote = remotes.get_remote(ref_remote)
