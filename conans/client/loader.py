@@ -278,7 +278,7 @@ class ConanFileLoader(object):
             pkg_settings = package_settings_values.get("&")
             if pkg_settings:
                 tmp_settings.update_values(pkg_settings)
-        conanfile.initialize(Settings(), profile.env_values, profile.buildenv)
+        conanfile.initialize(Settings(), profile.buildenv)
         conanfile.conf = profile.conf.get_conanfile_conf(None)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,

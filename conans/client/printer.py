@@ -220,11 +220,7 @@ class Printer(object):
                                                        for key, values in
                                                        profile.build_requires.items()])
 
-        envs = []
-        for package, env_vars in profile.env_values.data.items():
-            for name, value in env_vars.items():
-                key = "%s:%s" % (package, name) if package else name
-                envs.append((key, value))
+        envs = profile.buildenv.dumps()
         self._print_profile_section("env", envs, separator='=')
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):

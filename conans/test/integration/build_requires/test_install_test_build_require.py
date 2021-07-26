@@ -65,7 +65,6 @@ def test_build_require_test_package(existing_br, build_profile, client):
         class Pkg(ConanFile):
             settings = "os"
             test_type = "build_requires"
-            generators = "VirtualBuildEnv"
             {}
 
             def build(self):
@@ -112,7 +111,6 @@ def test_both_types(existing_br, client):
         class Pkg(ConanFile):
             settings = "os"
             test_type = "build_requires", "requires"
-            generators = "VirtualBuildEnv"
             {}
 
             def build(self):

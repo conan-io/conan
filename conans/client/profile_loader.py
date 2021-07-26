@@ -225,13 +225,6 @@ def _apply_inner_profile(doc, base_profile):
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
 
-    # The env vars from the current profile (read in doc)
-    # are updated with the included profiles (base_profile)
-    # the current env values has priority
-    # FIXME: Load Environment current_env_values = EnvValues.loads(doc.env)
-    # current_env_values.update(base_profile.env_values)
-    # base_profile.env_values = current_env_values
-
     if doc.conf:
         new_prof = ConfDefinition()
         new_prof.loads(doc.conf, profile=True)
@@ -295,17 +288,11 @@ def _profile_parse_args(settings, options, envs, conf):
                 simple_items.append((name, value))
         return simple_items, package_items
 
-    def _get_env_values(_env, _package_env):
-        return {}
-
     options = _get_tuples_list_from_extender_arg(options)
-    env, package_env = _get_simple_and_package_tuples(envs)
-    env_values = _get_env_values(env, package_env)
     settings, package_settings = _get_simple_and_package_tuples(settings)
 
     result = Profile()
     result.options = OptionsValues(options)
-    result.env_values = env_values
     result.settings = OrderedDict(settings)
     if conf:
         result.conf = ConfDefinition()
