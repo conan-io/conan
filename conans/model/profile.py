@@ -120,7 +120,7 @@ class Profile(object):
             self.build_requires[pattern] = list(existing.values())
 
         self.conf.update_conf_definition(other.conf)
-        self.buildenv.compose_env(other.buildenv)
+        self.buildenv.compose_profile_env(other.buildenv)
 
     def update_settings(self, new_settings):
         """Mix the specified settings with the current profile.
