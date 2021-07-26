@@ -13,7 +13,6 @@ from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
 from .virtualenv import VirtualEnvGenerator
 from .virtualrunenv import VirtualRunEnvGenerator
-from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
@@ -22,7 +21,6 @@ class GeneratorManager(object):
     def __init__(self):
         self._generators = {"cmake": CMakeGenerator,
                             "cmake_paths": CMakePathsGenerator,
-                            "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "virtualenv": VirtualEnvGenerator,
                             "virtualrunenv": VirtualRunEnvGenerator,

@@ -40,6 +40,7 @@ app_conanfile = textwrap.dedent("""
             cmake.configure()
 """)
 
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool_cmake(version="3.19")
 def test_apple_framework_xcode(client):
@@ -186,6 +187,7 @@ timer_cpp = textwrap.dedent("""
         Hello::hello();
     }
     """)
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
@@ -358,6 +360,7 @@ def test_apple_own_framework_cmake_find_package_multi():
                  "test_package/timer.cpp": timer_cpp})
     client.run("create .")
     assert "Hello World Release!" in client.out
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
