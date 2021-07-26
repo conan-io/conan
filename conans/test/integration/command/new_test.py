@@ -11,7 +11,7 @@ from conans.tools import save
 from conans.util.files import load
 
 
-class NewCommandTest(unittest.TestCase):
+class TestNewCommandTemplates(unittest.TestCase):
 
     def test_template(self):
         client = TestClient()
@@ -120,6 +120,18 @@ class NewCommandTest(unittest.TestCase):
         client.run("new hello/0.1 --template", assert_error=True)
         self.assertIn("ERROR: Exiting with code: 2", client.out)
 
+    def test_template_image_files(self):
+        client = TestClient()
+        template_dir = "templates/command/new/t_dir"
+        png = "$&(){}{}{{}{}"
+        save(os.path.join(client.cache_folder, template_dir + "/myimage.png"), png)
+
+        client.run("new hello/0.1 --template=t_dir")
+        myimage = client.load("myimage.png")
+        assert myimage == png
+
+
+class NewCommandTest(unittest.TestCase):
     def test_new(self):
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t')

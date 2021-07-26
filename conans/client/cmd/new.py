@@ -1,6 +1,7 @@
 import os
 import re
 
+import jinja2
 from jinja2 import Template
 
 from conans import __version__ as client_version
@@ -8,7 +9,6 @@ from conans.client.cmd.new_ci import ci_get_files
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference, get_reference_fields
 from conans.util.files import load
-
 
 conanfile = """from conans import ConanFile, CMake, tools
 
@@ -297,21 +297,24 @@ def _render_template(text, name, version, package_name, defines):
 
 
 def _get_files_from_template_dir(template_dir, name, version, package_name, defines):
-    files = []
+    out_files = {}
     for d, _, fs in os.walk(template_dir):
         for f in fs:
             rel_d = os.path.relpath(d, template_dir)
             rel_f = os.path.join(rel_d, f)
-            files.append(rel_f)
+            f_path = os.path.join(d, f)
+            with open(f_path, 'rb') as handle:
+                content = handle.read()
 
-    out_files = dict()
-    for f in files:
-        f_path = os.path.join(template_dir, f)
-        rendered_path = _render_template(f, name=name, version=version, package_name=package_name,
-                                         defines=defines)
-        rendered_file = _render_template(load(f_path), name=name, version=version,
+            try:
+                content = content.decode("utf-8")
+                rel_f = _render_template(rel_f, name=name, version=version,
                                          package_name=package_name, defines=defines)
-        out_files[rendered_path] = rendered_file
+                content = _render_template(content, name=name, version=version,
+                                           package_name=package_name, defines=defines)
+            except jinja2.exceptions.TemplateError:
+                pass
+            out_files[rel_f] = content
 
     return out_files
 
