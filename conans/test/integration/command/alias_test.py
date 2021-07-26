@@ -263,7 +263,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "%s"
     options = {"myoption": [True, False]}
-    default_options = "myoption=True"
+    default_options = {"myoption": True}
     def package_info(self):
         self.output.info("MYOPTION: {} {}".format(self.name, self.options.myoption))
 """
@@ -271,7 +271,7 @@ class Pkg(ConanFile):
             conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     options = {"myoption": [True, False]}
-    default_options = "myoption=True"
+    default_options = {"myoption": True}
     def configure(self):
         if self.name == "LibB":
             self.options["LibD"].myoption = False
