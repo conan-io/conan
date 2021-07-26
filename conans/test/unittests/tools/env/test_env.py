@@ -29,7 +29,7 @@ def test_compose():
     env2.unset("MyVar4")
     env2.define("MyVar5", "MyNewValue5")
 
-    env.compose(env2)
+    env.compose_env(env2)
     assert env.get("MyVar") == "MyValue"
     assert env.get("MyVar2") == 'MyValue2'
     assert env.get("MyVar3") == 'MyValue3'
@@ -85,7 +85,7 @@ def test_compose_combinations(op1, v1, s1, op2, v2, s2, result):
         getattr(env2, op2)("MyVar", v2, s2)
     else:
         env2.unset("MyVar")
-    env.compose(env2)
+    env.compose_env(env2)
     with environment_append({"MyVar": "MyVar"}):
         assert env.get("MyVar") == result
     assert env._values["MyVar"].get_str(ConanFileMock(), "{name}") == result
@@ -120,7 +120,7 @@ def test_compose_path_combinations(op1, v1, op2, v2, result):
         getattr(env2, op2+"_path")("MyVar", v2)
     else:
         env2.unset("MyVar")
-    env.compose(env2)
+    env.compose_env(env2)
     assert env._values["MyVar"].get_str(ConanFileMock(), "{name}", pathsep=":") == result
 
 
@@ -321,7 +321,7 @@ def test_dict_access():
 
     env2 = Environment(ConanFileMock())
     env2.define("MyVar", "MyValue2")
-    env.compose(env2)
+    env.compose_env(env2)
     ret = env.items()
     assert dict(ret) == {"MyVar": "MyValue@MyValue2"}
 

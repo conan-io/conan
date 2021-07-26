@@ -103,7 +103,7 @@ class _EnvValue:
         else:
             self._values.insert(0, value)
 
-    def compose(self, other):
+    def compose_env_value(self, other):
         """
         :type other: _EnvValue
         """
@@ -285,7 +285,7 @@ class Environment:
         if auto_activate:
             register_environment_script(self._conanfile, path)
 
-    def compose(self, other):
+    def compose_env(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
         self mandates what to do
@@ -296,7 +296,7 @@ class Environment:
             if existing is None:
                 self._values[k] = v.copy()
             else:
-                existing.compose(v)
+                existing.compose_env_value(v)
 
         return self
 
@@ -353,21 +353,21 @@ class ProfileEnvironment:
         result = Environment(conanfile)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                result = env.copy().compose(result)
+                result = env.copy().compose_env(result)
 
         # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
         #        hasn't conanfile
         result._conanfile = conanfile
         return result
 
-    def compose(self, other):
+    def compose_profile_env(self, other):
         """
         :type other: ProfileEnvironment
         """
         for pattern, environment in other._environments.items():
             existing = self._environments.get(pattern)
             if existing is not None:
-                self._environments[pattern] = environment.compose(existing)
+                self._environments[pattern] = environment.compose_env(existing)
             else:
                 self._environments[pattern] = environment
 
@@ -415,7 +415,7 @@ class ProfileEnvironment:
                 if existing is None:
                     result._environments[pattern] = env
                 else:
-                    result._environments[pattern] = env.compose(existing)
+                    result._environments[pattern] = env.compose_env(existing)
                 break
             else:
                 raise ConanException("Bad env defintion: {}".format(line))
