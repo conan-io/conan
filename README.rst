@@ -249,5 +249,5 @@ License
 .. |Logo| image:: https://conan.io/img/jfrog_conan_logo.png
 
 
-.. _`pip docs`: https://pip.pypa.io/en/stable/installing/
+.. _`pip docs`: https://pip.pypa.io/en/stable/installation/
 
