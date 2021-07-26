@@ -460,31 +460,30 @@ class BinaryInstaller(object):
         # Get source of information
         conanfile = node.conanfile
         ref = node.ref
-        package_layout = self._cache.get_pkg_layout(ref)
-        base_path = package_layout.base_folder()
+        conanfile_path = self._cache.editable_path(ref)
+        # TODO: Check, this assumes the folder is always the conanfile one
+        base_path = os.path.dirname(conanfile_path)
         self._call_package_info(conanfile, package_folder=base_path, ref=ref, is_editable=True)
 
         # New editables mechanism based on Folders
-        if hasattr(conanfile, "layout"):
-            conanfile.folders.set_base_package(base_path)
-            conanfile.folders.set_base_source(base_path)
-            conanfile.folders.set_base_build(base_path)
-            conanfile.folders.set_base_install(base_path)
-            conanfile.folders.set_base_imports(base_path)
+        conanfile.folders.set_base_package(base_path)
+        conanfile.folders.set_base_source(base_path)
+        conanfile.folders.set_base_build(base_path)
+        conanfile.folders.set_base_install(base_path)
+        conanfile.folders.set_base_imports(base_path)
 
-            output = conanfile.output
-            output.info("Rewriting files of editable package "
-                        "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
-            self._generator_manager.write_generators(conanfile, conanfile.install_folder,
-                                                     conanfile.generators_folder, output)
-            write_toolchain(conanfile, conanfile.generators_folder, output)
-            output.info("Generated toolchain")
-            graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
-            graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
-            output.info("Generated conan.lock")
-            copied_files = run_imports(conanfile)
-            report_copied_files(copied_files, output)
-            return
+        output = conanfile.output
+        output.info("Rewriting files of editable package "
+                    "'{}' at '{}'".format(conanfile.name, conanfile.generators_folder))
+        self._generator_manager.write_generators(conanfile, conanfile.install_folder,
+                                                 conanfile.generators_folder, output)
+        write_toolchain(conanfile, conanfile.generators_folder, output)
+        output.info("Generated toolchain")
+        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+        graph_lock_file.save(os.path.join(conanfile.install_folder, "conan.lock"))
+        output.info("Generated conan.lock")
+        copied_files = run_imports(conanfile)
+        report_copied_files(copied_files, output)
 
     def _handle_node_cache(self, node, processed_package_references, remotes, pkg_layout):
         pref = node.pref

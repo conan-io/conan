@@ -8,8 +8,11 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
                                        RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
-from conans.errors import ConanException, NotFoundException
 from conans.util.dates import from_iso8601_to_timestamp
+from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
+from conans.client.remover import DiskRemover
+from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
+from conans.model.ref import ConanFileReference
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
@@ -42,6 +45,10 @@ class ConanProxy(object):
 
     def _get_recipe(self, reference, check_updates, update, remotes, make_latest=False):
         output = ScopedOutput(str(reference), self._out)
+
+        conanfile_path = self._cache.editable_path(reference)
+        if conanfile_path is not None:
+            return conanfile_path, RECIPE_EDITABLE, None, reference
 
         # check if it there's any revision of this recipe in the local cache
         ref = self._cache.get_latest_rrev(reference)
