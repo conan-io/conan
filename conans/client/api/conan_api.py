@@ -271,9 +271,7 @@ class ConanAPIV2(object):
                 }
                 results.append(result)
 
-        return {"remote": remote.name if remote else None,
-                "reference": reference,
-                "results": results}
+        return results
 
     @api_method
     def get_package_revisions(self, reference, remote=None):
@@ -292,7 +290,10 @@ class ConanAPIV2(object):
         if ref.revision:
             raise ConanException(f"Cannot list the revisions of a specific package revision")
 
-        return self._get_revisions(ref, remote=remote)
+        results = self._get_revisions(ref, remote=remote)
+        return {"remote": remote.name if remote else None,
+                "reference": reference,
+                "results": results}
 
     @api_method
     def get_recipe_revisions(self, reference, remote=None):
@@ -311,7 +312,10 @@ class ConanAPIV2(object):
         if ref.revision:
             raise ConanException(f"Cannot list the revisions of a specific recipe revision")
 
-        return self._get_revisions(ref, remote=remote)
+        results = self._get_revisions(ref, remote=remote)
+        return {"remote": remote.name if remote else None,
+                "reference": reference,
+                "results": results}
 
     @api_method
     def get_package_ids(self, reference, remote=None):
