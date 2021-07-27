@@ -5,8 +5,8 @@ import unittest
 import pytest
 
 from conans.model.graph_lock import LOCKFILE
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import (BUILD_INFO_CMAKE, BUILD_INFO_XCODE, CONANFILE_TXT)
+from conans.model.ref import ConanFileReference
+from conans.paths import BUILD_INFO_CMAKE, CONANFILE_TXT
 from conans.test.utils.tools import TestClient
 
 
@@ -35,7 +35,6 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
             Hello/0.1@lasote/stable # My req comment
             [generators]
             cmake
-            xcode
             ''')
         client.save({"conanfile.txt": conanfile_txt}, clean_first=True)
 
@@ -43,7 +42,7 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
         client.run('install . --build missing')
 
         current_files = os.listdir(client.current_folder)
-        for f in [CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_XCODE, LOCKFILE]:
+        for f in [CONANFILE_TXT, BUILD_INFO_CMAKE, LOCKFILE]:
             assert f in current_files
 
         cmake = client.load(BUILD_INFO_CMAKE)
@@ -60,21 +59,3 @@ class VSXCodeGeneratorsTest(unittest.TestCase):
         latest_prev = client.cache.get_latest_prev(pkg_ids[0])
         package_path = client.cache.pkg_layout(latest_prev).package().replace("\\", "/")
         self.assertIn(f"{package_path}", cmake)
-
-        # CHECK XCODE GENERATOR
-        xcode = client.load(BUILD_INFO_XCODE)
-
-        expected_c_flags = '-some_c_compiler_flag'
-        expected_cpp_flags = '-some_cxx_compiler_flag'
-        expected_lib_dirs = os.path.join(package_path, "lib").replace("\\", "/")
-        expected_include_dirs = os.path.join(package_path, "include").replace("\\", "/")
-
-        self.assertIn('LIBRARY_SEARCH_PATHS = $(inherited) "%s"' % expected_lib_dirs, xcode)
-        self.assertIn('HEADER_SEARCH_PATHS = $(inherited) "%s"' % expected_include_dirs, xcode)
-        self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
-        self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
-        self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
-        self.assertIn('FRAMEWORK_SEARCH_PATHS = $(inherited) "%s"' % package_path.replace("\\", "/"),
-                      xcode)
-        self.assertIn('OTHER_LDFLAGS = $(inherited)  -lhello -lsystem_lib1',
-                      xcode)

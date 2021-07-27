@@ -1,13 +1,10 @@
-import os
-import platform
 import textwrap
 
 import pytest
 
-from conans.client.tools.env import _environment_add
+
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
-from conans.tools import save
 
 
 @pytest.fixture
@@ -22,7 +19,6 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create . foo/1.0@")
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     return client
 
 
