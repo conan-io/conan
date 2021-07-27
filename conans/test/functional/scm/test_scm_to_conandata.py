@@ -34,10 +34,10 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        package_layout = t.cache.package_layout(self.ref)
-        exported_conanfile = load(package_layout.conanfile())
+        ref_layout = t.get_latest_ref_layout(self.ref)
+        exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
-        exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
+        exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm'],
                              {"type": "git", "url": "myurl", "revision": "myrev",
@@ -66,10 +66,10 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        package_layout = t.cache.package_layout(self.ref)
-        exported_conanfile = load(package_layout.conanfile())
+        ref_layout = t.get_latest_ref_layout(self.ref)
+        exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
-        exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
+        exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm'], {"type": "git", "url": 'weir"d',
                                                            "revision": 123, "subfolder": "weir\"d",
@@ -98,10 +98,10 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        package_layout = t.cache.package_layout(self.ref)
-        exported_conanfile = load(package_layout.conanfile())
+        ref_layout = t.get_latest_ref_layout(self.ref)
+        exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
-        exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
+        exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm'],
                              {"type": "git", "url": 'https://myrepo.com.git', "revision": commit})
@@ -146,10 +146,10 @@ class SCMDataToConanDataTestCase(unittest.TestCase):
         t.run("export . name/version@")
 
         # Check exported files
-        package_layout = t.cache.package_layout(self.ref)
-        exported_conanfile = load(package_layout.conanfile())
+        ref_layout = t.get_latest_ref_layout(self.ref)
+        exported_conanfile = load(ref_layout.conanfile())
         self.assertEqual(exported_conanfile, conanfile)
-        exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
+        exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         self.assertDictEqual(conan_data['.conan']['scm'],
                              {"type": "git", "url": 'https://myrepo.com.git', "revision": commit})
@@ -205,10 +205,9 @@ def test_auto_can_be_automated():
     def _check(client):
         # Check exported files
         ref = ConanFileReference.loads("pkg/1.0")
-        package_layout = client.cache.package_layout(ref)
-        exported_conanfile = load(package_layout.conanfile())
-        assert exported_conanfile == conanfile
-        exported_conandata = load(os.path.join(package_layout.export(), DATA_YML))
+        ref_layout = client.get_latest_ref_layout(ref)
+        assert load(ref_layout.conanfile()) == conanfile
+        exported_conandata = load(ref_layout.conandata())
         conan_data = yaml.safe_load(exported_conandata)
         assert conan_data['.conan']['scm'] == {"type": "git",
                                                "url": 'https://myrepo.com.git',

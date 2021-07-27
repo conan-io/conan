@@ -71,7 +71,7 @@ class CommandOutputer(object):
         for node in sorted(deps_graph.nodes):
             ref = node.ref
             if node.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL, RECIPE_EDITABLE):
-                manifest = self._cache.package_layout(ref).recipe_manifest()
+                manifest = self._cache.ref_layout(ref).recipe_manifest()
                 ret[ref] = manifest.time_str
         return ret
 
@@ -121,22 +121,27 @@ class CommandOutputer(object):
             item_data["display_name"] = conanfile.display_name
             item_data["id"] = package_id
             item_data["build_id"] = build_id(conanfile)
+            item_data["context"] = conanfile.context
+
+            python_requires = getattr(conanfile, "python_requires", None)
+            if python_requires and not isinstance(python_requires, dict):  # no old python requires
+                item_data["python_requires"] = [repr(r)
+                                                for r in conanfile.python_requires.all_refs()]
 
             # Paths
             if isinstance(ref, ConanFileReference) and grab_paths:
-                package_layout = self._cache.package_layout(ref, conanfile.short_paths)
-                item_data["export_folder"] = package_layout.export()
-                item_data["source_folder"] = package_layout.source()
+                # ref already has the revision ID, not needed to get it again
+                ref_layout = self._cache.ref_layout(ref)
+                item_data["export_folder"] = ref_layout.export()
+                item_data["source_folder"] = ref_layout.source()
                 pref_build_id = build_id(conanfile) or package_id
-                pref = PackageReference(ref, pref_build_id)
-                item_data["build_folder"] = package_layout.build(pref)
-
-                pref = PackageReference(ref, package_id)
-                item_data["package_folder"] = package_layout.package(pref)
+                pref_build = self._cache.get_latest_prev(PackageReference(ref, pref_build_id))
+                pref_package = self._cache.get_latest_prev(PackageReference(ref, package_id))
+                item_data["build_folder"] = self._cache.get_pkg_layout(pref_build).build()
+                item_data["package_folder"] = self._cache.get_pkg_layout(pref_package).package()
 
             try:
-                package_metadata = self._cache.package_layout(ref).load_metadata()
-                reg_remote = package_metadata.recipe.remote
+                reg_remote = self._cache.get_remote(ref)
                 reg_remote = remotes.get(reg_remote)
                 if reg_remote:
                     item_data["remote"] = {"name": reg_remote.name, "url": reg_remote.url}

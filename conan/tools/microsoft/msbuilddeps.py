@@ -5,6 +5,7 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
+from conan.tools._check_build_profile import check_using_build_profile
 from conans.errors import ConanException
 from conans.model.build_info import DepCppInfo
 from conans.util.files import load, save
@@ -108,6 +109,8 @@ class MSBuildDeps(object):
             if not isinstance(self.exclude_code_analysis, list):
                 raise ConanException("tools.microsoft.msbuilddeps:exclude_code_analysis must be a"
                                      " list of package names patterns like ['pkga*']")
+
+        check_using_build_profile(self._conanfile)
 
     def generate(self):
         # TODO: Apply config from command line, something like
@@ -259,9 +262,12 @@ class MSBuildDeps(object):
         conf_name = self._config_filename()
         condition = self._condition()
         # Include all direct build_requires for host context. This might change
-        direct_deps = self._conanfile.dependencies.direct_host.values()
-        result[general_name] = self._all_props_file(general_name, direct_deps)
-        for dep in self._conanfile.dependencies.host.values():
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
+        host_req = list(self._conanfile.dependencies.host.values())
+        test_req = list(self._conanfile.dependencies.test.values())
+
+        result[general_name] = self._all_props_file(general_name, direct_deps.values())
+        for dep in host_req + test_req:
             dep_name = dep.ref.name
             dep_name = dep_name.replace(".", "_")
             cpp_info = DepCppInfo(dep.cpp_info)  # To account for automatic component aggregation

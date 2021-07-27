@@ -1,6 +1,6 @@
 import json
 
-from conans.cli.cli import cli_out_write
+from conans.cli.output import cli_out_write
 from conans.cli.command import conan_command, conan_subcommand, Extender, OnceArgument
 
 
@@ -87,7 +87,7 @@ def user_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
 
-@conan_command(group="Misc")
+@conan_command()
 def user(conan_api, parser, *args, **kwargs):
     """
     Authenticates against a remote with user/pass, caching the auth token.

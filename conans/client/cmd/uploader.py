@@ -9,14 +9,14 @@ from multiprocessing.pool import ThreadPool
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
 from conans.util.progress_bar import left_justify_message
-from conans.client.remote_manager import is_package_snapshot_complete, calc_files_checksum
+from conans.client.remote_manager import is_package_snapshot_complete
 from conans.client.source import retrieve_exports_sources
-from conans.errors import ConanException, NotFoundException
+from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
 from conans.model.manifest import gather_files, FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference, check_valid_ref
 from conans.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
                           EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
-from conans.search.search import search_packages, search_recipes
+from conans.search.search import search_recipes
 from conans.util.files import (load, clean_dirty, is_dirty,
                                gzopen_without_timestamps, set_dirty_context_manager)
 from conans.util.log import logger
@@ -64,7 +64,11 @@ class _UploadCollecter(object):
         if package_id or check_valid_ref(reference_or_pattern):
             # Upload package
             ref = ConanFileReference.loads(reference_or_pattern)
-            refs = [ref, ]
+            rrev = self._cache.get_latest_rrev(ref)
+            if not rrev:
+                raise RecipeNotFoundException(ref)
+            else:
+                refs = [rrev, ]
             confirm = True
         else:
             refs = search_recipes(self._cache, reference_or_pattern)
@@ -80,16 +84,16 @@ class _UploadCollecter(object):
         refs_by_remote = defaultdict(list)
 
         for ref in refs:
-            metadata = self._cache.package_layout(ref).load_metadata()
-            if ref.revision and ref.revision != metadata.recipe.revision:
-                raise ConanException("Recipe revision {} does not match the one stored in the "
-                                     "cache {}".format(ref.revision, metadata.recipe.revision))
-            ref = ref.copy_with_rev(metadata.recipe.revision)
+            # TODO: cache2.0. For 2.0 we should always specify the revision of the reference
+            #  that we want to upload, check if  we should move this to other place
+            # get the latest revision for the reference
             remote = remotes.selected
             if remote:
                 ref_remote = remote
             else:
-                ref_remote = metadata.recipe.remote
+                # FIXME: The ref has already been obtained before, no sense to ask for latest
+                rrev = self._cache.get_latest_rrev(ref)
+                ref_remote = self._cache.get_remote(rrev) if rrev else None
                 ref_remote = remotes.get_remote(ref_remote)
 
             upload = True
@@ -98,7 +102,7 @@ class _UploadCollecter(object):
                 upload = self._user_io.request_boolean(msg)
             if upload:
                 try:
-                    conanfile_path = self._cache.package_layout(ref).conanfile()
+                    conanfile_path = self._cache.ref_layout(ref).conanfile()
                     conanfile = self._loader.load_basic(conanfile_path)
                 except NotFoundException:
                     raise NotFoundException(("There is no local conanfile exported as %s" %
@@ -109,13 +113,32 @@ class _UploadCollecter(object):
                 if all_packages or query:
                     if all_packages:
                         query = None
-                    # better to do a search, that will retrieve real packages with ConanInfo
-                    # Not only "package_id" folders that could be empty
-                    package_layout = self._cache.package_layout(ref.copy_clear_rev())
-                    packages = search_packages(package_layout, query)
-                    packages_ids = list(packages.keys())
+
+                    # TODO: cache2.0 do we want to upload all package_revisions ? Just the latest
+                    #  upload just the latest for the moment
+                    # TODO: cache2.0 Ignoring the query for the moment
+                    packages_ids = []
+                    for pkg_id in self._cache.get_package_ids(ref):
+                        packages_ids.append(self._cache.get_latest_prev(pkg_id))
+
                 elif package_id:
-                    packages_ids = [package_id, ]
+                    # TODO: cache2.0 if we specify a package id we could have multiple package revisions
+                    #  something like: upload pkg/1.0:pkg_id will upload the package id for the latest prev
+                    #  or for all of them
+                    prev = package_id.split("#")[1] if "#" in package_id else ""
+                    package_id = package_id.split("#")[0]
+                    pref = PackageReference(ref, package_id, prev)
+                    # FIXME: The name is package_ids but we pass the latest prev for each package id
+                    packages_ids = []
+                    packages = [pref] if pref.revision else self._cache.get_package_ids(pref)
+                    for pkg in packages:
+                        latest_prev = self._cache.get_latest_prev(pkg) if pkg.id == package_id else None
+                        if latest_prev:
+                            packages_ids.append(latest_prev)
+
+                    if not packages_ids:
+                        prev = f"#{prev}" if prev else ""
+                        raise ConanException(f"Binary package {str(ref)}:{package_id}{prev} not found")
                 else:
                     packages_ids = []
                 if packages_ids:
@@ -125,21 +148,7 @@ class _UploadCollecter(object):
                 prefs = []
                 # Gather all the complete PREFS with PREV
                 for package in packages_ids:
-                    package_id, prev = package.split("#") if "#" in package else (package, None)
-                    if package_id not in metadata.packages:
-                        raise ConanException("Binary package %s:%s not found"
-                                             % (str(ref), package_id))
-                    if prev and prev != metadata.packages[package_id].revision:
-                        raise ConanException("Binary package %s:%s#%s not found"
-                                             % (str(ref), package_id, prev))
-                    # Filter packages that don't match the recipe revision
-                    if ref.revision:
-                        rec_rev = metadata.packages[package_id].recipe_revision
-                        if ref.revision != rec_rev:
-                            self._output.warn("Skipping package '%s', it doesn't belong to the"
-                                              " current recipe revision" % package_id)
-                            continue
-                    package_revision = metadata.packages[package_id].revision
+                    package_id, package_revision = package.id, package.revision
                     assert package_revision is not None, "PREV cannot be None to upload"
                     prefs.append(PackageReference(ref, package_id, package_revision))
                 refs_by_remote[ref_remote].append((ref, conanfile, prefs))
@@ -162,21 +171,19 @@ class _PackagePreparator(object):
         - check if the remote recipe is newer, raise
         - compare and decide which files need to be uploaded (and deleted from server)
         """
-        layout = self._cache.package_layout(ref)
-        current_remote_name = layout.load_metadata().recipe.remote
+        recipe_layout = self._cache.ref_layout(ref)
+        current_remote_name = self._cache.get_remote(ref)
 
         if remote.name != current_remote_name:
-            retrieve_exports_sources(self._remote_manager, self._cache, conanfile, ref, remotes)
+            retrieve_exports_sources(self._remote_manager, self._cache, recipe_layout, conanfile,
+                                     ref, remotes)
 
-        conanfile_path = layout.conanfile()
+        conanfile_path = recipe_layout.conanfile()
         self._hook_manager.execute("pre_upload_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
 
         t1 = time.time()
-        cache_files = self._compress_recipe_files(layout, ref)
-
-        with layout.update_metadata() as metadata:
-            metadata.recipe.checksums = calc_files_checksum(cache_files)
+        cache_files = self._compress_recipe_files(recipe_layout, ref)
 
         local_manifest = FileTreeManifest.loads(load(cache_files["conanmanifest.txt"]))
 
@@ -200,7 +207,8 @@ class _PackagePreparator(object):
 
         files_to_upload, deleted = self._recipe_files_to_upload(ref, policy, cache_files, remote,
                                                                 remote_manifest, local_manifest)
-        return files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name, layout
+        return (files_to_upload, deleted, cache_files, conanfile_path, t1, current_remote_name,
+                recipe_layout)
 
     def _check_recipe_date(self, ref, remote, local_manifest):
         try:
@@ -226,7 +234,7 @@ class _PackagePreparator(object):
             self._output.info(local_manifest)
             difference = remote_recipe_manifest.difference(local_manifest)
             if "conanfile.py" in difference:
-                contents = load(self._cache.package_layout(ref).conanfile())
+                contents = load(self._cache.ref_layout(ref).conanfile())
                 endlines = "\\r\\n" if "\r\n" in contents else "\\n"
                 self._output.info("Local 'conanfile.py' using '%s' line-ends" % endlines)
                 remote_contents = self._remote_manager.get_recipe_path(ref, path="conanfile.py",
@@ -302,7 +310,7 @@ class _PackagePreparator(object):
         return result
 
     def prepare_package(self, pref, integrity_check, policy, p_remote):
-        pkg_layout = self._cache.package_layout(pref.ref)
+        pkg_layout = self._cache.pkg_layout(pref)
         cache_files = self._compress_package_files(pkg_layout, pref, integrity_check)
 
         if policy == UPLOAD_POLICY_SKIP:
@@ -312,12 +320,13 @@ class _PackagePreparator(object):
 
     def _compress_package_files(self, layout, pref, integrity_check):
         t1 = time.time()
-        if layout.package_is_dirty(pref):
+
+        if layout.package_is_dirty():
             raise ConanException("Package %s is corrupted, aborting upload.\n"
                                  "Remove it with 'conan remove %s -p=%s'"
                                  % (pref, pref.ref, pref.id))
 
-        download_pkg_folder = layout.download_package(pref)
+        download_pkg_folder = layout.download_package()
         package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
         if is_dirty(package_tgz):
             self._output.warn("%s: Removing %s, marked as dirty" % (str(pref), PACKAGE_TGZ_NAME))
@@ -326,7 +335,7 @@ class _PackagePreparator(object):
 
         # Get all the files in that directory
         # existing package, will use short paths if defined
-        package_folder = layout.package(pref)
+        package_folder = layout.package()
         files, symlinks = gather_files(package_folder)
 
         if CONANINFO not in files or CONAN_MANIFEST not in files:
@@ -358,8 +367,8 @@ class _PackagePreparator(object):
         self._output.rewrite_line("Checking package integrity...")
 
         # short_paths = None is enough if there exist short_paths
-        layout = self._cache.package_layout(pref.ref, short_paths=None)
-        read_manifest, expected_manifest = layout.package_manifests(pref)
+        pkg_layout = self._cache.pkg_layout(pref)
+        read_manifest, expected_manifest = pkg_layout.package_manifests()
 
         if read_manifest != expected_manifest:
             self._output.writeln("")
@@ -492,7 +501,7 @@ class CmdUpload(object):
         """ Uploads the recipes and binaries identified by ref
         """
         assert (ref.revision is not None), "Cannot upload a recipe without RREV"
-        conanfile_path = self._cache.package_layout(ref).conanfile()
+        conanfile_path = self._cache.ref_layout(ref).conanfile()
         # FIXME: I think it makes no sense to specify a remote to "pre_upload"
         # FIXME: because the recipe can have one and the package a different one
         self._hook_manager.execute("pre_upload", conanfile_path=conanfile_path,
@@ -562,8 +571,7 @@ class CmdUpload(object):
 
         # The recipe wasn't in the registry or it has changed the revision field only
         if not current_remote_name:
-            with layout.update_metadata() as metadata:
-                metadata.recipe.remote = remote.name
+            self._cache.set_remote(ref, remote.name)
 
         return ref
 
@@ -573,8 +581,8 @@ class CmdUpload(object):
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
-        pkg_layout = self._cache.package_layout(pref.ref)
-        conanfile_path = pkg_layout.conanfile()
+        ref_layout = self._cache.ref_layout(pref.ref)
+        conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_upload_package", conanfile_path=conanfile_path,
                                    reference=pref.ref,
                                    package_id=pref.id,
@@ -600,27 +608,10 @@ class CmdUpload(object):
 
         logger.debug("UPLOAD: Time uploader upload_package: %f" % (time.time() - t1))
 
-        # Update the package metadata
-        checksums = calc_files_checksum(cache_files)
-        with pkg_layout.update_metadata() as metadata:
-            cur_package_remote = metadata.packages[pref.id].remote
-            if not cur_package_remote:
-                metadata.packages[pref.id].remote = p_remote.name
-            metadata.packages[pref.id].checksums = checksums
-
+        cur_package_remote = self._cache.get_remote(pref)
+        if not cur_package_remote:
+            self._cache.set_remote(pref, p_remote.name)
         return pref
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def compress_files(files, symlinks, name, dest_dir, output=None):

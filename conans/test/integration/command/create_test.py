@@ -3,7 +3,7 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
+import pytest
 
 from conans.client import tools
 from conans.model.ref import ConanFileReference, PackageReference
@@ -45,6 +45,7 @@ class CreateTest(unittest.TestCase):
         client.run("create . lasote/stable")
         self.assertNotIn("HelloBar/0.1@lasote/testing: Forced build from source", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -88,6 +89,7 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_name_command_line(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
@@ -133,6 +135,7 @@ class MyPkg(ConanFile):
         client.run("create . Hello/1.1@lasote/stable", assert_error=True)
         self.assertIn("ERROR: Package recipe with version 1.1!=1.2", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_user_channel(self):
         client = TestClient()
         client.save({"conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -145,6 +148,7 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder(self):
         client = TestClient()
         client.save({"subfolder/conanfile.py": GenConanfile().with_name("Pkg").with_version("0.1")})
@@ -153,6 +157,7 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create_in_subfolder_with_different_name(self):
         # Now with a different name
         client = TestClient()
@@ -286,10 +291,10 @@ class MyPkg(ConanFile):
             """)
         client.save({"conanfile.py": conanfile})
         ref = ConanFileReference("pkg", "0.1", "danimtb", "testing")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID, None)
         client.run("create . %s" % ref.full_str(), assert_error=True)
+        pref = client.get_latest_prev(ref, NO_SETTINGS_PACKAGE_ID)
         self.assertIn("Build error", client.out)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_folder = client.get_latest_pkg_layout(pref).package()
         self.assertFalse(os.path.exists(package_folder))
 
     def test_create_with_name_and_version(self):
@@ -338,9 +343,13 @@ class MyPkg(ConanFile):
         client.run("create .")
 
         ref = ConanFileReference.loads("Bye/0.1")
-        packages_folder = client.cache.package_layout(ref).packages()
-        p_folder = os.path.join(packages_folder, os.listdir(packages_folder)[0])
-        conaninfo = load(os.path.join(p_folder, "conaninfo.txt"))
+
+        refs = client.cache.get_latest_rrev(ref)
+        pkgs = client.cache.get_package_ids(refs)
+        prev = client.cache.get_latest_prev(pkgs[0])
+        package_folder = client.cache.pkg_layout(prev).package()
+
+        conaninfo = load(os.path.join(package_folder, "conaninfo.txt"))
         # The user and channel nor None nor "_/" appears in the conaninfo
         self.assertNotIn("None", conaninfo)
         self.assertNotIn("_/", conaninfo)

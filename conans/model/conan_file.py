@@ -1,4 +1,5 @@
 import os
+import platform
 
 from conan.tools.env import Environment
 from conan.tools.env.environment import environment_wrap_command
@@ -67,9 +68,11 @@ def get_env_context_manager(conanfile):
 class ConanFile(object):
     """ The base class for all package recipes
     """
-
     name = None
     version = None  # Any str, can be "1.1" or whatever
+    user = None
+    channel = None
+
     url = None  # The URL where this File is located, as github, to collaborate in package
     # The license of the PACKAGE, just a shortcut, does not replace or
     # change the actual license of the source code
@@ -94,10 +97,6 @@ class ConanFile(object):
     in_local_cache = True
     develop = False
 
-    # Defaulting the reference fields
-    default_channel = None
-    default_user = None
-
     # Settings and Options
     settings = None
     options = None
@@ -111,21 +110,21 @@ class ConanFile(object):
     patterns = None
 
     package_type = None
+    # Run in windows bash
+    win_bash = None
 
-    def __init__(self, output, runner, display_name="", user=None, channel=None):
+    def __init__(self, output, runner, display_name=""):
         # an output stream (writeln, info, warn error)
         self.output = ScopedOutput(display_name, output)
         self.display_name = display_name
         # something that can run commands, as os.sytem
         self._conan_runner = runner
-        self._conan_user = user
-        self._conan_channel = channel
 
         self.compatible_packages = []
         self._conan_requester = None
 
-        self.buildenv_info = Environment()
-        self.runenv_info = Environment()
+        self.buildenv_info = Environment(self)
+        self.runenv_info = Environment(self)
         # At the moment only for build_requires, others will be ignored
         self.conf_info = Conf()
         self._conan_buildenv = None  # The profile buildenv, will be assigned initialize()
@@ -137,6 +136,8 @@ class ConanFile(object):
 
         self._conan_new_cpp_info = None   # Will be calculated lazy in the getter
         self._conan_dependencies = None
+
+        self.environment_scripts = []  # Accumulate the env scripts generated in order
 
         # layout() method related variables:
         self.folders = Folders()
@@ -183,7 +184,7 @@ class ConanFile(object):
         if not isinstance(self._conan_buildenv, Environment):
             # TODO: missing user/channel
             ref_str = "{}/{}".format(self.name, self.version)
-            self._conan_buildenv = self._conan_buildenv.get_env(ref_str)
+            self._conan_buildenv = self._conan_buildenv.get_env(self, ref_str)
         return self._conan_buildenv
 
     def initialize(self, settings, env, buildenv=None):
@@ -193,9 +194,6 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.settings = create_settings(self, settings)
-
-        conan_v2_error("Setting 'cppstd' is deprecated in favor of 'compiler.cppstd',"
-                       " please update your recipe.", 'cppstd' in self.settings.fields)
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
@@ -281,34 +279,9 @@ class ConanFile(object):
         # the deps_env_info objects available
         tmp_env_values = self._conan_env_values.copy()
         tmp_env_values.update(self.deps_env_info)
-        ret, multiple = tmp_env_values.env_dicts(self.name, self.version, self._conan_user,
-                                                 self._conan_channel)
+        ret, multiple = tmp_env_values.env_dicts(self.name, self.version)
         ret.update(multiple)
         return ret
-
-    @property
-    def channel(self):
-        if not self._conan_channel:
-            _env_channel = os.getenv("CONAN_CHANNEL")
-            conan_v2_error("Environment variable 'CONAN_CHANNEL' is deprecated", _env_channel)
-            self._conan_channel = _env_channel or self.default_channel
-            if not self._conan_channel:
-                raise ConanException("channel not defined, but self.channel is used in conanfile")
-        return self._conan_channel
-
-    @property
-    def user(self):
-        if not self._conan_user:
-            _env_username = os.getenv("CONAN_USERNAME")
-            conan_v2_error("Environment variable 'CONAN_USERNAME' is deprecated", _env_username)
-            self._conan_user = _env_username or self.default_user
-            if not self._conan_user:
-                raise ConanException("user not defined, but self.user is used in conanfile")
-        return self._conan_user
-
-    def collect_libs(self, folder=None):
-        conan_v2_error("'self.collect_libs' is deprecated, use 'tools.collect_libs(self)' instead")
-        return tools.collect_libs(self, folder=folder)
 
     @property
     def build_policy_missing(self):
@@ -361,16 +334,22 @@ class ConanFile(object):
         """
 
     def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True,
-            ignore_errors=False, run_environment=False, with_login=True, env="conanbuildenv"):
+            ignore_errors=False, run_environment=False, with_login=True, env=None):
+        # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
 
-        command = environment_wrap_command(env, command)
-
-        def _run():
-            if not win_bash:
-                return self._conan_runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
+        def _run(cmd, _env):
             # FIXME: run in windows bash is not using output
-            return tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
-                                             msys_mingw=msys_mingw, with_login=with_login)
+            if platform.system() == "Windows":
+                if win_bash:
+                    return tools.run_in_windows_bash(self, bashcmd=cmd, cwd=cwd, subsystem=subsystem,
+                                                     msys_mingw=msys_mingw, with_login=with_login)
+                elif self.win_bash:  # New, Conan 2.0
+                    from conan.tools.microsoft.subsystems import run_in_windows_bash
+                    return run_in_windows_bash(self, command=cmd, cwd=cwd, env=_env)
+            _env = _env or "conanenv"
+            wrapped_cmd = environment_wrap_command(self, _env, cmd, cwd=self.generators_folder)
+            return self._conan_runner(wrapped_cmd, output, os.path.abspath(RUN_LOG_NAME), cwd)
+
         if run_environment:
             # When using_build_profile the required environment is already applied through
             # 'conanfile.env' in the contextmanager 'get_env_context_manager'
@@ -381,9 +360,9 @@ class ConanFile(object):
                           (os.environ.get('DYLD_LIBRARY_PATH', ''),
                            os.environ.get("DYLD_FRAMEWORK_PATH", ''),
                            command)
-            retcode = _run()
+            retcode = _run(command, env)
         else:
-            retcode = _run()
+            retcode = _run(command, env)
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))

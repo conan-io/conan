@@ -4,6 +4,7 @@ import unittest
 
 import pytest
 
+from conans.model.ref import ConanFileReference
 from conans.paths import BUILD_INFO_CMAKE, CONANFILE
 from conans.test.assets.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient, TestServer
@@ -37,7 +38,9 @@ class DiamondTest(unittest.TestCase):
     def _check_individual_deps(self):
         self.assertIn("INCLUDE [", self.client.out)
         output = str(self.client.out)
-        self.assertIn("/data/Hello0/0.1/lasote/stable", output.replace("\\", "/"))
+        latest_rrev = self.client.cache.get_latest_rrev(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
+        ref_layout = self.client.cache.ref_layout(latest_rrev)
+        self.assertIn(ref_layout.base_folder, output)
         cmakebuildinfo = load(os.path.join(self.client.current_folder, BUILD_INFO_CMAKE))
         self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
                       cmakebuildinfo)

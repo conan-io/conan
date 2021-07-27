@@ -96,6 +96,23 @@ def test_component_aggregation():
     assert ret.frameworkdirs == ["frameworkdir_c2", "frameworkdir_c1"]
 
 
+def test_cpp_info_sysroot_merge():
+    # If the value was already set is kept in the merge
+    one = NewCppInfo()
+    one.sysroot = "sys1"
+    two = NewCppInfo()
+    two.sysroot = "sys2"
+    one.merge(two)
+    assert one.sysroot == "sys1"
+
+    # If the value was not set it is assigned
+    one = NewCppInfo()
+    two = NewCppInfo()
+    two.sysroot = "sys2"
+    one.merge(two)
+    assert one.sysroot == "sys2"
+
+
 @pytest.mark.parametrize("aggregate_first", [True, False])
 def test_cpp_info_merge_aggregating_components_first(aggregate_first):
     cppinfo = NewCppInfo()

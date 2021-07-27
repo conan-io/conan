@@ -4,9 +4,7 @@ travis = """
 env:
    global:
      - CONAN_REFERENCE: "{name}/{version}"
-     - CONAN_USERNAME: "{user}"
      - CONAN_LOGIN_USERNAME: "{user}"
-     - CONAN_CHANNEL: "{channel}"
      {upload}
 linux: &linux
    os: linux
@@ -106,9 +104,7 @@ environment:
     PYTHON: "C:\\Python37"
 
     CONAN_REFERENCE: "{name}/{version}"
-    CONAN_USERNAME: "{user}"
     CONAN_LOGIN_USERNAME: "{user}"
-    CONAN_CHANNEL: "{channel}"
     {upload}
     matrix:
 {configs}
@@ -125,9 +121,7 @@ test_script:
 
 gitlab = """
 variables:
-    CONAN_USERNAME: "{user}"
     CONAN_REFERENCE: "{name}/{version}"
-    CONAN_CHANNEL: "{channel}"
     CONAN_LOGIN_USERNAME: "{user}"
     {upload}
 .build-template: &build-template
@@ -172,8 +166,6 @@ version: 2
           .circleci/run.sh
         environment:
           CONAN_REFERENCE: "{name}/{version}"
-          CONAN_USERNAME: "{user}"
-          CONAN_CHANNEL: "{channel}"
           {upload}
 jobs:
 {configs}

@@ -1,7 +1,8 @@
 from collections import OrderedDict, namedtuple
 
-from conans.errors import NotFoundException
-from conans.search.search import (search_packages, search_recipes, filter_by_revision)
+from conans.errors import NotFoundException, RecipeNotFoundException
+from conans.model.ref import ConanFileReference
+from conans.search.search import (search_packages, search_recipes)
 
 
 class Search(object):
@@ -10,26 +11,10 @@ class Search(object):
         self._remote_manager = remote_manager
         self._remotes = remotes
 
-    def search_recipes(self, pattern, remote_name=None, case_sensitive=False):
-        ignorecase = not case_sensitive
-
+    def search_recipes(self, pattern, remote_name):
         references = OrderedDict()
-        if not remote_name:
-            references[None] = search_recipes(self._cache, pattern, ignorecase)
-            return references
-
-        if remote_name == 'all':
-            # We have to check if there is a remote called "all"
-            # Deprecate: 2.0 can remove this check
-            if 'all' not in self._remotes:
-                for remote in self._remotes.values():
-                    refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                    if refs:
-                        references[remote.name] = sorted(refs)
-                return references
-        # single remote
         remote = self._remotes[remote_name]
-        refs = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+        refs = self._remote_manager.search_recipes(remote, pattern)
         references[remote.name] = sorted(refs)
         return references
 
@@ -54,12 +39,20 @@ class Search(object):
         return self._search_packages_in(remote_name, ref, query)
 
     def _search_packages_in_local(self, ref=None, query=None):
-        package_layout = self._cache.package_layout(ref, short_paths=None)
-        packages_props = search_packages(package_layout, query)
-        ordered_packages = OrderedDict(sorted(packages_props.items()))
+        latest_rrev = self._cache.get_latest_rrev(ref)
 
-        metadata = package_layout.load_metadata()
-        ordered_packages = filter_by_revision(metadata, ordered_packages)
+        if not latest_rrev:
+            raise RecipeNotFoundException(ref)
+
+        conanfileref = latest_rrev
+        package_layouts = []
+        pkg_ids = self._cache.get_package_ids(conanfileref)
+        for pkg in pkg_ids:
+            latest_prev = self._cache.get_latest_prev(pkg)
+            package_layouts.append(self._cache.pkg_layout(latest_prev))
+
+        packages_props = search_packages(package_layouts, query)
+        ordered_packages = OrderedDict(sorted(packages_props.items()))
 
         references = OrderedDict()
         references[None] = self.remote_ref(ordered_packages)

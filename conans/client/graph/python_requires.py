@@ -122,23 +122,34 @@ class PyRequireLoader(object):
             ref = ConanFileReference.loads(repr(locked))
         else:
             requirement = Requirement(ref)
-            resolved_ref = self._range_resolver.resolve(requirement, "py_require", update=self._update,
-                                         remotes=self._remotes)
-            ref = resolved_ref
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
+            else:
+                resolved_ref = self._range_resolver.resolve(requirement, "py_require",
+                                                            update=self._update,
+                                                            remotes=self._remotes)
+                ref = resolved_ref
         return ref
 
     def _load_pyreq_conanfile(self, loader, lock_python_requires, ref):
         recipe = self._proxy.get_recipe(ref, self._check_updates, self._update,
                                         remotes=self._remotes)
         path, _, _, new_ref = recipe
-        conanfile, module = loader.load_basic_module(path, lock_python_requires, user=new_ref.user,
-                                                     channel=new_ref.channel)
+        conanfile, module = loader.load_basic_module(path, lock_python_requires)
         conanfile.name = new_ref.name
         # FIXME Conan 2.0 version should be a string, not a Version object
         conanfile.version = new_ref.version
+        conanfile.user = new_ref.user
+        # TODO: Is tihs really necessary?
+        conanfile.channel = new_ref.channel
 
         if getattr(conanfile, "alias", None):
             ref = ConanFileReference.loads(conanfile.alias)
+            requirement = Requirement(ref)
+            alias = requirement.alias
+            if alias is not None:
+                ref = alias
             conanfile, module, new_ref, path = self._load_pyreq_conanfile(loader,
                                                                           lock_python_requires,
                                                                           ref)

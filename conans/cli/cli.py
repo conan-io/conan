@@ -7,8 +7,6 @@ from collections import defaultdict
 from difflib import get_close_matches
 from inspect import getmembers
 
-from colorama import Style
-
 from conans import __version__ as client_version
 from conans.cli.command import ConanSubCommand
 from conans.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
@@ -22,6 +20,8 @@ from conans.util.log import logger
 
 CLI_V2_COMMANDS = [
     'help',
+    'search',
+    'list'
 ]
 
 
@@ -67,23 +67,11 @@ class Cli(object):
             raise ConanException("There is no {} method defined in {}".format(method_name,
                                                                               import_path))
 
-    @property
-    def conan_api(self):
-        return self._conan_api
-
-    @property
-    def commands(self):
-        return self._commands
-
-    @property
-    def groups(self):
-        return self._groups
-
     def _print_similar(self, command):
         """ Looks for similar commands and prints them if found.
         """
         matches = get_close_matches(
-            word=command, possibilities=self.commands.keys(), n=5, cutoff=0.75)
+            word=command, possibilities=self._commands.keys(), n=5, cutoff=0.75)
 
         if len(matches) == 0:
             return
@@ -99,8 +87,8 @@ class Cli(object):
         self._out.info("")
 
     def help_message(self):
-        self.commands["help"].method(self.conan_api, self.commands["help"].parser,
-                                     commands=self.commands, groups=self.groups)
+        self._commands["help"].method(self._conan_api, self._commands["help"].parser,
+                                      commands=self._commands, groups=self._groups)
 
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
@@ -117,7 +105,7 @@ class Cli(object):
             self.help_message()
             return SUCCESS
         try:
-            command = self.commands[command_argument]
+            command = self._commands[command_argument]
         except KeyError as exc:
             if command_argument in ["-v", "--version"]:
                 self._out.info("Conan version %s" % client_version)
@@ -140,15 +128,29 @@ class Cli(object):
         ) and is_config_install_scheduled(self._conan_api):
             self._conan_api.config_install(None, None)
 
-        command.run(self.conan_api, self.commands[command_argument].parser,
-                    args[0][1:], commands=self.commands, groups=self.groups)
+        try:
+            command.run(self._conan_api, self._commands[command_argument].parser,
+                        args[0][1:], commands=self._commands, groups=self._groups)
+            exit_error = SUCCESS
+        except SystemExit as exc:
+            if exc.code != 0:
+                logger.error(exc)
+                self._conan_api.out.error("Exiting with code: %d" % exc.code)
+            exit_error = exc.code
+        except ConanInvalidConfiguration as exc:
+            exit_error = ERROR_INVALID_CONFIGURATION
+            self._conan_api.out.error(exc)
+        except ConanException as exc:
+            exit_error = ERROR_GENERAL
+            self._conan_api.out.error(exc)
+        except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
+            exit_error = ERROR_GENERAL
+            msg = exception_message_safe(exc)
+            self._conan_api.out.error(msg)
 
-        return SUCCESS
-
-
-def cli_out_write(data, fg=None, bg=None):
-    data = "{}{}{}{}\n".format(fg or '', bg or '', data, Style.RESET_ALL)
-    sys.stdout.write(data)
+        return exit_error
 
 
 def main(args):
@@ -166,6 +168,7 @@ def main(args):
         6: Invalid configuration (done)
     """
 
+    # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
     if command_argument not in CLI_V2_COMMANDS:
         from conans.client.command import main as v1_main
@@ -197,25 +200,6 @@ def main(args):
     if sys.platform == 'win32':
         signal.signal(signal.SIGBREAK, ctrl_break_handler)
 
-    try:
-        cli = Cli(conan_api)
-        exit_error = cli.run(args)
-    except SystemExit as exc:
-        if exc.code != 0:
-            logger.error(exc)
-            conan_api.out.error("Exiting with code: %d" % exc.code)
-        exit_error = exc.code
-    except ConanInvalidConfiguration as exc:
-        exit_error = ERROR_INVALID_CONFIGURATION
-        conan_api.out.error(exc)
-    except ConanException as exc:
-        exit_error = ERROR_GENERAL
-        conan_api.out.error(exc)
-    except Exception as exc:
-        import traceback
-        print(traceback.format_exc())
-        exit_error = ERROR_GENERAL
-        msg = exception_message_safe(exc)
-        conan_api.out.error(msg)
-
+    cli = Cli(conan_api)
+    exit_error = cli.run(args)
     sys.exit(exit_error)

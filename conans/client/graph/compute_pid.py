@@ -1,7 +1,9 @@
 from collections import OrderedDict
 
+from conans.client.graph.graph import BINARY_INVALID, BINARY_ERROR
 from conans.model.pkg_type import PackageType
-from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration
+from conans.errors import conanfile_exception_formatter, ConanInvalidConfiguration, \
+    ConanErrorConfiguration, ConanException
 from conans.model.info import ConanInfo, RequirementsInfo, RequirementInfo
 from conans.util.conan_v2_mode import conan_v2_property
 
@@ -23,24 +25,25 @@ def compute_package_id(node, new_config):
     for require, transitive in node.transitive_deps.items():
         dep_package_id = require.package_id_mode
         dep_node = transitive.node
+        dep_conanfile = dep_node.conanfile
         if require.build:
             if dep_package_id:
                 req_info = RequirementInfo(dep_node.pref, dep_package_id)
                 build_data[require] = req_info
         else:
             if dep_package_id is None:  # Automatically deducing package_id
-                if require.include or require.link:  # linked
-                    if node.package_type is PackageType.SHARED:
-                        if dep_node.package_type is PackageType.SHARED:
+                if require.headers or require.libs:  # linked
+                    if conanfile.package_type is PackageType.SHARED:
+                        if dep_conanfile.package_type is PackageType.SHARED:
                             dep_package_id = "minor_mode"
                         else:
                             dep_package_id = "recipe_revision_mode"
-                    elif node.package_type is PackageType.STATIC:
-                        if dep_node.package_type is PackageType.HEADER:
+                    elif conanfile.package_type is PackageType.STATIC:
+                        if dep_conanfile.package_type is PackageType.HEADER:
                             dep_package_id = "recipe_revision_mode"
                         else:
                             dep_package_id = "minor_mode"
-                    elif node.package_type is PackageType.HEADER:
+                    elif conanfile.package_type is PackageType.HEADER:
                         dep_package_id = "unrelated_mode"
             req_info = RequirementInfo(dep_node.pref, dep_package_id or default_package_id_mode)
             data[require] = req_info
@@ -74,7 +77,15 @@ def compute_package_id(node, new_config):
             try:
                 conanfile.validate()
             except ConanInvalidConfiguration as e:
-                conanfile.info.invalid = str(e)
+                conanfile.info.invalid = BINARY_INVALID, str(e)
+            except ConanErrorConfiguration as e:
+                conanfile.info.invalid = BINARY_ERROR, str(e)
+
+    try:
+        conanfile.settings.validate()  # All has to be ok!
+        conanfile.options.validate()
+    except ConanException:
+        conanfile.info.invalid = BINARY_INVALID, str(e)
 
     info = conanfile.info
     node.package_id = info.package_id()

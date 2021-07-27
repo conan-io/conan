@@ -101,12 +101,11 @@ class HelloPythonConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Packaged 1 '.h' file: myfile.h", client.out)
         self.assertNotIn("No files in this package!", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
-        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
+        pref = client.get_latest_prev(ref)
+        latest_package = client.get_latest_pkg_layout(pref).package()
+        conaninfo = load(os.path.join(latest_package, "conaninfo.txt"))
         self.assertEqual(2, conaninfo.count("os=Windows"))
-        manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+        manifest = load(os.path.join(latest_package, "conanmanifest.txt"))
         self.assertIn("conaninfo.txt: bc02e11c87c7dbe64952b85f0167c142", manifest)
         self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
@@ -122,6 +121,7 @@ class HelloPythonConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile
@@ -216,9 +216,8 @@ class TestConan(ConanFile):
                      "lib/bye.txt": ""}, clean_first=True)
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, package_id)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#f99320295379ced53f338446912a2cff:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
+        package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -239,9 +238,9 @@ class TestConan(ConanFile):
                      "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#cd0221af3af8be9e3d7e7b6ae56ce0b6:{package_id}#b1205438a95acf45b1814573e48f6c50")
+        package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
@@ -267,9 +266,8 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
                    "--source-folder=src")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        pref = PackageReference(ref, package_id)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        pref = PackageReference.loads(f"Hello/0.1@lasote/stable#c05196f9787f3f375005b1b9772ab828:{package_id}#ca390c141f4dfd77f5ffd03eca67b2e0")
+        package_folder = client.cache.pkg_layout(pref).package()
         inc = os.path.join(package_folder, "inc")
         self.assertEqual(os.listdir(inc), ["header.h"])
         self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
@@ -324,10 +322,10 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build")
         conanfile = GenConanfile().with_name("Hello1").with_version("0.1")\
-                                  .with_require(hello_ref)
+                                  .with_import("from conans import tools").with_require(hello_ref)
 
         conanfile = str(conanfile) + """\n    def package_info(self):
-        self.cpp_info.libs = self.collect_libs()
+        self.cpp_info.libs = tools.collect_libs(self)
     def package(self):
         self.copy("*")
         """
@@ -466,12 +464,13 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "src/header.h": "contents"})
         client.run("export-pkg . -s os=Windows")
-        ref = ConanFileReference.loads("Hello/0.1@")
-        pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        package_folder = client.cache.package_layout(pref.ref).package(pref)
+        pref = PackageReference.loads(f"Hello/0.1#7824a75809349a3700283a00e63086ee:{NO_SETTINGS_PACKAGE_ID}#44e87ea1a65a899b6291991959a22b62")
+        package_folder = client.cache.pkg_layout(pref).package()
         header = os.path.join(package_folder, "include/header.h")
         self.assertTrue(os.path.exists(header))
 
+    @pytest.mark.xfail(reason="cache2.0: we can't test this now, revisit when we move the uuid "
+                              "folders to a temporal location")
     def test_export_pkg_clean_dirty(self):
         # https://github.com/conan-io/conan/issues/6449
         client = TestClient()
@@ -486,14 +485,14 @@ class TestConan(ConanFile):
         client.run("create . pkg/0.1@", assert_error=True)
         self.assertIn("Can't build while installing", client.out)
         ref = ConanFileReference.loads("pkg/0.1")
-        layout = client.cache.package_layout(ref)
         pref = PackageReference(ref, NO_SETTINGS_PACKAGE_ID)
-        build_folder = layout.build(pref)
+        layout = client.get_latest_pkg_layout(pref)
+        build_folder = layout.build()
         self.assertTrue(is_dirty(build_folder))
-        self.assertTrue(layout.package_is_dirty(pref))
+        self.assertTrue(layout.package_is_dirty())
 
         client.run("export-pkg . pkg/0.1@")
-        self.assertFalse(layout.package_is_dirty(pref))
+        self.assertFalse(layout.package_is_dirty())
         client.run("install pkg/0.1@")
         self.assertIn("pkg/0.1: Already installed!", client.out)
 

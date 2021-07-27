@@ -122,9 +122,9 @@ class MyPackage(ConanFile):
         client.save({"conanfile.py": GenConanfile("Hello0", "0.1")})
         client.run("export . lasote/stable")
         client.run("install %s --build missing" % str(ref))
-
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).packages()))
+        pref = client.get_latest_prev(ref)
+        self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).build()))
+        self.assertTrue(os.path.exists(client.get_latest_pkg_layout(pref).package()))
 
         # Upload
         client.run("upload %s --all" % str(ref))
@@ -132,28 +132,29 @@ class MyPackage(ConanFile):
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build missing" % str(ref))
-        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
+        pref = client.get_latest_prev(ref)
+        self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
+        self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build" % str(ref))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        self.assertTrue(os.path.exists(other_client.cache.package_layout(ref).packages()))
+        pref = client.get_latest_prev(ref)
+        self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
+        self.assertTrue(os.path.exists(other_client.get_latest_pkg_layout(pref).package()))
 
         # Use an invalid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build HelloInvalid" % str(ref))
+
+        # pref = client.get_latest_prev(ref)
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
-        self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).packages()))
+        # self.assertFalse(os.path.exists(other_client.get_latest_pkg_layout(pref).build()))
 
         # Use another valid pattern and check that its not builded from source
         other_client = TestClient(servers=client.servers, users=client.users)
         other_client.run("install %s --build HelloInvalid -b Hello" % str(ref))
         # self.assertIn("No package matching 'HelloInvalid' pattern", other_client.out)
-        # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).builds()))
-        # self.assertFalse(os.path.exists(other_client.cache.package_layout(ref).packages()))
 
         # Now even if the package is in local store, check that's rebuilded
         other_client.run("install %s -b Hello*" % str(ref))

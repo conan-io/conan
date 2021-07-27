@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+import pytest
+
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient, GenConanfile
 from conans.util.files import save
@@ -83,6 +85,7 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("build . --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 revisit the test")
     def test_build_mode_requires(self):
         client = TestClient()
         self._create(client)

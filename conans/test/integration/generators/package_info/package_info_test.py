@@ -5,9 +5,8 @@ import unittest
 import pytest
 
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.test.assets.genconanfile import GenConanfile
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conans.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.mark.xfail(reason="Navigation of dependencies to be redefined")
@@ -277,10 +276,10 @@ class TestPackageInfo(unittest.TestCase):
                      "iss_libs/libiss": "",
                      "bin/exelauncher": ""})
         dep_ref = ConanFileReference("dep", "1.0", "us", "ch")
-        dep_pref = PackageReference(dep_ref, NO_SETTINGS_PACKAGE_ID)
         client.run("create conanfile_dep.py dep/1.0@us/ch")
         client.run("create conanfile_consumer.py consumer/1.0@us/ch")
-        package_folder = client.cache.package_layout(dep_ref).package(dep_pref)
+        dep_pref = client.get_latest_prev(dep_ref, NO_SETTINGS_PACKAGE_ID)
+        package_folder = client.get_latest_pkg_layout(dep_pref).package()
 
         expected_comp_starlight_include_paths = [os.path.join(package_folder, "galaxy", "starlight")]
         expected_comp_planet_include_paths = [os.path.join(package_folder, "galaxy", "planet")]

@@ -16,10 +16,10 @@ from conans.util.files import load, save
 class SettingsTest(unittest.TestCase):
 
     def _get_conaninfo(self, reference, client):
-        ref = ConanFileReference.loads(reference)
-        pkg_folder = client.cache.package_layout(ref).packages()
-        folders = os.listdir(pkg_folder)
-        pkg_folder = os.path.join(pkg_folder, folders[0])
+        ref = client.cache.get_latest_rrev(ConanFileReference.loads(reference))
+        pkg_ids = client.cache.get_package_ids(ref)
+        pref = client.cache.get_latest_prev(pkg_ids[0])
+        pkg_folder = client.cache.pkg_layout(pref).package()
         return ConanInfo.loads(client.load(os.path.join(pkg_folder, "conaninfo.txt")))
 
     def test_wrong_settings(self):
@@ -89,7 +89,7 @@ cppstd=11""", client.out)
         self.assertNotIn("os: None", client.out)
         pref = PackageReference.loads("Pkg/0.1@lasote/testing:"
                                       "544c1d8c53e9d269737e68e00ec66716171d2704")
-        info_path = os.path.join(client.cache.package_layout(pref.ref).package(pref), CONANINFO)
+        info_path = os.path.join(client.get_latest_pkg_layout(pref).package(), CONANINFO)
         info = load(info_path)
         self.assertNotIn("os", info)
         # Explicitly specifying None, put it in the conaninfo.txt, but does not affect the hash

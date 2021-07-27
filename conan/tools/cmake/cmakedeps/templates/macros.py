@@ -58,6 +58,8 @@ class MacrosTemplate(CMakeDepsFileTemplate):
                    list(APPEND _out_libraries ${CONAN_FOUND_LIBRARY})
 
                    # Create a micro-target for each lib/a found
+                   # Allow only some characters for the target name
+                   string(REGEX REPLACE "[^A-Za-z0-9.+_-]" "_" _LIBRARY_NAME ${_LIBRARY_NAME})
                    set(_LIB_NAME CONAN_LIB::${package_name}_${_LIBRARY_NAME}${config_suffix})
                    if(NOT TARGET ${_LIB_NAME})
                        # Create a micro-target for each lib/a found

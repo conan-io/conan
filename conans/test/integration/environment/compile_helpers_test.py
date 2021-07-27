@@ -13,7 +13,7 @@ from conans import ConanFile
 class AConan(ConanFile):
     settings = "os"
     build_requires = "Hello/0.1@lasote/testing"
-    generators = "VirtualEnv"
+    generators = "VirtualBuildEnv"
 
     def build(self):
         self.run("SET" if self.settings.os=="Windows" else "export")

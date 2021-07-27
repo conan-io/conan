@@ -7,11 +7,12 @@ from requests.exceptions import ConnectionError
 
 from conans.client.cache.remote_registry import Remote
 from conans.errors import ConanConnectionError, ConanException, NotFoundException, PackageNotFoundException
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, rm_conandir
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
 from conans.util.env_reader import get_env
-from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum
+from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
+    rmdir
 from conans.util.log import logger
 # FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
 from conans.util.tracer import (log_package_download,
@@ -96,20 +97,18 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
 
         self._hook_manager.execute("pre_download_recipe", reference=ref, remote=remote)
-        package_layout = self._cache.package_layout(ref)
-        package_layout.export_remove()
 
         ref = self._resolve_latest_ref(ref, remote)
+        layout = self._cache.create_ref_layout(ref)
+        layout.export_remove()
 
         t1 = time.time()
-        download_export = package_layout.download_export()
+        download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
-        recipe_checksums = calc_files_checksum(zipped_files)
-
-        export_folder = package_layout.export()
+        export_folder = layout.export()
         tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
         check_compressed_files(EXPORT_TGZ_NAME, zipped_files)
         if tgz_file:
@@ -119,14 +118,11 @@ class RemoteManager(object):
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
         # Make sure that the source dir is deleted
-        rm_conandir(package_layout.source())
+        rmdir(layout.source())
         touch_folder(export_folder)
-        conanfile_path = package_layout.conanfile()
+        conanfile_path = layout.conanfile()
 
-        with package_layout.update_metadata() as metadata:
-            metadata.recipe.revision = ref.revision
-            metadata.recipe.checksums = recipe_checksums
-            metadata.recipe.remote = remote.name
+        self._cache.set_remote(layout.reference, remote.name)
 
         self._hook_manager.execute("post_download_recipe", conanfile_path=conanfile_path,
                                    reference=ref, remote=remote)
@@ -152,17 +148,20 @@ class RemoteManager(object):
         uncompress_file(tgz_file, export_sources_folder, output=self._output)
         touch_folder(export_sources_folder)
 
-    def get_package(self, conanfile, pref, layout, remote, output, recorder):
-        conanfile_path = layout.conanfile()
+    def get_package(self, conanfile, pref, remote, output, recorder):
+        ref_layout = self._cache.ref_layout(pref.ref)
+        conanfile_path = ref_layout.conanfile()
         self._hook_manager.execute("pre_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
 
         output.info("Retrieving package %s from remote '%s' " % (pref.id, remote.name))
-        layout.package_remove(pref)  # Remove first the destination folder
-        with layout.set_dirty_context_manager(pref):
+        latest_prev = self.get_latest_package_revision(pref, remote)
+        pkg_layout = self._cache.create_pkg_layout(latest_prev)
+        pkg_layout.package_remove()  # Remove first the destination folder
+        with pkg_layout.set_dirty_context_manager():
             info = getattr(conanfile, 'info', None)
-            self._get_package(layout, pref, remote, output, recorder, info=info)
+            self._get_package(pkg_layout, pref, remote, output, recorder, info=info)
 
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
@@ -177,24 +176,18 @@ class RemoteManager(object):
             if not is_package_snapshot_complete(snapshot):
                 raise PackageNotFoundException(pref)
 
-            download_pkg_folder = layout.download_package(pref)
+            download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
             zipped_files = self._call_remote(remote, "get_package", pref, download_pkg_folder)
 
-            # Compute and update the package metadata
-            package_checksums = calc_files_checksum(zipped_files)
-            with layout.update_metadata() as metadata:
-                metadata.packages[pref.id].revision = pref.revision
-                metadata.packages[pref.id].recipe_revision = pref.ref.revision
-                metadata.packages[pref.id].checksums = package_checksums
-                metadata.packages[pref.id].remote = remote.name
+            self._cache.set_remote(layout.reference, remote.name)
 
             duration = time.time() - t1
             log_package_download(pref, duration, remote, zipped_files)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             check_compressed_files(PACKAGE_TGZ_NAME, zipped_files)
-            package_folder = layout.package(pref)
+            package_folder = layout.package()
             if tgz_file:  # This must happen always, but just in case
                 # TODO: The output could be changed to the package one, but
                 uncompress_file(tgz_file, package_folder, output=self._output)
@@ -216,11 +209,14 @@ class RemoteManager(object):
             output.error("Exception: %s %s" % (type(e), str(e)))
             raise
 
-    def search_recipes(self, remote, pattern=None, ignorecase=True):
+    def search_recipes(self, remote, pattern, ignorecase=True):
         """
         returns (dict str(ref): {packages_info}
         """
-        return self._call_remote(remote, "search", pattern, ignorecase)
+        # TODO: Remove the ignorecase param. It's not used anymore, we're keeping it
+        # to avoid some test crashes
+
+        return self._call_remote(remote, "search", pattern)
 
     def search_packages(self, remote, ref, query):
         packages = self._call_remote(remote, "search_packages", ref, query)
@@ -269,6 +265,8 @@ class RemoteManager(object):
 
     def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))
+        if remote.disabled:
+            raise ConanException("Remote '%s' is disabled" % remote.name)
         try:
             return self._auth_manager.call_rest_api_method(remote, method, *args, **kwargs)
         except ConnectionError as exc:

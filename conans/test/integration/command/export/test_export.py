@@ -1,8 +1,11 @@
 import textwrap
 
+import pytest
+
 from conans.test.utils.tools import TestClient
 
 
+@pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
 def test_basic():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -10,8 +13,8 @@ def test_basic():
         class TestConan(ConanFile):
             name = "hello"
             version = "1.2"
-            default_user = "myuser"
-            default_channel = "mychannel"
+            user = "myuser"
+            channel = "mychannel"
         """)
     client.save({"conanfile.py": conanfile})
     client.run("export .")

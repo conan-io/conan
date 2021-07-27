@@ -1,6 +1,5 @@
 from collections import OrderedDict
 
-from conans.model.pkg_type import PackageType
 from conans.model.ref import PackageReference
 
 RECIPE_DOWNLOADED = "Downloaded"
@@ -24,6 +23,7 @@ BINARY_SKIP = "Skip"
 BINARY_EDITABLE = "Editable"
 BINARY_UNKNOWN = "Unknown"
 BINARY_INVALID = "Invalid"
+BINARY_ERROR = "ConfigurationError"
 
 CONTEXT_HOST = "host"
 CONTEXT_BUILD = "build"
@@ -74,11 +74,6 @@ class Node(object):
             # TODO: possibly optimize in a bulk propagate
             prev_node.propagate_downstream(transitive.require, transitive.node, self)
 
-    @property
-    def package_type(self):
-        # TODO: immutable, can be cached
-        return PackageType.from_conanfile(self.conanfile)
-
     def propagate_downstream(self, require, node, src_node=None):
         # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
@@ -106,7 +101,8 @@ class Node(object):
             assert len(self.dependants) == 1
             d = self.dependants[0]
 
-        down_require = d.require.transform_downstream(self.package_type, require, node.package_type)
+        down_require = d.require.transform_downstream(self.conanfile.package_type, require,
+                                                      node.conanfile.package_type)
         if down_require is None:
             return
 
@@ -142,7 +138,7 @@ class Node(object):
 
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
-        down_require = d.require.transform_downstream(self.package_type, require, None)
+        down_require = d.require.transform_downstream(self.conanfile.package_type, require, None)
 
         if down_require is None:
             # print("    No need to check dowstream more")
@@ -201,6 +197,7 @@ class DepsGraph(object):
         self.nodes = []
         self.aliased = {}
         self.error = False
+        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def __repr__(self):

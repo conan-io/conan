@@ -293,12 +293,15 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         return self._conan.test(args.path, args.reference,
                                 args.profile_host, args.settings_host, args.options_host,
-                                args.env_host, remote_name=args.remote, update=args.update,
-                                build_modes=args.build, test_build_folder=args.test_build_folder,
+                                args.env_host, conf=args.conf_host, remote_name=args.remote,
+                                update=args.update, build_modes=args.build,
+                                test_build_folder=args.test_build_folder,
                                 lockfile=args.lockfile, profile_build=profile_build)
 
     def create(self, *args):
@@ -330,6 +333,8 @@ class Command(object):
                                  ' revision and url even if there are uncommitted changes')
         parser.add_argument("--build-require", action='store_true', default=False,
                             help='The provided reference is a build-require')
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("package name"))
 
@@ -354,19 +359,25 @@ class Command(object):
         info = None
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
-            info = self._conan.create(args.path, name, version, user, channel,
-                                      args.profile_host, args.settings_host, args.options_host,
-                                      args.env_host, args.test_folder,
-                                      args.build,
-                                      args.remote, args.update,
+            info = self._conan.create(args.path, name=name, version=version, user=user,
+                                      channel=channel, profile_names=args.profile_host,
+                                      settings=args.settings_host, conf=args.conf_host,
+                                      options=args.options_host, env=args.env_host,
+                                      test_folder=args.test_folder,
+                                      build_modes=args.build,
+                                      remote_name=args.remote, update=args.update,
                                       test_build_folder=args.test_build_folder,
                                       lockfile=args.lockfile,
                                       lockfile_out=args.lockfile_out,
                                       ignore_dirty=args.ignore_dirty,
                                       profile_build=profile_build,
-                                      is_build_require=args.build_require)
+                                      is_build_require=args.build_require,
+                                      require_overrides=args.require_override)
         except ConanException as exc:
             info = exc.info
             raise
@@ -467,12 +478,16 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=_help_build_policies.format("never"))
         parser.add_argument("--lockfile-node-id", action=OnceArgument,
                             help="NodeID of the referenced package in the lockfile")
+        parser.add_argument("--require-override", action="append",
+                            help="Define a requirement override")
 
         args = parser.parse_args(*args)
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         cwd = os.getcwd()
 
@@ -488,6 +503,7 @@ class Command(object):
                                            name=name, version=version, user=user, channel=channel,
                                            settings=args.settings_host, options=args.options_host,
                                            env=args.env_host, profile_names=args.profile_host,
+                                           conf=args.conf_host,
                                            profile_build=profile_build,
                                            remote_name=args.remote,
                                            build=args.build,
@@ -495,7 +511,8 @@ class Command(object):
                                            no_imports=args.no_imports,
                                            install_folder=args.install_folder,
                                            lockfile=args.lockfile,
-                                           lockfile_out=args.lockfile_out)
+                                           lockfile_out=args.lockfile_out,
+                                           require_overrides=args.require_override)
             else:
                 if args.reference:
                     raise ConanException("A full reference was provided as first argument, second "
@@ -506,6 +523,7 @@ class Command(object):
                                                      settings=args.settings_host,
                                                      options=args.options_host,
                                                      env=args.env_host,
+                                                     conf=args.conf_host,
                                                      profile_names=args.profile_host,
                                                      profile_build=profile_build,
                                                      remote_name=args.remote,
@@ -516,7 +534,8 @@ class Command(object):
                                                      lockfile=args.lockfile,
                                                      lockfile_out=args.lockfile_out,
                                                      lockfile_node_id=args.lockfile_node_id,
-                                                     is_build_require=args.build_require)
+                                                     is_build_require=args.build_require,
+                                                     require_overrides=args.require_override)
 
         except ConanException as exc:
             info = exc.info
@@ -556,9 +575,9 @@ class Command(object):
 
         install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
                                        help='Verify SSL connection when downloading file')
-        install_subparser.add_argument("--type", "-t", choices=["git", "dir", "file", "url"],
+        install_subparser.add_argument("-t", "--type", choices=["git", "dir", "file", "url"],
                                        help='Type of remote config')
-        install_subparser.add_argument("--args", "-a",
+        install_subparser.add_argument("-a", "--args",
                                        help='String with extra arguments for "git clone"')
         install_subparser.add_argument("-sf", "--source-folder",
                                        help='Install files only from a source subfolder from the '
@@ -671,7 +690,9 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
+        # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments to the API
 
         # INSTALL SIMULATION, NODES TO INSTALL
         if args.build is not None:
@@ -681,6 +702,7 @@ class Command(object):
                                                        options=args.options_host,
                                                        env=args.env_host,
                                                        profile_names=args.profile_host,
+                                                       conf=args.conf_host,
                                                        profile_build=profile_build,
                                                        remote_name=args.remote,
                                                        check_updates=args.update)
@@ -697,6 +719,7 @@ class Command(object):
                                     options=args.options_host,
                                     env=args.env_host,
                                     profile_names=args.profile_host,
+                                    conf=args.conf_host,
                                     profile_build=profile_build,
                                     update=args.update,
                                     build=args.dry_build,
@@ -830,7 +853,8 @@ class Command(object):
         self._check_lockfile_args(args)
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 
@@ -907,7 +931,8 @@ class Command(object):
         self._warn_python_version()
 
         profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                    options=args.options_build, env=args.env_build)
+                                    options=args.options_build, env=args.env_build,
+                                    conf=args.conf_build)
 
         self._warn_python_version()
 
@@ -966,7 +991,10 @@ class Command(object):
 
         try:
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
+            # TODO: 2.0 create profile_host object here to avoid passing a lot of arguments
+            #       to the API
 
             info = self._conan.export_pkg(conanfile_path=args.path,
                                           name=name,
@@ -978,6 +1006,7 @@ class Command(object):
                                           env=args.env_host,
                                           settings=args.settings_host,
                                           options=args.options_host,
+                                          conf=args.conf_host,
                                           profile_build=profile_build,
                                           force=args.force,
                                           user=user,
@@ -1252,8 +1281,7 @@ class Command(object):
                     raise ConanException(exc_msg)
 
                 info = self._conan.search_recipes(args.pattern_or_reference, remote_name=None,
-                                                  case_sensitive=args.case_sensitive,
-                                                  fill_revisions=True)
+                                                  case_sensitive=args.case_sensitive)
                 self._outputer.print_search_references(info["results"],
                                                        args.pattern_or_reference,
                                                        args.raw, all_remotes_search=None)
@@ -1537,7 +1565,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.profile.__doc__,
                                          prog="conan profile",
                                          formatter_class=SmartFormatter)
-        subparsers = parser.add_subparsers(dest='subcommand')
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
         subparsers.required = True
 
         # create the parser for the "profile" command
@@ -1680,10 +1708,6 @@ class Command(object):
         add_parser = subparsers.add_parser('add', help='Put a package in editable mode')
         add_parser.add_argument('path', help='Path to the package folder in the user workspace')
         add_parser.add_argument('reference', help='Package reference e.g.: mylib/1.X@user/channel')
-        add_parser.add_argument("-l", "--layout",
-                                help='Relative or absolute path to a file containing the layout.'
-                                ' Relative paths will be resolved first relative to current dir, '
-                                'then to local cache "layouts" folder')
 
         remove_parser = subparsers.add_parser('remove', help='Disable editable mode for a package')
         remove_parser.add_argument('reference',
@@ -1695,7 +1719,7 @@ class Command(object):
         self._warn_python_version()
 
         if args.subcommand == "add":
-            self._conan.editable_add(args.path, args.reference, args.layout, cwd=os.getcwd())
+            self._conan.editable_add(args.path, args.reference, cwd=os.getcwd())
             self._out.success("Reference '{}' in editable mode".format(args.reference))
         elif args.subcommand == "remove":
             ret = self._conan.editable_remove(args.reference)
@@ -1708,7 +1732,6 @@ class Command(object):
             for k, v in self._conan.editable_list().items():
                 self._out.info("%s" % k)
                 self._out.writeln("    Path: %s" % v["path"])
-                self._out.writeln("    Layout: %s" % v["layout"])
 
     def frogarian(self, *args):
         """
@@ -1839,9 +1862,11 @@ class Command(object):
             self._conan.lock_clean_modified(args.lockfile)
         elif args.subcommand == "create":
             profile_build = ProfileData(profiles=args.profile_build, settings=args.settings_build,
-                                        options=args.options_build, env=args.env_build)
+                                        options=args.options_build, env=args.env_build,
+                                        conf=args.conf_build)
             profile_host = ProfileData(profiles=args.profile_host, settings=args.settings_host,
-                                       options=args.options_host, env=args.env_host)
+                                       options=args.options_host, env=args.env_host,
+                                       conf=args.conf_host)
 
             self._conan.lock_create(path=args.path,
                                     reference=args.reference,
@@ -1944,12 +1969,12 @@ class Command(object):
     def _check_lockfile_args(args):
         return
         if args.lockfile and (args.profile_build or args.settings_build or args.options_build or
-                              args.env_build):
-            raise ConanException("Cannot use profile, settings, options or env 'build' when "
+                              args.env_build or args.conf_build):
+            raise ConanException("Cannot use profile, settings, options, env or conf 'build' when "
                                  "using lockfile")
         if args.lockfile and (args.profile_host or args.settings_host or args.options_host or
-                              args.env_host):
-            raise ConanException("Cannot use profile, settings, options or env 'host' when "
+                              args.env_host or args.conf_host):
+            raise ConanException("Cannot use profile, settings, options, env or conf 'host' when "
                                  "using lockfile")
         if args.lockfile_out and not args.lockfile:
             raise ConanException("lockfile_out cannot be specified if lockfile is not defined")
@@ -2113,7 +2138,17 @@ def _add_profile_arguments(parser):
                                  ' ({} machine). e.g.: -s{} compiler=gcc'.format(machine,
                                                                                  short_suffix))
 
-    for item_fn in [environment_args, options_args, profile_args, settings_args]:
+    def conf_args(machine, short_suffix="", long_suffix=""):
+        parser.add_argument("-c{}".format(short_suffix),
+                            "--conf{}".format(long_suffix),
+                            nargs=1, action=Extender,
+                            dest='conf_{}'.format(machine),
+                            help='Configuration to build the package, overwriting the defaults'
+                                 ' ({} machine). e.g.: -c{} '
+                                 'tools.cmake.cmaketoolchain:generator=Xcode'.format(machine,
+                                                                                     short_suffix))
+
+    for item_fn in [environment_args, options_args, profile_args, settings_args, conf_args]:
         item_fn("host", "", "")  # By default it is the HOST, the one we are building binaries for
         item_fn("build", ":b", ":build")
         item_fn("host", ":h", ":host")

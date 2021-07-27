@@ -1,4 +1,5 @@
 import os
+import textwrap
 
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
@@ -37,3 +38,28 @@ def test_package_from_system():
     assert not os.path.exists(os.path.join(client.current_folder, "custom_dep2-config.cmake"))
     contents = client.load("dep1-release-x86_64-data.cmake")
     assert 'set(dep1_FIND_DEPENDENCY_NAMES ${dep1_FIND_DEPENDENCY_NAMES} custom_dep2)' in contents
+
+
+def test_test_package():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . gtest/1.0@")
+    client.run("create . cmake/1.0@")
+
+    client.save({"conanfile.py": GenConanfile().with_build_requires("cmake/1.0").
+                with_test_requires("gtest/1.0")})
+
+    client.run("export . pkg/1.0@")
+
+    consumer = textwrap.dedent(r"""
+        from conans import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeDeps"
+            requires = "pkg/1.0"
+        """)
+    client.save({"conanfile.py": consumer})
+    client.run("install . -s:b os=Windows -s:h os=Linux -s:h compiler=gcc -s:h compiler.version=7 "
+               "-s:h compiler.libcxx=libstdc++11 --build=missing")
+    cmake_data = client.load("pkg-release-x86_64-data.cmake")
+    assert "gtest" not in cmake_data

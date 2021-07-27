@@ -393,7 +393,7 @@ class DefaultNameConan(ConanFile):
     name = "DefaultName"
     version = "0.1"
     settings = "os", "compiler", "arch", "build_type"
-    generators = "VirtualEnv"
+    generators = "VirtualBuildEnv"
 
     def build(self):
         # Print environment vars
@@ -551,8 +551,8 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.save({CONANFILE: self.conanfile,
                           "profile1": self.profile1, "profile2": self.profile2})
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_create(self):
-
         # The latest declared profile has priority
         self.client.run("create . lib/1.0@user/channel --profile profile1 -pr profile2")
         self.assertIn(dedent("""
@@ -572,6 +572,7 @@ class ProfileAggregationTest(unittest.TestCase):
         self.client.run("info . --profile profile1 --profile profile2")
         self.assertIn("32c2becb6ef30fe76e87f0ada90290ada84b155f", self.client.out)
 
+    @pytest.mark.xfail(reason="Tests using the Search command are temporarely disabled")
     def test_install(self):
         self.client.run("export . lib/1.0@user/channel")
         # Install ref
@@ -679,3 +680,108 @@ def test_profile_from_temp_absolute_path():
     recipe_path = os.path.join(client.current_folder, "current", "conanfile.txt")
     client.run('install "{}" -pr="{}"'.format(recipe_path, profile_path))
     assert "os=AIX" in client.out
+
+
+def test_consumer_specific_settings():
+    client = TestClient()
+    dep = str(GenConanfile().with_settings("build_type"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    dep += configure
+    client.save({"conanfile.py": dep})
+    client.run("create . dep/1.0@")
+    client.run("create . dep/1.0@ -s build_type=Debug")
+
+    consumer = str(GenConanfile().with_settings("build_type").with_requires("dep/1.0"))
+    consumer += configure
+    client.save({"conanfile.py": consumer})
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Release" in client.out
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug" in client.out
+    assert "I'm None and my build type is Release" in client.out
+
+    # Now the consumer using &
+    client.run("install . -s &:build_type=Debug")
+    assert "I'm dep and my build type is Release" in client.out
+    assert "I'm None and my build type is Debug" in client.out
+
+    # Now use a conanfile.txt
+    client.save({"conanfile.txt": textwrap.dedent("""
+            [requires]
+            dep/1.0
+    """)}, clean_first=True)
+
+    # Regular install with release
+    client.run("install . -s build_type=Release")
+    assert "I'm dep and my build type is Release" in client.out
+
+    # Now the dependency by name
+    client.run("install . -s dep:build_type=Debug")
+    assert "I'm dep and my build type is Debug" in client.out
+
+    # Test that the generators take the setting
+    if platform.system() != "Windows":  # Toolchain in windows is multiconfig
+        # Now the consumer using &
+        client.run("install . -s &:build_type=Debug  -g CMakeToolchain")
+        assert "I'm dep and my build type is Release" in client.out
+        # Verify the cmake toolchain takes Debug
+        contents = client.load("conan_toolchain.cmake")
+        assert 'set(CMAKE_BUILD_TYPE "Debug"' in contents
+
+
+def test_create_and_priority_of_consumer_specific_setting():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("foo").with_version("1.0"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s foo:build_type=Debug")
+    assert "I'm foo and my build type is Debug" in client.out
+
+    client.run("create . -s foo:build_type=Debug -s &:build_type=Release")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # The order doesn't matter
+    client.run("create . -s &:build_type=Release -s foo:build_type=Debug ")
+    assert "I'm foo and my build type is Release" in client.out
+
+    # With test_package also works
+    test = str(GenConanfile().with_test("pass").with_setting("build_type"))
+    test += configure
+    client.save({"test_package/conanfile.py": test})
+    client.run("create . -s &:build_type=Debug -s build_type=Release")
+    assert "I'm foo and my build type is Debug" in client.out
+    # the test package recipe has debug too
+    assert "I'm None and my build type is Debug" in client.out
+
+
+def test_consumer_specific_settings_from_profile():
+    client = TestClient()
+    conanfile = str(GenConanfile().with_settings("build_type").with_name("hello"))
+    configure = """
+    def configure(self):
+        self.output.warn("I'm {} and my build type is {}".format(self.name,
+                                                                 self.settings.build_type))
+    """
+    conanfile += configure
+    profile = textwrap.dedent("""
+        include(default)
+        [settings]
+        &:build_type=Debug
+    """)
+    client.save({"conanfile.py": conanfile, "my_profile.txt": profile})
+    client.run("install . --profile my_profile.txt")
+    assert "I'm hello and my build type is Debug" in client.out

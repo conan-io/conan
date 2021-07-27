@@ -1,11 +1,12 @@
+from conan.cache.conan_reference import ConanReference
 from conans.client.graph.build_mode import BuildMode
 from conans.client.graph.compute_pid import compute_package_id
 from conans.client.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD, BINARY_MISSING,
                                        BINARY_UPDATE, RECIPE_EDITABLE, BINARY_EDITABLE,
                                        RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, BINARY_UNKNOWN,
-                                       BINARY_INVALID)
+                                       BINARY_INVALID, BINARY_ERROR)
 from conans.errors import NoRemoteAvailable, NotFoundException, conanfile_exception_formatter, \
-    ConanException, ConanInvalidConfiguration
+    ConanException, ConanInvalidConfiguration, ConanErrorConfiguration
 from conans.model.info import ConanInfo, PACKAGE_ID_UNKNOWN, PACKAGE_ID_INVALID
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference
@@ -52,22 +53,14 @@ class GraphBinariesAnalyzer(object):
 
     def _evaluate_clean_pkg_folder_dirty(self, node, package_layout, pref):
         # Check if dirty, to remove it
-        with package_layout.package_lock(pref):
+        with package_layout.package_lock():
             assert node.recipe != RECIPE_EDITABLE, "Editable package shouldn't reach this code"
-            if package_layout.package_is_dirty(pref):
+            if package_layout.package_is_dirty():
                 node.conanfile.output.warn("Package binary is corrupted, removing: %s" % pref.id)
-                package_layout.package_remove(pref)
+                package_layout.package_remove()
                 return
 
-            metadata = package_layout.load_metadata()
-            rec_rev = metadata.packages[pref.id].recipe_revision
-            if rec_rev and rec_rev != node.ref.revision:
-                node.conanfile.output.warn("The package {} doesn't belong to the installed "
-                                           "recipe revision, removing folder".format(pref))
-                package_layout.package_remove(pref)
-            return metadata
-
-    def _evaluate_cache_pkg(self, node, package_layout, pref, metadata, remote, remotes, update):
+    def _evaluate_cache_pkg(self, node, package_layout, pref, remote, remotes, update):
         if update:
             output = node.conanfile.output
             if remote:
@@ -79,7 +72,7 @@ class GraphBinariesAnalyzer(object):
                 except NoRemoteAvailable:
                     output.warn("Can't update, no remote defined")
                 else:
-                    package_folder = package_layout.package(pref)
+                    package_folder = package_layout.package()
                     if self._check_update(upstream_manifest, package_folder, output):
                         node.binary = BINARY_UPDATE
                         node.prev = pref.revision  # With revision
@@ -87,11 +80,10 @@ class GraphBinariesAnalyzer(object):
                 pass  # Current behavior: no remote explicit or in metadata, do not update
             else:
                 output.warn("Can't update, no remote defined")
+
         if not node.binary:
             node.binary = BINARY_CACHE
-            metadata = metadata or package_layout.load_metadata()
-            node.prev = metadata.packages[pref.id].revision
-            assert node.prev, "PREV for %s is None: %s" % (str(pref), metadata.dumps())
+            assert node.prev, "PREV for %s is None" % str(pref)
 
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
@@ -214,12 +206,20 @@ class GraphBinariesAnalyzer(object):
                 # package_id was not locked, this means a base lockfile that is being completed
                 locked.complete_base_node(node.package_id, node.prev)
 
+        if (node.binary in (BINARY_BUILD, BINARY_MISSING) and node.conanfile.info.invalid and
+                node.conanfile.info.invalid[0] == BINARY_INVALID):
+            node._package_id = PACKAGE_ID_INVALID  # Fixme: Hack
+            node.binary = BINARY_INVALID
+
     def _process_node(self, node, pref, build_mode, update, remotes):
         # Check that this same reference hasn't already been checked
         if self._evaluate_is_cached(node, pref):
             return
 
-        conanfile = node.conanfile
+        if node.conanfile.info.invalid and node.conanfile.info.invalid[0] == BINARY_ERROR:
+            node.binary = BINARY_ERROR
+            return
+
         if node.recipe == RECIPE_EDITABLE:
             node.binary = BINARY_EDITABLE  # TODO: PREV?
             return
@@ -233,24 +233,24 @@ class GraphBinariesAnalyzer(object):
         if self._evaluate_build(node, build_mode):
             return
 
-        package_layout = self._cache.package_layout(pref.ref, short_paths=conanfile.short_paths)
-        metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
+        latest_prev_for_pkg_id = self._cache.get_latest_prev(pref)
+
+        if latest_prev_for_pkg_id:
+            package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id)
+            self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
 
-        metadata = metadata or package_layout.load_metadata()
         if not remote:
             # If the remote_name is not given, follow the binary remote, or the recipe remote
             # If it is defined it won't iterate (might change in conan2.0)
-            if pref.id in metadata.packages:
-                remote_name = metadata.packages[pref.id].remote or metadata.recipe.remote
-            else:
-                remote_name = metadata.recipe.remote
+            remote_name = self._cache.get_remote(latest_prev_for_pkg_id.ref) if latest_prev_for_pkg_id else None
             remote = remotes.get(remote_name)
 
-        if package_layout.package_id_exists(pref.id) and pref.id in metadata.packages:
-            # Binary already in cache, check for updates
-            self._evaluate_cache_pkg(node, package_layout, pref, metadata, remote, remotes, update)
+        if latest_prev_for_pkg_id:  # Binary already exists in local, check if we want to update
+            node.prev = latest_prev_for_pkg_id.revision
+            package_layout = self._cache.pkg_layout(latest_prev_for_pkg_id)
+            self._evaluate_cache_pkg(node, package_layout, latest_prev_for_pkg_id, remote, remotes, update)
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
             remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
@@ -262,7 +262,6 @@ class GraphBinariesAnalyzer(object):
 
     def evaluate_graph(self, deps_graph, build_mode, update, remotes, nodes_subset=None, root=None):
         build_mode = BuildMode(build_mode, self._output)
-
         assert isinstance(build_mode, BuildMode)
 
         default_package_id_mode = self._cache.config.default_package_id_mode
@@ -291,7 +290,7 @@ class GraphBinariesAnalyzer(object):
             for req, dep in node.transitive_deps.items():
                 dep_node = dep.node
                 require = dep.require
-                if require.include or require.link or require.run or require.build:
+                if require.headers or require.libs or require.run or require.build:
                     required_nodes.add(dep_node)
 
         for node in graph.nodes:

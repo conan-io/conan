@@ -4,6 +4,7 @@ import textwrap
 import time
 import unittest
 
+import pytest
 from parameterized import parameterized
 
 from conans.model.ref import ConanFileReference
@@ -327,7 +328,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: Author! author@company.com", client.out)
         self.assertIn("Pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents", client.out)
         ref = ConanFileReference.loads("Pkg/0.1@user/testing")
-        self.assertTrue(os.path.exists(os.path.join(client.cache.package_layout(ref).export(),
+        self.assertTrue(os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(),
                                                     "other.txt")))
 
     def test_reuse_system_requirements(self):
@@ -464,6 +465,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("Pkg/0.1@user/testing: MyHelperOutput!", client.out)
         self.assertIn("Pkg/0.1@user/testing: MyOtherHelperOutput!", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0: check --update flows")
     def test_update(self):
         client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
@@ -790,6 +792,7 @@ class PyRequiresExtendTest(unittest.TestCase):
         self.assertIn("conanfile.py: Build: tool header: myheader", client.out)
         self.assertIn("conanfile.py: Build: tool other: otherheader", client.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not considered yet")
     def test_reuse_exports(self):
         client = TestClient()
         conanfile = textwrap.dedent("""

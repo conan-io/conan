@@ -1,8 +1,10 @@
+import configparser
 import errno
 import os
 import platform
 import subprocess
 
+from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
 from conans.client.tools.files import unzip, which
 from conans.errors import ConanException
@@ -181,3 +183,42 @@ def rename(conanfile, src, dst):
             os.rename(src, dst)
         except Exception as err:
             raise ConanException("rename {} to {} failed: {}".format(src, dst, err))
+
+
+def load_toolchain_args(generators_folder=None):
+    """
+    Helper function to load the content of any CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE.
+    :return: <class 'configparser.SectionProxy'>
+    """
+    args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    toolchain_config = configparser.ConfigParser()
+    toolchain_file = toolchain_config.read(args_file)
+    if not toolchain_file:
+        raise ConanException("The file %s does not exist. Please, make sure that it was not"
+                             " generated in another folder." % args_file)
+    try:
+        return toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION]
+    except KeyError:
+        raise ConanException("The primary section [%s] does not exist in the file %s. Please, add it"
+                             " as the default one of all your configuration variables." %
+                             (CONAN_TOOLCHAIN_ARGS_SECTION, args_file))
+
+
+def save_toolchain_args(content, generators_folder=None):
+    """
+    Helper function to save the content into the CONAN_TOOLCHAIN_ARGS_FILE
+
+    :param content: `dict` all the information to be saved into the toolchain file.
+    :param generators_folder: `str` folder where is located the CONAN_TOOLCHAIN_ARGS_FILE
+    """
+    # Let's prune None values
+    content_ = {k: v for k, v in content.items() if v is not None}
+    args_file = os.path.join(generators_folder, CONAN_TOOLCHAIN_ARGS_FILE) if generators_folder \
+        else CONAN_TOOLCHAIN_ARGS_FILE
+    toolchain_config = configparser.ConfigParser()
+    toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
+    with open(args_file, "w") as f:
+        toolchain_config.write(f)

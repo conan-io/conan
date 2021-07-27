@@ -1,15 +1,13 @@
-import os
 import platform
 import textwrap
 
 import pytest
 
 from conan.tools.env.environment import environment_wrap_command
-from conans.client.tools import replace_in_file
 from conans.test.assets.cmake import gen_cmakelists
-from conans.test.assets.genconanfile import GenConanfile
 from conans.test.assets.pkg_cmake import pkg_cmake
 from conans.test.assets.sources import gen_function_cpp
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -73,7 +71,7 @@ def test_shared_requires_static():
            requires = "libb/0.1"
            default_options = {"libb:shared": True}
            settings = "os", "compiler", "arch", "build_type"
-           generators = "CMakeToolchain", "CMakeDeps", "VirtualEnv"
+           generators = "CMakeToolchain", "CMakeDeps", "VirtualBuildEnv", "VirtualRunEnv"
 
            def build(self):
                cmake = CMake(self)
@@ -87,7 +85,8 @@ def test_shared_requires_static():
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build .")
-    command = environment_wrap_command("conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    command = environment_wrap_command(ConanFileMock(),
+                                       "conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -125,8 +124,9 @@ def test_transitive_binary_skipped():
             "src/CMakeLists.txt": cmake,
             "conanfile.py": conanfile}, clean_first=True)
 
-    c.run("build . -g VirtualEnv")
-    command = environment_wrap_command("conanrunenv", ".\\Release\\myapp.exe", cwd=c.current_folder)
+    c.run("build . -g VirtualRunEnv")
+    command = environment_wrap_command(ConanFileMock(), "conanrunenv", ".\\Release\\myapp.exe",
+                                       cwd=c.current_folder)
     c.run_command(command)
     assert "liba: Release!" in c.out
 
@@ -135,7 +135,3 @@ def test_transitive_binary_skipped():
     c.save({"src/main.cpp": main})
     c.run("build .", assert_error=True)
     assert "Cannot open include file: 'liba.h'" in c.out
-
-
-
-

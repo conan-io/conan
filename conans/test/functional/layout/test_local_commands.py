@@ -141,7 +141,7 @@ def test_local_build_change_base():
 
 def test_local_source():
     """If we configure a source folder in the layout, the downloaded files in a "conan source ."
-    go to the specified folder: "my_source"
+    DON'T go to the specified folder: "my_source" but to the root source folder
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
@@ -149,7 +149,7 @@ def test_local_source():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("downloaded.h", "bar")
+        tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=my_install")
@@ -160,8 +160,8 @@ def test_local_source():
 
 
 def test_local_source_change_base():
-    """If we configure a source folder in the layout, the souce files in a "conan source ."
-    go to the specified folder: "my_source under the modified base one "all_source"
+    """If we configure a source folder in the layout, the source files in a "conan source ."
+    DON'T go to the specified folder: "my_source under the modified base one "all_source"
     """
     client = TestClient()
     conan_file = str(GenConanfile().with_import("from conans import tools"))
@@ -169,7 +169,7 @@ def test_local_source_change_base():
     def layout(self):
         self.folders.source = "my_source"
     def source(self):
-        tools.save("downloaded.h", "bar")
+        tools.save("my_source/downloaded.h", "bar")
     """
     client.save({"conanfile.py": conan_file})
     client.run("install . -if=common")
@@ -178,6 +178,7 @@ def test_local_source_change_base():
     assert os.path.exists(header)
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_export_pkg():
     """The export-pkg, calling the "package" method, follows the layout if `cache_package_layout` """
     client = TestClient()
@@ -210,7 +211,7 @@ def test_export_pkg():
     pref = PackageReference(ref, package_id)
     sf = os.path.join(client.current_folder, "my_source")
     bf = os.path.join(client.current_folder, "my_build")
-    pf = client.cache.package_layout(ref).package(pref)
+    pf = client.get_latest_pkg_layout(pref).package()
 
     assert "WARN: Source folder: {}".format(sf) in client.out
     assert "WARN: Build folder: {}".format(bf) in client.out
@@ -260,7 +261,7 @@ def test_export_pkg_local():
     client.run("export-pkg . lib/1.0@ -if=my_install -pf=my_package")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-    pf_cache = client.cache.package_layout(ref).package(pref)
+    pf_cache = client.get_latest_pkg_layout(pref).package()
 
     # Check the artifacts packaged, THERE IS NO "my_package" in the cache
     assert "my_package" not in pf_cache
@@ -271,12 +272,13 @@ def test_export_pkg_local():
     client.run("create . lib/1.0@")
     ref = ConanFileReference.loads("lib/1.0@")
     pref = PackageReference(ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-    pf_cache = client.cache.package_layout(ref).package(pref)
+    pf_cache = client.get_latest_pkg_layout(pref).package()
     assert "my_package" not in pf_cache
     assert os.path.exists(os.path.join(pf_cache, "generated.h"))
     assert os.path.exists(os.path.join(pf_cache, "library.lib"))
 
 
+@pytest.mark.xfail(reason="Update to cache2.0")
 def test_imports():
     """The 'conan imports' follows the layout"""
     client = TestClient()
@@ -321,6 +323,6 @@ def test_imports():
     package_id = re.search(r"foo/1.0:(\S+)", str(client.out)).group(1)
     ref = ConanFileReference.loads("foo/1.0@")
     pref = PackageReference(ref, package_id)
-    bfolder = client.cache.package_layout(ref).build(pref)
+    bfolder = client.get_latest_pkg_layout(pref).build()
     imports_folder = os.path.join(bfolder, "my_imports")
     assert "WARN: Imports folder: {}".format(imports_folder) in client.out

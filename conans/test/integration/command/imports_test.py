@@ -2,6 +2,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
@@ -241,15 +243,9 @@ class SymbolicImportsTest(unittest.TestCase):
         self.assertIn("Import from unknown package folder '@unknown_unexisting_dir'",
                       self.consumer.out)
 
+    @pytest.mark.xfail(reason="cache2.0 editables not supported yet")
     def test_imports_symbolic_from_editable(self):
-        layout = textwrap.dedent("""
-            [libdirs]
-            .
-            [bindirs]
-            .
-            """)
-        self.client.save({"layout": layout})
-        self.client.run("editable add . pkg/0.1@ --layout=layout")
+        self.client.run("editable add . pkg/0.1@")
         self.consumer.run("install .")
         self.assertEqual("hello world", self.consumer.load("bin/myfile.bin"))
         self.assertEqual("bye world", self.consumer.load("lib/myfile.lib"))

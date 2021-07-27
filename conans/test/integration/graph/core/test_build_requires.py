@@ -14,8 +14,8 @@ def _check_transitive(node, transitive_deps):
 
     for v1, v2 in zip(values, transitive_deps):
         assert v1.node is v2[0]
-        assert v1.require.include is v2[1]
-        assert v1.require.link is v2[2]
+        assert v1.require.headers is v2[1]
+        assert v1.require.libs is v2[2]
         assert v1.require.build is v2[3]
         assert v1.require.run is v2[4]
 
@@ -482,10 +482,8 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
     def test_minor_mode(self,):
         # app -> lib -(br)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_requirement("cmake/0.1", package_id_mode="minor_mode"))
-
+                              with_build_requirement("cmake/[*]", package_id_mode="minor_mode"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
@@ -501,8 +499,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         self._check_node(cmake, "cmake/0.1#123", deps=[], dependents=[lib])
 
         # Change the dependency to next minor
-        self.recipe_conanfile("lib/0.1", GenConanfile().
-                              with_build_requirement("cmake/0.2", package_id_mode="minor_mode"))
+        self.recipe_conanfile("cmake/0.2", GenConanfile())
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
         # Build requires always apply to the consumer
@@ -519,7 +516,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         # app -> lib -(br public)-> cmake
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("lib/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                               public=True))
+                                                                               visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("lib/0.1"))
 
@@ -538,13 +535,14 @@ class PublicBuildRequiresTest(GraphManagerTest):
                                 (cmake, False, False, True, False)])
 
     def test_conflict_diamond(self):
-        # app -> lib -(br public)-> cmake
+        # app -> libb -(br public)-> cmake/0.1
+        #   \--> libc -(br public)-> cmake/0.2
         self.recipe_conanfile("cmake/0.1", GenConanfile())
         self.recipe_conanfile("cmake/0.2", GenConanfile())
         self.recipe_conanfile("libb/0.1", GenConanfile().with_build_requirement("cmake/0.1",
-                                                                                public=True))
+                                                                                visible=True))
         self.recipe_conanfile("libc/0.1", GenConanfile().with_build_requirement("cmake/0.2",
-                                                                                public=True))
+                                                                                visible=True))
 
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requires("libb/0.1",
                                                                                "libc/0.1"),

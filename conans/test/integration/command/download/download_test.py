@@ -23,10 +23,11 @@ class DownloadTest(unittest.TestCase):
 
         self.assertIn("Downloading conanfile.py", client.out)
         self.assertNotIn("Downloading conan_package.tgz", client.out)
-        export = client.cache.package_layout(ref).export()
+        ref_layout = client.get_latest_ref_layout(ref)
+        export = ref_layout.export()
+        conan = ref_layout.base_folder
         self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
-        conan = client.cache.package_layout(ref).base_folder()
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 
     def test_download_with_sources(self):
@@ -54,7 +55,7 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1@lasote/stable")
         self.assertIn("Downloading conan_sources.tgz", client.out)
-        source = client.cache.package_layout(ref).export_sources()
+        source = client.get_latest_ref_layout(ref).export_sources()
         self.assertEqual("myfile.h", load(os.path.join(source, "file.h")))
         self.assertEqual("C++code", load(os.path.join(source, "otherfile.cpp")))
 
@@ -70,7 +71,7 @@ class Pkg(ConanFile):
         self.assertIn("WARN: No remote binary packages found in remote", client.out)
         # Check at least conanfile.py is downloaded
         ref = ConanFileReference.loads("pkg/0.1@user/stable")
-        self.assertTrue(os.path.exists(client.cache.package_layout(ref).conanfile()))
+        self.assertTrue(os.path.exists(client.get_latest_ref_layout(ref).conanfile()))
 
     def test_download_reference_with_packages(self):
         server = TestServer()
@@ -90,15 +91,15 @@ class Pkg(ConanFile):
         client.remove_all()
 
         client.run("download pkg/0.1@lasote/stable")
+        pref = client.get_latest_prev(ref)
+        ref_layout = client.get_latest_ref_layout(ref)
+        pkg_layout = client.get_latest_pkg_layout(pref)
 
-        package_layout = client.cache.package_layout(ref)
-
-        package_folder = os.path.join(package_layout.packages(),
-                                      os.listdir(package_layout.packages())[0])
+        package_folder = pkg_layout.package()
         # Check not 'No remote binary packages found' warning
         self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
         # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(package_layout.conanfile()))
+        self.assertTrue(os.path.exists(ref_layout.conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 
@@ -134,13 +135,15 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1@lasote/stable:{}".format(NO_SETTINGS_PACKAGE_ID))
 
-        package_layout = client.cache.package_layout(ref)
-        package_folder = os.path.join(package_layout.packages(),
-                                      os.listdir(package_layout.packages())[0])
+        rrev = client.cache.get_latest_rrev(ref)
+        pkgids = client.cache.get_package_ids(rrev)
+        prev = client.cache.get_latest_prev(pkgids[0])
+        package_folder = client.cache.pkg_layout(prev).package()
+
         # Check not 'No remote binary packages found' warning
         self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
         # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(package_layout.conanfile()))
+        self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 
@@ -172,13 +175,15 @@ class Pkg(ConanFile):
 
         client.run("download pkg/0.1@lasote/stable -p {}".format(NO_SETTINGS_PACKAGE_ID))
 
-        package_layout = client.cache.package_layout(ref)
-        package_folder = os.path.join(package_layout.packages(),
-                                      os.listdir(package_layout.packages())[0])
+        rrev = client.cache.get_latest_rrev(ref)
+        pkgids = client.cache.get_package_ids(rrev)
+        prev = client.cache.get_latest_prev(pkgids[0])
+        package_folder = client.cache.pkg_layout(prev).package()
+
         # Check not 'No remote binary packages found' warning
         self.assertNotIn("WARN: No remote binary packages found in remote", client.out)
         # Check at conanfile.py is downloaded
-        self.assertTrue(os.path.exists(package_layout.conanfile()))
+        self.assertTrue(os.path.exists(client.cache.ref_layout(rrev).conanfile()))
         # Check package folder created
         self.assertTrue(os.path.exists(package_folder))
 

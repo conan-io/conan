@@ -1,6 +1,7 @@
 import os
 
 from conans.client.build.cppstd_flags import cppstd_default
+from conans.client.graph.graph import BINARY_INVALID
 from conans.client.tools.win import MSVS_DEFAULT_TOOLSETS_INVERSE
 from conans.errors import ConanException
 from conans.model.dependencies import UserRequirementsDict
@@ -14,6 +15,7 @@ from conans.util.files import load
 from conans.util.sha import sha1
 
 PREV_UNKNOWN = "PREV unknown"
+RREV_UNKNOWN = "RREV unknown"
 PACKAGE_ID_UNKNOWN = "Package_ID_unknown"
 PACKAGE_ID_INVALID = "INVALID"
 
@@ -513,15 +515,13 @@ class ConanInfo(object):
         """ The package_id of a conans is the sha1 of its specific requirements,
         options and settings
         """
-        if self.invalid:
-            return PACKAGE_ID_INVALID
         result = [self.settings.sha,
                   self.options.sha]
         requires_sha = self.requires.sha
         if requires_sha is None:
             return PACKAGE_ID_UNKNOWN
         if requires_sha == PACKAGE_ID_INVALID:
-            self.invalid = "Invalid transitive dependencies"
+            self.invalid = BINARY_INVALID, "Invalid transitive dependencies"
             return PACKAGE_ID_INVALID
         result.append(requires_sha)
         if self.python_requires:
@@ -617,16 +617,10 @@ class ConanInfo(object):
                 self.full_settings.compiler.version):
             default = cppstd_default(self.full_settings)
 
-            if str(self.full_settings.cppstd) == default:
-                self.settings.cppstd = None
-
             if str(self.full_settings.compiler.cppstd) == default:
                 self.settings.compiler.cppstd = None
 
     def default_std_non_matching(self):
-        if self.full_settings.cppstd:
-            self.settings.cppstd = self.full_settings.cppstd
-
         if self.full_settings.compiler.cppstd:
             self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
 

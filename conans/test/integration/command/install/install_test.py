@@ -219,6 +219,7 @@ def test_install_with_path_errors(client):
     assert "Conanfile not found" in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0: TODO: check this case for new cache")
 def test_install_broken_reference(client):
     client.save({"conanfile.py": GenConanfile()})
     client.run("export . Hello/0.1@lasote/stable")
@@ -226,7 +227,7 @@ def test_install_broken_reference(client):
     ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
     # Because the folder is removed, the metadata is removed and the
     # origin remote is lost
-    rmdir(os.path.join(client.cache.package_layout(ref).base_folder()))
+    rmdir(os.path.join(client.get_latest_ref_layout(ref).base_folder()))
     client.run("install Hello/0.1@lasote/stable", assert_error=True)
     assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
@@ -236,6 +237,8 @@ def test_install_broken_reference(client):
     assert "Unable to find 'Hello/0.1@lasote/stable' in remotes" in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0: outputs building will never be the same because the uuid "
+                          "of the folders")
 def test_install_argument_order(client):
     # https://github.com/conan-io/conan/issues/2520
     conanfile_boost = textwrap.dedent("""
@@ -307,8 +310,8 @@ def test_install_disabled_remote(client):
     client.run("create . Pkg/0.1@lasote/testing")
     client.run("upload * --confirm --all -r default")
     client.run("remote disable default")
-    client.run("install Pkg/0.1@lasote/testing -r default", assert_error=True)
-    assert "ERROR: Remote 'default' is disabled" in client.out
+    client.run("install Pkg/0.1@lasote/testing -r default")
+    assert "Pkg/0.1@lasote/testing: Already installed!" in client.out
     client.run("remote enable default")
     client.run("install Pkg/0.1@lasote/testing -r default")
     client.run("remote disable default")
@@ -316,7 +319,7 @@ def test_install_disabled_remote(client):
     assert "Remote 'default' is disabled" in client.out
 
 
-def test_install_skip_disabled_remote(client):
+def test_install_skip_disabled_remote():
     client = TestClient(servers=OrderedDict({"default": TestServer(),
                                              "server2": TestServer(),
                                              "server3": TestServer()}),
@@ -330,6 +333,17 @@ def test_install_skip_disabled_remote(client):
     client.run("remote disable default")
     client.run("install Pkg/0.1@lasote/testing", assert_error=False)
     assert "Trying with 'default'..." not in client.out
+
+
+def test_install_without_update_fail(client):
+    # https://github.com/conan-io/conan/issues/9183
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@")
+    client.run("upload * --confirm --all -r default")
+    client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+    client.run("remote disable default")
+    client.run("install .")
+    assert "zlib/1.0: Already installed" in client.out
 
 
 def test_install_version_range_reference(client):
@@ -351,3 +365,32 @@ def test_install_error_never(client):
     assert "ERROR: --build=never not compatible with other options" in client.out
     client.run("install ./conanfile.py --build never --build outdated", assert_error=True)
     assert "ERROR: --build=never not compatible with other options" in client.out
+
+
+class TestCliOverride:
+
+    def test_install_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("install . --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out
+
+    def test_install_ref_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/1.1@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0")})
+        client.run("create . pkg/1.0@")
+        client.run("install pkg/1.0@ --require-override=zlib/1.1")
+        assert "zlib/1.1: Already installed" in client.out
+
+    def test_create_cli_override(self, client):
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("create . zlib/1.0@")
+        client.run("create . zlib/2.0@")
+        client.save({"conanfile.py": GenConanfile().with_requires("zlib/1.0"),
+                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+        client.run("create . pkg/0.1@ --require-override=zlib/2.0")
+        assert "zlib/2.0: Already installed" in client.out

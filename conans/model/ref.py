@@ -134,7 +134,7 @@ class ConanName(object):
             return
         if ConanName._validation_pattern.match(name) is None:
             if version and ((name.startswith("[") and name.endswith("]")) or
-                    (name.startswith("(") and name.endswith(")"))):
+                            (name.startswith("(") and name.endswith(")"))):
                 return
             ConanName.invalid_name_message(name, reference_token=reference_token)
 
@@ -299,7 +299,7 @@ class PackageReference(namedtuple("PackageReference", "ref id revision")):
         return tmp
 
     def copy_with_revs(self, revision, p_revision):
-        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision)
+        return PackageReference(self.ref.copy_with_rev(revision), self.id, p_revision, validate=False)
 
     def copy_clear_prev(self):
         return self.copy_with_revs(self.ref.revision, None)

@@ -27,7 +27,8 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 
 def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
-           test_build_folder, test_folder, conanfile_path, recorder, is_build_require=False):
+           test_build_folder, test_folder, conanfile_path, recorder, is_build_require=False,
+           require_overrides=None):
     assert isinstance(ref, ConanFileReference), "ref needed"
     assert profile_host is not None
     assert profile_build is not None
@@ -73,7 +74,9 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                                    graph_lock, root_ref, remotes, update,
                                    build_modes=build_modes,
                                    test_build_folder=test_build_folder,
-                                   recorder=recorder)
+                                   recorder=recorder,
+                                   require_overrides=require_overrides
+                                   )
     else:
         deps_install(app=app,
                      ref_or_path=ref,
@@ -88,4 +91,5 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                      build_modes=build_modes,
                      update=update,
                      recorder=recorder,
-                     is_build_require=is_build_require)
+                     is_build_require=is_build_require,
+                     require_overrides=require_overrides)

@@ -1,5 +1,6 @@
 from conan.tools.env.environment import environment_wrap_command
-from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app
+from conans.test.assets.pkg_cmake import pkg_cmake, pkg_cmake_app, pkg_cmake_test
+from conans.test.utils.mocks import ConanFileMock
 from conans.test.utils.tools import TestClient
 
 
@@ -16,9 +17,20 @@ def test_shared_cmake_toolchain():
     client.run("remove * -f")
 
     client = TestClient(servers=client.servers, users=client.users)
-    client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualEnv")
-    command = environment_wrap_command("conanrunenv", "app", cwd=client.current_folder)
+    client.run("install app/0.1@ -o chat:shared=True -o hello:shared=True -g VirtualRunEnv")
+    conanfile = ConanFileMock()
+    command = environment_wrap_command(conanfile, "conanrunenv", "app", cwd=client.current_folder)
+
     client.run_command(command)
     assert "main: Release!" in client.out
     assert "chat: Release!" in client.out
+    assert "hello: Release!" in client.out
+
+
+def test_shared_cmake_toolchain_test_package():
+    client = TestClient()
+    files = pkg_cmake("hello", "0.1")
+    files.update(pkg_cmake_test("hello"))
+    client.save(files)
+    client.run("create . -o hello:shared=True")
     assert "hello: Release!" in client.out

@@ -3,6 +3,8 @@ import os
 import textwrap
 import unittest
 
+import pytest
+
 from conans.test.utils.tools import TestClient, TestServer, GenConanfile
 
 
@@ -37,7 +39,9 @@ class ConanInspectTest(unittest.TestCase):
         client.run("inspect pkg/0.1@user/channel -r=default -a settings")
         self.assertIn("settings: os", client.out)
         client.run("inspect pkg/0.1@user/channel -a settings")
-        self.assertIn("settings: os", client.out)
+        # we got in cache the revision from the remote but still the latest
+        # revision in cache is the last we created
+        self.assertIn("settings: ('os', 'arch')", client.out)
         client.run("remove * -f")
         client.run("inspect pkg/0.1@user/channel -a settings")
         self.assertIn("settings: os", client.out)
@@ -470,3 +474,15 @@ class InspectRawTest(unittest.TestCase):
         client.run("inspect . --json=file.json")
         contents = client.load("file.json")
         self.assertIn('"settings": ["compiler", "os"]', contents)
+
+    def test_inspect_alias(self):
+        client = TestClient()
+        client.save({"conanfile.py": GenConanfile()})
+        client.run("export . pkg/0.1@")
+        client.run("alias pkg/latest@ pkg/0.1@")
+        client.run("inspect pkg/latest@ -a alias")
+        assert "alias: pkg/0.1" in client.out
+
+        client.run("inspect pkg/latest@ -a alias --json=myinspect")
+        myinspect = json.loads(client.load("myinspect"))
+        assert myinspect["alias"] == "pkg/0.1"

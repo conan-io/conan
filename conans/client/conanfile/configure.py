@@ -1,5 +1,6 @@
 from conans.errors import conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
+from conans.model.pkg_type import PackageType
 from conans.model.requires import BuildRequirements, TestRequirements
 from conans.util.conan_v2_mode import conan_v2_error
 from conans.util.misc import make_tuple
@@ -27,17 +28,17 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
         with conanfile_exception_formatter(str(conanfile), "configure"):
             conanfile.configure()
 
-        conanfile.settings.validate()  # All has to be ok!
-        conanfile.options.validate()
         # Recipe provides its own name if nothing else is defined
         conanfile.provides = make_tuple(conanfile.provides)
 
-        if conanfile.deprecated:
+        if conanfile.deprecated:  # TODO: Do not display here, but elsewhere
             message = "Recipe '%s' is deprecated" % conanfile.display_name
             if isinstance(conanfile.deprecated, str):
                 message += " in favor of '%s'" % conanfile.deprecated
             message += ". Please, consider changing your requirements."
             conanfile.output.warn(message)
+
+        PackageType.compute_package_type(conanfile)
 
         # Once the node is configured call the layout()
         if hasattr(conanfile, "layout"):
