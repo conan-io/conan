@@ -65,7 +65,6 @@ def client():
                 self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
             """)
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     client.save({"cmake/conanfile.py": cmake,
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
@@ -170,7 +169,6 @@ def test_profile_included_multiple():
 
 def test_profile_buildenv():
     client = TestClient()
-    save(client.cache.new_config_path, "tools.env.virtualenv:auto_use=True")
     conanfile = textwrap.dedent("""\
         import os, platform
         from conans import ConanFile

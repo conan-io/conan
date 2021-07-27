@@ -155,6 +155,8 @@ class ConanOutput(object):
             return True
 
 
-def cli_out_write(data, fg=None, bg=None, endline="\n"):
-    data = "{}{}{}{}{}".format(fg or '', bg or '', data, Style.RESET_ALL, endline)
+def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
+    fg_ = fg or ''
+    bg_ = bg or ''
+    data = f"{' ' * indentation}{fg_}{bg_}{data}{Style.RESET_ALL}{endline}"
     sys.stdout.write(data)

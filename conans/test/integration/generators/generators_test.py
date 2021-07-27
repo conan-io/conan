@@ -27,7 +27,6 @@ unknown
 [generators]
 cmake
 virtualenv
-xcode
 ycm
     '''
         files = {"conanfile.txt": base}
@@ -41,7 +40,6 @@ ycm
             venv_files.extend(["activate.bat", "deactivate.bat", "environment.bat.env"])
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
-                                 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
                                  LOCKFILE] + venv_files),
                          sorted(os.listdir(client.current_folder)))
