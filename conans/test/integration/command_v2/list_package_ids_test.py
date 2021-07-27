@@ -143,9 +143,9 @@ class TestRemotes(TestListPackageIdsBase):
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
         self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
 
-        expected_output = textwrap.dedent(f"""\
+        expected_output = textwrap.dedent("""\
         remote1:
-          {repr(rrev)}:.*
+          %s:.{40}
             settings:
               arch=.*
               build_type=.*
@@ -154,7 +154,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """)
+        """ % repr(rrev))
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -168,9 +168,9 @@ class TestRemotes(TestListPackageIdsBase):
 
         # Now, let's check that we're using the latest one by default
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
-        expected_output = textwrap.dedent(f"""\
+        expected_output = textwrap.dedent("""\
         remote1:
-          {repr(rrev)}:.*
+          %s:.{40}
             settings:
               arch=.*
               build_type=.*
@@ -179,7 +179,7 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """)
+        """ % repr(rrev))
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
@@ -199,9 +199,9 @@ class TestRemotes(TestListPackageIdsBase):
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
         self.client.run(f"list package-ids -a -c {repr(rrev)}")
         output = str(self.client.out)
-        expected_output = textwrap.dedent(f"""\
+        expected_output = textwrap.dedent("""\
         Local Cache:
-          {repr(rrev)}:.*
+          %(rrev)s:.{40}
             settings:
               arch=.*
               build_type=.*
@@ -211,7 +211,7 @@ class TestRemotes(TestListPackageIdsBase):
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote1:
-          {repr(rrev)}:.*
+          %(rrev)s:.{40}
             settings:
               arch=.*
               build_type=.*
@@ -222,7 +222,7 @@ class TestRemotes(TestListPackageIdsBase):
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote2:
           There are no matching references
-        """)
+        """ % {"rrev": repr(rrev)})
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
     def test_search_in_missing_remote(self):

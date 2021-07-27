@@ -1,6 +1,5 @@
 import os
 import time
-from collections import OrderedDict
 
 from tqdm import tqdm
 
