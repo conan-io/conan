@@ -158,6 +158,21 @@ class TestRemotes(TestListPackageIdsBase):
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
+    def test_search_with_full_reference_but_package_has_no_properties(self):
+        remote_name = "remote1"
+        recipe_name = "test_recipe/1.0.0@user/channel"
+        self._add_remote(remote_name)
+        self._upload_recipe(remote_name, recipe_name)
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
+
+        expected_output = textwrap.dedent("""\
+        remote1:
+          %s:.{40}
+        """ % repr(rrev))
+
+        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+
     def test_search_with_full_reference_but_using_ref_without_revision(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
