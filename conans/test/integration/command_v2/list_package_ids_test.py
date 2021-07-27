@@ -140,7 +140,7 @@ class TestRemotes(TestListPackageIdsBase):
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, recipe_name)
-        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        rrev = self._get_lastest_recipe_ref(recipe_name)
         self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
 
         expected_output = textwrap.dedent("""\
@@ -163,7 +163,7 @@ class TestRemotes(TestListPackageIdsBase):
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_recipe(remote_name, recipe_name)
-        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        rrev = self._get_lastest_recipe_ref(recipe_name)
         self.client.run(f"list package-ids -r remote1 {repr(rrev)}")
 
         expected_output = textwrap.dedent("""\
@@ -175,14 +175,12 @@ class TestRemotes(TestListPackageIdsBase):
 
     def test_search_with_reference_without_revision_in_cache_and_remotes(self):
         remote_name = "remote1"
-        recipe_name = "test_recipe/1.0.0@user/channel"
-        self._add_remote(remote_name)
-        self._upload_full_recipe(remote_name, recipe_name)
         ref = "test_recipe/1.0.0@user/channel"
-        self.client.run(f"list package-ids -a -c {str(ref)}")
-
+        self._add_remote(remote_name)
+        self._upload_full_recipe(remote_name, ref)
+        self.client.run(f"list package-ids -a -c {ref}")
         # Now, let's check that we're using the latest one by default
-        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        rrev = self._get_lastest_recipe_ref(ref)
         expected_output = textwrap.dedent("""\
         Local Cache:
           %(rrev)s:.{40}
@@ -248,7 +246,7 @@ class TestRemotes(TestListPackageIdsBase):
         remote2:
           There are no matching references
         """ % {"rrev": repr(rrev)})
-        assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
+        assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):
         remote1 = "remote1"
