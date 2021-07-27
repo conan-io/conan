@@ -173,19 +173,19 @@ class TestRemotes(TestListPackageIdsBase):
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 
-    def test_search_with_full_reference_but_using_ref_without_revision(self):
+    def test_search_with_reference_without_revision_in_cache_and_remotes(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
         self._add_remote(remote_name)
         self._upload_full_recipe(remote_name, recipe_name)
         ref = "test_recipe/1.0.0@user/channel"
-        self.client.run(f"list package-ids -r remote1 {repr(ref)}")
+        self.client.run(f"list package-ids -a -c {str(ref)}")
 
         # Now, let's check that we're using the latest one by default
         rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
         expected_output = textwrap.dedent("""\
-        remote1:
-          %s:.{40}
+        Local Cache:
+          %(rrev)s:.{40}
             settings:
               arch=.*
               build_type=.*
@@ -194,7 +194,17 @@ class TestRemotes(TestListPackageIdsBase):
               shared=False
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-        """ % repr(rrev))
+        remote1:
+          %(rrev)s:.{40}
+            settings:
+              arch=.*
+              build_type=.*
+              os=.*
+            options:
+              shared=False
+            requires:
+              pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+        """ % {"rrev": repr(rrev)})
 
         assert bool(re.match(expected_output, str(self.client.out), re.MULTILINE))
 

@@ -350,7 +350,7 @@ class ConanAPIV2(object):
                 # but in the meantime we must handle it here
                 packages_props = {}
         else:
-            rrev = ref if ref.revision else self.app.cache.get_latest_rrev(remote, ref)
+            rrev = ref if ref.revision else self.app.cache.get_latest_rrev(ref)
             package_ids = self.app.cache.get_package_ids(rrev)
             package_layouts = []
             for pkg in package_ids:
