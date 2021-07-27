@@ -121,6 +121,20 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
 
 class TestRemotes(TestListPackageIdsBase):
+
+    def test_search_with_full_reference_but_no_packages_in_cache(self):
+        self.client.save({
+            "conanfile.py": GenConanfile("test_recipe", "1.0.0").with_package_file("file.h", "0.1")
+        })
+        self.client.run("export . user/channel")
+        rrev = self._get_lastest_recipe_ref("test_recipe/1.0.0@user/channel")
+        self.client.run(f"list package-ids {repr(rrev)}")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          There are no matching references
+        """)
+        assert expected_output == str(self.client.out)
+
     def test_search_with_full_reference(self):
         remote_name = "remote1"
         recipe_name = "test_recipe/1.0.0@user/channel"
