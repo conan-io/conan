@@ -89,7 +89,7 @@ class GraphLockFile(object):
         self._profile_build = None
 
 
-class ConanReference:
+class ConanLockReference:
     def __init__(self, name=None, version=None, user=None, channel=None, rrev=None,
                  package_id=None, prev=None):
         self.name = name
@@ -143,7 +143,7 @@ class ConanReference:
             user = channel = None
 
         name, version = ref.split("/", 1)
-        return ConanReference(name, version, user, channel, rrev, package_id, prev)
+        return ConanLockReference(name, version, user, channel, rrev, package_id, prev)
 
     def __repr__(self):
         if self.name is None:
@@ -187,7 +187,7 @@ class GraphLock(object):
             assert graph_node.conanfile is not None
 
             self.root = self.root or graph_node.ref.name
-            requires.add(ConanReference.loads(repr(graph_node.ref)))
+            requires.add(ConanLockReference.loads(repr(graph_node.ref)))
 
         self.requires = sorted(requires)
         self.python_requires = sorted(python_requires)
@@ -206,7 +206,7 @@ class GraphLock(object):
                 continue
             assert graph_node.conanfile is not None
 
-            requires.add(ConanReference.loads(repr(graph_node.ref)))
+            requires.add(ConanLockReference.loads(repr(graph_node.ref)))
 
         new_requires = sorted(r for r in requires if r not in self.requires)
         self.requires = new_requires + self.requires
@@ -218,11 +218,11 @@ class GraphLock(object):
         graph_lock = GraphLock(deps_graph=None)
         graph_lock.root = data["root"]
         for r in data["requires"]:
-            graph_lock.requires.append(ConanReference.loads(r))
+            graph_lock.requires.append(ConanLockReference.loads(r))
         for r in data["python_requires"]:
-            graph_lock.python_requires.append(ConanReference.loads(r))
+            graph_lock.python_requires.append(ConanLockReference.loads(r))
         for r in data["build_requires"]:
-            graph_lock.build_requires.append(ConanReference.loads(r))
+            graph_lock.build_requires.append(ConanLockReference.loads(r))
         return graph_lock
 
     def serialize(self):
@@ -427,6 +427,6 @@ class GraphLock(object):
         match the existing RREV
         """
         # Filter existing matching
-        ref = ConanReference.loads(repr(ref))
+        ref = ConanLockReference.loads(repr(ref))
         if ref not in self.requires:
             self.requires.insert(0, ref)
