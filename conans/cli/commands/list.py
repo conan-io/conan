@@ -11,25 +11,25 @@ recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 
 
-def _print_common_list_cli_output(results, ref_type):
-    if results.get("error"):
+def _print_common_list_cli_output(result, ref_type):
+    if result.get("error"):
         # TODO: Handle errors
         return
 
-    if results.get("remote"):
-        cli_out_write(f"{results['remote']}:", fg=remote_color)
+    if result.get("remote"):
+        cli_out_write(f"{result['remote']}:", fg=remote_color)
     else:
         cli_out_write("Local Cache:", remote_color)
 
-    if not results.get("results"):
+    if not result.get("results"):
         cli_out_write(f"There are no matching {ref_type}", indentation=2)
 
 
 def list_recipes_cli_formatter(results):
-    for remote_results in results:
-        _print_common_list_cli_output(remote_results, "recipes")
+    for result in results:
+        _print_common_list_cli_output(result, "recipes")
         current_recipe = None
-        for recipe in remote_results["results"]:
+        for recipe in result["results"]:
             if recipe["name"] != current_recipe:
                 current_recipe = recipe["name"]
                 cli_out_write(current_recipe, fg=recipe_color, indentation=2)
@@ -39,10 +39,10 @@ def list_recipes_cli_formatter(results):
 
 
 def _list_revisions_cli_formatter(results, ref_type):
-    for remote_results in results:
-        _print_common_list_cli_output(remote_results, ref_type)
-        reference = remote_results["reference"]
-        for revisions in remote_results["results"]:
+    for result in results:
+        _print_common_list_cli_output(result, ref_type)
+        reference = result["reference"]
+        for revisions in result["results"]:
             rev = revisions["revision"]
             date = iso8601_to_str(revisions["time"])
             cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
@@ -61,10 +61,10 @@ def list_package_ids_cli_formatter(results):
     requires_fields = ("requires", "full_requires")
     general_fields = ("options", "settings")
 
-    for remote_results in results:
-        _print_common_list_cli_output(remote_results, "references")
-        reference = remote_results["reference"]
-        for pkg_id, props in remote_results["results"].items():
+    for result in results:
+        _print_common_list_cli_output(result, "references")
+        reference = result["reference"]
+        for pkg_id, props in result["results"].items():
             cli_out_write(repr(PackageReference(reference, pkg_id)),
                           fg=reference_color, indentation=2)
             for prop_name, values in props.items():
