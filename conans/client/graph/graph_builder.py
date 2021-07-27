@@ -48,7 +48,7 @@ class DepsGraphBuilder(object):
         self._recorder = recorder
 
     def load_graph(self, root_node, check_updates, update, remotes, profile_host, profile_build,
-                   graph_lock=None, make_latest=False):
+                   graph_lock=None):
         assert profile_build is not None
         check_updates = check_updates or update
         initial = graph_lock.initial_counter if graph_lock else None
@@ -64,8 +64,7 @@ class DepsGraphBuilder(object):
         # enter recursive computation
         t1 = time.time()
         self._expand_node(root_node, dep_graph, Requirements(), None, None, check_updates,
-                          update, remotes, profile_host, profile_build, graph_lock,
-                          make_latest=make_latest)
+                          update, remotes, profile_host, profile_build, graph_lock)
         logger.debug("GRAPH: Time to load deps %s" % (time.time() - t1))
         return dep_graph
 
@@ -113,7 +112,7 @@ class DepsGraphBuilder(object):
         return new_nodes
 
     def _expand_node(self, node, graph, down_reqs, down_ref, down_options, check_updates, update,
-                     remotes, profile_host, profile_build, graph_lock, make_latest=False):
+                     remotes, profile_host, profile_build, graph_lock):
         """ expands the dependencies of the node, recursively
 
         param node: Node object to be expanded in this step
@@ -131,7 +130,7 @@ class DepsGraphBuilder(object):
                 continue
             self._expand_require(require, node, graph, check_updates, update, remotes, profile_host,
                                  profile_build, new_reqs, new_options, graph_lock,
-                                 context_switch=False, make_latest=make_latest)
+                                 context_switch=False)
 
     def _resolve_ranges(self, graph, requires, consumer, update, remotes):
         for require in requires:
@@ -226,7 +225,7 @@ class DepsGraphBuilder(object):
 
     def _expand_require(self, require, node, graph, check_updates, update, remotes, profile_host,
                         profile_build, new_reqs, new_options, graph_lock, context_switch,
-                        populate_settings_target=True, make_latest=False):
+                        populate_settings_target=True):
         # Handle a requirement of a node. There are 2 possibilities
         #    node -(require)-> new_node (creates a new node in the graph)
         #    node -(require)-> previous (creates a diamond with a previously existing node)
@@ -247,8 +246,7 @@ class DepsGraphBuilder(object):
             new_node = self._create_new_node(node, graph, require, check_updates, update,
                                              remotes, profile_host, profile_build, graph_lock,
                                              context_switch=context_switch,
-                                             populate_settings_target=populate_settings_target,
-                                             make_latest=make_latest)
+                                             populate_settings_target=populate_settings_target)
 
             # The closure of a new node starts with just itself
             new_node.public_closure.add(new_node)
@@ -398,10 +396,9 @@ class DepsGraphBuilder(object):
         return new_options
 
     def _resolve_recipe(self, current_node, dep_graph, requirement, check_updates,
-                        update, remotes, profile, graph_lock, original_ref=None, make_latest=False):
+                        update, remotes, profile, graph_lock, original_ref=None):
         try:
-            result = self._proxy.get_recipe(requirement.ref, check_updates, update, remotes,
-                                            make_latest=make_latest)
+            result = self._proxy.get_recipe(requirement.ref, check_updates, update, remotes)
         except ConanException as e:
             if current_node.ref:
                 self._output.error("Failed requirement '%s' from '%s'"
@@ -431,7 +428,7 @@ class DepsGraphBuilder(object):
 
     def _create_new_node(self, current_node, dep_graph, requirement, check_updates,
                          update, remotes, profile_host, profile_build, graph_lock, context_switch,
-                         populate_settings_target, make_latest=False):
+                         populate_settings_target):
         # If there is a context_switch, it is because it is a BR-build
         if context_switch:
             profile = profile_build
@@ -441,7 +438,7 @@ class DepsGraphBuilder(object):
             context = current_node.context
 
         result = self._resolve_recipe(current_node, dep_graph, requirement, check_updates, update,
-                                      remotes, profile, graph_lock, make_latest=make_latest)
+                                      remotes, profile, graph_lock)
         new_ref, dep_conanfile, recipe_status, remote, locked_id = result
 
         # Assign the profiles depending on the context, with the new profile build/host

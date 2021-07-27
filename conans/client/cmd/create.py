@@ -28,7 +28,7 @@ def _get_test_conanfile_path(tf, conanfile_path):
 
 def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes, update, build_modes,
            test_build_folder, test_folder, conanfile_path, recorder, is_build_require=False,
-           make_latest=False, require_overrides=None):
+           require_overrides=None):
     assert isinstance(ref, ConanFileReference), "ref needed"
     assert profile_host is not None
     assert profile_build is not None
@@ -54,8 +54,7 @@ def create(app, ref, profile_host, profile_build, graph_lock, root_ref, remotes,
                          root_ref=root_ref,
                          build_modes=build_modes,
                          update=update,
-                         recorder=recorder,
-                         make_latest=make_latest)
+                         recorder=recorder)
             out.info("Executing test_package %s" % repr(ref))
             try:
                 graph_lock.relax()
