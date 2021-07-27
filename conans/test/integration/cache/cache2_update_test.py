@@ -311,6 +311,31 @@ def test_update_flows():
     # |             | REV0 (1000)|            |           |            |
     # |             |            |            |           |            |
 
+    client.run("remove * -f")
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # |             | REV3 (3050)| REV6(3030) |REV6(3040) | REV6(3050) |
+    # |             | REV0 (1000)|            |           |            |
+    # |             |            |            |           |            |
+
+    client.run(f"install {server_rrev}@#{server_rrev.revision} --update")
+
+    # now we have the same revision with different dates in the servers and in the cache
+    # in this case, if we specify --update we will check all the remotes and will install
+    # the revision from the server that has the latest date
+    # --> results: install from server3
+
+    latest_rrev_cache = client.cache.get_latest_rrev(liba)
+    assert latest_server_time == client.cache.get_timestamp(latest_rrev_cache)
+    assert "liba/1.0.0 from 'server3' - Downloaded" in client.out
+
+    # | CLIENT      | CLIENT2    | SERVER1    | SERVER2   | SERVER3    |
+    # |-------------|------------|------------|-----------|------------|
+    # | REV6(3050)  | REV3 (3050)| REV6(3030) |REV6(3040) | REV6(3050) |
+    # |             | REV0 (1000)|            |           |            |
+    # |             |            |            |           |            |
+
 
 def test_update_flows_version_ranges():
     pass

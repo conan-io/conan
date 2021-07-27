@@ -46,6 +46,8 @@ class ConanProxy(object):
     def _get_recipe(self, reference, check_updates, update, remotes):
         output = ScopedOutput(str(reference), self._out)
 
+        check_updates = check_updates or update
+
         conanfile_path = self._cache.editable_path(reference)
         if conanfile_path is not None:
             return conanfile_path, RECIPE_EDITABLE, None, reference
@@ -56,8 +58,9 @@ class ConanProxy(object):
         # NOT in disk, must be retrieved from remotes
         if not ref:
             # in 2.0 revisions are completely inmutable so if we specified the revision
-            # we don't want to check all servers, just get the first match
-            check_all_servers = False if reference.revision else True
+            # and we are not checking updates we don't want to check all servers,
+            # just get the first match
+            check_all_servers = False if reference.revision and not check_updates else True
             remote, new_ref = self._download_recipe(reference, output, remotes,
                                                     remotes.selected, check_all_servers)
             recipe_layout = self._cache.ref_layout(new_ref)
@@ -71,8 +74,6 @@ class ConanProxy(object):
         cur_remote = self._cache.get_remote(recipe_layout.reference)
         cur_remote = remotes[cur_remote] if cur_remote else None
         selected_remote = remotes.selected or cur_remote
-
-        check_updates = check_updates or update
 
         if check_updates:
 
