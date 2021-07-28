@@ -280,10 +280,17 @@ class ConanAPIV2(object):
         :param reference: `PackageReference` without the revision
         :param remote: `Remote` object
         :return: `dict` with all the results, e.g.,
-                 {"remote": "my_remote_name",  # or None
-                  "reference": "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a:ef93ea55bee154729e264db35ca6a16ecab77eb7",
-                  "results": [{"revision": "80b7cbe095ac7f38844b6511e69e453a",
-                               "time": "2021-07-20 00:56:25 UTC"}, ...]}
+                  {
+                    "remote": "my_remote_name",  # or None
+                    "reference": "libyaml/0.2.5#80b7cbe095ac7f38844b6511e69e453a:ef93ea55bee154729e264db35ca6a16ecab77eb7",
+                    "results": [
+                      {
+                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
+                        "time": "2021-07-20 00:56:25 UTC"
+                      },
+                      ...
+                    ]
+                  }
         """
         ref = PackageReference.loads(reference)
         if ref.revision:
@@ -302,10 +309,17 @@ class ConanAPIV2(object):
         :param reference: `ConanFileReference` without the revision
         :param remote: `Remote` object
         :return: `dict` with all the results, e.g.,
-                 {"remote": "my_remote_name",  # or None
-                  "reference": "libyaml/0.2.5",
-                  "results": [{"revision": "80b7cbe095ac7f38844b6511e69e453a",
-                               "time": "2021-07-20 00:56:25 UTC"}, ...]}
+                  {
+                    "remote": "my_remote_name",  # or None
+                    "reference": "libyaml/0.2.5",
+                    "results": [
+                      {
+                        "revision": "80b7cbe095ac7f38844b6511e69e453a",
+                        "time": "2021-07-20 00:56:25 UTC"
+                      },
+                      ...
+                    ]
+                  }
         """
         ref = ConanFileReference.loads(reference)
         if ref.revision:
@@ -327,15 +341,17 @@ class ConanAPIV2(object):
         :param reference: `ConanFileReference` with/without revision
         :param remote: `Remote` object
         :return: `list` of `dict` with the `package-id` as keys, e.g.,
-                 {"remote": "my_remote_name",  # or None
-                  "reference": "libcurl/7.77.0#2a9c4fcc8d76d891e4db529efbe24242",
-                  "results": {"d5f16437dd4989cc688211b95c24525589acaafd": {
-                                    "settings": {"compiler": "apple-clang",...},
-                                    "options": {'options': {'shared': 'False',...}},
-                                    "requires": [
-                                        'mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]}
-                            }
-                 }
+                  {
+                    "remote": "my_remote_name",  # or None
+                    "reference": "libcurl/7.77.0#2a9c4fcc8d76d891e4db529efbe24242",
+                    "results": {
+                        "d5f16437dd4989cc688211b95c24525589acaafd": {
+                            "settings": {"compiler": "apple-clang",...},
+                            "options": {'options': {'shared': 'False',...}},
+                            "requires": ['mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]
+                        }
+                    }
+                  }
         """
         ref = ConanFileReference.loads(reference)
         if remote:
