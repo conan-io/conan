@@ -10,14 +10,16 @@ class BaseDbTable:
     columns: namedtuple = None
     unique_together: tuple = None
 
-    def __init__(self):
+    def __init__(self, conn):
+        self._conn = conn
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
+        self.create_table()
 
-    def create_table(self, conn, if_not_exists=True):
-        def field_str(name, typename, nullable=False, check_constraints: Optional[List] = None,
-                      unique=False):
+    def create_table(self):
+        def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
+                  unique=False):
             field_str = name
             if typename in [str, ]:
                 field_str += ' text'
@@ -40,12 +42,12 @@ class BaseDbTable:
 
             return field_str
 
-        fields = ', '.join([field_str(*it) for it in self.columns_description])
-        guard = 'IF NOT EXISTS' if if_not_exists else ''
+        fields = ', '.join([field(*it) for it in self.columns_description])
+        guard = 'IF NOT EXISTS'
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
-        conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
+        self._conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
 
-    def dump(self, conn, output: StringIO):
-        r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
+    def dump(self, output: StringIO):
+        r = self._conn.execute(f'SELECT rowid, * FROM {self.table_name}')
         for it in r.fetchall():
             output.write(str(it) + '\n')

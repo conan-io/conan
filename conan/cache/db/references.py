@@ -1,8 +1,9 @@
+import sqlite3
 import time
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExist
+from conans.errors import ConanReferenceDoesNotExist, ConanReferenceAlreadyExist
 
 
 class ReferencesDbTable(BaseDbTable):
@@ -56,39 +57,39 @@ class ReferencesDbTable(BaseDbTable):
         set_expr = ', '.join([f'{k} = "{v}"' for k, v in set_dict.items() if v is not None])
         return set_expr
 
-    def get(self, conn, ref: ConanReference):
+    def get(self, ref: ConanReference):
         """ Returns the row matching the reference or fails """
         where_clause = self._where_clause(ref)
         query = f'SELECT * FROM {self.table_name} ' \
                 f'WHERE {where_clause};'
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         row = r.fetchone()
         if not row:
             raise ConanReferenceDoesNotExist(f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
-    def save(self, conn, path, ref: ConanReference, remote=None, reset_timestamp=False):
+    def save(self, path, ref: ConanReference, remote=None, reset_timestamp=False):
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         timestamp = time.time() if not reset_timestamp else 0
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        r = conn.execute(f'INSERT INTO {self.table_name} '
+        r = self._conn.execute(f'INSERT INTO {self.table_name} '
                          f'VALUES ({placeholders})',
                          [ref.reference, ref.rrev, ref.pkgid, ref.prev, path, remote, timestamp,
                           None])
         return r.lastrowid
 
-    def set_remote(self, conn, ref: ConanReference, remote):
+    def set_remote(self, ref: ConanReference, remote):
         where_clause = self._where_clause(ref)
         new_remote = f'"{remote}"' if remote else 'NULL'
         query = f"UPDATE {self.table_name} " \
                 f"SET {self.columns.remote}={new_remote} " \
                 f"WHERE {where_clause};"
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         return r.lastrowid
 
-    def update(self, conn, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
+    def update(self, old_ref: ConanReference, new_ref: ConanReference = None, new_path=None,
                new_remote=None, new_timestamp=None, new_build_id=None):
         if not new_ref:
             new_ref = old_ref
@@ -98,23 +99,26 @@ class ReferencesDbTable(BaseDbTable):
         query = f"UPDATE {self.table_name} " \
                 f"SET {set_clause} " \
                 f"WHERE {where_clause};"
-        r = conn.execute(query)
+        try:
+            r = self._conn.execute(query)
+        except sqlite3.IntegrityError:
+            raise ConanReferenceAlreadyExist(f"Reference '{new_ref.full_reference}' already exists")
         return r.lastrowid
 
-    def delete_by_path(self, conn, path):
+    def delete_by_path(self, path):
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE path = ?;"
-        r = conn.execute(query, (path,))
+        r = self._conn.execute(query, (path,))
         return r.lastrowid
 
-    def remove(self, conn, ref: ConanReference):
+    def remove(self, ref: ConanReference):
         where_clause = self._where_clause(ref)
         query = f"DELETE FROM {self.table_name} " \
                 f"WHERE {where_clause};"
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         return r.lastrowid
 
-    def all(self, conn, only_latest_rrev=False):
+    def all(self, only_latest_rrev=False):
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \
@@ -132,11 +136,11 @@ class ReferencesDbTable(BaseDbTable):
             query = f'SELECT * FROM {self.table_name} ' \
                     f'WHERE {self.columns.prev} IS NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC;'
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_package_revisions(self, conn, ref: ConanReference, only_latest_prev=False):
+    def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
         assert ref.rrev, "To search for package revisions you must provide a recipe revision."
         assert ref.pkgid, "To search for package revisions you must provide a package id."
         check_prev = f'AND {self.columns.prev} = "{ref.prev}" ' if ref.prev else ''
@@ -164,11 +168,11 @@ class ReferencesDbTable(BaseDbTable):
                     f'{check_prev} ' \
                     f'AND {self.columns.prev} IS NOT NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_package_ids(self, conn, ref: ConanReference):
+    def get_package_ids(self, ref: ConanReference):
         assert ref.rrev, "To search for package id's you must provide a recipe revision."
         # we select the latest prev for each package_id
         query = f'SELECT {self.columns.reference}, ' \
@@ -185,11 +189,11 @@ class ReferencesDbTable(BaseDbTable):
                 f'AND {self.columns.pkgid} IS NOT NULL ' \
                 f'GROUP BY {self.columns.pkgid} ' \
                 f'ORDER BY {self.columns.timestamp} DESC'
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
 
-    def get_recipe_revisions(self, conn, ref: ConanReference, only_latest_rrev=False):
+    def get_recipe_revisions(self, ref: ConanReference, only_latest_rrev=False):
         check_rrev = f'AND {self.columns.rrev} = "{ref.rrev}" ' if ref.rrev else ''
         if only_latest_rrev:
             query = f'SELECT {self.columns.reference}, ' \
@@ -214,6 +218,6 @@ class ReferencesDbTable(BaseDbTable):
                     f'AND {self.columns.pkgid} IS NULL ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
 
-        r = conn.execute(query)
+        r = self._conn.execute(query)
         for row in r.fetchall():
             yield self._as_dict(self.row_type(*row))
