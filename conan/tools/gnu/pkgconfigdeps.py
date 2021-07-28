@@ -48,33 +48,35 @@ class PkgConfigDeps(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
 
-    def _get_require_comp_name(self, pkg_name, req):
+    def _get_require_comp_name(self, dep, req):
+        pkg_name = dep.ref.name
         pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
-        req = self._conanfile.dependencies.direct_host[pkg]
+        req = dep.dependencies.direct_host[pkg]
         cmp_name = get_component_alias(req, comp_name)
         return cmp_name
 
-    def _get_components(self, pkg_name, dep):
+    def _get_components(self, dep):
         ret = []
         for comp_name, comp in dep.new_cpp_info.get_sorted_components().items():
             comp_genname = get_component_alias(dep, comp_name)
             comp_requires_gennames = []
             for require in comp.requires:
-                comp_requires_gennames.append(self._get_require_comp_name(pkg_name, require))
+                comp_requires_gennames.append(self._get_require_comp_name(dep, require))
             ret.append((comp_genname, comp, comp_requires_gennames))
         return ret
 
-    def _get_public_require_deps(self, comp):
+    def _get_public_require_deps(self, dep):
         public_comp_deps = []
-        for require in comp.requires:
+
+        for require in dep.new_cpp_info.requires:
             if "::" in require:  # Points to a component of a different package
                 pkg, cmp_name = require.split("::")
-                req = self._conanfile.dependencies.direct_host[pkg]
+                req = dep.dependencies.direct_host[pkg]
                 public_comp_deps.append(
                     (get_target_namespace(req), get_component_alias(req, cmp_name)))
             else:  # Points to a component of same package
-                public_comp_deps.append((get_target_namespace(self._conanfile),
-                                         get_component_alias(self._conanfile, require)))
+                public_comp_deps.append((get_target_namespace(dep),
+                                         get_component_alias(dep, require)))
         return public_comp_deps
 
     @property
@@ -85,7 +87,7 @@ class PkgConfigDeps(object):
             pkg_genname = get_target_namespace(dep)
 
             if dep.new_cpp_info.has_components:
-                components = self._get_components(dep.ref.name, dep)
+                components = self._get_components(dep)
                 for comp_genname, comp_cpp_info, comp_requires_gennames in components:
                     pkg_comp_genname = "%s-%s" % (pkg_genname, comp_genname)
                     ret["%s.pc" % pkg_comp_genname] = self._pc_file_content(
@@ -99,7 +101,7 @@ class PkgConfigDeps(object):
                                                                                comp_gennames)
             else:
                 require_public_deps = [_d for _, _d in
-                                       self._get_public_require_deps(dep.new_cpp_info)]
+                                       self._get_public_require_deps(dep)]
                 ret["%s.pc" % pkg_genname] = self._pc_file_content(pkg_genname, dep.new_cpp_info,
                                                                    require_public_deps,
                                                                    dep.package_folder,
