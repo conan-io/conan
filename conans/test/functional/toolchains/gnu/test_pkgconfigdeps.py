@@ -5,6 +5,7 @@ import unittest
 
 import pytest
 
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 
@@ -254,3 +255,33 @@ def test_custom_content_components():
 
     pc_content = client.load("pkg-mycomponent.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
+
+
+def test_components_with_requires():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("other", "0.1").with_package_file("file.h", "0.1")})
+    client.run("create . user/channel")
+
+    conanfile = textwrap.dedent("""
+        from conans import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            requires = "other/0.1@user/channel"
+
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].requires.append("other::other")
+
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . pkg/0.1@")
+
+    client2 = TestClient(cache_folder=client.cache_folder)
+    conanfile = textwrap.dedent("""
+        [requires]
+        pkg/0.1
+
+        [generators]
+        PkgConfigDeps
+        """)
+    client2.save({"conanfile.txt": conanfile})
+    client2.run("install .")
