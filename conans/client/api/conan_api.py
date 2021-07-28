@@ -26,7 +26,7 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.tools import set_global_instances
@@ -239,39 +239,52 @@ class ConanAPIV2(object):
         data["results"] = results
         return data
 
+    def _get_revisions(self, ref, remote=None):
+        if isinstance(ref, PackageReference):
+            method_name = 'get_package_revisions'
+        elif isinstance(ref, ConanFileReference):
+            method_name = 'get_recipe_revisions'
+        else:
+            raise ConanException(f"Unknown reference type: {ref}")
+
+        # Let's get all the revisions from a remote server
+        if remote:
+            try:
+                return getattr(self.app.remote_manager, method_name)(ref, remote=remote)
+            except NotFoundException:
+                # This exception must be catched manually due to a server inconsistency:
+                # Artifactory API returns an empty result if the recipe doesn't exist, but
+                # Conan Server returns a 404. This probably should be fixed server side,
+                # but in the meantime we must handle it here
+                return []
+        else:
+            # Let's get the revisions from the local cache
+            revs = getattr(self.app.cache, method_name)(ref)
+            results = []
+            for revision in revs:
+                timestamp = self.app.cache.get_timestamp(revision)
+                result = {
+                    "revision": revision.revision,
+                    "time": from_timestamp_to_iso8601(timestamp)
+                }
+                results.append(result)
+            return results
+
     @api_method
-    def get_remote_recipe_revisions(self, reference, remote):
+    def get_package_revisions(self, reference, remote=None):
+        ref = PackageReference.loads(reference)
+        if ref.revision:
+            raise ConanException(f"Cannot list the revisions of a specific package revision")
+
+        return self._get_revisions(ref, remote=remote)
+
+    @api_method
+    def get_recipe_revisions(self, reference, remote=None):
         ref = ConanFileReference.loads(reference)
         if ref.revision:
-            raise ConanException("Cannot list the revisions of a specific recipe revision")
-        if not remote:
-            raise ConanException("Must get a remote")
+            raise ConanException(f"Cannot list the revisions of a specific recipe revision")
 
-        try:
-            return self.app.remote_manager.get_recipe_revisions(ref, remote=remote)
-        except NotFoundException:
-            # This exception must be catched manually due to a server inconsistency:
-            # Artifactory API returns an empty result if the recipe doesn't exist, but
-            # Conan Server returns a 404. This probably should be fixed server side,
-            # but in the meantime we must handle it here
-            return []
-
-    @api_method
-    def get_local_recipe_revisions(self, reference):
-        ref = ConanFileReference.loads(reference)
-        if ref.revision:
-            raise ConanException("Cannot list the revisions of a specific recipe revision")
-
-        recipe_revisions = self.app.cache.get_recipe_revisions(ref)
-        results = []
-        for revision in recipe_revisions:
-            timestamp = self.app.cache.get_timestamp(revision)
-            result = {
-                "revision": revision.revision,
-                "time": from_timestamp_to_iso8601(timestamp)
-            }
-            results.append(result)
-        return results
+        return self._get_revisions(ref, remote=remote)
 
 
 Conan = ConanAPIV2
