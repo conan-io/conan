@@ -18,10 +18,10 @@ from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
-CLI_V2_COMMANDS = [
-    'help',
-    'search',
-    'list'
+CLI_V1_COMMANDS = [
+    'install', 'config', 'get', 'info', 'remote', 'new', 'create', 'upload', 'export', 'export-pkg',
+    'test', 'source', 'build', 'editable', 'profile', 'remote', 'user', 'imports', 'remove', 'alias',
+    'download', 'inspect', 'lock', 'frogarian'
 ]
 
 
@@ -170,7 +170,7 @@ def main(args):
 
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
-    if command_argument not in CLI_V2_COMMANDS:
+    if command_argument in CLI_V1_COMMANDS:
         from conans.client.command import main as v1_main
         return v1_main(args)
 
