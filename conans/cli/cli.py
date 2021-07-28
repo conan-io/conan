@@ -19,7 +19,7 @@ from conans.util.log import logger
 
 
 CLI_V1_COMMANDS = [
-    'help', 'install', 'config', 'get', 'info', 'remote', 'new', 'create', 'upload', 'export', 'export-pkg',
+    'install', 'config', 'get', 'info', 'remote', 'new', 'create', 'upload', 'export', 'export-pkg',
     'test', 'source', 'build', 'editable', 'profile', 'remote', 'user', 'imports', 'remove', 'alias',
     'download', 'inspect', 'lock', 'frogarian'
 ]
