@@ -196,10 +196,15 @@ def test_conditional_compatible_range():
     client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock -s os=Linux")
     assert "dep/0.2 from local cache - Cache" in client.out
     assert "dep/0.1" not in client.out
+    print("WINDOWS-------------------------------------------")
+    print(client.out)
+    print(client.load("conan.lock"))
     client.run("lock create consumer/conanfile.txt --base --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/0.2" not in client.out
+    print("Linux-------------------------------------------")
+    print(client.out)
     print(client.load("conan.lock"))
 
     client.run("install consumer --lockfile=conan.lock --lockfile-out=win.lock -s os=Windows")
@@ -208,8 +213,10 @@ def test_conditional_compatible_range():
 
     client.run("install consumer --lockfile=conan.lock --lockfile-out=linux.lock -s os=Linux "
                "--build=missing")
-    assert "dep/0.1 from local cache - Cache" in client.out
-    assert "dep/0.2" not in client.out
+    print("Install LINUX-------------------------------------------")
+    print(client.out)
+    assert "dep/0.2 from local cache - Cache" in client.out
+    assert "dep/0.1" not in client.out
 
 
 def test_lock_full_config():
