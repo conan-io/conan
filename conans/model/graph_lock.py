@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
 from conans.client.graph.python_requires import PyRequires
-from conans.client.graph.range_resolver import satisfying
+from conans.client.graph.range_resolver import satisfying, range_satisfies
 from conans.client.profile_loader import _load_profile
 from conans.errors import ConanException
 from conans.model.info import PACKAGE_ID_UNKNOWN
@@ -175,6 +175,7 @@ class GraphLock(object):
         self.requires = []
         self.python_requires = []
         self.build_requires = []
+        self.alias = {}
 
         if deps_graph is None:
             return
@@ -197,6 +198,7 @@ class GraphLock(object):
         self.requires = list(reversed(sorted(requires)))
         self.python_requires = list(reversed(sorted(python_requires)))
         self.build_requires = list(reversed(sorted(build_requires)))
+        self.alias = deps_graph.aliased
 
     def only_recipes(self):
         for r in self.requires:
@@ -238,6 +240,40 @@ class GraphLock(object):
                 "requires": [repr(r) for r in self.requires],
                 "python_requires": [repr(r) for r in self.python_requires],
                 "build_requires": [repr(r) for r in self.build_requires]}
+
+    def resolve_locked(self, require):
+        ref = require.ref
+        locked_refs = self.requires
+        version_range = require.version_range
+        if version_range:
+            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
+                       r.channel == ref.channel]
+            for m in matches:
+                if range_satisfies(version_range, m.version):
+                    require.ref = m.get_ref()
+                    break
+        else:
+            alias = require.alias
+            if alias:
+                require.ref = self.alias.get(require.ref, require.ref)
+            elif require.ref.revision is None:
+                # find exact revision
+                pass
+
+    def resolve_locked_pyrequires(self, require):
+        ref = require.ref
+        locked_refs = self.python_requires  # CHANGE
+        version_range = require.version_range
+        if version_range:
+            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
+                       r.channel == ref.channel]
+            for m in matches:
+                if range_satisfies(version_range, m.version):
+                    require.ref = m.get_ref()
+                    break
+        else:
+            # find exact
+            pass
 
     def update_ref(self, ref):
         """ when the recipe is exported, it will complete the missing RREV, otherwise it should

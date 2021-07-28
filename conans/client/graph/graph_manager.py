@@ -25,12 +25,11 @@ class GraphManager(object):
 
         name, version, user, channel = None, None, None, None
         if conanfile_path.endswith(".py"):
-            lock_python_requires = None
             conanfile = self._loader.load_consumer(conanfile_path,
                                                    profile_host=profile_host,
                                                    name=name, version=version,
                                                    user=user, channel=channel,
-                                                   lock_python_requires=lock_python_requires)
+                                                   graph_lock=graph_lock)
 
             run_configure_method(conanfile, down_options=None, down_ref=None, ref=None)
         else:
@@ -102,14 +101,12 @@ class GraphManager(object):
               the lockfile, or to initialize
         """
         if path.endswith(".py"):
-            lock_python_requires = graph_lock.python_requires if graph_lock else None
-
             conanfile = self._loader.load_consumer(path, profile,
                                                    name=ref.name,
                                                    version=ref.version,
                                                    user=ref.user,
                                                    channel=ref.channel,
-                                                   lock_python_requires=lock_python_requires,
+                                                   graph_lock=graph_lock,
                                                    require_overrides=require_overrides)
 
             ref = ConanFileReference(conanfile.name, conanfile.version,

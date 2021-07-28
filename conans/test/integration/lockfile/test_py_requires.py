@@ -6,32 +6,76 @@ from conans.test.utils.tools import TestClient
 
 def test_transitive_py_requires():
     # https://github.com/conan-io/conan/issues/5529
-    creator = TestClient()
-    client = TestClient(cache_folder=creator.cache_folder)
+    client = TestClient()
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         class PackageInfo(ConanFile):
             python_requires = "dep/[>0.0]@user/channel"
         """)
-    creator.save({"dep/conanfile.py": GenConanfile(),
-                  "pkg/conanfile.py": conanfile})
-    creator.run("export dep dep/0.1@user/channel")
-    creator.run("export pkg pkg/0.1@user/channel")
-
-    conanfile = textwrap.dedent("""
+    consumer = textwrap.dedent("""
         from conans import ConanFile
         class MyConanfileBase(ConanFile):
             python_requires = "pkg/0.1@user/channel"
         """)
-    client.save({"conanfile.py": conanfile})
-    client.run("lock create conanfile.py --lockfile-out=conan.lock")
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "pkg/conanfile.py": conanfile,
+                 "consumer/conanfile.py": consumer})
 
-    creator.run("export dep dep/0.2@user/channel")
+    client.run("export dep dep/0.1@user/channel")
+    client.run("export pkg pkg/0.1@user/channel")
+    client.run("lock create consumer/conanfile.py --lockfile-out=conan.lock")
 
-    client.run("install conanfile.py --lockfile=conan.lock")
+    client.run("export dep dep/0.2@user/channel")
+
+    client.run("install consumer/conanfile.py --lockfile=conan.lock")
     assert "dep/0.1@user/channel" in client.out
     assert "dep/0.2" not in client.out
 
-    client.run("install conanfile.py")
+    client.run("install consumer/conanfile.py")
     assert "dep/0.2@user/channel" in client.out
     assert "dep/0.1" not in client.out
+
+
+def test_transitive_matching():
+    client = TestClient()
+    tool = textwrap.dedent("""
+        from conans import ConanFile
+        class PackageInfo(ConanFile):
+            python_requires = "dep/{}"
+        """)
+    pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyConanfileBase(ConanFile):
+            python_requires = "{}/0.1"
+            def configure(self):
+                for k, p in self.python_requires.all_items():
+                    self.output.info("%s: %s!!" % (k, p.ref))
+        """)
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "toola/conanfile.py": tool.format("0.1"),
+                 "toolb/conanfile.py": tool.format("0.2"),
+                 "pkga/conanfile.py": pkg.format("toola"),
+                 "pkgb/conanfile.py": pkg.format("toolb"),
+                 "app/conanfile.py": GenConanfile().with_requires("pkga/0.1", "pkgb/0.1")})
+
+    client.run("export dep dep/0.1@")
+    client.run("export dep dep/0.2@")
+    client.run("export toola toola/0.1@")
+    client.run("export toolb toolb/0.1@")
+    client.run("create pkga pkga/0.1@")
+    client.run("create pkgb pkgb/0.1@")
+    client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
+
+    client.run("export dep dep/0.2@")
+
+    client.run("install app/conanfile.py --lockfile=conan.lock")
+    assert "pkga/0.1: toola: toola/0.1!!" in client.out
+    assert "pkgb/0.1: toolb: toolb/0.1!!" in client.out
+    assert "pkga/0.1: dep: dep/0.1!!" in client.out
+    assert "pkgb/0.1: dep: dep/0.2!!" in client.out
+
+    client.run("install app/conanfile.py")
+    assert "pkga/0.1: toola: toola/0.1!!" in client.out
+    assert "pkgb/0.1: toolb: toolb/0.1!!" in client.out
+    assert "pkga/0.1: dep: dep/0.1!!" in client.out
+    assert "pkgb/0.1: dep: dep/0.2!!" in client.out

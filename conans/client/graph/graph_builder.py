@@ -166,24 +166,9 @@ class DepsGraphBuilder(object):
         # This is the first pass over one recip requires
         for require in node.conanfile.requires.values():
             if graph_lock is not None:
-                self._resolve_lock(node, require, graph_lock)
+                graph_lock.resolve_locked(require)
             self._resolve_alias(node, require, graph, check_updates, update, remotes)
             node.transitive_deps[require] = TransitiveRequirement(require, None)
-
-    def _resolve_lock(self, node, require, graph_lock):
-        ref = require.ref
-        locked_refs = graph_lock.requires
-        version_range = require.version_range
-        if version_range:
-            matches = [r for r in locked_refs if r.name == ref.name and r.user == ref.user and
-                       r.channel == ref.channel]
-            for m in matches:
-                if range_satisfies(version_range, m.version):
-                    require.ref = m.get_ref()
-                    break
-        else:
-            # find exact
-            pass
 
     def _resolve_alias(self, node, require, graph, check_updates, update, remotes):
         alias = require.alias
@@ -227,16 +212,13 @@ class DepsGraphBuilder(object):
         result = self._proxy.get_recipe(ref, check_updates, update, remotes)
         conanfile_path, recipe_status, remote, new_ref = result
 
-        # TODO locked_id = requirement.locked_id
-        locked_id = None
-        lock_py_requires = graph_lock.python_requires(locked_id) if locked_id is not None else None
         dep_conanfile = self._loader.load_conanfile(conanfile_path, profile, ref=ref,
-                                                    lock_python_requires=lock_py_requires)
+                                                    graph_lock=graph_lock)
         if recipe_status == RECIPE_EDITABLE:
             dep_conanfile.in_local_cache = False
             dep_conanfile.develop = True
 
-        return new_ref, dep_conanfile, recipe_status, remote, locked_id
+        return new_ref, dep_conanfile, recipe_status, remote
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock,
                          update, check_updates, remotes, populate_settings_target):
@@ -261,7 +243,7 @@ class DepsGraphBuilder(object):
         except ConanException as e:
             raise GraphError.missing(node, require, str(e))
 
-        new_ref, dep_conanfile, recipe_status, remote, locked_id = resolved
+        new_ref, dep_conanfile, recipe_status, remote = resolved
 
         # TODO: This should be out of here
         # If there is a context_switch, it is because it is a BR-build
@@ -282,9 +264,6 @@ class DepsGraphBuilder(object):
         new_node = Node(new_ref, dep_conanfile, context=context)
         new_node.recipe = recipe_status
         new_node.remote = remote
-
-        if locked_id is not None:
-            new_node.id = locked_id
 
         down_options = node.conanfile.options.deps_package_values
         self._prepare_node(new_node, profile_host, profile_build, graph_lock,

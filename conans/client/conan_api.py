@@ -1412,6 +1412,8 @@ class ConanAPIV1(object):
         deps_graph = self.app.graph_manager.load_graph(ref_or_path, None, phost,
                                                        pbuild, graph_lock, root_ref, build, update,
                                                        update, remotes, recorder)
+        if deps_graph.error:
+            raise deps_graph.error
         print_graph(deps_graph, self.app.out)
 
         # The computed graph-lock by the graph expansion

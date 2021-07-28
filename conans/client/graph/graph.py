@@ -197,7 +197,6 @@ class DepsGraph(object):
         self.nodes = []
         self.aliased = {}
         self.error = False
-        self.new_aliased = {}
         self._node_counter = initial_node_id if initial_node_id is not None else -1
 
     def __repr__(self):
