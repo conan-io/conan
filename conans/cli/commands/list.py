@@ -68,16 +68,16 @@ def list_package_ids_cli_formatter(results):
             cli_out_write(repr(PackageReference(reference, pkg_id)),
                           fg=reference_color, indentation=2)
             for prop_name, values in props.items():
-                if prop_name in requires_fields:
-                    if values:
-                        cli_out_write("requires:", fg=Color.BRIGHT_YELLOW, indentation=4)
-                        for req in values:
-                            cli_out_write(req, fg=Color.CYAN, indentation=6)
+                if not values:
+                    continue
+                elif prop_name in requires_fields:
+                    cli_out_write("requires:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                    for req in values:
+                        cli_out_write(req, fg=Color.CYAN, indentation=6)
                 elif prop_name in general_fields:
-                    if values:
-                        cli_out_write(f"{prop_name}:", fg=Color.BRIGHT_YELLOW, indentation=4)
-                        for name, val in values.items():
-                            cli_out_write(f"{name}={val}", fg=Color.CYAN, indentation=6)
+                    cli_out_write(f"{prop_name}:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                    for name, val in values.items():
+                        cli_out_write(f"{name}={val}", fg=Color.CYAN, indentation=6)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module
@@ -213,8 +213,9 @@ def list_package_revisions(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters=list_package_ids_formatters)
 def list_package_ids(conan_api, parser, subparser, *args):
     """
-    List all the package IDs for a given recipe reference. If it doesn't include the revision,
-    the command will retrieve all the package IDs for the latest one by default.
+    List all the package IDs for a given recipe reference. If the reference doesn't
+    include the recipe revision, the command will retrieve all the package IDs for
+    the most recent revision.
     """
     _add_common_list_subcommands(subparser, "reference")
     args = parser.parse_args(*args)
