@@ -72,7 +72,7 @@ private Closure runTests(String nodeName, String pythonVersion, String module) {
                                 + "python -m pip install -r conans/requirements_dev.txt && "
 
                 def conanToolInstall = "python -m pip install . && " \
-                                     + "conan --version && conan --help && "
+                                     + "conan --version && "
 
 
                 def launchTests = "python -m pytest ${module} -n=4"
