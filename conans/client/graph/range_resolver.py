@@ -118,17 +118,11 @@ class RangeResolver(object):
         # The search pattern must be a string
         search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
 
-        # TODO: cache2.0 check with --update flows for the new cache
-        if update:
-            resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
-            if not resolved_ref:
-                remote_name = None
-                resolved_ref = self._resolve_local(search_ref, version_range)
-        else:
-            remote_name = None
-            resolved_ref = self._resolve_local(search_ref, version_range)
-            if not resolved_ref:
-                resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
+        remote_name = None
+        resolved_ref = self._resolve_local(search_ref, version_range)
+        if not resolved_ref or update:
+            resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes,
+                                                             check_all_remotes=update)
 
         origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
         if resolved_ref:
@@ -148,24 +142,36 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_remotes(self, search_ref, version_range, remotes):
+    def _search_remotes(self, search_ref, version_range, remotes, check_all_remotes):
         pattern = str(search_ref)
+        results = []
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
                 remote_results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
                 remote_results = [ref for ref in remote_results
                                   if ref.user == search_ref.user and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
-                if resolved_version:
+                if resolved_version and not check_all_remotes:
                     return resolved_version, remote.name
-        return None, None
+                elif resolved_version:
+                    results.append({"remote": remote.name,
+                                    "version": resolved_version})
+        if len(results) > 0:
+            resolved_version = self._resolve_version(version_range,
+                                                     [result.get("version") for result in results])
+            for result in results:
+                if result.get("version") == resolved_version:
+                    return result.get("version"), result.get("remote")
+        else:
+            return None, None
 
-    def _resolve_remote(self, search_ref, version_range, remotes):
+    def _resolve_remote(self, search_ref, version_range, remotes, check_all_remotes):
         # We should use ignorecase=False, we want the exact case!
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
         if found_refs is None:
             # Searching for just the name is much faster in remotes like Artifactory
-            found_refs, remote_name = self._search_remotes(search_ref, version_range, remotes)
+            found_refs, remote_name = self._search_remotes(search_ref, version_range, remotes,
+                                                           check_all_remotes)
             if found_refs:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:
