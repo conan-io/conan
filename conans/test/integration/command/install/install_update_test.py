@@ -43,7 +43,7 @@ def test_update_binaries():
     assert value == new_value
 
     client2.run("install Pkg/0.1@lasote/testing --update")
-    assert "Current package is older than remote upstream one" in client2.out
+    assert "Current package revision is older than the remote one" in client2.out
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
     assert value != new_value
 
@@ -57,7 +57,7 @@ def test_update_binaries():
     client2.run("install Pkg/0.1@lasote/testing")
     value2 = load(os.path.join(client2.current_folder, "file.txt"))
     client2.run("install Pkg/0.1@lasote/testing --update -r default")
-    assert "Current package is newer than remote upstream one" in client2.out
+    assert "Current package revision is newer than the remote one" in client2.out
     new_value = load(os.path.join(client2.current_folder, "file.txt"))
     assert value2 == new_value
 
