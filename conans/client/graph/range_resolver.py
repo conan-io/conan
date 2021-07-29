@@ -118,6 +118,7 @@ class RangeResolver(object):
         # The search pattern must be a string
         search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
 
+        # TODO: cache2.0 check with --update flows for the new cache
         if update:
             resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes)
             if not resolved_ref:
