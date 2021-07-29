@@ -497,7 +497,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+                graph_lock_file = GraphLockFile(graph_lock)
                 graph_lock_file.save(lockfile_out)
             return recorder.get_info()
         except ConanException as exc:
@@ -1287,6 +1287,15 @@ class ConanAPIV1(object):
                      generators=None, install_folder=None, cwd=None,
                      lockfile_out=None, recipes=None):
         lockfile = _make_abs_path(lockfile, cwd) if lockfile else None
+
+        """def install_reference(self, reference, settings=None, options=None, env=None,
+                              remote_name=None, build=None, profile_names=None,
+                              update=False, generators=None, install_folder=None, cwd=None,
+                              lockfile=None, lockfile_out=None, profile_build=None,
+                              lockfile_node_id=None, is_build_require=False, conf=None,
+                              require_overrides=None):"""
+        profile_host = ProfileData(profiles=profile_names, settings=settings, options=options,
+                                   env=env, conf=conf)
         graph_info = get_graph_info(None, None, cwd,
                                     self.app.cache, self.app.out, lockfile=lockfile)
         phost, pbuild, graph_lock, root_ref = graph_info

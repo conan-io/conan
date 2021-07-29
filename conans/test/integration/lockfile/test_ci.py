@@ -80,17 +80,18 @@ def test_single_config_centralized(client_setup):
     print(b_win)
 
     # Now lets build the application, to see everything ok
-    client.run("lock install b_win.lock --lockfile-out=pkgd2.lock --build=missing")
+    client.run("lock install app1_b_changed.lock --lockfile-out=app1_b_integrated.lock "
+               "--build=missing")
     print(client.out)
     assert "pkgb/0.2" in client.out
     assert "pkgb/0.1" not in client.out
     assert "pkgd/0.1: DEP FILE pkga: HelloA" in client.out
     assert "pkgd/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
-    pkgd2_lockfile = client.load("pkgd2.lock")
-    print(pkgd2_lockfile)
-    assert "pkgb/0.2" in pkgd2_lockfile
-    assert "pkgb/0.1" not in pkgd2_lockfile
+    app1_b_integrated = client.load("app1_b_integrated.lock")
+    print(app1_b_integrated)
+    assert "pkgb/0.2" in app1_b_integrated
+    assert "pkgb/0.1" not in app1_b_integrated
 
 
 def test_single_config_centralized_out_range(client_setup):
@@ -342,5 +343,3 @@ def test_multi_config_bundle(client_setup):
         assert "pkgb/0.2" in client_aux.out
         assert "pkgb/0.1" not in client_aux.out
         assert "DEP FILE pkga: HelloA" in client_aux.out
-        assert "DEP FILE pkgb: ByeB World!!" in client_aux.out
-
