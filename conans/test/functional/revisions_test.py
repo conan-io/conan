@@ -51,7 +51,7 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         self.assertEqual(pref.ref.revision, pref2.ref.revision)
 
         self.c_v2.run("install {}".format(self.ref))
-        self.assertIn("{} from 'remote2' - Downloaded".format(self.ref), self.c_v2.out)
+        self.assertIn("{} from 'default' - Downloaded".format(self.ref), self.c_v2.out)
         self.assertIn("Retrieving package {} from remote 'remote2'".format(pref.id), self.c_v2.out)
 
     def test_update_recipe_iterating_remotes(self):
