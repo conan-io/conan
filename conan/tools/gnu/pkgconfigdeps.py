@@ -49,7 +49,8 @@ class PkgConfigDeps(object):
         self._conanfile = conanfile
 
     def _get_require_comp_name(self, dep, req):
-        pkg_name = dep.ref.name
+        # FIXME: this str() is only needed for python2.7 (unicode values). Remove it for Conan 2.0
+        pkg_name = str(dep.ref.name)
         pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
         # FIXME: it could allow defining requires to not direct dependencies
         req = self._conanfile.dependencies.host[pkg]
