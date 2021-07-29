@@ -294,6 +294,7 @@ class RestV2Methods(RestCommonMethods):
     def get_recipe_revisions(self, ref):
         url = self.router.recipe_revisions(ref)
         tmp = self.get_json(url)["revisions"]
+        # FIXME: the server API is returning an iso date, we have to convert to timestamp
         tmp = [{"revision": item.get("revision"),
                 "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
         if ref.revision:
@@ -306,6 +307,7 @@ class RestV2Methods(RestCommonMethods):
     def get_package_revisions(self, pref):
         url = self.router.package_revisions(pref)
         tmp = self.get_json(url)["revisions"]
+        # FIXME: the server API is returning an iso date, we have to convert to timestamp
         tmp = [{"revision": item.get("revision"),
                 "time": from_iso8601_to_timestamp(item.get("time"))} for item in tmp]
         if pref.revision:
