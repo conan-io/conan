@@ -265,7 +265,7 @@ class ConanAPIV2(object):
                 timestamp = self.app.cache.get_timestamp(revision)
                 result = {
                     "revision": revision.revision,
-                    "time": from_timestamp_to_iso8601(timestamp)
+                    "time": timestamp
                 }
                 results.append(result)
             return results
