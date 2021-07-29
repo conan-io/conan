@@ -4,31 +4,32 @@ from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAN
 from conans.cli.output import cli_out_write
 from conans.client.output import Color
 from conans.util.dates import from_timestamp_to_iso8601
+from conans.model.ref import PackageReference
 
 remote_color = Color.BRIGHT_BLUE
 recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 
 
-def _print_common_list_cli_output(results, ref_type):
-    if results.get("error"):
+def _print_common_headers(result, ref_type):
+    if result.get("error"):
         # TODO: Handle errors
         return
 
-    if results.get("remote"):
-        cli_out_write(f"{results['remote']}:", fg=remote_color)
+    if result.get("remote"):
+        cli_out_write(f"{result['remote']}:", fg=remote_color)
     else:
         cli_out_write("Local Cache:", remote_color)
 
-    if not results.get("results"):
+    if not result.get("results"):
         cli_out_write(f"There are no matching {ref_type}", indentation=2)
 
 
 def list_recipes_cli_formatter(results):
-    for remote_results in results:
-        _print_common_list_cli_output(remote_results, "recipes")
+    for result in results:
+        _print_common_headers(result, "recipes")
         current_recipe = None
-        for recipe in remote_results["results"]:
+        for recipe in result["results"]:
             if recipe["name"] != current_recipe:
                 current_recipe = recipe["name"]
                 cli_out_write(current_recipe, fg=recipe_color, indentation=2)
@@ -38,10 +39,10 @@ def list_recipes_cli_formatter(results):
 
 
 def _list_revisions_cli_formatter(results, ref_type):
-    for remote_results in results:
-        _print_common_list_cli_output(remote_results, ref_type)
-        reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
-        for revisions in remote_results["results"]:
+    for result in results:
+        _print_common_headers(result, ref_type)
+        reference = result["reference"]
+        for revisions in result["results"]:
             rev = revisions["revision"]
             date = from_timestamp_to_iso8601(revisions["time"])
             cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
@@ -53,6 +54,30 @@ def list_recipe_revisions_cli_formatter(results):
 
 def list_package_revisions_cli_formatter(results):
     _list_revisions_cli_formatter(results, "packages")
+
+
+def list_package_ids_cli_formatter(results):
+    # Artifactory uses field 'requires', conan_center 'full_requires'
+    requires_fields = ("requires", "full_requires")
+    general_fields = ("options", "settings")
+
+    for result in results:
+        _print_common_headers(result, "references")
+        reference = result["reference"]
+        for pkg_id, props in result["results"].items():
+            cli_out_write(repr(PackageReference(reference, pkg_id)),
+                          fg=reference_color, indentation=2)
+            for prop_name, values in props.items():
+                if not values:
+                    continue
+                elif prop_name in requires_fields:
+                    cli_out_write("requires:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                    for req in values:
+                        cli_out_write(req, fg=Color.CYAN, indentation=6)
+                elif prop_name in general_fields:
+                    cli_out_write(f"{prop_name}:", fg=Color.BRIGHT_YELLOW, indentation=4)
+                    for name, val in values.items():
+                        cli_out_write(f"{name}={val}", fg=Color.CYAN, indentation=6)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module
@@ -71,6 +96,10 @@ list_recipe_revisions_formatters = {
 }
 list_package_revisions_formatters = {
     "cli": list_package_revisions_cli_formatter,
+    "json": json_formatter
+}
+list_package_ids_formatters = {
+    "cli": list_package_ids_cli_formatter,
     "json": json_formatter
 }
 
@@ -134,33 +163,24 @@ def _get_remotes(conan_api, args):
 @conan_subcommand(formatters=list_recipe_revisions_formatters)
 def list_recipe_revisions(conan_api, parser, subparser, *args):
     """
-    List all the revisions of a recipe
+    List all the revisions of a recipe reference.
     """
     _add_common_list_subcommands(subparser, "reference")
     args = parser.parse_args(*args)
 
-    if not args.cache and not args.remote and not args.all_remotes:
-        # If neither remote nor cache are defined, show results only from cache
-        args.cache = True
-
-    remotes = _get_remotes(conan_api, args)
-
+    use_remotes = any([args.remote, args.all_remotes])
     results = []
-    if args.cache:
-        result = {
-            'remote': None,
-            'reference': args.reference,
-            'results': conan_api.get_recipe_revisions(args.reference)
-        }
+
+    # If neither remote nor cache are defined, show results only from cache
+    if args.cache or not use_remotes:
+        result = conan_api.get_recipe_revisions(args.reference)
         results.append(result)
 
-    for remote in remotes:
-        result = {
-            'remote': remote.name,
-            'reference': args.reference,
-            'results': conan_api.get_recipe_revisions(args.reference, remote=remote)
-        }
-        results.append(result)
+    if use_remotes:
+        remotes = _get_remotes(conan_api, args)
+        for remote in remotes:
+            result = conan_api.get_recipe_revisions(args.reference, remote=remote)
+            results.append(result)
 
     return results
 
@@ -168,33 +188,51 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
 @conan_subcommand(formatters=list_package_revisions_formatters)
 def list_package_revisions(conan_api, parser, subparser, *args):
     """
-    List all the revisions of a package ID
+    List all the revisions of a package ID reference.
     """
     _add_common_list_subcommands(subparser, "package_reference")
     args = parser.parse_args(*args)
 
-    if not args.cache and not args.remote and not args.all_remotes:
-        # If neither remote nor cache are defined, show results only from cache
-        args.cache = True
-
-    remotes = _get_remotes(conan_api, args)
-
+    use_remotes = any([args.remote, args.all_remotes])
     results = []
-    if args.cache:
-        result = {
-            'remote': None,
-            'package_reference': args.package_reference,
-            'results': conan_api.get_package_revisions(args.package_reference)
-        }
+
+    # If neither remote nor cache are defined, show results only from cache
+    if args.cache or not use_remotes:
+        result = conan_api.get_package_revisions(args.package_reference)
         results.append(result)
 
-    for remote in remotes:
-        result = {
-            'remote': remote.name,
-            'package_reference': args.package_reference,
-            'results': conan_api.get_package_revisions(args.package_reference, remote=remote)
-        }
+    if use_remotes:
+        remotes = _get_remotes(conan_api, args)
+        for remote in remotes:
+            result = conan_api.get_package_revisions(args.package_reference, remote=remote)
+            results.append(result)
+
+    return results
+
+
+@conan_subcommand(formatters=list_package_ids_formatters)
+def list_package_ids(conan_api, parser, subparser, *args):
+    """
+    List all the package IDs for a given recipe reference. If the reference doesn't
+    include the recipe revision, the command will retrieve all the package IDs for
+    the most recent revision.
+    """
+    _add_common_list_subcommands(subparser, "reference")
+    args = parser.parse_args(*args)
+
+    use_remotes = any([args.remote, args.all_remotes])
+    results = []
+
+    # If neither remote nor cache are defined, show results only from cache
+    if args.cache or not use_remotes:
+        result = conan_api.get_package_ids(args.reference)
         results.append(result)
+
+    if use_remotes:
+        remotes = _get_remotes(conan_api, args)
+        for remote in remotes:
+            result = conan_api.get_package_ids(args.reference, remote=remote)
+            results.append(result)
 
     return results
 
