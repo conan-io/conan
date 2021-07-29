@@ -1,12 +1,10 @@
 import os
-import platform
 import re
-import textwrap
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
 from conans.model.graph_lock import LOCKFILE
+from conans.model.ref import ConanFileReference
+from conans.test.utils.tools import TestClient
 
 
 class GeneratorsTest(unittest.TestCase):
@@ -25,7 +23,6 @@ unknown
         base = '''
 [generators]
 cmake
-xcode
 ycm
     '''
         files = {"conanfile.txt": base}
@@ -34,7 +31,6 @@ ycm
         client.run("install . --build")
 
         self.assertEqual(sorted(['conanfile.txt', 'conanbuildinfo.cmake',
-                                 'conanbuildinfo.xcconfig',
                                  'conan_ycm_flags.json', 'conan_ycm_extra_conf.py',
                                  LOCKFILE]),
                          sorted(os.listdir(client.current_folder)))

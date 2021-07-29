@@ -11,7 +11,6 @@ from .cmake_paths import CMakePathsGenerator
 from .deploy import DeployGenerator
 from .json_generator import JsonGenerator
 from .markdown import MarkdownGenerator
-from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from ..tools import chdir
 
@@ -20,7 +19,6 @@ class GeneratorManager(object):
     def __init__(self):
         self._generators = {"cmake": CMakeGenerator,
                             "cmake_paths": CMakePathsGenerator,
-                            "xcode": XCodeGenerator,
                             "ycm": YouCompleteMeGenerator,
                             "json": JsonGenerator,
                             "deploy": DeployGenerator,
@@ -181,12 +179,11 @@ def write_toolchain(conanfile, path, output):
             with conanfile_exception_formatter(str(conanfile), "generate"):
                 conanfile.generate()
 
-    # tools.env.virtualenv:auto_use will be always True in Conan 2.0
-    if conanfile.conf["tools.env.virtualenv:auto_use"] and conanfile.virtualenv:
+    if conanfile.virtualenv:
         mkdir(path)
         with chdir(path):
             from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-            from conan.tools.env import VirtualRunEnv
+            from conan.tools.env.virtualrunenv import VirtualRunEnv
             env = VirtualBuildEnv(conanfile)
             env.generate()
 
