@@ -90,16 +90,13 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
 
-        profile.env_values.add("CXX", "path/to/my/compiler/g++")
-        profile.env_values.add("CC", "path/to/my/compiler/gcc")
-
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
                          '\ncompiler.version=14\n'
                          '[options]\n'
                          '[build_requires]\n'
-                         '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
+                         '[env]\n',
                          profile.dumps())
 
 

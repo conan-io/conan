@@ -15,7 +15,7 @@ class JsonTest(unittest.TestCase):
 
     def test_variables_setup(self):
         conanfile = ConanFile(Mock(), None)
-        conanfile.initialize(Settings({}), EnvValues())
+        conanfile.initialize(Settings({}))
 
         # Add some cpp_info for dependencies
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -58,12 +58,6 @@ class JsonTest(unittest.TestCase):
         self.assertEqual(my_pkg["name"], "MyPkg")
         self.assertEqual(my_pkg["description"], "My cool description")
         self.assertEqual(my_pkg["defines"], ["MYDEFINE1"])
-
-        # Check env_info
-        env_info = parsed["deps_env_info"]
-        self.assertListEqual(sorted(env_info.keys()), sorted(["VAR1", "PATH"]))
-        self.assertEqual(env_info["VAR1"], "env_info-value1")
-        self.assertListEqual(env_info["PATH"], ["path-extended"])
 
         # Check user_info
         user_info = parsed["deps_user_info"]

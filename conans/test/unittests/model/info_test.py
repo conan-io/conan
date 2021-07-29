@@ -40,10 +40,6 @@ info_text = '''[settings]
     zlib:shared=False
 
 [env]
-    A_OTHERVAR=OTHERVALUES
-    Z_OTHERVAR=OTHERVALUES
-    Aackage1:PATH=/PATH/TO
-    Package1:PATH=/PATH/TO
 '''
 
 
