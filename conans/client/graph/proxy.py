@@ -56,12 +56,10 @@ class ConanProxy(object):
 
         # NOT in disk, must be retrieved from remotes
         if not ref:
-            # in 2.0 revisions are completely inmutable so if we specified the revision
-            # and we are not checking updates we don't want to check all servers,
-            # just get the first match
-            check_all_servers = False if reference.revision and not check_updates else True
+            # we will only check all servers for latest revision if we did a --update
             remote, new_ref = self._download_recipe(reference, output, remotes,
-                                                    remotes.selected, check_all_servers)
+                                                    remotes.selected,
+                                                    check_all_servers=check_updates)
             recipe_layout = self._cache.ref_layout(new_ref)
             status = RECIPE_DOWNLOADED
             conanfile_path = recipe_layout.conanfile()
