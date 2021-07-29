@@ -11,7 +11,7 @@ recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 
 
-def _print_common_list_cli_output(result, ref_type):
+def _print_common_headers(result, ref_type):
     if result.get("error"):
         # TODO: Handle errors
         return
@@ -27,7 +27,7 @@ def _print_common_list_cli_output(result, ref_type):
 
 def list_recipes_cli_formatter(results):
     for result in results:
-        _print_common_list_cli_output(result, "recipes")
+        _print_common_headers(result, "recipes")
         current_recipe = None
         for recipe in result["results"]:
             if recipe["name"] != current_recipe:
@@ -40,7 +40,7 @@ def list_recipes_cli_formatter(results):
 
 def _list_revisions_cli_formatter(results, ref_type):
     for result in results:
-        _print_common_list_cli_output(result, ref_type)
+        _print_common_headers(result, ref_type)
         reference = result["reference"]
         for revisions in result["results"]:
             rev = revisions["revision"]
@@ -62,7 +62,7 @@ def list_package_ids_cli_formatter(results):
     general_fields = ("options", "settings")
 
     for result in results:
-        _print_common_list_cli_output(result, "references")
+        _print_common_headers(result, "references")
         reference = result["reference"]
         for pkg_id, props in result["results"].items():
             cli_out_write(repr(PackageReference(reference, pkg_id)),
