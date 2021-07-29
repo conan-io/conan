@@ -299,6 +299,8 @@ def test_pkg_getting_public_requires():
             def package_info(self):
                 self.cpp_info.components["cmp1"].libs = ["other_cmp1"]
                 self.cpp_info.components["cmp2"].libs = ["other_cmp2"]
+                self.cpp_info.components["cmp3"].requires.append("cmp1")
+
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create . other/1.0@")
@@ -329,3 +331,5 @@ def test_pkg_getting_public_requires():
     assert "Requires: cmp1" in pc_content
     assert client2.load("other-cmp1.pc")
     assert client2.load("other-cmp2.pc")
+    pc_content = client2.load("other-cmp3.pc")
+    assert "Requires: cmp1" in pc_content

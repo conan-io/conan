@@ -51,7 +51,8 @@ class PkgConfigDeps(object):
     def _get_require_comp_name(self, dep, req):
         pkg_name = dep.ref.name
         pkg, comp_name = req.split("::") if "::" in req else (pkg_name, req)
-        req = dep.dependencies.direct_host[pkg]
+        # FIXME: it could allow defining requires to not direct dependencies
+        req = self._conanfile.dependencies.host[pkg]
         cmp_name = get_component_alias(req, comp_name)
         return cmp_name
 
