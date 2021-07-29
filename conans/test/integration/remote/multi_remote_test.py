@@ -167,10 +167,10 @@ class MultiRemotesTest(unittest.TestCase):
         client.run("remove '*' -f")
 
         client.run("install Hello0/0.0@lasote/stable")
-        # If we don't set a remote we find between all remotes and get the latest
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Downloaded", client.out)
+        # If we don't set a remote we find between all remotes and get the first match
+        self.assertIn("Hello0/0.0@lasote/stable from 'default' - Downloaded", client.out)
         client.run("install Hello0/0.0@lasote/stable --update")
-        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Cache", client.out)
+        self.assertIn("Hello0/0.0@lasote/stable from 'local' - Updated", client.out)
 
         client.run("install Hello0/0.0@lasote/stable --update -r default")
         self.assertIn("Hello0/0.0@lasote/stable from 'default' - Cache", client.out)
