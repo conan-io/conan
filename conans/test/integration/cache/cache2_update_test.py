@@ -349,13 +349,8 @@ class TestUpdateFlows:
         for minor in range(3):
             self.client2.save({"conanfile.py": GenConanfile("liba", f"1.{minor}.0").with_build_msg("REV0")})
             self.client2.run("create .")
-
-        self.the_time = 10.0
-        self._upload_ref_to_server("liba/1.0.0", "server0", self.client2)
-        self.the_time = 20.0
-        self._upload_ref_to_server("liba/1.1.0", "server1", self.client2)
-        self.the_time = 30.0
-        self._upload_ref_to_server("liba/1.2.0", "server2", self.client2)
+            self.the_time = 10.0 + minor*10.0
+            self._upload_ref_to_server(f"liba/1.{minor}.0", f"server{minor}", self.client2)
 
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV0")})
         self.client.run("create .")
@@ -418,12 +413,32 @@ class TestUpdateFlows:
                "in remote 'server2'" in self.client.out
         assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
 
-        # TEST THIS CASE WITH --update --> SHOULD WE TAKE 1.2(REV1) THAT IS THE FIRST MATCH?
-        # SHOULD WE TAKE THE LATEST? 1.2 REV3? SHOULD WE RESOLVE THAT IN THE PROXY INSTEAD OF HERE?
-        # MAYBE THIS IS WORKING THE RIGHT WAY NOW, CHECK THAT!
+        # If we have multiple revisions with different names for the same version and we
+        # do a --update we are going to first resolver the version range agains server0
+        # then in the proxy we will install rev2 that is the latest
         # | CLIENT         | CLIENT2        | SERVER0        | SERVER1        | SERVER2        |
         # |----------------|----------------|----------------|----------------|----------------|
-        # | 1.1 REV0 (10)  | 1.0 REV0 (1000)| 1.2 REV1 (10)  | 1.2 REV2 (20)  | 1.2 REV3 (30)  |
-        # |                | 1.1 REV0 (1000)|                |                |                |
-        # |                | 1.2 REV0 (1000)|                |                |                |
+        # | 1.0 REV0 (10)  |                | 1.2 REV0 (10)  | 1.2 REV1 (20)  | 1.2 REV2 (30)  |
+        # |                |                |                |                |                |
+        # |                |                |                |                |                |
 
+        self.client.run("remove * -f")
+        self.client2.run("remove * -f")
+
+        # now we are uploading different revisions with different dates, but the same version
+        for minor in range(3):
+            self.client2.save({"conanfile.py": GenConanfile("liba", f"1.2.0").with_build_msg(f"REV{minor}")})
+            self.client2.run("create .")
+            self.the_time = 10.0 + minor*10.0
+            self._upload_ref_to_server(f"liba/1.2.0", f"server{minor}", self.client2)
+
+        self.client.save({"conanfile.py": GenConanfile("liba", "1.0.0").with_build_msg("REV0")})
+        self.client.run("create .")
+
+        self.client.run("install liba/[>1.0.0]@ --update")
+        assert "liba/* versions found in 'server0' remote" in self.client.out
+        assert "Version range '>1.0.0' required by 'virtual' resolved to 'liba/1.2.0' " \
+               "in remote 'server0'" in self.client.out
+        assert "liba/1.2.0 from 'server2' - Downloaded" in self.client.out
+        assert "liba/1.2.0: Retrieving package 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 " \
+               "from remote 'server2' " in self.client.out
