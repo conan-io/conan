@@ -8,7 +8,6 @@ from conans.client.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE
                                        RECIPE_UPDATED, RECIPE_EDITABLE,
                                        RECIPE_INCACHE_DATE_UPDATED)
 from conans.client.output import ScopedOutput
-from conans.util.dates import from_iso8601_to_timestamp
 from conans.client.recorder.action_recorder import INSTALL_ERROR_MISSING, INSTALL_ERROR_NETWORK
 from conans.client.remover import DiskRemover
 from conans.errors import ConanException, NotFoundException, RecipeNotFoundException
@@ -136,7 +135,7 @@ class ConanProxy(object):
                 for rrev in remote_rrevs:
                     results.append({'remote': remote,
                                     'reference': reference.copy_with_rev(rrev.get("revision")),
-                                    'time': from_iso8601_to_timestamp(rrev.get("time"))})
+                                    'time': rrev.get("time")})
                 if len(results) > 0 and not check_all_servers:
                     break
             except NotFoundException:

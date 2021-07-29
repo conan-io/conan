@@ -11,7 +11,6 @@ from conans.errors import ConanConnectionError, ConanException, NotFoundExceptio
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conans.search.search import filter_packages
 from conans.util import progress_bar
-from conans.util.dates import from_iso8601_to_timestamp
 from conans.util.env_reader import get_env
 from conans.util.files import make_read_only, mkdir, tar_extract, touch_folder, md5sum, sha1sum, \
     rmdir
@@ -112,7 +111,7 @@ class RemoteManager(object):
         download_export = layout.download_export()
         zipped_files = self._call_remote(remote, "get_recipe", ref, download_export)
         remote_revisions = self._call_remote(remote, "get_recipe_revisions", ref)
-        ref_time = from_iso8601_to_timestamp(remote_revisions[0].get("time"))
+        ref_time = remote_revisions[0].get("time")
         duration = time.time() - t1
         log_recipe_download(ref, duration, remote.name, zipped_files)
 
