@@ -26,16 +26,6 @@ class GraphBinariesAnalyzer(object):
         self._fixed_package_id = cache.config.full_transitive_package_id
 
     @staticmethod
-    def _check_update(upstream_manifest, package_folder, output):
-        read_manifest = FileTreeManifest.load(package_folder)
-        if upstream_manifest != read_manifest:
-            if upstream_manifest.time > read_manifest.time:
-                output.warn("Current package is older than remote upstream one")
-                return True
-            else:
-                output.warn("Current package is newer than remote upstream one")
-
-    @staticmethod
     def _evaluate_build(node, build_mode):
         ref, conanfile = node.ref, node.conanfile
         with_deps_to_build = False
