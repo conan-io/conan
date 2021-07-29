@@ -3,7 +3,7 @@ import json
 from conans.cli.command import conan_command, conan_subcommand, Extender, COMMAND_GROUPS
 from conans.cli.output import cli_out_write
 from conans.client.output import Color
-from conans.util.dates import iso8601_to_str
+from conans.util.dates import from_timestamp_to_iso8601
 
 remote_color = Color.BRIGHT_BLUE
 recipe_color = Color.BRIGHT_WHITE
@@ -43,7 +43,7 @@ def _list_revisions_cli_formatter(results, ref_type):
         reference = remote_results["package_reference" if ref_type == "packages" else "reference"]
         for revisions in remote_results["results"]:
             rev = revisions["revision"]
-            date = iso8601_to_str(revisions["time"])
+            date = from_timestamp_to_iso8601(revisions["time"])
             cli_out_write(f"{reference}#{rev} ({date})", fg=recipe_color, indentation=2)
 
 
