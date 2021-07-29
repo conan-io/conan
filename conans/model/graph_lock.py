@@ -1,15 +1,10 @@
 import json
 import os
-from collections import OrderedDict
 
 from conans.client.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER
-from conans.client.graph.python_requires import PyRequires
-from conans.client.graph.range_resolver import satisfying, range_satisfies
-from conans.client.profile_loader import _load_profile
+from conans.client.graph.range_resolver import range_satisfies
 from conans.errors import ConanException
-from conans.model.info import PACKAGE_ID_UNKNOWN
-from conans.model.options import OptionsValues
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.util.files import load, save
 
@@ -19,22 +14,12 @@ LOCKFILE_VERSION = "0.5"
 
 class GraphLockFile(object):
 
-    def __init__(self, profile_host, profile_build, graph_lock):
-        self._profile_host = profile_host
-        self._profile_build = profile_build
+    def __init__(self, graph_lock):
         self._graph_lock = graph_lock
 
     @property
     def graph_lock(self):
         return self._graph_lock
-
-    @property
-    def profile_host(self):
-        return self._profile_host
-
-    @property
-    def profile_build(self):
-        return self._profile_build
 
     @staticmethod
     def load(path):
@@ -49,7 +34,7 @@ class GraphLockFile(object):
             raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
     def save(self, path):
-        serialized_graph_str = self._dumps(path)
+        serialized_graph_str = self._dumps()
         save(path, serialized_graph_str)
 
     @staticmethod
@@ -61,33 +46,15 @@ class GraphLockFile(object):
                 raise ConanException("This lockfile was created with an incompatible "
                                      "version. Please regenerate the lockfile")
             # Do something with it, migrate, raise...
-        profile_host = graph_json.get("profile_host", None)
-        profile_build = graph_json.get("profile_build", None)
-        # FIXME: Reading private very ugly
-        if profile_host:
-            profile_host, _ = _load_profile(profile_host, None, None)
-        if profile_build:
-            profile_build, _ = _load_profile(profile_build, None, None)
         graph_lock = GraphLock.deserialize(graph_json["graph_lock"])
-        graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+        graph_lock_file = GraphLockFile(graph_lock)
         return graph_lock_file
 
-    def _dumps(self, path):
-        # Make the lockfile more reproducible by using a relative path in the node.path
-        # At the moment the node.path value is not really used, only its existence
+    def _dumps(self):
         serial_lock = self._graph_lock.serialize()
         result = {"graph_lock": serial_lock,
                   "version": LOCKFILE_VERSION}
-        if self._profile_host:
-            result["profile_host"] = self._profile_host.dumps()
-        if self._profile_build:
-            result["profile_build"] = self._profile_build.dumps()
         return json.dumps(result, indent=True)
-
-    def only_recipes(self):
-        self._graph_lock.only_recipes()
-        self._profile_host = None
-        self._profile_build = None
 
 
 class ConanLockReference:
@@ -200,11 +167,7 @@ class GraphLock(object):
         self.build_requires = list(reversed(sorted(build_requires)))
         self.alias = deps_graph.aliased
 
-    def only_recipes(self):
-        for r in self.requires:
-            r.package_id = r.prev = None
-
-    def update(self, deps_graph):
+    def update_lock(self, deps_graph):
         """ add new things at the beginning, to give more priority
         """
         requires = set()

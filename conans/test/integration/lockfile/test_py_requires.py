@@ -79,3 +79,45 @@ def test_transitive_matching():
     assert "pkgb/0.1: toolb: toolb/0.1!!" in client.out
     assert "pkga/0.1: dep: dep/0.1!!" in client.out
     assert "pkgb/0.1: dep: dep/0.2!!" in client.out
+
+
+def test_transitive_matching_ranges():
+    client = TestClient()
+    tool = textwrap.dedent("""
+        from conans import ConanFile
+        class PackageInfo(ConanFile):
+            python_requires = "dep/{}"
+        """)
+    pkg = textwrap.dedent("""
+        from conans import ConanFile
+        class MyConanfileBase(ConanFile):
+            python_requires = "tool/{}"
+            def configure(self):
+                for k, p in self.python_requires.all_items():
+                    self.output.info("%s: %s!!" % (k, p.ref))
+        """)
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "tool1/conanfile.py": tool.format("[<0.2]"),
+                 "tool2/conanfile.py": tool.format("[>0.0]"),
+                 "pkga/conanfile.py": pkg.format("[<0.2]"),
+                 "pkgb/conanfile.py": pkg.format("[>0.0]"),
+                 "app/conanfile.py": GenConanfile().with_requires("pkga/[*]", "pkgb/[*]")})
+
+    client.run("export dep dep/0.1@")
+    client.run("export dep dep/0.2@")
+    client.run("export tool1 tool/0.1@")
+    client.run("export tool2 tool/0.2@")
+    client.run("create pkga pkga/0.1@")
+    client.run("create pkgb pkgb/0.1@")
+    client.run("lock create app/conanfile.py --lockfile-out=conan.lock")
+
+    client.run("export dep dep/0.2@")
+    client.run("export tool1 tool/0.3@")
+    client.run("export pkga pkga/0.2@")
+    client.run("export pkgb pkgb/0.2@")
+
+    client.run("install app/conanfile.py --lockfile=conan.lock")
+    assert "pkga/0.1: tool: tool/0.1!!" in client.out
+    assert "pkga/0.1: dep: dep/0.1!!" in client.out
+    assert "pkgb/0.1: tool: tool/0.2!!" in client.out
+    assert "pkgb/0.1: dep: dep/0.2!!" in client.out

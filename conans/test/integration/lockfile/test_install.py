@@ -9,7 +9,7 @@ def test_conanfile_txt_deps_ranges():
     client.save({"pkg/conanfile.py": GenConanfile(),
                  "consumer/conanfile.txt": "[requires]\npkg/[>0.0]@user/testing"})
     client.run("create pkg pkg/0.1@user/testing")
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
     assert "pkg/0.1@user/testing from local cache - Cache" in client.out
 
     client.run("create pkg pkg/0.2@user/testing")
@@ -30,7 +30,7 @@ def test_conanfile_txt_deps_ranges_transitive():
     client.run("create dep dep/0.1@user/testing")
     client.run("create pkg pkg/0.1@user/testing")
 
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock")
     assert "dep/0.1@user/testing from local cache - Cache" in client.out
     assert "pkg/0.1@user/testing from local cache - Cache" in client.out
 
@@ -66,10 +66,10 @@ def test_conditional_os():
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
 
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock -s os=Windows")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows")
     assert "windep/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
-    client.run("lock create consumer/conanfile.txt --base --lockfile=conan.lock "
+    client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux")
     assert "nixdep/0.1 from local cache - Cache" in client.out
     assert "pkg/0.1 from local cache - Cache" in client.out
@@ -115,10 +115,10 @@ def test_conditional_same_package():
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
 
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock -s os=Windows")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/0.2" not in client.out
-    client.run("lock create consumer/conanfile.txt --base --lockfile=conan.lock "
+    client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux")
     assert "dep/0.2 from local cache - Cache" in client.out
     assert "dep/0.1" not in client.out
@@ -154,10 +154,10 @@ def test_conditional_incompatible_range():
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
 
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock -s os=Windows")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/1.1" not in client.out
-    client.run("lock create consumer/conanfile.txt --base --lockfile=conan.lock "
+    client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Linux")
     assert "dep/1.1 from local cache - Cache" in client.out
     assert "dep/0.1" not in client.out
@@ -193,13 +193,13 @@ def test_conditional_compatible_range():
     client.run("create pkg pkg/0.1@ -s os=Windows")
     client.run("create pkg pkg/0.1@ -s os=Linux")
 
-    client.run("lock create consumer/conanfile.txt --base --lockfile-out=conan.lock -s os=Linux")
+    client.run("lock create consumer/conanfile.txt  --lockfile-out=conan.lock -s os=Linux")
     assert "dep/0.2 from local cache - Cache" in client.out
     assert "dep/0.1" not in client.out
     print("WINDOWS-------------------------------------------")
     print(client.out)
     print(client.load("conan.lock"))
-    client.run("lock create consumer/conanfile.txt --base --lockfile=conan.lock "
+    client.run("lock create consumer/conanfile.txt  --lockfile=conan.lock "
                "--lockfile-out=conan.lock -s os=Windows")
     assert "dep/0.1 from local cache - Cache" in client.out
     assert "dep/0.2" not in client.out

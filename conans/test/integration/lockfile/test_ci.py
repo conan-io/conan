@@ -38,160 +38,159 @@ def client_setup():
         "pkga/myfile.txt": "HelloA",
         "pkgj/conanfile.py": conanfile.format(requires=""),
         "pkgj/myfile.txt": "HelloJ",
-        "pkgb/conanfile.py": conanfile.format(requires='requires="PkgA/[>0.0 <1.0]@user/channel"'),
+        "pkgb/conanfile.py": conanfile.format(requires='requires="pkga/[>0.0 <1.0]"'),
         "pkgb/myfile.txt": "HelloB",
-        "pkgc/conanfile.py": conanfile.format(requires='requires="PkgB/[>0.0 <1.0]@user/channel"'),
+        "pkgc/conanfile.py": conanfile.format(requires='requires="pkgb/[>0.0 <1.0]"'),
         "pkgc/myfile.txt": "HelloC",
-        "pkgd/conanfile.py": conanfile.format(requires='requires="PkgC/[>0.0 <1.0]@user/channel"'),
-        "pkgd/myfile.txt": "HelloD",
+        "app1/conanfile.py": conanfile.format(requires='requires="pkgc/[>0.0 <1.0]"'),
+        "app1/myfile.txt": "App1",
     }
     client.save(files)
 
-    client.run("create pkga PkgA/0.1@user/channel -s os=Windows")
-    client.run("create pkga PkgA/0.1@user/channel -s os=Linux")
-    client.run("create pkgb PkgB/0.1@user/channel -s os=Windows")
-    client.run("create pkgc PkgC/0.1@user/channel -s os=Windows")
-    client.run("create pkgd PkgD/0.1@user/channel -s os=Windows")
-    assert "PkgD/0.1@user/channel: SELF FILE: HelloD" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgA: HelloA" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgB: HelloB" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgC: HelloC" in client.out
+    client.run("create pkga pkga/0.1@ -s os=Windows")
+    client.run("create pkga pkga/0.1@ -s os=Linux")
+    client.run("create pkgb pkgb/0.1@ -s os=Windows")
+    client.run("create pkgc pkgc/0.1@ -s os=Windows")
+    client.run("create app1 app1/0.1@ -s os=Windows")
+    assert "app1/0.1: SELF FILE: App1" in client.out
+    assert "app1/0.1: DEP FILE pkga: HelloA" in client.out
+    assert "app1/0.1: DEP FILE pkgb: HelloB" in client.out
+    assert "app1/0.1: DEP FILE pkgc: HelloC" in client.out
     return client
 
 
 def test_single_config_centralized(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
-               "-s os=Windows")
-    pkgd_lockfile = client.load("pkgd.lock")
-    print(pkgd_lockfile)
+    client.run("lock create --reference=app1/0.1@  --lockfile-out=app1.lock -s os=Windows")
+    app1_lockfile = client.load("app1.lock")
+    print(app1_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Windows "
-               "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
-    b_win = client.load("b_win.lock")
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/0.2@ -s os=Windows "
+               "--lockfile=app1.lock --lockfile-out=app1_b_changed.lock")
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
+    b_win = client.load("app1_b_changed.lock")
     print(b_win)
 
     # Now lets build the application, to see everything ok
     client.run("lock install b_win.lock --lockfile-out=pkgd2.lock --build=missing")
     print(client.out)
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgA: HelloA" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!" in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
+    assert "pkgd/0.1: DEP FILE pkga: HelloA" in client.out
+    assert "pkgd/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
     pkgd2_lockfile = client.load("pkgd2.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
 
 def test_single_config_centralized_out_range(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
+    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
                "-s os=Windows")
     pkgd_lockfile = client.load("pkgd.lock")
     print(pkgd_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/1.0@user/channel -s os=Windows "
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/1.0@ -s os=Windows "
                "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
-    assert "PkgB/1.0@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/1.0: DEP FILE pkga: HelloA" in client.out
     b_win = client.load("b_win.lock")
     print(b_win)
 
     # Now lets build the application, to see everything ok
     client.run("lock install b_win.lock --lockfile-out=pkgd2.lock --build=missing")
     print(client.out)
-    assert "PkgB/0.1@user/channel" in client.out
-    assert "PkgB/1.0" not in client.out
+    assert "pkgb/0.1" in client.out
+    assert "pkgb/1.0" not in client.out
 
     pkgd2_lockfile = client.load("pkgd2.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.1@user/channel" in pkgd2_lockfile
-    assert "PkgB/1.0" not in pkgd2_lockfile
+    assert "pkgb/0.1" in pkgd2_lockfile
+    assert "pkgb/1.0" not in pkgd2_lockfile
 
 
 def test_single_config_centralized_change_dep_version(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
+    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
                "-s os=Windows")
     pkgd_lockfile = client.load("pkgd.lock")
     print(pkgd_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Build new package alternative J
-    client.run("create pkgj PkgJ/0.1@user/channel -s os=Windows")
+    client.run("create pkgj PkgJ/0.1@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/conanfile.py": conanfile.format(requires=
-                                                       'requires="PkgJ/[>0.0 <1.0]@user/channel"'),
+                                                       'requires="PkgJ/[>0.0 <1.0]"'),
                  "pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Windows "
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/0.2@ -s os=Windows "
                "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
-    assert "PkgB/0.2@user/channel: DEP FILE PkgJ: HelloJ" in client.out
+    assert "pkgb/0.2: DEP FILE PkgJ: HelloJ" in client.out
     b_win = client.load("b_win.lock")
     print(b_win)
 
     # Now lets build the application, to see everything ok
     client.run("lock install b_win.lock --lockfile-out=pkgd2.lock --build=missing")
     print(client.out)
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgJ: HelloJ" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!" in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
+    assert "pkgd/0.1: DEP FILE PkgJ: HelloJ" in client.out
+    assert "pkgd/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
     pkgd2_lockfile = client.load("pkgd2.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
 
 def test_multi_config_centralized(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
-               "-s os=Windows --base")
+    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
+               "-s os=Windows ")
     pkgd_lockfile = client.load("pkgd.lock")
     print(pkgd_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Windows "
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/0.2@ -s os=Windows "
                "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
     assert "SELF OS: Windows!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_win = client.load("b_win.lock")
     print(b_win)
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Linux "
+    client.run("create pkgb pkgb/0.2@ -s os=Linux "
                "--lockfile=pkgd.lock --lockfile-out=b_linux.lock")
     assert "SELF OS: Linux!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_linux = client.load("b_linux.lock")
     print(b_linux)
 
@@ -200,56 +199,56 @@ def test_multi_config_centralized(client_setup):
     print(client.out)
     assert "SELF OS: Windows!!" in client.out
     assert "SELF OS: Linux!!" not in client.out
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgA: HelloA" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!" in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
+    assert "pkgd/0.1: DEP FILE pkga: HelloA" in client.out
+    assert "pkgd/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
     pkgd2_lockfile = client.load("pkgd2_win.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
     client.run("lock install b_linux.lock --lockfile-out=pkgd2_linux.lock --build=missing")
     print(client.out)
     assert "SELF OS: Windows!!" not in client.out
     assert "SELF OS: Linux!!" in client.out
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgA: HelloA" in client.out
-    assert "PkgD/0.1@user/channel: DEP FILE PkgB: ByeB World!!" in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
+    assert "pkgd/0.1: DEP FILE pkga: HelloA" in client.out
+    assert "pkgd/0.1: DEP FILE pkgb: ByeB World!!" in client.out
 
     pkgd2_lockfile = client.load("pkgd2_win.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
 
 def test_multi_config_decentralized(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
-               "-s os=Windows --base")
+    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
+               "-s os=Windows ")
     pkgd_lockfile = client.load("pkgd.lock")
     print(pkgd_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Windows "
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/0.2@ -s os=Windows "
                "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
     assert "SELF OS: Windows!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_win = client.load("b_win.lock")
     print(b_win)
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Linux "
+    client.run("create pkgb pkgb/0.2@ -s os=Linux "
                "--lockfile=pkgd.lock --lockfile-out=b_linux.lock")
     assert "SELF OS: Linux!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_linux = client.load("b_linux.lock")
     print(b_linux)
 
@@ -257,13 +256,13 @@ def test_multi_config_decentralized(client_setup):
     client.run("lock build-order b_win.lock --lockfile-out=pkgd2_win.lock --build=missing "
                "--json=build_order.json")
     print(client.out)
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
 
     pkgd2_lockfile = client.load("pkgd2_win.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
     json_file = client.load("build_order.json")
     print("JSON: ", json_file)
@@ -277,37 +276,37 @@ def test_multi_config_decentralized(client_setup):
         client_aux.run("install %s --build=%s --lockfile=temp.lock " % (ref, ref))
         print(client_aux.out)
         assert "SELF OS: Windows!!" in client_aux.out
-        assert "PkgB/0.2@user/channel" in client_aux.out
-        assert "PkgB/0.1" not in client_aux.out
-        assert "DEP FILE PkgA: HelloA" in client_aux.out
-        assert "DEP FILE PkgB: ByeB World!!" in client_aux.out
+        assert "pkgb/0.2" in client_aux.out
+        assert "pkgb/0.1" not in client_aux.out
+        assert "DEP FILE pkga: HelloA" in client_aux.out
+        assert "DEP FILE pkgb: ByeB World!!" in client_aux.out
 
 
 def test_multi_config_bundle(client_setup):
     client = client_setup
-    client.run("lock create --reference=PkgD/0.1@user/channel --lockfile-out=pkgd.lock "
-               "-s os=Windows --base")
+    client.run("lock create --reference=pkgd/0.1@ --lockfile-out=pkgd.lock "
+               "-s os=Windows ")
     pkgd_lockfile = client.load("pkgd.lock")
     print(pkgd_lockfile)
 
     # Do an unrelated change in A, should not be used, this is not the change we are testing
     client.save({"pkga/myfile.txt": "ByeA World!!"})
-    client.run("create pkga PkgA/0.2@user/channel -s os=Windows")
+    client.run("create pkga pkga/0.2@ -s os=Windows")
 
     # Do a change in B, this is the change that we want to test
     client.save({"pkgb/myfile.txt": "ByeB World!!"})
 
-    # Test that PkgB/0.2 works
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Windows "
+    # Test that pkgb/0.2 works
+    client.run("create pkgb pkgb/0.2@ -s os=Windows "
                "--lockfile=pkgd.lock --lockfile-out=b_win.lock")
     assert "SELF OS: Windows!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_win = client.load("b_win.lock")
     print(b_win)
-    client.run("create pkgb PkgB/0.2@user/channel -s os=Linux "
+    client.run("create pkgb pkgb/0.2@ -s os=Linux "
                "--lockfile=pkgd.lock --lockfile-out=b_linux.lock")
     assert "SELF OS: Linux!!" in client.out
-    assert "PkgB/0.2@user/channel: DEP FILE PkgA: HelloA" in client.out
+    assert "pkgb/0.2: DEP FILE pkga: HelloA" in client.out
     b_linux = client.load("b_linux.lock")
     print(b_linux)
 
@@ -320,13 +319,13 @@ def test_multi_config_bundle(client_setup):
     client.run("lock build-order b_win.lock --lockfile-out=pkgd2_win.lock --build=missing "
                "--json=build_order.json")
     print(client.out)
-    assert "PkgB/0.2@user/channel" in client.out
-    assert "PkgB/0.1" not in client.out
+    assert "pkgb/0.2" in client.out
+    assert "pkgb/0.1" not in client.out
 
     pkgd2_lockfile = client.load("pkgd2_win.lock")
     print(pkgd2_lockfile)
-    assert "PkgB/0.2@user/channel" in pkgd2_lockfile
-    assert "PkgB/0.1" not in pkgd2_lockfile
+    assert "pkgb/0.2" in pkgd2_lockfile
+    assert "pkgb/0.1" not in pkgd2_lockfile
 
     json_file = client.load("build_order.json")
     print("JSON: ", json_file)
@@ -340,8 +339,8 @@ def test_multi_config_bundle(client_setup):
         client_aux.run("install %s --build=%s --lockfile=temp.lock " % (ref, ref))
         print(client_aux.out)
         assert "SELF OS: Windows!!" in client_aux.out
-        assert "PkgB/0.2@user/channel" in client_aux.out
-        assert "PkgB/0.1" not in client_aux.out
-        assert "DEP FILE PkgA: HelloA" in client_aux.out
-        assert "DEP FILE PkgB: ByeB World!!" in client_aux.out
+        assert "pkgb/0.2" in client_aux.out
+        assert "pkgb/0.1" not in client_aux.out
+        assert "DEP FILE pkga: HelloA" in client_aux.out
+        assert "DEP FILE pkgb: ByeB World!!" in client_aux.out
 

@@ -375,7 +375,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+                graph_lock_file = GraphLockFile(graph_lock)
                 graph_lock_file.save(lockfile_out)
             return recorder.get_info()
 
@@ -550,7 +550,7 @@ class ConanAPIV1(object):
 
             if lockfile_out:
                 lockfile_out = _make_abs_path(lockfile_out, cwd)
-                graph_lock_file = GraphLockFile(profile_host, profile_build, graph_lock)
+                graph_lock_file = GraphLockFile(graph_lock)
                 graph_lock_file.save(lockfile_out)
             return recorder.get_info()
         except ConanException as exc:
@@ -1362,7 +1362,7 @@ class ConanAPIV1(object):
     def lock_create(self, path, lockfile_out,
                     reference=None, name=None, version=None, user=None, channel=None,
                     profile_host=None, profile_build=None, remote_name=None, update=None, build=None,
-                    base=None, lockfile=None):
+                    lockfile=None):
         # profile_host is mandatory
         profile_host = profile_host or ProfileData(None, None, None, None, None)
         cwd = os.getcwd()
@@ -1381,30 +1381,24 @@ class ConanAPIV1(object):
         else:  # reference
             ref_or_path = ConanFileReference.loads(reference)
 
-        phost = pbuild = graph_lock = None
+        graph_lock = None
         if lockfile:
             lockfile = _make_abs_path(lockfile, cwd)
             graph_lock_file = GraphLockFile.load(lockfile)
-            phost = graph_lock_file.profile_host
-            pbuild = graph_lock_file.profile_build
             graph_lock = graph_lock_file.graph_lock
-            # graph_lock.relax()
 
-        if not phost:
-            phost = profile_from_args(profile_host.profiles, profile_host.settings,
-                                      profile_host.options, profile_host.env, profile_host.conf,
-                                      cwd, self.app.cache)
+        phost = profile_from_args(profile_host.profiles, profile_host.settings,
+                                  profile_host.options, profile_host.env, profile_host.conf,
+                                  cwd, self.app.cache)
 
-        if not pbuild:
-            # Only work on the profile_build if something is provided
-            pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                       profile_build.options, profile_build.env, profile_build.conf,
-                                       cwd, self.app.cache)
+        # Only work on the profile_build if something is provided
+        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                                   profile_build.options, profile_build.env, profile_build.conf,
+                                   cwd, self.app.cache)
 
         root_ref = ConanFileReference(name, version, user, channel, validate=False)
         phost.process_settings(self.app.cache)
-        if pbuild:
-            pbuild.process_settings(self.app.cache)
+        pbuild.process_settings(self.app.cache)
 
         recorder = ActionRecorder()
         # FIXME: Using update as check_update?
@@ -1421,11 +1415,9 @@ class ConanAPIV1(object):
         if lockfile is None:
             graph_lock = GraphLock(deps_graph)
         else:
-            graph_lock.update(deps_graph)
+            graph_lock.update_lock(deps_graph)
 
-        graph_lock_file = GraphLockFile(phost, pbuild, graph_lock)
-        if base:
-            graph_lock_file.only_recipes()
+        graph_lock_file = GraphLockFile(graph_lock)
 
         lockfile_out = _make_abs_path(lockfile_out or "conan.lock")
         graph_lock_file.save(lockfile_out)
@@ -1440,25 +1432,22 @@ def get_graph_info(profile_host, profile_build, cwd, cache, output,
 
     root_ref = ConanFileReference(name, version, user, channel, validate=False)
 
-    graph_lock = phost = pbuild = None
+    graph_lock = None
     if lockfile:
         lockfile = lockfile if os.path.isfile(lockfile) else os.path.join(lockfile, LOCKFILE)
         graph_lock_file = GraphLockFile.load(lockfile)
-        phost = graph_lock_file.profile_host
-        pbuild = graph_lock_file.profile_build
         graph_lock = graph_lock_file.graph_lock
         output.info("Using lockfile: '{}'".format(lockfile))
 
-    if phost is None:
-        phost = profile_from_args(profile_host.profiles, profile_host.settings,
-                                  profile_host.options, profile_host.env, profile_host.conf,
-                                  cwd, cache)
+    phost = profile_from_args(profile_host.profiles, profile_host.settings,
+                              profile_host.options, profile_host.env, profile_host.conf,
+                              cwd, cache)
     phost.process_settings(cache)
-    if pbuild is None:
-        # Only work on the profile_build if something is provided
-        pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
-                                   profile_build.options, profile_build.env, profile_build.conf,
-                                   cwd, cache)
+
+    # Only work on the profile_build if something is provided
+    pbuild = profile_from_args(profile_build.profiles, profile_build.settings,
+                               profile_build.options, profile_build.env, profile_build.conf,
+                               cwd, cache)
     pbuild.process_settings(cache)
 
     # Preprocess settings and convert to real settings
