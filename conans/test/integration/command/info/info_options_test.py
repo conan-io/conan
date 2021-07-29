@@ -40,7 +40,7 @@ class InfoOptionsTest(unittest.TestCase):
             from conans import ConanFile
             class Pkg(ConanFile):
                 options = {{"option{0}1": "ANY", "option{0}2": "ANY"}}
-                default_options = "option{0}1=1", "option{0}2=2"
+                default_options = {{"option{0}1": 1, "option{0}2": 2}}
             """)
         client.save({"conanfile.py": conanfile.format("A")})
         client.run("create . PkgA/0.1@user/testing")

@@ -399,7 +399,7 @@ class MyPkg(ConanFile):
     version = "1.2.1"
     exports_sources = "*"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 
     def build(self):
         if tools.get_env("MY_VAR", False):
@@ -457,7 +457,7 @@ class MyPkg(ConanFile):
     version = "1.2.1"
     exports_sources = "*"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 
     def build(self):
         if tools.get_env("MY_VAR", False):

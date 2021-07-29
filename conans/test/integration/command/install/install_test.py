@@ -77,7 +77,7 @@ def test_install_transitive_pattern(client):
         from conans import ConanFile
         class Pkg(ConanFile):
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG OPTION: %s" % self.options.shared)
         """)})
@@ -88,7 +88,7 @@ def test_install_transitive_pattern(client):
         class Pkg(ConanFile):
             requires = "Pkg/0.1@user/testing"
             options = {"shared": [True, False, "header"]}
-            default_options = "shared=False"
+            default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})
