@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -151,7 +152,8 @@ class RangeResolver(object):
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
                 remote_results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-                self._cached_remote_found[search_ref] = remote_results, remote.name
+                if remote_results:
+                    self._cached_remote_found.update({search_ref: {remote.name: remote_results}})
                 remote_results = [ref for ref in remote_results
                                   if ref.user == search_ref.user and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
@@ -169,11 +171,25 @@ class RangeResolver(object):
         else:
             return None, None
 
+    def _resolve_cached_reference(self, search_ref, version_range, remotes, check_all_remotes):
+        resolved_ref = None
+        resolved_remote = None
+        for remote in remotes.values():
+            if not remotes.selected or remote == remotes.selected:
+                cached_search = self._cached_remote_found.get(search_ref)
+                if cached_search:
+                    cached_refs = cached_search.get(remote.name) or []
+                    all_refs = [resolved_ref].extend(cached_refs) if resolved_ref else cached_refs
+                    resolved_ref = self._resolve_version(version_range, all_refs)
+                    if resolved_ref in cached_refs:
+                        resolved_remote = remote.name
+                    if not check_all_remotes and resolved_ref:
+                        return resolved_ref, resolved_remote
+        return resolved_ref, resolved_remote
+
     def _resolve_remote(self, search_ref, version_range, remotes, check_all_remotes):
-        # We should use ignorecase=False, we want the exact case!
-        found_refs, remote_name = self._cached_remote_found.get(search_ref, ([], None))
-        # we have to check that the resolved cached ref is in the range
-        resolved_ref = self._resolve_version(version_range, found_refs)
+        resolved_ref, remote_name = self._resolve_cached_reference(search_ref, version_range,
+                                                                   remotes, check_all_remotes)
         if resolved_ref is None:
             # Searching for just the name is much faster in remotes like Artifactory
             resolved_ref, remote_name = self._search_and_resolve_remotes(search_ref, version_range,
