@@ -63,8 +63,7 @@ class TestVersionRangesCache:
         # should call only once to server0
         self.counters["server0"] = 0
         self.counters["server1"] = 0
-        with patch.object(RemoteManager, "search_recipes",
-                          new=self._mocked_search_recipes) as mocked_search_recipes:
+        with patch.object(RemoteManager, "search_recipes", new=self._mocked_search_recipes):
             client.run("create . --update")
             assert self.counters["server0"] == 1
             assert self.counters["server1"] == 1
