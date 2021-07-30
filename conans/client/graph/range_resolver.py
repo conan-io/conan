@@ -119,12 +119,15 @@ class RangeResolver(object):
         search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
 
         remote_name = None
+        remote_resolved_ref = None
         resolved_ref = self._resolve_local(search_ref, version_range)
         if not resolved_ref or update:
-            resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes,
-                                                             check_all_remotes=update)
+            remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes,
+                                                                    check_all_remotes=update)
+            resolved_ref = self._resolve_version(version_range, [resolved_ref, remote_resolved_ref])
 
-        origin = ("remote '%s'" % remote_name) if remote_name else "local cache"
+        origin = f"remote '{remote_name}'" if resolved_ref == remote_resolved_ref and remote_name else "local cache"
+
         if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s' in %s"
                                 % (version_range, base_conanref, str(resolved_ref), origin))
@@ -168,7 +171,8 @@ class RangeResolver(object):
     def _resolve_remote(self, search_ref, version_range, remotes, check_all_remotes):
         # We should use ignorecase=False, we want the exact case!
         found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
-        if found_refs is None:
+        # we have to check that the resolved cached ref is in the range
+        if found_refs is None or not self._resolve_version(version_range, [found_refs]):
             # Searching for just the name is much faster in remotes like Artifactory
             found_refs, remote_name = self._search_remotes(search_ref, version_range, remotes,
                                                            check_all_remotes)
@@ -185,6 +189,6 @@ class RangeResolver(object):
         return (found_refs, remote_name) if found_refs else (None, None)
 
     def _resolve_version(self, version_range, refs_found):
-        versions = {ref.version: ref for ref in refs_found}
+        versions = {ref.version: ref for ref in refs_found if ref}
         result = satisfying(versions, version_range, self._result)
         return versions.get(result)
