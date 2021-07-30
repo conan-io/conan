@@ -276,7 +276,6 @@ class HelloReuseConan(ConanFile):
                       "RequirementOne/[=1.2.3]@lasote/stable"], upload=True)
 
         self.client.run("remove '*' -f")
-        self.client.run("search '*' -r default")
         self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
         self.assertIn("Conflict in RequirementOne/1.2.3@lasote/stable:\n"
             "    'RequirementOne/1.2.3@lasote/stable' requires "
