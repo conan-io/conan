@@ -145,12 +145,13 @@ class RangeResolver(object):
         if local_found:
             return self._resolve_version(version_range, local_found)
 
-    def _search_remotes(self, search_ref, version_range, remotes, check_all_remotes):
+    def _search_and_resolve_remotes(self, search_ref, version_range, remotes, check_all_remotes):
         pattern = str(search_ref)
         results = []
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
                 remote_results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+                self._cached_remote_found[search_ref] = remote_results, remote.name
                 remote_results = [ref for ref in remote_results
                                   if ref.user == search_ref.user and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
@@ -170,23 +171,22 @@ class RangeResolver(object):
 
     def _resolve_remote(self, search_ref, version_range, remotes, check_all_remotes):
         # We should use ignorecase=False, we want the exact case!
-        found_refs, remote_name = self._cached_remote_found.get(search_ref, (None, None))
+        found_refs, remote_name = self._cached_remote_found.get(search_ref, ([], None))
         # we have to check that the resolved cached ref is in the range
-        if found_refs is None or not self._resolve_version(version_range, [found_refs]):
+        resolved_ref = self._resolve_version(version_range, found_refs)
+        if resolved_ref is None:
             # Searching for just the name is much faster in remotes like Artifactory
-            found_refs, remote_name = self._search_remotes(search_ref, version_range, remotes,
-                                                           check_all_remotes)
-            if found_refs:
+            resolved_ref, remote_name = self._search_and_resolve_remotes(search_ref, version_range,
+                                                                         remotes, check_all_remotes)
+            if resolved_ref:
                 self._result.append("%s versions found in '%s' remote" % (search_ref, remote_name))
             else:
                 self._result.append("%s versions not found in remotes")
             # We don't want here to resolve the revision that should be done in the proxy
             # as any other regular flow
             # FIXME: refactor all this and update for 2.0
-            found_refs = found_refs.copy_clear_rev() if found_refs else None
-            # Empty list, just in case it returns None
-            self._cached_remote_found[search_ref] = found_refs, remote_name
-        return (found_refs, remote_name) if found_refs else (None, None)
+            resolved_ref = resolved_ref.copy_clear_rev() if resolved_ref else None
+        return (resolved_ref, remote_name) if resolved_ref else (None, None)
 
     def _resolve_version(self, version_range, refs_found):
         versions = {ref.version: ref for ref in refs_found if ref}
