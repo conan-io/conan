@@ -177,7 +177,7 @@ class RangeResolver(object):
             if not remotes.selected or remote == remotes.selected:
                 cached_search = self._cached_remote_found.get(search_ref)
                 if cached_search:
-                    cached_refs = cached_search.get(remote.name) or []
+                    cached_refs = cached_search.get(remote.name, [])
                     all_refs = [resolved_ref].extend(cached_refs) if resolved_ref else cached_refs
                     resolved_ref = self._resolve_version(version_range, all_refs)
                     if resolved_ref in cached_refs:
