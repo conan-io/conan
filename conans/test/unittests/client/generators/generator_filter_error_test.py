@@ -2,7 +2,6 @@ import os
 import unittest
 
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import load
 
 
 class MultiGeneratorFilterErrorTest(unittest.TestCase):
