@@ -1,10 +1,7 @@
-import os
 import textwrap
 import unittest
 
-from conans.model.ref import ConanFileReference
-from conans.paths import CONANINFO
-from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class OptionsTest(unittest.TestCase):
@@ -84,7 +81,7 @@ class EqualerrorConan(ConanFile):
     name = "equal"
     version = "1.0.0"
     options = {"opt": "ANY"}
-    default_options = ("opt=b=c",)
+    default_options = {"opt": "b=c"}
 
     def build(self):
         self.output.warn("OPTION %s" % self.options.opt)
@@ -110,7 +107,7 @@ class MyConanFile(ConanFile):
     name = "MyConanFile"
     version = "1.0"
     options = {"config": %s}
-    default_options = "config%s"
+    default_options = {"config": %s}
 
     def configure(self):
         if self.options.config:
@@ -121,43 +118,28 @@ class MyConanFile(ConanFile):
             self.output.info("String evaluation")
 """
         # Using "ANY" as possible options
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=None")})
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
 
         # Using None as possible options
-        client.save({"conanfile.py": conanfile % ("[None]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("[None]", "=None")})
+        client.save({"conanfile.py": conanfile % ("[None]", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
 
         # Using "None" as possible options
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=None")})
+        client.save({"conanfile.py": conanfile % ("[\"None\"]", "None")})
         client.run("create . danimtb/testing")
         self.assertNotIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)
         self.assertIn("String evaluation", client.out)
-        client.save({"conanfile.py": conanfile % ("[\"None\"]", "=\\\"None\\\"")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("'\"None\"' is not a valid 'options.config' value", client.out)
 
         # Using "ANY" as possible options and "otherstringvalue" as default
-        client.save({"conanfile.py": conanfile % ("[\"otherstringvalue\"]", "")})
-        client.run("create . danimtb/testing", assert_error=True)
-        self.assertIn("Error while initializing options.", client.out)
-        client.save({"conanfile.py": conanfile % ("\"ANY\"", "=otherstringvalue")})
+        client.save({"conanfile.py": conanfile % ("\"ANY\"", '"otherstringvalue"')})
         client.run("create . danimtb/testing")
         self.assertIn("Boolean evaluation", client.out)
         self.assertNotIn("None evaluation", client.out)

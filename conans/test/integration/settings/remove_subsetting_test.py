@@ -14,7 +14,7 @@ class RemoveSubsettingTest(unittest.TestCase):
         conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     options = {"opt1": [True, False], "opt2": [True, False]}
-    default_options = "opt1=True", "opt2=False"
+    default_options = {"opt1": True, "opt2": False}
     def config_options(self):
         del self.options.opt2
     def build(self):

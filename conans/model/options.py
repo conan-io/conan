@@ -655,3 +655,15 @@ class Options(object):
         existing_names = [pref.ref.name for pref in prefs]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}
+
+    @staticmethod
+    def create_options(pkg_options, default_options):
+        try:
+            options = Options(PackageOptions(pkg_options))
+            if default_options is not None:
+                if not isinstance(default_options, dict):
+                    raise ConanException("default_options must be a dictionary")
+                options.values = OptionsValues(default_options)
+            return options
+        except Exception as e:
+            raise ConanException("Error while initializing options. %s" % str(e))

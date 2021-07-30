@@ -22,8 +22,8 @@ class {name}Conan(ConanFile):
     version = "{version}"
     options = {{"language": [0, 1],
                 "static": [True, False]}}
-    default_options = '''language={language}
-                        static= {static}'''
+    default_options = {{"language": {language},
+                        "static": {static} }}
     requires = ({requires})
     settings = {settings}
     generators = "cmake"

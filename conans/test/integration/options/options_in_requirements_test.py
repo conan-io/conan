@@ -19,7 +19,7 @@ class ConanLib(ConanFile):
     name = "zlib"
     version = "0.1"
     options = {"shared": [True, False]}
-    default_options= "shared=False"
+    default_options={"shared": False}
 '''
 
         files = {"conanfile.py": zlib}
@@ -34,7 +34,7 @@ class BoostConan(ConanFile):
     name = "BoostDbg"
     version = "1.0"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options ={"shared": False}
 
     def requirements(self):
         self.requires("zlib/0.1@lasote/testing")

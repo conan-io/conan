@@ -488,7 +488,7 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     options = {"myoption": [123, 234]}
-    default_options = "myoption=123"
+    default_options = {"myoption": 123}
 """
         deps_graph = self.build_graph(say_content)
         self.assertEqual(1, len(deps_graph.nodes))
@@ -505,7 +505,7 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     options = {"myoption": [123, 234]}
-    default_options = "myoption=123"
+    default_options = {"myoption": 123}
 """
 
         def _assert_conanfile(conanfile_content):
@@ -536,29 +536,6 @@ class SayConan(ConanFile):
             self.assertEqual(conaninfo.requires.dumps(), "%s/%s" % (say_ref.name, say_ref.version))
             self.assertEqual(conaninfo.full_requires.dumps(),
                              "%s:48bb3c5cbdb4822ae87914437ca3cceb733c7e1d" % str(say_ref))
-
-        hello_content = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    requires = "Say/0.1@user/testing"
-    default_options = [("Say:myoption", "234")]  # To test list definition
-"""
-
-        _assert_conanfile(hello_content)
-
-        hello_content_tuple = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2"
-    requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=234",  # To test tuple definition
-"""
-        _assert_conanfile(hello_content_tuple)
 
         hello_content_dict = """
 from conans import ConanFile
@@ -595,7 +572,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing"
-    default_options = "Say:myoption=234"
+    default_options = {"Say:myoption": 234}
 """
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
@@ -673,7 +650,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing"
-    default_options = "*:myoption=234"
+    default_options = {"*:myoption": 234}
 """
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
@@ -722,7 +699,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing"
-    default_options = "Say:myoption2=234"
+    default_options = {"Say:myoption2": 234}
 """
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
@@ -740,7 +717,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing"
-    default_options = "Say:myoption=235"
+    default_options = {"Say:myoption": 235}
 """
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
@@ -766,7 +743,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "1.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=234"
+    default_options = {"Say:myoption": 234}
 """
         bye_content = """
 from conans import ConanFile
@@ -775,7 +752,7 @@ class ByeConan(ConanFile):
     name = "Bye"
     version = "0.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=234"
+    default_options = {"Say:myoption": 234}
 """
         chat_content = """
 from conans import ConanFile
@@ -835,7 +812,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "1.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=234"
+    default_options = {"Say:myoption": 234}
 """
         bye_content = """
 from conans import ConanFile
@@ -844,7 +821,7 @@ class ByeConan(ConanFile):
     name = "Bye"
     version = "0.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=123"
+    default_options = {"Say:myoption": 123}
 """
         chat_content = """
 from conans import ConanFile
@@ -877,7 +854,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "1.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=234"
+    default_options = {"Say:myoption": 234}
 """
         bye_content = """
 from conans import ConanFile
@@ -886,7 +863,7 @@ class ByeConan(ConanFile):
     name = "Bye"
     version = "0.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:myoption=123"
+    default_options = {"Say:myoption": 123}
 """
         chat_content = """
 from conans import ConanFile
@@ -895,7 +872,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing", "Bye/0.2@user/testing"
-    default_options = "Say:myoption=123"
+    default_options = {"Say:myoption": 123}
 """
         self.retriever.save_recipe(say_ref, say_content)
         self.retriever.save_recipe(hello_ref, hello_content)
@@ -958,7 +935,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "1.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:zip=True"
+    default_options = {"Say:zip": True}
 """
         bye_content = """
 from conans import ConanFile
@@ -967,7 +944,7 @@ class ByeConan(ConanFile):
     name = "Bye"
     version = "0.2"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:zip=True"
+    default_options = {"Say:zip": True}
 """
         chat_content = """
 from conans import ConanFile
@@ -1019,7 +996,7 @@ class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
     requires = "Hello/1.2@user/testing", "Bye/0.2@user/testing"
-    default_options = "Say:zip=False"
+    default_options = {"Say:zip": False}
 """
         deps_graph = self.build_graph(chat_content2)
         self.assertEqual(4, len(deps_graph.nodes))
@@ -1074,7 +1051,7 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     options = {"zip": [True, False]}
-    default_options = "zip=False"
+    default_options = {"zip": False}
     requires = "Base/0.1@user/testing"
 
     def requirements(self):
@@ -1090,7 +1067,7 @@ class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
     requires = "Say/0.1@user/testing"
-    default_options = "Say:zip=True"
+    default_options = {"Say:zip": True}
 """
         zlib_ref = ConanFileReference.loads("Zlib/0.1@user/testing")
         png_ref = ConanFileReference.loads("png/0.1@user/testing")
@@ -1342,7 +1319,7 @@ class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
 """
 
         hello_content = """
@@ -1353,7 +1330,7 @@ class HelloConan(ConanFile):
     version = "1.2"
     requires = "Say/0.1@user/testing"
     options = {"shared": [True, False]}
-    default_options = "shared=True"
+    default_options = {"shared": True}
 
     def package_id(self):
         if self.options.shared:
@@ -1368,7 +1345,7 @@ class ChatConan(ConanFile):
     version = "2.3"
     requires = "Hello/1.2@user/testing"
     options = {"shared": [True, False]}
-    default_options = "shared=True"
+    default_options = {"shared": True}
 
     def package_id(self):
         if self.options.shared:
@@ -1391,7 +1368,7 @@ class ChatConan(ConanFile):
                          "shared=True\nHello:shared=True\nSay:shared=False")
 
         # Now change the chat content
-        deps_graph = self.build_graph(chat_content.replace("shared=True", "shared=False"))
+        deps_graph = self.build_graph(chat_content.replace('{"shared": True}', '{"shared": False}'))
 
         self.assertEqual(3, len(deps_graph.nodes))
         chat = _get_nodes(deps_graph, "Chat")[0]
@@ -1403,7 +1380,8 @@ class ChatConan(ConanFile):
         self.assertEqual(chat.conanfile.info.options.dumps(), "shared=False")
 
         # Now change the hello content
-        self.retriever.save_recipe(hello_ref, hello_content.replace("shared=True", "shared=False"))
+        self.retriever.save_recipe(hello_ref, hello_content.replace('{"shared": True}',
+                                                                    '{"shared": False}'))
         deps_graph = self.build_graph(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
@@ -1424,7 +1402,7 @@ from conans import ConanFile
 class LibAConan(ConanFile):
     name = "LibA"
     options = {"shared": [True, False]}
-    default_options = "shared=False"
+    default_options = {"shared": False}
     def requirements(self):
         self.output.info("LibA requirements()")
     def configure(self):
@@ -1546,7 +1524,7 @@ class LibDConan(ConanFile):
     name = "LibD"
     version = "0.1"
     requires = "LibB/0.1@user/testing"
-    default_options = "LibA:shared=True"
+    default_options = {"LibA:shared": True}
 """
         libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
         self.retriever.save_recipe(libd_ref, libd_content)
@@ -1773,7 +1751,7 @@ class SayConan(ConanFile):
     version = "0.1"
     settings = "os"
     options = {"shared": [True, False], "header_only": [True, False],}
-    default_options = "shared=False", "header_only=True"
+    default_options = {"shared": False, "header_only": True}
 
     def config_options(self):
         if self.settings.os == "Windows":
