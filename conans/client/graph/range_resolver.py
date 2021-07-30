@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -86,7 +87,7 @@ class RangeResolver(object):
     def __init__(self, cache, remote_manager):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._cached_remote_found = {}
+        self._cached_remote_found = defaultdict(dict)
         self._result = []
 
     @property
@@ -152,7 +153,7 @@ class RangeResolver(object):
             if not remotes.selected or remote == remotes.selected:
                 remote_results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
                 if remote_results:
-                    self._cached_remote_found.update({search_ref: {remote.name: remote_results}})
+                    self._cached_remote_found[search_ref].update({remote.name: remote_results})
                 remote_results = [ref for ref in remote_results
                                   if ref.user == search_ref.user and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
@@ -177,7 +178,7 @@ class RangeResolver(object):
             if not remotes.selected or remote == remotes.selected:
                 cached_search = self._cached_remote_found.get(search_ref)
                 if cached_search:
-                    cached_refs = cached_search.get(remote.name) or []
+                    cached_refs = cached_search.get(remote.name, [])
                     all_refs = [resolved_ref].extend(cached_refs) if resolved_ref else cached_refs
                     resolved_ref = self._resolve_version(version_range, all_refs)
                     if resolved_ref in cached_refs:
