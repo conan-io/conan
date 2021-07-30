@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
