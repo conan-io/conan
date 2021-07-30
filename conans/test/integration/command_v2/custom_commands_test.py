@@ -8,6 +8,7 @@ class TestCustomCommands:
     def test_simple_custom_command(self):
         mycommand = textwrap.dedent("""
             import json
+            import os
 
             from conans.cli.output import cli_out_write
             from conans.cli.command import conan_command
@@ -25,7 +26,7 @@ class TestCustomCommands:
                 \"""
                 this is my custom command, it will print the location of the cache folder
                 \"""
-                info = {"cache_folder": conan_api.cache_folder}
+                info = {"cache_folder": os.path.basename(conan_api.cache_folder)}
                 return info
             """)
 
@@ -33,9 +34,10 @@ class TestCustomCommands:
         command_file_path = os.path.join(client.cache_folder, 'commands', 'cmd_mycommand.py')
         client.save({f"{command_file_path}": mycommand})
         client.run("mycommand")
-        assert f"Conan cache folder is: {client.cache_folder}" in client.out
+        foldername = os.path.basename(client.cache_folder)
+        assert f'Conan cache folder is: {foldername}' in client.out
         client.run("mycommand -f json")
-        assert f'{{"cache_folder": "{client.cache_folder}"}}' in client.out
+        assert f'{{"cache_folder": "{foldername}"}}' in client.out
 
     def test_custom_command_with_subcommands(self):
         complex_command = textwrap.dedent("""
