@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
@@ -87,25 +86,18 @@ class RangeResolver(object):
     def __init__(self, cache, remote_manager):
         self._cache = cache
         self._remote_manager = remote_manager
-        self._cached_remote_found = defaultdict(dict)
+        self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
+        self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self._result = []
 
-    def search_recipes(self, remote, search_ref):
+    def _search_remote_recipes(self, remote, search_ref):
         pattern = str(search_ref)
-        cached_ref = self._cached_references(search_ref, remote)
-        if not cached_ref:
-            remote_results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
-            if remote_results:
-                self._cached_remote_found[search_ref].update({remote.name: remote_results})
-                return remote_results
-        return cached_ref
-
-    def _cached_references(self, search_ref, remote):
-        cached_search = self._cached_remote_found.get(search_ref)
-        if cached_search:
-            cached_refs = cached_search.get(remote.name, [])
-            return cached_refs
-        return []
+        pattern_cached = self._cached_remote_found.setdefault(pattern, {})
+        results = pattern_cached.get(remote.name)
+        if results is None:
+            results = self._remote_manager.search_recipes(remote, pattern, ignorecase=False)
+            pattern_cached.update({remote.name: results})
+        return results
 
     @property
     def output(self):
@@ -140,11 +132,13 @@ class RangeResolver(object):
         remote_resolved_ref = None
         resolved_ref = self._resolve_local(search_ref, version_range)
         if not resolved_ref or update:
-            remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range, remotes,
+            remote_resolved_ref, remote_name = self._resolve_remote(search_ref, version_range,
+                                                                    remotes,
                                                                     check_all_remotes=update)
             resolved_ref = self._resolve_version(version_range, [resolved_ref, remote_resolved_ref])
 
-        origin = f"remote '{remote_name}'" if resolved_ref == remote_resolved_ref and remote_name else "local cache"
+        origin = f"remote '{remote_name}'" if resolved_ref == remote_resolved_ref and remote_name \
+            else "local cache"
 
         if resolved_ref:
             self._result.append("Version range '%s' required by '%s' resolved to '%s' in %s"
@@ -156,10 +150,12 @@ class RangeResolver(object):
                                  % (version_range, require, base_conanref, origin))
 
     def _resolve_local(self, search_ref, version_range):
-        local_found = search_recipes(self._cache, search_ref)
-        local_found = [ref for ref in local_found
-                       if ref.user == search_ref.user and
-                       ref.channel == search_ref.channel]
+        local_found = self._cached_cache.get(search_ref)
+        if local_found is None:
+            local_found = search_recipes(self._cache, search_ref)
+            local_found = [ref for ref in local_found
+                           if ref.user == search_ref.user and ref.channel == search_ref.channel]
+            self._cached_cache[search_ref] = local_found
         if local_found:
             return self._resolve_version(version_range, local_found)
 
@@ -167,9 +163,10 @@ class RangeResolver(object):
         results = []
         for remote in remotes.values():
             if not remotes.selected or remote == remotes.selected:
-                remote_results = self.search_recipes(remote, search_ref)
+                remote_results = self._search_remote_recipes(remote, search_ref)
                 remote_results = [ref for ref in remote_results
-                                  if ref.user == search_ref.user and ref.channel == search_ref.channel]
+                                  if ref.user == search_ref.user
+                                  and ref.channel == search_ref.channel]
                 resolved_version = self._resolve_version(version_range, remote_results)
                 if resolved_version and not check_all_remotes:
                     return resolved_version, remote.name
