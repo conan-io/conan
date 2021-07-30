@@ -284,10 +284,16 @@ class HelloReuseConan(ConanFile):
             "    To fix this conflict you need to override the package 'ProblemRequirement' in "
             "your root package.", self.client.out)
 
-        # Change the order, now it resolves correctly
+        # Change the order, still conflicts, message in different order, but same conflict
         self._export("Project", "1.0.0",
                      ["RequirementOne/[=1.2.3]@lasote/stable",
                       "RequirementTwo/[=4.5.6]@lasote/stable",
                       ], upload=True)
         self.client.run("remove '*' -f")
-        self.client.run("install Project/1.0.0@lasote/stable --build missing")
+        self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
+        self.assertIn("Conflict in RequirementTwo/4.5.6@lasote/stable:\n"
+              "    'RequirementTwo/4.5.6@lasote/stable' requires "
+              "'ProblemRequirement/1.1.0@lasote/stable' while 'RequirementOne/1.2.3@lasote/stable'"
+              " requires 'ProblemRequirement/1.0.0@lasote/stable'.\n"
+              "    To fix this conflict you need to override the package 'ProblemRequirement' in "
+              "your root package.", self.client.out)
