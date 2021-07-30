@@ -261,6 +261,12 @@ class RemoteManager(object):
         revision = self._call_remote(remote, "get_latest_recipe_revision", ref)
         return revision
 
+    # FIXME: fix in server side, get_latest_recipe_revision should return the time of the rev
+    def get_latest_recipe_revision_with_time(self, ref, remote):
+        revisions = self._call_remote(remote, "get_recipe_revisions", ref)
+        return {'reference': ref.copy_with_rev(revisions[0].get("revision")),
+                'time': revisions[0].get("time")} if revisions else {}
+
     def get_latest_package_revision(self, pref, remote, headers=None):
         revision = self._call_remote(remote, "get_latest_package_revision", pref, headers=headers)
         return revision

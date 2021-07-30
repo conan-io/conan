@@ -119,21 +119,21 @@ class ConanProxy(object):
             return conanfile_path, status, cur_remote, ref
 
     def _get_rrev_from_remotes(self, reference, remotes, check_all_servers):
-        results = []
         output = ScopedOutput(str(reference), self._out)
 
         # TODO: cache2.0 --update strategies: when we have specified the revision we don't want to
         #  check all the remotes, just return the first match
         output.info(f"Checking all remotes: ({', '.join([remote.name for remote in remotes])})")
-
+        results = []
         for remote in remotes:
             try:
                 output.info(f"Checking remote: {remote.name}")
-                remote_rrevs = self._remote_manager.get_recipe_revisions(reference, remote)
-                for rrev in remote_rrevs:
+
+                remote_rrev = self._remote_manager.get_latest_recipe_revision_with_time(reference, remote)
+                if remote_rrev.get('reference'):
                     results.append({'remote': remote,
-                                    'reference': reference.copy_with_rev(rrev.get("revision")),
-                                    'time': rrev.get("time")})
+                                    'reference': remote_rrev.get("reference"),
+                                    'time': remote_rrev.get("time")})
                 if len(results) > 0 and not check_all_servers:
                     break
             except NotFoundException:
