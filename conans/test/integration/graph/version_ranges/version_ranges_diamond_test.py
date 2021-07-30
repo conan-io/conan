@@ -6,6 +6,7 @@ import pytest
 from parameterized import parameterized
 
 from conans.paths import CONANFILE
+from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     inc_package_manifest_timestamp, inc_recipe_manifest_timestamp
 
@@ -52,35 +53,35 @@ class VersionRangesUpdatingTest(unittest.TestCase):
     def test_update(self):
         client = TestClient(servers={"default": TestServer()},
                             users={"default": [("lasote", "mypass")]})
-        conanfile = """from conans import ConanFile
-class HelloReuseConan(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . Pkg/1.1@lasote/testing")
-        client.run("create . Pkg/1.2@lasote/testing")
+
+        client.save({"pkg.py": GenConanfile()})
+        client.run("create pkg.py Pkg/1.1@lasote/testing")
+        client.run("create pkg.py Pkg/1.2@lasote/testing")
         client.run("upload Pkg* -r=default --all --confirm")
         client.run("remove Pkg/1.2@lasote/testing -f")
-        conanfile = """from conans import ConanFile
-class HelloReuseConan(ConanFile):
-    requires = "Pkg/[~1]@lasote/testing"
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
+
+        client.save({"consumer.py": GenConanfile().with_requirement("Pkg/[~1]@lasote/testing")})
+        client.run("install consumer.py")
         # Resolves to local package
         self.assertIn("Pkg/1.1@lasote/testing: Already installed!", client.out)
-        client.run("install . --update")
+        client.run("install consumer.py --update")
         # Resolves to remote package
         self.assertIn("Pkg/1.2@lasote/testing: Package installed", client.out)
         self.assertNotIn("Pkg/1.1", client.out)
 
+        # newer in cache that in remotes and updating, should resolve the cache one
+        client.run("create pkg.py Pkg/1.3@lasote/testing")
+        client.run("install consumer.py --update")
+        self.assertIn("Pkg/1.3@lasote/testing: Already installed!", client.out)
+        client.run("remove Pkg/1.3@lasote/testing -f")
+
         # removes remote
         client.run("remove Pkg* -r=default --f")
         # Resolves to local package
-        client.run("install .")
+        client.run("install consumer.py")
         self.assertIn("Pkg/1.2@lasote/testing: Already installed!", client.out)
         # Update also resolves to local package
-        client.run("install . --update")
+        client.run("install consumer.py --update")
         self.assertIn("Pkg/1.2@lasote/testing: Already installed!", client.out)
         self.assertNotIn("Pkg/1.1", client.out)
 
@@ -276,7 +277,6 @@ class HelloReuseConan(ConanFile):
 
         self.client.run("remove '*' -f")
         self.client.run("install Project/1.0.0@lasote/stable --build missing", assert_error=True)
-
         self.assertIn("Conflict in RequirementOne/1.2.3@lasote/stable:\n"
             "    'RequirementOne/1.2.3@lasote/stable' requires "
             "'ProblemRequirement/1.0.0@lasote/stable' while 'RequirementTwo/4.5.6@lasote/stable'"
