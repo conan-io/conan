@@ -460,7 +460,7 @@ class TestProfileEnvRoundTrip:
 
         env = ProfileEnvironment.loads(myprofile)
         text = env.dumps()
-        # NOTE: This is reversed order compared to origin, prepend alwyas first
+        # NOTE: This is reversed order compared to origin, prepend always first
         assert text == textwrap.dedent("""\
             MyVar1=+MyValue12
             MyVar1+=MyValue11
