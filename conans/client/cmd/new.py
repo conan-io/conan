@@ -312,7 +312,7 @@ def _get_files_from_template_dir(template_dir, name, version, package_name, defi
                                          package_name=package_name, defines=defines)
                 content = _render_template(content, name=name, version=version,
                                            package_name=package_name, defines=defines)
-            except jinja2.exceptions.TemplateError:
+            except (jinja2.exceptions.TemplateError, UnicodeDecodeError):
                 pass
             out_files[rel_f] = content
 
