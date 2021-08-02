@@ -176,11 +176,11 @@ class Pkg(ConanFile):
         self.assertIn("%s: server2" % pref, client.out)
 
         # install --update will install a new recipe revision from server1
-        # and the binary from server2
+        # and the binary from server1
         client.run('install Pkg/0.1@lasote/testing -s build_type=Debug --update')
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving from remote 'server1'...", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: Retrieving package "
-                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 from remote 'server2' ", client.out)
+                      "5a67a79dbc25fd0fa149a0eb7a20715189a0d988 from remote 'server1' ", client.out)
 
         # Export new recipe, it should be non associated
         conanfile = """from conans import ConanFile, tools
