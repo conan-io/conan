@@ -3,6 +3,7 @@ import errno
 import os
 import platform
 import subprocess
+from contextlib import contextmanager
 
 from conan.tools import CONAN_TOOLCHAIN_ARGS_FILE, CONAN_TOOLCHAIN_ARGS_SECTION
 from conans.client.downloaders.download import run_downloader
@@ -222,3 +223,13 @@ def save_toolchain_args(content, generators_folder=None):
     toolchain_config[CONAN_TOOLCHAIN_ARGS_SECTION] = content_
     with open(args_file, "w") as f:
         toolchain_config.write(f)
+
+
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)

@@ -2,6 +2,7 @@ import logging
 
 import patch_ng
 
+from conan.tools.files import chdir
 from conans.errors import ConanException
 
 try:
@@ -37,8 +38,10 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None,
     :param kwargs: Extra parameters that can be added and will contribute to output information
     """
 
+    base_path = base_path or conanfile.source_folder
     patch_type = kwargs.get('patch_type')
     patch_description = kwargs.get('patch_description')
+
     if patch_type or patch_description:
         patch_type_str = ' ({})'.format(patch_type) if patch_type else ''
         patch_description_str = ': {}'.format(patch_description) if patch_description else ''
@@ -97,11 +100,13 @@ def apply_conandata_patches(conanfile):
     """
 
     patches = conanfile.conan_data.get('patches')
-    if isinstance(patches, dict):
-        assert conanfile.version, "Can only be applied if conanfile.version is already defined"
-        entries = patches.get(conanfile.version, [])
-        for it in entries:
-            patch(conanfile, **it)
-    elif isinstance(patches, Iterable):
-        for it in patches:
-            patch(conanfile, **it)
+
+    with chdir(conanfile.folders.base_source):
+        if isinstance(patches, dict):
+            assert conanfile.version, "Can only be applied if conanfile.version is already defined"
+            entries = patches.get(conanfile.version, [])
+            for it in entries:
+                patch(conanfile, **it)
+        elif isinstance(patches, Iterable):
+            for it in patches:
+                patch(conanfile, **it)
