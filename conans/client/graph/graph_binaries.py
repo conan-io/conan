@@ -100,7 +100,7 @@ class GraphBinariesAnalyzer(object):
     def _get_package_info(self, node, pref, remote):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
 
-    def _evaluate_remote_pkg(self, node, pref, remote, remotes):
+    def _evaluate_remote_pkg(self, node, pref, remote, remotes, remote_selected):
         remote_info = None
         if remote:
             try:
@@ -113,7 +113,7 @@ class GraphBinariesAnalyzer(object):
 
         # If the "remote" came from the registry but the user didn't specified the -r, with
         # revisions iterate all remotes
-        if not remote:  # or (not remote_info and self._cache.config.revisions_enabled):
+        if not remote_selected:  # or (not remote_info and self._cache.config.revisions_enabled):
             for r in remotes.values():  # FIXME: Here we hit the same remote we did before
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
@@ -243,6 +243,7 @@ class GraphBinariesAnalyzer(object):
         metadata = self._evaluate_clean_pkg_folder_dirty(node, package_layout, pref)
 
         remote = remotes.selected
+        remote_selected = remote is not None
 
         metadata = metadata or package_layout.load_metadata()
         if not remote:
@@ -260,7 +261,8 @@ class GraphBinariesAnalyzer(object):
             recipe_hash = None
         else:  # Binary does NOT exist locally
             # Returned remote might be different than the passed one if iterating remotes
-            recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes)
+            recipe_hash, remote = self._evaluate_remote_pkg(node, pref, remote, remotes,
+                                                            remote_selected)
 
         if build_mode.outdated:
             if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
