@@ -106,11 +106,13 @@ def test_patch(mock_patch_ng):
     client.save({"conanfile.py": conanfile})
     client.run('create .')
 
-    assert mock_patch_ng.apply_args == (None, 0, False)
+    assert os.path.exists(mock_patch_ng.apply_args[0])
+    assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
 
 
-def test_apply_conandata_patches(mock_patch_ng):
+@pytest.mark.parametrize("use_base_path", [False, True])
+def test_apply_conandata_patches(mock_patch_ng, use_base_path):
     conanfile = textwrap.dedent("""
         from conans import ConanFile
         from conan.tools.files import apply_conandata_patches
@@ -119,6 +121,9 @@ def test_apply_conandata_patches(mock_patch_ng):
             name = "mypkg"
             version = "1.11.0"
 
+            def layout(self):
+                self.folders.source = "source_subfolder"
+
             def build(self):
                 apply_conandata_patches(self)
         """)
@@ -126,22 +131,27 @@ def test_apply_conandata_patches(mock_patch_ng):
         patches:
           "1.11.0":
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-              base_path: "source_subfolder"
+              {base}
             - patch_file: "patches/0002-implicit-copy-constructor.patch"
-              base_path: "source_subfolder"
+              {base}
               patch_type: backport
               patch_source: https://github.com/google/flatbuffers/pull/5650
               patch_description: Needed to build with modern clang compilers.
           "1.12.0":
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-              base_path: "source_subfolder"
-    """)
+              {base}
+    """.format(base='base_path: "source_subfolder"' if use_base_path else ""))
 
     client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
 
-    assert mock_patch_ng.apply_args == ('source_subfolder', 0, False)
+    if use_base_path:
+        assert mock_patch_ng.apply_args == ('source_subfolder', 0, False)
+    else:
+        assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
+        assert mock_patch_ng.apply_args[1:] == (0, False)
+
     assert 'mypkg/1.11.0: Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
