@@ -98,7 +98,8 @@ def latest_vs_version_installed(output):
     return latest_visual_studio_version_installed(output=output)
 
 
-MSVS_YEAR = {"16": "2019",
+MSVS_YEAR = {"17": "2022",
+             "16": "2019",
              "15": "2017",
              "14": "2015",
              "12": "2013",
