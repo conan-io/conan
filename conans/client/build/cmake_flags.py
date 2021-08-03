@@ -63,7 +63,8 @@ def get_generator(conanfile):
                     '12': '12 2013',
                     '14': '14 2015',
                     '15': '15 2017',
-                    '16': '16 2019'}.get(major_version, "UnknownVersion %s" % version)
+                    '16': '16 2019',
+                    '17': '17 2022'}.get(major_version, "UnknownVersion %s" % version)
         base = "Visual Studio %s" % _visuals
         return base
 

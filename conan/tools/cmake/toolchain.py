@@ -771,7 +771,8 @@ class CMakeToolchain(object):
                        '12': '12 2013',
                        '14': '14 2015',
                        '15': '15 2017',
-                       '16': '16 2019'}
+                       '16': '16 2019',
+                       '17': '17 2022'}
 
         if compiler == "msvc":
             if compiler_version is None:
