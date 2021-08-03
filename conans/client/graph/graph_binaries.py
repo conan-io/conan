@@ -113,8 +113,9 @@ class GraphBinariesAnalyzer(object):
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
 
-        # If we didn't find a package and we didn't pin a remote with -r we iterate the other remotes
-        if not remote_info and not remote_selected:
+        # If we didn't pin a remote with -r and we didn't find a package, we iterate the
+        # other remotes to find a binary but only when revisions mechanism
+        if not remote_selected and (not remote_info and self._cache.config.revisions_enabled):
             for r in remotes.values():
                 if r == remote:
                     continue
