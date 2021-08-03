@@ -39,7 +39,8 @@ def _write_conanvcvars(conanfile, auto_activate=True):
             if toolset is not None:
                 vcvars_ver = {"v140": "14.0",
                               "v141": "14.1",
-                              "v142": "14.2"}.get(toolset)
+                              "v142": "14.2",
+                              "v143": "14.3"}.get(toolset)
         else:
             # Code similar to CMakeToolchain toolset one
             compiler_version = str(conanfile.settings.compiler.version)
