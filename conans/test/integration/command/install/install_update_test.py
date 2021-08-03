@@ -287,7 +287,7 @@ def test_fail_usefully_when_failing_retrieving_package():
     # Now fake the remote url to force a network failure
     client.run("remote update default http://this_not_exist8823.com")
     # Try to install ref2, it will try to download the binary for ref1
-    client.run("install {} -r default".format(ref2), assert_error=True)
+    client.run("install {}".format(ref2), assert_error=True)
     assert "ERROR: Error downloading binary package: '{}'".format(pref1) in client.out
 
 

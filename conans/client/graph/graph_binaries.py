@@ -101,11 +101,10 @@ class GraphBinariesAnalyzer(object):
         return self._remote_manager.get_package_info(pref, remote, info=node.conanfile.info)
 
     def _evaluate_remote_pkg(self, node, pref, remote, remotes, remote_selected):
-        """
-        :param remote_selected: bool, The user specified a remote with -r
-        """
         remote_info = None
-        if remote_selected:
+        # If the remote is pinned (remote_selected) we won't iterate the remotes.
+        # The "remote" can come from -r or from the registry (associated ref)
+        if remote_selected or remote:
             try:
                 remote_info, pref = self._get_package_info(node, pref, remote)
             except NotFoundException:
@@ -113,8 +112,12 @@ class GraphBinariesAnalyzer(object):
             except Exception:
                 node.conanfile.output.error("Error downloading binary package: '{}'".format(pref))
                 raise
-        else:
+
+        # If we didn't find a package and we didn't pin a remote with -r we iterate the other remotes
+        if not remote_info and not remote_selected:
             for r in remotes.values():
+                if r == remote:
+                    continue
                 try:
                     remote_info, pref = self._get_package_info(node, pref, r)
                 except NotFoundException:
