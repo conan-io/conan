@@ -166,6 +166,7 @@ class RemoteManager(object):
         self._hook_manager.execute("post_download_package", conanfile_path=conanfile_path,
                                    reference=pref.ref, package_id=pref.id, remote=remote,
                                    conanfile=conanfile)
+        return pkg_layout
 
     def _get_package(self, layout, pref, remote, output, recorder, info):
         t1 = time.time()

@@ -16,6 +16,7 @@ from conans.client.graph.graph import BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOA
 from conans.client.importer import remove_imports, run_imports
 from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTALL_ERROR_MISSING
 from conans.client.source import retrieve_exports_sources, config_source
+from conans.client.tools import chdir
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
@@ -413,8 +414,8 @@ class BinaryInstaller(object):
                 _download(node)
 
     def _download_pkg(self, node):
-        self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
-                                         node.conanfile.output, self._recorder)
+        return self._remote_manager.get_package(node.conanfile, node.pref, node.binary_remote,
+                                                node.conanfile.output, self._recorder)
 
     def _build(self, nodes_by_level, root_node, profile_host, profile_build, graph_lock,
                remotes, build_mode, update):
@@ -517,6 +518,7 @@ class BinaryInstaller(object):
                     pkg_layout.package_remove()
                     with pkg_layout.set_dirty_context_manager():
                         pref = self._build_package(node, output, remotes, pkg_layout)
+                    self._call_post_package(node, output, pkg_layout)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -524,7 +526,8 @@ class BinaryInstaller(object):
                     # this can happen after a re-evaluation of packageID with Package_ID_unknown
                     # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
                     #  move the layout inside the get... method
-                    self._download_pkg(node)
+                    pkg_layout = self._download_pkg(node)
+                    self._call_post_package(node, output, pkg_layout)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
@@ -536,12 +539,29 @@ class BinaryInstaller(object):
             if pkg_layout.reference != pref:
                 self._cache.assign_prev(pkg_layout, ConanReference(pref))
 
-            package_folder = pkg_layout.package()
+            package_install_folder = pkg_layout.post_package()
+            if os.path.exists(package_install_folder):
+                output.info('Using package install folder')
+                package_folder = package_install_folder
+            else:
+                package_folder = pkg_layout.package()
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
                                                    % (str(pref), package_folder))
             # Call the info method
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
+
+    def _call_post_package(self, node, output, pkg_layout):
+        conanfile = node.conanfile
+        # FIXME: better name? "install" might be confusing with the old install_folder mechanism
+        # FIXME: Maybe it is better to remove first the install folder here in develop2
+        # TODO: dirty?
+        if hasattr(conanfile, "post_package") and callable(getattr(conanfile, "post_package")):
+            shutil.copytree(pkg_layout.package(), pkg_layout.post_package(), symlinks=True)
+            with chdir(pkg_layout.package()):
+                conanfile.folders.set_base_post_package(pkg_layout.post_package())
+                output.info("Calling post_package() method...")
+                conanfile.post_package()
 
     def _build_package(self, node, output, remotes, pkg_layout):
         conanfile = node.conanfile

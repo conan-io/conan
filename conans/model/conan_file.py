@@ -235,6 +235,10 @@ class ConanFile(object):
         self.folders.set_base_package(folder)
 
     @property
+    def post_package_folder(self):
+        return self.folders.base_post_package
+
+    @property
     def install_folder(self):
         # FIXME: Remove in 2.0, no self.install_folder
         return self.folders.base_install

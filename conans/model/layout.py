@@ -36,6 +36,7 @@ class Folders(object):
 
     def __init__(self):
         self._base_install = None
+        self._base_post_package = None
         self._base_source = None
         self._base_build = None
         self._base_package = None
@@ -88,6 +89,13 @@ class Folders(object):
 
     def set_base_install(self, folder):
         self._base_install = folder
+
+    @property
+    def base_post_package(self):
+        return self._base_post_package
+
+    def set_base_post_package(self, folder):
+        self._base_post_package = folder
 
     @property
     def base_package(self):

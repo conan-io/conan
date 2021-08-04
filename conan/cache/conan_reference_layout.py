@@ -12,6 +12,7 @@ from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 SRC_FOLDER = "source"
 BUILD_FOLDER = "build"
 PACKAGES_FOLDER = "package"
+PACKAGES_INSTALL_FOLDER = "install"
 EXPORT_SRC_FOLDER = "export_source"
 SYSTEM_REQS_FOLDER = "system_reqs"
 SCM_SRC_FOLDER = "scm_source"
@@ -121,6 +122,9 @@ class PackageLayout(LayoutBase):
     def package(self):
         return os.path.join(self.base_folder, PACKAGES_FOLDER)
 
+    def post_package(self):
+        return os.path.join(self.base_folder, PACKAGES_INSTALL_FOLDER)
+
     def download_package(self):
         return os.path.join(self.base_folder, "dl")
 
@@ -168,11 +172,12 @@ class PackageLayout(LayoutBase):
         # Here we could validate and check we own a write lock over this package
         tgz_folder = self.download_package()
         rmdir(tgz_folder)
-        try:
-            rmdir(self.package())
-        except OSError as e:
-            raise ConanException("%s\n\nFolder: %s\n"
-                                 "Couldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % (self.package(), str(e)))
-        if is_dirty(self.package()):
-            clean_dirty(self.package())
+        for folder in self.package(), self.post_package():
+            try:
+                rmdir(folder)
+            except OSError as e:
+                raise ConanException("%s\n\nFolder: %s\n"
+                                     "Couldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry" % (folder, str(e)))
+            if is_dirty(folder):
+                clean_dirty(folder)
