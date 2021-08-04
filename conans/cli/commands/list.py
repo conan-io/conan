@@ -9,17 +9,17 @@ from conans.model.ref import PackageReference
 remote_color = Color.BRIGHT_BLUE
 recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
+error_color = Color.BRIGHT_RED
 
 
 def _print_common_headers(result, ref_type):
-    if result.get("error"):
-        # TODO: Handle errors
-        return
-
     if result.get("remote"):
         cli_out_write(f"{result['remote']}:", fg=remote_color)
     else:
         cli_out_write("Local Cache:", remote_color)
+
+    if result.get("error"):
+        cli_out_write(result["error"], fg=error_color, indentation=2)
 
     if not result.get("results"):
         cli_out_write(f"There are no matching {ref_type}", indentation=2)
