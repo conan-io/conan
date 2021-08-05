@@ -46,7 +46,7 @@ def test_removed_folder():
     pref = client.get_latest_prev(ref)
     layout = client.get_latest_pkg_layout(pref)
     assert not os.path.exists(layout.post_package())
-    assert os.path.exists(os.path.join(layout.package(), "foo_bar.txt")
+    assert os.path.exists(os.path.join(layout.package(), "foo_bar.txt"))
 
 
 def test_post_package_method():
