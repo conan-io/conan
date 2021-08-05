@@ -260,11 +260,11 @@ class ConanAPIV2(object):
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                error = "It does not exist the reference."
+                pass
             except ConanConnectionError:
                 error = "There was a connection problem."
             except BaseException as e:
-                error = f"Something was wrong: {str(e)}"
+                error = str(e)
         else:
             # Let's get the revisions from the local cache
             revs = getattr(self.app.cache, method_name)(ref)
@@ -357,7 +357,7 @@ class ConanAPIV2(object):
                         "d5f16437dd4989cc688211b95c24525589acaafd": {
                             "settings": {"compiler": "apple-clang",...},
                             "options": {'options': {'shared': 'False',...}},
-                            "requires": ['mylib/1.0.8:3df6ebb8a308d309e882b21988fd9ea103560e16',...]
+                            "requires": ['mylib/1.0.8#3df6ebb8a308d309e882b21988fd9ea103560e16',...]
                         }
                     }
                   }
@@ -375,11 +375,11 @@ class ConanAPIV2(object):
                 # Artifactory API returns an empty result if the recipe doesn't exist, but
                 # Conan Server returns a 404. This probably should be fixed server side,
                 # but in the meantime we must handle it here
-                error = "It does not exist the reference."
+                pass
             except ConanConnectionError:
                 error = "There was a connection problem."
             except BaseException as e:
-                error = f"Something was wrong: {str(e)}"
+                error = str(e)
         else:
             rrev = ref if ref.revision else self.app.cache.get_latest_rrev(ref)
             package_ids = self.app.cache.get_package_ids(rrev)

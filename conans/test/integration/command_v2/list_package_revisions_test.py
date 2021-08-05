@@ -81,7 +81,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching packages
+          There are no matching package references
         """)
 
         self.client.run(f"list package-revisions {self._get_fake_package_refence('whatever/0.1')}")
@@ -93,11 +93,11 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching packages
+          There are no matching package references
         remote1:
-          There are no matching packages
+          There are no matching package references
         remote2:
-          There are no matching packages
+          There are no matching package references
         """)
 
         pref = self._get_fake_package_refence('whatever/0.1')
@@ -113,7 +113,11 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         self.client.run("remote disable remote1")
         pref = self._get_fake_package_refence('whatever/0.1')
         self.client.run(f"list package-revisions -r remote1 {pref}", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        expected_output = textwrap.dedent("""\
+        remote1
+          ERROR: Remote 'remote1' is disabled
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes(TestListPackageRevisionsBase):
@@ -152,7 +156,7 @@ class TestRemotes(TestListPackageRevisionsBase):
         remote1:
           {repr(pref)}#.*
         remote2:
-          There are no matching packages""")
+          There are no matching package references""")
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):

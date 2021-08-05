@@ -85,7 +85,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching references
+          There are no matching recipe references
         """)
 
         self.client.run(f"list package-ids {self._get_fake_recipe_refence('whatever/0.1')}")
@@ -97,11 +97,11 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
         expected_output = textwrap.dedent("""\
         Local Cache:
-          There are no matching references
+          There are no matching recipe references
         remote1:
-          There are no matching references
+          There are no matching recipe references
         remote2:
-          There are no matching references
+          There are no matching recipe references
         """)
 
         rrev = self._get_fake_recipe_refence('whatever/0.1')
@@ -117,7 +117,11 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("remote disable remote1")
         rrev = self._get_fake_recipe_refence('whatever/0.1')
         self.client.run(f"list package-ids -r remote1 {rrev}", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        expected_output = textwrap.dedent("""\
+        remote1
+          ERROR: Remote 'remote1' is disabled
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes(TestListPackageIdsBase):
@@ -131,7 +135,7 @@ class TestRemotes(TestListPackageIdsBase):
         self.client.run(f"list package-ids {repr(rrev)}")
         expected_output = textwrap.dedent(f"""\
         Local Cache:
-          There are no matching references
+          There are no matching recipe references
         """)
         assert expected_output == str(self.client.out)
 
@@ -244,7 +248,7 @@ class TestRemotes(TestListPackageIdsBase):
             requires:
               pkg/0.1@user/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
         remote2:
-          There are no matching references
+          There are no matching recipe references
         """ % {"rrev": repr(rrev)})
         assert bool(re.match(expected_output, output, re.MULTILINE))
 

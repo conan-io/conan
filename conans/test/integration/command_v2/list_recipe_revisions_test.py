@@ -1,4 +1,5 @@
 import re
+import textwrap
 
 import pytest
 
@@ -65,7 +66,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         self._add_remote("remote2")
 
         expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n")
+                           "  There are no matching recipe references\n")
 
         self.client.run("list recipe-revisions whatever/1.0")
         assert expected_output == self.client.out
@@ -75,11 +76,11 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         self._add_remote("remote2")
 
         expected_output = ("Local Cache:\n"
-                           "  There are no matching recipes\n"
+                           "  There are no matching recipe references\n"
                            "remote1:\n"
-                           "  There are no matching recipes\n"
+                           "  There are no matching recipe references\n"
                            "remote2:\n"
-                           "  There are no matching recipes\n")
+                           "  There are no matching recipe references\n")
 
         self.client.run("list recipe-revisions -c -a whatever/1.0")
         assert expected_output == self.client.out
@@ -92,7 +93,11 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
         self.client.run("list recipe-revisions -r remote1 whatever/1.0", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        expected_output = textwrap.dedent("""\
+        remote1
+          ERROR: Remote 'remote1' is disabled
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes(TestListRecipeRevisionsBase):
@@ -121,7 +126,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
 
         expected_output = (
             "remote1:\n"
-            "  There are no matching recipes\n"
+            "  There are no matching recipe references\n"
         )
 
         assert expected_output in self.client.out
@@ -133,7 +138,7 @@ class TestRemotes(TestListRecipeRevisionsBase):
             r"remote1:\n"
             r"  test_recipe/1.0.0@user/channel#.*\n"
             r"remote2:\n"
-            r"  There are no matching recipes\n"
+            r"  There are no matching recipe references\n"
         )
 
         remote1 = "remote1"
