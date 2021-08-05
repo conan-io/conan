@@ -518,7 +518,7 @@ class BinaryInstaller(object):
                     pkg_layout.package_remove()
                     with pkg_layout.set_dirty_context_manager():
                         pref = self._build_package(node, output, remotes, pkg_layout)
-                    self._call_post_package(node, output, pkg_layout)
+                    self._call_post_package(node.conanfile, output, pkg_layout)
                     assert node.prev, "Node PREV shouldn't be empty"
                     assert node.pref.revision, "Node PREF revision shouldn't be empty"
                     assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -527,7 +527,7 @@ class BinaryInstaller(object):
                     # TODO: cache2.0. We can't pass the layout because we don't have the prev yet
                     #  move the layout inside the get... method
                     pkg_layout = self._download_pkg(node)
-                    self._call_post_package(node, output, pkg_layout)
+                    self._call_post_package(node.conanfile, output, pkg_layout)
                 elif node.binary == BINARY_CACHE:
                     assert node.prev, "PREV for %s is None" % str(pref)
                     output.success('Already installed!')
@@ -550,8 +550,7 @@ class BinaryInstaller(object):
             self._call_package_info(conanfile, package_folder, ref=pref.ref, is_editable=False)
             self._recorder.package_cpp_info(pref, conanfile.cpp_info)
 
-    def _call_post_package(self, node, output, pkg_layout):
-        conanfile = node.conanfile
+    def _call_post_package(self, conanfile, output, pkg_layout):
         # FIXME: better name? "install" might be confusing with the old install_folder mechanism
         # FIXME: Maybe it is better to remove first the install folder here in develop2
         # TODO: dirty?
