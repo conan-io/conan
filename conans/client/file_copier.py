@@ -52,7 +52,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None, ignore_case=True, if_different=True):
+                 excludes=None, ignore_case=True, if_different=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -66,7 +66,7 @@ class FileCopier(object):
         param links: True to activate symlink copying
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
-        param if_different: only copy file if source is different from the destination
+        param if_different: only copy file if source is different from the destination (specially useful for imports)
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
