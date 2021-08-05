@@ -66,7 +66,7 @@ class FileCopier(object):
         param links: True to activate symlink copying
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
-        param if_different: only copy file if destination is different from the source
+        param if_different: only copy file if source is different from the destination
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
