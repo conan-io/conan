@@ -114,7 +114,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         pref = self._get_fake_package_refence('whatever/0.1')
         self.client.run(f"list package-revisions -r remote1 {pref}", assert_error=True)
         expected_output = textwrap.dedent("""\
-        remote1
+        remote1:
           ERROR: Remote 'remote1' is disabled
         """)
         assert expected_output == self.client.out

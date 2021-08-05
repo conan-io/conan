@@ -26,7 +26,7 @@ from conans.client.runner import ConanRunner
 from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
-    ConanConnectionError
+    ConanConnectionError, InvalidNameException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
@@ -94,7 +94,7 @@ class ConanApp(object):
 
 def api_method(f):
     def wrapper(api, *args, **kwargs):
-        try:  # getcwd can fail if Conan runs on an unexisting folder
+        try:  # getcwd can fail if Conan runs on an non-existing folder
             old_curdir = os.getcwd()
         except EnvironmentError:
             old_curdir = None
@@ -102,17 +102,9 @@ def api_method(f):
             api.create_app()
             with environment_append(api.app.cache.config.env_vars):
                 return f(api, *args, **kwargs)
-        except Exception as exc:
-            msg = exception_message_safe(exc)
-            try:
-                api.out.error("{} ({})".format(str(exc.__class__.__name__), msg))
-            except BaseException:
-                pass
-            raise
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
-
     return wrapper
 
 
@@ -296,10 +288,16 @@ class ConanAPIV2(object):
                         "time": "2021-07-20 00:56:25 UTC"
                       },
                       ...
-                    ]
+                    ],
+                    "error": None
                   }
         """
-        ref = PackageReference.loads(reference)
+        try:
+            ref = PackageReference.loads(reference)
+        except (ConanException, InvalidNameException):
+            raise ConanException(f"{reference} is not a valid recipe revision reference, provide a "
+                                 f"reference in the form "
+                                 f"name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID")
         if ref.revision:
             raise ConanException(f"Cannot list the revisions of a specific package revision")
 
@@ -326,10 +324,15 @@ class ConanAPIV2(object):
                         "time": "2021-07-20 00:56:25 UTC"
                       },
                       ...
-                    ]
+                    ],
+                    "error": None
                   }
         """
-        ref = ConanFileReference.loads(reference)
+        try:
+            ref = ConanFileReference.loads(reference)
+        except (ConanException, InvalidNameException):
+            raise ConanException(f"{reference} is not a valid recipe reference, provide a reference"
+                                 f" in the form name/version[@user/channel]")
         if ref.revision:
             raise ConanException(f"Cannot list the revisions of a specific recipe revision")
 
@@ -359,10 +362,15 @@ class ConanAPIV2(object):
                             "options": {'options': {'shared': 'False',...}},
                             "requires": ['mylib/1.0.8#3df6ebb8a308d309e882b21988fd9ea103560e16',...]
                         }
-                    }
+                    },
+                    "error": None
                   }
         """
-        ref = ConanFileReference.loads(reference)
+        try:
+            ref = ConanFileReference.loads(reference)
+        except (ConanException, InvalidNameException):
+            raise ConanException(f"{reference} is not a valid recipe reference, provide a reference"
+                                 f" in the form name/version[@user/channel][#RECIPE_REVISION]")
         error = None
         packages_props = {}
         if remote:

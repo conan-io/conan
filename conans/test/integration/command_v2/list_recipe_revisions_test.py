@@ -94,7 +94,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
         self.client.run("remote disable remote1")
         self.client.run("list recipe-revisions -r remote1 whatever/1.0", assert_error=True)
         expected_output = textwrap.dedent("""\
-        remote1
+        remote1:
           ERROR: Remote 'remote1' is disabled
         """)
         assert expected_output == self.client.out

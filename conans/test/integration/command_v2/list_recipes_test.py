@@ -55,6 +55,7 @@ class TestParams(TestListRecipesBase):
         self.client.run("list recipes --all-remotes --remote remote1 package", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
+
 class TestListRecipesFromRemotes(TestListRecipesBase):
     def test_by_default_search_only_in_cache(self):
         self._add_remote("remote1")
@@ -89,7 +90,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         self.client.run("remote disable remote1")
         self.client.run("list recipes whatever -r remote1", assert_error=True)
         expected_output = textwrap.dedent("""\
-        remote1
+        remote1:
           ERROR: Remote 'remote1' is disabled
         """)
         assert expected_output == self.client.out
