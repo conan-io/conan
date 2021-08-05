@@ -539,10 +539,9 @@ class BinaryInstaller(object):
             if pkg_layout.reference != pref:
                 self._cache.assign_prev(pkg_layout, ConanReference(pref))
 
-            package_install_folder = pkg_layout.post_package()
-            if os.path.exists(package_install_folder):
+            if os.path.exists(pkg_layout.post_package()):
                 output.info('Using package install folder')
-                package_folder = package_install_folder
+                package_folder = pkg_layout.post_package()
             else:
                 package_folder = pkg_layout.package()
             assert os.path.isdir(package_folder), ("Package '%s' folder must exist: %s\n"
