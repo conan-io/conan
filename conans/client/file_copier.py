@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import shutil
+import filecmp
 from collections import defaultdict
 
 from conans.errors import ConanException
@@ -51,7 +52,7 @@ class FileCopier(object):
         return report_copied_files(self._copied, output)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None, ignore_case=True):
+                 excludes=None, ignore_case=True, if_different=True):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -65,6 +66,7 @@ class FileCopier(object):
         param links: True to activate symlink copying
         param excludes: Single pattern or a tuple of patterns to be excluded from the copy
         param ignore_case: will do a case-insensitive pattern matching when True
+        param if_different: only copy file if destination is different from the source
         return: list of copied files
         """
         # TODO: Remove the old "links" arg for Conan 2.0
@@ -75,7 +77,7 @@ class FileCopier(object):
             # Avoid repeatedly copying absolute paths
             return self._copy(os.curdir, pattern, src, dst, links,
                               ignore_case, excludes, keep_path,
-                              excluded_folders=[self._dst_folder])
+                              excluded_folders=[self._dst_folder], if_different=if_different)
 
         files = []
         for src_folder in self._src_folders:
@@ -88,7 +90,7 @@ class FileCopier(object):
         return files
 
     def _copy(self, base_src, pattern, src, dst, symlinks, ignore_case, excludes, keep_path,
-              excluded_folders):
+              excluded_folders, if_different):
         # Check for ../ patterns and allow them
         if pattern.startswith(".."):
             rel_dir = os.path.abspath(os.path.join(base_src, pattern))
@@ -100,7 +102,7 @@ class FileCopier(object):
 
         files_to_copy, link_folders = self._filter_files(src, pattern, symlinks, excludes,
                                                          ignore_case, excluded_folders)
-        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks)
+        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, symlinks, if_different)
         self.link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
@@ -216,7 +218,7 @@ class FileCopier(object):
                     base_path = os.path.dirname(base_path)
 
     @staticmethod
-    def _copy_files(files, src, dst, keep_path, symlinks):
+    def _copy_files(files, src, dst, keep_path, symlinks, if_different):
         """ executes a multiple file copy from [(src_file, dst_file), (..)]
         managing symlinks if necessary
         """
@@ -237,6 +239,7 @@ class FileCopier(object):
                     pass
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
             else:
-                shutil.copy2(abs_src_name, abs_dst_name)
+                if not if_different or not os.path.exists(abs_dst_name) or not filecmp.cmp(abs_src_name, abs_dst_name):
+                    shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)
         return copied_files
