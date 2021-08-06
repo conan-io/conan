@@ -41,4 +41,5 @@ def run_configure_method(conanfile, down_options, down_ref, ref):
 
         # Once the node is configured call the layout()
         if hasattr(conanfile, "layout"):
-            conanfile.layout()
+            with conanfile_exception_formatter(str(conanfile), "layout"):
+                conanfile.layout()
