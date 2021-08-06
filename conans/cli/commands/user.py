@@ -28,7 +28,8 @@ def user_list(conan_api, parser, subparser, *args):
                                 "If no remote is specified it will show the users for all "
                                 "the remotes")
     args = parser.parse_args(*args)
-    info = conan_api.user_list(args.remote)
+    # FIXME: Handle errors
+    info, error = conan_api.user_list(args.remote)
     return info
 
 
