@@ -14,7 +14,7 @@ class Autotools(object):
         self._configure_args = toolchain_file_content.get("configure_args")
         self._make_args = toolchain_file_content.get("make_args")
 
-    def configure(self, source_folder=None):
+    def configure(self, build_script_folder=None):
         """
         http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
@@ -24,8 +24,8 @@ class Autotools(object):
             return
 
         source = self._conanfile.source_folder
-        if source_folder:
-            source = os.path.join(self._conanfile.source_folder, source_folder)
+        if build_script_folder:
+            source = os.path.join(self._conanfile.source_folder, build_script_folder)
 
         configure_cmd = "{}/configure".format(source)
         configure_cmd = unix_path(self._conanfile, configure_cmd)

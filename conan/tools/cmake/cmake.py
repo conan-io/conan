@@ -73,14 +73,14 @@ class CMake(object):
 
         self._cmake_program = "cmake"  # Path to CMake should be handled by environment
 
-    def configure(self, source_folder=None):
+    def configure(self, build_script_folder=None):
         # TODO: environment?
         if not self._conanfile.should_configure:
             return
 
         source = self._conanfile.source_folder
-        if source_folder:
-            source = os.path.join(self._conanfile.source_folder, source_folder)
+        if build_script_folder:
+            source = os.path.join(self._conanfile.source_folder, build_script_folder)
 
         build_folder = self._conanfile.build_folder
         generator_folder = self._conanfile.generators_folder
