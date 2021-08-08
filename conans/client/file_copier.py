@@ -84,7 +84,7 @@ class FileCopier(object):
             excluded = [self._dst_folder]
             excluded.extend([d for d in self._src_folders if d is not src_folder])
             fs = self._copy(src_folder, pattern, src, dst, links, ignore_case, excludes,
-                            keep_path, excluded_folders=excluded)
+                            keep_path, excluded_folders=excluded, if_different=if_different)
             files.extend(fs)
 
         return files

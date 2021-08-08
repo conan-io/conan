@@ -2,7 +2,6 @@ import mock
 import os
 import platform
 import unittest
-
 import pytest
 
 from conans.client.file_copier import FileCopier
@@ -270,3 +269,30 @@ class FileCopierTest(unittest.TestCase):
                          sorted(os.listdir(os.path.join(dst_folder, "include"))))
         self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
                          sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
+
+    def test_if_different(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "file.h"), "")
+
+        dst_folder = temp_folder()
+        copier = FileCopier([src_folder], dst_folder)
+
+        copier("*.h", dst="include")
+
+        # creation time
+        dst_file = os.path.join(dst_folder, "include", "file.h")
+        dst_file_ctime = os.stat(dst_file).st_ctime_ns
+
+        # test that file is not copied again
+        copier("*.h", if_different=True, dst="include")
+        self.assertEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)
+
+        # test that file is copied again
+        copier("*.h", if_different=False, dst="include")
+        self.assertNotEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)
+
+        # test that file is copied again when source changes
+        dst_file_ctime = os.stat(dst_file).st_ctime_ns
+        save(os.path.join(src_folder, "file.h"), "dummy")
+        copier("*.h", if_different=True, dst="include")
+        self.assertNotEqual(dst_file_ctime, os.stat(dst_file).st_ctime_ns)
