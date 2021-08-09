@@ -18,7 +18,7 @@ class ConanLib(ConanFile):
         conanfile = '''from conans import ConanFile
 class ConanLib(ConanFile):
     options = {"use_lib": [True, False]}
-    default_options= "use_lib=False"
+    default_options= {"use_lib": False}
     def requirements(self):
         if self.options.use_lib:
             self.requires("optional/0.1@user/testing")

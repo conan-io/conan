@@ -263,7 +263,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "%s"
     options = {"myoption": [True, False]}
-    default_options = "myoption=True"
+    default_options = {"myoption": True}
     def package_info(self):
         self.output.info("MYOPTION: {} {}".format(self.name, self.options.myoption))
 """
@@ -271,7 +271,7 @@ class Pkg(ConanFile):
             conanfile = """from conans import ConanFile
 class Pkg(ConanFile):
     options = {"myoption": [True, False]}
-    default_options = "myoption=True"
+    default_options = {"myoption": True}
     def configure(self):
         if self.name == "LibB":
             self.options["LibD"].myoption = False
@@ -293,8 +293,8 @@ class Pkg(ConanFile):
 
         client.save({"conanfile.py": conanfile % "LibC/latest@user/testing"})
         replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                        '"myoption=True"',
-                        '"myoption=True", "LibD:myoption=False"',
+                        '{"myoption": True}',
+                        '{"myoption": True, "LibD:myoption": False}',
                         output=client.out)
         client.run("export . LibB/0.1@user/testing")
         client.run("alias LibB/latest@user/testing LibB/0.1@user/testing")
