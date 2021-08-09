@@ -37,15 +37,16 @@ class TestListPackageRevisionsBase:
 
 
 class TestParams(TestListPackageRevisionsBase):
-    def test_fail_if_reference_is_not_correct(self):
-        self.client.run("list package-revisions whatever", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
 
-        self.client.run("list package-revisions whatever/", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
-
-        self.client.run("list package-revisions whatever/1", assert_error=True)
-        assert "ERROR: Value provided for package version, '1' (type Version), is too short" in self.client.out
+    @pytest.mark.parametrize("ref", [
+        "whatever",
+        "whatever/",
+        "whatever/1"
+    ])
+    def test_fail_if_reference_is_not_correct(self, ref):
+        self.client.run(f"list package-ids {ref}", assert_error=True)
+        assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
+               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" in self.client.out
 
     def test_fails_if_reference_has_already_the_revision(self):
         pref = self._get_fake_package_refence("whatever/1.0.0")
@@ -72,6 +73,12 @@ class TestParams(TestListPackageRevisionsBase):
 
         self.client.run("list package-revisions --all-remotes --remote remote1 package/1.0", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
+
+    def test_wildcard_not_accepted(self):
+        self.client.run("list package-ids -a -c test_*", assert_error=True)
+        expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
+                          "reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID"
+        assert expected_output in self.client.out
 
 
 class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
@@ -112,7 +119,7 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions -r remote1 {pref}", assert_error=True)
+        self.client.run(f"list package-revisions -r remote1 {pref}")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
@@ -173,16 +180,4 @@ class TestRemotes(TestListPackageRevisionsBase):
 
         pref = self._get_fake_package_refence(remote1_recipe1)
         self.client.run(f"list package-revisions -r wrong_remote {pref}", assert_error=True)
-        assert expected_output in self.client.out
-
-    def test_wildcard_not_accepted(self):
-        remote1 = "remote1"
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-
-        expected_output = "is an invalid name. Valid names MUST begin with a letter, number or underscore"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self.client.run("list package-revisions -a -c test_*", assert_error=True)
-
         assert expected_output in self.client.out

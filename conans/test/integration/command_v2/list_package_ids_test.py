@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
@@ -46,15 +47,16 @@ class TestListPackageIdsBase:
 
 
 class TestParams(TestListPackageIdsBase):
-    def test_fail_if_reference_is_not_correct(self):
-        self.client.run("list package-ids whatever", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
 
-        self.client.run("list package-ids whatever/", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
-
-        self.client.run("list package-ids whatever/1", assert_error=True)
-        assert "ERROR: Value provided for package version, '1' (type Version), is too short" in self.client.out
+    @pytest.mark.parametrize("ref", [
+        "whatever",
+        "whatever/",
+        "whatever/1"
+    ])
+    def test_fail_if_reference_is_not_correct(self, ref):
+        self.client.run(f"list package-ids {ref}", assert_error=True)
+        assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
+               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -76,6 +78,12 @@ class TestParams(TestListPackageIdsBase):
 
         self.client.run("list package-ids --all-remotes --remote remote1 package/1.0", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
+
+    def test_wildcard_not_accepted(self):
+        self.client.run("list package-ids -a -c test_*", assert_error=True)
+        expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
+                          "reference in the form name/version[@user/channel][#RECIPE_REVISION]"
+        assert expected_output in self.client.out
 
 
 class TestListPackagesFromRemotes(TestListPackageIdsBase):
@@ -116,7 +124,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
         rrev = self._get_fake_recipe_refence('whatever/0.1')
-        self.client.run(f"list package-ids -r remote1 {rrev}", assert_error=True)
+        self.client.run(f"list package-ids -r remote1 {rrev}")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
@@ -266,16 +274,4 @@ class TestRemotes(TestListPackageIdsBase):
 
         rrev = self._get_fake_recipe_refence(remote1_recipe1)
         self.client.run(f"list package-ids -r wrong_remote {rrev}", assert_error=True)
-        assert expected_output in self.client.out
-
-    def test_wildcard_not_accepted(self):
-        remote1 = "remote1"
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-
-        expected_output = "is an invalid name. Valid names MUST begin with a letter, number or underscore"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self.client.run("list package-ids -a -c test_*", assert_error=True)
-
         assert expected_output in self.client.out

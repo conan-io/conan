@@ -28,15 +28,15 @@ class TestListRecipeRevisionsBase:
 
 
 class TestParams(TestListRecipeRevisionsBase):
-    def test_fail_if_reference_is_not_correct(self):
-        self.client.run("list recipe-revisions whatever", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
-
-        self.client.run("list recipe-revisions whatever/", assert_error=True)
-        assert "ERROR: Specify the 'name' and the 'version'" in self.client.out
-
-        self.client.run("list recipe-revisions whatever/1", assert_error=True)
-        assert "ERROR: Value provided for package version, '1' (type Version), is too short" in self.client.out
+    @pytest.mark.parametrize("ref", [
+        "whatever",
+        "whatever/",
+        "whatever/1"
+    ])
+    def test_fail_if_reference_is_not_correct(self, ref):
+        self.client.run(f"list package-ids {ref}", assert_error=True)
+        assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
+               f"reference in the form name/version[@user/channel]" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -58,6 +58,12 @@ class TestParams(TestListRecipeRevisionsBase):
 
         self.client.run("list recipe-revisions --all-remotes --remote remote1 package/1.0", assert_error=True)
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
+
+    def test_wildcard_not_accepted(self):
+        self.client.run("list package-ids -a -c test_*", assert_error=True)
+        expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
+                          "reference in the form name/version[@user/channel]"
+        assert expected_output in self.client.out
 
 
 class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
@@ -92,7 +98,7 @@ class TestListRecipesFromRemotes(TestListRecipeRevisionsBase):
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
-        self.client.run("list recipe-revisions -r remote1 whatever/1.0", assert_error=True)
+        self.client.run("list recipe-revisions -r remote1 whatever/1.0")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
@@ -170,16 +176,4 @@ class TestRemotes(TestListRecipeRevisionsBase):
         self._upload_recipe(remote1, remote1_recipe2)
 
         self.client.run("list recipe-revisions -r wrong_remote test_recipe/1.0.0@user/channel", assert_error=True)
-        assert expected_output in self.client.out
-
-    def test_wildcard_not_accepted(self):
-        remote1 = "remote1"
-        remote1_recipe1 = "test_recipe/1.0.0@user/channel"
-
-        expected_output = "is an invalid name. Valid names MUST begin with a letter, number or underscore"
-
-        self._add_remote(remote1)
-        self._upload_recipe(remote1, remote1_recipe1)
-        self.client.run("list recipe-revisions -a -c test_*", assert_error=True)
-
         assert expected_output in self.client.out

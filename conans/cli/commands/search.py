@@ -1,6 +1,6 @@
 from conans.cli.command import conan_command, Extender, COMMAND_GROUPS
 from conans.cli.commands.list import list_recipes_cli_formatter, json_formatter
-
+from conans.errors import ConanException
 
 search_formatters = {
     "cli": list_recipes_cli_formatter,
@@ -19,7 +19,10 @@ def search(conan_api, parser, *args, **kwargs):
                         help="Remote to search. Accepts wildcards. To search in all remotes use *")
     args = parser.parse_args(*args)
 
-    remotes, _ = conan_api.get_active_remotes(args.remote)
+    remotes, error = conan_api.get_active_remotes(args.remote)
+    if error:
+        raise ConanException(error)
+
     results = []
     for remote in remotes:
         result, error = conan_api.search_remote_recipes(args.query, remote)

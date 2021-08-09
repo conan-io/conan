@@ -15,21 +15,22 @@ field_color = Color.BRIGHT_YELLOW
 values_color = Color.CYAN
 
 
-def _print_common_headers(result, ref_type):
+def _print_common_headers(result):
     if result.get("remote"):
         cli_out_write(f"{result['remote']}:", fg=remote_color)
     else:
         cli_out_write("Local Cache:", remote_color)
 
-    if result.get("error"):
-        cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
-    elif not result.get("results"):
-        cli_out_write(f"There are no matching {ref_type}", indentation=2)
-
 
 def list_recipes_cli_formatter(results):
     for result in results:
-        _print_common_headers(result, "recipe references")
+        _print_common_headers(result)
+        if result.get("error"):
+            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            continue
+        elif not result.get("results"):
+            cli_out_write("There are no matching recipe references", indentation=2)
+            continue
         current_recipe = None
         for recipe in result["results"]:
             if recipe["name"] != current_recipe:
@@ -42,7 +43,13 @@ def list_recipes_cli_formatter(results):
 
 def _list_revisions_cli_formatter(results, ref_type):
     for result in results:
-        _print_common_headers(result, ref_type)
+        _print_common_headers(result)
+        if result.get("error"):
+            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            continue
+        elif not result.get("results"):
+            cli_out_write(f"There are no matching {ref_type}", indentation=2)
+            continue
         reference = result["reference"]
         for revisions in result["results"]:
             rev = revisions["revision"]
@@ -64,10 +71,16 @@ def list_package_ids_cli_formatter(results):
     general_fields = ("options", "settings")
 
     for result in results:
-        _print_common_headers(result, "recipe references")
+        _print_common_headers(result)
+        if result.get("error"):
+            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            continue
+        elif not result.get("results"):
+            cli_out_write("There are no matching recipe references", indentation=2)
+            continue
         reference = result["reference"]
         for pkg_id, props in result["results"].items():
-            cli_out_write(repr(PackageReference(reference, pkg_id)),
+            cli_out_write(f"{reference}:{pkg_id}",
                           fg=reference_color, indentation=2)
             for prop_name, values in props.items():
                 if not values:

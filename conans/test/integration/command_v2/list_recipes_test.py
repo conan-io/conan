@@ -88,7 +88,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
         self.client.run("remote disable remote1")
-        self.client.run("list recipes whatever -r remote1", assert_error=True)
+        self.client.run("list recipes whatever -r remote1")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
