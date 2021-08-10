@@ -31,7 +31,8 @@ def test_all_methods(direct):
     else:
         throw = "self._aux_method()"
     for method in ["source", "build", "package", "package_info", "configure", "build_id",
-                   "package_id", "requirements", "config_options"]:
+                   "package_id", "requirements", "config_options", "layout", "generate", "export",
+                   "export_sources"]:
         client.save({CONANFILE: conanfile.format(method=method, method_contents=throw)})
         client.run("create . ", assert_error=True)
         assert "exceptions/0.1: Error in %s() method, line 12" % method in client.out
