@@ -34,7 +34,7 @@ class TestParams(TestListRecipeRevisionsBase):
         "whatever/1"
     ])
     def test_fail_if_reference_is_not_correct(self, ref):
-        self.client.run(f"list package-ids {ref}", assert_error=True)
+        self.client.run(f"list recipe-revisions {ref}", assert_error=True)
         assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
                f"reference in the form name/version[@user/channel]" in self.client.out
 
@@ -60,7 +60,7 @@ class TestParams(TestListRecipeRevisionsBase):
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
     def test_wildcard_not_accepted(self):
-        self.client.run("list package-ids -a -c test_*", assert_error=True)
+        self.client.run("list recipe-revisions -a -c test_*", assert_error=True)
         expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
                           "reference in the form name/version[@user/channel]"
         assert expected_output in self.client.out
@@ -160,7 +160,6 @@ class TestRemotes(TestListRecipeRevisionsBase):
 
         self.client.run("list recipe-revisions -a -c test_recipe/1.0.0@user/channel")
         output = str(self.client.out)
-
         assert bool(re.match(expected_output, output, re.MULTILINE))
 
     def test_search_in_missing_remote(self):

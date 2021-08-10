@@ -25,9 +25,9 @@ class TestSearch:
 
     def test_search_no_matching_recipes(self, remotes):
         expected_output = ("remote1:\n"
-                           "  There are no matching recipes\n"
+                           "  There are no matching recipe references\n"
                            "remote2:\n"
-                           "  There are no matching recipes\n")
+                           "  There are no matching recipe references\n")
 
         self.client.run("search whatever")
         assert expected_output == self.client.out
@@ -41,8 +41,12 @@ class TestSearch:
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
-        self.client.run("search whatever -r remote1", assert_error=True)
-        assert "ERROR: Remote 'remote1' is disabled" in self.client.out
+        self.client.run("search whatever -r remote1")
+        expected_output = textwrap.dedent("""\
+        remote1:
+          ERROR: Remote 'remote1' is disabled
+        """)
+        assert expected_output == self.client.out
 
 
 class TestRemotes:
@@ -164,7 +168,7 @@ class TestRemotes:
             "    test_recipe/1.0.0@user/channel\n"
             "    test_recipe/1.1.0@user/channel\n"
             "remote2:\n"
-            "  There are no matching recipes\n"
+            "  There are no matching recipe references\n"
         )
 
         self._add_remote(remote1)

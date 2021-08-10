@@ -195,7 +195,7 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     results = []
     # If neither remote nor cache are defined, show results only from cache
     if args.cache or not use_remotes:
-        result, error = conan_api.get_recipe_revisions(args.reference)
+        result, error = conan_api.get_recipe_revisions(ref)
         results.append({
             "reference": repr(ref),
             "error": error,
@@ -229,7 +229,7 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     try:
         pref = PackageReference.loads(args.package_reference)
     except (ConanException, InvalidNameException):
-        raise ConanException(f"{args.package_reference} is not a valid recipe revision reference,"
+        raise ConanException(f"{args.package_reference} is not a valid package reference,"
                              f" provide a reference in the form "
                              f"name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID")
     if pref.revision:

@@ -44,9 +44,9 @@ class TestParams(TestListPackageRevisionsBase):
         "whatever/1"
     ])
     def test_fail_if_reference_is_not_correct(self, ref):
-        self.client.run(f"list package-ids {ref}", assert_error=True)
-        assert f"ERROR: {ref} is not a valid recipe reference, provide a " \
-               f"reference in the form name/version[@user/channel][#RECIPE_REVISION]" in self.client.out
+        self.client.run(f"list package-revisions {ref}", assert_error=True)
+        assert f"ERROR: {ref} is not a valid package reference, provide a " \
+               f"reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID" in self.client.out
 
     def test_fails_if_reference_has_already_the_revision(self):
         pref = self._get_fake_package_refence("whatever/1.0.0")
@@ -75,8 +75,8 @@ class TestParams(TestListPackageRevisionsBase):
         assert "error: argument -r/--remote: not allowed with argument -a/--all-remotes" in self.client.out
 
     def test_wildcard_not_accepted(self):
-        self.client.run("list package-ids -a -c test_*", assert_error=True)
-        expected_output = "ERROR: test_* is not a valid recipe reference, provide a " \
+        self.client.run("list package-revisions -a -c test_*", assert_error=True)
+        expected_output = "ERROR: test_* is not a valid package reference, provide a " \
                           "reference in the form name/version[@user/channel]#RECIPE_REVISION:PACKAGE_ID"
         assert expected_output in self.client.out
 
@@ -112,7 +112,8 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
         assert expected_output == self.client.out
 
     def test_fail_if_no_configured_remotes(self):
-        self.client.run("list package-revisions -a whatever/1.0", assert_error=True)
+        pref = self._get_fake_package_refence('whatever/0.1')
+        self.client.run(f"list package-revisions -a {pref}", assert_error=True)
         assert "ERROR: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self):
