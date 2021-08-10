@@ -12,7 +12,7 @@ recipe_color = Color.BRIGHT_WHITE
 reference_color = Color.WHITE
 error_color = Color.BRIGHT_RED
 field_color = Color.BRIGHT_YELLOW
-values_color = Color.CYAN
+value_color = Color.CYAN
 
 
 def _print_common_headers(result):
@@ -88,11 +88,11 @@ def list_package_ids_cli_formatter(results):
                 elif prop_name in requires_fields:
                     cli_out_write("requires:", fg=field_color, indentation=4)
                     for req in values:
-                        cli_out_write(req, fg=values_color, indentation=6)
+                        cli_out_write(req, fg=value_color, indentation=6)
                 elif prop_name in general_fields:
                     cli_out_write(f"{prop_name}:", fg=field_color, indentation=4)
                     for name, val in values.items():
-                        cli_out_write(f"{name}={val}", fg=values_color, indentation=6)
+                        cli_out_write(f"{name}={val}", fg=value_color, indentation=6)
 
 
 # FIXME: it's a general formatter, perhaps we should look for another module
