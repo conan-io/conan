@@ -1,9 +1,11 @@
 import re
 import textwrap
-from collections import OrderedDict
+from unittest.mock import patch, Mock
 
 import pytest
 
+from conans.client.api.helpers.search import Search
+from conans.errors import ConanConnectionError, ConanException
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer
 
@@ -87,11 +89,37 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
+        self._add_remote("remote2")
         self.client.run("remote disable remote1")
-        self.client.run("list recipes whatever -r remote1")
+        # He have to put both remotes instead of using "-a" because of the
+        # disbaled remote won't appear
+        self.client.run("list recipes whatever -r remote1 -r remote2")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
+        remote2:
+          There are no matching recipe references
+        """)
+        assert expected_output == self.client.out
+
+    @pytest.mark.parametrize("exc,output", [
+        (ConanConnectionError("Review your network!"),
+         "There was a connection problem: Review your network!"),
+        (ConanException("Boom!"), "Boom!")
+    ])
+    def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
+        self._add_remote("remote1")
+        self._add_remote("remote2")
+        with patch.object(Search, "search_remote_recipes",
+                          new=Mock(side_effect=exc)):
+            self.client.run("list recipes whatever -a -c")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          There are no matching recipe references
+        remote1:
+          ERROR: {output}
+        remote2:
+          ERROR: {output}
         """)
         assert expected_output == self.client.out
 

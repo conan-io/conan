@@ -1,8 +1,11 @@
 import re
 import textwrap
+from unittest.mock import Mock, patch
 
 import pytest
 
+from conans.client.remote_manager import RemoteManager
+from conans.errors import ConanConnectionError, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.assets.genconanfile import GenConanfile
 from conans.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
@@ -118,12 +121,39 @@ class TestListPackagesFromRemotes(TestListPackageRevisionsBase):
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
+        self._add_remote("remote2")
         self.client.run("remote disable remote1")
+        # He have to put both remotes instead of using "-a" because of the
+        # disbaled remote won't appear
         pref = self._get_fake_package_refence('whatever/0.1')
-        self.client.run(f"list package-revisions -r remote1 {pref}")
+        self.client.run(f"list package-revisions {pref} -r remote1 -r remote2")
         expected_output = textwrap.dedent("""\
         remote1:
           ERROR: Remote 'remote1' is disabled
+        remote2:
+          There are no matching package references
+        """)
+        assert expected_output == self.client.out
+
+    @pytest.mark.parametrize("exc,output", [
+        (ConanConnectionError("Review your network!"),
+         "There was a connection problem: Review your network!"),
+        (ConanException("Boom!"), "Boom!")
+    ])
+    def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
+        self._add_remote("remote1")
+        self._add_remote("remote2")
+        pref = self._get_fake_package_refence('whatever/0.1')
+        with patch.object(RemoteManager, "get_package_revisions",
+                          new=Mock(side_effect=exc)):
+            self.client.run(f"list package-revisions {pref} -a -c")
+        expected_output = textwrap.dedent(f"""\
+        Local Cache:
+          There are no matching package references
+        remote1:
+          ERROR: {output}
+        remote2:
+          ERROR: {output}
         """)
         assert expected_output == self.client.out
 

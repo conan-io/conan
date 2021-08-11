@@ -93,10 +93,9 @@ class ConanApp(object):
 
 
 def api_method(f):
-    """Useful decorator for ConanAPI methods management"""
+    """Useful decorator to manage Conan API methods"""
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
-        """Adding an extra error-management layer"""
         error = None
         results = None
         try:  # getcwd can fail if Conan runs on an non-existing folder
@@ -112,7 +111,6 @@ def api_method(f):
             # Artifactory API returns an empty result if the recipe doesn't exist, but
             # Conan Server returns a 404. This probably should be fixed server side,
             # but in the meantime we must handle it here
-            # If there are no matching recipes, let's avoid raising any error
             pass
         except ConanConnectionError as e:
             error = f"There was a connection problem: {str(e)}"
@@ -259,7 +257,7 @@ class ConanAPIV2(object):
 
         :param reference: `PackageReference` without the revision
         :param remote: `Remote` object
-        :return: `list` with all the results, e.g.,
+        :return: `list` of `dict` with all the results, e.g.,
                     [
                       {
                         "revision": "80b7cbe095ac7f38844b6511e69e453a",
@@ -276,7 +274,7 @@ class ConanAPIV2(object):
 
         :param reference: `ConanFileReference` without the revision
         :param remote: `Remote` object
-        :return: `dict` with all the results, e.g.,
+        :return: `list` of `dict` with all the results, e.g.,
                   [
                       {
                         "revision": "80b7cbe095ac7f38844b6511e69e453a",
