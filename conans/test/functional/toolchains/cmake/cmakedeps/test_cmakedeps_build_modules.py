@@ -175,7 +175,7 @@ class TestNoNamespaceTarget:
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):

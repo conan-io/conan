@@ -36,7 +36,7 @@ def setup_client_with_greetings():
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -143,7 +143,7 @@ def create_chat(client, components, package_info, cmake_find, test_cmake_find):
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -359,7 +359,7 @@ def test_same_names():
 
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(source_folder="src")
+                cmake.configure(build_script_folder="src")
                 cmake.build()
 
             def package(self):
@@ -531,7 +531,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
 
                 def package(self):
@@ -587,7 +587,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
 
                 def package(self):
@@ -616,7 +616,7 @@ class TestComponentsCMakeGenerators:
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
                     self.run(".%smain" % os.sep)
             """.format("CMakeDeps"))
