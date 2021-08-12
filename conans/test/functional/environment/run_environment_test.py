@@ -198,7 +198,7 @@ class RunEnvironmentSharedTest(unittest.TestCase):
             output = check_output_runner(command)
             self.assertIn("Hello Tool!", output)
 
-    @pytest.mark.skipif(platform.system() == "Darwin", reason="Requires DYLD_LIBRARY_PATH")
+    @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires DYLD_LIBRARY_PATH")
     def test_plus_char_dyld_path(self):
         client = TestClient(path_with_spaces=False)
         client.run("config set log.print_run_commands=1")
