@@ -1,5 +1,5 @@
 # coding=utf-8
-
+import os.path
 import platform
 import textwrap
 import unittest
@@ -197,3 +197,29 @@ class RunEnvironmentSharedTest(unittest.TestCase):
 
             output = check_output_runner(command)
             self.assertIn("Hello Tool!", output)
+
+    @pytest.mark.skipif(platform.system() == "Darwin", reason="Requires DYLD_LIBRARY_PATH")
+    def test_plus_char_dyld_path(self):
+        client = TestClient(path_with_spaces=False)
+        client.run("config set log.print_run_commands=1")
+        client.run("config set log.level=10")
+        client.run("new -s -t foo++/0.1")
+
+        tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"), "Foo++Conan", "FooConan")
+        tools.replace_in_file(os.path.join(client.current_folder, "test_package", "conanfile.py"), "Foo++TestConan",
+                              "FooTestConan")
+        tools.replace_in_file(os.path.join(client.current_folder, "src", "foo++.h"),
+                              "foo++",
+                              "foo")
+        tools.replace_in_file(os.path.join(client.current_folder, "src", "foo++.cpp"),
+                              "foo++(",
+                              "foo(")
+        tools.replace_in_file(os.path.join(client.current_folder, "test_package", "example.cpp"),
+                              "foo++(",
+                              "foo(")
+        tools.replace_in_file(os.path.join(client.current_folder, "test_package", "conanfile.py"),
+                              "os.sep",
+                              "os.sep, run_environment=True")
+
+        client.run("create . -o foo++:shared=True")
+        self.assertIn("> DYLD_LIBRARY_PATH=asd", client.out)
