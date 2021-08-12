@@ -49,7 +49,7 @@ class UserRequirementsDict(object):
     __nonzero__ = __bool__
 
     def _get_require(self, ref, **kwargs):
-        assert isinstance(ref, str)
+        assert isinstance(ref, str), "ref arg is not str"
         if "/" in ref:
             ref = ConanFileReference.loads(ref)
         else:
@@ -77,6 +77,9 @@ class UserRequirementsDict(object):
 
     def values(self):
         return self._data.values()
+
+    def __contains__(self, name):
+        return self.get(name) is not None
 
 
 class ConanFileDependencies(UserRequirementsDict):
