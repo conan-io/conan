@@ -222,4 +222,4 @@ class RunEnvironmentSharedTest(unittest.TestCase):
                               "os.sep, run_environment=True")
 
         client.run("create . -o foo++:shared=True")
-        self.assertIn("> DYLD_LIBRARY_PATH=asd", client.out)
+        self.assertNotIn('> DYLD_LIBRARY_PATH=""', client.out)
