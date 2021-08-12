@@ -113,6 +113,10 @@ class ConanProxy(object):
         def _retrieve_from_remote(the_remote):
             output.info("Trying with '%s'..." % the_remote.name)
             # If incomplete, resolve the latest in server
+            if "https://conan.bintray.com" in the_remote.url:
+                output.warn("Remote https://conan.bintray.com is deprecated and will be shut down "
+                            "soon. Please use the new 'conancenter' default remote "
+                            "(https://center.conan.io).")
             _ref = self._remote_manager.get_recipe(ref, the_remote)
             output.info("Downloaded recipe revision %s" % _ref.revision)
             recorder.recipe_downloaded(ref, the_remote.url)

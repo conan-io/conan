@@ -447,3 +447,18 @@ class TestCliOverride:
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . pkg/0.1@ --require-override=zlib/2.0")
         assert "zlib/2.0: Already installed" in client.out
+
+
+def test_install_bintray_warning():
+    """
+    IMPORTANT: This test is actually using https://conan.bintray.com
+    Warning is only displayed when downloading a recipe from the remote
+    """
+    client = TestClient()
+    client.run("remote add whatever https://conan.bintray.com")
+    client.run("install zlib/1.2.8@conan/stable -r whatever")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" in client.out
+    client.run("install zlib/1.2.8@conan/stable -r whatever -s build_type=Debug")
+    assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
+           "soon" not in client.out
