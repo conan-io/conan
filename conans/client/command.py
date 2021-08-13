@@ -1077,8 +1077,8 @@ class Command(object):
         Copies the recipe (conanfile.py & associated files) to your local cache.
 
         Use the 'reference' param to specify a user and channel where to export
-        it. Once the recipe is in the local cache it can be shared, reused and
-        to any remote with the 'conan upload' command.
+        it. Once the recipe is in the local cache it can be shared and reused
+        with any remote with the 'conan upload' command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__,
                                          prog="conan export",
