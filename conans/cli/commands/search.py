@@ -19,13 +19,17 @@ def search(conan_api, parser, *args, **kwargs):
                         help="Remote to search. Accepts wildcards. To search in all remotes use *")
     args = parser.parse_args(*args)
 
-    remotes, error = conan_api.get_active_remotes(args.remote)
-    if error:
-        raise ConanException(error)
-
+    remotes = conan_api.get_active_remotes(args.remote)
     results = []
+
     for remote in remotes:
-        result, error = conan_api.search_remote_recipes(args.query, remote)
+        error = None
+        try:
+            result = conan_api.search_remote_recipes(args.query, remote)
+        except ConanException as e:
+            error = str(e)
+            result = {}
+
         results.append({
             "remote": remote.name,
             "error": error,

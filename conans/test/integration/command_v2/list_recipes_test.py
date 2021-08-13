@@ -34,7 +34,7 @@ class TestListRecipesBase:
 class TestParams(TestListRecipesBase):
     def test_fail_if_remote_list_is_empty(self):
         self.client.run("list recipes -r whatever *", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        assert "UnexpectedError: The remotes registry is empty" in self.client.out
 
     def test_query_param_is_required(self):
         self._add_remote("remote1")
@@ -85,7 +85,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
 
     def test_fail_if_no_configured_remotes(self):
         self.client.run("list recipes -a whatever", assert_error=True)
-        assert "ERROR: The remotes registry is empty" in self.client.out
+        assert "UnexpectedError: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -96,7 +96,7 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         self.client.run("list recipes whatever -r remote1 -r remote2")
         expected_output = textwrap.dedent("""\
         remote1:
-          ERROR: Remote 'remote1' is disabled
+          UnexpectedError: Remote 'remote1' is disabled
         remote2:
           There are no matching recipe references
         """)
@@ -104,8 +104,8 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
-         "There was a connection problem: Review your network!"),
-        (ConanException("Boom!"), "Boom!")
+         "ConnectionError: Review your network!"),
+        (ConanException("Boom!"), "UnexpectedError: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
@@ -117,9 +117,9 @@ class TestListRecipesFromRemotes(TestListRecipesBase):
         Local Cache:
           There are no matching recipe references
         remote1:
-          ERROR: {output}
+          {output}
         remote2:
-          ERROR: {output}
+          {output}
         """)
         assert expected_output == self.client.out
 

@@ -28,7 +28,6 @@ from conans.client.tools.env import environment_append
 from conans.client.userio import UserIO
 from conans.errors import ConanException, NotFoundException, PackageNotFoundException, \
     ConanConnectionError
-from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home
 from conans.search.search import search_packages
@@ -96,8 +95,6 @@ def api_method(f):
     """Useful decorator to manage Conan API methods"""
     @functools.wraps(f)
     def wrapper(api, *args, **kwargs):
-        error = None
-        results = None
         try:  # getcwd can fail if Conan runs on an non-existing folder
             old_curdir = os.getcwd()
         except EnvironmentError:
@@ -105,22 +102,20 @@ def api_method(f):
         try:
             api.create_app()
             with environment_append(api.app.cache.config.env_vars):
-                results = f(api, *args, **kwargs)
-        except (NotFoundException, PackageNotFoundException):
+                return f(api, *args, **kwargs)
+        except (NotFoundException, PackageNotFoundException) as e:
             # This exception must be caught manually due to a server inconsistency:
             # Artifactory API returns an empty result if the recipe doesn't exist, but
             # Conan Server returns a 404. This probably should be fixed server side,
             # but in the meantime we must handle it here
-            pass
+            raise ConanException(f"NotFoundError: {str(e)}")
         except ConanConnectionError as e:
-            error = f"There was a connection problem: {str(e)}"
+            raise ConanException(f"ConnectionError: {str(e)}")
         except BaseException as e:
-            error = str(e)
+            raise ConanException(f"UnexpectedError: {str(e)}")
         finally:
             if old_curdir:
                 os.chdir(old_curdir)
-            # Let's return the results and any possible error
-            return results, error
     return wrapper
 
 
@@ -226,20 +221,13 @@ class ConanAPIV2(object):
                 results.append(result)
         return results
 
-    def _get_revisions(self, ref, remote=None):
-        if isinstance(ref, PackageReference):
-            method_name = 'get_package_revisions'
-        elif isinstance(ref, ConanFileReference):
-            method_name = 'get_recipe_revisions'
-        else:
-            raise ConanException(f"Unknown reference type: {ref}")
-
+    def _get_revisions(self, ref, getter_name, remote=None):
         # Let's get all the revisions from a remote server
         if remote:
-            results = getattr(self.app.remote_manager, method_name)(ref, remote=remote)
+            results = getattr(self.app.remote_manager, getter_name)(ref, remote=remote)
         else:
             # Let's get the revisions from the local cache
-            revs = getattr(self.app.cache, method_name)(ref)
+            revs = getattr(self.app.cache, getter_name)(ref)
             results = []
             for revision in revs:
                 timestamp = self.app.cache.get_timestamp(revision)
@@ -265,7 +253,9 @@ class ConanAPIV2(object):
                       }
                     ]
         """
-        return self._get_revisions(reference, remote=remote)
+        # Method name to get remotely/locally the revisions
+        getter_name = 'get_package_revisions'
+        return self._get_revisions(reference, getter_name, remote=remote)
 
     @api_method
     def get_recipe_revisions(self, reference, remote=None):
@@ -282,7 +272,9 @@ class ConanAPIV2(object):
                       }
                   ]
         """
-        return self._get_revisions(reference, remote=remote)
+        # Method name to get remotely/locally the revisions
+        getter_name = 'get_recipe_revisions'
+        return self._get_revisions(reference, getter_name, remote=remote)
 
     @api_method
     def get_package_ids(self, reference, remote=None):

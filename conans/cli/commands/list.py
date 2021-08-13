@@ -23,13 +23,17 @@ def _print_common_headers(result):
 
 
 def list_recipes_cli_formatter(results):
+    no_results_msg = "There are no matching recipe references"
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            error = result['error']
+            if error.startswith("NotFoundError:"):
+                error = no_results_msg
+            cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write("There are no matching recipe references", indentation=2)
+            cli_out_write(no_results_msg, indentation=2)
             continue
         current_recipe = None
         for recipe in result["results"]:
@@ -42,13 +46,17 @@ def list_recipes_cli_formatter(results):
 
 
 def _list_revisions_cli_formatter(results, ref_type):
+    no_results_msg = f"There are no matching {ref_type}"
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            error = result['error']
+            if error.startswith("NotFoundError:"):
+                error = no_results_msg
+            cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write(f"There are no matching {ref_type}", indentation=2)
+            cli_out_write(no_results_msg, indentation=2)
             continue
         reference = result["reference"]
         for revisions in result["results"]:
@@ -69,14 +77,18 @@ def list_package_ids_cli_formatter(results):
     # Artifactory uses field 'requires', conan_center 'full_requires'
     requires_fields = ("requires", "full_requires")
     general_fields = ("options", "settings")
+    no_results_msg = "There are no matching recipe references"
 
     for result in results:
         _print_common_headers(result)
         if result.get("error"):
-            cli_out_write(f"ERROR: {result['error']}", fg=error_color, indentation=2)
+            error = result['error']
+            if error.startswith("NotFoundError:"):
+                error = no_results_msg
+            cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
-            cli_out_write("There are no matching recipe references", indentation=2)
+            cli_out_write(no_results_msg, indentation=2)
             continue
         reference = result["reference"]
         for pkg_id, props in result["results"].items():
@@ -130,13 +142,10 @@ def _add_remotes_and_cache_options(subparser):
 
 def _get_remotes(conan_api, args):
     remotes = []
-    error = None
     if args.all_remotes:
-        remotes, error = conan_api.get_active_remotes(None)
+        remotes = conan_api.get_active_remotes(None)
     elif args.remote:
-        remotes, error = conan_api.get_active_remotes(args.remote)
-    if error:
-        raise ConanException(error)
+        remotes = conan_api.get_active_remotes(args.remote)
     return remotes
 
 
@@ -157,19 +166,31 @@ def list_recipes(conan_api, parser, subparser, *args):
 
     # If neither remote nor cache are defined, show results only from cache
     if args.cache or not use_remotes:
-        result, error = conan_api.search_local_recipes(args.query)
+        error = None
+        try:
+            result = conan_api.search_local_recipes(args.query)
+        except ConanException as e:
+            error = str(e)
+            result = []
+
         results.append({
             "error": error,
-            "results": result or []
+            "results": result
         })
     if use_remotes:
         remotes = _get_remotes(conan_api, args)
         for remote in remotes:
-            result, error = conan_api.search_remote_recipes(args.query, remote)
+            error = None
+            try:
+                result = conan_api.search_remote_recipes(args.query, remote)
+            except ConanException as e:
+                error = str(e)
+                result = []
+
             results.append({
                 "remote": remote.name,
                 "error": error,
-                "results": result or []
+                "results": result
             })
     return results
 
@@ -195,21 +216,33 @@ def list_recipe_revisions(conan_api, parser, subparser, *args):
     results = []
     # If neither remote nor cache are defined, show results only from cache
     if args.cache or not use_remotes:
-        result, error = conan_api.get_recipe_revisions(ref)
+        error = None
+        try:
+            result = conan_api.get_recipe_revisions(ref)
+        except ConanException as e:
+            error = str(e)
+            result = []
+
         results.append({
             "reference": repr(ref),
             "error": error,
-            "results": result or []
+            "results": result
         })
     if use_remotes:
         remotes = _get_remotes(conan_api, args)
         for remote in remotes:
-            result, error = conan_api.get_recipe_revisions(ref, remote=remote)
+            error = None
+            try:
+                result = conan_api.get_recipe_revisions(ref, remote=remote)
+            except ConanException as e:
+                error = str(e)
+                result = []
+
             results.append({
                 "reference": repr(ref),
                 "remote": remote.name,
                 "error": error,
-                "results": result or []
+                "results": result
             })
 
     return results
@@ -239,21 +272,33 @@ def list_package_revisions(conan_api, parser, subparser, *args):
     results = []
     # If neither remote nor cache are defined, show results only from cache
     if args.cache or not use_remotes:
-        result, error = conan_api.get_package_revisions(pref)
+        error = None
+        try:
+            result = conan_api.get_package_revisions(pref)
+        except ConanException as e:
+            error = str(e)
+            result = []
+
         results.append({
             "reference": repr(pref),
             "error": error,
-            "results": result or []
+            "results": result
         })
     if use_remotes:
         remotes = _get_remotes(conan_api, args)
         for remote in remotes:
-            result, error = conan_api.get_package_revisions(pref, remote=remote)
+            error = None
+            try:
+                result = conan_api.get_package_revisions(pref, remote=remote)
+            except ConanException as e:
+                error = str(e)
+                result = []
+
             results.append({
                 "reference": repr(pref),
                 "remote": remote.name,
                 "error": error,
-                "results": result or []
+                "results": result
             })
 
     return results
@@ -281,24 +326,31 @@ def list_package_ids(conan_api, parser, subparser, *args):
     results = []
     # If neither remote nor cache are defined, show results only from cache
     if args.cache or not use_remotes:
-        result, error = conan_api.get_package_ids(ref)
-        result = result or {}
-        ret = {
-            "error": error
-        }
-        ret.update(result)
-        results.append(ret)
+        error = None
+        try:
+            result = conan_api.get_package_ids(ref)
+        except ConanException as e:
+            error = str(e)
+            result = {}
+
+        result["error"] = error
+        results.append(result)
+
     if use_remotes:
         remotes = _get_remotes(conan_api, args)
         for remote in remotes:
-            result, error = conan_api.get_package_ids(ref, remote=remote)
-            result = result or {}
-            ret = {
+            error = None
+            try:
+                result = conan_api.get_package_ids(ref, remote=remote)
+            except ConanException as e:
+                error = str(e)
+                result = {}
+
+            result.update({
                 "remote": remote.name,
                 "error": error
-            }
-            ret.update(result)
-            results.append(ret)
+            })
+            results.append(result)
 
     return results
 
