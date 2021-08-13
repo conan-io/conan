@@ -74,7 +74,7 @@ conanfile = textwrap.dedent("""
 
                 def build(self):
                     cmake = CMake(self)
-                    cmake.configure(source_folder="src")
+                    cmake.configure(build_script_folder="src")
                     cmake.build()
                     cmake.install()
                     self.run("otool -L '%s/hello.framework/hello'" % self.build_folder)
