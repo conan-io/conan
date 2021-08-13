@@ -30,6 +30,8 @@ def list_recipes_cli_formatter(results):
             error = result['error']
             if error.startswith("NotFoundError:"):
                 error = no_results_msg
+            else:
+                error = f"ERROR: {error}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
@@ -53,6 +55,8 @@ def _list_revisions_cli_formatter(results, ref_type):
             error = result['error']
             if error.startswith("NotFoundError:"):
                 error = no_results_msg
+            else:
+                error = f"ERROR: {error}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):
@@ -85,6 +89,8 @@ def list_package_ids_cli_formatter(results):
             error = result['error']
             if error.startswith("NotFoundError:"):
                 error = no_results_msg
+            else:
+                error = f"ERROR: {error}"
             cli_out_write(error, fg=error_color, indentation=2)
             continue
         elif not result.get("results"):

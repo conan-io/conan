@@ -40,14 +40,14 @@ class TestSearch:
         self.client = TestClient(servers=self.servers)
 
         self.client.run("search whatever", assert_error=True)
-        assert "UnexpectedError: The remotes registry is empty" in self.client.out
+        assert "ERROR: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
         self.client.run("search whatever -r remote1")
         expected_output = textwrap.dedent("""\
         remote1:
-          UnexpectedError: Remote 'remote1' is disabled
+          ERROR: Remote 'remote1' is disabled
         """)
         assert expected_output == self.client.out
 
@@ -78,8 +78,8 @@ class TestRemotes:
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
-         "ConnectionError: Review your network!"),
-        (ConanException("Boom!"), "UnexpectedError: Boom!")
+         "ERROR: ConnectionError: Review your network!"),
+        (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
@@ -97,7 +97,7 @@ class TestRemotes:
 
     def test_no_remotes(self):
         self.client.run("search something", assert_error=True)
-        expected_output = "UnexpectedError: The remotes registry is empty. " \
+        expected_output = "ERROR: The remotes registry is empty. " \
                           "Please add at least one valid remote"
         assert expected_output in self.client.out
 

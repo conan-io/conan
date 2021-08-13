@@ -112,7 +112,7 @@ def api_method(f):
         except ConanConnectionError as e:
             raise ConanException(f"ConnectionError: {str(e)}")
         except BaseException as e:
-            raise ConanException(f"UnexpectedError: {str(e)}")
+            raise ConanException(str(e))
         finally:
             if old_curdir:
                 os.chdir(old_curdir)

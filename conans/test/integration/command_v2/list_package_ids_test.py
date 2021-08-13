@@ -120,7 +120,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
     def test_fail_if_no_configured_remotes(self):
         self.client.run("list package-ids -a whatever/1.0", assert_error=True)
-        assert "UnexpectedError: The remotes registry is empty" in self.client.out
+        assert "ERROR: The remotes registry is empty" in self.client.out
 
     def test_search_disabled_remote(self):
         self._add_remote("remote1")
@@ -131,7 +131,7 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
         self.client.run("list package-ids whatever/1.0 -r remote1 -r remote2")
         expected_output = textwrap.dedent("""\
         remote1:
-          UnexpectedError: Remote 'remote1' is disabled
+          ERROR: Remote 'remote1' is disabled
         remote2:
           There are no matching recipe references
         """)
@@ -139,8 +139,8 @@ class TestListPackagesFromRemotes(TestListPackageIdsBase):
 
     @pytest.mark.parametrize("exc,output", [
         (ConanConnectionError("Review your network!"),
-         "ConnectionError: Review your network!"),
-        (ConanException("Boom!"), "UnexpectedError: Boom!")
+         "ERROR: ConnectionError: Review your network!"),
+        (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, exc, output):
         self._add_remote("remote1")
