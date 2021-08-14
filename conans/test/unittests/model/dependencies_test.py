@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from unittest.mock import Mock
+from mock import Mock
 
 import pytest
 
@@ -7,6 +7,7 @@ from conans import ConanFile
 from conans.model.conanfile_interface import ConanFileInterface
 from conans.model.dependencies import Requirement, ConanFileDependencies
 from conans.model.ref import ConanFileReference
+
 
 @pytest.fixture
 def dependencies_object():
