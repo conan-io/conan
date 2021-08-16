@@ -78,9 +78,9 @@ class CMake(object):
         if not self._conanfile.should_configure:
             return
 
-        source = self._conanfile.source_folder
+        cmakelist_folder = self._conanfile.source_folder
         if build_script_folder:
-            source = os.path.join(self._conanfile.source_folder, build_script_folder)
+            cmakelist_folder = os.path.join(self._conanfile.source_folder, build_script_folder)
 
         build_folder = self._conanfile.build_folder
         generator_folder = self._conanfile.generators_folder
@@ -101,7 +101,7 @@ class CMake(object):
             arg_list.append('-DCMAKE_INSTALL_PREFIX="{}"'.format(pkg_folder))
         if platform.system() == "Windows" and self._generator == "MinGW Makefiles":
             arg_list.append('-DCMAKE_SH="CMAKE_SH-NOTFOUND"')
-        arg_list.append('"{}"'.format(source))
+        arg_list.append('"{}"'.format(cmakelist_folder))
 
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)

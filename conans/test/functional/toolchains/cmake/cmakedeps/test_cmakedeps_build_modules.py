@@ -173,9 +173,12 @@ class TestNoNamespaceTarget:
             exports_sources = ["src/*", "build-module.cmake"]
             generators = "cmake"
 
+            def layout(self):
+                self.folders.source = "src"
+
             def build(self):
                 cmake = CMake(self)
-                cmake.configure(build_script_folder="src")
+                cmake.configure()
                 cmake.build()
 
             def package(self):
