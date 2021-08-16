@@ -18,10 +18,10 @@ from conans.util.files import exception_message_safe
 from conans.util.log import logger
 
 
-CLI_V2_COMMANDS = [
-    'help',
-    'search',
-    'list'
+CLI_V1_COMMANDS = [
+    'install', 'config', 'get', 'info', 'remote', 'new', 'create', 'upload', 'export', 'export-pkg',
+    'test', 'source', 'build', 'editable', 'profile', 'remote', 'user', 'imports', 'remove', 'alias',
+    'download', 'inspect', 'lock', 'frogarian'
 ]
 
 
@@ -98,27 +98,30 @@ class Cli(object):
         if version.major == 2 or version.minor <= 4:
             raise ConanException(
                 "Unsupported Python version. Minimum required version is Python 3.5")
-
         try:
-            command_argument = args[0][0]
-        except IndexError:  # No parameters
-            self.help_message()
-            return SUCCESS
-        try:
-            command = self._commands[command_argument]
-        except KeyError as exc:
-            if command_argument in ["-v", "--version"]:
-                self._out.info("Conan version %s" % client_version)
-                return SUCCESS
-
-            if command_argument in ["-h", "--help"]:
+            try:
+                command_argument = args[0][0]
+            except IndexError:  # No parameters
                 self.help_message()
                 return SUCCESS
+            try:
+                command = self._commands[command_argument]
+            except KeyError as exc:
+                if command_argument in ["-v", "--version"]:
+                    self._out.info("Conan version %s" % client_version)
+                    return SUCCESS
 
-            self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
-            self._out.info("")
-            self._print_similar(command_argument)
-            raise ConanException("Unknown command %s" % str(exc))
+                if command_argument in ["-h", "--help"]:
+                    self.help_message()
+                    return SUCCESS
+
+                self._out.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+                self._out.info("")
+                self._print_similar(command_argument)
+                raise ConanException("Unknown command %s" % str(exc))
+        except ConanException as exc:
+            self._out.error(exc)
+            return ERROR_GENERAL
 
         if (
             command != "config"
@@ -170,7 +173,7 @@ def main(args):
 
     # Temporary hack to call the legacy command system if the command is not yet implemented in V2
     command_argument = args[0] if args else None
-    if command_argument not in CLI_V2_COMMANDS:
+    if command_argument in CLI_V1_COMMANDS:
         from conans.client.command import main as v1_main
         return v1_main(args)
 

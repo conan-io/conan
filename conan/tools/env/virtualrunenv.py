@@ -38,9 +38,8 @@ class VirtualRunEnv:
         test_req = self._conanfile.dependencies.test
         for _, dep in list(host_req.items()) + list(test_req.items()):
             if dep.runenv_info:
-                runenv.compose(dep.runenv_info)
-            runenv.compose(runenv_from_cpp_info(self._conanfile, dep.cpp_info))
-
+                runenv.compose_env(dep.runenv_info)
+            runenv.compose_env(runenv_from_cpp_info(self._conanfile, dep.cpp_info))
 
         return runenv
 

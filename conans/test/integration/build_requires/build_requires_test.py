@@ -481,7 +481,7 @@ class package(ConanFile):
     name            = "first"
     version         = "0.0.0"
     options         = {"coverage": [True, False]}
-    default_options = "coverage=False"
+    default_options = {"coverage": False}
     def build(self):
         self.output.info("Coverage: %s" % self.options.coverage)
     """
@@ -494,7 +494,7 @@ class package(ConanFile):
 class package(ConanFile):
     name            = "second"
     version         = "0.0.0"
-    default_options = "first:coverage=True"
+    default_options = {"first:coverage": True}
     build_requires  = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})

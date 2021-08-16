@@ -53,12 +53,29 @@ def environment_wrap_command(conanfile, env_filenames, cmd, cwd=None):
 
 
 class _EnvValue:
-    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ",
-                 path=False):
+    def __init__(self, name, value=_EnvVarPlaceHolder, separator=" ", path=False):
         self._name = name
         self._values = [] if value is None else value if isinstance(value, list) else [value]
         self._path = path
         self._sep = separator
+
+    def dumps(self):
+        result = []
+        path = "(path)" if self._path else ""
+        if not self._values:  # Empty means unset
+            result.append("{}=!".format(self._name))
+        elif _EnvVarPlaceHolder in self._values:
+            index = self._values.index(_EnvVarPlaceHolder)
+            for v in self._values[:index]:
+                result.append("{}=+{}{}".format(self._name, path, v))
+            for v in self._values[index+1:]:
+                result.append("{}+={}{}".format(self._name, path, v))
+        else:
+            append = ""
+            for v in self._values:
+                result.append("{}{}={}{}".format(self._name, append, path, v))
+                append = "+"
+        return "\n".join(result)
 
     def copy(self):
         return _EnvValue(self._name, self._values, self._sep, self._path)
@@ -86,7 +103,7 @@ class _EnvValue:
         else:
             self._values.insert(0, value)
 
-    def compose(self, other):
+    def compose_env_value(self, other):
         """
         :type other: _EnvValue
         """
@@ -101,6 +118,7 @@ class _EnvValue:
 
     def get_str(self, conanfile, placeholder, pathsep=os.pathsep):
         """
+        :param conanfile: The conanfile is necessary to get win_bash, path separator, etc.
         :param placeholder: a OS dependant string pattern of the previous env-var value like
         $PATH, %PATH%, et
         :param pathsep: The path separator, typically ; or :
@@ -138,8 +156,16 @@ class Environment:
 
     __nonzero__ = __bool__
 
+    def copy(self):
+        e = Environment(self._conanfile)
+        e._values = self._values.copy()
+        return e
+
     def __repr__(self):
         return repr(self._values)
+
+    def dumps(self):
+        return "\n".join([v.dumps() for v in reversed(self._values.values())])
 
     def define(self, name, value, separator=" "):
         self._values[name] = _EnvValue(name, value, separator, path=False)
@@ -259,10 +285,10 @@ class Environment:
         if auto_activate:
             register_environment_script(self._conanfile, path)
 
-    def compose(self, other):
+    def compose_env(self, other):
         """
         self has precedence, the "other" will add/append if possible and not conflicting, but
-        self mandates what to do
+        self mandates what to do. If self has define(), without placeholder, that will remain
         :type other: Environment
         """
         for k, v in other._values.items():
@@ -270,8 +296,9 @@ class Environment:
             if existing is None:
                 self._values[k] = v.copy()
             else:
-                existing.compose(v)
+                existing.compose_env_value(v)
 
+        self._conanfile = self._conanfile or other._conanfile
         return self
 
     # Methods to user access to the environment object as a dict
@@ -319,6 +346,11 @@ class ProfileEnvironment:
     def __repr__(self):
         return repr(self._environments)
 
+    def __bool__(self):
+        return bool(self._environments)
+
+    __nonzero__ = __bool__
+
     def get_env(self, conanfile, ref):
         """ computes package-specific Environment
         it is only called when conanfile.buildenv is called
@@ -327,23 +359,33 @@ class ProfileEnvironment:
         result = Environment(conanfile)
         for pattern, env in self._environments.items():
             if pattern is None or fnmatch.fnmatch(str(ref), pattern):
-                result = env.compose(result)
-
-        # FIXME: Needed to assign _conanfile here too because in the env.compose returns env and it
-        #        hasn't conanfile
-        result._conanfile = conanfile
+                # Latest declared has priority, copy() necessary to not destroy data
+                result = env.copy().compose_env(result)
         return result
 
-    def compose(self, other):
+    def update_profile_env(self, other):
         """
         :type other: ProfileEnvironment
+        :param other: The argument profile has priority/precedence over the current one.
         """
         for pattern, environment in other._environments.items():
             existing = self._environments.get(pattern)
             if existing is not None:
-                self._environments[pattern] = environment.compose(existing)
+                self._environments[pattern] = environment.compose_env(existing)
             else:
                 self._environments[pattern] = environment
+
+    def dumps(self):
+        result = []
+        for pattern, env in self._environments.items():
+            if pattern is None:
+                result.append(env.dumps())
+            else:
+                result.append("\n".join("{}:{}".format(pattern, line) if line else ""
+                                        for line in env.dumps().splitlines()))
+        if result:
+            result.append("")
+        return "\n".join(result)
 
     @staticmethod
     def loads(text):
@@ -364,6 +406,7 @@ class ProfileEnvironment:
                 else:
                     pattern, name = None, pattern_name[0]
 
+                # When loading from profile file, latest line has priority
                 env = Environment(conanfile=None)
                 if method == "unset":
                     env.unset(name)
@@ -377,10 +420,10 @@ class ProfileEnvironment:
                 if existing is None:
                     result._environments[pattern] = env
                 else:
-                    result._environments[pattern] = env.compose(existing)
+                    result._environments[pattern] = env.compose_env(existing)
                 break
             else:
-                raise ConanException("Bad env defintion: {}".format(line))
+                raise ConanException("Bad env definition: {}".format(line))
         return result
 
 

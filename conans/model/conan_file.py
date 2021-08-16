@@ -14,35 +14,10 @@ from conans.model.dependencies import ConanFileDependencies
 from conans.model.env_info import DepsEnvInfo
 from conans.model.layout import Folders, Patterns, Infos
 from conans.model.new_build_info import from_old_cppinfo
-from conans.model.options import Options, OptionsValues, PackageOptions
+from conans.model.options import Options
 from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
-from conans.util.conan_v2_mode import conan_v2_error
-
-
-def create_options(conanfile):
-    try:
-        package_options = PackageOptions(getattr(conanfile, "options", None))
-        options = Options(package_options)
-
-        default_options = getattr(conanfile, "default_options", None)
-        if default_options:
-            if isinstance(default_options, dict):
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, (list, tuple)):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, str):
-                conan_v2_error("Declare 'default_options' as a dictionary")
-                default_values = OptionsValues.loads(default_options)
-            else:
-                raise ConanException("Please define your default_options as list, "
-                                     "multiline string or dictionary")
-            options.values = default_values
-        return options
-    except Exception as e:
-        raise ConanException("Error while initializing options. %s" % str(e))
 
 
 def create_settings(conanfile, settings):
@@ -192,7 +167,8 @@ class ConanFile(object):
         if isinstance(self.generators, str):
             self.generators = [self.generators]
         # User defined options
-        self.options = create_options(self)
+
+        self.options = Options.create_options(self.options, self.default_options)
         self.settings = create_settings(self, settings)
 
         # needed variables to pack the project

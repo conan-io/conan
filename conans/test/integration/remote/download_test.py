@@ -1,4 +1,5 @@
 import unittest
+import mock
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import ConanFileReference
@@ -44,6 +45,7 @@ class DownloadTest(unittest.TestCase):
         client2 = TestClient(servers=servers, requester_class=BuggyRequester)
         ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         proxy = client2.proxy
+        proxy._out = mock.Mock()
 
         remotes = Remotes()
         remotes.add("remotename", "url")
@@ -56,6 +58,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
         proxy = client2.proxy
+        proxy._out = mock.Mock()
 
         try:
             proxy.get_recipe(ref, False, False, remotes)

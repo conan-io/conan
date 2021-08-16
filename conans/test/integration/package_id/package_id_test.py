@@ -30,7 +30,7 @@ def test_remove_option_setting():
         class TestConan(ConanFile):
             settings = "os"
             options = {"opt": [True, False]}
-            default_options = "opt=False"
+            default_options = {"opt": False}
 
             def package_id(self):
                 self.output.info("OPTION OPT=%s" % self.info.options.opt)

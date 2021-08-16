@@ -2,11 +2,9 @@ import os
 import textwrap
 import unittest
 
-from parameterized.parameterized import parameterized
 
-from conans.client.tools.files import replace_in_file
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestClient, TestServer, GenConanfile
+from conans.test.utils.tools import TestClient, GenConanfile
 
 
 class ConanAliasTest(unittest.TestCase):

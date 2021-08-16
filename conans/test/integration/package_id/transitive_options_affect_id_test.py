@@ -13,7 +13,7 @@ class TransitiveOptionsAffectPackageIDTest(unittest.TestCase):
         conanfile = '''from conans import ConanFile
 class Pkg(ConanFile):
     options = {"shared": [True, False], "num": [1, 2, 3]}
-    default_options= "shared=False", "num=1"
+    default_options= {"shared": False, "num": 1}
 '''
 
         client.save({"conanfile.py": conanfile})

@@ -266,17 +266,6 @@ class _CppInfo(object):
         except KeyError:
             pass
 
-    # Compatibility for 'cppflags' (old style property to allow decoration)
-    def get_cppflags(self):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        return self.cxxflags
-
-    def set_cppflags(self, value):
-        conan_v2_error("'cpp_info.cppflags' is deprecated, use 'cxxflags' instead")
-        self.cxxflags = value
-
-    cppflags = property(get_cppflags, set_cppflags)
-
 
 class Component(_CppInfo):
 
