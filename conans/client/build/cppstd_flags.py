@@ -253,7 +253,7 @@ def _cppstd_gcc(gcc_version, cppstd):
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
 
-    if Version(gcc_version) == "5" or Version(gcc_version) >= "5.1":
+    if Version(gcc_version) >= "5":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
 
