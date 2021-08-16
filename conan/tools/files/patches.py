@@ -93,7 +93,6 @@ def apply_conandata_patches(conanfile):
 
     patches = conanfile.conan_data.get('patches')
 
-    # The patch files are located in the root src
     if isinstance(patches, dict):
         assert conanfile.version, "Can only be applied if conanfile.version is already defined"
         entries = patches.get(conanfile.version, [])
@@ -101,6 +100,7 @@ def apply_conandata_patches(conanfile):
             if not "patch_file" in it:
                 raise ConanException("The 'conandata.yml' file needs a 'patch_file' entry for every"
                                      " patch to be applied")
+            # The patch files are located in the root src
             patch_file = os.path.join(conanfile.folders.base_source, it.pop("patch_file"))
             patch(conanfile, patch_file=patch_file, **it)
     elif isinstance(patches, Iterable):
