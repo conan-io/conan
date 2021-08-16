@@ -226,7 +226,7 @@ def save_toolchain_args(content, generators_folder=None):
 
 
 @contextmanager
-def chdir(newdir):
+def chdir(conanfile, newdir):
     old_path = os.getcwd()
     os.chdir(newdir)
     try:

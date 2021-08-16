@@ -1,8 +1,8 @@
 import logging
+import os
 
 import patch_ng
 
-from conan.tools.files import chdir
 from conans.errors import ConanException
 
 try:
@@ -25,11 +25,9 @@ class PatchLogHandler(logging.Handler):
             self._output.info("%s: %s" % (self.patchname, logstr))
 
 
-def patch(conanfile, base_path=None, patch_file=None, patch_string=None,
-          strip=0, fuzz=False, **kwargs):
+def patch(conanfile, patch_file=None, patch_string=None, strip=0, fuzz=False, **kwargs):
     """ Applies a diff from file (patch_file)  or string (patch_string)
         in base_path directory or current dir if None
-    :param base_path: Base path where the patch should be applied.
     :param patch_file: Patch file that should be applied.
     :param patch_string: Patch string that should be applied.
     :param strip: Number of folders to be stripped from the path.
@@ -38,7 +36,6 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None,
     :param kwargs: Extra parameters that can be added and will contribute to output information
     """
 
-    base_path = base_path or conanfile.source_folder
     patch_type = kwargs.get('patch_type')
     patch_description = kwargs.get('patch_description')
 
@@ -59,7 +56,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None,
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
-    if not patchset.apply(root=base_path, strip=strip, fuzz=fuzz):
+    if not patchset.apply(root=conanfile.source_folder, strip=strip, fuzz=fuzz):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
@@ -74,9 +71,7 @@ def apply_conandata_patches(conanfile):
     ```
     patches:
     - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-      base_path: "source_subfolder"
     - patch_file: "patches/0002-implicit-copy-constructor.patch"
-      base_path: "source_subfolder"
       patch_type: backport
       patch_source: https://github.com/google/flatbuffers/pull/5650
       patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
@@ -87,26 +82,27 @@ def apply_conandata_patches(conanfile):
     patches:
       "1.11.0":
         - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-          base_path: "source_subfolder"
         - patch_file: "patches/0002-implicit-copy-constructor.patch"
-          base_path: "source_subfolder"
           patch_type: backport
           patch_source: https://github.com/google/flatbuffers/pull/5650
           patch_description: Needed to build with modern clang compilers (adapted to 1.11.0 tagged sources).
       "1.12.0":
         - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
-          base_path: "source_subfolder"
     ```
     """
 
     patches = conanfile.conan_data.get('patches')
 
-    with chdir(conanfile.folders.base_source):
-        if isinstance(patches, dict):
-            assert conanfile.version, "Can only be applied if conanfile.version is already defined"
-            entries = patches.get(conanfile.version, [])
-            for it in entries:
-                patch(conanfile, **it)
-        elif isinstance(patches, Iterable):
-            for it in patches:
-                patch(conanfile, **it)
+    # The patch files are located in the root src
+    if isinstance(patches, dict):
+        assert conanfile.version, "Can only be applied if conanfile.version is already defined"
+        entries = patches.get(conanfile.version, [])
+        for it in entries:
+            if not "patch_file" in it:
+                raise ConanException("The 'conandata.yml' file needs a 'patch_file' entry for every"
+                                     " patch to be applied")
+            patch_file = os.path.join(conanfile.folders.base_source, it.pop("patch_file"))
+            patch(conanfile, patch_file=patch_file, **it)
+    elif isinstance(patches, Iterable):
+        for it in patches:
+            patch(conanfile, **it)

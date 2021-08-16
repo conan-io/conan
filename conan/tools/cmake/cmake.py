@@ -102,7 +102,7 @@ class CMake(object):
 
         command = " ".join(arg_list)
         self._conanfile.output.info("CMake command: %s" % command)
-        with chdir(build_folder):
+        with chdir(self, build_folder):
             self._conanfile.run(command)
 
     def _build(self, build_type=None, target=None):
