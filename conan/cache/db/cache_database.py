@@ -44,7 +44,7 @@ class CacheDatabase:
         self._references.save(path, ref)
 
     def list_references(self, only_latest_rrev):
-        for it in self._references.all(only_latest_rrev):
+        for it in self._references.all_references(only_latest_rrev):
             yield it
 
     def get_package_revisions(self, ref: ConanReference, only_latest_prev=False):
