@@ -87,7 +87,6 @@ class ConanProxy(object):
                 cache_time = self._cache.get_timestamp(ref)
                 if latest_rrev.revision != ref.revision:
                     if cache_time < remote_time:
-                        remotes.select(remote.name)
                         # the remote one is newer
                         output.info("Retrieving from remote '%s'..." % remote.name)
                         remote, new_ref = self._download_recipe(latest_rrev, output,
@@ -105,7 +104,6 @@ class ConanProxy(object):
                         status = RECIPE_INCACHE
                     else:
                         selected_remote = remote
-                        remotes.select(remote.name)
                         self._cache.update_reference(ref,
                                                      new_timestamp=remote_time,
                                                      new_remote=selected_remote.name)
