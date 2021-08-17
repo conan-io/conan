@@ -3,7 +3,7 @@ import time
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistInDB
+from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 
 
 class ReferencesDbTable(BaseDbTable):
@@ -102,7 +102,7 @@ class ReferencesDbTable(BaseDbTable):
         try:
             r = self._conn.execute(query)
         except sqlite3.IntegrityError:
-            raise ConanReferenceAlreadyExistInDB(f"Reference '{new_ref.full_reference}' already exists")
+            raise ConanReferenceAlreadyExistsInDB(f"Reference '{new_ref.full_reference}' already exists")
         return r.lastrowid
 
     def delete_by_path(self, path):

@@ -107,7 +107,7 @@ class ConanReferenceDoesNotExistInDB(ConanException):
     pass
 
 
-class ConanReferenceAlreadyExistInDB(ConanException):
+class ConanReferenceAlreadyExistsInDB(ConanException):
     """ Reference already exists in cache db """
     pass
 
