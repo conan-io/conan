@@ -102,12 +102,12 @@ class ConanException(Exception):
         return exception_message_safe(msg)
 
 
-class ConanReferenceDoesNotExist(ConanException):
+class ConanReferenceDoesNotExistInDB(ConanException):
     """ Reference does not exist in cache db """
     pass
 
 
-class ConanReferenceAlreadyExist(ConanException):
+class ConanReferenceAlreadyExistInDB(ConanException):
     """ Reference already exists in cache db """
     pass
 

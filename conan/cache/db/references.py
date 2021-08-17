@@ -3,7 +3,7 @@ import time
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExist, ConanReferenceAlreadyExist
+from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistInDB
 
 
 class ReferencesDbTable(BaseDbTable):
@@ -65,7 +65,7 @@ class ReferencesDbTable(BaseDbTable):
         r = self._conn.execute(query)
         row = r.fetchone()
         if not row:
-            raise ConanReferenceDoesNotExist(f"No entry for reference '{ref.full_reference}'")
+            raise ConanReferenceDoesNotExistInDB(f"No entry for reference '{ref.full_reference}'")
         return self._as_dict(self.row_type(*row))
 
     def save(self, path, ref: ConanReference, remote=None, reset_timestamp=False):
@@ -102,7 +102,7 @@ class ReferencesDbTable(BaseDbTable):
         try:
             r = self._conn.execute(query)
         except sqlite3.IntegrityError:
-            raise ConanReferenceAlreadyExist(f"Reference '{new_ref.full_reference}' already exists")
+            raise ConanReferenceAlreadyExistInDB(f"Reference '{new_ref.full_reference}' already exists")
         return r.lastrowid
 
     def delete_by_path(self, path):
@@ -118,7 +118,8 @@ class ReferencesDbTable(BaseDbTable):
         r = self._conn.execute(query)
         return r.lastrowid
 
-    def all(self, only_latest_rrev=False):
+    # returns all different conan references (name/version@user/channel)
+    def all_references(self, only_latest_rrev=False):
         if only_latest_rrev:
             query = f'SELECT DISTINCT {self.columns.reference}, ' \
                     f'{self.columns.rrev}, ' \

@@ -18,7 +18,7 @@ from conans.client.recorder.action_recorder import INSTALL_ERROR_BUILDING, INSTA
 from conans.client.source import retrieve_exports_sources, config_source
 from conans.errors import (ConanException, ConanExceptionInUserConanfileMethod,
                            conanfile_exception_formatter, ConanInvalidConfiguration,
-                           ConanReferenceDoesNotExist)
+                           ConanReferenceDoesNotExistInDB)
 from conans.model.build_info import CppInfo, DepCppInfo, CppInfoDefaultValues
 from conans.model.conan_file import ConanFile
 from conans.model.env_info import EnvInfo
@@ -447,7 +447,7 @@ class BinaryInstaller(object):
                     else:
                         try:
                             package_layout = self._cache.pkg_layout(node.pref)
-                        except ConanReferenceDoesNotExist:
+                        except ConanReferenceDoesNotExistInDB:
                             package_layout = self._cache.create_pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)

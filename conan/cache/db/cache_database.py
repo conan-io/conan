@@ -3,7 +3,6 @@ from io import StringIO
 
 from conan.cache.conan_reference import ConanReference
 from conan.cache.db.references import ReferencesDbTable
-from conans.errors import ConanReferenceAlreadyExist
 
 CONNECTION_TIMEOUT_SECONDS = 1  # Time a connection will wait when the database is locked
 
