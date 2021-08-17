@@ -95,6 +95,12 @@ class ClientCache(object):
     def create_temp_pkg_layout(self, ref):
         return self._data_cache.create_tmp_package_layout(ConanReference(ref))
 
+    def get_or_create_ref_layout(self, ref: ConanReference):
+        return self._data_cache.get_or_create_reference_layout(ConanReference(ref))
+
+    def get_or_create_pkg_layout(self, ref: ConanReference):
+        return self._data_cache.get_or_create_package_layout(ConanReference(ref))
+
     def remove_layout(self, layout):
         layout.remove()
         self._data_cache.remove(ConanReference(layout.reference))

@@ -10,7 +10,7 @@ from io import StringIO
 from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.errors import ConanException, ConanReferenceAlreadyExistInDB
+from conans.errors import ConanException, ConanReferenceAlreadyExistInDB, ConanReferenceDoesNotExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util.files import md5, rmdir
 
@@ -113,6 +113,18 @@ class DataCache:
         pref_data = self._db.try_get_reference(pref)
         pref_path = pref_data.get("path")
         return PackageLayout(pref, os.path.join(self.base_folder, pref_path))
+
+    def get_or_create_reference_layout(self, ref: ConanReference):
+        try:
+            return self.get_reference_layout(ref)
+        except ConanReferenceDoesNotExistInDB:
+            return self.create_reference_layout(ref)
+
+    def get_or_create_package_layout(self, ref: ConanReference):
+        try:
+            return self.get_package_layout(ref)
+        except ConanReferenceDoesNotExistInDB:
+            return self.create_package_layout(ref)
 
     def _move_rrev(self, old_ref: ConanReference, new_ref: ConanReference):
         ref_data = self._db.try_get_reference(old_ref)

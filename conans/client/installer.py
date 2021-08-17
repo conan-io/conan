@@ -445,10 +445,7 @@ class BinaryInstaller(object):
                     if not node.pref.revision:
                         package_layout = self._cache.create_temp_pkg_layout(node.pref)
                     else:
-                        try:
-                            package_layout = self._cache.pkg_layout(node.pref)
-                        except ConanReferenceDoesNotExistInDB:
-                            package_layout = self._cache.create_pkg_layout(node.pref)
+                        package_layout = self._cache.get_or_create_pkg_layout(node.pref)
 
                     _handle_system_requirements(conan_file, package_layout, output)
                     self._handle_node_cache(node, processed_package_refs, remotes, package_layout)
