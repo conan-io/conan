@@ -126,11 +126,9 @@ class ReferencesDbTable(BaseDbTable):
                     f'{self.columns.prev}, ' \
                     f'{self.columns.path}, ' \
                     f'{self.columns.remote}, ' \
-                    f'MAX({self.columns.timestamp}), ' \
                     f'{self.columns.build_id} ' \
                     f'FROM {self.table_name} ' \
                     f'WHERE {self.columns.prev} IS NULL ' \
-                    f'GROUP BY {self.columns.reference} ' \
                     f'ORDER BY {self.columns.timestamp} DESC'
         else:
             query = f'SELECT * FROM {self.table_name} ' \
