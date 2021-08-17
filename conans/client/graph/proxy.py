@@ -119,9 +119,6 @@ class ConanProxy(object):
     def _get_rrev_from_remotes(self, reference, remotes, check_all_servers):
         output = ScopedOutput(str(reference), self._out)
 
-        # TODO: cache2.0 --update strategies: when we have specified the revision we don't want to
-        #  check all the remotes, just return the first match
-        output.info(f"Checking all remotes: ({', '.join([remote.name for remote in remotes])})")
         results = []
         for remote in remotes:
             try:
