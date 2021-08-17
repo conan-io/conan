@@ -10,7 +10,7 @@ from io import StringIO
 from conan.cache.db.cache_database import CacheDatabase
 from conan.cache.conan_reference import ConanReference
 from conan.cache.conan_reference_layout import RecipeLayout, PackageLayout
-from conans.errors import ConanException, ConanReferenceAlreadyExist
+from conans.errors import ConanException, ConanReferenceAlreadyExistInDB
 from conans.model.info import RREV_UNKNOWN, PREV_UNKNOWN
 from conans.util.files import md5, rmdir
 
@@ -121,7 +121,7 @@ class DataCache:
 
         try:
             self._db.update_reference(old_ref, new_ref, new_path=new_path, new_timestamp=time.time())
-        except ConanReferenceAlreadyExist:
+        except ConanReferenceAlreadyExistInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             self._db.delete_ref_by_path(old_path)
@@ -153,7 +153,7 @@ class DataCache:
                                      "Close any app using it, and retry")
         try:
             self._db.update_reference(old_pref, new_pref, new_path=new_path, new_timestamp=time.time())
-        except ConanReferenceAlreadyExist:
+        except ConanReferenceAlreadyExistInDB:
             # This happens when we create a recipe revision but we already had that one in the cache
             # we remove the new created one and update the date of the existing one
             # TODO: cache2.0 locks
