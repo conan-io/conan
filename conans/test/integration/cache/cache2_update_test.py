@@ -255,7 +255,6 @@ class TestUpdateFlows:
         # --> result: install new revision asked, but the latest revision remains the other one,
         # because the one installed took the date from the server and it's older
         assert "liba/1.0.0: Not found in local cache, looking in remotes..." in self.client.out
-        assert "liba/1.0.0: Checking all remotes: (server0, server1, server2)" in self.client.out
         assert "liba/1.0.0: Checking remote: server0" in self.client.out
         assert "liba/1.0.0: Checking remote: server1" not in self.client.out
         assert "liba/1.0.0: Checking remote: server2" not in self.client.out
