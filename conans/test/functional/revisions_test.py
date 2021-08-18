@@ -77,8 +77,6 @@ class InstallingPackagesWithRevisionsTest(unittest.TestCase):
         # Install, it wont resolve the remote2 because it is in the registry, it will use the cache
         # doing --update it will find a newer same revision in remote2 and update the date and server
         # of the revision in the local cache
-        # TODO: cache2.0 we get the recipe from remote 2 but package rev still is the one from
-        #  is this what we want?
         self.c_v2.run("install {} --update".format(self.ref))
         self.assertIn("lib/1.0@conan/testing from 'remote2' - Cache (Updated date)", self.c_v2.out)
         self.assertIn("lib/1.0@conan/testing:{} - Update".format(pref.id), self.c_v2.out)
