@@ -4,6 +4,7 @@ import time
 from collections import OrderedDict
 from time import sleep
 
+import pytest
 from mock import patch
 
 from conans.model.ref import ConanFileReference, PackageReference
@@ -173,6 +174,8 @@ def test_upload_doesnt_follow_pref():
     assert "Uploading package 1/1: %s to 'r1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
+@pytest.mark.xfail(reason="cache2.0: revisit this test when we decide if we want to maintain"
+                          "the recipe-remote associations in the cache for 2.0")
 def test_install_update_following_pref():
     conanfile = textwrap.dedent("""
         import os, random
