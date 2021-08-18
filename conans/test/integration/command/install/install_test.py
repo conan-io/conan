@@ -450,15 +450,18 @@ class TestCliOverride:
 
 
 def test_install_bintray_warning():
-    """
-    IMPORTANT: This test is actually using https://conan.bintray.com
-    Warning is only displayed when downloading a recipe from the remote
-    """
-    client = TestClient()
-    client.run("remote add conan-center https://conan.bintray.com")
-    client.run("install zlib/1.2.8@conan/stable -r conan-center")
+    server = TestServer(complete_urls=True)
+    from conans.client.graph import proxy
+    proxy.DEPRECATED_CONAN_CENTER_BINTRAY_URL = server.fake_url  # Mocking!
+    client = TestClient(servers={"conan-center": server},
+                        users={"conan-center": [("lasote", "mypass")]})
+    client.save({"conanfile.py": GenConanfile()})
+    client.run("create . zlib/1.0@lasote/testing")
+    client.run("upload zlib/1.0@lasote/testing --all -r conan-center")
+    client.run("remove * -f")
+    client.run("install zlib/1.0@lasote/testing -r conan-center")
     assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
            "soon" in client.out
-    client.run("install zlib/1.2.8@conan/stable -r conan-center -s build_type=Debug")
+    client.run("install zlib/1.0@lasote/testing -r conan-center -s build_type=Debug")
     assert "WARN: Remote https://conan.bintray.com is deprecated and will be shut down " \
            "soon" not in client.out
