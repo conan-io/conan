@@ -236,7 +236,9 @@ class GraphBinariesAnalyzer(object):
 
         # we use the selected remote or the one associated with the recipe reference if there's one
         # TODO: Probably we want to get rid of all remote associations with references for Conan 2.0
-        remote = remotes.selected or remotes.get_remote(self._cache.get_remote(pref.ref))
+
+        recipe_remote = self._cache.get_remote(pref.ref)
+        remote = remotes.selected or (remotes.get_remote(recipe_remote) if recipe_remote else None)
 
         if not remote:
             # If the remote_name is not given, follow the binary remote, or the recipe remote
