@@ -13,6 +13,7 @@ from conans.paths.package_layouts.package_editable_layout import PackageEditable
 from conans.util.tracer import log_recipe_got_from_local_cache
 
 
+# TODO: Remove warning message when this URL is no longer available
 DEPRECATED_CONAN_CENTER_BINTRAY_URL = "https://conan.bintray.com"
 
 
