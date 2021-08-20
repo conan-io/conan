@@ -19,7 +19,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        data_pattern = "${_DIR}/" if not self.find_modules_mode else  "${_DIR}/modules-"
+        data_pattern = "${_DIR}/" if not self.find_modules_mode else "${_DIR}/modules-"
         data_pattern += "{}-*-data.cmake".format(self.file_name)
 
         target_pattern = "" if not self.find_modules_mode else "modules-"

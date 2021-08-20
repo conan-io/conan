@@ -14,7 +14,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
     @property
     def filename(self):
         name = "" if not self.find_modules_mode else "modules-"
-        name += "{}Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
+        name += "{}-Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
         return name
 
     @property
