@@ -13,16 +13,16 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        name = "" if not self.find_modules_mode else "modules-"
+        name = "" if not self.find_module_mode else "module-"
         name += self.file_name + "Targets.cmake"
         return name
 
     @property
     def context(self):
-        data_pattern = "${_DIR}/" if not self.find_modules_mode else "${_DIR}/modules-"
+        data_pattern = "${_DIR}/" if not self.find_module_mode else "${_DIR}/module-"
         data_pattern += "{}-*-data.cmake".format(self.file_name)
 
-        target_pattern = "" if not self.find_modules_mode else "modules-"
+        target_pattern = "" if not self.find_module_mode else "module-"
         target_pattern += "{}-Target-*.cmake".format(self.file_name)
 
         ret = {"pkg_name": self.pkg_name,

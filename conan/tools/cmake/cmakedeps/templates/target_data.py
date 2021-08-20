@@ -15,7 +15,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "" if not self.find_modules_mode else "modules-"
+        data_fname = "" if not self.find_module_mode else "module-"
         data_fname += "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
@@ -143,9 +143,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for dep_name, _ in self.conanfile.new_cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
-                    ret.append(get_file_name(req, self.find_modules_mode))
+                    ret.append(get_file_name(req, self.find_module_mode))
         elif direct_host:
-            ret = [get_file_name(r, self.find_modules_mode) for r in direct_host.values()]
+            ret = [get_file_name(r, self.find_module_mode) for r in direct_host.values()]
 
         return ret
 

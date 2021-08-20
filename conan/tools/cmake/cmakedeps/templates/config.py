@@ -14,7 +14,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        if self.find_modules_mode:
+        if self.find_module_mode:
             return "Find{}.cmake".format(self.file_name)
         else:
             if self.file_name == self.file_name.lower():
@@ -24,7 +24,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def context(self):
-        targets_include = "" if not self.find_modules_mode else "modules-"
+        targets_include = "" if not self.find_module_mode else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
         return {"file_name": self.file_name,
                 "pkg_name": self.pkg_name,

@@ -7,11 +7,11 @@ from conans.errors import ConanException
 
 class CMakeDepsFileTemplate(object):
 
-    def __init__(self, cmakedeps, require, conanfile, find_modules_mode=False):
+    def __init__(self, cmakedeps, require, conanfile, find_module_mode=False):
         self.cmakedeps = cmakedeps
         self.require = require
         self.conanfile = conanfile
-        self.find_modules_mode = find_modules_mode
+        self.find_module_mode = find_module_mode
 
     @property
     def pkg_name(self):
@@ -23,7 +23,7 @@ class CMakeDepsFileTemplate(object):
 
     @property
     def file_name(self):
-        return get_file_name(self.conanfile, self.find_modules_mode) + self.suffix
+        return get_file_name(self.conanfile, self.find_module_mode) + self.suffix
 
     @property
     def suffix(self):
@@ -76,10 +76,10 @@ class CMakeDepsFileTemplate(object):
         return "_{}".format(self.configuration.upper()) if self.configuration else ""
 
     def get_file_name(self):
-        return get_file_name(self.conanfile, find_module_mode=self.find_modules_mode)
+        return get_file_name(self.conanfile, find_module_mode=self.find_module_mode)
 
     def get_target_namespace(self, req):
-        if self.find_modules_mode:
+        if self.find_module_mode:
             ret = req.new_cpp_info.get_property("cmake_module_target_name", "CMakeDeps")
             if ret:
                 return ret
@@ -96,7 +96,7 @@ class CMakeDepsFileTemplate(object):
                 return self.get_target_namespace(req)
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=req.ref.name, cname=comp_name))
-        if self.find_modules_mode:
+        if self.find_module_mode:
             ret = req.new_cpp_info.components[comp_name].get_property("cmake_module_target_name",
                                                                       "CMakeDeps")
             if ret:

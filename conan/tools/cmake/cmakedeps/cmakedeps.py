@@ -92,22 +92,22 @@ class CMakeDeps(object):
             generate_find_module = dep.new_cpp_info.get_property("cmake_module_file_name",
                                                                  "CMakeDeps") is not None
 
-            for find_modules_mode in ([False, True] if generate_find_module else [False]):
-                if not find_modules_mode:
+            for find_module_mode in ([False, True] if generate_find_module else [False]):
+                if not find_module_mode:
                     config_version = ConfigVersionTemplate(self, require, dep)
                     ret[config_version.filename] = config_version.render()
 
-                data_target = ConfigDataTemplate(self, require, dep, find_modules_mode)
+                data_target = ConfigDataTemplate(self, require, dep, find_module_mode)
                 ret[data_target.filename] = data_target.render()
 
                 target_configuration = TargetConfigurationTemplate(self, require, dep,
-                                                                   find_modules_mode)
+                                                                   find_module_mode)
                 ret[target_configuration.filename] = target_configuration.render()
 
-                targets = TargetsTemplate(self, require, dep, find_modules_mode)
+                targets = TargetsTemplate(self, require, dep, find_module_mode)
                 ret[targets.filename] = targets.render()
 
-                config = ConfigTemplate(self, require, dep, find_modules_mode)
+                config = ConfigTemplate(self, require, dep, find_module_mode)
                 # Check if the XXConfig.cmake exists to keep the first generated configuration
                 # to only include the build_modules from the first conan install. The rest of the
                 # file is common for the different configurations.
