@@ -94,6 +94,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
 
         ########### COMPONENT {{ comp_name }} VARIABLES #############################################
 
+        set({{ pkg_name }}_{{ comp_name }}_FOUND 1)
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIRS {{ comp.include_paths }})
         set({{ pkg_name }}_{{ comp_name }}_INCLUDE_DIR {{ comp.include_path }})
         set({{ pkg_name }}_{{ comp_name }}_INCLUDES {{ comp.include_paths }})
@@ -103,6 +104,7 @@ class CMakeFindPackageGenerator(GeneratorComponentsMixin, Generator):
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_DEFINITIONS {{ comp.compile_definitions }})
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_C "{{ comp.cflags_list }}")
         set({{ pkg_name }}_{{ comp_name }}_COMPILE_OPTIONS_CXX "{{ comp.cxxflags_list }}")
+        set({{ pkg_name }}_{{ comp_name }}_LIBRARY {{ comp.libs }})
         set({{ pkg_name }}_{{ comp_name }}_LIBS {{ comp.libs }})
         set({{ pkg_name }}_{{ comp_name }}_SYSTEM_LIBS {{ comp.system_libs }})
         set({{ pkg_name }}_{{ comp_name }}_FRAMEWORK_DIRS {{ comp.framework_paths }})
