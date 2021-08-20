@@ -14,6 +14,8 @@ def test_bazeldeps_dependency_buildfiles():
 
     cpp_info = CppInfo("mypkg", "dummy_root_folder1")
     cpp_info.defines = ["DUMMY_DEFINE=\"string/value\""]
+    cpp_info.system_libs = ["system_lib1"]
+    cpp_info.libs = ["lib1"]
 
     conanfile_dep = ConanFile(Mock(), None)
     conanfile_dep.cpp_info = cpp_info
@@ -31,6 +33,8 @@ def test_bazeldeps_dependency_buildfiles():
             dependency_content = bazeldeps._get_dependency_buildfile_content(dependency)
             assert 'cc_library(\n    name = "OriginalDepName",' in dependency_content
             assert 'defines = ["DUMMY_DEFINE=\'string/value\'"],' in dependency_content
+            assert 'linkopts = ["-lsystem_lib1"],' in dependency_content
+            assert 'deps = [\n    \n    ":lib1_precompiled",' in dependency_content
 
 
 def test_bazeldeps_main_buildfile():

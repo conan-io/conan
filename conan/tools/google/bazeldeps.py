@@ -50,7 +50,17 @@ class BazelDeps(object):
                 {% if defines %}
                 defines = [{{ defines }}],
                 {% endif %}
-                visibility = ["//visibility:public"]
+                {% if linkopts %}
+                linkopts = [{{ linkopts }}],
+                {% endif %}
+                visibility = ["//visibility:public"],
+                {% if libs %}
+                deps = [
+                {% for lib in libs %}
+                ":{{ lib }}_precompiled",
+                {% endfor %}
+                {% endif %}
+                ],
             )
 
         """)
@@ -74,13 +84,19 @@ class BazelDeps(object):
                    for define in dependency.new_cpp_info.defines)
         defines = ', '.join(defines)
 
+        linkopts = []
+        for linkopt in dependency.new_cpp_info.system_libs:
+            linkopts.append('"-l{}"'.format(linkopt))
+        linkopts = ', '.join(linkopts)
+
         context = {
             "name": dependency.ref.name,
             "libs": dependency.new_cpp_info.libs,
             "libdir": dependency.new_cpp_info.libdirs[0],
             "headers": headers,
             "includes": includes,
-            "defines": defines
+            "defines": defines,
+            "linkopts": linkopts
         }
 
         content = Template(template).render(**context)
