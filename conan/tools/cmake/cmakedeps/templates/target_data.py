@@ -1,8 +1,7 @@
 import os
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
-    get_target_namespace
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 from conan.tools.cmake.utils import get_file_name
 
 """
@@ -16,7 +15,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        data_fname = "{}-{}".format(self.file_name, self.configuration.lower())
+        data_fname = "" if not self.find_modules_mode else "modules-"
+        data_fname += "{}-{}".format(self.file_name, self.configuration.lower())
         if self.arch:
             data_fname += "-{}".format(self.arch)
         data_fname += "-data.cmake"
@@ -122,14 +122,14 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
                 if "::" in require:  # Points to a component of a different package
                     pkg, cmp_name = require.split("::")
                     req = self.conanfile.dependencies.direct_host[pkg]
-                    public_comp_deps.append("{}::{}".format(get_target_namespace(req),
-                                                            get_component_alias(req, cmp_name)))
+                    public_comp_deps.append("{}::{}".format(self.get_target_namespace(req),
+                                                            self.get_component_alias(req, cmp_name)))
                 else:  # Points to a component of same package
                     public_comp_deps.append("{}::{}".format(self.target_namespace,
-                                                            get_component_alias(self.conanfile,
-                                                                                 require)))
+                                                            self.get_component_alias(self.conanfile,
+                                                                                     require)))
             deps_cpp_cmake.public_deps = " ".join(public_comp_deps)
-            component_rename = get_component_alias(self.conanfile, comp_name)
+            component_rename = self.get_component_alias(self.conanfile, comp_name)
             ret.append((component_rename, deps_cpp_cmake))
         ret.reverse()
         return ret
@@ -143,9 +143,9 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
             for dep_name, _ in self.conanfile.new_cpp_info.required_components:
                 if dep_name and dep_name not in ret:  # External dep
                     req = direct_host[dep_name]
-                    ret.append(get_file_name(req))
+                    ret.append(get_file_name(req, self.find_modules_mode))
         elif direct_host:
-            ret = [get_file_name(r) for r in direct_host.values()]
+            ret = [get_file_name(r, self.find_modules_mode) for r in direct_host.values()]
 
         return ret
 

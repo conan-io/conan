@@ -1,4 +1,5 @@
 import os
+from fnmatch import fnmatch
 
 from conan.tools._check_build_profile import check_using_build_profile
 from conan.tools.cmake.cmakedeps.templates.config import ConfigTemplate
@@ -26,6 +27,9 @@ class CMakeDeps(object):
         # If specified, the files/targets/variables for the build context will be renamed appending
         # a suffix. It is necessary in case of same require and build_require and will cause an error
         self.build_context_suffix = {}
+
+        # Patterns to be excluded
+        self.excluded_requirement_patterns = []
 
         check_using_build_profile(self._conanfile)
 
@@ -75,26 +79,39 @@ class CMakeDeps(object):
             if dep.is_build_context and dep.ref.name not in self.build_context_activated:
                 continue
 
+            # Skip from the consumer
+            if any(fnmatch(str(dep.ref), pattern) for pattern in self.excluded_requirement_patterns):
+                self._conanfile.output.info("CMakeDeps: Skipped '{}'".format(dep.ref))
+                continue
+
+            # Skip from the requirement
             if dep.new_cpp_info.get_property("skip_deps_file", "CMakeDeps"):
                 # Skip the generation of config files for this node, it will be located externally
                 continue
 
-            config_version = ConfigVersionTemplate(self, require, dep)
-            ret[config_version.filename] = config_version.render()
+            generate_find_module = dep.new_cpp_info.get_property("cmake_module_file_name",
+                                                                 "CMakeDeps") is not None
 
-            data_target = ConfigDataTemplate(self, require, dep)
-            ret[data_target.filename] = data_target.render()
+            for find_modules_mode in ([False, True] if generate_find_module else [False]):
+                if not find_modules_mode:
+                    config_version = ConfigVersionTemplate(self, require, dep)
+                    ret[config_version.filename] = config_version.render()
 
-            target_configuration = TargetConfigurationTemplate(self, require, dep)
-            ret[target_configuration.filename] = target_configuration.render()
+                data_target = ConfigDataTemplate(self, require, dep, find_modules_mode)
+                ret[data_target.filename] = data_target.render()
 
-            targets = TargetsTemplate(self, require, dep)
-            ret[targets.filename] = targets.render()
+                target_configuration = TargetConfigurationTemplate(self, require, dep,
+                                                                   find_modules_mode)
+                ret[target_configuration.filename] = target_configuration.render()
 
-            config = ConfigTemplate(self, require, dep)
-            # Check if the XXConfig.cmake exists to keep the first generated configuration
-            # to only include the build_modules from the first conan install. The rest of the
-            # file is common for the different configurations.
-            if not os.path.exists(config.filename):
-                ret[config.filename] = config.render()
+                targets = TargetsTemplate(self, require, dep, find_modules_mode)
+                ret[targets.filename] = targets.render()
+
+                config = ConfigTemplate(self, require, dep, find_modules_mode)
+                # Check if the XXConfig.cmake exists to keep the first generated configuration
+                # to only include the build_modules from the first conan install. The rest of the
+                # file is common for the different configurations.
+                if not os.path.exists(config.filename):
+                    ret[config.filename] = config.render()
+
         return ret

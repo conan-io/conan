@@ -1,7 +1,6 @@
 import textwrap
 
-from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate, get_component_alias, \
-    get_target_namespace
+from conan.tools.cmake.cmakedeps.templates import CMakeDepsFileTemplate
 
 """
 
@@ -14,8 +13,9 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        return "{}Target-{}.cmake".format(self.file_name,
-                                          self.cmakedeps.configuration.lower())
+        name = "" if not self.find_modules_mode else "modules-"
+        name += "{}Target-{}.cmake".format(self.file_name, self.cmakedeps.configuration.lower())
+        return name
 
     @property
     def context(self):
@@ -147,7 +147,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         ret = []
         sorted_comps = self.conanfile.new_cpp_info.get_sorted_components()
         for comp_name, comp in sorted_comps.items():
-            ret.append(get_component_alias(self.conanfile, comp_name))
+            ret.append(self.get_component_alias(self.conanfile, comp_name))
         ret.reverse()
         return ret
 
@@ -163,16 +163,15 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             for dep_name, component_name in self.conanfile.new_cpp_info.required_components:
                 if not dep_name:
                     # Internal dep (no another component)
-                    dep_name = get_target_namespace(self.conanfile)
                     req = self.conanfile
                 else:
                     req = self.conanfile.dependencies.host[dep_name]
-                    dep_name = get_target_namespace(req)
 
-                component_name = get_component_alias(req, component_name)
+                dep_name = self.get_target_namespace(req)
+                component_name = self.get_component_alias(req, component_name)
                 ret.append("{}::{}".format(dep_name, component_name))
         elif self.conanfile.dependencies.direct_host:
             # Regular external "conanfile.requires" declared, not cpp_info requires
-            ret = ["{p}::{p}".format(p=get_target_namespace(r))
+            ret = ["{p}::{p}".format(p=self.get_target_namespace(r))
                    for r in self.conanfile.dependencies.direct_host.values()]
         return ret

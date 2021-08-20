@@ -14,18 +14,24 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
     @property
     def filename(self):
-        if self.file_name == self.file_name.lower():
-            return "{}-config.cmake".format(self.file_name)
+        if self.find_modules_mode:
+            return "Find{}.cmake".format(self.file_name)
         else:
-            return "{}Config.cmake".format(self.file_name)
+            if self.file_name == self.file_name.lower():
+                return "{}-config.cmake".format(self.file_name)
+            else:
+                return "{}Config.cmake".format(self.file_name)
 
     @property
     def context(self):
+        targets_include = "" if not self.find_modules_mode else "modules-"
+        targets_include += "{}Targets.cmake".format(self.file_name)
         return {"file_name": self.file_name,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "target_namespace": self.target_namespace,
-                "check_components_exist": self.cmakedeps.check_components_exist}
+                "check_components_exist": self.cmakedeps.check_components_exist,
+                "targets_include_file": targets_include}
 
     @property
     def template(self):
@@ -38,7 +44,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         endif()
 
         include(${CMAKE_CURRENT_LIST_DIR}/cmakedeps_macros.cmake)
-        include(${CMAKE_CURRENT_LIST_DIR}/{{ file_name }}Targets.cmake)
+        include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
         include(CMakeFindDependencyMacro)
 
         foreach(_DEPENDENCY {{ '${' + pkg_name + '_FIND_DEPENDENCY_NAMES' + '}' }} )
