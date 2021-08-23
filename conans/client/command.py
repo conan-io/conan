@@ -1182,8 +1182,20 @@ class Command(object):
             if not args.pattern_or_reference:
                 raise ConanException('Please specify a pattern to be removed ("*" for all)')
 
-        return self._conan.remove(pattern=args.pattern_or_reference, query=args.query,
-                                  packages=args.packages, builds=args.builds, src=args.src,
+        try:
+            pref = PackageReference.loads(args.pattern_or_reference, validate=True)
+            packages = [pref.id]
+            pattern_or_reference = repr(pref.ref)
+        except ConanException:
+            pref = None
+            pattern_or_reference = args.pattern_or_reference
+            packages = args.packages
+
+        if pref and args.packages:
+            raise ConanException("Use package ID only as -p argument or reference, not both")
+
+        return self._conan.remove(pattern=pattern_or_reference, query=args.query,
+                                  packages=packages, builds=args.builds, src=args.src,
                                   force=args.force, remote_name=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
