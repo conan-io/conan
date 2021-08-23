@@ -247,25 +247,20 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_
     file and the args command-line arguments
     """
     # Ensures a default profile creating
-    default_profile = cache.default_profile if not build_profile else None
+    default_profile = cache.default_profile
+    create_profile = profiles or settings or options or env or conf or not build_profile
 
     if profiles is None:
-        def _get_default_profile_new_conf(default_profile_conf_name):
-            default_profile_conf = cache.new_config[default_profile_conf_name]
-            if default_profile_conf is not None:
-                if os.path.isabs(default_profile_conf):
-                    default_profile_path = default_profile_conf
-                else:
-                    default_profile_path = os.path.join(cache.profiles_path, default_profile_conf)
-                prof, _ = read_profile(default_profile_path, os.getcwd(), cache.profiles_path)
-                return prof
-
-        if build_profile:
-            result = _get_default_profile_new_conf("core:default_build_profile")
+        default_name = "core:default_build_profile" if build_profile else "core:default_profile"
+        default_conf = cache.new_config[default_name]
+        if default_conf is not None:
+            default_profile_path = default_conf if os.path.isabs(default_conf) \
+                else os.path.join(cache.profiles_path, default_conf)
+            result, _ = read_profile(default_profile_path, os.getcwd(), cache.profiles_path)
+        elif create_profile:
+            result = default_profile
         else:
-            result = _get_default_profile_new_conf("core:default_profile")
-            if result is None:
-                result = default_profile
+            result = None
     else:
         result = Profile()
         for p in profiles:
@@ -277,8 +272,7 @@ def profile_from_args(profiles, settings, options, env, conf, cwd, cache, build_
     if result:
         result.compose_profile(args_profile)
     else:
-        # avoid creating a build profile when nothing is defined
-        if not build_profile or settings or options or env or conf:
+        if create_profile:
             result = args_profile
     return result
 
